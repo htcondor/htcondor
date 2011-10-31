@@ -27,11 +27,10 @@
 #include "qmgmt_constants.h"
 #include "condor_qmgr.h"
 
-#if defined(assert)
-#undef assert
-#endif
-
-#define assert(x) if (!(x)) { errno = ETIMEDOUT; return -1; }
+// ETIMEDOUT is used to indicate one and all types of network errors.
+// I am preserving this questionable tradition for now.
+#define neg_on_error(x) if (!(x)) { errno = ETIMEDOUT; return -1; }
+#define null_on_error(x) if (!(x)) { errno = ETIMEDOUT; return NULL; }
 
 static int CurrentSysCall;
 extern ReliSock *qmgmt_sock;
@@ -43,7 +42,7 @@ InitializeConnection( const char * /*owner*/, const char * /* domain */ )
 	CurrentSysCall = CONDOR_InitializeConnection;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
 
 	return( 0 );
 }
@@ -54,7 +53,7 @@ InitializeReadOnlyConnection( const char * /*owner*/ )
 	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
 
 	return( 0 );
 }
@@ -67,22 +66,22 @@ QmgmtSetEffectiveOwner(char const *o)
 	CurrentSysCall = CONDOR_SetEffectiveOwner;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
 	if( !o ) {
 		o = "";
 	}
-	assert( qmgmt_sock->put(o) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->put(o) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return 0;
 }
@@ -95,18 +94,18 @@ NewCluster()
 		CurrentSysCall = CONDOR_NewCluster;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -120,19 +119,19 @@ NewProc( int cluster_id )
 		CurrentSysCall = CONDOR_NewProc;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -146,20 +145,20 @@ DestroyProc( int cluster_id, int proc_id )
 		CurrentSysCall = CONDOR_DestroyProc;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->code(proc_id) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -173,19 +172,19 @@ DestroyCluster( int cluster_id, const char * /*reason*/ )
 		CurrentSysCall = CONDOR_DestroyCluster;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -200,19 +199,19 @@ DestroyClusterByConstraint( char *constraint )
 		CurrentSysCall = CONDOR_DestroyClusterByConstraint;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(constraint) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(constraint) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -230,24 +229,24 @@ SetAttributeByConstraint( char const *constraint, char const *attr_name, char co
 		}
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->put(constraint) );
-		assert( qmgmt_sock->put(attr_value) );
-		assert( qmgmt_sock->put(attr_name) );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->put(constraint) );
+		neg_on_error( qmgmt_sock->put(attr_value) );
+		neg_on_error( qmgmt_sock->put(attr_name) );
 		if( flags ) {
-			assert( qmgmt_sock->code(flags) );
+			neg_on_error( qmgmt_sock->code(flags) );
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -267,29 +266,29 @@ SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *at
 		}
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->put(attr_value) );
-		assert( qmgmt_sock->put(attr_name) );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->code(proc_id) );
+		neg_on_error( qmgmt_sock->put(attr_value) );
+		neg_on_error( qmgmt_sock->put(attr_name) );
 		if( flags ) {
-			assert( qmgmt_sock->code(flags) );
+			neg_on_error( qmgmt_sock->code(flags) );
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		if( flags & SetAttribute_NoAck ) {
 			rval = 0;
 		}
 		else {
 			qmgmt_sock->decode();
-			assert( qmgmt_sock->code(rval) );
+			neg_on_error( qmgmt_sock->code(rval) );
 			if( rval < 0 ) {
-				assert( qmgmt_sock->code(terrno) );
-				assert( qmgmt_sock->end_of_message() );
+				neg_on_error( qmgmt_sock->code(terrno) );
+				neg_on_error( qmgmt_sock->end_of_message() );
 				errno = terrno;
 				return rval;
 			}
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->end_of_message() );
 		}
 
 	return rval;
@@ -303,22 +302,22 @@ SetTimerAttribute( int cluster_id, int proc_id, char const *attr_name, int durat
 		CurrentSysCall = CONDOR_SetTimerAttribute;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->put(attr_name) );
-		assert( qmgmt_sock->code(duration) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->code(proc_id) );
+		neg_on_error( qmgmt_sock->put(attr_name) );
+		neg_on_error( qmgmt_sock->code(duration) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -331,18 +330,18 @@ BeginTransaction_imp()
 		CurrentSysCall = CONDOR_BeginTransaction;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -361,20 +360,20 @@ AbortTransaction_imp()
 		CurrentSysCall = CONDOR_AbortTransaction;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
 
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		return rval;
 }
@@ -399,21 +398,21 @@ RemoteCommitTransaction(SetAttributeFlags_t flags)
 	}
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
 	if( CurrentSysCall == CONDOR_CommitTransaction ) {
-		assert( qmgmt_sock->put((int)flags) );
+		neg_on_error( qmgmt_sock->put((int)flags) );
 	}
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -426,22 +425,22 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 		CurrentSysCall = CONDOR_GetAttributeFloat;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->code(attr_name) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->code(proc_id) );
+		neg_on_error( qmgmt_sock->code(attr_name) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->code(value) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(value) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -455,22 +454,22 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 		CurrentSysCall = CONDOR_GetAttributeInt;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->put(attr_name) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->code(proc_id) );
+		neg_on_error( qmgmt_sock->put(attr_name) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->code(value) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(value) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -486,22 +485,22 @@ GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char 
 	CurrentSysCall = CONDOR_GetAttributeString;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->code(cluster_id) );
-	assert( qmgmt_sock->code(proc_id) );
-	assert( qmgmt_sock->put(attr_name) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(proc_id) );
+	neg_on_error( qmgmt_sock->put(attr_name) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
-	assert( qmgmt_sock->code(*val) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(*val) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -517,22 +516,22 @@ GetAttributeExprNew( int cluster_id, int proc_id, char const *attr_name, char **
 	*value = NULL;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->code(cluster_id) );
-	assert( qmgmt_sock->code(proc_id) );
-	assert( qmgmt_sock->put(attr_name) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(proc_id) );
+	neg_on_error( qmgmt_sock->put(attr_name) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
-	assert( qmgmt_sock->code(*value) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(*value) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -547,16 +546,16 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	CurrentSysCall = CONDOR_GetDirtyAttributes;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->code(cluster_id) );
-	assert( qmgmt_sock->code(proc_id) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(proc_id) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
@@ -565,7 +564,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 		errno = ETIMEDOUT;
 		return 0;
 	}
-	assert( qmgmt_sock->end_of_message() != 0 );
+	neg_on_error( qmgmt_sock->end_of_message() != 0 );
 
 	return rval;
 }
@@ -579,21 +578,21 @@ DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 		CurrentSysCall = CONDOR_DeleteAttribute;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->put(attr_name) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->code(cluster_id) );
+		neg_on_error( qmgmt_sock->code(proc_id) );
+		neg_on_error( qmgmt_sock->put(attr_name) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -606,19 +605,19 @@ SendSpoolFile( char const *filename )
 		CurrentSysCall = CONDOR_SendSpoolFile;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->put(filename) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+		neg_on_error( qmgmt_sock->put(filename) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			neg_on_error( qmgmt_sock->code(terrno) );
+			neg_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return rval;
 		}
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -631,19 +630,19 @@ SendSpoolFileIfNeeded( ClassAd& ad )
 	CurrentSysCall = CONDOR_SendSpoolFileIfNeeded;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( ad.put(*qmgmt_sock) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( ad.put(*qmgmt_sock) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;
 	}
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return rval;
 }
@@ -654,17 +653,11 @@ CloseSocket()
 	CurrentSysCall = CONDOR_CloseSocket;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return 0;
 }
-
-#if defined(assert)
-#undef assert
-#endif
-
-#define assert(x) if (!(x)) { errno = ETIMEDOUT; return NULL; }
 
 ClassAd *
 GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )
@@ -674,16 +667,16 @@ GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_e
 		CurrentSysCall = CONDOR_GetJobAd;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(cluster_id) );
-		assert( qmgmt_sock->code(proc_id) );
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->code(CurrentSysCall) );
+		null_on_error( qmgmt_sock->code(cluster_id) );
+		null_on_error( qmgmt_sock->code(proc_id) );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		null_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			null_on_error( qmgmt_sock->code(terrno) );
+			null_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return NULL;
 		}
@@ -695,7 +688,7 @@ GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_e
 			return NULL;
 		}
 
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 	return ad;
 }
@@ -709,15 +702,15 @@ GetJobByConstraint( char const *constraint )
 		CurrentSysCall = CONDOR_GetJobByConstraint;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->put(constraint) );
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->code(CurrentSysCall) );
+		null_on_error( qmgmt_sock->put(constraint) );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		null_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			null_on_error( qmgmt_sock->code(terrno) );
+			null_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return NULL;
 		}
@@ -729,7 +722,7 @@ GetJobByConstraint( char const *constraint )
 			return NULL;
 		}
 
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 	return ad;
 }
@@ -743,15 +736,15 @@ GetNextJob( int initScan )
 		CurrentSysCall = CONDOR_GetNextJob;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->code(initScan) );
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->code(CurrentSysCall) );
+		null_on_error( qmgmt_sock->code(initScan) );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
-		assert( qmgmt_sock->code(rval) );
+		null_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( qmgmt_sock->code(terrno) );
-			assert( qmgmt_sock->end_of_message() );
+			null_on_error( qmgmt_sock->code(terrno) );
+			null_on_error( qmgmt_sock->end_of_message() );
 			errno = terrno;
 			return NULL;
 		}
@@ -764,7 +757,7 @@ GetNextJob( int initScan )
 			return NULL;
 		}
 
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 	return ad;
 }
@@ -778,16 +771,16 @@ GetNextJobByConstraint( char const *constraint, int initScan )
 	CurrentSysCall = CONDOR_GetNextJobByConstraint;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->code(initScan) );
-	assert( qmgmt_sock->put(constraint) );
-	assert( qmgmt_sock->end_of_message() );
+	null_on_error( qmgmt_sock->code(CurrentSysCall) );
+	null_on_error( qmgmt_sock->code(initScan) );
+	null_on_error( qmgmt_sock->put(constraint) );
+	null_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	null_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->code(terrno) );
+		null_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return NULL;
 	}
@@ -800,7 +793,7 @@ GetNextJobByConstraint( char const *constraint, int initScan )
 		return NULL;
 	}
 
-	assert( qmgmt_sock->end_of_message() );
+	null_on_error( qmgmt_sock->end_of_message() );
 
 	return ad;
 }
@@ -813,18 +806,18 @@ GetAllJobsByConstraint_imp( char const *constraint, char const *projection, Clas
 		CurrentSysCall = CONDOR_GetAllJobsByConstraint;
 
 		qmgmt_sock->encode();
-		assert( qmgmt_sock->code(CurrentSysCall) );
-		assert( qmgmt_sock->put(constraint) );
-		assert( qmgmt_sock->put(projection) );
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->code(CurrentSysCall) );
+		null_on_error( qmgmt_sock->put(constraint) );
+		null_on_error( qmgmt_sock->put(projection) );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 
 		qmgmt_sock->decode();
 		while (true) {
-			assert( qmgmt_sock->code(rval) );
+			null_on_error( qmgmt_sock->code(rval) );
 			if( rval < 0 ) {
-				assert( qmgmt_sock->code(terrno) );
-				assert( qmgmt_sock->end_of_message() );
+				null_on_error( qmgmt_sock->code(terrno) );
+				null_on_error( qmgmt_sock->end_of_message() );
 				errno = terrno;
 				return NULL;
 			}
@@ -839,7 +832,7 @@ GetAllJobsByConstraint_imp( char const *constraint, char const *projection, Clas
 			list.Insert(ad);
 
 		};
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->end_of_message() );
 
 	return 0;
 }
@@ -856,10 +849,10 @@ GetAllJobsByConstraint_Start( char const *constraint, char const *projection)
 	CurrentSysCall = CONDOR_GetAllJobsByConstraint;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->put(constraint) );
-	assert( qmgmt_sock->put(projection) );
-	assert( qmgmt_sock->end_of_message() );
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->put(constraint) );
+	neg_on_error( qmgmt_sock->put(projection) );
+	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
 	return 0;
@@ -870,12 +863,12 @@ GetAllJobsByConstraint_Next( ClassAd &ad )
 {
 	int rval = -1;
 
-	assert( CurrentSysCall == CONDOR_GetAllJobsByConstraint );
+	ASSERT( CurrentSysCall == CONDOR_GetAllJobsByConstraint );
 
-	assert( qmgmt_sock->code(rval) );
+	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return -1;
 	}
@@ -896,16 +889,16 @@ GetNextDirtyJobByConstraint( char const *constraint, int initScan )
 	CurrentSysCall = CONDOR_GetNextDirtyJobByConstraint;
 
 	qmgmt_sock->encode();
-	assert( qmgmt_sock->code(CurrentSysCall) );
-	assert( qmgmt_sock->code(initScan) );
-	assert( qmgmt_sock->put(constraint) );
-	assert( qmgmt_sock->end_of_message() );
+	null_on_error( qmgmt_sock->code(CurrentSysCall) );
+	null_on_error( qmgmt_sock->code(initScan) );
+	null_on_error( qmgmt_sock->put(constraint) );
+	null_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
-	assert( qmgmt_sock->code(rval) );
+	null_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( qmgmt_sock->code(terrno) );
-		assert( qmgmt_sock->end_of_message() );
+		null_on_error( qmgmt_sock->code(terrno) );
+		null_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return NULL;
 	}
@@ -918,7 +911,7 @@ GetNextDirtyJobByConstraint( char const *constraint, int initScan )
 		return NULL;
 	}
 
-	assert( qmgmt_sock->end_of_message() );
+	null_on_error( qmgmt_sock->end_of_message() );
 
 	return ad;
 }
