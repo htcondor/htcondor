@@ -232,13 +232,21 @@ Its previous behavior had the \Condor{procd} continue to execute
 in a useless mode of operation, unable to receive any communication.
 \Ticket{2500}
 
-\item Lines like ``ProcAPI sanity failure on pid 1317, age = -1901476270''
-should no longer appear in the \Condor{master} daemon log on Mac OS X.
+\item For Mac OS X platforms, 
+improper detection of a non existent process led to lines such as
+\begin{verbatim}
+ProcAPI sanity failure on pid 1317, age = -1901476270
+\end{verbatim}
+appearing in the \Condor{master} daemon log.
+This should no longer be the case.
 \Ticket{2594}
 
-\item Added logic to the \Condor{negotiator} daemon's Accountant
-initialization to ensure that table entries are always created for
-accounting groups on startup and reconfig.
+\item Fixed a bug introduced with hierarchical group quotas that
+failed to correctly initialize table entries.
+The fix adds logic to the accounting mechanism in the
+\Condor{negotiator} daemon,
+such that initialization occurs correctly 
+when starting up and upon reconfiguration.
 \Ticket{2509}
 
 \item When \Condor{advertise} is used with the \Opt{-tcp} option, this
@@ -249,20 +257,22 @@ DaemonCore: Can't receive command request from IP (perhaps a timeout?)
 \end{verbatim}
 \Ticket{2483}
 
-\item \MacroNI{NETWORK\_INTERFACE} did not have any effect.  This bug
-was introduced in 7.7.0.
+\item Fixed a bug introduced in Condor version 7.7.0,
+in which the setting of \MacroNI{NETWORK\_INTERFACE} did not have any effect.
 \Ticket{2513}
 
 \item \Prog{glexec} now also works when Condor is running as root.
 \Ticket{2503}
 
-\item \Condor{master} now successfully advertises itself in a personal
-condor installation when the collector is configured to use port 0
+\item The \Condor{master} daemon now successfully advertises itself in 
+a Personal Condor installation,
+when the \Condor{collector} is configured to use port 0
 and to operate through a shared port.
 \Ticket{2555}
 
-\item Since 7.7.1, \MacroNI{WANT\_HOLD} did not work unless
-\MacroNI{WANT\_HOLD\_SUBCODE} was set to something non-zero.
+\item Since Condor version 7.7.1, 
+the configuration variable \Macro{WANT\_HOLD} did not work,
+unless \Macro{WANT\_HOLD\_SUBCODE} was set to a non-zero value.
 \Ticket{2565}
 
 \item Since Condor version 7.7.2, there was a rare condition that could cause
