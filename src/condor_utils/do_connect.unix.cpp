@@ -257,6 +257,7 @@ int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 	fd_set			writefds;
 	int				nfound;
 	int				nfds;
+	int				tmp_errno;
 	socklen_t		sz;
 	int				val = 0;
 	int				save_errno;
