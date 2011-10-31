@@ -47,6 +47,8 @@
 #include "basename.h"
 #include "MyString.h"
 
+#include "internet_obsolete.h"
+#include "ipv6_hostname.h"
 
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
@@ -1097,7 +1099,10 @@ create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 void
 get_host_addr( unsigned int *ip_addr )
 {
-	*ip_addr = my_ip_addr();
+	// [TODO:IPV6]
+	condor_sockaddr myaddr = get_local_ipaddr();
+	sockaddr_in saddr = myaddr.to_sin();
+	*ip_addr = ntohl(saddr.sin_addr.s_addr);
 	display_ip_addr( *ip_addr );
 }
 

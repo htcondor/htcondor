@@ -40,6 +40,68 @@ unsigned long SafeSock::_deleted = 0;
 unsigned long SafeSock::_avgSwhole = 0;
 unsigned long SafeSock::_avgSdeleted = 0;
 
+/*
+ * Below is Mersenne Twister, a random number generator from
+ * http://en.literateprograms.org/Mersenne_twister_(C)
+ *
+ * It is used for fill out ip_addr, pid and time fields in _condorMsgId.
+ * Instead of changing ip_addr to 16 bytes to be compatible with IPv6,
+ * it fills out random numbers. Thus, we can make sure that it is still
+ * compatible with older Condor but also probabilistically guarantee
+ * safe handling of Condor packets.
+ */
+
+#define MT_LEN 624
+static int mt_index;
+static unsigned long mt_buffer[MT_LEN];
+
+void mt_init() {
+    int i;
+    srand(time(NULL));
+    for (i = 0; i < MT_LEN; i++)
+        mt_buffer[i] = rand();
+    mt_index = 0;
+}
+
+static struct __static_initializer {
+	__static_initializer() { mt_init(); }
+} __static_init1;
+
+#define MT_IA           397
+#define MT_IB           (MT_LEN - MT_IA)
+#define UPPER_MASK      0x80000000
+#define LOWER_MASK      0x7FFFFFFF
+#define MATRIX_A        0x9908B0DF
+#define TWIST(b,i,j)    ((b)[i] & UPPER_MASK) | ((b)[j] & LOWER_MASK)
+#define MAGIC(s)        (((s)&1)*MATRIX_A)
+
+unsigned long mt_random() {
+    unsigned long * b = mt_buffer;
+    int idx = mt_index;
+    unsigned long s;
+    int i;
+
+    if (idx == MT_LEN*sizeof(unsigned long))
+    {
+        idx = 0;
+        i = 0;
+        for (; i < MT_IB; i++) {
+            s = TWIST(b, i, i+1);
+            b[i] = b[i + MT_IA] ^ (s >> 1) ^ MAGIC(s);
+        }
+        for (; i < MT_LEN-1; i++) {
+            s = TWIST(b, i, i+1);
+            b[i] = b[i - MT_IB] ^ (s >> 1) ^ MAGIC(s);
+        }
+
+        s = TWIST(b, MT_LEN-1, 0);
+        b[MT_LEN-1] = b[MT_IA-1] ^ (s >> 1) ^ MAGIC(s);
+    }
+    mt_index = idx + sizeof(unsigned long);
+    return *(unsigned long *)((unsigned char *)b + idx);
+    /* Here there is a commented out block in MB's original program */
+}
+
 /* 
    NOTE: All SafeSock constructors initialize with this, so you can
    put any shared initialization code here.  -Derek Wright 3/12/99
@@ -57,9 +119,11 @@ void SafeSock::init()
 	// initialize msgID
 	if(_outMsgID.msgNo == 0) { // first object of this class
 		// [TODO:IPv6] Remove it!
-		_outMsgID.ip_addr = (unsigned long)my_ip_addr();
-		_outMsgID.pid = (short)getpid();
-		_outMsgID.time = (unsigned long)time(NULL);
+		//_outMsgID.ip_addr = (unsigned long)my_ip_addr();
+
+		_outMsgID.ip_addr = mt_random();
+		_outMsgID.pid = mt_random() % 65536; //(short)getpid();
+		_outMsgID.time = mt_random(); //(unsigned long)time(NULL);
 		_outMsgID.msgNo = (unsigned long)get_random_int();
 	}
 
@@ -512,14 +576,6 @@ int SafeSock::handle_incoming_packet()
 		in recvfrom, I'm going to predict the "fromlen" variable
 		the recvfrom uses is a size_t sized quantity since
 		size_t is how you count bytes right?  Stupid Solaris. */
-//	size_t len = sizeof(struct sockaddr_in);
-//#else
-//	SOCKET_ALTERNATE_LENGTH_TYPE len = sizeof(struct sockaddr_in);
-//#endif
-
-//	SOCKET_ALTERNATE_LENGTH_TYPE *fromlen = 
-//		(SOCKET_ALTERNATE_LENGTH_TYPE *)&len;
-
 	bool last;
 	int seqNo, length;
 	_condorMsgID mID;

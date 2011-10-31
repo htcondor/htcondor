@@ -46,7 +46,6 @@ private:
 	unsigned int		time_recving;
 	FILE	*log_file;
 
-	char	*subnet;
 	MyString pwd;
 
 	CollectorList * Collectors;

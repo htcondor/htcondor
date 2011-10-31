@@ -29,6 +29,7 @@ public:
 	~ReplicationEvent();
 	int Prio() { return _prio; }
 	void Prio(int x) { _prio = x; }
+	// [TODO:IPV6]
 	struct sockaddr_in ServerAddr() { return _server_addr; }
 	void ServerAddr(struct sockaddr_in s) { _server_addr = s; }
 	struct in_addr ShadowIP() { return _shadow_IP; }

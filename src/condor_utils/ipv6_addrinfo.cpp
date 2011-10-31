@@ -21,6 +21,7 @@
 #include "ipv6_addrinfo.h"
 #include "condor_netdb.h"
 #include "MyString.h"
+#include "condor_ipv6.h"
 
 addrinfo get_default_hint()
 {
@@ -33,6 +34,11 @@ addrinfo get_default_hint()
 
 	ret.ai_socktype = SOCK_STREAM;
 	ret.ai_protocol = IPPROTO_TCP;
+	if(_condor_is_ipv6_mode()) {
+		ret.ai_family = AF_UNSPEC;
+	} else {
+		ret.ai_family = AF_INET;
+	}
 	return ret;
 }
 

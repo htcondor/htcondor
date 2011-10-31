@@ -1,14 +1,14 @@
-/***************************************************************
+/*******char * ipport_to_string(const unsigned int ip, const unsigned short port)********************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,32 +17,22 @@
  *
  ***************************************************************/
 
+/* This file defines some of the obsolete functions from internet.h
+ * Except check point server, it should not be included!
+ */
 
-#ifndef CONDOR_NETDB_H
-#define CONDOR_NETDB_H
-
-#include "condor_common.h"
-#include "condor_socket_types.h"
+#ifndef INTERNET_OBSOLETE_H
+#define INTERNET_OBSOLETE_H
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-
-// do not use gethostbyname and gethostbyaddr
-// use resolve_hsotname, get_hostname instead
-
-//struct hostent *
-//condor_gethostbyname(const char *name);
-//
-//struct hostent *
-//condor_gethostbyaddr(const char *addr, SOCKET_LENGTH_TYPE len, int type);
-
-int
-condor_gethostname(char *name, size_t namelen);
+char * ipport_to_string(const unsigned int ip, const unsigned short port);
+struct sockaddr_in * getSockAddr(int sockfd);
 
 #if defined(__cplusplus)
 }
 #endif
 
-#endif
+#endif /* INTERNET_OBSOLETE_H */

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,18 +20,26 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
-// every func here will be obsolete.
+// use get_local_hostname() instead
 extern	char*	my_hostname( void );
+
+// use get_local_fqdn() instead
 extern	char*	my_full_hostname( void );
-extern	unsigned int	my_ip_addr( void );
-extern	struct in_addr*	my_sin_addr( void );
+
+// use get_local_ipaddr().to_ip_string() instead
 extern	char*	my_ip_string( void );
-extern  void	init_full_hostname( void );
-extern  void	init_ipaddr( int config_done );
+
+// following functions are deprecated
+//extern	unsigned int	my_ip_addr( void );
+//extern	struct in_addr*	my_sin_addr( void );
+//extern  void	init_full_hostname( void );
+//extern  void	init_ipaddr( int config_done );
 
 #include "stream.h"
 #include <string>
 #include <set>
+
+void init_network_interfaces(int config_done);
 
 // If the specified attribute name is recognized as an attribute used
 // to publish a daemon IP address, this function replaces any

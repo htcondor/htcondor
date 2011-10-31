@@ -68,9 +68,9 @@ bool makeGridAdHashKey (AdNameHashKey &, ClassAd *);
 bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *);
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
-// [OBSOLETE] do not use it. specification of sinful string is changed
+// [OBSOLETE] do not use it. specification of sinful string has been changed
 // over time but this function does not handle correctly.
-bool parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
+//bool parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
 
 class HashString : public MyString
 {

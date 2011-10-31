@@ -223,7 +223,7 @@ NewConnection( int id )
 	SyscallStream->end_of_message();
 
 		// Create the sinful string we want to connect back to.
-	sprintf( addr, "<%s:%d>", SyscallStream->peer_ip_str(), portno );
+	generate_sinful(addr, 128, SyscallStream->peer_ip_str(), portno );
 	dprintf( D_FULLDEBUG, "New Socket address: %s\n", addr );	
 	if( ! reli->connect(addr, 0) ) {
 		EXCEPT( "Can't connect to shadow at %s", addr );	
