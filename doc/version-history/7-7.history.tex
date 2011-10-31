@@ -40,7 +40,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A new configuration parameter JOB\_QUEUE\_LOG has been added.  The default
+value is path\_to\_spool/job\_queue.log.  This can now be set to another path, which is
+useful if you have a solid state drive which is big enough to hold the
+frequently written to job\_queue.log, but not big enough to hold the whole
+contents of the spool directory.
 
 \end{itemize}
 
