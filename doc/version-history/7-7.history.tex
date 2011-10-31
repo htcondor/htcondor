@@ -186,9 +186,12 @@ appearing in the \Condor{master} daemon log.
 This should no longer be the case.
 \Ticket{2594}
 
-\item Added logic to the \Condor{negotiator} daemon's Accountant
-initialization to ensure that table entries are always created for
-accounting groups on startup and reconfig.
+\item Fixed a bug introduced with hierarchical group quotas that
+failed to correctly initialize table entries.
+The fix adds logic to the accounting mechanism in the
+\Condor{negotiator} daemon,
+such that initialization occurs correctly 
+when starting up and upon reconfiguration.
 \Ticket{2509}
 
 \item When \Condor{advertise} is used with the \Opt{-tcp} option, this
