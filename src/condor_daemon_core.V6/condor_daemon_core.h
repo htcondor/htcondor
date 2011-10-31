@@ -1837,8 +1837,6 @@ class DaemonCore : public Service
 	int					_cookie_len, _cookie_len_old;
 	unsigned char		*_cookie_data, *_cookie_data_old;
 
-    struct in_addr      negotiator_sin_addr;    // used by Verify method
-
 #ifdef WIN32
     // the thread id of the thread running the main daemon core
     DWORD   dcmainThreadId;

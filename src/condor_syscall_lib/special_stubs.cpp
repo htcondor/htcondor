@@ -217,20 +217,6 @@ int vprintf_length(const char *format, va_list args) { return 0; }
 
 
 /*
-  We need our own definition of my_ip_addr(), which is used by
-  Sock::bind() to support Condor on machines with multiple network
-  interfaces.  This version, instead of looking in a config file for
-  magic parameters, looks at the existing syscall_sock and grabs the
-  IP address off of there.
-*/
-unsigned int
-my_ip_addr()
-{
-	return syscall_sock->get_ip_int();
-}
-
-
-/*
   We need our own definition of my_ip_string(), which is used by the
   utilities in internet.c (which in turn are used by CEDAR).  This
   version, instead of looking in a config file for magic parameters,
@@ -240,10 +226,9 @@ my_ip_addr()
 char*
 my_ip_string()
 {
-	struct in_addr addr;
-	memset( &addr, 0, sizeof(struct in_addr) );
-	addr.s_addr = syscall_sock->get_ip_int();
-	return inet_ntoa( addr );
+	static char ipbuf[INET6_ADDRSTRLEN] = {0,};
+	syscall_sock->my_addr().to_ip_string(ipbuf, sizeof(ipbuf));
+	return ipbuf;
 }
 
 std::vector<condor_sockaddr> resolve_hostname(const char* hostname) {

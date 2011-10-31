@@ -835,9 +835,9 @@ sub CheckTimedRegistrations
 	# when we started the test and submited it. This is the time 
 	# at all other regsitrations have to be registered by....
 
-    if( defined $test{$handle}{"RegisterTimed"} )
+    if( exists $test{$handle} and defined $test{$handle}{"RegisterTimed"} )
     {
-		debug( "Found a timer to regsiter.......\n",4);
+		debug( "Found a timer to register.......\n",4);
 		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
     }
 }

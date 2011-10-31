@@ -22,8 +22,7 @@
 
 #include "net_string_list.h"
 #include "condor_debug.h"
-#include "internet.h"
-
+#include "condor_netaddr.h"
 
 NetStringList::NetStringList(const char *s, const char *delim ) 
 	: StringList(s,delim)
@@ -34,8 +33,8 @@ NetStringList::NetStringList(const char *s, const char *delim )
 
 // string_withnetmask() handles the following four forms:
 //
-// 192.168.10.1
 // 192.168.*
+// 192.168.10.1
 // 192.168.0.0/24 
 // 192.168.0.0/255.255.255.0
 //
@@ -47,38 +46,25 @@ NetStringList::NetStringList(const char *s, const char *delim )
 bool
 NetStringList::find_matches_withnetwork(const char *ip_address,StringList *matches)
 {
-	char *x;
-	struct in_addr test_ip, base_ip, mask;
-	
-	// fill in test_ip
-	if (!is_ipaddr(ip_address, &test_ip)) {
-		// not even a valid IP
+	condor_sockaddr target;
+	if (!target.from_ip_string(ip_address))
 		return false;
-	}
 
 	m_strings.Rewind();
-	while ( (x = m_strings.Next()) ) {
-		if (is_valid_network(x, &base_ip, &mask)) {
-			// test_ip, base_ip, and mask are all filled
+	while (char* x = m_strings.Next()) {
+		condor_netaddr netaddr;
+		if (!netaddr.from_net_string(x))
+			continue;
 
-			// logic here:
-			// all bits specified in the mask must be equal in the
-			// test_ip and base_ip.  so, AND both of them with the mask,
-			// and then compare them.
-			if ((base_ip.s_addr & mask.s_addr) == (test_ip.s_addr & mask.s_addr)) {
-				if( matches ) {
-					matches->append( x );
-				}
-				else {
-					return true;
-				}
-			}
+		if (netaddr.match(target)) {
+			if (matches)
+				matches->append(x);
+			else
+				return true;
 		}
 	}
-
 	if( matches ) {
 		return !matches->isEmpty();
 	}
 	return false;
 }
-

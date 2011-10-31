@@ -29,9 +29,21 @@
 #include "unit_test_utils.h"
 #include "emit.h"
 
+#include "condor_sockaddr.h"
+
+// IPV6_REMOVED - IPv6 changes obsoleted these interfaces.  However, 
+// these tests probably should be updated to the new interfaces,
+// so they are being kept here for nwo.
+#ifdef IPV6_REMOVED
 static bool test_normal_case(void);
+#endif
 
 bool FTEST_sin_to_string(void) {
+	const char* h = "<[fe80::862b:2bff:fe98:65f2]:9618>";
+	condor_sockaddr addr;
+	addr.from_sinful(h);
+
+
 		// beginning junk for getPortFromAddr(() {
 	emit_function("sin_to_string(sockaddr_in)");
 	emit_comment("Converts a sockaddr_in to a sinful string.");
@@ -39,12 +51,15 @@ bool FTEST_sin_to_string(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
+#ifdef IPV6_REMOVED
 	driver.register_function(test_normal_case);
+#endif
 	
 		// run the tests
 	return driver.do_all_functions();
 }
 
+#ifdef IPV6_REMOVED
 static bool test_normal_case() {
 	emit_test("Is normal input converted correctly?");
 #ifdef WIN32
@@ -82,3 +97,4 @@ static bool test_normal_case() {
 	free(expected);
 	PASS;
 }
+#endif

@@ -46,7 +46,7 @@ public:
 	WindowsNetworkAdapter () throw ();
 
 	/// Constructor
-	WindowsNetworkAdapter ( LPCSTR ip_addr, unsigned int ) throw ();
+	WindowsNetworkAdapter ( const condor_sockaddr & ipaddr) throw ();
 
 	/// Alternate
 	WindowsNetworkAdapter ( LPCSTR description ) throw ();
@@ -69,7 +69,7 @@ public:
     /** Returns the adapter's IP address as a string
 		@return the adapter's IP address
 	*/
-	virtual unsigned ipAddress () const;
+	virtual condor_sockaddr ipAddress () const;
 
     /** Returns the adapter's hardware address
 		@return a string representation of the subnet mask
@@ -135,8 +135,8 @@ private:
 	PBYTE getRegistryProperty (
 		IN DWORD registry_property,
 		IN PRE_PROCESS_REISTRY_VALUE preprocess = NULL ) const;
-	
-	
+
+
 };
 
 #define NETWORK_ADAPTER_TYPE_DEFINED	1

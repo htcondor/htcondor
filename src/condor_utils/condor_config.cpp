@@ -802,17 +802,21 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		free( config_source );
 	}
 
+	// init_ipaddr and init_full_hostname is now obsolete
+	init_network_interfaces(TRUE);
+
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
 		// is set, we need to re-initialize my_full_hostname().
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
-		init_full_hostname();
+		//init_full_hostname();
 		init_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
 		// parameter at this point, if it's set.
-	init_ipaddr( TRUE );
+	//init_ipaddr( TRUE );
+
 
 		// The IPv6 code currently caches some results that depend
 		// on configuration settings such as NETWORK_INTERFACE.

@@ -2,13 +2,13 @@
 *
 * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you
 * may not use this file except in compliance with the License.  You may
 * obtain a copy of the License at
-* 
+*
 *    http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,18 +44,18 @@ class UnixNetworkAdapter : public NetworkAdapterBase
 
 public:
 
-	/** @name Instantiation. 
+	/** @name Instantiation.
 	*/
 	//@{
 
 	/// Constructor
-	UnixNetworkAdapter ( unsigned int ip_addr ) throw ();
+	UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) throw ();
 
 	/// Constructor
 	UnixNetworkAdapter ( const char *name ) throw ();
 
 	/// Destructor
-	virtual ~UnixNetworkAdapter ( void ) throw (); 
+	virtual ~UnixNetworkAdapter ( void ) throw ();
 
 
 	/** @name Adapter properties.
@@ -69,7 +69,7 @@ public:
 	virtual bool initialize( void );
 
 	/** Returns the adapter's hardware address
-		@return a string representation of the addapter's hardware 
+		@return a string representation of the addapter's hardware
         address
 	*/
 	const char *hardwareAddress (void) const { return m_hw_addr_str; };
@@ -77,7 +77,7 @@ public:
     /** Returns the adapter's IP address as a string
 		@return the addapter's IP address
 	*/
-	virtual unsigned ipAddress (void) const { return m_ip_addr; };
+	virtual condor_sockaddr ipAddress (void) const { return m_ip_addr; };
 
     /** Returns the adapter's subnet mask
 		@return a string representation of the subnet mask
@@ -94,14 +94,14 @@ public:
 	*/
 	const char *interfaceName( void ) const { return m_if_name; };
 
-	
+
 	//@}
 
 protected:
 	bool				 m_found;
 
-	unsigned			 m_ip_addr;
-    struct in_addr		 m_in_addr;
+	condor_sockaddr		 m_ip_addr;
+    //struct in_addr		 m_in_addr;
 	char				*m_if_name;
 
 	// HW address & string rep of it
@@ -111,23 +111,23 @@ protected:
 	// Network mask
     struct sockaddr		 m_netmask;
     char			 	 m_netmask_str[32];
-	
+
 	// Very UNIX specific definitions
 
 	// Internal methods
-	virtual bool findAdapter( unsigned int ip_addr );
+	virtual bool findAdapter( const condor_sockaddr& ip_addr );
 	virtual bool findAdapter( const char *if_name );
 	virtual bool getAdapterInfo( void );
 	virtual bool detectWOL( void );
 
 	void setName( const char * );
-	void setIpAddr( unsigned int ip_addr );
+	void setIpAddr( const condor_sockaddr& ip_addr );
 
 	void resetName( bool init = false );
 	void resetIpAddr( bool init = false );
 	void resetHwAddr( bool init = false );
 	void resetNetMask( bool init = false );
-	
+
 #  if defined(HAVE_STRUCT_IFREQ)
 	void getName( struct ifreq &ifr, const char *name = NULL ) const;
 
