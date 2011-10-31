@@ -177,8 +177,13 @@ Its previous behavior had the \Condor{procd} continue to execute
 in a useless mode of operation, unable to receive any communication.
 \Ticket{2500}
 
-\item Lines like ``ProcAPI sanity failure on pid 1317, age = -1901476270''
-should no longer appear in the \Condor{master} daemon log on Mac OS X.
+\item For Mac OS X platforms, 
+improper detection of a non existent process led to lines such as
+\begin{verbatim}
+ProcAPI sanity failure on pid 1317, age = -1901476270
+\end{verbatim}
+appearing in the \Condor{master} daemon log.
+This should no longer be the case.
 \Ticket{2594}
 
 \item Added logic to the \Condor{negotiator} daemon's Accountant
