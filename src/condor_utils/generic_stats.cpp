@@ -418,7 +418,7 @@ template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlot
    recent = buf.Sum();
 }
 
-template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int flags) const
+template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int) const
 {
    MyString str;
    if (this->value.cItems <= 0) {

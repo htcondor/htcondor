@@ -29,6 +29,7 @@
 #include "sock.h"
 #include "condor_secman.h"
 #include "ipv6_hostname.h"
+#include "condor_netaddr.h"
 
 // Externs to Globals
 
@@ -475,7 +476,9 @@ static void
 ExpandHostAddresses(char const *host,StringList *list)
 {
 	list->append(host);
-	if( strchr(host,'*') || strchr(host,'/') || is_valid_network(host,NULL,NULL) ) {
+	condor_netaddr netaddr;
+
+	if (strchr(host,'*') || strchr(host,'/') || netaddr.from_net_string(host)) {
 		return; // not a valid hostname, so don't bother trying to look it up
 	}
 
@@ -593,15 +596,18 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 		} else {
 			*user = strdup("*");
 
+			// [IPV6] WHY DOES IT LOOK FOR COLON?
+			// COLON IS ESSENTIAL PART OF IPV6 ADDRESS
 			// look for a colon
-			colon = strchr(permbuf, ':');
-			if (colon) {
-				// colon points into permbuf.  permbuf is a local
-				// copy of the data made above, so we can modify it.
-				// drop a null in place of the colon so everything
-				// from the colon and beyond is gone.
-				*colon = 0;
-			}
+
+//			colon = strchr(permbuf, ':');
+//			if (colon) {
+//				// colon points into permbuf.  permbuf is a local
+//				// copy of the data made above, so we can modify it.
+//				// drop a null in place of the colon so everything
+//				// from the colon and beyond is gone.
+//				*colon = 0;
+//			}
 
 			// now dup it
 			*host = strdup(permbuf);
@@ -623,7 +629,9 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 				*user = strdup(permbuf);
 				*host = strdup(slash0);
 			} else {
-				if (is_valid_network(permbuf, NULL, NULL)) {
+				condor_netaddr netaddr;
+				if (netaddr.from_net_string(permbuf)) {
+				//if (is_valid_network(permbuf, NULL, NULL)) {
 					*user = strdup("*");
 					*host = strdup(permbuf);
 				} else {
@@ -814,7 +822,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			hostnames = get_hostname_with_alias(addr);
 		}
 
-		for (int i = 0; i < hostnames.size(); ++i) {
+		for (unsigned int i = 0; i < hostnames.size(); ++i) {
 			thehost = hostnames[i].Value();
 			peer_description.append_to_list(thehost);
 
@@ -892,7 +900,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 						deny_reason->sprintf(
 							"%s authorization policy contains no matching "
 							"ALLOW entry for this request"
-							"; identifiers used for this host: %s, hostname size = %d, "
+							"; identifiers used for this host: %s, hostname size = %lu, "
 							"original ip address = %s",
 							PermString(perm),
 							peer_description.Value(),

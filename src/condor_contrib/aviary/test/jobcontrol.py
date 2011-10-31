@@ -17,14 +17,11 @@
 #
 
 # uses Suds - https://fedorahosted.org/suds/
-import logging
 from suds import *
 from suds.client import Client
-from sys import exit, argv, stdin
-import time
-from aviary.https import *
-from aviary.util import *
+from sys import exit
 from optparse import OptionParser
+from aviary.util import *
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
@@ -46,19 +43,9 @@ if opts.cproc is None:
 	parser.print_help()
 	exit(1)
 
-if "https://" in opts.url:
-	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
-else:
-	client = Client(wsdl)
-
+client = create_suds_client(opts,wsdl,None)
 opts.url += opts.cmd
 client.set_options(location=opts.url)
-
-# enable to see service schema
-if opts.verbose:
-	logging.basicConfig(level=logging.INFO)
-	logging.getLogger('suds.client').setLevel(logging.DEBUG)
-	print client
 
 # set up our JobID
 jobId = client.factory.create('ns0:JobID')

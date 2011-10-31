@@ -750,14 +750,12 @@ static char *do_common_dir_cmd_tasks(configuration *c,
                                      int is_chown_dir)
 {
     const char *pathname;
-    uid_t uid;
     int r;
     char *dir_parent;
     char *dir_name;
 
     process_dir_cmd_config(dir_cmd_conf, is_rmdir, is_chown_dir);
 
-    uid = dir_cmd_conf->user_uid;
     pathname = dir_cmd_conf->user_dir;
 
     dir_parent = strdup(pathname);

@@ -13,6 +13,125 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-5}Version 7.7.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.5 not yet released.
+%\item Condor version 7.7.5 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item \Condor{q} \Opt{-run} now displays a job's EC2VirtualMachineName
+  under the HOST(s) column for running EC2 jobs.
+\Ticket{2599}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item A new configuration parameter JOB\_QUEUE\_LOG has been added.  The default
+value is path\_to\_spool/job\_queue.log.  This can now be set to another path, which is
+useful if you have a solid state drive which is big enough to hold the
+frequently written to job\_queue.log, but not big enough to hold the whole
+contents of the spool directory.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Communication errors were not always correctly handled when
+fetching results of a query when using the \Opt{-stream} option to
+\Condor{q}.  This problem was introduced in 7.7.0.
+\Ticket{2601}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-4}Version 7.7.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.4 not yet released.
+%\item Condor version 7.7.4 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-7-3}Version 7.7.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -177,9 +296,21 @@ Its previous behavior had the \Condor{procd} continue to execute
 in a useless mode of operation, unable to receive any communication.
 \Ticket{2500}
 
-\item Added logic to the \Condor{negotiator} daemon's Accountant
-initialization to ensure that table entries are always created for
-accounting groups on startup and reconfig.
+\item For Mac OS X platforms, 
+improper detection of a non existent process led to lines such as
+\begin{verbatim}
+ProcAPI sanity failure on pid 1317, age = -1901476270
+\end{verbatim}
+appearing in the \Condor{master} daemon log.
+This should no longer be the case.
+\Ticket{2594}
+
+\item Fixed a bug introduced with hierarchical group quotas that
+failed to correctly initialize table entries.
+The fix adds logic to the accounting mechanism in the
+\Condor{negotiator} daemon,
+such that initialization occurs correctly 
+when starting up and upon reconfiguration.
 \Ticket{2509}
 
 \item When \Condor{advertise} is used with the \Opt{-tcp} option, this
@@ -190,20 +321,22 @@ DaemonCore: Can't receive command request from IP (perhaps a timeout?)
 \end{verbatim}
 \Ticket{2483}
 
-\item \MacroNI{NETWORK\_INTERFACE} did not have any effect.  This bug
-was introduced in 7.7.0.
+\item Fixed a bug introduced in Condor version 7.7.0,
+in which the setting of \MacroNI{NETWORK\_INTERFACE} did not have any effect.
 \Ticket{2513}
 
 \item \Prog{glexec} now also works when Condor is running as root.
 \Ticket{2503}
 
-\item \Condor{master} now successfully advertises itself in a personal
-condor installation when the collector is configured to use port 0
+\item The \Condor{master} daemon now successfully advertises itself in 
+a Personal Condor installation,
+when the \Condor{collector} is configured to use port 0
 and to operate through a shared port.
 \Ticket{2555}
 
-\item Since 7.7.1, \MacroNI{WANT\_HOLD} did not work unless
-\MacroNI{WANT\_HOLD\_SUBCODE} was set to something non-zero.
+\item Since Condor version 7.7.1, 
+the configuration variable \Macro{WANT\_HOLD} did not work,
+unless \Macro{WANT\_HOLD\_SUBCODE} was set to a non-zero value.
 \Ticket{2565}
 
 \item Since Condor version 7.7.2, there was a rare condition that could cause

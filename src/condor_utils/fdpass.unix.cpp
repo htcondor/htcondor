@@ -45,7 +45,7 @@ fdpass_send(int uds_fd, int fd)
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
-	*(int*)CMSG_DATA(cmsg) = fd;
+	memcpy(CMSG_DATA(cmsg), &fd, sizeof(int));
 
 	ssize_t bytes = sendmsg(uds_fd, &msg, 0);
 	if (bytes == -1) {
@@ -113,7 +113,8 @@ fdpass_recv(int uds_fd)
 	}
 
 	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
-	int fd = *(int*)CMSG_DATA(cmsg);
+	int fd;
+	memcpy(&fd, CMSG_DATA(cmsg), sizeof(int));
 
 	free(buf);
 	return fd;

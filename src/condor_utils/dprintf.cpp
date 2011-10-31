@@ -383,7 +383,6 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #endif
 	int saved_errno;
 	priv_state	priv;
-	int debug_level;
 	FILE *debug_file_ptr = NULL;
 	std::vector<DebugFileInfo>::iterator it;
 
@@ -893,7 +892,6 @@ void debug_close_file(int debug_level)
 {
 	FILE *debug_file_ptr = NULL;
 	std::vector<DebugFileInfo>::iterator it;
-	bool level_exists = false;
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
@@ -904,7 +902,6 @@ void debug_close_file(int debug_level)
 		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		debug_file_ptr = (*it).debugFP;
-		level_exists = true;
 		break;
 	}
 
@@ -924,7 +921,6 @@ void debug_close_all_files()
 {
 	FILE *debug_file_ptr = NULL;
 	std::vector<DebugFileInfo>::iterator it;
-	bool level_exists = false;
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
@@ -947,7 +943,6 @@ debug_unlock(int debug_level)
 	int result = 0;
 
 	FILE *debug_file_ptr = NULL;
-	bool level_exists = false;
 	std::vector<DebugFileInfo>::iterator it;
 
 	if(log_keep_open)
@@ -962,7 +957,6 @@ debug_unlock(int debug_level)
 		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		debug_file_ptr = (*it).debugFP;
-		level_exists = true;
 	}
 
 	if( DebugUnlockBroken ) {
@@ -1139,7 +1133,6 @@ preserve_log_file(int debug_level)
 void
 _condor_fd_panic( int line, const char* file )
 {
-	priv_state	priv;
 	int i;
 	char msg_buf[DPRINTF_ERR_MAX];
 	char panic_msg[DPRINTF_ERR_MAX];
@@ -1147,9 +1140,9 @@ _condor_fd_panic( int line, const char* file )
 	std::vector<DebugFileInfo>::iterator it;
 	std::string filePath;
 	bool fileExists = false;
-	FILE* debug_file_ptr;
+	FILE* debug_file_ptr=0;
 
-	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+	_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	snprintf( panic_msg, sizeof(panic_msg),
 			 "**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s",

@@ -37,13 +37,13 @@ MultiProfile::
 }
 
 bool MultiProfile::
-AddProfile( Profile &c )
+AddProfile( Profile & )
 {
 	return true;
 }
 
 bool MultiProfile::
-RemoveProfile( Profile &c )
+RemoveProfile( Profile & )
 {
 	return true;
 }

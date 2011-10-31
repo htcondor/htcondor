@@ -42,8 +42,8 @@ extern "C"
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 ssize_t multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 														   size_t n_bytes );
-int create_socket(struct sockaddr_in *sa_in, int listen_count);
-int create_socket_url(char *url_buf, int listen_count);
+//int create_socket(struct sockaddr_in *sa_in, int listen_count);
+//int create_socket_url(char *url_buf, int listen_count);
 int wait_for_connections(int sock_fd, int count, int *return_list);
 
 
@@ -181,48 +181,50 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 }
 
 
-int
-create_socket(struct sockaddr_in *sa_in, int listen_count)
-{
-	int             socket_fd;
-    struct sockaddr_in *tmp;
-	
-	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (socket_fd < 0) {
-		fprintf(stderr, "condor_exec: unable to create socket\n");
-		return -1;
-	}
-	
-	/* FALSE means this is an incoming connection */
-	if( ! _condor_local_bind(FALSE, socket_fd) ) {
-		close( socket_fd );
-		fprintf(stderr, "condor_exec: bind failed\n");
-		return -1;
-	}
-	
-	listen(socket_fd, listen_count);
+//int
+//create_socket(struct sockaddr_in *sa_in, int listen_count)
+//{
+//	int             socket_fd;
+//    struct sockaddr_in *tmp;
+//
+//	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+//	if (socket_fd < 0) {
+//		fprintf(stderr, "condor_exec: unable to create socket\n");
+//		return -1;
+//	}
+//
+//	/* FALSE means this is an incoming connection */
+//	if( ! _condor_local_bind(FALSE, socket_fd) ) {
+//		close( socket_fd );
+//		fprintf(stderr, "condor_exec: bind failed\n");
+//		return -1;
+//	}
+//
+//	listen(socket_fd, listen_count);
+//
+//    tmp = getSockAddr(socket_fd);
+//    if (tmp) {
+//        memcpy(sa_in, tmp, sizeof(struct sockaddr_in));
+//    }
+//
+//	return socket_fd;
+//}
 
-    tmp = getSockAddr(socket_fd);
-    if (tmp) {
-        memcpy(sa_in, tmp, sizeof(struct sockaddr_in));
-    }
 
-	return socket_fd;
-}
+// nobody uses create_socket_url() and yet IPv6 incompatible
 
-
-int
-create_socket_url(char *url_buf, int listen_count)
-{
-	struct sockaddr_in	sa_in;
-	int		sock_fd;
-
-	sock_fd = create_socket(&sa_in, listen_count);
-	if (sock_fd >= 0) {
-		sprintf(url_buf, "cbstp:%s", sin_to_string(&sa_in));
-	}
-	return sock_fd;
-}
+//int
+//create_socket_url(char *url_buf, int listen_count)
+//{
+//	struct sockaddr_in	sa_in;
+//	int		sock_fd;
+//
+//	sock_fd = create_socket(&sa_in, listen_count);
+//	if (sock_fd >= 0) {
+//		sprintf(url_buf, "cbstp:%s", sin_to_string(&sa_in));
+//	}
+//	return sock_fd;
+//}
 
 
 int

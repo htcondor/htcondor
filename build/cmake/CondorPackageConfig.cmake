@@ -201,7 +201,6 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
     
 	set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
-	set (CPACK_WIX_BITMAP_FOLDER Bitmaps)
 	set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
 
 	#setup all the merge module settings.
@@ -209,7 +208,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 		set (VC_CRT_MSM Microsoft_VC90_CRT_x86.msm)
 		find_file( CPACK_VC_POLICY_MODULE 
 			policy_9_0_Microsoft_VC90_CRT_x86.msm
-               		"C:/Program Files/Common Files/Merge #Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+               		"C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
 		set (WIX_MERGE_MODLES "<Merge Id=\"VCPolicy\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_POLICY_MODULE}\"/>")
 		set (WIX_MERGE_REFS "<MergeRef Id=\"VCPolicy\"/>")
 	elseif(MSVC10)

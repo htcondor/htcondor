@@ -83,7 +83,7 @@ int FileInformation::RemoveFileInfo(file_info_node* d_ptr)
 }
 
 
-file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
+file_info_node* FileInformation::AddFileInfo(const condor_sockaddr& machine_IP,
 					     const char*    owner_name,
 					     const char*    file_name,
 					     u_lint         file_size,
@@ -91,7 +91,7 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
 					     time_t*        last_modified_ptr)
 {
   file_info_node* n;
-  char*           temp_name;
+  char           temp_name[INET6_ADDRSTRLEN];
 
   n = new file_info_node;
   if (n == NULL)
@@ -100,8 +100,8 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
 			  "ERROR: unable to allocate memory for the file information\n");
       exit(DYNAMIC_ALLOCATION);
     }
-  memcpy((char*) &n->data.machine_IP, &machine_IP, sizeof(struct in_addr));
-  temp_name = GetIPName(machine_IP);
+  n->data.machine_IP = machine_IP;
+  machine_IP.to_ip_string(temp_name, sizeof(temp_name));
   strncpy(n->data.machine_IP_name, temp_name, MAX_MACHINE_NAME_LENGTH);
   strncpy(n->data.owner_name, owner_name, MAX_NAME_LENGTH);
   strncpy(n->data.file_name, file_name, MAX_CONDOR_FILENAME_LENGTH);
@@ -262,7 +262,7 @@ void FileInformation::WriteFileInfoToDisk()
     {
       if ((fin_ptr->data.state == ON_SERVER) || 
 	  (fin_ptr->data.state == XMITTING))
-	outfile << fin_ptr->data.machine_IP.s_addr << endl
+	outfile << fin_ptr->data.machine_IP.to_sin().sin_addr.s_addr << endl
 	        << fin_ptr->data.owner_name << endl
 		<< fin_ptr->data.file_name << endl
                 << fin_ptr->data.size << endl

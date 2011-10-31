@@ -28,7 +28,7 @@
 #include <hash_map>
 #define classad_hash_map stdext::hash_map
 #else
-#ifdef HAVE_TR1_UNORDERED_MAP
+#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 2)
 #include <tr1/unordered_map>
 #define classad_hash_map std::tr1::unordered_map
 #else

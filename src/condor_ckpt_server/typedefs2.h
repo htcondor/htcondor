@@ -23,6 +23,7 @@
 #include "constants2.h"
 #include <time.h>
 #include "sig_install.h"
+#include "condor_sockaddr.h"
 
 typedef unsigned long int u_lint;
 
@@ -77,7 +78,7 @@ typedef struct file_state_info
 
 typedef struct file_info
 {
-  struct in_addr machine_IP;
+  condor_sockaddr machine_IP;
   char           machine_IP_name[MAX_MACHINE_NAME_LENGTH];
   char           owner_name[MAX_NAME_LENGTH];
   char           file_name[MAX_CONDOR_FILENAME_LENGTH];

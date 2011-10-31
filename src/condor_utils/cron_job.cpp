@@ -473,7 +473,7 @@ CronJob::ProcessOutputQueue( void )
 			m_num_outputs++;			// Increment # of valid output blocks
 		}
 	}
-	return 0;
+	return status;
 }
 
 // Start a job

@@ -405,6 +405,8 @@ KillFamily::takesnapshot()
 					}
 				}
 			}
+#else
+			if (found_it) {} // To get rid of set-but-not-used warning
 #endif	// of ifdef WIN32
 
 			// keep a running tally of the cpu usage for pids

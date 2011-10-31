@@ -261,7 +261,7 @@ ReliSock::put_line_raw( char *buffer )
 	int length = strlen(buffer);
 	result = put_bytes_raw(buffer,length);
 	if(result!=length) return -1;
-	result = put_bytes_raw("\n",1);
+	result = put_bytes_raw("\n", 1);
 	if(result!=1) return -1;
 	return length;
 }
@@ -287,7 +287,7 @@ ReliSock::get_line_raw( char *buffer, int length )
 }
 
 int 
-ReliSock::put_bytes_raw( char *buffer, int length )
+ReliSock::put_bytes_raw( const char *buffer, int length )
 {
 	return condor_write(peer_description(),_sock,buffer,length,_timeout);
 }
@@ -523,7 +523,7 @@ const char * ReliSock :: isIncomingDataMD5ed()
 int 
 ReliSock::put_bytes(const void *data, int sz)
 {
-	int		tw, header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
+	int		tw=0, header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	int		nw, l_out;
         unsigned char * dta = NULL;
 

@@ -1136,7 +1136,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 						tmp);
 			}
 			else {
-				private_sinful_string.sprintf("<%s:%d>", private_ip.c_str(), port);
+				private_sinful_string = generate_sinful(private_ip.c_str(), port);
 				sinful_private = strdup(private_sinful_string.Value());
 			}
 			free(tmp);
@@ -2944,6 +2944,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
+		strcpy(ipstr, "(unknown)");
 		addr.to_ip_string(ipstr, sizeof(ipstr));
 	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 
@@ -7395,7 +7396,11 @@ int DaemonCore::Create_Process(
 		//  GCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
-	inheritbuf += InfoCommandSinfulStringMyself(true);
+	{
+		MyString mysin = InfoCommandSinfulStringMyself(true);
+		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		inheritbuf += mysin;
+	}
 
 	if ( sock_inherit_list ) {
 		inherit_handles = TRUE;
@@ -9320,10 +9325,6 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
 	if( dc_rsock ) {
-			//const unsigned int my_ip = dc_rsock->get_ip_int();
-			//const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
-
-			//if( my_ip == loopback_ip ) {
 		if ( dc_rsock->my_addr().is_loopback() ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );

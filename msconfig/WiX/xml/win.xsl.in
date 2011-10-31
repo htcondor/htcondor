@@ -336,8 +336,8 @@
         <UIRef Id="WixUI_ErrorProgressText" />
 
         <!-- Update  -->
-        <WixVariable Id="WixUIBannerBmp" Overridable="yes" Value="@CPACK_WIX_BITMAP_FOLDER@/bannrbmp.bmp"/>
-        <WixVariable Id="WixUIDialogBmp" Overridable="yes" Value="@CPACK_WIX_BITMAP_FOLDER@/dlgbmp.bmp"/>
+        <WixVariable Id="WixUIBannerBmp" Overridable="yes" Value="Bitmaps/bannrbmp.bmp"/>
+        <WixVariable Id="WixUIDialogBmp" Overridable="yes" Value="Bitmaps/dlgbmp.bmp"/>
 
       </Product>
 

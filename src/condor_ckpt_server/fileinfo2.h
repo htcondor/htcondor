@@ -37,7 +37,7 @@ class FileInformation
     ~FileInformation();
     void DeleteFileInfo();
     int RemoveFileInfo(file_info_node* d_ptr);
-    file_info_node* AddFileInfo(struct in_addr machine_IP,
+    file_info_node* AddFileInfo(const condor_sockaddr& machine_IP,
 				const char*    owner_name,
 				const char*    file_name,
 				u_lint         file_size,

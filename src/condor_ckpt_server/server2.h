@@ -57,6 +57,7 @@ class Server
     int            num_store_xfers;
     int            num_restore_xfers;
 	int            num_replicate_xfers;
+	// [TODO:IPV6]
     struct in_addr server_addr;
 	struct sockaddr_in peer_addr_list[MAX_PEERS];
 	int            num_peers;

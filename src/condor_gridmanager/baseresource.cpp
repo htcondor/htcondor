@@ -726,7 +726,7 @@ BaseResource::BatchStatusResult BaseResource::StartBatchStatus()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	EXCEPT("Internal consistency error: BaseResource::StartBatchStatus() called.");
 	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
@@ -736,7 +736,7 @@ BaseResource::BatchStatusResult BaseResource::FinishBatchStatus()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	EXCEPT("Internal consistency error: BaseResource::FinishBatchStatus() called.");
 	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
@@ -746,7 +746,7 @@ GahpClient * BaseResource::BatchGahp()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
+	EXCEPT("Internal consistency error: BaseResource::BatchGahp() called.");
 	return 0;
 }
 

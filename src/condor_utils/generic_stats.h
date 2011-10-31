@@ -296,7 +296,8 @@ public:
       if ( ! pbuf) SetSize(2);
 
       // advance the head item pointer
-      ixHead = (++ixHead) % cMax;
+      ++ixHead;
+      ixHead %= cMax;
 
       // if we have room to add an item without overwriting one
       // then also grow the counter.

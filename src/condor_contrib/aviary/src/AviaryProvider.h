@@ -45,7 +45,7 @@ namespace transport {
     // based on condor config only
     class AviaryProviderFactory {
     public:
-        static AviaryProvider* create(const std::string& name);
+        static AviaryProvider* create(const std::string& log_file);
 
     private:
         AviaryProviderFactory();

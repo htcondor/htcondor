@@ -24,6 +24,21 @@ from subprocess import Popen, PIPE
 from aviary.https import *
 from aviary.util import *
 
+#NOTE: ensure this DAG script directory is writable by the user
+
+plugins = []
+# NOTE: Suds has had little support for adding attributes
+# to the request body until 0.4.1
+# uncomment the following to enable the allowOverrides attribute
+
+#from suds.plugin import MessagePlugin
+#from suds.sax.attribute import Attribute
+#class OverridesPlugin(MessagePlugin):
+    #def marshalled(self, context):
+        #sj_body = context.envelope.getChild('Body')[0]
+        #sj_body.attributes.append(Attribute("allowOverrides", "true"))
+#plugins=[OverridesPlugin()]
+
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 
 exe_file = Popen('which condor_dagman', shell=True, stdout=PIPE).stdout.readline().rstrip('\n')
@@ -37,7 +52,7 @@ parser.add_option('--d','--dag', action='store', dest='dag', help='full path to 
 if opts.dag is None:
 	print "Path of dag submit file must be supplied\n"
 	parser.print_help()
-	exit(1)
+	sys.exit(1)
 
 dag = opts.dag
 url = opts.url
@@ -47,11 +62,7 @@ exe_args = '-f -l . -Debug 3 -AutoRescue 1 -DoRescueFrom 0 -Allowversionmismatch
 
 uid = pwd.getpwuid(os.getuid())[0] or "nobody"
 
-if "https://" in url:
-	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
-else:
-	client = Client(wsdl)
-
+client = create_suds_client(opts,wsdl,plugins)
 client.set_options(location=url)
 
 # closure to build out our various attribute types
@@ -92,9 +103,6 @@ if verbose:
 	print 'Dag file=',file_name
 	print vars
 	print extras
-	logging.basicConfig(level=logging.INFO)
-	logging.getLogger('suds.client').setLevel(logging.DEBUG)
-	print client
 
 try:
 	result = client.service.submitJob(

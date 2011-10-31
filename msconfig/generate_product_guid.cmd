@@ -1,12 +1,17 @@
 @rem = 'use perl to generate a GUID from a MD5 string hash
-@perl "%~sf0" %*
+@setlocal
+@for %%I in (perl.exe) do @set $_=%%~$PATH:I
+@if "%$_%"=="" @for /f "tokens=3 skip=2 usebackq" %%I in (`reg query HKLM\Software\Perl /v BinDir 2^>NUL`) do @set $_=%%~sfI 
+@if "%$_%"=="" @for /f "tokens=3 skip=2 usebackq" %%I in (`reg query HKLM\Software\Wow6432Node\Perl /v BinDir 2^>NUL`) do @set $_=%%~sfI 
+@if "%$_%"=="" @set $_=perl.exe 
+@%$_% -- "%~f0" %*
 @goto :EOF ';
 #!/user/bin/env perl
 use strict;
 use warnings;
 use File::Basename;
 my $dir=dirname($0);
-require "$dir\\UUIDTiny.pm";
+require "$dir/UUIDTiny.pm";
 my $guid_v3 = 3; # MD5
 my $guid_v5 = 5; # SHA1 (perl support may not be available)
 

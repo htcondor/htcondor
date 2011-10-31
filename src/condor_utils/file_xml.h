@@ -47,7 +47,7 @@ private:
 public:
 	
 	FILEXML(bool use_xml_logfile = false) : FILESQL(use_xml_logfile) { }
-	FILEXML(const char *outputfilename,int flags=O_WRONLY|O_CREAT|O_APPEND, bool use_xml_logfile = false) : FILESQL(outfilename, flags, use_xml_logfile) { }
+	FILEXML(const char *ofilename,int flags=O_WRONLY|O_CREAT|O_APPEND, bool use_xml_logfile = false) : FILESQL(ofilename, flags, use_xml_logfile) { }
 	virtual ~FILEXML() {}
 
 /*
