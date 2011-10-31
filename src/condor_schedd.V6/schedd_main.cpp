@@ -127,7 +127,15 @@ main_init(int argc, char* argv[])
 	scheduler.Register();
 
 		// Initialize the job queue
-	job_queue_name.sprintf( "%s/job_queue.log", Spool);
+	char *job_queue_param_name = param("JOB_QUEUE_LOG");
+
+	if (job_queue_param_name == NULL) {
+		// the default place for the job_queue.log is in spool
+		job_queue_name.sprintf( "%s/job_queue.log", Spool);
+	} else {
+		job_queue_name = job_queue_param_name; // convert char * to MyString
+		free(job_queue_param_name);
+	}
 
 		// Make a backup of the job queue?
 	if ( param_boolean_crufty("SCHEDD_BACKUP_SPOOL", false) ) {
