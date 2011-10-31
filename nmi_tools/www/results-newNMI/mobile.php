@@ -1,5 +1,5 @@
 <?php
-$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : 25;
+$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : 10;
 define("NUM_RUNS", $NUM_RUNS);
 
 define("MAX_TASKS_TO_DISPLAY_IN_POPUP", 10);
@@ -13,6 +13,17 @@ $dash->connect_to_db();
 
 $blacklist = Array("x86_64_fedora_13");
 ?>
+
+<style type="text/css">
+<!--
+  span.link {
+  font-size:50%;
+}
+td.small {
+  font-size: 50%;
+}
+-->
+</style>
 
 </head>
 <body>
@@ -148,46 +159,9 @@ $commit_info = get_git_log($hash1, $hash2);
 
 print "<div id='main'>\n";
 
-print "<form method='get' action='" . $_SERVER["PHP_SELF"] . "'>\n";
-print "<p>Commits:&nbsp;<select name='runs'>\n";
-print "<option selected='selected'>25</option>\n";
-print "<option>50</option>\n";
-print "<option>100</option>\n";
-print "<option>200</option>\n";
-print "</select><input type='submit' value='Show'></form>\n";
-
-print "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $blacklist) . "</p>\n";
-
 // Create the table header
 print "<table>\n";
-print "<tr>\n";
-print "  <th>D</td>\n";
-print "  <th>SHA1</th>\n";
 
-// Get the queue lengths
-$condorq = new CondorQ($pool_platforms);
-foreach (array_keys($seen_platforms) AS $platform) {
-  $condorq->add_platform($platform);
-}
-$queues = $condorq->condor_q();
-
-foreach (array_keys($seen_platforms) as $platform) {
-  // Update this if NMI has any other architecture prefixes (such as ia64) 
-  if(preg_match("/^x86_64_/", $platform)) {
-    $display = preg_replace("/x86_64_/", "x86_64<br>", $platform);
-  }
-  elseif(preg_match("/ia64_/", $platform)) {
-    $display = preg_replace("/ia64_/", "x86<br>", $platform);
-  }
-  else {
-    $display = preg_replace("/x86_/", "x86<br>", $platform);
-  }
-
-  print "  <th colspan=2><font size='-3'>$display" . $queues[$platform]["html-queue"] . "</font></th>\n";
-  print "  <th></th>\n";
-}
-print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
-print "</tr>\n";
 
 // Determine the heights of the days-of-the-week that display on the left
 $day_heights = Array();
@@ -213,63 +187,10 @@ array_push($day_heights, $count);
 foreach ($runs as $run) {
   print "<tr>\n";
 
-  if(array_key_exists("day-break", $run)) {
-    $td_class = "daybreak";
-    $rowspan = array_shift($day_heights);
-
-    $dayofweek = $run["dayofweek"];
-    if($rowspan < 4) {
-      $dayofweek = substr($dayofweek, 0, 3);
-    }
-    $dayofweek = implode("<br>", str_split($dayofweek, 1));
-    print "  <td class=\"$td_class\" rowspan=$rowspan>$dayofweek</td>\n";
-  }
-  else {
-    $td_class = "";
-  }
-
-  print "  <td class=\"$td_class\">\n";
-
-  $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "</font>\n";
-  $link = sprintf(GITSHA1, $run["sha1"]);  
-  print "    <span class=\"link\"><a href=\"$link\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
-  print "  </td>\n";
-
-  // Keep track of a summary of the platforms
-  $summary = Array();
-  $summary["build"] = Array();
-  $summary["build"]["passed"] = 0;
-  $summary["build"]["pending"] = 0;
-  $summary["build"]["failed"] = 0;
-  $summary["test"] = Array();
-  $summary["test"]["passed"] = 0;
-  $summary["test"]["pending"] = 0;
-  $summary["test"]["failed"] = 0;
-
   // Now print the results for each platform
-  foreach (array_keys($seen_platforms) as $platform) {
+  foreach (Array("x86_64_rhap_6.1", "x86_64_winnt_6.1") as $platform) {
     // There is no guarantee that each platform is in each run.  So check it here
     if(array_key_exists($platform, $run["platforms"])) {
-
-      if($run["platforms"][$platform]["build"]["result"] == NULL) {
-	$summary["build"]["pending"] += 1;
-      }
-      elseif($run["platforms"][$platform]["build"]["result"] != 0) {
-	$summary["build"]["failed"] += 1;
-      }
-      else {
-	$summary["build"]["passed"] += 1;
-	if($run["platforms"][$platform]["test"]["result"] == NULL) {
-	  $summary["test"]["pending"] += 1;
-	}
-	elseif($run["platforms"][$platform]["test"]["result"] == 0) {
-	  $summary["test"]["passed"] += 1;
-	}
-	else {
-	  $summary["test"]["failed"] += 1;
-	}
-      }
-
 
       print make_cell($run, $platform, "build", $td_class);
 
@@ -278,26 +199,14 @@ foreach ($runs as $run) {
 	print make_cell($run, $platform, "test", $td_class);
       }
       else {
-	print " <td class=\"noresults test $td_class\">&nbsp;&nbsp;&nbsp;</td>";
+	print " <td class=\"noresults test $td_class small\">&nbsp;</td>";
       }
     }    
     else {
-      print "  <td class='build $td_class'>&nbsp;</td><td class='test $td_class'>&nbsp;</td>\n";
+      print "  <td class='build $td_class small'>&nbsp;</td><td class='test $td_class small'>&nbsp;</td>\n";
     }
 
-    print "  <td class='$td_class' style=\"width:10px; font-size:5px;\">&nbsp;</td>\n";
   }
-
-  // Print the summary
-  $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
-  $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
-  $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
-  print "<td class='$td_class'>$txt</td>\n";
-
-  $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
-  $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
-  $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
-  print "<td class='$td_class'>$txt</td>\n";
 
   print "</tr>\n";
 }
@@ -432,7 +341,7 @@ function make_cell($run, $platform, $run_type, $td_class) {
     $failed_tasks = "<nobr>" . implode("</nobr><br><nobr>", $run["platforms"][$platform][$run_type]["bad-tasks"]) . "</nobr>";
   }
   else {
-    $failed_tasks = "<nobr>" . implode("</nobr><br><nobr>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1)) . "</nobr>";
+    $failed_tasks = "<nobr>" . implode("<nobr><br></nobr>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1)) . "</nobr>";
     $hidden = count($run["platforms"][$platform][$run_type]["bad-tasks"]) - MAX_TASKS_TO_DISPLAY_IN_POPUP;
     $failed_tasks .= "<br><i>$hidden more...</i>";
   }
@@ -444,7 +353,10 @@ function make_cell($run, $platform, $run_type, $td_class) {
   $detail_url = sprintf(DETAIL_URL, $run["runid"]);
 
   if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
-    $div = "&nbsp;&nbsp;&nbsp;";
+    #$div = "&nbsp;";
+    if($run_type == "build") {
+      $div = substr($run["sha1"], 0, 3);
+    }
   }
   else {
     $div = count($run["platforms"][$platform][$run_type]["bad-tasks"]);
