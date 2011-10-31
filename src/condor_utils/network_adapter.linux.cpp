@@ -2,13 +2,13 @@
 *
 * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you
 * may not use this file except in compliance with the License.  You may
 * obtain a copy of the License at
-* 
+*
 *    http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,8 +59,7 @@
 ***************************************************************/
 
 /// Constructor
-LinuxNetworkAdapter::LinuxNetworkAdapter ( const char */*ip_string*/,
-										   unsigned int ip_addr ) throw ()
+LinuxNetworkAdapter::LinuxNetworkAdapter ( const condor_sockaddr& ip_addr ) throw ()
 		: UnixNetworkAdapter( ip_addr )
 {
 	m_wol_support_mask = 0;
@@ -80,7 +79,7 @@ LinuxNetworkAdapter::~LinuxNetworkAdapter ( void ) throw()
 }
 
 bool
-LinuxNetworkAdapter::findAdapter( unsigned int ip_addr )
+LinuxNetworkAdapter::findAdapter( const condor_sockaddr& ip_addr )
 {
 	bool			found = false;
 # if (HAVE_STRUCT_IFCONF) && (HAVE_STRUCT_IFREQ) && (HAVE_DECL_SIOCGIFCONF)
@@ -98,8 +97,13 @@ LinuxNetworkAdapter::findAdapter( unsigned int ip_addr )
 
 	// Loop 'til we've read in all the interfaces, keep increasing
 	// the number that we try to read each time
-	struct sockaddr_in	in_addr;
+	//struct sockaddr_in	in_addr;
+	condor_sockaddr addr;
 	ifc.ifc_buf = NULL;
+
+	// [TODO:IPV6]
+	// ifreq never returns IPv6 address
+	// should change to getifaddrs()
 	while( !found ) {
 		int size	= num_req * sizeof(struct ifreq);
 		ifc.ifc_buf	= (char *) calloc( num_req, sizeof(struct ifreq) );
@@ -115,10 +119,13 @@ LinuxNetworkAdapter::findAdapter( unsigned int ip_addr )
 		int				 num = ifc.ifc_len / sizeof(struct ifreq);
 		struct ifreq	*ifr = ifc.ifc_req;
 		for ( int i = 0;  i < num;  i++, ifr++ ) {
-			struct sockaddr_in *in = (struct sockaddr_in*)&(ifr->ifr_addr);
-			MemCopy( &in_addr, in, sizeof(struct sockaddr_in) );
+			//struct sockaddr_in *in = (struct sockaddr_in*)&(ifr->ifr_addr);
+			condor_sockaddr in(&ifr->ifr_addr);
+			//MemCopy( &in_addr, in, sizeof(struct sockaddr_in) );
+			addr = in;
 
-			if ( in->sin_addr.s_addr == ip_addr ) {
+			//if ( in->sin_addr.s_addr == ip_addr ) {
+			if ( in.compare_address(ip_addr) ) {
 				setIpAddr( *ifr );
 				setName( *ifr );
 				found = true;
@@ -147,7 +154,7 @@ LinuxNetworkAdapter::findAdapter( unsigned int ip_addr )
 		dprintf( D_FULLDEBUG,
 				 "Found interface %s that matches %s\n",
 				 interfaceName( ),
-				 sin_to_string( &in_addr )
+				 addr.to_sinful().Value()
 				 );
 	}
 	else
@@ -155,7 +162,7 @@ LinuxNetworkAdapter::findAdapter( unsigned int ip_addr )
 		m_if_name = NULL;
 		dprintf( D_FULLDEBUG,
 				 "No interface for address %s\n",
-				 sin_to_string( &in_addr )
+				 addr.to_sinful().Value()
 				 );
 	}
 
@@ -198,7 +205,7 @@ LinuxNetworkAdapter::findAdapter( const char *name )
 		dprintf( D_FULLDEBUG,
 				 "Found interface %s with ip %s\n",
 				 name,
-				 inet_ntoa( m_in_addr )
+				 m_ip_addr.to_ip_string().Value()
 				 );
 	}
 	else
@@ -323,7 +330,7 @@ static WolTable wol_table [] =
 	{ WAKE_UCAST,		NetworkAdapterBase::WOL_UCAST },
 	{ WAKE_MCAST,		NetworkAdapterBase::WOL_MCAST },
 	{ WAKE_BCAST,		NetworkAdapterBase::WOL_BCAST },
-	{ WAKE_ARP,			NetworkAdapterBase::WOL_ARP }, 
+	{ WAKE_ARP,			NetworkAdapterBase::WOL_ARP },
 	{ WAKE_MAGIC,		NetworkAdapterBase::WOL_MAGIC },
 	{ WAKE_MAGICSECURE,	NetworkAdapterBase::WOL_MAGICSECURE },
 # endif

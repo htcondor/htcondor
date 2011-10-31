@@ -255,7 +255,6 @@ public:
 	*/
 
     /// peer's port and IP address in a struct sockaddr_in.
-	//struct sockaddr_in *peer_addr();
 	condor_sockaddr peer_addr();
 
 	/// peer's port number 
@@ -265,27 +264,18 @@ public:
 	const char* peer_ip_str();
 
 	/// peer's IP address, integer version (e.g. 2154390801)
-	//unsigned int peer_ip_int();
 
 	/// is peer a local interface, aka did this connection originate from a local process?
 	bool peer_is_local();
 
+    /// my port and IP address in a class condor_sockaddr
 	condor_sockaddr my_addr();
-
-    /// my port and IP address in a struct sockaddr_in
-    /// @args: the address is returned via 'sin'
-    /// @ret: 0 if succeed, -1 if failed
-    //int my_addr(struct sockaddr_in *sin);
 
 	/// my IP address, string version (e.g. "128.105.101.17")
 	virtual const char* my_ip_str();
 
 	/// local port number
-	// [TODO] change to my_addr().get_port() for every call site.
 	int get_port();
-
-	/// [OBSOLETE] local ip address integer
-	//unsigned int get_ip_int();
 
     /// sinful address of mypoint() in the form of "<a.b.c.d:pppp>"
     char * get_sinful();
@@ -478,8 +468,7 @@ protected:
 	SOCKET			_sock;
 	sock_state		_state;
 	int				_timeout;
-		//struct sockaddr_in _who;	// endpoint of "connection"
-	condor_sockaddr			_who;
+	condor_sockaddr			_who;	// endpoint of "connection"
 	char *			m_connect_addr;
 	char *          _fqu;
 	char *          _fqu_user_part;

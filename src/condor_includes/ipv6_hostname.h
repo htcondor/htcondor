@@ -30,13 +30,52 @@ condor_sockaddr get_local_ipaddr();
 MyString get_local_hostname();
 MyString get_local_fqdn();
 
+// returns fully-qualified-domain-name from given hostname.
+// this is replacement of previous get_full_hostname()
+//
+// it will
+// 1) lookup DNS by calling getaddrinfo()
+// 2) if FQDN was not found in canonname of addrinfo,
+//    it will look into h_alias from gethostbyname().
+// 3) if FQDN still not be found, it will add DEFAULT_DOMAIN_NAME.
+// 4) if DEFAULT_DOMAIN_NAME is not defined, it will return an empty string.
+MyString get_fqdn_from_hostname(const MyString& hostname);
+
+// returns 'best' IP address and fully-qualified-domain-name for given hostname
+// the criteria for picking best IP address is
+// 1) public IP address
+// 2) private IP address
+// 3) loopback address
+//
+// the algorithm for getting FQDN is same as get_fqdn_from_hostname()
+//
+// Return value:
+// 0 - if failed
+// 1 - if succeeded
+int get_fqdn_and_ip_from_hostname(const MyString& hostname,
+		MyString& fqdn, condor_sockaddr& addr);
+
+// returns just hostname for given addr
 MyString get_hostname(const condor_sockaddr& addr);
+
+// returns a set of hostname for given addr
 std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr);
+
+// returns a fully-qualified domain name for given addr
+//
+// IT IS DIFFERENT FROM PREVIOUS get_full_hostname()
 MyString get_full_hostname(const condor_sockaddr& addr);
 
+// DNS-lookup for given hostname
 std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname);
 std::vector<condor_sockaddr> resolve_hostname(const char* hostname);
 
+// _raw function directly calls getaddrinfo, does not do any of NO_DNS
+// related handlings.
+std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname);
+
+// NODNS functions
+//
 // IPv6-compliant version of convert_ip_to_hostname and
 // convert_hostname_to_ip.
 MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr);

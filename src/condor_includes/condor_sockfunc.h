@@ -47,9 +47,15 @@ int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
 int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
 		condor_sockaddr& addr);
 
+// it is not really required...
+//
 // create IPv6 socket if the build is configured to ipv6
 // else create IPv4 socket
-int condor_socket(int socket_type, int protocol);
+//int condor_socket(int socket_type, int protocol);
+
+struct addrinfo;
+// create a socket based on addrinfo
+int condor_socket(const addrinfo& ai);
 
 // Reer the syntax of IP address
 // from http://www.opengroup.org/onlinepubs/000095399/functions/inet_ntop.html
@@ -64,7 +70,7 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr);
 int condor_getsockaddr(int fd, condor_sockaddr& addr);
 // moved to my_hostname.h --> ipv6_hostname.h
 //condor_sockaddr ipv6_my_ip_addr();
-int ipv6_is_ipaddr(const char* host, condor_sockaddr& addr);
+//int ipv6_is_ipaddr(const char* host, condor_sockaddr& addr);
 //const char* ipv6_addr_to_hostname(const condor_sockaddr& addr, char* buf, int len);
 
 #endif // CONDOR_SOCKFUNC_H

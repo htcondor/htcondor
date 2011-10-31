@@ -54,7 +54,7 @@ public:
 	condor_sockaddr(const sockaddr_in* sin) ;
 	condor_sockaddr(const sockaddr_in6* sin6);
 
-	void init(int ip, unsigned port);
+	void init(int32_t ip, unsigned port);
 
 	// the caller is responsible for checking is_ipv4().
 	sockaddr_in to_sin() const;
@@ -62,8 +62,14 @@ public:
 	bool is_ipv4() const;
 	bool is_ipv6() const;
 
-		// temporary function. should be elimintaed at Phase 3.
+	// returns true if the ip address is link local.
+	// for IPv4, it denotes 169.254.0.0/16
+	// for IPv6, it denotes fe80::/10
+	bool is_link_local() const;
+
+	// set ip version when you want to bind the address to a socket
 	void set_ipv4();
+	void set_ipv6();
 
 	// addr_any and loopback involve protocol dependent constant
 	// like INADDR_ANY, IN6ADDR_ANY, ...
@@ -78,11 +84,16 @@ public:
 	void set_port(unsigned short port);
 	unsigned short get_port() const;
 
+	// sets the sin6_scope_id field in sockaddr_in6
+	// ipv6 only
+	void set_scope_id(uint32_t scope_id);
+
 	bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
+	bool from_sinful(const MyString& ip_string);
 	bool from_sinful(const char* sinful);
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
@@ -124,6 +135,16 @@ public:
 		// e.x. 137.10.0.1 --> ::FFFF:137.10.0.1
 	in6_addr to_ipv6_address() const;
 
+		// returns raw pointer to the address array.
+		// if the stored address is IPv4, returned address is single uint32_t.
+		// if it is IPv6, it returns uint32_t [4]
+	const uint32_t* get_address() const;
+
+		// returns length of the address array
+		// if the stored address is IPv4, returns 1
+		// if it is IPv6, returns 4
+	int get_address_len() const;
+
 		// returns AF_INET if ipv4, AF_INET6 if ipv6, AF_UNSPEC if unknown.
 	int get_aftype() const;
 
@@ -136,6 +157,9 @@ public:
 
 	bool operator<(const condor_sockaddr& rhs) const;
 	bool operator==(const condor_sockaddr& lhs) const;
+	bool operator!=(const condor_sockaddr& rhs) const {
+		return !operator ==(rhs);
+	}
 };
 
-#endif // CONDOR_CONDOR_SOCKADDR_H
+#endif // CONDOR_SOCKADDR_H

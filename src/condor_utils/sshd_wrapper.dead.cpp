@@ -230,7 +230,8 @@ SshdWrapper::getSshRuntimeInfo(char* & sinful_string, char* & dir, char* &
 	hostname = get_local_hostname();
 
 	sinful_string = (char *) malloc(hostname.Length() + 10);
-	sprintf(sinful_string, "<%s:%d>", hostname.Value(), port);
+	generate_sinful(sinful_string, hostname.Length() + 10, hostname.Value(),
+			port);
 
 		// Is the dir the cwd?
 	MyString wd;

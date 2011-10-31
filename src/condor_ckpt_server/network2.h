@@ -61,27 +61,27 @@
 #include <unistd.h>
 #endif
 #include "typedefs2.h"
-
+#include "condor_sockaddr.h"
 
 /* Function Prototypes*/
-extern "C" {
-const char* GetIPName(struct in_addr machine_IP); 
+//extern "C" {
+//char* GetIPName(struct in_addr machine_IP);
 
-int I_bind(int socket_desc,
-		   struct sockaddr_in* addr, int is_well_known);
+// I_bind binds to given addr and stores the address obtained by
+// getsockname() on socket_desc to addr.
+int I_bind(int socket_desc, condor_sockaddr& addr, int is_well_known);
 
-char* gethostnamebyaddr(struct in_addr* addr);
+//char* gethostnamebyaddr(struct in_addr* addr);
 
 int I_socket(void); 
 
 int I_listen(int socket_desc, int queue_len);
 
 int I_accept(int                 socket_desc,
-			 struct sockaddr_in* addr,
-			 int*                addr_len);
+			 condor_sockaddr&    addr);
 
 int net_write(int socket_desc, char* buffer, int size);
-}
+//}
 
 
 #endif

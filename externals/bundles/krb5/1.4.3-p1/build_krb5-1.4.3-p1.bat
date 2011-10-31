@@ -1,4 +1,5 @@
-
+ECHO "Invoked"
+pause
 REM . 
 REM Manages the building of the gsoap external on Win32
 REM . 

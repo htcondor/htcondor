@@ -420,7 +420,7 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 		exit(IMDS_INDEX_ERROR);
     }
 
-	strcpy(machine_name, inet_ntoa(file_ptr->file_data->data.machine_IP));
+	file_ptr->file_data->data.machine_IP.to_ip_string(machine_name, sizeof(machine_name));
 
 	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
 			owner_name, file_name);

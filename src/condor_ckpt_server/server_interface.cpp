@@ -25,21 +25,24 @@
 #include "network2.h"
 #include "internet.h"
 #include "condor_netdb.h"
+#include "condor_sockaddr.h"
+#include "ipv6_hostname.h"
 #include "subsystem_info.h"
 #include "MyString.h"
 #include <string.h>
 #include <map>
+#include "condor_network.h"
 
 using namespace std;
 
-static char* getserveraddr(void);
+static condor_sockaddr getserveraddr(void);
 int get_ckpt_server_count(void);
 
 /* from condor_util_lib/do_connect.c */
-extern "C" {
-int tcp_connect_timeout(int sockfd, struct sockaddr *sinful, int len,
-						int timeout);
-}
+//extern "C" {
+//int tcp_connect_timeout(int sockfd, struct sockaddr *sinful, int len,
+//						int timeout);
+//}
 
 
 /* NOTE: There is no particularly good reason why this codebase is C linkage.
@@ -64,8 +67,8 @@ extern "C" void StripPrefix(const char* pathname,
 extern "C" int ConnectToServer(request_type type)
 {
 	int                conn_req_sd;
-	struct sockaddr_in server_sa;
-	char			   *server_IP;
+	condor_sockaddr    server_sa;
+	condor_sockaddr    server_IP;
 	int				   on = 1;
 	MyString			str;
 	static				map<MyString, time_t> penalty_box;
@@ -86,12 +89,12 @@ extern "C" int ConnectToServer(request_type type)
 
 	server_IP = getserveraddr();
 
-	if (server_IP == 0) {
+	if (server_IP == condor_sockaddr::null) {
 		return -1;
 	}
 
 	/* Get a reasonable name for it. This next line is bad and wrong. */
-	str = inet_ntoa(*(struct in_addr*)server_IP);
+	str = server_IP.to_ip_string();
 
 	/////////////////////////////////////////////////
 	// Check cache to see if this checkpoint server had timed out recently
@@ -149,19 +152,16 @@ extern "C" int ConnectToServer(request_type type)
 		return CKPT_SERVER_SOCKET_ERROR;
 	}
 
-	memset((char*) &server_sa, 0, (int) sizeof(server_sa));
-	server_sa.sin_family = AF_INET;
-	memcpy((char*) &server_sa.sin_addr.s_addr, (char*) server_IP, 
-		   sizeof(struct in_addr));
+	server_sa = server_IP;
 	switch (type) {
         case SERVICE_REQ:
-		    server_sa.sin_port = htons(CKPT_SVR_SERVICE_REQ_PORT);
+		    server_sa.set_port(CKPT_SVR_SERVICE_REQ_PORT);
 			break;
 		case STORE_REQ:
-			server_sa.sin_port = htons(CKPT_SVR_STORE_REQ_PORT);
+			server_sa.set_port(CKPT_SVR_STORE_REQ_PORT);
 			break;
 		case RESTORE_REQ:
-			server_sa.sin_port = htons(CKPT_SVR_RESTORE_REQ_PORT);
+			server_sa.set_port(CKPT_SVR_RESTORE_REQ_PORT);
 			break;
 		case REPLICATE_REQ:
 			dprintf(D_ALWAYS, "ERROR: REPLICATE_REQ not implemented.");
@@ -174,8 +174,8 @@ extern "C" int ConnectToServer(request_type type)
 			return CKPT_SERVER_SOCKET_ERROR;
 		}
 
-	ret = tcp_connect_timeout(conn_req_sd, (struct sockaddr*) &server_sa,
-							sizeof(server_sa), ckpt_server_timeout);
+	ret = tcp_connect_timeout(conn_req_sd, server_sa,
+							ckpt_server_timeout);
 	
 	if (ret < 0) {
 
@@ -539,21 +539,17 @@ extern "C" int SetCkptServerHost(const char *host)
 *                                                                             *
 ******************************************************************************/
 
-static char* getserveraddr()
+static condor_sockaddr getserveraddr()
 {
-	struct hostent* h = NULL;
-
-	if (server_host == NULL) return NULL;
-
-	h = condor_gethostbyname(server_host);
-	if (h == NULL) {
+	std::vector<condor_sockaddr> addrs;
+	addrs = resolve_hostname(server_host);
+	if (addrs.empty()) {
 		dprintf(D_ALWAYS,
 				"Can't get address for checkpoint server host %s: %s\n",
 				(server_host) ? server_host : "(NULL)", strerror(errno));
-		return NULL;
+		return condor_sockaddr::null;
 	}
-
-	return(h->h_addr);
+	return addrs.front();
 }
 
 static int ckpt_server_number;

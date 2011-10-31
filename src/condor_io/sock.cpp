@@ -34,6 +34,7 @@
 #include "selector.h"
 #include "authentication.h"
 #include "condor_sockfunc.h"
+#include "condor_ipv6.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -384,6 +385,7 @@ int Sock::assign(SOCKET sockd)
 
 	if (sockd != INVALID_SOCKET){
 		_sock = sockd;		/* Could we check for correct protocol ? */
+		/* should we check that sockd matches to IPv6 mode? */
 		_state = sock_assigned;
 
 		_who.clear();
@@ -394,6 +396,12 @@ int Sock::assign(SOCKET sockd)
 		}
 		return TRUE;
 	}
+
+	int af_type;
+	if (_condor_is_ipv6_mode())
+		af_type = AF_INET6;
+	else
+		af_type = AF_INET;
 
 	switch(type()){
 		case safe_sock:
@@ -409,7 +417,7 @@ int Sock::assign(SOCKET sockd)
 #ifndef WIN32 /* Unix */
 	errno = 0;
 #endif
-	if ((_sock = socket(AF_INET, my_type, 0)) == INVALID_SOCKET) {
+	if ((_sock = socket(af_type, my_type, 0)) == INVALID_SOCKET) {
 #ifndef WIN32 /* Unix... */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic( __LINE__, __FILE__ ); /* Calls dprintf_exit! */
@@ -455,6 +463,7 @@ int
 Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
+	bool ipv6_mode = _condor_is_ipv6_mode();
 
 	// Use hash function with pid to get the starting point
     struct timeval curTime;
@@ -477,10 +486,17 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 		addr.clear();
 		if( bind_all ) {
-			addr.set_ipv4();
+			if (ipv6_mode)
+				addr.set_ipv6();
+			else
+				addr.set_ipv4();
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
+			// what if the socket type does not match?
+			// e.g. addr is ipv6 but ipv6 mode is not turned on?
+			if (addr.is_ipv4() && ipv6_mode)
+				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)this_trial++);
 
@@ -585,14 +601,19 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		}
 	} else {
 			// Bind to a dynamic port.
-		addr.set_ipv4();
+
+		if (_condor_is_ipv6_mode())
+			addr.set_ipv6();
+		else
+			addr.set_ipv4();
 		if( loopback ) {
 			addr.set_loopback();
-		}
-		else if( (bool)_condor_bind_all_interfaces() ) {
+		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
+			if (addr.is_ipv4() && _condor_is_ipv6_mode())
+				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)port);
 
@@ -719,12 +740,16 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 }
 
 bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& addr) {
+	dprintf(D_HOSTNAME, "Guess address string for host = %s, port = %d\n",
+			host, port);
 	/* might be in <x.x.x.x:x> notation				*/
 	if (host[0] == '<') {
 		addr.from_sinful(host);
+		dprintf(D_HOSTNAME, "it was sinful string. ip = %s, port = %d\n",
+				addr.to_ip_string().Value(), addr.get_port());
 	}
 	/* try to get a decimal notation 	 			*/
-	else if ( ipv6_is_ipaddr(host, addr) ) {
+	else if ( addr.from_ip_string(host) ) {
 			// nothing to do here
 		addr.set_port(port);
 	}
@@ -752,6 +777,9 @@ int Sock::do_connect(
 	if (!guess_address_string(host, port, _who)) {
 		return FALSE;
 	}
+
+	if (_condor_is_ipv6_mode() && _who.is_ipv4())
+		_who.convert_to_ipv6();
 
 		// current code handles sinful string and just hostname differently.
 		// however, why don't we just use sinful string at all?

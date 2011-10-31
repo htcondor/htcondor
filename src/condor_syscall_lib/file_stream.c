@@ -26,7 +26,7 @@
 #include "condor_debug.h"
 #include "condor_file_info.h"
 #include "internet.h"
-
+#include "internet_obsolete.h"
 
 /* remote system call prototypes */
 extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, char **physical_name);

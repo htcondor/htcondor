@@ -27,10 +27,10 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_string.h"
-#include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "my_username.h"
 #include "condor_uid.h"
+#include "ipv6_hostname.h"
 
 extern "C" {
 
@@ -76,7 +76,11 @@ get_daemon_name( const char* name )
 			// There's no '@', just try to resolve the hostname.
 		dprintf( D_HOSTNAME, "Daemon name contains no '@', treating as a "
 				 "regular hostname\n" );
-		daemon_name = get_full_hostname( tmpname );
+
+		//MyString hostname(tmpname);
+		MyString fqdn = get_fqdn_from_hostname(tmpname);
+		//daemon_name = get_full_hostname( tmpname );
+		daemon_name = strnewp(fqdn.Value());
 	}
 	free( tmpname );
 
@@ -121,12 +125,12 @@ build_valid_daemon_name( const char* name )
 			just_name = true;
 		} else {
 				// no '@', see if what we have is our hostname
-			if( (tmp = get_full_hostname(name)) ) {
-				if( !strcmp(tmp, my_full_hostname()) ) {
+			MyString fqdn = get_fqdn_from_hostname(name);
+			if( fqdn.Length() > 0 ) {
+				if( get_local_fqdn() != fqdn ) {
 						// Yup, so just the full hostname.
 					just_host = true;
 				}					
-				delete [] tmp;
 			}
 		}
 	} else {

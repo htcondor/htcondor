@@ -2,13 +2,13 @@
 *
 * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you
 * may not use this file except in compliance with the License.  You may
 * obtain a copy of the License at
-* 
+*
 *    http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,7 @@
 ***************************************************************/
 
 /// Constructor
-UnixNetworkAdapter::UnixNetworkAdapter ( unsigned int ip_addr ) throw ()
+UnixNetworkAdapter::UnixNetworkAdapter ( const condor_sockaddr& ip_addr ) throw ()
 {
 	m_found = false;
 	resetIpAddr( true );
@@ -67,7 +67,7 @@ UnixNetworkAdapter::~UnixNetworkAdapter (void) throw ()
 bool
 UnixNetworkAdapter::initialize ( void )
 {
-	if ( m_ip_addr && !findAdapter(m_ip_addr) ) {
+	if ( m_ip_addr != condor_sockaddr::null && !findAdapter(m_ip_addr) ) {
 		return false;
 	}
 	else if ( !findAdapter(m_if_name ) ) {
@@ -86,7 +86,7 @@ UnixNetworkAdapter::initialize ( void )
 }
 
 bool
-UnixNetworkAdapter::findAdapter( unsigned int /*ip_addr*/ )
+UnixNetworkAdapter::findAdapter( const condor_sockaddr& /*ip_addr*/ )
 {
 	return false;
 }
@@ -133,15 +133,15 @@ UnixNetworkAdapter::MemCopy( const void *dest, const void *src, unsigned size )
 void
 UnixNetworkAdapter::resetIpAddr( bool /*init*/ )
 {
-	m_ip_addr = 0;
-	MemZero( &m_in_addr, sizeof(m_in_addr) );
+	m_ip_addr.clear();
+	//MemZero( &m_in_addr, sizeof(m_in_addr) );
 }
 void
-UnixNetworkAdapter::setIpAddr( unsigned int ip )
+UnixNetworkAdapter::setIpAddr( const condor_sockaddr& ip )
 {
 	m_ip_addr = ip;
-	struct in_addr	*in = (&m_in_addr);
-	in->s_addr = ip;
+//	struct in_addr	*in = (&m_in_addr);
+//	in->s_addr = ip;
 }
 
 // Reset hardware address
@@ -231,11 +231,14 @@ UnixNetworkAdapter::setIpAddr( const struct ifreq &ifr )
 {
 	resetIpAddr( );
 
-	const struct sockaddr_in *in = (const struct sockaddr_in*)&(ifr.ifr_addr);
-	struct sockaddr_in	sin_addr;
-	MemCopy( &sin_addr, in, sizeof(struct sockaddr_in) );
-	MemCopy( &m_in_addr, &sin_addr.sin_addr, sizeof(struct in_addr) );
-	m_ip_addr = in->sin_addr.s_addr;
+    condor_sockaddr addr((const sockaddr*)&ifr.ifr_addr);
+    m_ip_addr = addr;
+
+//	const struct sockaddr_in *in = (const struct sockaddr_in*)&(ifr.ifr_addr);
+//	struct sockaddr_in	sin_addr;
+//	MemCopy( &sin_addr, in, sizeof(struct sockaddr_in) );
+//	MemCopy( &m_in_addr, &sin_addr.sin_addr, sizeof(struct in_addr) );
+//	m_ip_addr = in->sin_addr.s_addr;
 }
 
 // Set the net mask from the ifreq

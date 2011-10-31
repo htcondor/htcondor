@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,8 @@
 #include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "condor_network.h"
+#include "condor_sockfunc.h"
+#include "ipv6_hostname.h"
 
 /*
  * FYI: This code is used by the old shadow/starter and by the syscall lib
@@ -33,35 +35,53 @@
  *
  */
 extern "C" {
+unsigned short find_port_num( const char *service_name,
+							  unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
 char *param( const char *name );
 
 int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 						int timeout );
-int do_connect_with_timeout( const char* host, 
+int do_connect_with_timeout( const char* host, const char* service,
 							 u_short port, int timeout );
 int set_fd_blocking(int fd);
 int set_fd_nonblocking(int fd);
 }
 
+// [IPV6] nobody uses do_connect, do_connect_with_timeout and udp_connect
+// actually, someone is. at shadow_common.cpp.
+
 int
-do_connect( const char* host, u_short port )
+do_connect( const char* host, const char* service, u_short port )
 {
-	return do_connect_with_timeout(host, port, 0);
+	return do_connect_with_timeout(host, service, port, 0);
 }
 
 
 int
-do_connect_with_timeout( const char* host, 
-						 u_short port, int timeout ) 
+do_connect_with_timeout( const char* host, const char* service,
+						 u_short port, int timeout )
 {
-	struct sockaddr_in	sinful;
-	struct hostent		*hostentp;
 	int					status;
 	int					fd;
 	int					True = 1;
+	condor_sockaddr		dest_addr;
 
-	if( (fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
+    if (host[0]=='<'){ /* dhaval */
+    	dest_addr.from_sinful(host);
+    } else {
+    	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
+		if (addrs.empty()) {
+			dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
+								host );
+			return( -1 );
+		}
+		port = find_port_num( service, port );
+		dest_addr = addrs.front();
+		dest_addr.set_port(port);
+	}
+
+	if( (fd=socket(dest_addr.get_aftype(), SOCK_STREAM, 0)) < 0 ) {
 		EXCEPT( "socket" );
 	}
 
@@ -74,25 +94,9 @@ do_connect_with_timeout( const char* host,
 		/* TRUE means this is an outgoing connection */
 	_condor_local_bind( TRUE, fd );
 
-    if (host[0]=='<'){ /* dhaval */
-    	string_to_sin(host,&sinful);
-    } else {
-		hostentp = condor_gethostbyname( host );
-		if( hostentp == NULL ) {
-			dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
-								host );
-			close(fd);
-			return( -1 );
-		}
-		memset( (char *)&sinful,0,sizeof(sinful) );
-		memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
-		sinful.sin_family = hostentp->h_addrtype;
-		sinful.sin_port = htons(port);
-	}
 
-	memset(&sinful.sin_zero, 0, sizeof(sinful.sin_zero));
 	if (timeout == 0) {
-		status = connect(fd,(struct sockaddr *)&sinful,sizeof(sinful));
+		status = condor_connect(fd, dest_addr);
 	} else {
 		// This code path is available if one calls this function with
 		// a timeout > 0. As of the writing of this comment, all invocations
@@ -102,7 +106,7 @@ do_connect_with_timeout( const char* host,
 		// work. However, I had to fix up that function into working state
 		// for an unrelated feature elsewhere in the code, and found this
 		// code path used it. Determining this code path's usage of
-		// tcp_connect_timeout() is beyond the scope of my changes which 
+		// tcp_connect_timeout() is beyond the scope of my changes which
 		// led to this comment--hence, the EXCEPT. Your job is to figure
 		// out if tcp_connect_timeout() is being called corectly here and
 		// semantically does what you think it should in accordance to
@@ -110,8 +114,7 @@ do_connect_with_timeout( const char* host,
 		// function is likely the stuff to change.
 		EXCEPT("This is the first time this code path has been taken, please "
 			"ensure it does what you think it does.");
-		status = tcp_connect_timeout(fd, (struct sockaddr*)&sinful, 
-									 sizeof(sinful), timeout);
+		status = tcp_connect_timeout(fd, dest_addr, timeout);
 		if (status == fd) {
 			status = 0;
 		}
@@ -127,42 +130,74 @@ do_connect_with_timeout( const char* host,
 }
 
 
-int
-udp_connect( char* host, u_short port )
+//int
+//udp_connect( char* host, u_short port )
+//{
+//	int		sock;
+//	struct sockaddr_in	sinful;
+//	struct hostent		*hostentp;
+//
+//	hostentp = condor_gethostbyname( host );
+//	if( hostentp == NULL ) {
+//		printf( "Can't find host \"%s\" (Nameserver down?)\n",
+//							host );
+//		return( -1 );
+//	}
+//
+//	if( (sock=socket(AF_INET,SOCK_DGRAM,0)) < 0 ) {
+//		perror( "socket" );
+//		exit( 1 );
+//	}
+//
+//		/* Now, bind this socket to the right interface. */
+//		/* TRUE means this is an outgoing connection */
+//	_condor_local_bind( TRUE, sock );
+//
+//	memset( (char *)&sinful,0,sizeof(sinful) );
+//	memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
+//	sinful.sin_family = hostentp->h_addrtype;
+//	sinful.sin_port = htons( (u_short)port );
+//
+//	if( connect(sock,(struct sockaddr *)&sinful,sizeof(sinful)) < 0 ) {
+//		perror( "connect" );
+//		exit( 1 );
+//	}
+//
+//	return sock;
+//}
+
+
+unsigned short
+find_port_num( const char* service_name, unsigned short dflt_port )
 {
-	int		sock;
-	struct sockaddr_in	sinful;
-	struct hostent		*hostentp;
+	struct servent		*servp;
+	char				*config_name;
+	char				*pval;
 
-	hostentp = condor_gethostbyname( host );
-	if( hostentp == NULL ) {
-		printf( "Can't find host \"%s\" (Nameserver down?)\n",
-							host );
-		return( -1 );
+	if( service_name == NULL || service_name[0] == '\0' ) {
+		return dflt_port;
 	}
 
-	if( (sock=socket(AF_INET,SOCK_DGRAM,0)) < 0 ) {
-		perror( "socket" );
-		exit( 1 );
+		/* Try to look up port number in config file */
+	config_name = mk_config_name( service_name );
+	pval = param( config_name );
+	if( pval != NULL ) {
+		unsigned short rc = atoi( pval );
+		free( pval );
+		return rc;
 	}
 
-		/* Now, bind this socket to the right interface. */
-		/* TRUE means this is an outgoing connection */
-	_condor_local_bind( TRUE, sock );
-
-	memset( (char *)&sinful,0,sizeof(sinful) );
-	memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
-	sinful.sin_family = hostentp->h_addrtype;
-	sinful.sin_port = htons( (u_short)port );
-
-	if( connect(sock,(struct sockaddr *)&sinful,sizeof(sinful)) < 0 ) {
-		perror( "connect" );
-		exit( 1 );
+		/* Try to find in "/etc/services" */
+	if( service_name && service_name[0] ) {
+		servp = getservbyname(service_name, "tcp");
+		if( servp != NULL ) {
+			return servp->s_port;
+		}
 	}
 
-	return sock;
+		/* Fall back on the default */
+	return dflt_port;
 }
-
 
 /*
   Convert a condor service name which looks like:
@@ -215,7 +250,7 @@ mk_config_name( const char *service_name )
 	socket and try again since you can't tell if it is left in a blocking
 	or nonblocking state depending where the error happened. A timeout
 	of zero or a negative value means block forever in the connect. */
-int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
+int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 						int timeout )
 {
 	struct timeval  timer;
@@ -226,10 +261,10 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 	int				val = 0;
 	int				save_errno;
 
-	/* if we don't want a timeout, then just call connect by itself in 
+	/* if we don't want a timeout, then just call connect by itself in
 		a blocking manner. */
 	if (timeout == 0) {
-		if (connect(sockfd, sinful, len) < 0) {
+		if (condor_connect(sockfd, serv_addr) < 0) {
 			return -1;
 		}
 
@@ -243,7 +278,8 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 	}
 
 	/* try the connect, which will return immediately */
-	if( connect(sockfd, sinful,len) < 0 ) {
+	if(condor_connect(sockfd, serv_addr) < 0) {
+		tmp_errno = errno;
 		switch( errno ) {
 			case EAGAIN:
 			case EINPROGRESS:
@@ -271,7 +307,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 					(fd_set*) &writefds,
 					(fd_set*) 0,
 					(struct timeval *)&timer );
-	
+
 	if (nfound < 0) {
 		if (errno == EINTR) {
 
@@ -304,15 +340,15 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 		}
 		return -2;
 	}
-	
+
 	/* just because the select returned with something doesn't really mean the
 		connect is ok, so we'll check it before returning it to the caller
 		to ensure things went ok. */
 	sz = sizeof(int);
 	if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (void*)(&val), &sz) < 0) {
-		/* on some architectures, this call *itself* returns with the 
+		/* on some architectures, this call *itself* returns with the
 			error instead of putting it into val, so we'll deal with that
-			here.  Of course if it fails for some other legitimate reason, 
+			here.  Of course if it fails for some other legitimate reason,
 			the caller would be hard pressed to figure it out...
 		*/
 		save_errno = errno;
@@ -338,7 +374,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 	if (set_fd_blocking(sockfd) < 0) {
 		return -1;
 	}
-	
+
 	/* if I got to here, the connect succeeded */
 	return sockfd;
 }
@@ -381,7 +417,7 @@ int set_fd_blocking(int fd)
 /*
  tcp_accept_timeout() : accept with timeout
  most of this code is got from negotiator.c
- 
+
   returns       -1 on error
                 -2 on timeout
                 -3 if there is an interrupt
@@ -391,7 +427,7 @@ int set_fd_blocking(int fd)
 */
 
 int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
-                       int timeout) 
+                       int timeout)
 {
 	int             count;
 	fd_set  		readfds;
@@ -408,9 +444,9 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
 #if defined(AIX31) || defined(AIX32)
 	errno = EINTR;  /* Shouldn't have to do this... */
 #endif
-    count = select(ConnectionSock+1, 
-				   (SELECT_FDSET_PTR) &readfds, 
-				   (SELECT_FDSET_PTR) 0, 
+    count = select(ConnectionSock+1,
+				   (SELECT_FDSET_PTR) &readfds,
+				   (SELECT_FDSET_PTR) 0,
 				   (SELECT_FDSET_PTR) 0,
                    (struct timeval *)&timer );
     if( count < 0 ) {
@@ -422,7 +458,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
 		}
     }
 	/*
-	 ** dprintf( D_FULLDEBUG, "Select returned %d\n", NFDS(count) );	
+	 ** dprintf( D_FULLDEBUG, "Select returned %d\n", NFDS(count) );
 	 */
 
     if( count == 0 ) {
@@ -438,7 +474,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
     } else {
 		EXCEPT( "select: unknown connection, count = %d", count );
     }
-   
-    return -1; 
+
+    return -1;
 }
 

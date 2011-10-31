@@ -144,28 +144,29 @@ FILE *fopen_http( char *server, char *path )
 
 int open_tcp( char *server, int port )
 {
-	struct sockaddr_in addr;
-	struct hostent *host;
+	struct addrinfo* res = NULL;
 	int fd;
+	int result = 0;
 
-	host = gethostbyname( server );
-	if(!host) {
-		printf("FAILURE: gethostbyname failed: h_errno = %d\n", h_errno);
+	result = getaddrinfo(server, NULL, NULL, &res);
+	if (result != 0) {
+		printf("FAILURE: getaddrinfo failed: h_errno = %d\n", h_errno);
 		exit(EXIT_FAILURE);
 	}
 
-	addr.sin_port = htons(port);
-	addr.sin_family = host->h_addrtype;
-	addr.sin_addr = *((struct in_addr *) host->h_addr_list[0]);
+	if (!result) {
+		printf("FAILURE: getaddrinfo returned NULL result\n");
+		exit(EXIT_FAILURE);
+	}
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
+	fd = socket(res->ai_family, SOCK_STREAM, 0);
 	if(fd<0)
 	{
 		printf("FAILURE: socket(): %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
-	if(connect(fd, (struct sockaddr *) &addr, sizeof(addr))<0) {
+	if(connect(fd, res->ai_addr, res->ai_addrlen)<0) {
 		printf("FAILURE: connect(): %s\n", strerror(errno));
 		close(fd);
 		exit(EXIT_FAILURE);

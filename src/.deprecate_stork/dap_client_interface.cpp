@@ -59,7 +59,7 @@ get_stork_sinful_string (const char * hostname) {
     port = CLI_AGENT_SUBMIT_TCP_PORT;
 
   char * stork_host = (char*)malloc(100);
-  sprintf (stork_host, "<%s:%d>", ip, port);
+  generate_sinful(stork_host, 100, ip, port);
   return stork_host;
 }
 
