@@ -42,11 +42,14 @@ under the HOST(S) column for grid type ec2 jobs.
 
 \begin{itemize}
 
-\item A new configuration parameter JOB\_QUEUE\_LOG has been added.  The default
-value is path\_to\_spool/job\_queue.log.  This can now be set to another path, which is
-useful if you have a solid state drive which is big enough to hold the
-frequently written to job\_queue.log, but not big enough to hold the whole
-contents of the spool directory.
+\item The new configuration variable \Macro{JOB\_QUEUE\_LOG} 
+specifies an alternative path and file name for the \File{job\_queue.log} file.
+The default value is \File{\MacroUNI{SPOOL}/job\_queue.log}.
+This alternative location can be
+useful if there is a solid state drive which is big enough to hold the
+frequently written to \File{job\_queue.log},
+but not big enough to hold the whole contents of the spool directory.
+\Ticket{2598}
 
 \end{itemize}
 

@@ -1456,6 +1456,15 @@ of the subsystem corresponding to the daemon.
   only the \MacroNI{SHADOW} subsystem.  This macro is defined relative
   to the \MacroUNI{LOCK} macro.
 
+\label{param:JobQueueLog} 
+\item[\Macro{JOB\_QUEUE\_LOG}]
+  A full path and file name, specifying the job queue log.  
+  The default value, when not defined is \File{\MacroUNI{SPOOL}/job\_queue.log}.
+  This specification can be useful,
+  if there is a solid state drive which is big enough to hold the
+  frequently written to \File{job\_queue.log},
+  but not big enough to hold the whole contents of the spool directory.
+
 \label{param:FileLockViaMutex} 
 \item[\Macro{FILE\_LOCK\_VIA\_MUTEX}]
   This macro setting only works on Win32 -- it is ignored on Unix.  If set
