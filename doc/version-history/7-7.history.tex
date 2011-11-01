@@ -282,6 +282,11 @@ In such cases, there was also a spurious
 unsuspend event logged in the job's user log.
 \Ticket{2577}
 
+\item Fixed a bug introduced in 7.7.2 by the change of \Macro{OpSys} to "WINDOWS".
+Submit files that used version 1 syntax for the \SubmitCmd{environment} command
+were using Unix syntax rather than Windows syntax.
+\Ticket{2607}
+
 \end{itemize}
 
 \noindent Known Bugs:
