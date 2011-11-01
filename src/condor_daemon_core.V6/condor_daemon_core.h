@@ -92,6 +92,8 @@ static const int DC_STD_FD_NOPIPE = -1;
 
 
 int dc_main( int argc, char **argv );
+bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
+
 
 // External protos
 extern void (*dc_main_init)(int argc, char *argv[]);	// old main
