@@ -11,6 +11,7 @@ Can have one of the following values:
 	\item[\AdStr{Vacating}:] A job is currently checkpointing
 	\item[\AdStr{Killing}:] A job is currently being killed
 	\item[\AdStr{Benchmarking}:] The startd is running benchmarks
+	\item[\AdStr{Retiring}:] Waiting for a job to finish or for the maximum retirement time to expire
 	\end{description}
 %
 \index{ClassAd machine attribute!Arch}
@@ -311,6 +312,8 @@ match for this resource, but a Condor scheduler has not yet claimed it.
 	\item[\AdStr{Preempting}:] A Condor job is being preempted (possibly
 via checkpointing) in order to clear the machine for either a higher
 priority job or because the machine owner wants the machine back.
+	\item[\AdStr{Drained}:] This slot is not accepting jobs,
+because the machine is being drained.
 	\end{description}   % of State
 %
 \index{ClassAd machine attribute!TargetType}
