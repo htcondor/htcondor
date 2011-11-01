@@ -253,6 +253,7 @@ sub reconstitute {
 		else { print REC_OUT $_[0]; }
 	}
 	sub end_output {
+		print REC_OUT "\n" unless $options{stdout};
 		close REC_OUT unless $options{stdout};
 	}
 	############################################################################

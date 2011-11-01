@@ -199,7 +199,6 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 
 					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 					if(!logPathParam) {
-						char *str;
 						char *log = param("LOG");
 						char *lsubsys = param("SUBSYSTEM");
 						if(!log || !lsubsys) {
