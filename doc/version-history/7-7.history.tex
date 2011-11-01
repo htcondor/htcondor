@@ -30,8 +30,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Condor{q} \Opt{-run} now displays a job's EC2VirtualMachineName
-  under the HOST(s) column for running EC2 jobs.
+\item  \Condor{q} \Opt{-run} now displays the value of the job ClassAd
+attribute \Attr{EC2RemoteVirtualMachineName} instead of
+\Expr{[????????????????]},
+under the HOST(S) column for grid type ec2 jobs.
 \Ticket{2599}
 
 \end{itemize}
