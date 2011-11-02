@@ -162,39 +162,39 @@ bool user_policy_ad_checker(ClassAd* ad,
 void insert_into_ad(ClassAd* ad, const char* attribute, const char* value);
 
 /* Prints error message and exits if value is not zero */
-void cut_assert_z_impl(int value, char *expr, char *file, int line);
+void cut_assert_z_impl(int value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is zero */
-int cut_assert_nz_impl(int value, char *expr, char *file, int line);
+int cut_assert_nz_impl(int value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not greater than zero */
-int cut_assert_gz_impl(int value, char *expr, char *file, int line);
+int cut_assert_gz_impl(int value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not less than zero */
-int cut_assert_lz_impl(int value, char *expr, char *file, int line);
+int cut_assert_lz_impl(int value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not greater than or equal to 
    zero */
-int cut_assert_gez_impl(int value, char *expr, char *file, int line);
+int cut_assert_gez_impl(int value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not less than or equal to 
    zero */
-int cut_assert_lez_impl(int value, char *expr, char *file, int line);
+int cut_assert_lez_impl(int value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not true */
-bool cut_assert_true_impl(bool value, char *expr, char *file, int line);
+bool cut_assert_true_impl(bool value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not false */
-bool cut_assert_false_impl(bool value, char *expr, char *file, int line);
+bool cut_assert_false_impl(bool value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is NULL */
-void* cut_assert_not_null_impl(void *value, char *expr, char *file, int line);
+void* cut_assert_not_null_impl(void *value, const char *expr, const char *file, int line);
 
 /* Prints error message and exits if value is not NULL */
-void cut_assert_null_impl(void *value, char *expr, char *file, int line);
+void cut_assert_null_impl(void *value, const char *expr, const char *file, int line);
 
 /* Creates an empty file */
-void create_empty_file(char *file);
+void create_empty_file(const char *file);
 
 #ifdef WIN32
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)

@@ -289,7 +289,7 @@ void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
 }
 
 /* don't return anything: the process will die if value not zero */
-void cut_assert_z_impl(int value, char *expr, char *file, int line)
+void cut_assert_z_impl(int value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -302,7 +302,7 @@ void cut_assert_z_impl(int value, char *expr, char *file, int line)
 	}
 }
 
-int cut_assert_nz_impl(int value, char *expr, char *file, int line)
+int cut_assert_nz_impl(int value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -317,7 +317,7 @@ int cut_assert_nz_impl(int value, char *expr, char *file, int line)
 	return value;
 }
 
-int cut_assert_gz_impl(int value, char *expr, char *file, int line)
+int cut_assert_gz_impl(int value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -332,7 +332,7 @@ int cut_assert_gz_impl(int value, char *expr, char *file, int line)
 	return value;
 }
 
-int cut_assert_lz_impl(int value, char *expr, char *file, int line)
+int cut_assert_lz_impl(int value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -347,7 +347,7 @@ int cut_assert_lz_impl(int value, char *expr, char *file, int line)
 	return value;
 }
 
-int cut_assert_gez_impl(int value, char *expr, char *file, int line)
+int cut_assert_gez_impl(int value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -362,7 +362,7 @@ int cut_assert_gez_impl(int value, char *expr, char *file, int line)
 	return value;
 }
 
-int cut_assert_lez_impl(int value, char *expr, char *file, int line)
+int cut_assert_lez_impl(int value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -377,7 +377,7 @@ int cut_assert_lez_impl(int value, char *expr, char *file, int line)
 	return value;
 }
 
-bool cut_assert_true_impl(bool value, char *expr, char *file, int line)
+bool cut_assert_true_impl(bool value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -392,7 +392,7 @@ bool cut_assert_true_impl(bool value, char *expr, char *file, int line)
 	return value;
 }
 
-bool cut_assert_false_impl(bool value, char *expr, char *file, int line)
+bool cut_assert_false_impl(bool value, const char *expr, const char *file, int line)
 {
 	int tmp_errno = errno;
 
@@ -407,7 +407,7 @@ bool cut_assert_false_impl(bool value, char *expr, char *file, int line)
 	return value;
 }
 
-void* cut_assert_not_null_impl(void *value, char *expr, char *file, int line) {
+void* cut_assert_not_null_impl(void *value, const char *expr, const char *file, int line) {
 	int tmp_errno = errno;
 
 	if (value == NULL) {
@@ -422,7 +422,7 @@ void* cut_assert_not_null_impl(void *value, char *expr, char *file, int line) {
 }
 
 /* don't return anything: the process will die if value is not NULL */
-void cut_assert_null_impl(void *value, char *expr, char *file, int line) {
+void cut_assert_null_impl(void *value, const char *expr, const char *file, int line) {
 	int tmp_errno = errno;
 
 	if (value != NULL) {
@@ -436,7 +436,7 @@ void cut_assert_null_impl(void *value, char *expr, char *file, int line) {
 }
 
 /* Safely creates an empty file */
-void create_empty_file(char *file)
+void create_empty_file(const char *file)
 {
 	FILE *f = NULL;
 	cut_assert_not_null( f = safe_fopen_wrapper_follow(file, "w+") );
