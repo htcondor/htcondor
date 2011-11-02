@@ -2717,7 +2717,8 @@ specify this in the requirements and/or rank expressions.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!nice\_user}
-\item[nice\_user = $<$True \Bar\ False$>$] \label{man-condor-submit-nice}Normally, when a machine
+\label{man-condor-submit-nice}
+\item[nice\_user = $<$True \Bar\ False$>$] Normally, when a machine
 becomes available to Condor, Condor decides which job to run based upon
 user and job priorities. Setting \SubmitCmd{nice\_user} equal to \Expr{True}
 tells Condor not to use your regular user priority, but that this job

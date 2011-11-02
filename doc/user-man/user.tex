@@ -1280,13 +1280,13 @@ priorities and \Term{user} priorities.
 \index{priority!of a job}
 Job priorities allow the assignment of a priority level to
 each submitted Condor job in order to
-control order of execution.
-To set a job priority, use the \Condor{prio} command
+control the order of their execution.
 \index{Condor commands!condor\_prio}
---- see the example in section~\ref{sec:job-prio}, or the
+To set a job priority, use the \Condor{prio} command;
+see the example in section~\ref{sec:job-prio}, or the
 command reference page on page~\pageref{man-condor-prio}.
 Job priorities do not impact user priorities in any fashion.
-A job priority can be any integer, and higher values are ``better''.
+A job priority can be any integer, and higher values are \emph{better}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-priority-explained}User priority}
@@ -1320,7 +1320,7 @@ If the number of machines is less then the priority,
 the priority will improve by numerically decreasing over time. 
 The long-term result is fair-share access across all users.
 The speed at which Condor adjusts the priorities is
-controlled with the configuration macro \Macro{PRIORITY\_HALFLIFE},
+controlled with the configuration variable \Macro{PRIORITY\_HALFLIFE},
 an exponential half-life value.
 The default is one day.
 If a user that has user priority of 100 and is
@@ -1333,7 +1333,7 @@ according to user priority both when allocating machines which become
 available and by priority preemption of currently allocated machines.
 For instance, if a low priority user is utilizing all available machines
 and suddenly a higher priority user submits jobs, Condor will
-immediately checkpoint and vacate jobs belonging to the lower priority
+immediately take a checkpoint and vacate jobs belonging to the lower priority
 user. This will free up machines that Condor will then give over to the
 higher priority user. Condor will not starve the lower priority user; it
 will preempt only enough jobs so that the higher priority user's fair
@@ -1344,14 +1344,14 @@ The default expression that ships with Condor is configured to only preempt
 lower priority jobs that have run
 for at least one hour. So in the previous example, in the worse case it
 could take up to a maximum of one hour until the higher priority user
-receives his fair share of machines.
+receives a fair share of machines.
 For a general discussion of
 limiting preemption,
 please see
 section \ref{sec:Disabling Preemption} of the Administrator's manual.
 
-User priorities are keyed on ``username@domain'', for example
-``johndoe@cs.wisc.edu''. The domain name to use, if any, is configured by
+User priorities are keyed on \Expr{<username>@<domain>}, for example
+\Expr{johndoe@cs.wisc.edu}. The domain name to use, if any, is configured by
 the Condor site administrator.  Thus, user priority and therefore resource
 allocation is not impacted by which machine the user submits from or
 even if the user submits jobs from multiple machines.
