@@ -88,7 +88,12 @@ if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
 :: strip trailing \ from cmake bin dir
 if "~%CMAKE_BIN_DIR:~-1%"=="~\" set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
 
+:: set path to WIX binaries
 set WIX_PATH=%WIX%
+if "~%WIX_PATH:~-1%"=="~\" set WIX_PATH=%WIX_PATH:~0,-1%
+if NOT "~%WIX_PATH%"=="~" set WIX_PATH=%WIX_PATH%\bin
+
+:: set path to MSCONFIG binaries
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
 
 set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%;%ZIP_PATH%;%WIX_PATH%
@@ -174,6 +179,8 @@ dir %BUILD_ROOT%
 verify >NUL
 call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-winnt-x86.msi
 @echo ERRORLEVEL=%ERRORLEVEL%
+:: reset set errorlevel to 0
+verify >NUL
 goto finis
 
 :PACK
