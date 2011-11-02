@@ -27,8 +27,8 @@
 
 //------------------------------------------------------------------------
 
-static void displayJobShort(AttrList* ad);
-static void short_header(void);
+void displayJobShort(AttrList* ad);
+void short_header(void);
 static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
 static void shorten (char *, int);
 static const char* format_date( time_t date );
@@ -40,7 +40,7 @@ static char encode_status( int status );
 
 //------------------------------------------------------------------------
 
-static void
+void
 displayJobShort(AttrList* ad)
 {
     int cluster, proc, date, status, prio, image_size, CompDate;
@@ -96,7 +96,7 @@ displayJobShort(AttrList* ad)
 
 //------------------------------------------------------------------------
 
-static void
+void
 short_header (void)
 {
     printf( " %-7s %-14s %11s %12s %-2s %11s %-15s\n",

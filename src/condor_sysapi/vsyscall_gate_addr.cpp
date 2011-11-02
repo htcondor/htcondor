@@ -43,7 +43,6 @@ const char *
 sysapi_vsyscall_gate_addr_raw(void)
 {
 	char *tmp;
-	char *cmd[3];
 	FILE *fin;
 	char buf[BUFFER_SIZE];
 	char addr[BUFFER_SIZE];
@@ -65,9 +64,7 @@ sysapi_vsyscall_gate_addr_raw(void)
 		}
 
 		/* exec probe */
-		cmd[0] = tmp;
-		cmd[1] = "--vdso-addr";
-		cmd[2] = NULL;
+		const char *cmd[] = {tmp, "--vdso-addr", NULL};
 		fin = my_popenv(cmd, "r", TRUE);
 		free(tmp);
 		if (fin == NULL) {

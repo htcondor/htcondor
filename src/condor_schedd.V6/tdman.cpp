@@ -169,7 +169,7 @@ TransferDaemon::push_transfer_requests(void)
 	TreqAction ret;
 	MyString capability;
 	MyString rej_reason;
-	char *encap = "ENCAPSULATION_METHOD_OLD_CLASSADS\n";
+	char encap[] = "ENCAPSULATION_METHOD_OLD_CLASSADS\n";
 	ClassAd respad;
 	int invalid;
 
@@ -240,7 +240,7 @@ TransferDaemon::push_transfer_requests(void)
 
 		// Let's use the only encapsulation protocol we have at the moment.
 		m_treq_sock->encode();
-		m_treq_sock->code(encap);
+		m_treq_sock->code((unsigned char *)encap);
 		m_treq_sock->end_of_message();
 
 		// This only puts a small amount of the treq onto the channel. The

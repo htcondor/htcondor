@@ -218,7 +218,7 @@ void ViewServer::Shutdown()
 // HandleQuery to take care of replying to the query
 //-------------------------------------------------------------------
 
-int ViewServer::ReceiveHistoryQuery(Service* s, int command, Stream* sock)
+int ViewServer::ReceiveHistoryQuery(Service* /*s*/, int command, Stream* sock)
 {
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 
@@ -561,7 +561,7 @@ ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray*
 //-------------------------------------------------------------------
 
 fpos_t*
-ViewServer::findOffset(FILE* &fp, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
+ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
 	fpos_t* search_offset_ptr = NULL;
 	if( times_array->length() == 0 ) {
 

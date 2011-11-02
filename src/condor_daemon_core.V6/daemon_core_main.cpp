@@ -1419,6 +1419,7 @@ dc_reconfig()
 			ptmp = NULL;
 			char segfault;	
 			segfault = *ptmp; // should blow up here
+			if (segfault) {} // Line to avoid compiler warnings.
 			ptmp[0] = 'a';
 			
 			// should never make it to here!
@@ -1535,7 +1536,6 @@ int dc_main( int argc, char** argv )
 	char**	ptr;
 	int		command_port = -1;
 	char const *daemon_sock_name = NULL;
-	int 	http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
@@ -1762,14 +1762,8 @@ int dc_main( int argc, char** argv )
 					// specify an HTTP port
 				ptr++;
 				if( ptr && *ptr ) {
-					http_port = atoi( *ptr );
-					dcargs += 2;
-				} else {
 					fprintf( stderr, 
-							 "DaemonCore: ERROR: -http needs another argument.\n" );
-					fprintf( stderr, 
-					   "   Please specify the port to use for the HTTP socket.\n" );
-
+							 "DaemonCore: ERROR: -http no longer accepted.\n" );
 					exit( 1 );
 				}
 			} else {

@@ -165,7 +165,7 @@ SelfDrainingQueue::timerHandler( void )
 	}
 	int count;
 	for( count=0; count<m_count_per_interval && !queue.IsEmpty(); count++ ) {
-		ServiceData* d;
+		ServiceData* d = NULL;
 		queue.dequeue(d);
 
 		SelfDrainingHashItem hash_item(d);

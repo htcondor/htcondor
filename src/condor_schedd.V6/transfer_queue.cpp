@@ -287,10 +287,10 @@ TransferQueueManager::CheckTransferQueue() {
 			}
 		}
 		else {
-			if( client->m_downloading && 
-				(downloading < m_max_downloads || m_max_downloads <= 0) ||
-				!client->m_downloading &&
-				(uploading < m_max_uploads || m_max_uploads <= 0) )
+			if( (client->m_downloading && 
+				(downloading < m_max_downloads || m_max_downloads <= 0)) ||
+				((!client->m_downloading) &&
+				(uploading < m_max_uploads || m_max_uploads <= 0)) )
 			{
 				dprintf(D_FULLDEBUG,
 						"TransferQueueManager: sending GoAhead to %s.\n",

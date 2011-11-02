@@ -2368,23 +2368,18 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 					 job_id.cluster, job_id.proc );
 
 			int handler_sig=0;
-			const char* handler_sig_str;
 			switch( action ) {
 			case JA_HOLD_JOBS:
 				handler_sig = SIGUSR1;
-				handler_sig_str = "SIGUSR1";
 				break;
 			case JA_REMOVE_JOBS:
 				handler_sig = SIGUSR1;
-				handler_sig_str = "SIGUSR1";
 				break;
 			case JA_VACATE_JOBS:
 				handler_sig = DC_SIGSOFTKILL;
-				handler_sig_str = "DC_SIGSOFTKILL";
 				break;
 			case JA_VACATE_FAST_JOBS:
 				handler_sig = DC_SIGHARDKILL;
-				handler_sig_str = "DC_SIGHARDKILL";
 				break;
 			default:
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
@@ -2411,7 +2406,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				dprintf( D_FULLDEBUG, "This job does not have a match\n");
             }
 			int shadow_sig=0;
-			const char* shadow_sig_str;
+			const char* shadow_sig_str = "UNKNOWN";
 			switch( action ) {
 			case JA_HOLD_JOBS:
 					// for now, use the same as remove
@@ -2632,10 +2627,6 @@ PeriodicExprEval( ClassAd *jobad )
 	jobad->LookupInteger(ATTR_JOB_STATUS,status);
 
 	if(cluster<0 || proc<0 || status<0) return 1;
-
-	PROC_ID job_id;
-	job_id.cluster = cluster;
-	job_id.proc = proc;
 
 	UserPolicy policy;
 	policy.Init(jobad);
@@ -6564,7 +6555,6 @@ void
 Scheduler::StartJob(match_rec *rec)
 {
 	PROC_ID id;
-	bool ReactivatingMatch;
 
 	ASSERT( rec );
 	switch(rec->status) {
@@ -6591,7 +6581,6 @@ Scheduler::StartJob(match_rec *rec)
 		// This is the case we want to try and start a job.
 	id.cluster = rec->cluster;
 	id.proc = rec->proc; 
-	ReactivatingMatch = (id.proc == -1);
 	if(!Runnable(&id)) {
 			// find the job in the cluster with the highest priority
 		id.proc = -1;
@@ -13920,9 +13909,9 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 		// currently we only support serial jobs here
 	if( !mrec || !mrec->user ||
-		srec->universe != CONDOR_UNIVERSE_VANILLA &&
-		srec->universe != CONDOR_UNIVERSE_JAVA &&
-		srec->universe != CONDOR_UNIVERSE_VM )
+		(srec->universe != CONDOR_UNIVERSE_VANILLA &&
+		 srec->universe != CONDOR_UNIVERSE_JAVA &&
+		 srec->universe != CONDOR_UNIVERSE_VM) )
 	{
 		stream->encode();
 		stream->put((int)0);
@@ -14015,7 +14004,6 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 
 	int shadow_pid = srec->pid;
 	PROC_ID new_job_id = srec->job_id;
-	PROC_ID prev_job_id = srec->prev_job_id;
 
 	ASSERT( stream );
 

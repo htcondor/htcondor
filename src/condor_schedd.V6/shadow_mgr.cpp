@@ -286,7 +286,7 @@ ShadowMgr::makeShadow( const char* path )
 {
 	Shadow* new_shadow;
 	FILE* fp;
-	char *args[] = {const_cast<char*>(path), "-classad", NULL};
+	const char *args[] = {const_cast<char*>(path), "-classad", NULL};
 	char buf[1024];
 
 		// first, try to execute the given path with a "-classad"

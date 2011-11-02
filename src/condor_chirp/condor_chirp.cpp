@@ -91,7 +91,7 @@ chirp_client_connect_starter()
 	MyString path;
     int port;
     int result;
-	char *dir;
+	const char *dir;
 
 	if (NULL == (dir = getenv("_CONDOR_SCRATCH_DIR"))) {
 		dir = ".";
@@ -292,7 +292,8 @@ int chirp_fetch(int argc, char **argv) {
 int chirp_put(int argc, char **argv) {
 
 	int fileOffset = 2;
-	char *mode = "cwt";
+	char default_mode [] = "cwt";
+	char *mode = default_mode;
 	unsigned perm = 0777;
 
 	bool more = true;

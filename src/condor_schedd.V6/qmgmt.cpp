@@ -143,7 +143,7 @@ static void ScheduleJobQueueLogFlush();
 bool qmgmt_all_users_trusted = false;
 static char	**super_users = NULL;
 static int	num_super_users = 0;
-static char *default_super_user =
+static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
 #else
@@ -1587,7 +1587,8 @@ int get_myproxy_password_handler(Service * /*service*/, int /*i*/, Stream *socke
 		return -1;
 	}
 
-	char * password = "";
+	char pwd[] = "";
+	char * password = pwd;
 
 	if (GetMyProxyPassword (cluster_id, proc_id, &password) != 0) {
 		// Try not specifying a proc
@@ -2441,7 +2442,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	int universe;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( flags & SETDIRTY ) && ( status == RUNNING || ( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) {
+	if( ( flags & SETDIRTY ) && ( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
 		// Add the key to list of dirty classads
 		DirtyJobIDs.rewind();
 		if( ! DirtyJobIDs.contains( key ) ) {
@@ -2684,9 +2685,6 @@ char * simple_encode (int key, const char * src) {
 
   char * result = (char*)strdup (src);
 
-  char buff[2];
-  buff [1]='\n';
-
   unsigned int i= 0;
   for (; i<strlen (src); i++) {
     int c = (int)src[i]-(int)' ';
@@ -2767,7 +2765,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 		int cluster_id;
 		int old_cluster_id = -10;
 		int proc_id;
-		ClassAd *procad;
+		ClassAd *procad = NULL;
 		ClassAd *clusterad;
 
 		int counter = 0;
@@ -3118,7 +3116,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
-	ClassAd				*ad;
+	ClassAd				*ad = NULL;
 	char				key[PROC_ID_STR_BUFLEN];
 //	LogDeleteAttribute	*log;
 	char				*attr_val = NULL;

@@ -108,7 +108,7 @@ reserve_for_afs_cache()
 #else
 	int		answer;
 	FILE	*fp;
-	char	*args[] = {FS_PROGRAM, FS_COMMAND, NULL};
+	const char	*args[] = {FS_PROGRAM, FS_COMMAND, NULL};
 	int		cache_size, cache_in_use;
 	int		do_it;
 

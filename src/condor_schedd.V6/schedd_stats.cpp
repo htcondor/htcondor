@@ -52,6 +52,7 @@ void ScheddStatistics::SetWindowSize(int window)
 // 
 void ScheddStatistics::Init() 
 { 
+   /*
    static const int64_t sizes[] = {
       (int64_t)0x10000 * 0x1,        (int64_t)0x10000 * 0x4,      // 64Kb, 256Kb
       (int64_t)0x10000 * 0x10,       (int64_t)0x10000 * 0x40,     //  1Mb,   4Mb
@@ -60,6 +61,7 @@ void ScheddStatistics::Init()
       (int64_t)0x10000 * 0x10000,    (int64_t)0x10000 * 0x40000,  //  4Gb,  16Gb
       (int64_t)0x10000 * 0x100000,   (int64_t)0x10000 * 0x400000, // 64Gb, 256Gb
       };
+   */
    //JobSizes.value.set_levels(COUNTOF(sizes), sizes);
    //JobSizes.recent.set_levels(COUNTOF(sizes), sizes);
 

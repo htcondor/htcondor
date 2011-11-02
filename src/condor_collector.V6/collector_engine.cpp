@@ -69,8 +69,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
-	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
 	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
+	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
@@ -1013,7 +1013,7 @@ updateClassAd (CollectorHashTable &hashTable,
 ClassAd * CollectorEngine::
 mergeClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
-			   const char *label,
+			   const char * /*label*/,
 			   ClassAd *new_ad,
 			   AdNameHashKey &hk,
 			   const MyString &hashString,

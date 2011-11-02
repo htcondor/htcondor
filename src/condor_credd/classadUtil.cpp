@@ -114,21 +114,21 @@ bool putOldClassAd ( Stream *sock, ClassAd& ad )
 		}
 		buf += " = ";
 		unp.Unparse( buf, expr );
-		if (!sock->put((char*)buf.c_str())) return false;
+		if (!sock->put(buf.c_str())) return false;
 	}
 
 	// Send the type
 	if (!ad.EvaluateAttrString("MyType",buf)) {
 		buf="(unknown type)";
 	}
-	if (!sock->put((char*)buf.c_str())) {
+	if (!sock->put(buf.c_str())) {
 		return false;
 	}
 
 	if (!ad.EvaluateAttrString("TargetType",buf)) {
 		buf="(unknown type)";
 	}
-	if (!sock->put((char*)buf.c_str())) {
+	if (!sock->put(buf.c_str())) {
 		return false;
 	}
 

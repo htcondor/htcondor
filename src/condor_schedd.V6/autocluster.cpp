@@ -251,7 +251,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 	}
 	else {
 		cur_id = next_id++;
-		if( next_id < cur_id ) {
+		if( cur_id < 0 ) {
 				// We've wrapped around MAX_INT!
 				// In config() we take steps to avoid this unlikely condition.
 			EXCEPT("Auto cluster IDs exhausted! (allocated %d)",cur_id);

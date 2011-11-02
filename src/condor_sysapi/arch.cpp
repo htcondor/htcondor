@@ -425,9 +425,9 @@ sysapi_translate_opsys( const char *sysname,
 }
 
 int sysapi_translate_opsys_version( 
-    const char *sysname,
+    const char * /*sysname*/,
 	const char *release,
-	const char *version )
+	const char * /*version*/ )
 {
     const char * psz = release;
 

@@ -281,7 +281,7 @@ privsep_exec_set_args(FILE* fp, ArgList& args)
 {
 	int num_args = args.Count();
 	for (int i = 0; i < num_args; i++) {
-		fprintf(fp, "exec-arg<%d>\n", strlen(args.GetArg(i)));
+		fprintf(fp, "exec-arg<%lu>\n", strlen(args.GetArg(i)));
 		fprintf(fp, "%s\n", args.GetArg(i));
 	}
 }
@@ -291,7 +291,7 @@ privsep_exec_set_env(FILE* fp, Env& env)
 {
 	char** env_array = env.getStringArray();
 	for (char** ptr = env_array; *ptr != NULL; ptr++) {
-		fprintf(fp, "exec-env<%d>\n", strlen(*ptr));
+		fprintf(fp, "exec-env<%lu>\n", strlen(*ptr));
 		fprintf(fp, "%s\n", *ptr);
 	}
 	deleteStringArray(env_array);

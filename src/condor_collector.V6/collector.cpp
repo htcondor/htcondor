@@ -1441,8 +1441,9 @@ void CollectorDaemon::sendCollectorAd()
 		return ;
 	}
 	if ( updateRemoteCollector ) {
+		char update_addr_default [] = "(null)";
 		char *update_addr = updateRemoteCollector->addr();
-		if (!update_addr) update_addr = "(null)";
+		if (!update_addr) update_addr = update_addr_default;
 		if( ! updateRemoteCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 					 "(%s): %s\n", update_addr,

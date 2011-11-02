@@ -496,8 +496,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	// Ok, figure out if I have a transferd already setup for this user.
 	td = m_tdman.find_td_by_user(fquser);
 	if (td == NULL || 
-		(td->get_status() != TD_REGISTERED) && 
-			(td->get_status() != TD_INVOKED)) 
+		((td->get_status() != TD_REGISTERED) && 
+			(td->get_status() != TD_INVOKED)) )
 	{
 		// Since it looks like I'm going to have to wait for a transferd
 		// to wake up and register to this schedd, let the client know we

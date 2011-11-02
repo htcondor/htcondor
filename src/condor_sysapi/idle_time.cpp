@@ -209,8 +209,8 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 #define UTMP_KIND utmp
 
 #if defined(LINUX)
-static char *UtmpName = "/var/run/utmp";
-static char *AltUtmpName = "/var/adm/utmp";
+static const char *UtmpName = "/var/run/utmp";
+static const char *AltUtmpName = "/var/adm/utmp";
 #elif defined(CONDOR_FREEBSD)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "";

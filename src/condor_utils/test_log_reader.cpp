@@ -476,7 +476,7 @@ ReadEvents(Options &opts, int &totalEvents)
 		if ( opts.checkFileStatus ) {
 			ReadUserLog::FileStatus	fstatus = reader.CheckFileStatus( empty );
 			if ( fstatus != prevFstatus ) {
-				char	*s;
+				const char	*s;
 				switch( fstatus ) {
 				case ReadUserLog::LOG_STATUS_ERROR:
 					s = "ERROR";

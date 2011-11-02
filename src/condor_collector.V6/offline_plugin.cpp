@@ -311,7 +311,7 @@ OfflineCollectorPlugin::mergeClassAd (
 	ClassAd &ad,
 	char const *key )
 {
-	ClassAd *old_ad;
+	ClassAd *old_ad = NULL;
 
 	_ads->BeginTransaction ();
 

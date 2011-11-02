@@ -60,7 +60,7 @@ int default_cred_expire_threshold;
 
 
 int 
-store_cred_handler(Service * service, int i, Stream *stream) {
+store_cred_handler(Service * /*service*/, int /*i*/, Stream *stream) {
   void * data = NULL;
   int rtnVal = FALSE;
   int rc;
@@ -222,7 +222,7 @@ EXIT:
 
 
 int 
-get_cred_handler(Service * service, int i, Stream *stream) {
+get_cred_handler(Service * /*service*/, int /*i*/, Stream *stream) {
   char * name = NULL;
   int rtnVal = FALSE;
   bool found_cred=false;
@@ -334,7 +334,7 @@ EXIT:
 
 
 int 
-query_cred_handler(Service * service, int i, Stream *stream) {
+query_cred_handler(Service * /*service*/, int /*i*/, Stream *stream) {
 
   classad::ClassAdUnParser unparser;
   std::string adbuffer;
@@ -413,7 +413,7 @@ EXIT:
 
 
 int 
-rm_cred_handler(Service * service, int i, Stream *stream) {
+rm_cred_handler(Service * /*service*/, int /*i*/, Stream *stream) {
   char * name = NULL;
   int rtnVal = FALSE;
   int rc;
@@ -622,7 +622,7 @@ CheckCredentials () {
     priv_state priv = set_user_priv();
 
     time_t time = pCred->cred->GetRealExpirationTime();
-    dprintf (D_FULLDEBUG, "Checking %s:%s = %d\n",
+    dprintf (D_FULLDEBUG, "Checking %s:%s = %ld\n",
 	       pCred->cred->GetOwner(),
                pCred->cred->GetName(),
 	       time);
@@ -1102,7 +1102,8 @@ init_user_id_from_FQN (const char * _fqn) {
   char * uid = NULL;
   char * domain = NULL;
   char * fqn = NULL;
-  
+  char default_uid [] = "nobody";
+
   if (_fqn) {
     fqn = strdup (_fqn);
     uid = fqn;
@@ -1116,7 +1117,7 @@ init_user_id_from_FQN (const char * _fqn) {
   }
   
   if (uid == NULL) {
-    uid = "nobody";
+    uid = default_uid;
   }
 
   int rc = init_user_ids (uid, domain);
