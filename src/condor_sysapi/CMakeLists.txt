@@ -18,7 +18,14 @@
 
 file( GLOB SysApiRmvElements *_t.* *.t.* dhry21b* *_main.cpp test.* )
 
+
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
+
+# clinpack comes from a 3rd party, we don't every want to touch it, even
+# to fix warnings.
+if (UNIX)
+set_source_files_properties(clinpack.cpp PROPERTIES COMPILE_FLAGS -w)
+endif(UNIX)
 
 set( SYSAPI_UTIL_SRCS "${SysapiHeaderFiles};${SysapiSourceFiles}" PARENT_SCOPE )
 
