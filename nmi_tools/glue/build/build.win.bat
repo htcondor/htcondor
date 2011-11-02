@@ -164,7 +164,7 @@ goto finis
 :MSI
 :MAKE_MSI
 :NATIVE
-@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%BUILD_VERSION%-winnt-x86.msi
+@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-winnt-x86.msi
 @echo TODO: fix so that do_wix.bat can run in NMI. %ERRORLEVEL%
 @echo on
 dir %BUILD_ROOT%\release_dir
@@ -172,7 +172,7 @@ dir %BUILD_ROOT%
 @echo off
 :: reset set errorlevel to 0
 verify >NUL
-:: call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%BUILD_VERSION%-winnt-x86.msi
+call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-winnt-x86.msi
 @echo ERRORLEVEL=%ERRORLEVEL%
 goto finis
 
