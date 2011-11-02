@@ -291,6 +291,10 @@ class MyString
 	*/
 	void trim( void );
 
+	/** Remove all the whitespace from this string
+	*/
+	void compressSpaces( void );
+
 	//@}
 
 	// ----------------------------------------

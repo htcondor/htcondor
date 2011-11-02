@@ -117,17 +117,6 @@ OfflineCollectorPlugin::configure ()
 
 }
 
-/* remove all the whitespace from a string */
-void
-compressSpaces ( MyString &s ) {
-	for ( int i = 0, j = 0; i <= s.Length (); ++i, ++j ) {
-		if ( isspace ( s[i] ) ) {
-			i++;
-		}
-		s.setChar ( j, s[i] );
-	}
-}
-
 void
 OfflineCollectorPlugin::update (
 	int	 command,
@@ -166,7 +155,7 @@ OfflineCollectorPlugin::update (
 	}
 	MyString s;
 	hashKey.sprint ( s );
-	compressSpaces ( s );
+	s.compressSpaces();
 	const char *key = s.Value ();
 
 	/* report whether this ad is "off-line" or not and update
@@ -391,7 +380,7 @@ OfflineCollectorPlugin::invalidate (
 		ClassAd *p;
 		MyString s;
 		hashKey.sprint ( s );
-		compressSpaces ( s );
+		s.compressSpaces();
 		const char *key = s.Value ();
 
 		/* can't remove ads that do not exist */
