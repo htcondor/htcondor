@@ -61,6 +61,12 @@ if the job was submitted with the \Opt{-remote} or \Opt{-spool} option to
 \Condor{submit}.
 \Ticket{2569}
 
+\item Fixed a bug that caused \Opt{condor\_q -analyze} to fail if a job or
+machine ad contained a string attribute ending in a backslash.
+\Opt{condor\_q -analyze} would print the error 
+``Unable to process machine ClassAds'' or ``Unable to process job ClassAd''.
+\Ticket{2603}
+
 \end{itemize}
 
 \noindent Known Bugs:
