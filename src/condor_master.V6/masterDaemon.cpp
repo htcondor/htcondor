@@ -585,12 +585,11 @@ int daemon::RealStart( )
 		remove( m_after_startup_wait_for_file.Value() );
 	}
 
-		// Collector needs to listen on a well known port, as does the
-		// Negotiator.  
 		// We didn't want them to use root for any reason, but b/c of
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
+		// Collector needs to listen on a well known port.
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
 
 			// Go through all of the
