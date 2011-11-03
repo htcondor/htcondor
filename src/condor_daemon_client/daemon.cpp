@@ -1649,9 +1649,6 @@ Daemon::getDefaultPort( void )
 	case DT_COLLECTOR:
 		return COLLECTOR_PORT;
 		break;
-	case DT_NEGOTIATOR:
-		return NEGOTIATOR_PORT;
-		break;
 	case DT_VIEW_COLLECTOR:
 		return CONDOR_VIEW_PORT;
 		break;
