@@ -593,6 +593,9 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				delete event;
 				break;
 			}
+			default:
+				// ignore the rest of the eveats
+				break;
 			}
 		} else {
 			

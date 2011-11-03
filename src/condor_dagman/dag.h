@@ -595,7 +595,7 @@ class Dag {
 
 	const char *DefaultNodeLog(void) { return _defaultNodeLog; }
 
-	const bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
+	bool GenerateSubdagSubmits(void) { return _generateSubdagSubmits; }
 
 	StringList& DagFiles(void) { return _dagFiles; }
 
