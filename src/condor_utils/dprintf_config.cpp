@@ -242,7 +242,10 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 					if(!file_found)
 					{
 						DebugFileInfo logFileInfo;
-						logFileInfo.debugFlags = debug_level;
+						if(!debug_level)
+							logFileInfo.debugFlags = DebugFlags;
+						else
+							logFileInfo.debugFlags = debug_level;
 						logFileInfo.logPath = logPath;
 						it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
 					}
