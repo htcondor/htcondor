@@ -39,7 +39,6 @@
 #include "basename.h"
 #include "spooled_job_files.h"
 #include "condor_holdcodes.h"
-#include "condor_parameters.h"
 #include "string_list.h"
 #include "filename_tools.h"
 //#include "myproxy_manager.h"
@@ -2304,7 +2303,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			// If requested, put the job on hold. Otherwise, wait for the
 			// proxy to be refreshed, then resume handling the job.
 			bool hold_if_credential_expired = 
-				param_boolean(PARAM_HOLD_IF_CRED_EXPIRED,true);
+				param_boolean("HOLD_JOB_IF_CREDENTIAL_EXPIRES",true);
 			if ( hold_if_credential_expired ) {
 					// set hold reason via Globus cred expired error code
 				globusStateErrorCode =
@@ -2627,7 +2626,7 @@ void GlobusJob::NotifyResourceDown()
 		// timer already set, our work is done
 		return;
 	}
-	int timeout = param_integer(PARAM_GLOBUS_GATEKEEPER_TIMEOUT,60*60*24*5);
+	int timeout = param_integer("GLOBUS_GATEKEEPER_TIMEOUT",60*60*24*5);
 	int time_of_death = 0;
 	unsigned int now = time(NULL);
 	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );

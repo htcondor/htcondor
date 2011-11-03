@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "condor_email.h"
 #include "condor_environ.h"
-#include "condor_parameters.h"
 #include "daemon_list.h"
 #include "sig_name.h"
 #include "internet.h"

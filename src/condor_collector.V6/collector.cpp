@@ -26,7 +26,6 @@
 #include "internet.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
-#include "condor_parameters.h"
 #include "condor_email.h"
 #include "condor_query.h"
 

@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_parameters.h"
 #include "subsystem_info.h"
 
 /*

@@ -28,7 +28,6 @@
 #include "condor_collector.h"
 #include "scheduler.h"
 #include "condor_attributes.h"
-#include "condor_parameters.h"
 #include "condor_classad.h"
 #include "classad_helpers.h"
 #include "condor_adtypes.h"

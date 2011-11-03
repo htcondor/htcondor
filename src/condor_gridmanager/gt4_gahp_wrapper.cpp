@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include <errno.h>
-#include "condor_parameters.h"
 #include "condor_config.h"
 #include "env.h"
 #include "directory.h"
