@@ -40,6 +40,10 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
     m_svr_thread = NULL;
     m_init = false;
     m_http_socket_read_timeout = AXIS2_HTTP_DEFAULT_SO_TIMEOUT;
+
+    m_allocator = axutil_allocator_init(NULL);
+    m_env = axutil_env_create(m_allocator);
+
 }
 
 Axis2SoapProvider::~Axis2SoapProvider()
@@ -56,6 +60,8 @@ Axis2SoapProvider::~Axis2SoapProvider()
         axutil_env_free(m_env);
     }
 
+    // don't free m_allocator
+
     axiom_xml_reader_cleanup();
 
 }
@@ -71,18 +77,17 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
     }
 
     if (!m_init) {
-        axutil_allocator_t* allocator = axutil_allocator_init(NULL);
-        axutil_error_t *error = axutil_error_create(allocator);
-        axutil_log_t *log = axutil_log_create(allocator, NULL, m_log_file.c_str());
+
+        axutil_log_t *log = axutil_log_create(m_allocator, NULL, m_log_file.c_str());
 
         // TODO: not sure we need a TP but don't wanted to get tripped up by a NP
         // deeper in the stack
-        axutil_thread_pool_t *thread_pool = axutil_thread_pool_init(allocator);
+        axutil_thread_pool_t *thread_pool = axutil_thread_pool_init(m_allocator);
         axiom_xml_reader_init();
-        m_env = axutil_env_create(allocator);
-        axutil_error_init();
 
-        m_env = axutil_env_create_with_error_log_thread_pool(allocator, error, log, thread_pool);
+        axutil_error_t *error = axutil_error_create(m_allocator);
+        axutil_error_init();
+        m_env = axutil_env_create_with_error_log_thread_pool(m_allocator, error, log, thread_pool);
         m_env->log->level = m_log_level;
 
         axis2_status_t status = axutil_file_handler_access(m_repo_path.c_str(), AXIS2_R_OK);

@@ -92,6 +92,7 @@ class Axis2SoapProvider: public aviary::transport::AviaryProvider {
         std::string m_repo_path;
         axutil_log_levels_t m_log_level;
         axutil_env_t* m_env;
+        axutil_allocator_t* m_allocator;
         axis2_transport_receiver_t* m_http_server;
         axis2_http_svr_thread_t* m_svr_thread;
         int m_http_socket_read_timeout;
