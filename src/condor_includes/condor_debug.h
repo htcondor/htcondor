@@ -173,6 +173,7 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #if defined(__cplusplus)
 }
 #endif
+
 #if defined(__cplusplus)
 bool debug_open_fds(std::map<int,bool> &open_fds);
 
@@ -186,7 +187,7 @@ public:
     double   begin;
 };
 
-#endif
+#endif // defined(__cplusplus)
 
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \

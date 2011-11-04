@@ -1990,7 +1990,8 @@ public:
     double                    begin;
 };
 
-#define DC_AUTO_FUNCTION_RUNTIME(a) dc_stats_auto_runtime_probe a("DCFunc_" __FUNCTION__, IF_VERBOSEPUB)
+#define DC_AUTO_RUNTIME_PROBE(n,a) dc_stats_auto_runtime_probe a(n, IF_VERBOSEPUB)
+#define DC_AUTO_FUNCTION_RUNTIME(a) DC_AUTO_RUNTIME_PROBE(__FUNCTION__,a)
 
 
 #ifndef _NO_EXTERN_DAEMON_CORE
