@@ -404,7 +404,8 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
    StatisticsPool * pool = &daemonCore->dc_stats.Pool;
    this->probe = pool->GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! this->probe) {
-       MyString attr(name);
+       MyString attr("DC_Func");
+       attr += name;
        cleanStringForUseAsAttr(attr);
        int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
        this->probe = pool->NewProbe< stats_entry_recent<Probe> >(name, attr.Value(), as_pub);

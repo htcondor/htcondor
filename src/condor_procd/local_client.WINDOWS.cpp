@@ -21,6 +21,50 @@
 #include "condor_common.h"
 #include "local_client.h"
 
+double pfc_lc_rt_start_connection = 0;
+double pfc_lc_rt_open_pipe = 0;
+double pfc_lc_rt_wait_pipe = 0;
+double pfc_lc_rt_write_pipe = 0;
+double pfc_lc_rt_end_connection = 0;
+double pfc_lc_rt_read_data = 0;
+
+#if defined(HAVE__FTIME)
+# include <sys/timeb.h>
+#endif
+
+// can't use _condor_auto_save_runtime in this file because it pulls in
+// other things as well. 
+class _lc_auto_save_runtime
+{
+public:
+   double & runtime;
+   double   begin;
+   double   begin_step;
+   _lc_auto_save_runtime(double & store) : runtime(store) { this->begin_step = this->begin = current_time(); }
+   ~_lc_auto_save_runtime() { runtime = elapsed(); }
+   double   elapsed() { return current_time() - begin; }
+   double   step() { 
+      double now = current_time(); 
+      double ret = begin_step - now; 
+      begin_step = now; 
+      return ret; 
+   }
+   double   current_time() {
+#if defined(HAVE__FTIME)
+	struct _timeb timebuffer;
+	_ftime( &timebuffer );
+	return ( timebuffer.time + (timebuffer.millitm * 0.001) );
+#elif defined(HAVE_GETTIMEOFDAY)
+	struct timeval	tv;
+	gettimeofday( &tv, NULL );
+	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+#else
+    return 0.0;
+#endif
+   }
+};
+
+
 LocalClient::LocalClient() :
 	m_initialized(false),
 	m_pipe_addr(NULL),
@@ -57,6 +101,7 @@ bool
 LocalClient::start_connection(void* buffer, int len)
 {
 	ASSERT(m_initialized);
+    _lc_auto_save_runtime rt(pfc_lc_rt_start_connection);
 
 	ASSERT(m_pipe == INVALID_HANDLE_VALUE);
 	while (true) {
@@ -67,6 +112,7 @@ LocalClient::start_connection(void* buffer, int len)
 	                        OPEN_EXISTING,                 // fail if not there
 	                        0,                             // default attributes
 		                    NULL);                         // no template file
+        pfc_lc_rt_open_pipe = rt.step();
 		if (m_pipe != INVALID_HANDLE_VALUE) {
 			break;
 		}
@@ -77,8 +123,10 @@ LocalClient::start_connection(void* buffer, int len)
 		}
 		if (WaitNamedPipe(m_pipe_addr, NMPWAIT_WAIT_FOREVER) == FALSE) {
 			dprintf(D_ALWAYS, "WaitNamedPipe error: %u\n", GetLastError());
+            pfc_lc_rt_wait_pipe = rt.step();
 			return false;
 		}
+        pfc_lc_rt_wait_pipe = rt.step();
 	}
 
 	DWORD bytes;
@@ -86,9 +134,11 @@ LocalClient::start_connection(void* buffer, int len)
 		dprintf(D_ALWAYS, "WriteFile error: %u\n", GetLastError());
 		CloseHandle(m_pipe);
 		m_pipe = INVALID_HANDLE_VALUE;
+        pfc_lc_rt_write_pipe = rt.step();
 		return false;
 	}
 	ASSERT(bytes == len);
+    pfc_lc_rt_write_pipe = rt.step();
 
 	return true;
 }
@@ -97,6 +147,7 @@ void
 LocalClient::end_connection()
 {
 	ASSERT(m_initialized);
+    _lc_auto_save_runtime rt(pfc_lc_rt_end_connection);
 
 	ASSERT(m_pipe != INVALID_HANDLE_VALUE);
 	CloseHandle(m_pipe);
@@ -107,6 +158,7 @@ bool
 LocalClient::read_data(void* buffer, int len)
 {
 	ASSERT(m_initialized);
+    _lc_auto_save_runtime rt(pfc_lc_rt_read_data);
 
 	DWORD bytes;
 	if (ReadFile(m_pipe, buffer, len, &bytes, NULL) == FALSE) {
