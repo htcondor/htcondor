@@ -115,7 +115,7 @@ axis2_ssl_utils_initialize_ctx(
         if (!(SSL_CTX_use_certificate_chain_file(ctx, server_cert)))
         {
             AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,
-                "[ssl] Loading server certificate failed, key file %s", server_key);
+                            "[ssl] Loading server certificate failed, cert file '%s'", server_cert);
             SSL_CTX_free(ctx);
             return NULL;
         }
@@ -123,7 +123,7 @@ axis2_ssl_utils_initialize_ctx(
         if (!(SSL_CTX_use_PrivateKey_file(ctx, server_key, SSL_FILETYPE_PEM)))
         {
             AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,
-                "[ssl] Loading server key failed, key file %s", server_key);
+                "[ssl] Loading server key failed, key file '%s'", server_key);
             SSL_CTX_free(ctx);
             return NULL;
         }
@@ -131,7 +131,8 @@ axis2_ssl_utils_initialize_ctx(
     else
     {
         AXIS2_LOG_INFO(env->log,
-            "[ssl] Server certificate chain file not specified");
+            "[ssl] Server key file not specified");
+        return NULL;
     }
 
     /* Load the CAs we trust */
