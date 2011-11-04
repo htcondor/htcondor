@@ -20,10 +20,12 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include <map>
+#include <cctype>
 #include "timed_queue.h"
 #include "generic_stats.h"
 #include "classad_helpers.h" // for canStringForUseAsAttr
 #include "string_list.h"     // for StringList
+#include "condor_config.h"
 
 // use these to help initialize static const arrays arrays of 
 //
@@ -37,6 +39,11 @@
  #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
 #endif
 #define GS_FIELD(st,fld) (((st *)0)->fld)
+
+// specialize AdvanceBy for simple types so that we can use a more efficient algorithm.
+template <> void stats_entry_recent<int>::AdvanceBy(int cSlots) { this->AdvanceAndSub(cSlots); }
+template <> void stats_entry_recent<int64_t>::AdvanceBy(int cSlots) { this->AdvanceAndSub(cSlots); }
+template <> void stats_entry_recent<double>::AdvanceBy(int cSlots) { this->AdvanceAndSub(cSlots); }
 
 // specialization of PublishDebug to dump the internal data storage
 // of stats_entry_recent. 
@@ -106,6 +113,15 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
       attr += "Debug";
 
    ad.Assign(pattr, str);
+}
+
+template <>
+void stats_entry_recent<stats_histogram_sizes>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   ;
+}
+template <>
+void stats_entry_recent<stats_histogram_times>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   ;
 }
 
 // Determine if enough time has passed to Advance the recent buffers,
@@ -211,7 +227,7 @@ int generic_stats_ParseConfigString(
        if (psep) {
           size_t cch = psep - p;
           char sz[64];
-          if (cch > COUNTOF(sz)) 
+          if (cch >= COUNTOF(sz)) 
              continue;
           strncpy(sz, p, cch);
           sz[cch] = 0;
@@ -380,6 +396,7 @@ double Probe::Std() const
    }
 }
 
+/*
 template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots) { 
    if (cSlots <= 0) 
       return;
@@ -393,7 +410,9 @@ template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots) {
 
    recent = buf.Sum();
 }
+*/
 
+/*
 template <> void stats_entry_recent< stats_histogram<int64_t> >::AdvanceBy(int cSlots)
 {
    if (cSlots <= 0) 
@@ -402,6 +421,7 @@ template <> void stats_entry_recent< stats_histogram<int64_t> >::AdvanceBy(int c
    recent = buf.Sum();
 }
 
+GCC_DIAG_OFF(float-equal)
 template <> void stats_entry_recent< stats_histogram<double> >::AdvanceBy(int cSlots)
 {
    if (cSlots <= 0) 
@@ -409,6 +429,7 @@ template <> void stats_entry_recent< stats_histogram<double> >::AdvanceBy(int cS
    while (cSlots > 0) { buf.Advance(); --cSlots; }
    recent = buf.Sum();
 }
+GCC_DIAG_ON(float-equal)
 
 template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlots)
 {
@@ -417,26 +438,7 @@ template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlot
    while (cSlots > 0) { buf.Advance(); --cSlots; }
    recent = buf.Sum();
 }
-
-template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int flags) const
-{
-   MyString str;
-   if (this->value.cItems <= 0) {
-      str += "";
-   } else {
-      str += this->value.data[0];
-      for (int ix = 1; ix < this->value.cItems+1; ++ix) {
-         str += ", ";
-         str += this->value.data[ix];
-      }
-   }
-
-   ad.Assign(pattr, str);
-
-   MyString attr(pattr);
-   attr += "Set";
-   ad.Assign(attr.Value(), "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb");
-}
+*/
 
 void ProbeToStringDebug(MyString & str, const Probe& probe)
 {
@@ -572,6 +574,216 @@ void TestProbe()
    stats.Runtime.AdvanceBy(1);
 }
 
+/*
+template <> 
+void stats_entry_recent<stats_histogram_sizes>::Publish(ClassAd& ad, const char * pattr, int flags) const
+{
+	MyString str("");
+	if (this->cItems > 0) {
+		str += this->data[0];
+		for(int ii = 1; ii <= this->cItems; ++ii) {
+			str += ", ";
+			str += this->data[i];
+		}
+	}
+	ad.Assign(pattr, str);
+}
+*/
+
+/*
+template <> void stats_entry_recent<stats_histogram_sizes>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
+template <> void stats_entry_recent<stats_histogram_times>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
+template <> void stats_entry_recent<stats_histogram_double>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
+template <> void stats_entry_recent<stats_histogram_int>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
+*/
+
+int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_sizes& probe)
+{
+	MyString str("");
+    probe.AppendToString(str);
+	return ad.Assign(pattr, str);
+}
+
+int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_times& probe)
+{
+	MyString str("");
+    probe.AppendToString(str);
+	return ad.Assign(pattr, str);
+}
+
+int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_double& probe)
+{
+	MyString str("");
+    probe.AppendToString(str);
+	return ad.Assign(pattr, str);
+}
+
+int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_int& probe)
+{
+	MyString str("");
+    probe.AppendToString(str);
+	return ad.Assign(pattr, str);
+}
+
+// tj: this code doesn't currently work....
+//
+int stats_histogram_sizes::ParseSizes(const char * psz, int64_t * pSizes, int cMaxSizes)
+{
+   int cSizes = 0;
+   int64_t size = 0;
+   for (const char* p = psz; p && *p; ++p) {
+
+      while (isspace(*p))
+         ++p;
+
+      if ( ! isdigit(*p)) {
+         EXCEPT("Invalid input to ParseSizes at offset %d in '%s'\n", (int)(p-psz), psz);
+         break;
+      }
+
+      bool saw_digit = false;
+      while (isdigit(*p)) {
+         saw_digit = true;
+         size *= 10;
+         size += *p - '0';
+         ++p;
+      }
+
+      if (saw_digit) {
+
+         while (isspace(*p))
+            ++p;
+
+         int64_t scale = 1;
+         if (*p == 'K') ++p, scale = 1024;
+         else if (*p == 'M') ++p, scale = 1024*1024;
+         else if (*p == 'G') ++p, scale = 1024*1024*1024;
+         else if (*p == 'T') ++p, scale = (int64_t)1024*1024*1024*1024;
+         if (*p == 'b' || *p == 'B') ++p;
+
+         while (isspace(*p))
+            ++p;
+
+         if (*p == ',') ++p;
+
+         if (cSizes < cMaxSizes)
+            pSizes[cSizes] = size * scale;
+
+         ++cSizes;
+         size = 0;
+      }
+
+      while (isspace(*p))
+         ++p;
+   }
+
+   return cSizes; 
+}
+
+void stats_histogram_sizes::PrintSizes(MyString & str, const int64_t * pSizes, int cSizes)
+{
+   // tj: WRITE THIS
+}
+
+int stats_histogram_times::ParseTimes(const char * psz, time_t * pTimes, int cMaxSizes)
+{
+   int cTimes = 0;
+   time_t time = 0;
+   for (const char* p = psz; p && *p; ++p) {
+
+      while (isspace(*p))
+         ++p;
+
+      if ( ! isdigit(*p)) {
+         EXCEPT("Invalid input to ParseTimes at offset %d in '%s'\n", (int)(p-psz), psz);
+         break;
+      }
+
+      bool saw_digit = false;
+      while (isdigit(*p)) {
+         saw_digit = true;
+         time *= 10;
+         time += *p - '0';
+         ++p;
+      }
+
+      if (saw_digit) {
+
+         while (isspace(*p))
+            ++p;
+
+         time_t scale = 1;
+         if (toupper(*p) == 'S') {
+            scale = 1;
+            ++p;
+            if (toupper(*p) == 'E') {
+               ++p; if (toupper(*p) == 'C') ++p;
+            }
+         } else if (toupper(*p) == 'M') {
+            scale = 60;
+            ++p;
+            if (toupper(*p) == 'I') {
+               ++p; if (toupper(*p) == 'N') ++p;
+            }
+         } else if (toupper(*p) == 'H') {
+            scale = 60*60;
+            ++p;
+            if (toupper(*p) == 'R') ++p;
+         } else if (toupper(*p) == 'D') { 
+            scale = 24*60*60;
+            if (toupper(*p) == 'A') {
+               ++p; if (toupper(*p) == 'Y') ++p;
+            }
+         }
+
+         while (isspace(*p))
+            ++p;
+
+         if (*p == ',') ++p;
+
+         if (cTimes < cMaxSizes)
+            pTimes[cTimes] = time * scale;
+
+         ++cTimes;
+         time = 0;
+      }
+
+      while (isspace(*p))
+         ++p;
+   }
+
+   return cTimes; 
+}
+
+void stats_histogram_times::PrintTimes(MyString & str, const time_t * pTimes, int cTimes)
+{
+   // tj: WRITE THIS
+}
+
+/*
+int stats_histogram_double::ParseLimits(const char * psz, double * pLimits, int cMax)
+{
+   // tj: WRITE THIS
+   return 0; 
+}
+
+void stats_histogram_sizes::PrintLimits(MyString & str, const double * pLimits, int cLimits)
+{
+   // tj: WRITE THIS
+}
+
+int stats_histogram_int::ParseLimits(const char * psz, int * pLimits, int cMax)
+{
+   // tj: WRITE THIS
+   return 0; 
+}
+
+void stats_histogram_int::PrintLimits(MyString & str, const int * pLimits, int cTimes)
+{
+   // tj: WRITE THIS
+}
+*/
+
 //----------------------------------------------------------------------------------------------
 // methods for the StatisticsPool class.  StatisticsPool is a collection of statistics that 
 // share a recent time quantum and are intended to be published/Advanced/Cleared
@@ -677,6 +889,7 @@ void StatisticsPool::InsertPublish (
    pub.insert(name, item);
 }
 
+/* tj: IMPLEMENT THIS
 double StatisticsPool::SetSample(const char * probe_name, double sample)
 {
    return sample;
@@ -691,6 +904,7 @@ int64_t StatisticsPool::SetSample(const char * probe_name, int64_t sample)
 {
    return sample;
 }
+*/
 
 int StatisticsPool::Advance(int cAdvance)
 {
@@ -805,10 +1019,12 @@ void generic_stats_force_refs()
    stats_entry_recent<int64_t>* pt = NULL;
    stats_entry_recent<double>* pd = NULL;
    stats_entry_recent<Probe>* pp = NULL;
-   stats_entry_recent< stats_histogram<int64_t> >* ph = new stats_entry_recent< stats_histogram<int64_t> >();
+   stats_entry_recent< stats_histogram_sizes >* ph = new stats_entry_recent< stats_histogram_sizes >();
+   stats_entry_recent< stats_histogram_times >* pm = new stats_entry_recent< stats_histogram_times >();
    stats_recent_counter_timer* pc = NULL;
 
    ph->value.set_levels(0, NULL);
+   pm->value.set_levels(0, NULL);
 
    StatisticsPool dummy;
    dummy.GetProbe<stats_entry_recent<int> >("");
@@ -833,8 +1049,96 @@ void generic_stats_force_refs()
    dummy.AddProbe("",pd,NULL,0);
    dummy.AddProbe("",pp,NULL,0);
    dummy.AddProbe("",ph,NULL,0);
+   dummy.AddProbe("",pm,NULL,0);
 };
 
+//int stats_histogram_sizes::cSizes;
+//int64_t stats_histogram_sizes::sizes[MAX_HIST_SIZES_LEVELS];
+#if 0
+void stats_histogram_sizes::init_sizes_from_param(const char* param_name)
+{
+	char* tmp = param(param_name);
+	int i = 0;
+	int64_t result;
+	for(const char* p = tmp;p && *p;++p){
+		if(*p != ',' && !isdigit(*p)){
+			EXCEPT("Only have digits and commas should be seen in param %s\n",param_name);
+		}
+		int saw_int = 0;
+		result = 0;
+		while(isdigit(*p)){
+			saw_int = 1;
+			result *= 10;
+			result += *p - '0';
+		}
+		if(saw_int){
+			if(i >= MAX_HIST_SIZES_LEVELS){
+				EXCEPT("param %s has too many sizes\n",param_name);
+			}
+			sizes[i] = result;
+			++i;
+			result = 0;
+		}
+	}
+	stats_histogram_sizes::cSizes = i;
+}
+void stats_histogram_sizes::init_sizes_from_vars(const int64_t* vsizes, int count)
+{
+	if (count <= MAX_HIST_SIZES_LEVELS) {
+		cSizes = count;
+		for(int i=0;i<size;++i){
+			sizes[i] = vsizes[i];
+		}
+	} else {
+		EXCEPT("Sizes array in stats_histogram_sizes too large");
+		cSizes = 0;
+	}
+}
+
+void stats_histogram_sizes::reconfig()
+{
+	levels = sizes;
+	cItems = cSizes;
+	for(int i=0;i<cSizes;++i){
+		data[i] = 0;
+	}
+}
+
+void stats_histogram_sizes::Publish(ClassAd & ad, const char * pattr, int /* flags */) const
+{ 
+	MyString str;
+	if(cItems <= 0) {
+		str += "";
+	} else {
+		str += data[0];
+		for(int i=1;i<=cItems;++i){
+			str += ", ";
+			str += data[i];
+		}
+	}
+	ad.Assign(pattr, str);
+	MyString attr(pattr);
+	attr += "Set";	
+	str = MyString();
+	str += (int)(sizes[0]/0x400); // Sizes reported in units of kilobytes
+	for(int i=1;i<cSizes;++i){
+		str += ", ";
+		str += (int)(sizes[i]/0x400);
+	}
+	ad.Assign(attr.Value(),str);
+}
+
+void stats_histogram_sizes::Unpublish(ClassAd & ad, const char * pattr) const
+{
+	MyString str(pattr);
+	ad.Delete(str.Value());
+	str += "Set";
+	ad.Delete(str.Value());	
+}
+#endif
+
+#if 0
+/*
 template <class T>
 stats_histogram<T>::~stats_histogram()
 {
@@ -978,14 +1282,8 @@ stats_histogram<T>& stats_histogram<T>::operator+=(const stats_histogram<T>& sh)
 
    return *this;
 }
-
-/*
-template<class T>
-void stats_histogram<T>::Publish(ClassAd& ad, const char* pattr, int flags) const 
-{
-	
-}
 */
+#endif
 
 //
 // This is how you use the generic_stats functions.
