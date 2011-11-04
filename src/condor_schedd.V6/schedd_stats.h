@@ -73,6 +73,14 @@ typedef struct ScheddStatistics {
    //stats_entry_recent<int> ShadowExceptions;     // number of times shadows have excepted
    stats_entry_recent<int> ShadowsReconnections; // number of times shadows have reconnected
 
+   stats_entry_recent<stats_histogram_sizes> JobsRunningSizes;
+   stats_entry_recent<stats_histogram_sizes> JobsCompletedSizes;
+   stats_entry_recent<stats_histogram_sizes> JobsBadputSizes;
+
+   stats_entry_recent<stats_histogram_times> JobsRunningRuntimes;
+   stats_entry_recent<stats_histogram_times> JobsCompletedRuntimes;
+   stats_entry_recent<stats_histogram_times> JobsBadputRuntimes;
+
    // non-published values
    time_t InitTime;            // last time we init'ed the structure
    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.

@@ -9904,9 +9904,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
             {
             stats.JobsExitedNormally += 1;
             stats.JobsCompleted += 1;
+            int image_size = 0;
+            GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &image_size);
+            stats.JobsCompletedSizes += (int64_t)image_size * 1024;
             int start_date = 0;
             GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
             stats.JobsAccumRunningTime += (updateTime - start_date);
+            stats.JobsCompletedRuntimes += (updateTime - start_date); 
             }
 				// no break, fall through and do the action
 
