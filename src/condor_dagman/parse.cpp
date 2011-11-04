@@ -855,6 +855,13 @@ parse_retry(
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have retries\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
 	
 	char *s = strtok( NULL, DELIMITERS );
 	if( s == NULL ) {
@@ -1271,6 +1278,13 @@ parse_priority(
 		}
 	}
 
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have priority\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
 	//
 	// Next token is the priority value.
 	//
@@ -1362,6 +1376,13 @@ parse_category(
 						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
+	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have category\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
 	}
 
 	//
