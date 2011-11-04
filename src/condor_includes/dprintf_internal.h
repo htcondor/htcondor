@@ -32,4 +32,5 @@ struct DebugFileInfo
 	DebugFileInfo() : debugFP(0), debugFlags(0), maxLog(0), maxLogNum(0) {}
 	DebugFileInfo(const DebugFileInfo &debugFileInfo);
 	~DebugFileInfo();
+    bool MatchesFlags(int flags) const;
 };

@@ -49,6 +49,7 @@ extern int		log_keep_open;
 
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
+extern bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
 
 param_functions *dprintf_param_funcs = NULL;
 
@@ -103,7 +104,6 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;
-	FILE *debug_file_fp;
 	int log_open_default = TRUE;
 	std::vector<DebugFileInfo> *debugLogsOld = DebugLogs;
 	bool debug_zero = false;	//This indicates whether debug level zero has been initialized.
@@ -286,34 +286,27 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 					DebugLock = param(pname);
 				}
 
-				if( first_time && want_truncate ) {
-					debug_file_fp = debug_lock(debug_level, "wN", 0);
-				} else {
-					debug_file_fp = debug_lock(debug_level, "aN", 0);
-				}
-
-				if( debug_file_fp == NULL && debug_level == 0 ) {
-                   #ifdef WIN32
+				// check to see if we can open the log file.
+				bool dont_panic = true;
+				bool fOk = debug_check_it(*it, (first_time && want_truncate), dont_panic);
+				if( ! fOk && debug_level == 0 ) {
+			       #ifdef WIN32
 					/*
 					** If we could not open the log file, we might want to keep running anyway.
 					** If we do, then set the log filename to NUL so we don't keep trying
 					** (and failing) to open the file.
 					*/
 					if (DebugContinueOnOpenFailure) {
-
+			
 						// change the debug file to point to the NUL device.
 						it->logPath.insert(0, NULL_FILE);
 
 					} else
-                   #endif
+			       #endif
 					{
-					    EXCEPT("Cannot open log file '%s'",
-							logPath.c_str());
+					    EXCEPT("Cannot open log file '%s'", logPath.c_str());
 					}
 				}
-
-				if (debug_file_fp) (void)debug_unlock( debug_level );
-				debug_file_fp = NULL;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "MAX_%s_LOG", subsys);
