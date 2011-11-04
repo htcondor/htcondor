@@ -53,13 +53,18 @@
 #include "log_rotate.h"
 #include "dprintf_internal.h"
 
-FILE *debug_lock(int debug_level, const char *mode, int force_lock);
-FILE *open_debug_file( int debug_level, const char flags[] );
-void debug_unlock(int debug_level);
-void debug_close_file(int debug_level);
-void debug_close_all_files();
-void debug_close_lock();
-FILE *preserve_log_file(int debug_level);
+FILE *debug_lock(int debug_flags, const char *mode, int force_lock);
+void debug_unlock(int debug_flags);
+
+static FILE *debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic);
+static void debug_unlock_it(struct DebugFileInfo* it);
+static FILE *open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic);
+static void debug_close_file(struct DebugFileInfo* it);
+static void debug_close_all_files(void);
+static void debug_open_lock(void);
+static void debug_close_lock(void);
+static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic);
+
 void _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_set_debug_flags( const char *strflags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
@@ -180,6 +185,13 @@ DebugFileInfo::~DebugFileInfo()
 		fclose(debugFP);
 		debugFP = NULL;
 	}
+}
+
+bool DebugFileInfo::MatchesFlags(int flags) const
+{
+	if ( ! flags) return true;
+	if ( ! this->debugFlags) return (DebugFlags & flags) != 0;
+	return (this->debugFlags & flags) != 0;
 }
 
 static char *formatTimeHeader(struct tm *tm) {
@@ -512,13 +524,19 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		{
 			int debugFlags = (*it).debugFlags;
 			/*
-			 * Checks to make sure at least one of the levels in flags match
-			 * the levels associated with this output target.
+			 * if debugFlags for the file is 0, print everything
+			 * otherwise print only messages that match at least one of the flags.
+			 * note: this means that D_ALWAYS will go only to slots where debugFlags == 0
 			 */
-			if((debugFlags != 0) && ((debugFlags & flags) != 0))
+			if (debugFlags && !(debugFlags & flags))
 				continue;
+
+			// for log files other than the first one, dont panic if we
+			// fail to write to the file.
+			bool dont_panic = (debugFlags != 0) || DebugContinueOnOpenFailure;
+
 			/* Open and lock the log file */
-			debug_file_ptr = debug_lock(debugFlags, NULL, 0);
+			debug_file_ptr = debug_lock_it(&(*it), NULL, 0, dont_panic);
 			if (debug_file_ptr) {
 #ifdef va_copy
 				va_list copyargs;
@@ -530,7 +548,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #endif
 			}
 
-			debug_unlock(debugFlags);
+			debug_unlock_it(&(*it));
 		}
 
 			/* restore privileges */
@@ -732,36 +750,43 @@ double dprintf_get_lock_delay(void) {
 }
 
 FILE *
-debug_lock(int debug_level, const char *mode, int force_lock )
+debug_lock(int debug_flags, const char *mode, int force_lock)
+{
+	std::vector<DebugFileInfo>::iterator it;
+
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * debug_level is being treated by the caller as an INDEX into
+		 * the DebugLogs vector, this it nuts, but it works as long as
+		 * each file has a unique set of flags which is true for now...
+		 */
+		if(it->debugFlags != debug_flags)
+			continue;
+
+		// for log files other than the first one, dont panic if we
+		// fail to write to the file.
+		bool dont_panic = (it->debugFlags != 0) || DebugContinueOnOpenFailure;
+
+		return debug_lock_it(&(*it), mode, force_lock, dont_panic);
+	}
+
+	return stderr;
+}
+
+static FILE *
+debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic)
 {
 	off_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
 	int locked = 0;
-	FILE *debug_file_ptr = NULL;
-	std::vector<DebugFileInfo>::iterator it;
-	bool level_exists = false;
-
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * Checks to make sure at least one of the levels in flags match
-		 * the levels associated with this output target.
-		 */
-		if(((*it).debugFlags & debug_level) != 0)
-			continue;
-		debug_file_ptr = (*it).debugFP;
-		level_exists = true;
-		break;
-	}
+	FILE *debug_file_ptr = it->debugFP;
 
 	if ( mode == NULL ) {
 		mode = "aN";
 	}
-
-	if(!level_exists)
-		return stderr;
 
 	errno = 0;
 
@@ -785,12 +810,15 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 		//open_debug_file will set DebugFPs[debug_level] so we do
 		//not have to worry about it in this function, assuming
 		//there are no further errors.
-		debug_file_ptr = open_debug_file(debug_level, mode);
+		debug_file_ptr = open_debug_file(it, mode, dont_panic);
 
 		if( debug_file_ptr == NULL ) {
-			if (debug_level > 0) return NULL;
 			
 			save_errno = errno;
+			if (dont_panic) {
+				_set_priv(priv, __FILE__, __LINE__, 0);
+				return NULL;
+			}
 #ifdef WIN32
 			if (DebugContinueOnOpenFailure) {
 				_set_priv(priv, __FILE__, __LINE__, 0);
@@ -808,9 +836,9 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	}
 
 	if( (length=lseek(fileno(debug_file_ptr), 0, SEEK_END)) < 0 ) {
-		if (debug_level > 0) {
+		if (dont_panic) {
 			if(locked) debug_close_lock();
-			debug_close_file(debug_level);
+			debug_close_file(it);
 
 			return NULL;
 		}
@@ -843,9 +871,9 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			if(DebugLock)
 			{
 				debug_close_lock();
-				debug_close_file(debug_level);
+				debug_close_file(it);
 				_set_priv(priv, __FILE__, __LINE__, 0);
-				return debug_lock(debug_level, mode, 1);
+				return debug_lock_it(it, mode, 1, dont_panic);
 			}
 		}
 
@@ -855,7 +883,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 		// wenger 2009-02-24.
 		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
 		
-		debug_file_ptr = preserve_log_file(debug_level);
+		debug_file_ptr = preserve_log_file(it, dont_panic);
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -863,7 +891,8 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	return debug_file_ptr;
 }
 
-void debug_close_lock()
+static void 
+debug_close_lock(void)
 {
 	int flock_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
@@ -888,22 +917,10 @@ void debug_close_lock()
 	}
 }
 
-void debug_close_file(int debug_level)
+static void 
+debug_close_file(struct DebugFileInfo* it)
 {
-	FILE *debug_file_ptr = NULL;
-	std::vector<DebugFileInfo>::iterator it;
-
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * Checks to make sure at least one of the levels in flags match
-		 * the levels associated with this output target.
-		 */
-		if(((*it).debugFlags & debug_level) != 0)
-			continue;
-		debug_file_ptr = (*it).debugFP;
-		break;
-	}
+	FILE *debug_file_ptr = (*it).debugFP;
 
 	if( debug_file_ptr ) {
 		if (debug_file_ptr) {
@@ -917,7 +934,8 @@ void debug_close_file(int debug_level)
 	}
 }
 
-void debug_close_all_files()
+static void 
+debug_close_all_files()
 {
 	FILE *debug_file_ptr = NULL;
 	std::vector<DebugFileInfo>::iterator it;
@@ -937,27 +955,33 @@ void debug_close_all_files()
 }
 
 void
-debug_unlock(int debug_level)
+debug_unlock(int debug_flags)
+{
+	std::vector<DebugFileInfo>::iterator it;
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * debug_level is being treated by the caller as an INDEX into
+		 * the DebugLogs vector, this it nuts, but it works as long as
+		 * each file has a unique set of flags which is true for now...
+		 */
+		if(it->debugFlags != debug_flags)
+			continue;
+		debug_unlock_it(&(*it));
+		break;
+	}
+}
+
+static void
+debug_unlock_it(struct DebugFileInfo* it)
 {
 	priv_state priv;
 	int result = 0;
 
-	FILE *debug_file_ptr = NULL;
-	std::vector<DebugFileInfo>::iterator it;
+	FILE *debug_file_ptr = (*it).debugFP;
 
 	if(log_keep_open)
 		return;
-
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * Checks to make sure at least one of the levels in flags match
-		 * the levels associated with this output target.
-		 */
-		if(((*it).debugFlags & debug_level) != 0)
-			continue;
-		debug_file_ptr = (*it).debugFP;
-	}
 
 	if( DebugUnlockBroken ) {
 		return;
@@ -973,7 +997,7 @@ debug_unlock(int debug_level)
 		}
 
 		debug_close_lock();
-		debug_close_file(debug_level);
+		debug_close_file(it);
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -983,8 +1007,8 @@ debug_unlock(int debug_level)
 /*
 ** Copy the log file to a backup, then truncate the current one.
 */
-FILE *
-preserve_log_file(int debug_level)
+static FILE *
+preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 {
 	char		old[MAXPATHLEN + 4];
 	priv_state	priv;
@@ -995,26 +1019,13 @@ preserve_log_file(int debug_level)
 	const char *timestamp;
 	int			result;
 	int			file_there = 0;
-	FILE		*debug_file_ptr = NULL;
-	std::string		filePath;
-	std::vector<DebugFileInfo>::iterator it;
+	FILE		*debug_file_ptr = (*it).debugFP;
+	std::string		filePath = (*it).logPath;
 #ifndef WIN32
 	struct stat buf;
 #endif
 	char msg_buf[DPRINTF_ERR_MAX];
 
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * Checks to make sure at least one of the levels in flags match
-		 * the levels associated with this output target.
-		 */
-		if(((*it).debugFlags & debug_level) != 0)
-			continue;
-		debug_file_ptr = (*it).debugFP;
-		filePath = (*it).logPath;
-		break;
-	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 	(void)setBaseName(filePath.c_str());
@@ -1032,7 +1043,7 @@ preserve_log_file(int debug_level)
 #if defined(WIN32)
 	if (result < 0) { // MoveFileEx and Copy failed
 		failed_to_rotate = TRUE;
-		debug_file_ptr = open_debug_file(debug_level, "wN");
+		debug_file_ptr = open_debug_file(it, "wN", dont_panic);
 		if ( debug_file_ptr ==  NULL ) {
 			still_in_old_file = TRUE;
 		}
@@ -1085,7 +1096,7 @@ preserve_log_file(int debug_level)
 #endif
 
 	if (debug_file_ptr == NULL) {
-		debug_file_ptr = open_debug_file(debug_level, "aN");
+		debug_file_ptr = open_debug_file(it, "aN", dont_panic);
 	}
 
 	if( debug_file_ptr == NULL ) {
@@ -1093,7 +1104,7 @@ preserve_log_file(int debug_level)
 
 		save_errno = errno;
 		snprintf( msg_buf, sizeof(msg_buf), "Can't open file for debug level %d\n",
-				 debug_level ); 
+				 it->debugFlags ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
@@ -1155,8 +1166,6 @@ _condor_fd_panic( int line, const char* file )
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & D_ALWAYS) != D_ALWAYS)
-			continue;
 		filePath = (*it).logPath;
 		fileExists = true;
 		break;
@@ -1212,27 +1221,14 @@ char	*name;
 sigset(){}
 #endif
 
-FILE *
-open_debug_file(int debug_level, const char flags[])
+static FILE *
+open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 {
 	FILE		*fp;
 	priv_state	priv;
 	char msg_buf[DPRINTF_ERR_MAX];
 	int save_errno;
-	std::string filePath;
-	std::vector<DebugFileInfo>::iterator it;
-
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * Checks to make sure at least one of the levels in flags match
-		 * the levels associated with this output target.
-		 */
-		if(((*it).debugFlags & debug_level) != 0)
-			continue;
-		filePath = (*it).logPath;
-		break;
-	}
+	std::string filePath = (*it).logPath;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1251,7 +1247,7 @@ open_debug_file(int debug_level, const char flags[])
 			fp = stderr;
 		}
 		_condor_dfprintf( fp, "Can't open \"%s\"\n", filePath.c_str() );
-		if( debug_level == 0 ) {
+		if( ! dont_panic ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 filePath.c_str() );
 
@@ -1266,6 +1262,20 @@ open_debug_file(int debug_level, const char flags[])
 	it->debugFP = fp;
 
 	return fp;
+}
+
+bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic)
+{
+	FILE *debug_file_fp;
+
+	if( fTruncate ) {
+		debug_file_fp = debug_lock_it(&it, "wN", 0, dont_panic);
+	} else {
+		debug_file_fp = debug_lock_it(&it, "aN", 0, dont_panic);
+	}
+
+	if (debug_file_fp) (void)debug_unlock_it(&it);
+	return (debug_file_fp != NULL);
 }
 
 /* dprintf() hit some fatal error and is going to exit. */
