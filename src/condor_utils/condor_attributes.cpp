@@ -887,7 +887,7 @@ const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
 const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
 const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
 const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
-const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailbityZone";
+const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailabilityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
 
