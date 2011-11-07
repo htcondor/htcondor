@@ -438,7 +438,6 @@ template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlot
    while (cSlots > 0) { buf.Advance(); --cSlots; }
    recent = buf.Sum();
 }
-<<<<<<< HEAD
 
 template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int) const
 {
@@ -459,9 +458,7 @@ template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd
    attr += "Set";
    ad.Assign(attr.Value(), "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb");
 }
-=======
 */
->>>>>>> First cut of basic histogram statistics for schedd #2352
 
 void ProbeToStringDebug(MyString & str, const Probe& probe)
 {
