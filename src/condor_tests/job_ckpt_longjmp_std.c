@@ -78,11 +78,14 @@ void fill_buf( char *buf, char fill_char, size_t size );
 
 
 int
-main( int argc, char *argv[] )
+main( int  argc, char * argv[] )
 {
 	int		i;
 	char	buf[ 1024 * 1024 ];
 	char	fill_char = 'a';
+
+	argc = argc;
+	argv = argv; /* quiet compiler warnings */
 
 	for( i = 0; i<10; i++, fill_char++ ) {
 		printf( "i = %d\n", i );
@@ -223,10 +226,10 @@ static jmp_buf ReturnEnv;
 static double	TmpStack[ TmpStackSize ];
 
 void
-ThreadExecute( void (*func)() )
+ThreadExecute( void (*f)() )
 {
 	jmp_buf	env;
-	SaveFunc = func;
+	SaveFunc = f;
 	unsigned long addr;
 
 	if( SETJMP(ReturnEnv) == 0 ) {

@@ -81,7 +81,7 @@ int main( int argc, char **argv )
 
 		curbrk = sbrk(0);
 		if( oldbrk != curbrk ) {
-			printf("Current break is now 0x%x, old was 0x%x (set i = %d)\n",
+			printf("Current break is now 0x%p, old was 0x%p (set i = %d)\n",
 				curbrk, oldbrk, i);
 		}
 

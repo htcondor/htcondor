@@ -44,7 +44,7 @@ const int dflag = D_ALWAYS | D_NOHEADER | D_FULLDEBUG;
 
 void show_leases( const char *label, list< const DCLeaseManagerLease *> &leases )
 {
-	printf( "%s: %d leases:\n", label, leases.size() );
+	printf( "%s: %ld leases:\n", label, leases.size() );
 
 	for( list< const DCLeaseManagerLease *>::iterator iter = leases.begin( );
 		 iter != leases.end( );
@@ -246,7 +246,7 @@ int main( int argc, char* argv[] )
 
 		// Release 'em
 		if ( release_list.size() ) {
-			printf( "Releasing %d leases\n", release_list.size() );
+			printf( "Releasing %ld leases\n", release_list.size() );
 			double	t1 = dtime();
 			if ( !lm->releaseLeases( release_list ) ) {
 				printf( "Release failed!!!\n" );
@@ -260,7 +260,7 @@ int main( int argc, char* argv[] )
 
 		// Renew leases
 		if ( renew_list.size() ) {
-			printf( "Renew %d leases\n", renew_list.size() );
+			printf( "Renew %ld leases\n", renew_list.size() );
 			list<DCLeaseManagerLease *> renewed_list;
 
 			// Mark all of the leases to renew as false, all others as true

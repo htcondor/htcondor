@@ -195,7 +195,7 @@ static bool test_iterate_first() {
 
 static bool test_get_current_key() {
 	emit_test("Test getCurrentKey() and make sure it reports the correct index.");
-	int value;
+	int value = 0;
 	int result = table->getCurrentKey(value);
 	emit_output_expected_header();
 	emit_param("Value", "%d OR %d OR %d", 150, 30, 4);

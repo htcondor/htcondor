@@ -28,7 +28,7 @@
 void foo( register int arg0, register int arg1, register int arg2, register int arg3, register int arg4, register int arg5, register int arg6, register int arg7 );
 
 int
-main( int argc, char **argv )
+main( int argc, char ** argv )
 {
 	/*
 	extern int DebugFlags;
@@ -37,6 +37,9 @@ main( int argc, char **argv )
 #if 0
 	sbrk( 10 * MEG );
 #endif
+
+	argc = argc;
+	argv = argv;
 
 	foo( 0, 0, 0, 0, 0, 0, 0, 0 );
 	exit( 0 );

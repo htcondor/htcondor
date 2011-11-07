@@ -47,10 +47,11 @@
 void foo( register float arg0, register float arg1, register float arg2, register float arg3, register float arg4, register float arg5, register float arg6, register float arg7 );
 
 int
-main( int argc, char **argv )
+main( int  argc, char ** argv )
 {
 
-
+	argc = argc;
+	argv = argv; /* remove compiler warnings */
 	foo( 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 );
 	exit( 0 );
 }

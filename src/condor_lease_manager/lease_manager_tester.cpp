@@ -748,10 +748,10 @@ Tests::displayLeases( const char *label, bool selected_only )
 	list<const DCLeaseManagerLease *> &leases = getListConst(selected_only);
 
 	if ( label ) {
-		printf( "%s: %d leases:\n", label, leases.size() );
+		printf( "%s: %ld leases:\n", label, leases.size() );
 	}
 	else {
-		printf( "%d leases:\n", leases.size() );
+		printf( "%ld leases:\n", leases.size() );
 	}
 
 	int		n = 0;
