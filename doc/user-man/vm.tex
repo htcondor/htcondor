@@ -87,12 +87,12 @@ the submit command to prevent the transfer is
 
 The required disk image must be identified for a virtual machine.
 This \SubmitCmd{vm\_disk} command specifies a list of comma-separated files.
-Each disk file is specified by 4 colon separated fields.
+Each disk file is specified by colon-separated fields.
 The first field is the path and file name of the disk file.
-The second field specifies the device,
+The second field specifies the device.
 The third field specifies permissions, and the optional 
 fourth specifies the format.
-Here is an example that identifies two files:
+Here is an example that identifies a single file:
 \footnotesize
 \begin{verbatim}
   vm_disk = /var/lib/libvirt/images/swap.img:sda2:w:raw
@@ -141,7 +141,7 @@ virtual machine type targeted.
 Specific to VMware, the submit description file command
 \SubmitCmd{vmware\_dir} gives the path and directory
 (on the machine from which the job is submitted)
-where VMware-specific files and applications reside.
+to where VMware-specific files and applications reside.
 One example of a VMware-specific application is the VMDK files,
 which form a virtual hard drive (disk image) for the virtual machine.
 VMX files containing the primary configuration for the virtual
@@ -248,7 +248,7 @@ that it will no longer execute this job.
 
 \SubmitCmd{vm} universe jobs can \emph{not} use a checkpoint server.
 
-Periodically creating checkpoints is not supported at this time.
+Periodic creation of checkpoints is not supported at this time.
 
 Enabling both networking and checkpointing for a \SubmitCmd{vm}
 universe job can cause networking problems when the job restarts,
@@ -276,15 +276,9 @@ on the same machine or a different one within the Condor pool.
 VMware on Windows and Linux}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Obtain \Prog{VMware Server} from 
-%\URL{http://www.vmware.com/download/server/}
-
-%VMware Server installation instructions are detailed in:
-%\URL{http://pubs.vmware.com/server1/}
-
 Following the platform-specific
 guest OS installation instructions found at
-\URL{http://pubs.vmware.com/guestnotes},
+\URL{http://partnerweb.vmware.com/GOSIG/home.html},
 creates a VMware disk image.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -317,9 +311,6 @@ an administrator issues the command
 \begin{verbatim}
   shutdown -s -t 01
 \end{verbatim}
-For older versions of Windows operating systems, 
-directions are given at
-\URL{http://www.aumha.org/win4/a/shutcut.php}.
 
 Under a Linux virtual machine,
 the \Login{root} user executes
