@@ -322,6 +322,7 @@ if (BUILD_TESTS)
 	if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "rhel3")
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
 	endif()
+        condor_pl_test(cmd_drain "condor_drain" "core;quick;full;quicknolink")
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")

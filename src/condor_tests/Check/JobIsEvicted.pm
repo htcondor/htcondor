@@ -17,9 +17,11 @@
 ##
 ##**************************************************************
 
-package SimpleJob;
+package JobIsEvicted;
 
 use CondorTest;
+
+my $eviction_flag_file;
 
 $submitted = sub
 {
@@ -28,7 +30,6 @@ $submitted = sub
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
 };
 
 $execute = sub
@@ -37,6 +38,20 @@ $execute = sub
 
 $ExitSuccess = sub {
 	CondorTest::debug("Job completed\n",1);
+};
+
+$evicted = sub
+{
+	# NOTE: this function is called within a sub-process, so it
+	# cannot modify variables that are seen by the main program!
+	# That is why we resort to touching a file to indicate
+	# that we got here.
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	CondorTest::debug("Job $cluster was evicted.  Good!\n",1);
+	open( EVICTION_FLAG_FILE, ">$eviction_flag_file" ) || die "error writing to $eviction_flag_file: $!\n";
+	close( EVICTION_FLAG_FILE );
+	CondorTest::runcmd("condor_rm $cluster");
 };
 
 sub RunCheck
@@ -56,6 +71,9 @@ sub RunCheck
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
     CondorTest::RegisterExecute($testname, $execute_fn);
     CondorTest::RegisterSubmit( $testname, $submitted );
+    CondorTest::RegisterEvicted( $testname, $evicted );
+
+    $eviction_flag_file = CondorTest::TempFileName("testname.evicted");
 
     my $submit_fname = CondorTest::TempFileName("$testname.submit");
     open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
@@ -80,6 +98,14 @@ sub RunCheck
     close( SUBMIT );
 
     my $result = CondorTest::RunTest($testname, $submit_fname, 0);
+
+    if( ! -e $eviction_flag_file ) {
+        CondorTest::debug("Job left queue without being evicted.  Bad!\n",1);
+        CondorTest::RegisterResult( 0, %args );
+        return 0;
+    }
+    unlink( $eviction_flag_file );
+
     CondorTest::RegisterResult( $result, %args );
     return $result;
 }

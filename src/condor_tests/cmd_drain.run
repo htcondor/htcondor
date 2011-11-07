@@ -1,0 +1,82 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::JobDoesNotRun;
+use Check::JobIsEvicted;
+use Check::CondorLog;
+
+my $hostname = `condor_config_val full_hostname`;
+
+my $append_condor_config = '
+  MaxJobRetirementTime = 120
+  MachineMaxVacateTime = 5
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+
+# verify that a job runs
+SimpleJob::RunCheck();
+
+# drain the startd
+CondorTest::runcmd("condor_drain $hostname");
+
+# verify that the job does not run while startd is drained
+JobDoesNotRun::RunCheck();
+
+# turn off draining
+CondorTest::runcmd("condor_drain -cancel $hostname");
+
+# verify that a job runs
+SimpleJob::RunCheck();
+
+
+my $graceful_drain_on_execute = sub {
+  CondorTest::debug("Draining -graceful while job is running.",1);
+  CondorTest::runcmd("condor_drain -graceful $hostname");
+};
+
+# verify that a 20s job runs to completion during graceful draining
+SimpleJob::RunCheck(
+  duration=>20,
+  on_execute=>$graceful_drain_on_execute
+);
+
+
+# turn off draining
+CondorTest::runcmd("condor_drain -cancel $hostname");
+
+my $quick_drain_on_execute = sub {
+  CondorTest::debug("Draining -quick while job is running.",1);
+  CondorTest::runcmd("condor_drain -quick $hostname");
+};
+
+# verify that a 20s job gets evicted during quick draining
+JobIsEvicted::RunCheck(
+  duration=>20,
+  on_execute=>$quick_drain_on_execute
+);
+
+
+CondorTest::EndTest();

@@ -17,69 +17,81 @@
 ##
 ##**************************************************************
 
-package SimpleJob;
+package JobDoesNotRun;
 
 use CondorTest;
-
-$submitted = sub
-{
-	CondorTest::debug("Job submitted\n",1);
-};
-
-$aborted = sub 
-{
-	die "Abort event NOT expected\n";
-};
-
-$execute = sub
-{
-};
-
-$ExitSuccess = sub {
-	CondorTest::debug("Job completed\n",1);
-};
 
 sub RunCheck
 {
     my %args = @_;
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
-    my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $append_submit_commands = $args{append_submit_commands} || "";
-    my $grid_resource = $args{grid_resource} || "";
-    my $should_transfer_files = $args{should_transfer_files} || "";
-    my $when_to_transfer_output = $args{when_to_transfer_output} || "";
-    my $duration = $args{duration} || "1";
-    my $execute_fn = $args{on_execute} || $execute;
+    my $timeout = 60;
 
-    CondorTest::RegisterAbort( $testname, $aborted );
-    CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
-    CondorTest::RegisterExecute($testname, $execute_fn);
-    CondorTest::RegisterSubmit( $testname, $submitted );
+    my $user_log = CondorTest::TempFileName("$testname.user_log");
 
     my $submit_fname = CondorTest::TempFileName("$testname.submit");
     open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
     print SUBMIT "universe = $universe\n";
     print SUBMIT "executable = x_sleep.pl\n";
     print SUBMIT "log = $user_log\n";
-    print SUBMIT "arguments = $duration\n";
+    print SUBMIT "arguments = 1\n";
     print SUBMIT "notification = never\n";
-    if( $grid_resource ne "" ) {
-	print SUBMIT "GridResource = $grid_resource\n"
-    }
-    if( $should_transfer_files ne "" ) {
-	print SUBMIT "ShouldTransferFiles = $should_transfer_files\n";
-    }
-    if( $when_to_transfer_output ne "" ) {
-	print SUBMIT "WhenToTransferOutput = $when_to_transfer_output\n";
-    }
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
     print SUBMIT "queue\n";
     close( SUBMIT );
 
-    my $result = CondorTest::RunTest($testname, $submit_fname, 0);
+    my $jobid = Condor::Submit($submit_fname);
+
+    if( $jobid == 0 ) {
+        CondorTest::RegisterResult( 0, %args );
+        return 0;
+    }
+
+    my $q_cmd = "condor_q " .
+       "-format \"%d \" 'LastMatchTime=!=undefined' " .
+       "-format \"%d \" 'LastRejMatchTime=!=undefined' " .
+       "-format \"%d\\n\" 'JobStatus' " .
+       "$jobid";
+
+    CondorTest::debug("monitoring job with following command: $q_cmd\n",1);
+
+    my $job_was_considered = 0;
+    my $result = 1;
+    my $i = 1;
+    while( $i < $timeout ) {
+        $i=$i+1;
+
+        my $q_output = `$q_cmd`;
+        my @fields=split(" ",$q_output);
+
+        my $job_matched = $fields[0];
+        my $job_rejected = $fields[1];
+        my $job_status = $fields[2];
+
+        if( $job_status ne "1" ) {
+            $result = 0;
+            CondorTest::debug("Job status is $job_status.  Bad!",1);
+            last;
+        }
+        if( $job_matched eq "1" || $job_rejected eq "1" ) {
+            $job_was_considered=$job_was_considered+1;
+        }
+        # We wait a bit after first seeing that the job was considered.
+        # If the job still has not run, then we assume it never will.
+        if( $job_was_considered > 5 ) {
+            CondorTest::debug("Job was considered but has not run.  Good!",1);
+            last;
+        }
+
+        sleep(1);
+    }
+
+    CondorTest::runcmd("condor_rm $jobid");
+
     CondorTest::RegisterResult( $result, %args );
     return $result;
 }
