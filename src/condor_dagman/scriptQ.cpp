@@ -57,8 +57,7 @@ ScriptQ::~ScriptQ()
 int
 ScriptQ::Run( Script *script )
 {
-	char prefix[8];
-	strcpy( prefix, script->_post ? "POST" : "PRE" );
+	const char *prefix = script->_post ? "POST" : "PRE";
 	int maxScripts =
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 	// if we have no script limit, or we're under the limit, run now
