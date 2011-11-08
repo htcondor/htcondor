@@ -946,6 +946,11 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
 	}
 
+    int setup_opt_mask = 0;
+    if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
+        setup_opt_mask =  DCJOBOPT_NO_ENV_INHERIT;
+    }
+
 	if( !preferred_shells.IsEmpty() ) {
 		dprintf(D_FULLDEBUG,
 				"Checking preferred shells: %s\n",preferred_shells.Value());
@@ -985,7 +990,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			0,
 			NULL,
 			setup_reaper,
-			0,
+			setup_opt_mask,
 			NULL);
 	}
 	else {
@@ -999,7 +1004,11 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			GetWorkingDir(),
 			NULL,
 			NULL,
-			setup_std_fds);
+			setup_std_fds,
+			NULL,
+			0,
+			NULL,
+			setup_opt_mask);
 	}
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
