@@ -1,0 +1,76 @@
+\begin{ManPage}
+{\label{man-condor-drain}\Condor{drain}}{1}
+{Control draining of an execute machine}
+\Synopsis \SynProg{\Condor{drain}}
+\oOpt{-help}
+
+\SynProg{\Condor{drain}}
+\ToolDebugOption
+\oOptArg{-pool}{pool-name}
+\oOpt{-graceful}
+\oOpt{-quick}
+\oOpt{-fast}
+\oOpt{-resume-on-completion}
+\oOptArg{-check}{expr}
+\oOpt{-cancel}
+\oOptArg{-request-id}{id}
+\Arg{startd-name }
+
+\index{Condor commands!condor\_drain}
+\index{condor\_drain command}
+
+\Description
+
+\Condor{drain} is an administrative command used to control draining
+of an execute machine.  Once the startd is draining, it will not
+accept any new jobs.  How existing jobs are treated depends on the
+draining schedule that is chosen:
+
+\begin{description}
+
+\item[\Opt{-graceful}] Initiate a graceful eviction of the job.  This means
+all promises that have been made to the job are honored, including
+\MacroNI{MaxJobRetirementTime}.  The eviction of jobs is coordinated
+to reduce idle time.  This means if one slot has a job with a long
+retirement time and the other slots have jobs with shorter retirement
+times, the effective retirement time for all of the jobs is the longer
+one.
+
+\item[\Opt{-quick}] \MacroNI{MaxJobRetirementTime} is not honored.  Eviction
+of jobs is immediately initiated.  Jobs are given time to shut down
+and checkpoint according to the usual policy
+(i.e. \MacroNI{MachineMaxVacateTime}).
+
+\item[\Opt{-fast}] Jobs are immediately hard-killed with no chance to
+gracefully shut down or checkpoint.
+
+\end{description}
+
+Once draining is complete, the machine will enter the Drained/Idle
+state.  To resume normal operation at this time or any previous time
+during draining, the \Opt{-cancel} option may be used.  To
+automatically resume normal operation once draining has completed, the
+\Opt{-resume-on-completion} option may be used when initiating
+draining.  This is useful for forcing a machine with a partitionable
+slot to join all of the resources back together into one slot.
+
+\begin{Options}
+  \OptItem{\Opt{-help}}{ Display brief usage information and exit. }
+  \ToolDebugDesc
+  \OptItem{\OptArg{-pool}{pool-name}}{Specify an alternate Condor pool,
+    if the default one is not desired.}
+  \OptItem{\Opt{-graceful}}{(the default) Honor maximum vacate and retirement time policy}
+  \OptItem{\Opt{-quick}}{Honor maximum vacate but not retirement time policy}
+  \OptItem{\Opt{-fast}}{Honor neither maximum vacate nor retirement time policy}
+  \OptItem{\Opt{-resume-on-completion}}{When done draining, resume normal operation}
+  \OptItem{\OptArg{-check}{expr}}{Abort if expression is not true for all slots to be drained}
+  \OptItem{\Opt{-cancel}}{Cancel a prior draining request}
+  \OptItem{\OptArg{-request-id}{id}}{Specify a specific drainng request to cancel}
+\end{Options}
+
+\ExitStatus
+
+\Condor{drain} will exit with a non-zero status value if it fails and
+zero status if it succeeds.
+
+\end{ManPage}

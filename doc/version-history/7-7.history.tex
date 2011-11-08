@@ -30,6 +30,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item A new command \Condor{drain} may be used to control the draining
+of an execute machine.  While a machine is draining, no new jobs may
+start.  Once draining is complete, it enters the Drained/Idle state.
+For more details, see page~\pageref{man-condor-drain}.
+\Ticket{2330}
+
 \item  \Condor{q} \Opt{-run} now displays the value of the job ClassAd
 attribute \Attr{EC2RemoteVirtualMachineName} instead of
 \Expr{[????????????????]},
