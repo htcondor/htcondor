@@ -27,8 +27,7 @@
 #endif
 
 MachAttributes::MachAttributes()
-   : m_user_settings_init(false)
-   , m_user_specified(NULL, ";")
+   : m_user_specified(NULL, ";"), m_user_settings_init(false)
 {
 	m_mips = -1;
 	m_kflops = -1;
@@ -117,13 +116,13 @@ MachAttributes::~MachAttributes()
 
     AttribValue *val = NULL;
     m_lst_dynamic.Rewind();
-    while (val = m_lst_dynamic.Next() ) {
+    while ((val = m_lst_dynamic.Next()) ) {
        if (val) free (val);
        m_lst_dynamic.DeleteCurrent();
     }
 
     m_lst_static.Rewind();
-    while (val = m_lst_static.Next() ) {
+    while ((val = m_lst_static.Next())) {
        if (val) free (val);
        m_lst_static.DeleteCurrent();
     }
@@ -143,14 +142,14 @@ MachAttributes::init_user_settings()
 
 	AttribValue *val = NULL;
 	m_lst_dynamic.Rewind();
-	while (val = m_lst_dynamic.Next())
+	while ((val = m_lst_dynamic.Next()))
     {
         if (val) free (val);
 	    m_lst_dynamic.DeleteCurrent();
 	}
 
 	m_lst_static.Rewind();
-	while (val = m_lst_static.Next())
+	while ((val = m_lst_static.Next()))
     {
 	    if (val) free (val);
 	    m_lst_static.DeleteCurrent();
@@ -400,7 +399,7 @@ MachAttributes::compute( amask_t how_much )
 
         AttribValue *pav = NULL;
         m_lst_dynamic.Rewind();
-        while (pav = m_lst_dynamic.Next() ) {
+        while ((pav = m_lst_dynamic.Next()) ) {
            if (pav) {
              #ifdef WIN32
               if ( ! update_WinPerf_Value(pav))
@@ -720,7 +719,7 @@ MachAttributes::credd_test()
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
 							  int slot_type,
-							  int num_cpus, 
+							  int num_cpus_arg, 
 							  int num_phys_mem,
 							  float virt_mem_fraction,
 							  float disk_fraction,
@@ -729,7 +728,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 {
 	map = map_arg;
 	c_type = slot_type;
-	c_num_cpus = num_cpus;
+	c_num_cpus = num_cpus_arg;
 	c_phys_mem = num_phys_mem;
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
