@@ -2476,11 +2476,11 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 # %u --> remote user
 # %x --> proxy command
 # %% --> %
-#SSH_TO_JOB_SSH_CMD = ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h
+#SSH_TO_JOB_SSH_CMD = "ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h"
 
 # Additional ssh clients may be configured.  They all have the same
 # default as ssh, except for scp, which omits the %h:
-#SSH_TO_JOB_SCP_CMD = scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x
+#SSH_TO_JOB_SCP_CMD = "scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x"
 
 # Path to sshd
 #SSH_TO_JOB_SSHD = /usr/sbin/sshd
