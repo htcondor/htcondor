@@ -68,6 +68,10 @@ as they did not correctly take into account
 shifts in time caused by daylight savings time transitions.
 \Ticket{2620}
 
+\item \Condor{ssh\_to\_job} sessions inherited the \Condor{starter}
+environment.  Now, this only happens when
+\MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT} is \Expr{True}.
+
 \end{itemize}
 
 \noindent Known Bugs:
