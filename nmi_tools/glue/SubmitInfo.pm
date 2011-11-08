@@ -904,7 +904,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_rhas_4'		=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
