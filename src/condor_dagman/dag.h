@@ -683,6 +683,9 @@ class Dag {
 	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
 	int GetDefaultPriority() const { return _defaultPriority; }
 
+		//TEMPTEMP -- document
+	bool IsHalted() { return _dagIsHalted; }
+
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -1096,11 +1099,19 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+
 	// If true, run the POST script, regardless of the exit status of the PRE script
 	// Defaults to true
 	bool _alwaysRunPost;
+
 		// The default priority for nodes in this DAG. (defaults to 0)
 	int _defaultPriority;
+
+		//TEMPTEMP -- document
+	bool _dagIsHalted;
+
+		//TEMPTEMP -- document
+	MyString _haltFile;
 };
 
 #endif /* #ifndef DAG_H */

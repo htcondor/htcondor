@@ -224,3 +224,12 @@ RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
 		}
 	}
 }
+
+//-------------------------------------------------------------------------
+MyString
+HaltFileName( const MyString &primaryDagFile )
+{
+	MyString haltFile = primaryDagFile + ".halt";
+
+	return haltFile;
+}

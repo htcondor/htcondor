@@ -89,4 +89,7 @@ MyString RescueDagName(const char *primaryDagFile,
 void RenameRescueDagsAfter(const char *primaryDagFile,
 			bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
+//TEMPTEMP -- document
+MyString HaltFileName( const MyString &primaryDagFile );
+
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

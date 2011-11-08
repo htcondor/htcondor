@@ -58,48 +58,67 @@ int
 ScriptQ::Run( Script *script )
 {
 	const char *prefix = script->_post ? "POST" : "PRE";
+
+	bool deferScript = false;
+
+		// Defer the script if the DAG is halted.
+		//TEMPTEMP -- test this
+	if ( _dag->IsHalted() ) {
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_1,
+		debug_printf( DEBUG_QUIET, //TEMPTEMP
+					"Deferring %s script of node %s because DAG is halted\n",
+					prefix, script->GetNodeName() );
+		deferScript = true;
+	}
+
+		// Defer the script if we've hit the max PRE/POST scripts
+		// running limit.
+		//TEMPTEMP -- test this
 	int maxScripts =
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
-	// if we have no script limit, or we're under the limit, run now
-	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
-		debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
-					  prefix, script->GetNodeName() );
-		_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
-					script->_post );
-		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
-			_numScriptsRunning++;
-			_scriptPidTable->insert( pid, script );
-			debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,
-						  script->_cmd );
-			return 1;
-		}
-		// BackgroundRun() returned pid 0
-		debug_printf( DEBUG_NORMAL, "  error: daemonCore->Create_Process() "
-					  "failed; %s script of Job %s failed\n", prefix,
-					  script->GetNodeName() );
-
-		// Putting this code here fixes PR 906 (Missing PRE or POST script
-		// causes DAGMan to hang); also, without this code a node for which
-		// the script spawning fails will permanently add to the running
-		// script count, which will throw off the maxpre/maxpost throttles.
-		// wenger 2007-11-08
-		const int returnVal = 1<<8;
-		if( ! script->_post ) {
-			_dag->PreScriptReaper( script->GetNodeName(), returnVal );
-		} else {
-			_dag->PostScriptReaper( script->GetNodeName(), returnVal );
-		}
-
-		return 0;
-	}
-	else {
+	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
 			// max scripts already running
-		debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
+		debug_printf( DEBUG_QUIET, "Max %s scripts (%d) already running; "//TEMPTEMP
 					  "deferring %s script of Job %s\n", prefix, maxScripts,
 					  prefix, script->GetNodeName() );
-		_scriptDeferredCount++;
+		deferScript = true;
 	}
-	_waitingQueue->enqueue( script );
+
+	if ( deferScript ) {
+		_scriptDeferredCount++;
+		_waitingQueue->enqueue( script );
+		return 0;
+	}
+
+	debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
+				  prefix, script->GetNodeName() );
+	_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
+				script->_post );
+	if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
+		_numScriptsRunning++;
+		_scriptPidTable->insert( pid, script );
+		debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,
+					  script->_cmd );
+		return 1;
+	}
+	// BackgroundRun() returned pid 0
+	debug_printf( DEBUG_NORMAL, "  error: daemonCore->Create_Process() "
+				  "failed; %s script of Job %s failed\n", prefix,
+				  script->GetNodeName() );
+
+	// Putting this code here fixes PR 906 (Missing PRE or POST script
+	// causes DAGMan to hang); also, without this code a node for which
+	// the script spawning fails will permanently add to the running
+	// script count, which will throw off the maxpre/maxpost throttles.
+	// wenger 2007-11-08
+	const int returnVal = 1<<8;
+	if( ! script->_post ) {
+		_dag->PreScriptReaper( script->GetNodeName(), returnVal );
+	} else {
+		_dag->PostScriptReaper( script->GetNodeName(), returnVal );
+	}
+
 	return 0;
 }
 

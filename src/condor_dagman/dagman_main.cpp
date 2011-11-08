@@ -1,3 +1,4 @@
+//TEMPTEMP -- we shouldn't start any scripts when we're held, either -- test for that...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1225,7 +1226,7 @@ void condor_event_timer () {
 			// Note: it would be nice to also have the proc submit
 			// count here.  wenger, 2006-02-08.
 		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
-					  justSubmitted, justSubmitted == 1 ? "" : "s" );
+				  	justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
 
 	// If the log has grown
@@ -1293,6 +1294,14 @@ void condor_event_timer () {
 		ExitSuccess();
 		return;
     }
+
+	//TEMPTEMP -- document
+	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
+				dagman.dag->ScriptRunNodeCount() == 0 ) {
+		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
+					"and no jobs or scripts are running\n" );
+		main_shutdown_rescue( EXIT_ERROR );
+	}
 
     //
     // If no jobs are submitted and no scripts are running, but the
