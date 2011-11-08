@@ -70,9 +70,8 @@ our %build_and_test_sets = (
 	# release - a build problem on this platform could indicate problems on a future
 	# release of RHEL.
 	'extra_builds' => [
-		'x86_64_rhap_5.3-updated',
+		'x86_64_rhas_4',
 		'x86_64_fedora_14-updated',
-		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
 		'x86_64_macos_10.6-updated',
 	],
@@ -452,10 +451,7 @@ our %submit_info = (
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
 				'x86_64_fedora_14-updated',
-				'x86_64_fedora_13', 'x86_64_fedora_13-updated',
-				'x86_64_rhap_5.2', 'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
-				'x86_64_sl_5.5',
-				'x86_64_opensuse_11.3-updated', 'x86_64_opensuse_11.4-updated',
+				'x86_64_opensuse_11.4-updated',
 				'x86_64_rhap_6.1-updated',
 				],
 		},
@@ -495,9 +491,7 @@ our %submit_info = (
 								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [
-				'x86_64_sles_9',
-				'x86_64_rhas_4' ],
+			'xtests'	=> [ ],
 		},
 
 		'test' => {
@@ -517,7 +511,7 @@ our %submit_info = (
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
 									  'prereqs' => [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-									  'xtests'	=> [ 'x86_ubuntu_10.04', ],
+									  'xtests'	=> [ ],
 		},
 
 		'test' => {
@@ -537,8 +531,6 @@ our %submit_info = (
 							 'coreutils-5.2.1',
 							 'libtool-1.5.26',],
 			'xtests'	=> [
-				'x86_64_macos_10.5-updated',
-				'x86_64_macos_10.6',
 				'x86_64_macos_10.6-updated',
 				],
 		},
@@ -617,9 +609,6 @@ our %submit_info = (
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_rhap_5.2',
-				'x86_64_rhap_5.3',
-				'x86_64_rhap_5.3-updated',
 				'unmanaged-x86_rhap_5'
 				],
 		},
@@ -915,7 +904,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_rhas_4'		=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

@@ -79,6 +79,13 @@ The details of each version are described below.
 %\item Condor version 7.7.3 released on Month Date, 2011.
 
 \item
+On Linux and Mac OS X, the Condor binaries now dynamically link with
+libcondor\_utils, a shared library that contains all Condor code that's
+used by multiple binaries. This library is not meant to be linked with
+user applications.
+\Ticket{2132}
+
+\item
 \emph{Condor now dynamically links with the ClassAds, Globus and VOMS
 libraries on Mac OS X.}
 A copy of these libraries is included with Condor.
@@ -281,6 +288,11 @@ if the job was put on hold while it was running.
 In such cases, there was also a spurious
 unsuspend event logged in the job's user log.
 \Ticket{2577}
+
+\item Fixed a bug introduced in 7.7.2 by the change of \Macro{OpSys} to "WINDOWS".
+Submit files that used version 1 syntax for the \SubmitCmd{environment} command
+were using Unix syntax rather than Windows syntax.
+\Ticket{2607}
 
 \end{itemize}
 

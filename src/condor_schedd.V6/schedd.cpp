@@ -7039,32 +7039,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 #else
 		// UNIX
 
-	bool nt_resource = false;
- 	char* match_opsys = NULL;
-
- 	if( mrec->my_match_ad ) {
- 		mrec->my_match_ad->LookupString( ATTR_OPSYS, &match_opsys );
-	}
-
-	if( match_opsys ) {
-		if( strncasecmp(match_opsys,"winnt",5) == MATCH ) {
-			nt_resource = true;
-		}
-		free( match_opsys );
-		match_opsys = NULL;
-	}
-	
-	if( nt_resource ) {
-		shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE );
-		if( ! shadow_obj ) {
-			dprintf( D_ALWAYS, "Trying to run a job on a Windows "
-					 "resource but you do not have a condor_shadow "
-					 "that will work, aborting.\n" );
-			noShadowForJob( srec, NO_SHADOW_WIN32 );
-			return;
-		}
-	}
-
 	if( ! shadow_obj ) {
 		switch( universe ) {
 		case CONDOR_UNIVERSE_STANDARD:

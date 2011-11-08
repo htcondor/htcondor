@@ -429,7 +429,7 @@ VOID ServiceMain(DWORD argc, LPTSTR *argv)
 	terminate(0);
 }
 
-void register_service()
+DWORD start_as_service()
 {
 	SERVICE_TABLE_ENTRY serviceTable[] = 
 	{ 
@@ -437,12 +437,23 @@ void register_service()
 		(LPSERVICE_MAIN_FUNCTION) ServiceMain},
 	{ NULL, NULL }
 	};
-	BOOL success;
 
-	// Register with the SCM
-	success = 
-		StartServiceCtrlDispatcher(serviceTable);
-	if (!success)
-		ErrorHandler("In StartServiceCtrlDispatcher",
-			GetLastError());
+	// Register with the Windows SCM. 
+    // Note: this calls ServiceMain and doesn't return 
+    // until the service fails or exits.
+    DWORD err = NO_ERROR;
+    BOOL success = StartServiceCtrlDispatcher(serviceTable);
+    if ( ! success) {
+        DWORD err = GetLastError();
+        // If "The service process could not connect to the service controller."
+        // it's probably because the service controller didn't start us so
+        // return a special error code to tell the caller it should start us as
+        // a daemon instead...
+        if (ERROR_FAILED_SERVICE_CONTROLLER_CONNECT == err) {
+           return 0x666;
+           }
+        // otherwise - report the error.
+		ErrorHandler("In StartServiceCtrlDispatcher", err);
+    }
+    return err;
 }

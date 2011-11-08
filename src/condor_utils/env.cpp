@@ -654,7 +654,7 @@ Env::GetEnvV1Delimiter(char const *opsys)
 	if(!opsys) {
 		return env_delimiter;
 	}
-	else if(!strncmp(opsys,"WINNT",5) || !strncmp(opsys,"WIN32",5)) {
+	else if(!strncmp(opsys,"WIN",3)) { // match "WINDOWS" or "WINNTnn" or "WIN32"
 		return windows_env_delim;
 	}
 	else {
