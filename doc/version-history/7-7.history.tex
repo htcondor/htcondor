@@ -62,7 +62,9 @@ fetching results of a query when using the \Opt{-stream} option to
 \Condor{q}.  This problem was introduced in 7.7.0.
 \Ticket{2601}
 
-\item The scheduling of cron jobs did not correctly take into account
+\item Fixed Condor's CronTab (Crondor, section~\ref{sec:CronTab})
+scheduling of jobs,
+as they did not correctly take into account
 shifts in time caused by daylight savings time transitions.
 \Ticket{2620}
 
