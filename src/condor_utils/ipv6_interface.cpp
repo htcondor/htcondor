@@ -2,7 +2,8 @@
 #include "ipv6_interface.h"
 #include "condor_config.h"
 #include "condor_sockaddr.h"
-#if !defined(WIN32)
+
+#if HAVE_GETIFADDRS
 #include <ifaddrs.h>
 
 static bool scope_id_inited = false;
@@ -45,10 +46,10 @@ uint32_t ipv6_get_scope_id() {
 }
 
 #else
-	// Win32
+	// Win32, Solaris
 uint32_t ipv6_get_scope_id() {
 	// TODO
-	EXCEPT("ipv6_get_scope_id does not work on Windows. In practice this means IPv6 does not work on Windows.");
+	EXCEPT("ipv6_get_scope_id is not implemented on this platform.  In practice this means IPv6 does not work on Windows.");
 	return 0;
 }
 
