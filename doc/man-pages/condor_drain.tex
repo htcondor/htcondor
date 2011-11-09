@@ -12,7 +12,12 @@
 \oOpt{-fast}
 \oOpt{-resume-on-completion}
 \oOptArg{-check}{expr}
-\oOpt{-cancel}
+\Arg{startd-name }
+
+\SynProg{\Condor{drain}}
+\ToolDebugOption
+\oOptArg{-pool}{pool-name}
+\Opt{-cancel}
 \oOptArg{-request-id}{id}
 \Arg{startd-name }
 
@@ -34,7 +39,8 @@ all promises that have been made to the job are honored, including
 to reduce idle time.  This means if one slot has a job with a long
 retirement time and the other slots have jobs with shorter retirement
 times, the effective retirement time for all of the jobs is the longer
-one.
+one.  If no draining schedule is specified, \Opt{-graceful} is chosen
+by default.
 
 \item[\Opt{-quick}] \MacroNI{MaxJobRetirementTime} is not honored.  Eviction
 of jobs is immediately initiated.  Jobs are given time to shut down
