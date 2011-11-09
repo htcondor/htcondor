@@ -13978,6 +13978,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// the add/delete_shadow_rec() functions update the job
 		// ads, so we need to do that here
 	delete_shadow_rec( srec );
+	SetMrecJobID(mrec,new_job_id);
 	srec = new shadow_rec;
 	srec->pid = shadow_pid;
 	srec->match = mrec;
