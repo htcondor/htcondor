@@ -75,6 +75,15 @@ is the amount of disk space available in the directory specified in
 the Condor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
 %
+\index{ClassAd machine attribute!Draining}
+\item[\AdAttr{Draining}:] This attribute is \Expr{True} when the slot
+is draining and undefined if not.
+%
+\index{ClassAd machine attribute!DrainingRequestId}
+\item[\AdAttr{DrainingRequestId}:] This attribute contains a string that
+is the request id of the draining request that put this slot in a draining
+state.  It is undefined if the slot is not draining.
+%
 \index{ClassAd machine attribute!DotNetVersions}
 \item[\AdAttr{DotNetVersions}:] The .NET framework versions
 currently installed on this computer. 
@@ -100,6 +109,33 @@ this boolean value identifies that this dynamic slot may be partitioned.
 entered the current Activity (see \AdAttr{Activity} entry above).  On
 all platforms (including NT), this is measured in the number of
 integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+%
+\index{ClassAd machine attribute!ExpectedMachineGracefulDrainingBadput}
+\item[\AdAttr{ExpectedMachineGracefulDrainingBadput}:] The
+job runtime in cpu-seconds that would be lost if graceful draining
+were initiated at the time this ad was published.  This calculation assumes
+that jobs will run for the full retirement time and then be evicted
+without saving a checkpoint.
+%
+\index{ClassAd machine attribute!ExpectedMachineGracefulDrainingCompletion}
+\item[\AdAttr{ExpectedMachineGracefulDrainingCompletion}:] Time at
+which graceful draining of the machine could complete if it were
+initiated at the time this ad was published.  This is measured in the
+number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
+1970).
+%
+\index{ClassAd machine attribute!ExpectedMachineQuickDrainingBadput}
+\item[\AdAttr{ExpectedMachineGracefulQuickBadput}:] The
+job runtime in cpu-seconds that would be lost if quick draining
+were initiated at the time this ad was published.  This calculation assumes
+that all evicted jobs will not save a checkpoint.
+%
+\index{ClassAd machine attribute!ExpectedMachineQuickDrainingCompletion}
+\item[\AdAttr{ExpectedMachineQuickDrainingCompletion}:] Time at
+which quick draining of the machine could complete if it were
+initiated at the time this ad was published.  This is measured in the
+number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
+1970).
 %
 \index{ClassAd machine attribute!FileSystemDomain}
 \item[\AdAttr{FileSystemDomain}:] A domain name configured by the
@@ -325,6 +361,19 @@ always want to be matched with jobs, and vice-versa.
 \item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
+%
+\index{ClassAd machine attribute!TotalMachineDrainingBadput}
+\item[\AdAttr{TotalMachineDrainingBadput}:] The
+total job runtime in cpu-seconds that has been lost due to job evictions
+caused by draining since this \Condor{startd} began executing.  In
+this calculation, it is assumed that jobs are evicted without
+checkpointing.
+%
+\index{ClassAd machine attribute!TotalMachineDrainingUnclaimedTime}
+\item[\AdAttr{TotalMachineDrainingUnclaimedTime}:] The
+total machine-wide time in cpu-seconds that has not been used
+(i.e. not matched to a job submitter) due to draining since this
+\Condor{startd} began executing.
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}
 \item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds
