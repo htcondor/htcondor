@@ -117,6 +117,117 @@ OfflineCollectorPlugin::configure ()
 
 }
 
+const char* 
+OfflineCollectorPlugin::makeOfflineKey( 
+	const ClassAd &ad, 
+	MyString & s)
+{
+	AdNameHashKey hashKey;
+	if ( !makeStartdAdHashKey (
+		hashKey,
+		const_cast<ClassAd*>( &ad ) ) ) {
+
+		dprintf (
+			D_FULLDEBUG,
+			"OfflineCollectorPlugin::makeOfflineKey: "
+			"failed to hash class ad. Ignoring.\n" );
+
+		return NULL;
+
+	}
+	hashKey.sprint ( s );
+	s.compressSpaces();
+	return s.Value();
+}
+
+bool
+OfflineCollectorPlugin::persistentStoreAd(const char *key, ClassAd &ad)
+{
+	ClassAd *p = NULL;
+	MyString s;
+
+		// If not given a key for the ad, make one now.
+	if ( !key ) {
+		key = makeOfflineKey(ad,s);
+		if (!key) return false;
+	}
+
+	_ads->BeginTransaction ();
+
+	/* replace duplicate ads */
+	if ( _ads->LookupClassAd ( key, p ) ) {
+		
+		if ( !_ads->DestroyClassAd ( key ) ) {
+			dprintf (
+				D_FULLDEBUG,
+				"OfflineCollectorPlugin::persistentStoreRemove: "
+				"failed remove existing off-line ad from the persistent "
+				"store.\n" );
+
+			_ads->AbortTransaction ();
+			return false;
+		}
+
+		dprintf(D_FULLDEBUG, 
+			"OfflineCollectorPlugin::persistentStoreRemove: "
+			"Replacing existing offline ad.\n");
+	}
+
+	/* try to add the new ad */
+	if ( !_ads->NewClassAd ( 
+		key, 
+		&ad ) ) {
+
+		dprintf (
+			D_FULLDEBUG,
+			"OfflineCollectorPlugin::persistentStoreRemove: "
+			"failed add off-line ad to the persistent "
+			"store.\n" );
+
+		_ads->AbortTransaction ();
+		return false;
+
+	}
+
+	_ads->CommitTransaction ();
+
+	return true;
+}
+
+bool
+OfflineCollectorPlugin::persistentRemoveAd(const char* key)
+{
+	_ads->BeginTransaction ();
+
+	ClassAd *p;
+
+	/* can't remove ads that do not exist */
+	if ( !_ads->LookupClassAd ( key, p ) ) {
+
+		_ads->AbortTransaction ();
+		return false;
+
+	}
+
+	/* try to remove the ad */
+	if ( !_ads->DestroyClassAd ( key ) ) {
+
+		dprintf (
+			D_FULLDEBUG,
+			"OfflineCollectorPlugin::update: "
+			"failed remove off-line ad from the persistent "
+			"store.\n" );
+
+		_ads->AbortTransaction ();
+		return false;
+
+	}
+
+	_ads->CommitTransaction ();
+
+	return true;
+}
+
 void
 OfflineCollectorPlugin::update (
 	int	 command,
@@ -140,23 +251,9 @@ OfflineCollectorPlugin::update (
 		 return;
 	}
 
-	AdNameHashKey hashKey;
-	if ( !makeStartdAdHashKey (
-		hashKey,
-		&ad ) ) {
-
-		dprintf (
-			D_FULLDEBUG,
-			"OfflineCollectorPlugin::update: "
-			"failed to hash class ad. Ignoring.\n" );
-
-		return;
-
-	}
 	MyString s;
-	hashKey.sprint ( s );
-	s.compressSpaces();
-	const char *key = s.Value ();
+	const char *key = makeOfflineKey(ad,s);
+	if (!key) return;
 
 	/* report whether this ad is "off-line" or not and update
 	   the ad accordingly. */		
@@ -225,73 +322,13 @@ OfflineCollectorPlugin::update (
 		}
 	}
 
-	_ads->BeginTransaction ();
-
-	ClassAd *p;
-
 	/* if it is off-line then add it to the list; otherwise,
 	   remove it. */
 	if ( offline > 0 ) {
-
-		/* replace duplicate ads */
-		if ( _ads->LookupClassAd ( key, p ) ) {
-			
-			if ( !_ads->DestroyClassAd ( key ) ) {
-				dprintf (
-					D_FULLDEBUG,
-					"OfflineCollectorPlugin::update: "
-					"failed remove existing off-line ad from the persistent "
-					"store.\n" );
-
-				_ads->AbortTransaction ();
-				return;
-			}
-			dprintf(D_FULLDEBUG, "Replacing existing offline ad.\n");
-		}
-
-		/* try to add the new ad */
-		if ( !_ads->NewClassAd ( 
-			key, 
-			&ad ) ) {
-
-			dprintf (
-				D_FULLDEBUG,
-				"OfflineCollectorPlugin::update: "
-				"failed add off-line ad to the persistent "
-				"store.\n" );
-
-			_ads->AbortTransaction ();
-			return;
-
-		}
-
+		persistentStoreAd(key,ad);
 	} else {
-
-		/* can't remove ads that do not exist */
-		if ( !_ads->LookupClassAd ( key, p ) ) {
-
-			_ads->AbortTransaction ();
-			return;
-
-		}
-
-		/* try to remove the ad */
-		if ( !_ads->DestroyClassAd ( key ) ) {
-
-			dprintf (
-				D_FULLDEBUG,
-				"OfflineCollectorPlugin::update: "
-				"failed remove off-line ad from the persistent "
-				"store.\n" );
-
-			_ads->AbortTransaction ();
-			return;
-
-		}
-
+		persistentRemoveAd(key);
 	}
-
-	_ads->CommitTransaction ();
 
 }
 
@@ -361,52 +398,11 @@ OfflineCollectorPlugin::invalidate (
 	/* make sure the command is relevant to us */
 	if ( INVALIDATE_STARTD_ADS == command ) {
 
-		AdNameHashKey hashKey;
-		if ( !makeStartdAdHashKey (
-			hashKey,
-			const_cast<ClassAd*> ( &ad ) ) ) {
-
-			dprintf (
-				D_FULLDEBUG,
-				"OfflineCollectorPlugin::invalidate: "
-				"failed to hash class ad. Ignoring.\n" );
-
-			return;
-
-		}
-
-		_ads->BeginTransaction ();
-
-		ClassAd *p;
 		MyString s;
-		hashKey.sprint ( s );
-		s.compressSpaces();
-		const char *key = s.Value ();
+		const char *key = makeOfflineKey(ad,s);
+		if (!key) return;
 
-		/* can't remove ads that do not exist */
-		if ( !_ads->LookupClassAd ( key, p ) ) {
-
-			_ads->AbortTransaction ();
-			return;
-
-		}
-
-		/* try to remove the ad */
-		if ( !_ads->DestroyClassAd ( key ) ) {
-
-			dprintf (
-				D_FULLDEBUG,
-				"OfflineCollectorPlugin::invalidate: "
-				"failed remove off-line ad from the persistent "
-				"store.\n" );
-
-			_ads->AbortTransaction ();
-			return;
-
-		}
-
-		_ads->CommitTransaction ();
-
+		persistentRemoveAd(key);
 	}
 
 }
