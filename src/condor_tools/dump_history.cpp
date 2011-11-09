@@ -41,11 +41,12 @@
 
 #define NUM_PARAMETERS 3
 
+void Usage(char* name, int iExitCode=1);
 
-static void Usage(char* name) 
+void Usage(char* name, int iExitCode ) 
 {
   printf("Usage: %s -name quill-name\n",name);
-  exit(1);
+  exit(iExitCode);
 }
 
 static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
@@ -134,7 +135,7 @@ main(int argc, char* argv[])
 		readfromfile = false;
     }
     else if (strcmp(argv[i],"-help")==0) {
-		Usage(argv[0]);
+		Usage(argv[0],0);
     }
   }
   if (i<argc) Usage(argv[0]);
