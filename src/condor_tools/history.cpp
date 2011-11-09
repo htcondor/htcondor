@@ -46,7 +46,11 @@
 
 #define NUM_PARAMETERS 3
 
-static void Usage(char* name) 
+
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
+void Usage(char* name, int iExitCode=1);
+
+void Usage(char* name, int iExitCode) 
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-help\t\t\tThis screen\n"
@@ -66,7 +70,7 @@ static void Usage(char* name)
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
 			name);
-  exit(1);
+  exit(iExitCode);
 }
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -208,7 +212,7 @@ main(int argc, char* argv[])
 		readfromfile = true;
     }
     else if (match_prefix(argv[i],"-help")) {
-		Usage(argv[0]);
+		Usage(argv[0],0);
     }
     else if (match_prefix(argv[i],"-format")) {
 		if (argc <= i + 2) {
