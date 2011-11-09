@@ -54,7 +54,7 @@ StringList* job_ids = NULL;
 	// Prototypes of local interest
 void addConstraint(const char *);
 void procArg(const char*);
-void usage();
+void usage(int iExitCode=1);
 void handleAll();
 void handleConstraints( void );
 ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
@@ -101,7 +101,7 @@ actionWord( JobAction action, bool past )
 
 
 void
-usage()
+usage(int iExitCode)
 {
 	char word[32];
 	sprintf( word, getJobActionString(mode) );
@@ -141,7 +141,7 @@ usage()
 	fprintf( stderr, "  -constraint expr    %s all jobs matching the boolean expression\n", word );
 	fprintf( stderr, "  -all                %s all jobs "
 			 "(cannot be used with other constraints)\n", word );
-	exit( 1 );
+	exit( iExitCode );
 }
 
 
@@ -326,7 +326,7 @@ main( int argc, char *argv[] )
             } else if (match_prefix(arg, "-version")) {
 				version();
             } else if (match_prefix(arg, "-help")) {
-				usage();
+				usage(0);
             } else {
 				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
 				usage();
