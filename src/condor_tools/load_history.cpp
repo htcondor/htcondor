@@ -48,11 +48,12 @@
 #define NUM_PARAMETERS 3
 
 DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
+void Usage(char* name, int iExitCode=1)
 
-static void Usage(char* name) 
+void Usage(char* name, int iExitCode) 
 {
   printf("Usage: %s -f history-filename [-name schedd-name jobqueue-birthdate]\n", name);
-  exit(1);
+  exit(iExitCode);
 }
 
 static void doDBconfig();
@@ -104,7 +105,7 @@ main(int argc, char* argv[])
 		JobHistoryFileName=argv[i];
     }
     else if (strcmp(argv[i],"-help")==0) {
-		Usage(argv[0]);
+		Usage(argv[0],0);
     }
     else if (strcmp(argv[i],"-name")==0) {
 		if (i+1==argc || ScheddName) break;

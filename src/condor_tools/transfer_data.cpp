@@ -44,13 +44,12 @@ bool All = false;
 
 SandboxTransferMethod st_method = STM_USE_SCHEDD_ONLY;
 
-void usage();
+void usage(int iExitCode=1);
 void procArg(const char*);
 void addConstraint(const char *);
 void handleAll();
 
-void
-usage()
+void usage(int iExitCode)
 {
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
 	fprintf( stderr, " where [options] is zero or more of:\n" );
@@ -75,7 +74,7 @@ usage()
 	fprintf( stderr, "  -constraint expr    transfer data for all jobs matching the boolean expression\n" );
 	fprintf( stderr, "  -all                transfer data for all jobs "
 			 "(cannot be used with other constraints)\n" );
-	exit( 1 );
+	exit( iExitCode );
 }
 
 void
@@ -292,7 +291,7 @@ main(int argc, char *argv[])
 				version();
 				break;
 			case 'h':
-				usage();
+				usage(0);
 				break;
 			default:
 				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
