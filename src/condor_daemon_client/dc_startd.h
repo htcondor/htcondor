@@ -49,6 +49,8 @@ public:
 	DCStartd( const char* const name, const char* const pool,
 			  const char* const addr, const char* const id );
 
+	DCStartd( ClassAd *ad, const char *pool = NULL );
+
 		/// Destructor.
 	~DCStartd();
 

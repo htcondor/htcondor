@@ -10185,3 +10185,163 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=602
+
+[DEFRAG_REQUIREMENTS]
+aliases=
+default=True
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=602
+
+[DEFRAG_WHOLE_MACHINE_EXPR]
+aliases=
+default=Cpus == TotalCpus
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=602
+
+[DEFRAG_STATE_FILE]
+aliases=
+default=$(LOCK)/defrag_state
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=602
+
+[DEFRAG_LOG]
+aliases=
+default=$(LOG)/DefragLog
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
+
+[DEFRAG_INTERVAL]
+aliases=
+default=600
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
+
+[DEFRAG_DRAINING_MACHINES_PER_HOUR]
+aliases=
+default=0
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
+
+[DEFRAG_MAX_CONCURRENT_DRAINING]
+aliases=
+default=-1
+version=0.0.0
+range=-1,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
+
+[DEFRAG_MAX_WHOLE_MACHINES]
+aliases=
+default=-1
+version=0.0.0
+range=-1,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
+
+[DEFRAG_RANK]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
+
+[DEFRAG_DRAINING_SCHEDULE]
+aliases=
+default=graceful
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Collector Log
+usage=Log files
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag,log
+id=550
