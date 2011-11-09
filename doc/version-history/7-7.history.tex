@@ -24,6 +24,11 @@ The details of each version are described below.
 %\item Condor version 7.7.3 released on Month Date, 2011.
 
 \item
+Fixed a bug that caused dollar dollar expansion of attributes
+in job ads not to work correctly when shadows are recycled.
+
+\Ticket{2552}
+\item
 On Linux and Mac OS X, the Condor binaries now dynamically link with
 libcondor\_utils, a shared library that contains all Condor code that's
 used by multiple binaries. This library is not meant to be linked with
