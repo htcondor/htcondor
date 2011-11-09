@@ -47,7 +47,6 @@
 
 #define NUM_PARAMETERS 3
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 void Usage(char* name, int iExitCode=1)
 
 void Usage(char* name, int iExitCode) 
