@@ -1,4 +1,5 @@
 //TEMPTEMP -- we shouldn't start any scripts when we're held, either -- test for that...
+//TEMPTEMP -- hmm -- maybe we *should* start POST scripts when things are held -- otherwise you waste all of the work you did in the node job, I think...  We shouldn't start PRE scripts, though...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1295,9 +1296,14 @@ void condor_event_timer () {
 		return;
     }
 
-	//TEMPTEMP -- document
+		// If the DAG is halted, we don't want to actually exit yet if
+		// jobs are still in the queue, or any POST scripts need to be
+		// run (we need to run POST scripts so we don't "waste" jobs
+		// that completed; on the other hand, we don't care about waiting
+		// for PRE scripts because they'll be re-run when the rescue
+		// DAG is run anyhow).
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
-				dagman.dag->ScriptRunNodeCount() == 0 ) {
+				dagman.dag->PostRunNodeCount() == 0 ) {
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		main_shutdown_rescue( EXIT_ERROR );

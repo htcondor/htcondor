@@ -361,19 +361,22 @@ class Dag {
 	}
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_PRERUN.
+	 *          Job::STATUS_PRERUN (whether or not the script is actually
+	 *			running).
 	 */
 	inline int PreRunNodeCount() const
 		{ return _preRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_POSTRUN.
+	 *          Job::STATUS_POSTRUN (whether or not the script is actually
+	 *			running).
 	 */
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN.
+	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN (whether or not
+	 *			the script is actually running).
 	 */
 	inline int ScriptRunNodeCount() const
 		{ return _preRunNodeCount + _postRunNodeCount; }

@@ -61,11 +61,11 @@ ScriptQ::Run( Script *script )
 
 	bool deferScript = false;
 
-		// Defer the script if the DAG is halted.
-		//TEMPTEMP -- test this
-	if ( _dag->IsHalted() ) {
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_1,
-		debug_printf( DEBUG_QUIET, //TEMPTEMP
+		// Defer PRE scripts if the DAG is halted (we need to go ahead
+		// and run POST scripts so we don't "waste" the fact that the
+		// job completed).
+	if ( _dag->IsHalted() && !script->_post ) {
+		debug_printf( DEBUG_DEBUG_1,
 					"Deferring %s script of node %s because DAG is halted\n",
 					prefix, script->GetNodeName() );
 		deferScript = true;
@@ -73,13 +73,11 @@ ScriptQ::Run( Script *script )
 
 		// Defer the script if we've hit the max PRE/POST scripts
 		// running limit.
-		//TEMPTEMP -- test this
 	int maxScripts =
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
 			// max scripts already running
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
-		debug_printf( DEBUG_QUIET, "Max %s scripts (%d) already running; "//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
 					  "deferring %s script of Job %s\n", prefix, maxScripts,
 					  prefix, script->GetNodeName() );
 		deferScript = true;
