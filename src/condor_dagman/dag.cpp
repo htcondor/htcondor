@@ -1743,7 +1743,7 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 			return;
 		}
 		_readyQ->Rewind();
-		Job* job;
+		Job* job = 0;
 		_readyQ->Next( job );
 		if( job ) {
 			dprintf( D_ALWAYS | D_NOHEADER, "%s", job->GetJobName() );

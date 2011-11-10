@@ -44,7 +44,7 @@ void ExitSuccess();
 	// Note: these functions are declared 'extern "C"' where they're
 	// implemented; if we don't do that here we get a link failure
 	// (I think because of the name mangling).  wenger 2007-02-09.
-extern "C" void process_config_source( char* file, char* name,
+extern "C" void process_config_source( char* file, const char* name,
 			char* host, int required );
 extern "C" bool is_piped_command(const char* filename);
 
