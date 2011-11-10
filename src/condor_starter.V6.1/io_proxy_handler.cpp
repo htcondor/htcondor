@@ -210,7 +210,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
 	if(sscanf_chirp(line,"open %s %s %d",path,flags_string,&mode)==3) {
-		fix_chirp_path(path);
 
 		/*
 		Open is a rather special case.
@@ -307,29 +306,24 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"unlink %s",path)==1) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_unlink(path);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"rename %s %s",path,newpath)==2) {
 
-		fix_chirp_path(path);
-		fix_chirp_path(newpath);
 		result = REMOTE_CONDOR_rename(path,newpath);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"mkdir %s %d",path,&mode)==2) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_mkdir(path,mode);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"rmdir %s",path)==1) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_rmdir(path);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
@@ -342,7 +336,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"lookup %s",path)==1) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_get_file_info_new(path,url);
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
@@ -501,7 +494,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		
 	} else if(sscanf_chirp(line,"rmall %s", &path) == 1) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_rmall(path);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
@@ -558,7 +550,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"getfile %s", &path) == 1) {
 		
-		fix_chirp_path(path);
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_getfile(path, &buffer);
 		sprintf(line,"%d",convert(result,errno));
@@ -570,7 +561,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"putfile %s %d %d", &path, &mode, &length) == 3)
 	{
-		fix_chirp_path(path);
 
 		// First check if putfile is possible
 		result = REMOTE_CONDOR_putfile(path, mode, length);
@@ -594,7 +584,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"getlongdir %s", &path) == 1) {
 
-		fix_chirp_path(path);
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_getlongdir(path, buffer);
 		sprintf(line, "%d", convert(result, errno));
@@ -605,7 +594,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"getdir %s", &path) == 1) {
 
-		fix_chirp_path(path);
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_getdir(path, buffer);
 		sprintf(line, "%d", convert(result, errno));
@@ -647,21 +635,18 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"link %s %s", &path, &newpath) == 2) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_link(path, newpath);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"symlink %s %s", &path, &newpath) == 2) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_symlink(path, newpath);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"readlink %s %d", &path, &length) == 2) {
 
-		fix_chirp_path(path);
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_readlink(path, length, &buffer);
 		sprintf(line, "%d", convert(result, errno));
@@ -673,7 +658,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"statfs %s", &path) == 1) {
 
-		fix_chirp_path(path);
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_statfs(path, buffer);
@@ -690,7 +674,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"stat %s", &path) == 1) {
 		
-		fix_chirp_path(path);
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_stat(path, buffer);
@@ -707,7 +690,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"lstat %s", &path) == 1) {
 
-		fix_chirp_path(path);
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_lstat(path, buffer);
@@ -724,42 +706,36 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	} else if(sscanf_chirp(line,"access %s %d", &path, &mode) == 2) {
 		
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_access(path, mode);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"chmod %s %d", &path, &mode) == 2) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_chmod(path, mode);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"chown %s %d %d", &path, &uid, &gid) == 3) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_chown(path, uid, gid);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"lchown %s %d %d", &path, &uid, &gid) == 3) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_lchown(path, uid, gid);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"truncate %s %d", &path, &length) == 2) {
 
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_truncate(path, length);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(sscanf_chirp(line,"utime %s %d %d", &path, &actime, &modtime) == 3){
 		
-		fix_chirp_path(path);
 		result = REMOTE_CONDOR_utime(path, actime, modtime);
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
