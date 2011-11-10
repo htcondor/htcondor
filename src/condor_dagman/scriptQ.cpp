@@ -61,6 +61,7 @@ ScriptQ::Run( Script *script )
 
 	bool deferScript = false;
 
+debug_printf( DEBUG_QUIET, "DIAG ScriptQ::Run(); IsHalted: %d\n", _dag->IsHalted() );//TEMPTEMP
 		// Defer PRE scripts if the DAG is halted (we need to go ahead
 		// and run POST scripts so we don't "waste" the fact that the
 		// job completed).
@@ -121,6 +122,20 @@ ScriptQ::Run( Script *script )
 }
 
 int
+ScriptQ::RunWaitingScript()
+{
+	Script *script = NULL;
+
+	if( !_waitingQueue->IsEmpty() ) {
+		_waitingQueue->dequeue( script );
+		ASSERT( script != NULL );
+		return Run( script );
+	}
+
+	return 0;
+}
+
+int
 ScriptQ::NumScriptsRunning()
 {
 	return _numScriptsRunning;
@@ -152,12 +167,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 	}
 
 	// if there's another script waiting to run, run it now
-	script = NULL;
-	if( !_waitingQueue->IsEmpty() ) {
-		_waitingQueue->dequeue( script );
-		ASSERT( script != NULL );
-		Run( script );
-	}
+	RunWaitingScript();
 
 	return 1;
 }

@@ -5,18 +5,26 @@ Vars NodeX args="$(JOB) -unhalt"
 Priority NodeX 10
 
 # This node halts the DAG.
-Job NodeY job_dagman_halt-A-node.cmd
-Vars NodeY nodename="$(JOB)"
-Vars NodeY args="$(JOB) -halt"
-Priority NodeY 5
+Job NodeY1 job_dagman_halt-A-node.cmd
+Vars NodeY1 nodename="$(JOB)"
+Vars NodeY1 args="$(JOB) -halt"
+Priority NodeY1 5
 
 # This node runs normally -- tests that things are resumed correctly
 # after the DAG is un-halted.
 Job NodeY2 job_dagman_halt-A-node.cmd
-#TEMPTEMP Script Pre NodeY2 job_dagman_halt-A-script.pl Pre $JOB
+Script Pre NodeY2 job_dagman_halt-A-script.pl Pre $JOB
 Script Post NodeY2 job_dagman_halt-A-script.pl Post $JOB
 Vars NodeY2 nodename="$(JOB)"
 Vars NodeY2 args="$(JOB)"
+
+# This node runs normally -- tests that things are resumed correctly
+# after the DAG is un-halted.
+Job NodeY3 job_dagman_halt-A-node.cmd
+Script Pre NodeY3 job_dagman_halt-A-script.pl Pre $JOB
+Script Post NodeY3 job_dagman_halt-A-script.pl Post $JOB
+Vars NodeY3 nodename="$(JOB)"
+Vars NodeY3 args="$(JOB)"
 
 # This node just runs normally.
 Job NodeA job_dagman_halt-A-node.cmd
@@ -32,10 +40,10 @@ Vars NodeB args="$(JOB) -sleep"
 Priority NodeB 10
 
 # This node halts the DAG.
-Job NodeC job_dagman_halt-A-node.cmd
-Vars NodeC nodename="$(JOB)"
-Vars NodeC args="$(JOB) -halt"
-Priority NodeC 5
+Job NodeC1 job_dagman_halt-A-node.cmd
+Vars NodeC1 nodename="$(JOB)"
+Vars NodeC1 args="$(JOB) -halt"
+Priority NodeC1 5
 
 # This node exists mainly to test that a node that is ready doesn't
 # get run when the DAG is halted (and its PRE script is not run, either).
@@ -51,16 +59,11 @@ Vars NodeD nodename="$(JOB)"
 Vars NodeD args="$(JOB)"
 
 Parent NodeX Child NodeA
-Parent NodeY Child NodeY2
-Parent NodeY2 Child NodeA
-Parent NodeA Child NodeB NodeC
-Parent NodeC Child NodeC2
+Parent NodeY1 Child NodeY2 NodeY3
+Parent NodeY2 NodeY3 Child NodeA
+Parent NodeA Child NodeB NodeC1
+Parent NodeC1 Child NodeC2
 Parent NodeB NodeC2 Child NodeD
 
-#TEMPTEMP -- NodeC should halt dag; make sure NodeB starts before NodeC (priority?); add pre and post to nodeB; make sure pre runs & post doesn't?
+#TEMPTEMP -- check job_dagman_halt-A.nodes.out
 #TEMPTEMP -- check rescue DAG
-
-#TEMPTEMP -- make another test that only halts things temporarily?
-#TEMPTEMP -- or make an earlier node in this DAG that does that?
-
-#TEMPTEMP -- check common log file for correct submissions?

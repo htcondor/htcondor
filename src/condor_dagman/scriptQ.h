@@ -46,6 +46,9 @@ class ScriptQ : public Service {
 	// or deferred).
 	int Run( Script *script );
 
+	//TEMPTEMP -- document
+	int RunWaitingScript();
+
     int NumScriptsRunning();
 
     // reaper function for PRE & POST script completion

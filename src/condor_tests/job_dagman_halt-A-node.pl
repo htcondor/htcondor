@@ -1,35 +1,38 @@
 #! /usr/bin/env perl
 
-open (OUT, ">>job_dagman_halt-A.nodes.out") || die "Can't open $!\n";
+$outfile = "job_dagman_halt-A.nodes.out";
 
-print OUT "Node $ARGV[0] starting\n";
+system("echo 'Node $ARGV[0] starting' >> $outfile");
 
 $halt_file = "job_dagman_halt-A.dag.halt";
 
 if ($ARGV[1] eq "-sleep") {
-	print OUT "  Sleeping\n";
+	system("echo '  $ARGV[0] Sleeping' >> $outfile");
 	sleep(5);
 	while (! -e $halt_file) {
-		print OUT "  Found halt file\n";
 		sleep(5);
 	}
+	system("echo '  $ARGV[0] found halt file' >> $outfile");
+	sleep(5);
 
 } elsif ($ARGV[1] eq "-halt") {
-	print OUT "  Halting DAG\n";
+	sleep(15); # Allow time for sibling node to start.
+	system("echo '  $ARGV[0] halting DAG' >> $outfile");
 	system("touch $halt_file");
+	sleep(5);#TEMPTEMP!!
 
 } elsif ($ARGV[1] eq "-unhalt") {
-	print OUT "  Sleeping\n";
+	system("echo '  $ARGV[0] sleeping' >> $outfile");
 	sleep(5);
 	while (! -e $halt_file) {
 		sleep(5);
 	}
-	print OUT "  Found halt file\n";
+	system("echo '  $ARGV[0] Found halt file' >> $outfile");
 	sleep(30); # Time for next node to start...
 	system("rm -f $halt_file");
-	print OUT "  Removed halt file\n";
+	system("echo '  $ARGV[0] removed halt file' >> $outfile");
+} else {
+	sleep(10);
 }
 
-print OUT "Node $ARGV[0] succeeded\n";
-
-close(OUT);
+system("echo 'Node $ARGV[0] succeeded' >> $outfile");
