@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define _POSIX_SOURCE
-
 #ifndef __XINTERFACE_H__
 #define __XINTERFACE_H__
 #include "condor_common.h"
