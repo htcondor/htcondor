@@ -1741,7 +1741,7 @@ sub KillDaemonPids
 #		to parse port number out of the file.
 #
 
-sub FindCollectorPort
+sub FindCollectorAddress
 {
 	my $collector_address_file = `condor_config_val collector_address_file`;
 	my $line;
@@ -1763,16 +1763,28 @@ sub FindCollectorPort
 	while(<COLLECTORADDR>) {
 		CondorUtils::fullchomp($_);
 		$line = $_;
-		if( $line =~ /^\s*<(\d+\.\d+\.\d+\.\d+):(\d+)>\s*$/ ) {
-			debug( "Looks like ip $1 and port $2!\n",$debuglevel);
-			return($2);
+		if( $line =~ /^\s*<([^>]+)>\s*$/ ) {
+			debug( "Collector address is $1\n",$debuglevel);
+			return($1);
 		} else {
 			debug( "$line\n",$debuglevel);
 		}
 	}
 	close(COLLECTORADDR);
-	debug( "No collector address found in collector address file! returning 0.\n",$debuglevel);
-	return("0");
+	debug( "No collector address found in collector address file!\n",$debuglevel);
+	return("");
+}
+
+sub FindCollectorPort
+{
+    my $addr = FindCollectorAddress();
+    if( $addr =~ /^(\d+\.\d+\.\d+\.\d+):(\d+)$/ ) {
+	debug( "Collector ip $1 and port $2\n",$debuglevel);
+	return($2);
+    } else {
+	debug( "Failed to extract port from collector address: $addr\n",$debuglevel);
+    }
+    return("0");
 }
 
 #################################################################

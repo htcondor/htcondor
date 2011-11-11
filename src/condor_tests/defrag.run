@@ -26,41 +26,15 @@ use Check::CondorLog;
 
 my $hostname = `condor_config_val full_hostname`;
 
-my $append_condor_config = '
+my $common_condor_config = '
   NUM_CPUS = 2
-  SLOT_TYPE_1 = 100%
-  NUM_SLOTS_TYPE_1 = 1
-  SLOT_TYPE_1_PARTITIONABLE = true
 
   MaxJobRetirementTime = 0
-  MachineMaxVacateTime = 2
+  MachineMaxVacateTime = 10
 
-  # start up 3 startds all together
-  STARTD2=$(STARTD)
-  STARTD3=$(STARTD)
-  STARTD4=$(STARTD)
-  DC_DAEMON_LIST = +STARTD2,STARTD3,STARTD4
-  DAEMON_LIST = $(DAEMON_LIST) DEFRAG STARTD2 STARTD3 STARTD4
-  STARTD_ARGS  = -f -local-name STARTD1
-  STARTD2_ARGS = -f -local-name STARTD2
-  STARTD3_ARGS = -f -local-name STARTD3
-  STARTD4_ARGS = -f -local-name STARTD4
-
+  DrainRank = 1
   STARTD_EXPRS = DrainRank
-  STARTD.STARTD1.DrainRank = 1
-  STARTD.STARTD2.DrainRank = 2
-  STARTD.STARTD3.DrainRank = 3
-  STARTD.STARTD4.DrainRank = 4
-
-  STARTD.STARTD1.STARTD_NAME = startd1@$(FULL_HOSTNAME)
-  STARTD.STARTD2.STARTD_NAME = startd2@$(FULL_HOSTNAME)
-  STARTD.STARTD3.STARTD_NAME = startd3@$(FULL_HOSTNAME)
-  STARTD.STARTD4.STARTD_NAME = startd4@$(FULL_HOSTNAME)
-
-  # Make STARTD1 not a whole machine, so it always gets defragmented
-  # unless a job is running on one of the others.
-  STARTD.STARTD1.SLOT_TYPE_1 = 50%
-  STARTD.STARTD1.NUM_SLOTS_TYPE_1 = 2
+  STARTD_NAME = startd$(DrainRank)@$(FULL_HOSTNAME)
 
   DEFRAG_INTERVAL = 10
   DEFRAG_REQUIREMENTS = DrainRank < 4
@@ -68,17 +42,48 @@ my $append_condor_config = '
   DEFRAG_DRAINING_MACHINES_PER_HOUR = 360
 ';
 
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
+# The startd in pool1 is not partitionable, but it is already
+# fragmented into two slots, so it will always be available to be
+# selected by defrag for draining unless one of the startds
+# with higher DEFRAG_RANK gets partitioned.  In this way,
+# we test that the rank is effective.
+
+my $pool1 = CondorTest::StartCondorWithParams(
+    condor_name => "pool1",
+    append_condor_config => $common_condor_config,
+    daemon_list => "MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD, DEFRAG"
 );
 
-# verify that a 30s job runs on STARTD4 (should not be drained)
+my $pool1_collector = $pool1->GetCollectorAddress();
+
+my $partitionable_condor_config = '
+  DAEMON_LIST = MASTER,STARTD
+  SLOT_TYPE_1 = 100%
+  NUM_SLOTS_TYPE_1 = 1
+  SLOT_TYPE_1_PARTITIONABLE = true
+' . "  COLLECTOR_HOST = $pool1_collector\n";
+
+# start up 3 partitionable startds, all reporting to pool1
+for(my $i=2; $i<5; $i++) {
+  CondorTest::StartCondorWithParams(
+      condor_name => "startd$i",
+      append_condor_config => $common_condor_config . $partitionable_condor_config . "\nDrainRank = $i\n"
+  );
+}
+
+# we will submit jobs to pool1, since it has the schedd
+$pool1->MakeThisTheDefaultInstance();
+
+# Verify that a 30s job runs on startd4.  It should not be drained,
+# because this startd does not match DRAIN_REQUIREMENTS
 SimpleJob::RunCheck(
   duration=>30,
   append_submit_commands=>"requirements = DrainRank>=4"
 );
 
-# verify that a 30s job gets evicted from STARTD3
+# Verify that a 30s job gets evicted from startd3.  This startd
+# matches DRAIN_REQUIREMENTS and is higher DRAIN_RANK than
+# startd1.
 JobIsEvicted::RunCheck(
   duration=>30,
   append_submit_commands=>"requirements = DrainRank==3"
