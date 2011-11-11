@@ -38,7 +38,7 @@ add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param
 set( EXTRA_SRCS "${SAFE_OPEN_SRC};${ANALYSIS_UTIL_SRCS};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${CKPT_SERVER_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PRIVSEP_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
 if (UNIX)
 set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLAGS -w)
-set_source_files_properties(../classad_analysis/interval.cpp generic_stats.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+set_source_files_properties(../condor_damon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
 #On windows we add the cpp file into the build 

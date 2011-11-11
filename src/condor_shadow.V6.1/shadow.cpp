@@ -245,7 +245,7 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 
 void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	int iPrevExitReason=remRes->getExitReason();
+	/*int iPrevExitReason=*/ remRes->getExitReason();
 	
 	remRes->setExitReason( JOB_SHOULD_HOLD );
 	BaseShadow::holdJob(reason, hold_reason_code, hold_reason_subcode);

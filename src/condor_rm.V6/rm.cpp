@@ -310,7 +310,7 @@ main( int argc, char *argv[] )
 					exit(1);
 				}		
 				char *end = NULL;
-				long code = strtol(*argv,&end,10);
+				/* long code = */ strtol(*argv,&end,10);
 				if( !end || *end || end==*argv ) {
 					fprintf( stderr, "Invalid -subcode %s!\n", *argv );
 					exit(1);
@@ -397,22 +397,22 @@ main( int argc, char *argv[] )
 	if( actionReason == NULL ) {
 		switch( mode ) {
 		case JA_RELEASE_JOBS:
-			actionReason = "via condor_release";
+			actionReason = strdup("via condor_release");
 			break;
 		case JA_REMOVE_X_JOBS:
-			actionReason = "via condor_rm -forcex";
+			actionReason = strdup("via condor_rm -forcex");
 			break;
 		case JA_REMOVE_JOBS:
-			actionReason = "via condor_rm";
+			actionReason = strdup("via condor_rm");
 			break;
 		case JA_HOLD_JOBS:
-			actionReason = "via condor_hold";
+			actionReason = strdup("via condor_hold");
 			break;
 		case JA_SUSPEND_JOBS:
-			actionReason = "via condor_suspend";
+			actionReason = strdup("via condor_suspend");
 			break;
 		case JA_CONTINUE_JOBS:
-			actionReason = "via condor_continue";
+			actionReason = strdup("via condor_continue");
 			break;
 		default:
 			actionReason = NULL;
@@ -496,7 +496,7 @@ main( int argc, char *argv[] )
 bool
 doWorkByConstraint( const char* constraint, CondorError * errstack )
 {
-	ClassAd* ad;
+	ClassAd* ad = 0;
 	int total_jobs = -1;
 	bool rval = true;
 	switch( mode ) {
@@ -557,7 +557,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 ClassAd*
 doWorkByList( StringList* ids, CondorError *errstack )
 {
-	ClassAd* rval;
+	ClassAd* rval = 0;
 	switch( mode ) {
 	case JA_RELEASE_JOBS:
 		rval = schedd->releaseJobs( ids, actionReason, errstack );

@@ -382,10 +382,10 @@ MPIShadow::startMaster()
         rr = ResourceList[i];
         rr->getStartdAddress( sinful );
 		addr.from_sinful(sinful);
-		MyString hostname = get_hostname(addr);
-        fprintf( pg, "%s 1 condor_exec %s\n", hostname.Value(),
+		MyString mach_hostname = get_hostname(addr);
+        fprintf( pg, "%s 1 condor_exec %s\n", mach_hostname.Value(),
 				 getOwner() );
-        dprintf( D_FULLDEBUG, "%s 1 condor_exec %s\n", hostname.Value(),
+        dprintf( D_FULLDEBUG, "%s 1 condor_exec %s\n", mach_hostname.Value(),
 				 getOwner() );
     }
     delete [] sinful;
