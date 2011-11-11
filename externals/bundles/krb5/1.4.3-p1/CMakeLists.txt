@@ -23,7 +23,7 @@ endif()
   
 if (WITH_KRB5)
 
-	find_multiple( "krb5;com_err;k5crypto;krb5support" KRB5_FOUND )
+	find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
 
 	if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 

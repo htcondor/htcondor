@@ -299,6 +299,14 @@ Submit files that used version 1 syntax for the \SubmitCmd{environment} command
 were using Unix syntax rather than Windows syntax.
 \Ticket{2607}
 
+\item Fixed the linking of Kerberos libraries on RHEL 3. This could cause
+the Condor binaries to fail on some systems with this error:
+\begin{verbatim}
+relocation error: /usr/kerberos/lib/libgssapi_krb5.so.2: 
+undefined symbol: krb5int_enc_arcfour
+\end{verbatim}
+\Ticket{2627}
+
 \end{itemize}
 
 \noindent Known Bugs:
