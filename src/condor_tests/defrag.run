@@ -44,9 +44,12 @@ my $common_condor_config = '
 
 # The startd in pool1 is not partitionable, but it is already
 # fragmented into two slots, so it will always be available to be
-# selected by defrag for draining unless one of the startds
-# with higher DEFRAG_RANK gets partitioned.  In this way,
-# we test that the rank is effective.
+# selected by defrag for draining unless one of the startds with
+# higher DEFRAG_RANK gets partitioned.  In this way, we test that the
+# rank is effective.  (Obviously it does not make sense in the real
+# world for DRAIN_REQUIREMENTS to match startd1, which is not running
+# any jobs and which is not partionable.  This setup is just for
+# testing.)
 
 my $pool1 = CondorTest::StartCondorWithParams(
     condor_name => "pool1",
@@ -63,7 +66,8 @@ my $partitionable_condor_config = '
   SLOT_TYPE_1_PARTITIONABLE = true
 ' . "  COLLECTOR_HOST = $pool1_collector\n";
 
-# start up 3 partitionable startds, all reporting to pool1
+# Start up 3 partitionable startds, all reporting to pool1.
+# These have increasing DRANK_RANK.
 for(my $i=2; $i<5; $i++) {
   CondorTest::StartCondorWithParams(
       condor_name => "startd$i",
@@ -74,8 +78,9 @@ for(my $i=2; $i<5; $i++) {
 # we will submit jobs to pool1, since it has the schedd
 $pool1->MakeThisTheDefaultInstance();
 
-# Verify that a 30s job runs on startd4.  It should not be drained,
-# because this startd does not match DRAIN_REQUIREMENTS
+# Verify that a 30s job runs on startd4, the startd with the highest
+# DRAIN_RANK.  It should not be drained, because this startd does not
+# match DRAIN_REQUIREMENTS
 SimpleJob::RunCheck(
   duration=>30,
   append_submit_commands=>"requirements = DrainRank>=4"
