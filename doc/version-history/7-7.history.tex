@@ -36,6 +36,11 @@ start.  Once draining is complete, it enters the Drained/Idle state.
 For more details, see page~\pageref{man-condor-drain}.
 \Ticket{2330}
 
+\item A new daemon \Condor{defrag} has been added to automate a simple
+policy for draining machines.  For more details, see
+page~\pageref{sec:Config-defrag}.
+\Ticket{2330}
+
 \item  \Condor{q} \Opt{-run} now displays the value of the job ClassAd
 attribute \Attr{EC2RemoteVirtualMachineName} instead of
 \Expr{[????????????????]},
