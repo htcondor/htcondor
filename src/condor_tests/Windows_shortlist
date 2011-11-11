@@ -20,6 +20,7 @@ cmd_q_shows-xml
 cmd_q_shows-cputime
 cmd_q_shows-format
 cmd_drain
+defrag
 #cmd_status_shows-any
 #cmd_status_shows-submitters
 #cmd_status_shows-negotiator

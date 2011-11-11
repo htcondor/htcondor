@@ -67,4 +67,7 @@ typedef enum {
 const char* getCAResultString( CAResult r );
 CAResult getCAResultNum( const char* str );
 
+int getDrainingScheduleNum( char const *name );
+char const *getDrainingScheduleName( int num );
+
 #endif

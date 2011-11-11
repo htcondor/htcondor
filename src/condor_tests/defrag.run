@@ -1,0 +1,87 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::JobDoesNotRun;
+use Check::JobIsEvicted;
+use Check::CondorLog;
+
+my $hostname = `condor_config_val full_hostname`;
+
+my $append_condor_config = '
+  NUM_CPUS = 2
+  SLOT_TYPE_1 = 100%
+  NUM_SLOTS_TYPE_1 = 1
+  SLOT_TYPE_1_PARTITIONABLE = true
+
+  MaxJobRetirementTime = 0
+  MachineMaxVacateTime = 2
+
+  # start up 3 startds all together
+  STARTD2=$(STARTD)
+  STARTD3=$(STARTD)
+  STARTD4=$(STARTD)
+  DC_DAEMON_LIST = +STARTD2,STARTD3,STARTD4
+  DAEMON_LIST = $(DAEMON_LIST) DEFRAG STARTD2 STARTD3 STARTD4
+  STARTD_ARGS  = -f -local-name STARTD1
+  STARTD2_ARGS = -f -local-name STARTD2
+  STARTD3_ARGS = -f -local-name STARTD3
+  STARTD4_ARGS = -f -local-name STARTD4
+
+  STARTD_EXPRS = DrainRank
+  STARTD.STARTD1.DrainRank = 1
+  STARTD.STARTD2.DrainRank = 2
+  STARTD.STARTD3.DrainRank = 3
+  STARTD.STARTD4.DrainRank = 4
+
+  STARTD.STARTD1.STARTD_NAME = startd1@$(FULL_HOSTNAME)
+  STARTD.STARTD2.STARTD_NAME = startd2@$(FULL_HOSTNAME)
+  STARTD.STARTD3.STARTD_NAME = startd3@$(FULL_HOSTNAME)
+  STARTD.STARTD4.STARTD_NAME = startd4@$(FULL_HOSTNAME)
+
+  # Make STARTD1 not a whole machine, so it always gets defragmented
+  # unless a job is running on one of the others.
+  STARTD.STARTD1.SLOT_TYPE_1 = 50%
+  STARTD.STARTD1.NUM_SLOTS_TYPE_1 = 2
+
+  DEFRAG_INTERVAL = 10
+  DEFRAG_REQUIREMENTS = DrainRank < 4
+  DEFRAG_RANK = DrainRank
+  DEFRAG_DRAINING_MACHINES_PER_HOUR = 360
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+# verify that a 30s job runs on STARTD4 (should not be drained)
+SimpleJob::RunCheck(
+  duration=>30,
+  append_submit_commands=>"requirements = DrainRank>=4"
+);
+
+# verify that a 30s job gets evicted from STARTD3
+JobIsEvicted::RunCheck(
+  duration=>30,
+  append_submit_commands=>"requirements = DrainRank==3"
+);
+
+CondorTest::EndTest();

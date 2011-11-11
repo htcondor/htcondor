@@ -51,6 +51,11 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	}
 }
 
+DCStartd::DCStartd( ClassAd *ad, const char *tPool )
+	: Daemon(ad,DT_STARTD,tPool),
+	  claim_id(NULL)
+{
+}
 
 DCStartd::~DCStartd( void )
 {
