@@ -45,9 +45,7 @@ Defrag::Defrag():
 	m_max_draining(-1),
 	m_max_whole_machines(-1),
 	m_draining_schedule(DRAIN_GRACEFUL),
-	m_last_poll(0),
-	m_last_polling_hour(0),
-	m_last_polling_day(0)
+	m_last_poll(0)
 {
 }
 
@@ -63,6 +61,12 @@ void Defrag::init()
 
 void Defrag::config()
 {
+
+	ASSERT( param(m_state_file,"DEFRAG_STATE_FILE") );
+	if( m_last_poll==0 ) {
+		loadState();
+	}
+
 	int old_polling_interval = m_polling_interval;
 	m_polling_interval = param_integer("DEFRAG_INTERVAL",600);
 	if( m_polling_interval <= 0 ) {
@@ -83,8 +87,13 @@ void Defrag::config()
 		}
 	}
 	else {
+		time_t now = time(NULL);
+		int first_time = 0;
+		if( m_last_poll != 0 && now-m_last_poll < m_polling_interval && m_last_poll <= now ) {
+			first_time = m_polling_interval - (now-m_last_poll);
+		}
 		m_polling_timer = daemonCore->Register_Timer(
-			m_polling_interval,
+			first_time,
 			m_polling_interval,
 			(TimerHandlercpp)&Defrag::poll,
 			"Defrag::poll",
@@ -105,11 +114,15 @@ void Defrag::config()
 
 	double error_per_hour = (rate - m_draining_per_poll)/m_polling_interval*3600.0;
 	m_draining_per_poll_hour = (int)floor(error_per_hour + 0.00001);
-	if( m_draining_per_hour < 0 ) m_draining_per_hour = 0;
+	if( m_draining_per_hour < 0 || m_polling_interval > 3600 ) {
+		m_draining_per_hour = 0;
+	}
 
 	double error_per_day = (error_per_hour - m_draining_per_poll_hour)*24.0;
 	m_draining_per_poll_day = (int)floor(error_per_day + 0.5);
-	if( m_draining_per_poll_day < 0 ) m_draining_per_poll_day = 0;
+	if( m_draining_per_poll_day < 0 || m_polling_interval > 3600*24 ) {
+		m_draining_per_poll_day = 0;
+	}
 	dprintf(D_ALWAYS,"polling interval %ds, DEFRAG_DRAINING_MACHINES_PER_HOUR = %f/hour = %d/interval + %d/hour + %d/day\n",
 			m_polling_interval,m_draining_per_hour,m_draining_per_poll,
 			m_draining_per_poll_hour,m_draining_per_poll_day);
@@ -146,8 +159,6 @@ void Defrag::config()
 				   rank.Value());
 		}
 	}
-
-	ASSERT( param(m_state_file,"DEFRAG_STATE_FILE") );
 }
 
 void Defrag::stop()
@@ -240,7 +251,7 @@ int Defrag::countMachines(char const *constraint,char const *constraint_source,	
 	startdAds.Close();
 
 	dprintf(D_FULLDEBUG,"Counted %d machines matching %s=%s\n",
-			count,constraint,constraint_source);
+			count,constraint_source,constraint);
 	return count;
 }
 
@@ -287,8 +298,6 @@ void Defrag::loadState()
 		int timestamp = (int)m_last_poll;
 		ad->LookupInteger(ATTR_LAST_POLL,timestamp);
 		m_last_poll = (time_t)timestamp;
-		m_last_polling_hour = m_last_poll % 3600;
-		m_last_polling_day = m_last_poll % (3600*24);
 
 		dprintf(D_ALWAYS,"Last poll: %d\n",(int)m_last_poll);
 
@@ -307,15 +316,41 @@ void Defrag::slotNameToDaemonName(std::string const &name,std::string &machine)
 	}
 }
 
+// n is a number per period.  If we are partly through
+// the interval, reduce n in proportion to how much
+// is left.
+static int prorate(int n,int time_remaining,int period,int granularity)
+{
+	double frac = ((double)time_remaining)/period;
+
+		// Add in maximum time in this interval that could have been
+		// missed due to polling interval (granularity).
+
+	frac += ((double)granularity)/period;
+
+	int answer = (int)floor(n*frac + 0.5);
+
+	if( (n > 0 && answer > n) || (n < 0 && answer < n) ) {
+		return n; // never exceed magnitude of n
+	}
+	if( answer*n < 0 ) { // never flip sign
+		return 0;
+	}
+	return answer;
+}
+
 void Defrag::poll()
 {
-	if( m_last_poll == 0 ) {
-		loadState();
-	}
-
 	dprintf(D_FULLDEBUG,"Evaluating defragmentation policy.\n");
 
+		// If we crash during this polling cycle, we will have saved
+		// the time of the last poll, so the next cycle will be
+		// scheduled on the false assumption that a cycle ran now.  In
+		// this way, we error on the side of draining too little
+		// rather than too much.
+
 	time_t now = time(NULL);
+	time_t prev = m_last_poll;
 	m_last_poll = now;
 	saveState();
 
@@ -336,16 +371,17 @@ void Defrag::poll()
 	}
 
 	int num_to_drain = m_draining_per_poll;
-	time_t current_hour = now % 3600;
-	time_t current_day = now % (3600*24);
 
-	if( current_hour != m_last_polling_hour ) {
-		m_last_polling_hour = current_hour;
-		num_to_drain += m_draining_per_poll_hour;
+	time_t last_hour    = (prev / 3600)*3600;
+	time_t current_hour = (now  / 3600)*3600;
+	time_t last_day     = (prev / (3600*24))*3600*24;
+	time_t current_day  = (now  / (3600*24))*3600*24;
+
+	if( current_hour != last_hour ) {
+		num_to_drain += prorate(m_draining_per_poll_hour,now-current_hour,3600,m_polling_interval);
 	}
-	if( current_day != m_last_polling_day ) {
-		m_last_polling_day = current_day;
-		num_to_drain += m_draining_per_poll_day;
+	if( current_day != last_day ) {
+		num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval);
 	}
 	if( num_to_drain <= 0 ) {
 		dprintf(D_ALWAYS,"Doing nothing, because draining rate has already been achieved.\n");

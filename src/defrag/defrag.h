@@ -59,8 +59,6 @@ class Defrag: public Service {
 	std::string m_draining_schedule_str;
 
 	time_t m_last_poll;
-	time_t m_last_polling_hour;
-	time_t m_last_polling_day;
 
 	std::string m_state_file;
 

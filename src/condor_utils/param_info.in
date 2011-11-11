@@ -10188,7 +10188,7 @@ id=602
 
 [DEFRAG_REQUIREMENTS]
 aliases=
-default=True
+default=PartitionableSlot
 version=0.0.0
 range=.*
 state=default
@@ -10316,7 +10316,7 @@ id=550
 
 [DEFRAG_RANK]
 aliases=
-default=
+default=-ExpectedMachineGracefulDrainingBadput
 version=0.0.0
 range=.*
 state=default
