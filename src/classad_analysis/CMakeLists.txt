@@ -19,6 +19,8 @@
 
 condor_selective_glob( "analysis.*;boolExpr.*;condition.*;multiProfile.*;profile.*;resourceGroup.*;boolValue.*;explain.*;interval.*;result.*" AnalSrcs )
 
+set_source_files_properties(interval.cpp PROPERTIES COMPILE_FLAGS
+-Wno-float-equal)
 set( ANALYSIS_UTIL_SRCS "${AnalSrcs};${CMAKE_CURRENT_SOURCE_DIR}/conversion.cpp;${CMAKE_CURRENT_SOURCE_DIR}/conversion.h" PARENT_SCOPE)
 
 # # condor_shared_lib( gangmatch "portGraph.cpp;gmr.cpp;gangster.cpp")

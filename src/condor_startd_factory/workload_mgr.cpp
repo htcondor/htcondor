@@ -45,7 +45,7 @@ void WorkloadManager::query_workloads(char *script)
 	int idx;
 	ClassAd *ad = NULL;
 	int eof, error, empty;
-	char *classad_delimitor = "---\n";
+	const char *classad_delimitor = "---\n";
 	ArgList args;
 	priv_state priv;
 

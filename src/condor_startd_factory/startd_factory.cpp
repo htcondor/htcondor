@@ -91,7 +91,7 @@ StartdFactory::~StartdFactory()
 }
 
 int
-StartdFactory::init(int argc, char *argv[])
+StartdFactory::init(int  /*argc*/, char ** /*argv*/)
 {
 	// load the config file attributes I need
 	reconfig();
