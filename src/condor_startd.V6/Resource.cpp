@@ -2283,7 +2283,7 @@ Resource::beginCODLoadHack( void )
 		// only if we've been free of COD for over a minute (and
 		// therefore, we're completely out of COD-load hack), do we
 		// want to record the real system load as the "pre-COD" load.
-	if( ! r_pre_cod_total_load ) {
+	if( r_pre_cod_total_load > 0.0 ) {
 		r_pre_cod_total_load = r_attr->total_load();
 		r_pre_cod_condor_load = r_attr->condor_load();
 	} else {

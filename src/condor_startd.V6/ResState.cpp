@@ -54,7 +54,7 @@ ResState::ResState( Resource* res_ip )
 
 
 void
-ResState::publish( ClassAd* cp, amask_t how_much ) 
+ResState::publish( ClassAd* cp, amask_t  /*how_much*/ ) 
 {
 	cp->Assign( ATTR_STATE, state_to_string(r_state) );
 

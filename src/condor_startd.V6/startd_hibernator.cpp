@@ -88,8 +88,8 @@ StartdHibernator::update( void )
 bool
 StartdHibernator::initialize( void )
 {
-	char	*args [] =
-		{ const_cast<char*>(m_plugin_path.Value()), "ad", NULL};
+	const char	*args [] =
+ { m_plugin_path.Value(), "ad", NULL};
 
 
 		// Run the plugin with the "ad" option,

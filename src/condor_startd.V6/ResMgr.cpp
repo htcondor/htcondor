@@ -108,7 +108,7 @@ void ResMgr::Stats::Init()
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkOther, IF_VERBOSEPUB);
 }
 
-double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer & probe)
+double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
 {
    return UtcTime::getTimeDouble();
 }
@@ -120,7 +120,7 @@ double ResMgr::Stats::EndRuntime(stats_recent_counter_timer & probe, double befo
    return now;
 }
 
-double ResMgr::Stats::BeginWalk(VoidResourceMember memberfunc)
+double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 {
    return UtcTime::getTimeDouble();
 }
@@ -1135,7 +1135,7 @@ ResMgr::walk( VoidResourceMember memberfunc )
 		return;
 	}
 
-    double now = stats.BeginWalk(memberfunc);
+    double currenttime = stats.BeginWalk(memberfunc);
 
 		// Because the memberfunc might be an eval function, it can
 		// result in resources being deleted. This means a straight
@@ -1152,7 +1152,7 @@ ResMgr::walk( VoidResourceMember memberfunc )
 
 	delete [] cache;
 
-    stats.EndWalk(memberfunc, now);
+    stats.EndWalk(memberfunc, currenttime);
 }
 
 
@@ -2008,7 +2008,7 @@ ResMgr::deleteResource( Resource* rip )
 
 
 void
-ResMgr::makeAdList( ClassAdList *list, ClassAd * pqueryAd /*=NULL*/ )
+ResMgr::makeAdList( ClassAdList *list, ClassAd *  /*pqueryAd =NULL*/ )
 {
 	ClassAd* ad;
 	int i;

@@ -144,7 +144,7 @@ AvailStats::compute( amask_t how_much )
 			int current_idle_time = current_time - as_start_avail;
 			int num_intervals = as_num_avail_periods;
 			as_avail_periods.Rewind();
-			int item;
+			int item = 0;
 			as_avail_periods.Next(item);
 			while( num_intervals && item < current_idle_time ) { 
 				as_avail_periods.Next(item);

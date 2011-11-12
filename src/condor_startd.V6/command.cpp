@@ -1370,7 +1370,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on machine rank\n" );
 				} else {
-					ASSERT( rank == rip->r_cur->rank() );
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on user priority\n" );
 				}
