@@ -10839,10 +10839,10 @@ that is supported is one machine per day or one machine per
 
 \label{param:DefragRequirements}
 \item[\Macro{DEFRAG\_REQUIREMENTS}] An expression that specifies which
-machines to drain.  The default is \Expr{PartitionableSlot}.  A machine
-(i.e. \Condor{startd}) is matched if \emph{any} of its slots match
-this expression.  Machines are automatically excluded if they are
-already draining or if they match
+machines to drain.  The default is \Expr{PartitionableSlot \&\&
+  Offline=!=True}.  A machine (i.e. \Condor{startd}) is matched if
+\emph{any} of its slots match this expression.  Machines are
+automatically excluded if they are already draining or if they match
 \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
 
 \label{param:DefragRequirements}
@@ -10857,10 +10857,10 @@ The default rank is \Expr{-ExpectedMachineGracefulDrainingBadput}.
 \label{param:DefragWholeMachineExpr}
 \item[\Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}] An expression that
 specifies which machines are already operating as whole machines.  The
-default is \Expr{Cpus == TotalCpus}.  A machine is matched if
-\emph{any} slot on the machine matches this expression.  Each
-\Condor{startd} is considered to be one machine.  Whole machines are
-excluded when selecting machines to drain.  They are also counted
+default is \Expr{Cpus == TotalCpus \&\& Offline=!=True}.  A machine is
+matched if \emph{any} slot on the machine matches this expression.
+Each \Condor{startd} is considered to be one machine.  Whole machines
+are excluded when selecting machines to drain.  They are also counted
 against \Macro{DEFRAG\_MAX\_WHOLE\_MACHINES}.
 
 \label{param:DefragMaxWholeMachines}
