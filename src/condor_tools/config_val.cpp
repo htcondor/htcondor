@@ -483,7 +483,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 		// just cheating and being lazy here by replicating the old
 		// behavior...
 	char* addr;
-	char* name;
+	const char* name;
 	bool connect_error = true;
 	do {
 		addr = target->addr();

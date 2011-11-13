@@ -53,7 +53,7 @@ version()
 
 int main( int argc, char *argv[] )
 {
-	char *filename=0;
+	const char *filename=0;
 	char *pool=0;
 	int command=-1;
 	int i;

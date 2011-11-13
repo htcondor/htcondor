@@ -316,7 +316,7 @@ int BaseShadow::cdToIwd() {
 	int iRet =0;
 	
 #if ! defined(WIN32)
-	priv_state p;
+	priv_state p = PRIV_UNKNOWN;
 	
 	if (m_RunAsNobody)
 		p = set_root_priv();

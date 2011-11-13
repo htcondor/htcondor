@@ -516,7 +516,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\
 		int min_new_expire = INT_MAX;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
-dprintf(D_FULLDEBUG,"    starting min_new_expire=%d next_renew_time=%d\n",min_new_expire,next_renew_time);
+dprintf(D_FULLDEBUG,"    starting min_new_expire=%d next_renew_time=%ld\n",min_new_expire,next_renew_time);
 		while ( registeredJobs.Next( curr_job ) ) {
 			int new_expire;
 			std::string  job_id;
@@ -539,7 +539,7 @@ dprintf(D_FULLDEBUG,"    starting min_new_expire=%d next_renew_time=%d\n",min_ne
 			} else if ( job_renew_time < next_renew_time ) {
 				next_renew_time = job_renew_time;
 			}
-dprintf(D_FULLDEBUG,"    after %d.%d: min_new_expire=%d next_renew_time=%d job_renew_time=%d\n",curr_job->procID.cluster,curr_job->procID.proc,min_new_expire,next_renew_time,job_renew_time);
+dprintf(D_FULLDEBUG,"    after %d.%d: min_new_expire=%d next_renew_time=%ld job_renew_time=%ld\n",curr_job->procID.cluster,curr_job->procID.proc,min_new_expire,next_renew_time,job_renew_time);
 		}
 		if ( min_new_expire == INT_MAX ||
 			 ( m_hasSharedLeases && next_renew_time < INT_MAX &&
@@ -547,7 +547,7 @@ dprintf(D_FULLDEBUG,"    after %d.%d: min_new_expire=%d next_renew_time=%d job_r
 			if ( next_renew_time > time(NULL) + 3600 ) {
 				next_renew_time = time(NULL) + 3600;
 			}
-dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %d secs\n",next_renew_time - time(NULL));
+dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld secs\n",next_renew_time - time(NULL));
 			lastUpdateLeases = time(NULL);
 			daemonCore->Reset_Timer( updateLeasesTimerId,
 									 next_renew_time - time(NULL) );
@@ -561,7 +561,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %d 
 					}
 				}
 				m_sharedLeaseExpiration = min_new_expire;
-dprintf(D_FULLDEBUG,"    new shared lease expiration at %d, updating job ads...\n",m_sharedLeaseExpiration);
+dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, updating job ads...\n",m_sharedLeaseExpiration);
 			}
 			requestScheddUpdateNotification( updateLeasesTimerId );
 			updateLeasesActive = true;
@@ -613,7 +613,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %d secs\n",update_delay);
+dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %ld secs\n",update_delay);
 		return;
 	}
 

@@ -43,7 +43,7 @@
 #define HASH_TABLE_SIZE			50
 
 bool logGahpIo = true;
-int logGahpIoSize = 0;
+unsigned long logGahpIoSize = 0;
 bool useXMLClassads = false;
 
 HashTable <HashKey, GahpServer *>
@@ -1266,7 +1266,7 @@ GahpClient::getErrorString()
 	output = "";
 
 	unsigned int i = 0;
-	int input_len = error_string.length();
+	unsigned int input_len = error_string.length();
 	for (i=0; i < input_len; i++) {
 			// Some error strings may contain characters that are
 			// undesirable. Specifically, when logging, a \n can cause
@@ -1355,7 +1355,7 @@ GahpServer::poll_real_soon()
 
 
 int
-GahpServer::pipe_ready(int pipe_end)
+GahpServer::pipe_ready(int  /*pipe_end*/ )
 {
 	skip_next_r = true;
 	poll_real_soon();
@@ -1363,7 +1363,7 @@ GahpServer::pipe_ready(int pipe_end)
 }
 
 int
-GahpServer::err_pipe_ready(int pipe_end)
+GahpServer::err_pipe_ready(int  /*pipe_end*/)
 {
 	int count = 0;
 
@@ -7082,9 +7082,9 @@ int GahpClient::ec2_associate_address(const char * service_url,
 
     if ( result ) {
         // command completed and the return value looks like:
-        int rc = atoi(result->argv[1]);
+        int return_code = atoi(result->argv[1]);
         
-        if (rc == 1) {
+        if (return_code == 1) {
             
             if (result->argc == 2) {
                 error_string = "";
@@ -7095,7 +7095,7 @@ int GahpClient::ec2_associate_address(const char * service_url,
                 EXCEPT("Bad %s Result",command);
             }
             
-        } else {    // rc == 0
+        } else {    // return_code == 0
             
             if ( ( (result->argc-2) % 2) != 0 ) {
                 EXCEPT("Bad %s Result",command);
@@ -7176,9 +7176,9 @@ int GahpClient::ec2_attach_volume(const char * service_url,
 
     if ( result ) {
         // command completed and the return value looks like:
-        int rc = atoi(result->argv[1]);
+        int result_code = atoi(result->argv[1]);
         
-        if (rc == 1) {
+        if (result_code == 1) {
             
             if (result->argc == 2) {
                 error_string = "";
@@ -7189,7 +7189,7 @@ int GahpClient::ec2_attach_volume(const char * service_url,
                 EXCEPT("Bad %s Result",command);
             }
             
-        } else {    // rc == 0
+        } else {    // result_code == 0
             
             if ( ( (result->argc-2) % 2) != 0 ) {
                 EXCEPT("Bad %s Result",command);

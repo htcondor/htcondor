@@ -616,7 +616,7 @@ parsePOpt( char* opt, char* arg )
 
 
 void
-parseArgv( int argc, char* argv[] )
+parseArgv( int  /*argc*/, char* argv[] )
 {
 	char** tmp = argv;
 	param_functions *p_funcs = NULL;

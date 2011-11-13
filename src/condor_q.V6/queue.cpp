@@ -189,7 +189,7 @@ static 	bool		customFormat = false;
 static  bool		cputime = false;
 static	bool		current_run = false;
 static 	bool		globus = false;
-static  char		*JOB_TIME = "RUN_TIME";
+static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
@@ -1430,10 +1430,10 @@ buffer_io_display( ClassAd *ad )
 	   report no data collected.  This could be true for a vanilla
 	   job, or for a standard job that has not checkpointed yet. */
 
-	if(wall_clock<0 || (!read_bytes && !write_bytes && !seek_count) ) {
+	if(wall_clock<0 || ((read_bytes < 1.0) && (write_bytes < 1.0) && (seek_count < 1.0)) ) {
 		strcat(return_buff, "   [ no i/o data collected ]\n");
 	} else {
-		if(wall_clock==0) wall_clock=1;
+		if(wall_clock < 1.0) wall_clock=1;
 
 		/*
 		Note: metric_units() cannot be used twice in the same
@@ -1938,9 +1938,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	static bool	setup_mask = false;
 	clusterProcString **the_output;
 
-	const char *scheddAddress;
-	const char *scheddName;
-	const char *scheddMachine;
+	const char *scheddAddress = 0;
+	const char *scheddName = 0;
+	const char *scheddMachine = 0;
 
 	const char *quill_name = 0;
 	const char *db_ipAddr = 0;

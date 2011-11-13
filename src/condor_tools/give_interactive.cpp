@@ -86,7 +86,7 @@ obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
 
 ClassAd *
 giveBestMachine(ClassAd &request,ClassAdList &startdAds,
-			double preemptPrio)
+			double   /*preemptPrio*/)
 {
 		// the order of values in this enumeration is important!
 		// it goes from least preffered to most preffered, i.e. we

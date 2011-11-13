@@ -235,7 +235,7 @@ produce_output()
 	}
 
 	if( MailFlag ) {
-		char *explanation = "\n\nWhat is condor_preen?\n\n"
+		const char *explanation = "\n\nWhat is condor_preen?\n\n"
 "The condor_preen tool examines the directories belonging to Condor, and\n"
 "removes extraneous files and directories which may be left over from Condor\n"
 "processes which terminated abnormally either due to internal errors or a\n"

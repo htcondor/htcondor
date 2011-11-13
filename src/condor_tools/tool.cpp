@@ -56,7 +56,7 @@ int doSquawkReconnect( char *addr );
 void squawkHelp( char *token );
 int  printAdToFile(ClassAd *ad, char* filename);
 int strncmp_auto(const char *s1, const char *s2);
-void usage( char *str, int iExitCode=1 );
+void usage( const char *str, int iExitCode=1 );
 
 // Global variables
 int cmd = 0;
@@ -90,7 +90,7 @@ HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 #endif
 
 void
-usage( char *str, int iExitCode )
+usage( const char *str, int iExitCode )
 {
 	if( ! str ) {
 		fprintf( stderr, "Use \"-help\" to see usage information\n" );
@@ -302,7 +302,7 @@ cmdToStr( int c )
 	
 
 void
-subsys_check( char* MyName )
+subsys_check( const char* MyName )
 {
 	if( ! takes_subsys ) {
 		fprintf( stderr, 
