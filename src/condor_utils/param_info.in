@@ -10188,7 +10188,7 @@ id=602
 
 [DEFRAG_REQUIREMENTS]
 aliases=
-default=PartitionableSlot
+default=PartitionableSlot && Offline=!=True
 version=0.0.0
 range=.*
 state=default
@@ -10204,7 +10204,7 @@ id=602
 
 [DEFRAG_WHOLE_MACHINE_EXPR]
 aliases=
-default=Cpus == TotalCpus
+default=Cpus == TotalCpus && Offline=!=True
 version=0.0.0
 range=.*
 state=default
