@@ -686,7 +686,10 @@ class Dag {
 	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
 	int GetDefaultPriority() const { return _defaultPriority; }
 
-		//TEMPTEMP -- document
+	/** Determine whether the DAG is currently halted (waiting for
+		existing jobs to finish but not submitting any new ones).
+		@return true iff the DAG is halted.
+	*/
 	bool IsHalted() { return _dagIsHalted; }
 
   private:
@@ -1110,10 +1113,10 @@ class Dag {
 		// The default priority for nodes in this DAG. (defaults to 0)
 	int _defaultPriority;
 
-		//TEMPTEMP -- document
+		// Whether the DAG is currently halted.
 	bool _dagIsHalted;
 
-		//TEMPTEMP -- document
+		// The name of the halt file (we halt the DAG if that file exists).
 	MyString _haltFile;
 };
 

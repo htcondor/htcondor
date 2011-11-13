@@ -61,7 +61,6 @@ ScriptQ::Run( Script *script )
 
 	bool deferScript = false;
 
-debug_printf( DEBUG_QUIET, "DIAG ScriptQ::Run(); IsHalted: %d\n", _dag->IsHalted() );//TEMPTEMP
 		// Defer PRE scripts if the DAG is halted (we need to go ahead
 		// and run POST scripts so we don't "waste" the fact that the
 		// job completed).
@@ -133,6 +132,19 @@ ScriptQ::RunWaitingScript()
 	}
 
 	return 0;
+}
+
+int
+ScriptQ::RunAllWaitingScripts()
+{
+	int scriptsRun = 0;
+
+	while ( RunWaitingScript() > 0 ) {
+		scriptsRun++;
+	}
+
+	debug_printf( DEBUG_DEBUG_1, "Ran %d scripts\n", scriptsRun );
+	return scriptsRun;
 }
 
 int

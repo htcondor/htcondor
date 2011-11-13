@@ -1386,7 +1386,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		// any jobs or run scripts.
 	bool prevDagIsHalted = _dagIsHalted;
 	_dagIsHalted = ( access( _haltFile.Value() , F_OK ) == 0 );
-debug_printf( DEBUG_QUIET, "DIAG _dagIsHalted: %d\n", _dagIsHalted );//TEMPTEMP
 	if ( _dagIsHalted ) {
 		debug_printf( DEBUG_QUIET,
 					"DAG is halted because halt file %s exists\n",
@@ -1394,10 +1393,11 @@ debug_printf( DEBUG_QUIET, "DIAG _dagIsHalted: %d\n", _dagIsHalted );//TEMPTEMP
         return numSubmitsThisCycle;
 	}
 	if ( prevDagIsHalted ) {
-		//TEMPTEMP -- we should run more than one if possible...
-		_preScriptQ->RunWaitingScript();
+			// If going from the halted to the not halted state, we need
+			// to fire up any PRE scripts that were deferred while we were
+			// halted.
+		_preScriptQ->RunAllWaitingScripts();
 	}
-	//TEMPTEMP -- if going from halted to not halted, call RunWaitingScript() on pre script queue?
 
 	bool didLogSleep = false;
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {

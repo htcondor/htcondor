@@ -46,8 +46,16 @@ class ScriptQ : public Service {
 	// or deferred).
 	int Run( Script *script );
 
-	//TEMPTEMP -- document
+	/** Run one waiting script, if possible.
+		@return 1 if a script was spawned, 0 if not (error or deferred).
+	*/
 	int RunWaitingScript();
+
+	/** Run all waiting scripts, if possible (keep trying until a script
+		is not run).
+		@return the number of scripts spawned.
+	*/
+	int RunAllWaitingScripts();
 
     int NumScriptsRunning();
 
