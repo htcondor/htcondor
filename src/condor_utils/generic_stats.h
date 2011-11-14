@@ -20,6 +20,30 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
+#ifdef __GNUC__
+# if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
+#  define GCC_DIAG_STR(S) #S
+#  define GCC_DIAG_JOINSTR(X,Y) GCC_DIAG_STR(X ## Y)
+#  define GCC_DIAG_DO_PRAGMA(X) _Pragma (#X)
+#  define GCC_DIAG_PRAGMA(X) GCC_DIAG_DO_PRAGMA(GCC diagnostic x)
+#  if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
+#    define GCC_DIAG_OFF(X) GCC_DIAG_PRAGMA(push) \
+        GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,X))
+#    define GCC_DIAG_ON(X) GCC_DIAG_PRAGMA(pop)
+#  else
+#    define GCC_DIAG_OFF(X) GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,X))
+#    define GCC_DIAG_ON(X)  GCC_DIAG_PRAGMA(warning GCC_DIAG_JOINSTR(-W,X))
+#  endif
+# else
+#  pragma GCC system_header // this turns off all warnings
+#  define GCC_DIAG_OFF(X)
+#  define GCC_DIAG_ON(X)
+# endif
+#else
+# define GCC_DIAG_OFF(X)
+# define GCC_DIAG_ON(X)
+#endif
+
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
 //     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
@@ -290,9 +314,39 @@ public:
    }
 
 
+   // push an empty item, this is more efficient
+   // when pbuf is an array of classes.
+   void PushZero() {
+      if (cItems > cMax) {
+         Unexpected();
+         return;
+      }
+
+      if ( ! pbuf) SetSize(2);
+
+      // advance the head item pointer
+      ++ixHead;
+      ixHead %= cMax;
+
+      // if we have room to add an item without overwriting one
+      // then also grow the counter.
+      if (cItems < cMax) {
+         ++cItems;
+      }
+      // clear the head item.
+      pbuf[ixHead] = 0;
+   }
+
+// we don't use these, the semantics could easily lead to
+// memory leaks for the ring buffers used by statistics code.
+// 
+#ifdef RING_BUFFER_PUSH_POP
    // push a new latest item, returns the item that was discarded
    T Push(T val) {
-      if (cItems > cMax) return T(Unexpected());
+      if (cItems > cMax) {
+         Unexpected();
+         return T(0);
+      }
       if ( ! pbuf) SetSize(2);
 
       // advance the head item pointer
@@ -304,7 +358,7 @@ public:
       if (cItems < cMax) {
          pbuf[ixHead] = val;
          ++cItems;
-         return 0;
+         return T(0);
       }
 
       // we get here if cItems == cMax. 
@@ -325,23 +379,52 @@ public:
             ixHead = 0;
          return tmp;
       }
-      return 0;
+      return T(0);
    }
 
+   // advance to the head item to next slot in the ring buffer,
+   // this is equivalent to PushZero except that it does NOT allocate
+   // a ring buffer if there isn't one.
+   //
+   T Advance() { 
+      if (empty()) return T(0);
+      return Push(T(0));
+   }
+#endif // RING_BUFFER_PUSH_POP
+
    // add to the head item.
-   T Add(T val) {
-      if ( ! pbuf || ! cMax) return T(Unexpected());
+   const T& Add(T val) {
+      if ( ! pbuf || ! cMax) {
+         Unexpected();
+         return pbuf[0];
+      }
       pbuf[ixHead] += val;
       return pbuf[ixHead];
    }
 
-   // advance to the head item to next slot in the ring buffer,
-   // this is equivalent to Push(0) except that it does NOT allocate
-   // a ring buffer if there isn't one.
+   // advance the ring buffer by cAdvance slots if there the buffer
+   // has been allocated, but don't treat an unallocated buffer as an error.
+   // Sum the overwritten items and return them via pSumTo
    //
-   T Advance() { 
-      if (empty()) return 0;
-      return Push(T(0)); 
+   void AdvanceBy(int cAdvance) { 
+      if (cMax <= 0) 
+         return;
+      while (--cAdvance >= 0)
+         PushZero(); 
+   }
+
+   // advance the ring buffer by cAdvance slots if there the buffer
+   // has been allocated, but don't treat an unallocated buffer as an error.
+   // Sum the overwritten items and return them via pSumTo
+   //
+   void AdvanceAccum(int cAdvance, T& accum) { 
+      if (cMax <= 0) 
+         return;
+      while (--cAdvance >= 0) {
+         if (cItems == cMax)
+            accum += pbuf[(ixHead+1)%cMax];
+         PushZero(); 
+      }
    }
 };
 
@@ -361,12 +444,14 @@ template <class T>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
    MyString attr(pattr1);
    attr += pattr2;
-   return ad.Assign(attr.Value(), value);
+   return ClassAdAssign(ad, attr.Value(), value);
 }
+/*
 template <>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, int64_t value) {
    return ClassAdAssign2(ad, pattr1, pattr2, (int)value);
 }
+*/
 
 // base class for all statistics probes
 //
@@ -408,6 +493,9 @@ public:
    static const int unit = IS_CLS_COUNT | stats_entry_type<T>::id;
    static void Delete(stats_entry_count<T> * probe) { delete probe; }
 };
+
+template <class T> inline bool stats_entry_is_zero(const T& val) { return val == 0; }
+template <> inline bool stats_entry_is_zero(const double& val) { return val >= 0.0 && val <= 0.0; }
 
 // use stats_entry_abs for entries that have an absolute value such as Number of jobs currently running.
 // this entry keeps track of the largest value as the value changes.
@@ -468,7 +556,9 @@ public:
 // as well as the overall total - new values are added to recent and old
 // values are subtracted from it. 
 //
-template <class T> class stats_entry_recent : public stats_entry_count<T> {
+GCC_DIAG_OFF(float-equal)
+template <typename T> 
+class stats_entry_recent : public stats_entry_count<T> {
 public:
    stats_entry_recent(int cRecentMax=0) : recent(0), buf(cRecentMax) {}
    T recent;            // the up-to-date recent value (for publishing)
@@ -482,7 +572,7 @@ public:
    static const int PubDefault = PubValueAndRecent;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
       if ( ! flags) flags = PubDefault;
-      if ((flags & IF_NONZERO) && this->value == T(0)) return;
+      if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
       if (flags & this->PubRecent) {
@@ -519,13 +609,13 @@ public:
       recent += val;
       if (buf.MaxSize() > 0) {
          if (buf.empty())
-            buf.Push(val);
-         else
-            buf.Add(val);
+            buf.PushZero();
+         buf.Add(val);
       }
       return this->value; 
    }
 
+#ifdef RING_BUFFER_PUSH_POP // depends on ring_buffer::Push
    // Advance to the next time slot and add a value.
    T Advance(T val) { 
       this->value += val; 
@@ -537,14 +627,23 @@ public:
       }
       return this->value; 
    }
+#endif // RING_BUFFER_PUSH_POP
 
-   // Advance by cSlots time slots
+   // Advance by cSlots time slots, then update recent by summing the remaining
    void AdvanceBy(int cSlots) { 
+      if (cSlots <= 0) 
+         return;
+      buf.AdvanceBy(cSlots); 
+      recent = buf.Sum();
+   }
+
+   // Advance by cSlots time slots, keeping a running total, more efficient
+   // than AdvandBy, but can only be used for types that support -=
+   void AdvanceAndSub(int cSlots) { 
       if (cSlots < buf.MaxSize()) {
-         while (cSlots > 0) {
-            recent -= buf.Advance();
-            --cSlots;
-         }
+         T accum(0);
+         buf.AdvanceAccum(cSlots, accum);
+         recent -= accum;
       } else {
          recent = 0;
          buf.Clear();
@@ -574,6 +673,13 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_recent<T>::Unpublish; };
    static void Delete(stats_entry_recent<T> * probe) { delete probe; }
 };
+
+GCC_DIAG_ON(float-equal)
+
+// specialize AdvanceBy for simple types so that we can use a more efficient algorithm.
+template <> void stats_entry_recent<int>::AdvanceBy(int cSlots);
+template <> void stats_entry_recent<int64_t>::AdvanceBy(int cSlots);
+template <> void stats_entry_recent<double>::AdvanceBy(int cSlots);
 
 // use timed_queue to keep track of recent windowed values.
 // obsolete: use stats_entry_tq for windowed values that need more time accuracy than
@@ -623,7 +729,7 @@ public:
 
    T Add(T val, time_t now) { 
       this->value += val; 
-      if (val != 0) {
+      if (val != T(0)) {
          if (tq.empty() || tq.front().first != now) 
             tq.push_front(val, now);
          else
@@ -744,6 +850,9 @@ public:
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
 
+// --------------------------------------------------------------------
+//   Full Min/Max/Avg/Std Probe class for use with stats_entry_recent
+//
 class Probe {
 public:
    Probe(int=0) 
@@ -775,16 +884,181 @@ public:
    Probe& operator+=(double val) { Add(val); return *this; }
    Probe& operator+=(const Probe & val) { Add(val); return *this; }
    //Probe& operator-=(const Probe & val) { Remove(val); return *this; }
-   //bool   operator!=(const int val) const { return this->Sum != val; }
+
+   // comparison to int(0) is used to detect if the probe is 'empty'
+   bool operator==(const int &ii) const { return ii ? false : this->Count == ii; }
+   bool operator!=(const int &ii) const { return !(*this == ii); }
 
    static const int unit = IS_CLS_PROBE;
 };
 
-template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
+//template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
 template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const;
 template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const;
 int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
 
+// --------------------------------------------------------------------
+//  statistcs probe for histogram data.
+//  Holds a set of integer counters indexed by level
+//  where level is defined by an array of constants of increasing size.
+//  When a data value is added to an instance of this class, a index is chosen
+//  such that level[index-1] <= value < level[index], then counter[index] is incremented
+//
+template <class T>
+class stats_histogram : public stats_entry_base {
+public:
+   stats_histogram(const T* ilevels = 0, int num_levels = 0) 
+      : cLevels(num_levels)
+      , levels(ilevels)
+      , data(0)
+      {
+         if (cLevels) {
+      		data = new int[cLevels+1];
+		    Clear();
+         }
+      }
+   ~stats_histogram() { delete [] data; data = 0, cLevels = 0; }
+
+public:
+   int      cLevels;    // number of levels
+   const T* levels;    // upper size bound for each member of data
+   int*     data;      // data array is cLevels+1 in size
+
+   bool set_levels(const T* ilevels, int num_levels);
+
+   void Clear() { if (data) for (int ii = 0; ii <= cLevels; ++ii) data[ii] = 0; }
+
+   static const int PubValue = 1;
+   static const int PubDefault = PubValue;
+   void AppendToString(MyString & str) const;
+   void Publish(ClassAd & ad, const char * pattr, int flags) const {
+      MyString str;
+      this->AppendToString(str);
+      ad.Assign(pattr, str);
+      }
+   void Unpublish(ClassAd & ad, const char * pattr) { ad.Delete(pattr); }
+
+   T Add(T val);
+   T Remove(T val);
+   stats_histogram<T>& Accumulate(const stats_histogram<T>& sh);
+
+   // operator overloads
+   stats_histogram<T>& operator+=(const stats_histogram<T>& sh) { return Accumulate(sh); }
+   T operator+=(T val) { return Add(val); }
+   T operator-=(T val) { return Remove(val); }
+   stats_histogram& operator=(const stats_histogram<T>& sh);
+   stats_histogram& operator=(int val) {
+     #ifdef EXCEPT
+      if (val != 0) {
+          EXCEPT("Clearing operation on histogram with non-zero value\n");
+      }
+     #endif
+      Clear();
+      return *this;
+   }
+
+   // comparison to int(0) is used to detect if the histogram is 'empty'
+   bool operator==(const int &val) const { return val ? false : this->cLevels == val; }
+   bool operator!=(const int &val) const { return !(*this == val); }
+
+   // helper methods for parsing configuration
+   //static int ParseLimits(const char * psz, T * pLimits, int cMax);
+   //static int PrintLimits(MyString & str, const T * pLimits, int cLimits);
+
+   // callback methods/fetchers for use by the StatisticsPool class
+   static const int unit = IS_HISTOGRAM | stats_entry_type<T>::id;
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_histogram<T>::Unpublish; };
+   static void Delete(stats_entry_recent<T> * probe) { delete probe; }
+};
+
+// helper functions for parsing configuration for histogram limits
+int stats_histogram_ParseSizes(const char * psz, int64_t * pSizes, int cMaxSizes);
+void stats_histogram_PrintSizes(MyString & str, const int64_t * pSizes, int cSizes);
+int stats_histogram_ParseTimes(const char * psz, time_t * pTimes, int cMaxTimes);
+void stats_histogram_PrintTimes(MyString & str, const time_t * pTimes, int cTimes);
+
+// --------------------------------------------------------------------
+//  statistics probe combining a histogram class with Recent ring buffer
+//
+template <typename T> 
+class stats_entry_recent_histogram : public stats_entry_recent< stats_histogram<T> > {
+public:
+   stats_entry_recent_histogram(const T* vlevels = 0, int num_levels = 0) 
+      : recent_dirty(false) 
+      {
+      if (num_levels && vlevels) {
+         this->value.set_levels(vlevels, num_levels);
+         this->recent.set_levels(vlevels, num_levels);
+         }
+      };
+      
+   bool recent_dirty;
+   
+   bool set_levels(const T* vlevels, int num_levels) {
+      this->recent.set_levels(vlevels, num_levels);
+      return this->value.set_levels(vlevels, num_levels);
+   }
+
+   T Add(T val) { 
+      this->value.Add(val); 
+      if (this->buf.MaxSize() > 0) {
+         if (this->buf.empty())
+            this->buf.PushZero(); 
+         if (this->buf[0].cLevels <= 0)
+            this->buf[0].set_levels(this->value.levels, this->value.cLevels);
+         this->buf[0] += val;
+      }
+      recent_dirty = true;
+      return val; 
+   }
+
+   void AdvanceBy(int cSlots) { 
+      if (cSlots <= 0) 
+         return;
+      this->buf.AdvanceBy(cSlots); 
+      recent_dirty = true;
+   }
+
+   void UpdateRecent() {
+      if (recent_dirty) {
+         this->recent.Clear();
+         for (int ix = 0; ix > (0 - this->buf.cItems); --ix)
+            this->recent.Accumulate(this->buf[ix]);
+         recent_dirty = false;
+      }
+   }
+
+   void Publish(ClassAd & ad, const char * pattr, int flags) { 
+      if ( ! flags) flags = this->PubDefault;
+      if ((flags & IF_NONZERO) && this->value.cLevels <= 0) return;
+      if (flags & this->PubValue) {
+       	 MyString str("");
+         this->value.AppendToString(str);
+         ClassAdAssign(ad, pattr, str); 
+      }
+      if (flags & this->PubRecent) {
+         UpdateRecent();
+       	 MyString str("");
+         this->recent.AppendToString(str);
+         if (flags & this->PubDecorateAttr)
+            ClassAdAssign2(ad, "Recent", pattr, str);
+         else
+            ClassAdAssign(ad, pattr, str); 
+      }
+      if (flags & this->PubDebug) {
+         PublishDebug(ad, pattr, flags);
+      }
+   }
+
+   void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
+
+   T operator+=(T val) { return Add(val); }
+
+   static const int unit = IS_HISTOGRAM | IS_RECENT | stats_entry_type<T>::id;
+   static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_recent_histogram<T>::AdvanceBy; };
+};
+
+//-----------------------------------------------------------------------------
 // A statistics probe designed to keep track of accumulated running time
 // of a data set.  keeps a count of times that time was added and
 // a running total of time
@@ -829,30 +1103,7 @@ public:
    static void Delete(stats_recent_counter_timer * pthis);
 };
 
-template <class T>
-class stats_histogram : public stats_entry_base {
-public:
-	static const int unit = IS_HISTOGRAM | stats_entry_type<T>::id;
-	~stats_histogram();
-	stats_histogram(int num=0,const T* ilevels = 0);
-	T get_level(int n) const;
-    bool set_levels(int num, const T* ilevels);
-	bool set_level(int n, T val);
-	void Clear();
-	T Add(T val);
-    stats_histogram<T>& operator+=(const stats_histogram<T>& sh);
-    T operator+=(T val) { return Add(val); }
-//private:
-	int cItems;
-	int* data;
-	T* levels;
-};
-
-template <> void stats_entry_recent< stats_histogram<int64_t> >::AdvanceBy(int cSlots);
-template <> void stats_entry_recent< stats_histogram<double> >::AdvanceBy(int cSlots);
-template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlots);
-template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int flags) const;
-
+//-----------------------------------------------------------------------------------
 // a helper function for determining if enough time has passed so that we
 // should Advance the recent buffers.  returns an Advance count that you
 // should pass to the AdvancBy methods of your stats_entry_recent<T> counters
@@ -1001,9 +1252,11 @@ public:
 
    int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
 
+   /* tj: IMPLEMENT THIS
    double  SetSample(const char * probe_name, double sample);
    int     SetSample(const char * probe_name, int sample);
    int64_t SetSample(const char * probe_name, int64_t sample);
+   */
 
    void Clear();
    void ClearRecent();

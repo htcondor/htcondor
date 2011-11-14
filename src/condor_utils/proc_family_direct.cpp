@@ -52,6 +52,8 @@ ProcFamilyDirect::register_subfamily(pid_t pid,
                                      pid_t,
                                      int snapshot_interval)
 {
+    DC_AUTO_RUNTIME_PROBE(__FUNCTION__,dummy);
+
 	// create a KillFamily object according to our arguments
 	//
 	KillFamily* family = new KillFamily(pid, PRIV_ROOT);

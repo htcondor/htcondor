@@ -173,9 +173,21 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #if defined(__cplusplus)
 }
 #endif
+
 #if defined(__cplusplus)
 bool debug_open_fds(std::map<int,bool> &open_fds);
-#endif
+
+class _condor_auto_save_runtime
+{
+public:
+    _condor_auto_save_runtime(double & store); // save result here
+    ~_condor_auto_save_runtime();
+    double   current_runtime();
+    double & runtime;
+    double   begin;
+};
+
+#endif // defined(__cplusplus)
 
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \

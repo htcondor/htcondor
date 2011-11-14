@@ -264,13 +264,13 @@ void Defrag::saveState()
 	sprintf(new_state_file,"%s.new",m_state_file.c_str());
 	FILE *fp;
 	if( !(fp = safe_fopen_wrapper_follow(new_state_file.c_str(), "w")) ) {
-		dprintf(D_ALWAYS,"WARNING: failed to save state to %s\n",new_state_file.c_str());
+		EXCEPT("failed to save state to %s\n",new_state_file.c_str());
 	}
 	else {
 		ad.fPrint(fp);
 		fclose( fp );
 		if( rotate_file(new_state_file.c_str(),m_state_file.c_str())!=0 ) {
-			dprintf(D_ALWAYS,"WARNING: failed to save state to %s\n",m_state_file.c_str());
+			EXCEPT("failed to save state to %s\n",m_state_file.c_str());
 		}
 	}
 }
@@ -283,7 +283,7 @@ void Defrag::loadState()
 			dprintf(D_ALWAYS,"State file %s does not yet exist.\n",m_state_file.c_str());
 		}
 		else {
-			dprintf(D_ALWAYS,"WARNING: failed to load state from %s\n",m_state_file.c_str());
+			EXCEPT("failed to load state from %s\n",m_state_file.c_str());
 		}
 	}
 	else {
@@ -317,7 +317,7 @@ void Defrag::slotNameToDaemonName(std::string const &name,std::string &machine)
 }
 
 // n is a number per period.  If we are partly through
-// the interval, reduce n in proportion to how much
+// the interval, make n be in proportion to how much
 // is left.
 static int prorate(int n,int time_remaining,int period,int granularity)
 {
@@ -388,7 +388,7 @@ void Defrag::poll()
 		return;
 	}
 
-	char const *draining_constraint = "Draining";
+	char const *draining_constraint = "Draining && Offline=!=True";
 	int num_draining = countMachines(draining_constraint,"<internal draining constraint>");
 
 	MachineSet whole_machines;
@@ -403,6 +403,11 @@ void Defrag::poll()
 					m_max_draining, num_draining);
 			return;
 		}
+		else if( num_draining < 0 ) {
+			dprintf(D_ALWAYS,"Doing nothing, because DEFRAG_MAX_CONCURRENT_DRAINING=%d and the query to count draining machines failed.\n",
+					m_max_draining);
+			return;
+		}
 	}
 
 	if( m_max_whole_machines >= 0 ) {
@@ -413,12 +418,22 @@ void Defrag::poll()
 		}
 	}
 
+		// Even if m_max_whole_machines is -1 (infinite), we still need
+		// the list of whole machines in order to filter them out in
+		// the draining selection algorithm, so abort now if the
+		// whole machine query failed.
+	if( num_whole_machines < 0 ) {
+		dprintf(D_ALWAYS,"Doing nothing, because the query to find whole machines failed.\n");
+		return;
+	}
+
 	dprintf(D_ALWAYS,"Looking for %d machines to drain.\n",num_to_drain);
 
 	ClassAdList startdAds;
 	std::string requirements;
 	sprintf(requirements,"(%s) && Draining =!= true",m_defrag_requirements.c_str());
 	if( !queryMachines(requirements.c_str(),"DEFRAG_REQUIREMENTS",startdAds) ) {
+		dprintf(D_ALWAYS,"Doing nothing, because the query to select machines matching DEFRAG_REQUIREMENTS failed.\n");
 		return;
 	}
 

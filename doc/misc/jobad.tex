@@ -533,17 +533,24 @@ a set of job hooks, and added to the ClassAd once a job is fetched.
 %%% ClassAd attribute: ImageSize
 \index{ClassAd job attribute!ImageSize}
 \index{ImageSize!job ClassAd attribute}
-\item[\AdAttr{ImageSize}:]  Estimate of the memory image size of the
-job in Kbytes.  The initial estimate may be specified in the job
-submit file using \SubmitCmd{request\_memory} or for \SubmitCmd{vm}
-universe jobs using \SubmitCmd{vm\_memory}.  
-Otherwise, the initial value is equal to the size of the
+\item[\AdAttr{ImageSize}:]  Estimate of the memory image size
+(i.e. virtual memory) of the
+job in Kbytes.  The initial value is equal to the size of the
 executable for non-vm universe jobs, and 0 for vm universe jobs.
 When the job writes a checkpoint, the \AdAttr{ImageSize}
 attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
+How quickly this updated information becomes visibile to \Condor{q} is
+controlled by \MacroNI{SHADOW\_QUEUE\_UPDATE\_INTERVAL} and
+\MacroNI{STARTER\_UPDATE\_INTERVAL}.
+
+Under Linux, \AdAttr{ProportionalSetSize} is a better indicator of
+memory usage for jobs with significant sharing of memory between
+processes, because \AdAttr{ImageSize} is simply the sum of virtual
+memory sizes across all of the processes in the job, which may count
+the same memory pages more than once.
 
 %%% ClassAd attribute: IwdFlushNFSCache
 \index{ClassAd job attribute!IwdFlushNFSCache}

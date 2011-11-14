@@ -83,6 +83,11 @@ shifts in time caused by daylight savings time transitions.
 environment.  Now, this only happens when
 \MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT} is \Expr{True}.
 
+\item In Linux, the memory usage was ignored for job sub-processes
+that were created via fork() without calling exec().  This problem
+affected \Attr{ImageSize} and \Attr{ResidentSetSize} but not
+\Attr{ProportionalSetSize}.
+
 \end{itemize}
 
 \noindent Known Bugs:
