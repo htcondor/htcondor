@@ -46,6 +46,32 @@ HashTable <pid_t, procHashNode *> * ProcAPI::procHash =
 
 piPTR ProcAPI::allProcInfos = NULL;
 
+// counters for measuring the performance of GetProcInfoList
+//
+int    ProcAPI::cGetProcInfoList = 0;
+double ProcAPI::sGetProcInfoList = 0.0;
+int    ProcAPI::cGetProcInfoListReg = 0;
+double ProcAPI::sGetProcInfoListReg = 0.0;
+int    ProcAPI::cGetProcInfoListPid = 0;
+double ProcAPI::sGetProcInfoListPid = 0.0;
+int    ProcAPI::cGetProcInfoListCPU = 0;
+double ProcAPI::sGetProcInfoListCPU = 0.0;
+int ProcAPI::getProcInfoListStats(double & sOverall, 
+                                  int & cReg, double & sReg, 
+                                  int & cPid, double & sPid,
+                                  int & cCPU, double & sCPU)
+{
+   cReg = cGetProcInfoListReg;
+   sReg = sGetProcInfoListReg;
+   cPid = cGetProcInfoListPid;
+   sPid = sGetProcInfoListPid;
+   cCPU = cGetProcInfoListCPU;
+   sCPU = sGetProcInfoListCPU;
+   sOverall = sGetProcInfoList;
+   return cGetProcInfoList; 
+}
+
+
 #ifndef WIN32
 pidlistPTR ProcAPI::pidList = NULL;
 int ProcAPI::pagesize		= 0;
@@ -63,6 +89,14 @@ static CSysinfo ntSysInfo;	// for getting parent pid on NT
 const __int64 EPOCH_SHIFT = 11644473600;
 
 PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
+size_t           ProcAPI::cbDataBlockAlloc = 0;
+size_t           ProcAPI::cbDataBlockData = 0;
+int              ProcAPI::cAllocs = 0;
+int              ProcAPI::cReallocs = 0;
+int              ProcAPI::cGetSystemPerfDataCalls = 0;
+int              ProcAPI::cPerfDataQueries = 0;
+double           ProcAPI::sPerfDataQueries = 0.0;
+
 struct Offset * ProcAPI::offsets	= NULL;
 
 #endif // WIN32
@@ -1733,11 +1767,17 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 int
 ProcAPI::buildProcInfoList()
 {
+    double begin = qpcBegin();
+
 	deallocAllProcInfos();
 
 	if (GetProcessPerfData() != PROCAPI_SUCCESS) {
 		return PROCAPI_FAILURE;
 	}
+
+    ++cGetProcInfoList;
+    ++cGetProcInfoListReg;
+    sGetProcInfoListReg += qpcDeltaSec(begin);
 
 	// If we haven't yet gotten the offsets, grab 'em.
 	//
@@ -1768,8 +1808,13 @@ ProcAPI::buildProcInfoList()
 		pi = NULL;
 		initpi(pi);
 
+        double iter_start = qpcBegin();
+
         pi->pid = *(pid_t*)(ctrblk + offsets->procid);
 		pi->ppid = ntSysInfo.GetParentPID(pi->pid);
+
+        ++cGetProcInfoListPid;
+        sGetProcInfoListPid += qpcDeltaSec(iter_start);
 
 		LARGE_INTEGER* liptr;
 		liptr = (LARGE_INTEGER*)(ctrblk + offsets->imgsize);
@@ -1792,6 +1837,8 @@ ProcAPI::buildProcInfoList()
 
 		pi->age = (long)((sampleObjectTime - pi->birthday) / objectFrequency);
 
+        iter_start = qpcBegin();
+
                         /* We figure out the cpu usage (a total counter, not a
                            percent!) and the total page faults here. */
 		double cpu = LI_to_double( pt ) / objectFrequency;
@@ -1800,6 +1847,9 @@ ProcAPI::buildProcInfoList()
 		/* figure out the %cpu and %faults */
 		do_usage_sampling (pi, cpu, faults, 0, sampleObjectTime / objectFrequency);
 
+        ++cGetProcInfoListCPU;
+        sGetProcInfoListCPU += qpcDeltaSec(iter_start);
+
 		pi->next = allProcInfos;
 		allProcInfos = pi;
 
@@ -1807,6 +1857,7 @@ ProcAPI::buildProcInfoList()
 		instanceNum++;
 	}
 
+    sGetProcInfoList += qpcDeltaSec(begin);
 	return PROCAPI_SUCCESS;
 }
 
@@ -2843,12 +2894,40 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
    and the HighPart.  I could have done something fancier, but just hacking
    everything into a double seems like the simplest thing to do.
  */
-double ProcAPI::LI_to_double ( LARGE_INTEGER bigun ) {
+double ProcAPI::LI_to_double ( LARGE_INTEGER & bigun ) {
   
   double ret;
   ret = (double) bigun.LowPart;
   ret += ( ((double) bigun.HighPart) * ( ((double)0xffffffff) + 1.0 ) ) ;
   return ret;
+}
+
+int ProcAPI::grabDataBlockStats(int & cA, int & cR, int & cQueries, double & sQueries, size_t & cbAlloc, size_t & cbData)
+{
+   cA = cAllocs;
+   cR = cReallocs;
+   cbAlloc = cbDataBlockAlloc;
+   cbData  = cbDataBlockData;
+   cQueries = cPerfDataQueries;
+   sQueries = sPerfDataQueries;
+   return cGetSystemPerfDataCalls;
+}
+
+double ProcAPI::qpcBegin()
+{
+   LARGE_INTEGER li;
+   QueryPerformanceCounter(&li);
+   return LI_to_double(li);
+}
+
+double ProcAPI::qpcDeltaSec(double dstart_ticks)
+{
+   LARGE_INTEGER li;
+   QueryPerformanceCounter(&li);
+   double dend_ticks = LI_to_double(li);
+   QueryPerformanceFrequency(&li);
+   double dfreq = LI_to_double(li);
+   return (dend_ticks - dstart_ticks) / dfreq;
 }
 
 DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue ) 
@@ -2875,14 +2954,24 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
     pDataBlock = (PPERF_DATA_BLOCK) malloc ( INITIAL_SIZE );
     if ( pDataBlock == NULL )
       return ERROR_OUTOFMEMORY;
+    ++cAllocs;
   }
-  
+
+  ++cGetSystemPerfDataCalls;
+
   while ( TRUE ) {
     Size = _msize ( pDataBlock ); 
     
+    cbDataBlockAlloc = Size;
+    ++cPerfDataQueries;
+    double begin = qpcBegin();
+
     lError = RegQueryValueEx ( HKEY_PERFORMANCE_DATA, pValue, 0, &Type, 
              (LPBYTE) pDataBlock, &Size );
     
+    cbDataBlockData = Size;
+    sPerfDataQueries += qpcDeltaSec(begin);
+
     // check for success & valid perf data bolck struct.
     
     if ( (!lError) && (Size>0) && 
@@ -2900,6 +2989,7 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
                                                 EXTEND_SIZE );
       if ( !pDataBlock)
         return lError;
+      ++cReallocs;
     }
     else
       return lError;

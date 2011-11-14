@@ -30,6 +30,9 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "procd_config.h"
 
+// enable PROCAPI profileing code.
+#define PROFILE_PROCAPI
+
 // this class is just used to forward reap events to the real
 // ProcFamilyProxy object; we do this in a separate class to
 // avoid multiple inheritance (would that even work?) since DC
@@ -159,6 +162,10 @@ ProcFamilyProxy::register_subfamily(pid_t root_pid,
                                     pid_t watcher_pid,
                                     int max_snapshot_interval)
 {
+    #ifdef PROFILE_PROCAPI
+    DC_AUTO_RUNTIME_PROBE(__FUNCTION__,auto0);
+    #endif
+
 	// HACK: we treat this call specially, since it is only called
 	// from forked children on UNIX. this means that if we were to
 	// try to restart the ProcD we would update the ProcD-related
@@ -175,6 +182,27 @@ ProcFamilyProxy::register_subfamily(pid_t root_pid,
 		dprintf(D_ALWAYS, "register_subfamily: ProcD communication error\n");
 		return false;
 	}
+
+    // suck statistics out of global variables, this is ugly, but the procd doesn't have
+    // access to daemonCore, so I can't store the values until I get back to here..
+    #ifdef PROFILE_PROCAPI
+    {
+       extern double pfc_lc_rt_start_connection;
+       extern double pfc_lc_rt_open_pipe;
+       extern double pfc_lc_rt_wait_pipe;
+       extern double pfc_lc_rt_write_pipe;
+       extern double pfc_lc_rt_read_data;
+       extern double pfc_lc_rt_end_connection;
+
+       daemonCore->dc_stats.AddSample("DCFuncProcFamilyProxy::register_subfamily_0start_connection", IF_VERBOSEPUB, pfc_lc_rt_start_connection);
+       daemonCore->dc_stats.AddSample("DCFuncProcFamilyProxy::register_subfamily__0open_pipe", IF_VERBOSEPUB, pfc_lc_rt_open_pipe);
+       daemonCore->dc_stats.AddSample("DCFuncProcFamilyProxy::register_subfamily__1wait_pipe", IF_VERBOSEPUB, pfc_lc_rt_wait_pipe);
+       daemonCore->dc_stats.AddSample("DCFuncProcFamilyProxy::register_subfamily__2write_pipe", IF_VERBOSEPUB, pfc_lc_rt_write_pipe);
+       daemonCore->dc_stats.AddSample("DCFuncProcFamilyProxy::register_subfamily_1read_data", IF_VERBOSEPUB, pfc_lc_rt_read_data);
+       daemonCore->dc_stats.AddSample("DCFuncProcFamilyProxy::register_subfamily_2end_connection", IF_VERBOSEPUB, pfc_lc_rt_end_connection);
+    }
+    #endif
+
 	return response;
 }
 
