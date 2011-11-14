@@ -930,7 +930,15 @@ public:
 
    static const int PubValue = 1;
    static const int PubDefault = PubValue;
-   void AppendToString(MyString & str) const;
+   void AppendToString(MyString & str) const {
+      if (this->cLevels > 0) {
+         str += this->data[0];
+         for (int ix = 1; ix <= this->cLevels; ++ix) {
+            str += ", ";
+            str += this->data[ix];
+            }
+         }
+      }
    void Publish(ClassAd & ad, const char * pattr, int flags) const {
       MyString str;
       this->AppendToString(str);

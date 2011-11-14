@@ -550,18 +550,6 @@ bool stats_histogram<T>::set_levels(const T* ilevels, int num_levels)
 }
 
 template<class T>
-void stats_histogram<T>::AppendToString(MyString & str) const 
-{
-   if (this->cLevels > 0) {
-      str += this->data[0];
-      for (int ix = 1; ix < this->cLevels+1; ++ix) {
-         str += ", ";
-         str += this->data[ix];
-      }
-   }
-}
-
-template<class T>
 stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
 {
 	// if the input histogram is null, there is nothing to do.
