@@ -172,7 +172,6 @@ class Matchmaker : public Service
 		   double priority, double share,
 		   double submitterLimit,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
-		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft);
 

@@ -2440,7 +2440,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					result=negotiate( scheddName.Value(),schedd,submitterPrio,
 								  submitterAbsShare, submitterLimit,
 								  startdAds, claimIds, 
-								  scheddVersion, ignore_submitter_limit,
+								  ignore_submitter_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
@@ -2931,7 +2931,6 @@ int Matchmaker::
 negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, double share,
 		   double submitterLimit,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
-		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft)
 {
@@ -3218,7 +3217,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				int want_match_diagnostics = 0;
 				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
 									want_match_diagnostics);
-				char *diagnostic_message = NULL;
+				const char *diagnostic_message = NULL;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());

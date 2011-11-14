@@ -2415,8 +2415,8 @@ SetTransferFiles()
 		//  (D) STF is not STF_NO and WTTO is FTO_NONE
 		//  (E) STF is STF_IF_NEEDED and WTTO is FTO_ON_EXIT_OR_EVICT
 		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
-	char *should = "INTERNAL ERROR";
-	char *when = "INTERNAL ERROR";
+	const char *should = "INTERNAL ERROR";
+	const char *when = "INTERNAL ERROR";
 	bool default_should;
 	bool default_when;
 	FileTransferOutput_t when_output;
@@ -3247,7 +3247,7 @@ void
 SetMaxJobRetirementTime()
 {
 	// Assume that SetPriority() has been called before getting here.
-	char *value = NULL;
+	const char *value = NULL;
 
 	value = condor_param( MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME );
 	if(!value && (nice_user_setting || JobUniverse == 1)) {
@@ -5334,7 +5334,7 @@ SetGSICredentials()
 				exit( 1 );
 			}
 
-			(void) buffer.sprintf( "%s=%i", ATTR_X509_USER_PROXY_EXPIRATION, 
+			(void) buffer.sprintf( "%s=%li", ATTR_X509_USER_PROXY_EXPIRATION, 
 						   proxy_expiration);
 			InsertJobExpr(buffer);	
 	

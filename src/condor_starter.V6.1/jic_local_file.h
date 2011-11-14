@@ -69,7 +69,7 @@ public:
 		*/
 	bool getLocalJobAd( void );
 
-	char* jobAdFileName( void );
+	const char* jobAdFileName( void );
 
 protected:
 
