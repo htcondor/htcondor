@@ -78,20 +78,14 @@ The details of each version are described below.
 \item Condor version 7.7.3 not yet released.
 %\item Condor version 7.7.3 released on Month Date, 2011.
 
-\item
-Fixed a bug that caused dollar dollar expansion of attributes
-in job ads not to work correctly when shadows are recycled.
-
-\Ticket{2552}
-\item
-On Linux and Mac OS X, the Condor binaries now dynamically link with
-libcondor\_utils, a shared library that contains all Condor code that's
-used by multiple binaries. This library is not meant to be linked with
-user applications.
+\item On Linux and Mac OS X, the Condor binaries now dynamically link with
+\File{libcondor\_utils}, 
+a shared library that contains all Condor code that is
+used by multiple binaries. 
+This library is not meant to be linked with user applications.
 \Ticket{2132}
 
-\item
-\emph{Condor now dynamically links with the ClassAds, Globus and VOMS
+\item \emph{Condor now dynamically links with the ClassAds, Globus and VOMS
 libraries on Mac OS X.}
 A copy of these libraries is included with Condor.
 \Ticket{2482}
@@ -237,6 +231,14 @@ and \Macro{BIND\_ALL\_INTERFACES} no longer support the undocumented use of
 
 \begin{itemize}
 
+\item Fixed a bug from Condor version 7.7.1
+that caused submit description file commands using a substitution macro,
+\$\$(),
+to not work correctly when a \Condor{shadow} daemon is recycled,
+as it is when the configuration variable \Macro{SHADOW\_WORKLIFE}
+is set to a non-zero value.
+\Ticket{2552}
+
 \item When the \Condor{procd}'s named command pipe is removed, 
 or when the inode of the pipe has been changed while the daemon is running, 
 the \Condor{procd} will now exit.
@@ -294,13 +296,16 @@ In such cases, there was also a spurious
 unsuspend event logged in the job's user log.
 \Ticket{2577}
 
-\item Fixed a bug introduced in 7.7.2 by the change of \Macro{OpSys} to "WINDOWS".
-Submit files that used version 1 syntax for the \SubmitCmd{environment} command
+\item Fixed a bug introduced in Condor version 7.7.2 by the change 
+of \Attr{OpSys} to \AdStr{WINDOWS}.
+Submit description files that used old syntax for the 
+\SubmitCmd{environment} command
 were using Unix syntax rather than Windows syntax.
 \Ticket{2607}
 
-\item Fixed the linking of Kerberos libraries on RHEL 3. This could cause
-the Condor binaries to fail on some systems with this error:
+\item Fixed the linking of Kerberos libraries on RHEL 3. 
+The bug could cause
+the Condor binaries to fail on some systems with the error:
 \begin{verbatim}
 relocation error: /usr/kerberos/lib/libgssapi_krb5.so.2: 
 undefined symbol: krb5int_enc_arcfour
