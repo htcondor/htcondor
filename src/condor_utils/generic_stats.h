@@ -25,7 +25,7 @@
 #  define GCC_DIAG_STR(S) #S
 #  define GCC_DIAG_JOINSTR(X,Y) GCC_DIAG_STR(X ## Y)
 #  define GCC_DIAG_DO_PRAGMA(X) _Pragma (#X)
-#  define GCC_DIAG_PRAGMA(X) GCC_DIAG_DO_PRAGMA(GCC diagnostic x)
+#  define GCC_DIAG_PRAGMA(X) GCC_DIAG_DO_PRAGMA(GCC diagnostic X)
 #  if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
 #    define GCC_DIAG_OFF(X) GCC_DIAG_PRAGMA(push) \
         GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,X))
