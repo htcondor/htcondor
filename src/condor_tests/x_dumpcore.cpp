@@ -20,19 +20,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main( int argc, char **argv )
+int main( int  argc, char ** /*argv*/ )
 {
 	char *null = NULL;
 	char *space;
 #ifndef WIN32
-	int dumpnow;
+	int dumpnow = argc; /* Trick compiler into not warning about div-by-zero */
 #endif
 
 	space = (char *) malloc(600000);
 
 	/* try a couple of different ways to dump core. */
 #ifndef WIN32
-	dumpnow = 7 / 0;
+	dumpnow = 7 / (dumpnow ^ dumpnow);
 #endif
 	*null = '\0';
 

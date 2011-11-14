@@ -26,7 +26,7 @@
 #define 	TSTMSG		"Testing message"
 
 int 
-main(int argc, char **argv)
+main(int  /*argc*/, char **  /*argv*/)
 {
 	char filebuff[10000];
 	int readfd = 0;

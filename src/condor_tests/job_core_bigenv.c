@@ -36,15 +36,17 @@
 #include <stdio.h>
 #include <string.h>
 
-int main(int argc, char **argv, char **envp);
+int main(int argc, char **argv);
 static int check_environment_variable(
 	char *variable_name,
 	char repeating_character);
 
-int main(int argc, char **argv, char **envp)
+int main(int  argc, char ** argv)
 {
 	int  some_test_failed;
 
+	argc = argc;
+	argv = argv; /* turn off warnings */
 	some_test_failed = 0;
 
 	if (check_environment_variable("V1", '1')) some_test_failed = 1;
@@ -79,7 +81,7 @@ static int check_environment_variable(
 		printf("Failed: %s doesn't exist.\n", variable_name);
 		failed = 1;
 	} else if (strlen(value) != 1000) {
-		printf("Failed: %s is corrupt (bad length). hi Should be 1000 but %d, %s\n", 
+		printf("Failed: %s is corrupt (bad length). hi Should be 1000 but %ld, %s\n", 
 			   variable_name, strlen(value), value);
 		failed = 1;
 	} else {

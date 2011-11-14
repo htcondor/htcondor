@@ -537,7 +537,7 @@ CheckStateAccess( const Options & /*opts*/,
 }
 
 int
-DiffState( const Options &opts,
+DiffState( const Options &  /*opts*/,
 		   const ReadUserLog::FileState &state1,
 		   const ReadUserLog::FileState &state2 )
 {

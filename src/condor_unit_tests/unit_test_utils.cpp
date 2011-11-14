@@ -83,12 +83,13 @@ const char* nicePrint(const char* str) {
 
 /* Exactly like strcmp, but treats NULL and "" as equal */
 int niceStrCmp(const char* str1, const char* str2) {
-	if(!str1)
+	if(!str1) {
 		if(!str2) {
 			return 0;	//both NULL
 		} else {
 			return strcmp(str2, "");	//"", NULL
 		}
+	}
 	if(!str2)
 		return strcmp(str1, "");	//NULL, ""
 	return strcmp(str1, str2);

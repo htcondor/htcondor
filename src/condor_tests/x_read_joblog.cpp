@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 	int jobid = 0;
 	int maxjobs = 0;
 
-	char* jobidstr ;
+	char* jobidstr  = 0;
 
 	if( (argc == 3) && (strcmp(action, "MAXJOBS") == 0))
 	{
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 	int current_cluster = 0;
 	int running_jobs = 0;
 	int running_jobs_hitlimit = 0;
-	int returnval;
+	int returnval = 0;
 
 	if( (!strcmp(action, "TRACE") || !strcmp(action, "RETURNVALUE") ) && jobid)
 	{
