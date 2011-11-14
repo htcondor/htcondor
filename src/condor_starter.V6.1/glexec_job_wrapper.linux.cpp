@@ -156,7 +156,7 @@ read_env()
 			            strerror(errno));
 		}
 		else {
-			err.sprintf("short read of env size: %d of %d bytes",
+			err.sprintf("short read of env size: %d of %ld bytes",
 			            bytes,
 			            sizeof(env_len));
 		}

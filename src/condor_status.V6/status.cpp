@@ -37,7 +37,7 @@
 
 // global variables
 AttrListPrintMask pm;
-char		*DEFAULT= "<default>";
+const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
@@ -379,8 +379,8 @@ main (int argc, char *argv[])
 				addr = d->addr();
 				requested_daemon = d;
 			} else {
-			        char* id = const_cast<char*>(d->idStr());
-                                if (NULL == id) id = const_cast<char*>(d->name());
+			        const char* id = d->idStr();
+                                if (NULL == id) id = d->name();
 				if (NULL == id) id = "daemon";
            	                fprintf(stderr, "Error: Failed to locate %s\n", id);
                                 fprintf(stderr, "%s\n", d->error());
@@ -412,19 +412,19 @@ main (int argc, char *argv[])
 
 	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
                         // Specific long message if connection to collector failed.
-		        char* fullhost = requested_daemon->fullHostname();
+		        const char* fullhost = requested_daemon->fullHostname();
                         if (NULL == fullhost) fullhost = "<unknown_host>";
-                        char* daddr = requested_daemon->addr();
+                        const char* daddr = requested_daemon->addr();
                         if (NULL == daddr) daddr = "<unknown>";
                         char info[1000];
                         sprintf(info, "%s (%s)", fullhost, daddr);
 		        printNoCollectorContact( stderr, info, !expert );                        
 	        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
                         // more helpful message for failure to connect to some daemon/subsys
-			char* id = const_cast<char*>(requested_daemon->idStr());
-                        if (NULL == id) id = const_cast<char*>(requested_daemon->name());
+			const char* id = requested_daemon->idStr();
+                        if (NULL == id) id = requested_daemon->name();
 			if (NULL == id) id = "daemon";
-                        char* daddr = requested_daemon->addr();
+                        const char* daddr = requested_daemon->addr();
                         if (NULL == daddr) daddr = "<unknown>";
            	        fprintf(stderr, "Error: Failed to contact %s at %s\n", id, daddr);
 		}

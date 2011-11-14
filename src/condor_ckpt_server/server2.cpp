@@ -1113,7 +1113,8 @@ void Server::Replicate()
 	Log("Checking replication schedule...");
 	ReplicationEvent *e = replication_schedule.GetNextReplicationEvent();
 	if (e) {
-		server_sa = condor_sockaddr(&e->ServerAddr());
+		struct sockaddr_in tmp_sockaddr = e->ServerAddr();
+		server_sa = condor_sockaddr(&tmp_sockaddr);
 		sprintf(log_msg, "Replicating: Prio=%d, Serv=%s, File=%s",
 				e->Prio(), server_sa.to_sinful().Value(), e->File());
 		Log(log_msg);
