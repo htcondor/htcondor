@@ -1070,6 +1070,8 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
 //
 void generic_stats_force_refs()
 {
+   MyString str;
+
    stats_entry_recent<int>* pi = NULL;
    stats_entry_recent<long>* pl = NULL;
    stats_entry_recent<int64_t>* pt = NULL;
@@ -1082,9 +1084,13 @@ void generic_stats_force_refs()
    ph->value.set_levels(NULL, 0);
    ph->value.Add(1);
    ph->value.Remove(1);
+   ph->value.AppendToString(str);
+
    pm->value.set_levels(NULL, 0);
    pm->value.Add(1);
-   ph->value.Remove(1);
+   pm->value.Remove(1);
+   pm->value.AppendToString(str);
+   
 
    StatisticsPool dummy;
    dummy.GetProbe<stats_entry_recent<int> >("");
