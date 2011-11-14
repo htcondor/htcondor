@@ -48,6 +48,7 @@ typedef struct ScheddStatistics {
 
    stats_entry_recent<time_t> JobsAccumTimeToStart; // sum of all time jobs spent waiting to start
    stats_entry_recent<time_t> JobsAccumRunningTime; // sum of all time jobs spent running.
+   stats_entry_recent<time_t> JobsAccumBadputTime;  // sum of all time jobs spent running badput
 
    // counts of various exit conditions.
    stats_entry_recent<int> JobsExitedNormally; // jobs that exited with JOB_EXITED or JOB_EXITED_AND_CLAIM_CLOSING
@@ -73,13 +74,13 @@ typedef struct ScheddStatistics {
    //stats_entry_recent<int> ShadowExceptions;     // number of times shadows have excepted
    stats_entry_recent<int> ShadowsReconnections; // number of times shadows have reconnected
 
-   stats_entry_recent<stats_histogram_sizes> JobsRunningSizes;
-   stats_entry_recent<stats_histogram_sizes> JobsCompletedSizes;
-   stats_entry_recent<stats_histogram_sizes> JobsBadputSizes;
+   stats_entry_recent_histogram<int64_t> JobsCompletedSizes;
+   stats_entry_recent_histogram<int64_t> JobsBadputSizes;
+   stats_entry_recent_histogram<time_t> JobsCompletedRuntimes;
+   stats_entry_recent_histogram<time_t> JobsBadputRuntimes;
 
-   stats_entry_recent<stats_histogram_times> JobsRunningRuntimes;
-   stats_entry_recent<stats_histogram_times> JobsCompletedRuntimes;
-   stats_entry_recent<stats_histogram_times> JobsBadputRuntimes;
+   stats_histogram<int64_t> JobsRunningSizes;
+   stats_histogram<time_t>  JobsRunningRuntimes;
 
    // non-published values
    time_t InitTime;            // last time we init'ed the structure

@@ -27,19 +27,6 @@
 #include "string_list.h"     // for StringList
 #include "condor_config.h"
 
-// use these to help initialize static const arrays arrays of 
-//
-#ifndef FIELDOFF
- #ifdef WIN32
-  #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
- #else
-  //#define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
-  #define FIELDOFF(st,fld) offsetof(st,fld)
- #endif
- #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
-#endif
-#define GS_FIELD(st,fld) (((st *)0)->fld)
-
 // specialize AdvanceBy for simple types so that we can use a more efficient algorithm.
 template <> void stats_entry_recent<int>::AdvanceBy(int cSlots) { this->AdvanceAndSub(cSlots); }
 template <> void stats_entry_recent<int64_t>::AdvanceBy(int cSlots) { this->AdvanceAndSub(cSlots); }
@@ -115,14 +102,29 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
    ad.Assign(pattr, str);
 }
 
-template <>
-void stats_entry_recent<stats_histogram_sizes>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   ;
+template <class T>
+void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   MyString str("(");
+   this->value.AppendToString(str);
+   str += ") (";
+   this->recent.AppendToString(str);
+   str.sprintf_cat(") {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         str.sprintf_cat(!ix ? "[(" : (ix == this->buf.cMax ? ")|(" : ") ("));
+         this->buf.pbuf[ix].AppendToString(str);
+         }
+      str += ")]";
+      }
+
+   MyString attr(pattr);
+   if (flags & this->PubDecorateAttr)
+      attr += "Debug";
+
+   ad.Assign(pattr, str);
 }
-template <>
-void stats_entry_recent<stats_histogram_times>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
-   ;
-}
+
 
 // Determine if enough time has passed to Advance the recent buffers,
 // returns an advance count. 
@@ -396,69 +398,6 @@ double Probe::Std() const
    }
 }
 
-/*
-template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots) { 
-   if (cSlots <= 0) 
-      return;
-
-   // remove the values associated with the slot being overwritten
-   // from the aggregate value.
-   while (cSlots > 0) {
-      buf.Advance();
-      --cSlots;
-      }
-
-   recent = buf.Sum();
-}
-*/
-
-/*
-template <> void stats_entry_recent< stats_histogram<int64_t> >::AdvanceBy(int cSlots)
-{
-   if (cSlots <= 0) 
-      return;
-   while (cSlots > 0) { buf.Advance(); --cSlots; }
-   recent = buf.Sum();
-}
-
-GCC_DIAG_OFF(float-equal)
-template <> void stats_entry_recent< stats_histogram<double> >::AdvanceBy(int cSlots)
-{
-   if (cSlots <= 0) 
-      return;
-   while (cSlots > 0) { buf.Advance(); --cSlots; }
-   recent = buf.Sum();
-}
-GCC_DIAG_ON(float-equal)
-
-template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlots)
-{
-   if (cSlots <= 0) 
-      return;
-   while (cSlots > 0) { buf.Advance(); --cSlots; }
-   recent = buf.Sum();
-}
-
-template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int) const
-{
-   MyString str;
-   if (this->value.cItems <= 0) {
-      str += "";
-   } else {
-      str += this->value.data[0];
-      for (int ix = 1; ix < this->value.cItems+1; ++ix) {
-         str += ", ";
-         str += this->value.data[ix];
-      }
-   }
-
-   ad.Assign(pattr, str);
-
-   MyString attr(pattr);
-   attr += "Set";
-   ad.Assign(attr.Value(), "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb");
-}
-*/
 
 void ProbeToStringDebug(MyString & str, const Probe& probe)
 {
@@ -594,60 +533,147 @@ void TestProbe()
    stats.Runtime.AdvanceBy(1);
 }
 
-/*
-template <> 
-void stats_entry_recent<stats_histogram_sizes>::Publish(ClassAd& ad, const char * pattr, int flags) const
+// stats_histogram code
+//
+template <class T>
+bool stats_histogram<T>::set_levels(const T* ilevels, int num_levels)
 {
-	MyString str("");
-	if (this->cItems > 0) {
-		str += this->data[0];
-		for(int ii = 1; ii <= this->cItems; ++ii) {
-			str += ", ";
-			str += this->data[i];
+	bool ret = false;
+	if(cLevels == 0 && ilevels != NULL) {
+		cLevels = num_levels;
+		levels = ilevels;
+		data = new int[cLevels + 1];
+        Clear();
+		ret = true;	
+	}
+	return ret;
+}
+
+template<class T>
+void stats_histogram<T>::AppendToString(MyString & str) const 
+{
+   if (this->cLevels > 0) {
+      str += this->data[0];
+      for (int ix = 1; ix < this->cLevels+1; ++ix) {
+         str += ", ";
+         str += this->data[ix];
+      }
+   }
+}
+
+template<class T>
+stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
+{
+	// if the input histogram is null, there is nothing to do.
+	if (sh.cLevels <= 0) {
+		return *this;
+	}
+
+	// if the current histogram is null, take on the size and levels of the input
+	if (this->cLevels <= 0) {
+		this->set_levels(sh.levels, sh.cLevels);
+	}
+
+	// to add histograms, they must both be the same size (and have the same
+	// limits array as well, should we check that?)
+	if (this->cLevels != sh.cLevels) {
+       #ifdef EXCEPT
+		EXCEPT("attempt to add histogram of %d items to histogram of %d items\n", 
+				sh.cLevels, this->cLevels);
+       #else
+        return *this;
+       #endif
+	}
+
+	if (this->levels != sh.levels) {
+       #ifdef EXCEPT
+		EXCEPT("Histogram level pointers are not the same.\n");
+       #else
+        return *this;
+       #endif
+	}
+
+	for (int i = 0; i <= cLevels; ++i) {
+		this->data[i] += sh.data[i];
+	}
+
+	return *this;
+}
+
+GCC_DIAG_OFF(float-equal)
+template<class T>
+stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
+{
+	if(sh.cLevels == 0){
+		Clear();
+	} else if(this != &sh) {
+		if(this->cLevels > 0 && this->cLevels != sh.cLevels){
+			EXCEPT("Tried to assign different sized histograms\n");
+			return *this;
+		} else if(this->cLevels == 0) {
+			this->cLevels = sh.cLevels;
+			this->data = new int[this->cLevels+1];
+			this->levels = sh.levels;
+            for(int i=0;i<=cLevels;++i){
+				this->data[i] = sh.data[i];
+			}
+		} else {
+			for(int i=0;i<=cLevels;++i){
+				this->data[i] = sh.data[i];
+				if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
+					EXCEPT("Tried to assign different levels of histograms\n");
+					return *this;	
+				}
+			}
+		}
+		this->data[this->cLevels] = sh.data[sh.cLevels];
+	}
+	return *this;
+}
+GCC_DIAG_ON(float-equal)
+
+template<class T>
+T stats_histogram<T>::Add(T val)
+{
+	int ix = 0;
+    while (ix < cLevels && val >= levels[ix])
+        ++ix;
+    data[ix] += 1;
+/* the above code should give the same result as this...
+	if(val < levels[0]){
+		data[0] += 1;
+	} else if(val >= levels[cLevels - 1]){
+		data[cLevels] += 1;
+	} else {
+		for(int i=1;i<cLevels;++i){
+			if(val >= levels[i-1] && val < levels[i]){
+				data[i] += 1;
+			}
 		}
 	}
-	ad.Assign(pattr, str);
-}
 */
-
-/*
-template <> void stats_entry_recent<stats_histogram_sizes>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
-template <> void stats_entry_recent<stats_histogram_times>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
-template <> void stats_entry_recent<stats_histogram_double>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
-template <> void stats_entry_recent<stats_histogram_int>::AdvanceBy(int cSlots) { this->AdvanceAndSum(cSlots);}
-*/
-
-int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_sizes& probe)
-{
-	MyString str("");
-    probe.AppendToString(str);
-	return ad.Assign(pattr, str);
+	return val;
 }
 
-int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_times& probe)
+template<class T>
+T stats_histogram<T>::Remove(T val)
 {
-	MyString str("");
-    probe.AppendToString(str);
-	return ad.Assign(pattr, str);
+	int ix = 0;
+    while (ix < cLevels && val >= levels[ix])
+        ++ix;
+    data[ix] -= 1;
+	return val;
 }
 
-int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_double& probe)
-{
-	MyString str("");
-    probe.AppendToString(str);
-	return ad.Assign(pattr, str);
-}
-
-int ClassAdAssign(ClassAd & ad, const char * pattr, const stats_histogram_int& probe)
-{
-	MyString str("");
-    probe.AppendToString(str);
-	return ad.Assign(pattr, str);
-}
-
-// tj: this code doesn't currently work....
+// Parse a string of the form "NNN Kb, NNN Mb" and return an array of sizes in bytes
+// the valid scaling factors are b B Kb KB Mb MB Gb GB Tb TB
+// commas and the scaling factors (Kb, Mb, etc) are parsed, but not required. 
+// return value is number of entries needed in pSizes array to fully parse. 
 //
-int stats_histogram_sizes::ParseSizes(const char * psz, int64_t * pSizes, int cMaxSizes)
+int stats_histogram_ParseSizes(
+   const char * psz, // in: string to parse
+   int64_t * pSizes, // out: parsed values
+   int cMaxSizes)    // in: size of pSizes array.
 {
    int cSizes = 0;
    int64_t size = 0;
@@ -700,12 +726,22 @@ int stats_histogram_sizes::ParseSizes(const char * psz, int64_t * pSizes, int cM
    return cSizes; 
 }
 
-void stats_histogram_sizes::PrintSizes(MyString & str, const int64_t * pSizes, int cSizes)
+void stats_histogram_PrintSizes(MyString & str, const int64_t * pSizes, int cSizes)
 {
+   EXCEPT("stats_histogram::PrintSizes not implemented\n");
    // tj: WRITE THIS
 }
 
-int stats_histogram_times::ParseTimes(const char * psz, time_t * pTimes, int cMaxSizes)
+// Parse a string of the form "NNN Sec, NNN Min" and return an array of times in seconds
+// the valid scaling factors are S Sec M Min H HR D Day (case insensitive)
+// commas and the scaling factors (Sec, Min etc) are parsed, but not required. 
+// note that Sec is a scaling factor of 1 
+// return value is size of pTimes array necessary to parse all of the input.
+//
+int stats_histogram_ParseTimes(
+   const char * psz, // in: string to parse
+   time_t * pTimes,  // out: parsed values
+   int cMaxTimes)    // in: size of pTimes array
 {
    int cTimes = 0;
    time_t time = 0;
@@ -761,7 +797,7 @@ int stats_histogram_times::ParseTimes(const char * psz, time_t * pTimes, int cMa
 
          if (*p == ',') ++p;
 
-         if (cTimes < cMaxSizes)
+         if (cTimes < cMaxTimes)
             pTimes[cTimes] = time * scale;
 
          ++cTimes;
@@ -775,8 +811,9 @@ int stats_histogram_times::ParseTimes(const char * psz, time_t * pTimes, int cMa
    return cTimes; 
 }
 
-void stats_histogram_times::PrintTimes(MyString & str, const time_t * pTimes, int cTimes)
+void stats_histogram_times_PrintTimes(MyString & str, const time_t * pTimes, int cTimes)
 {
+   EXCEPT("stats_histogram::PrintTimes not implemented\n");
    // tj: WRITE THIS
 }
 
@@ -1028,9 +1065,8 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
       }
 }
 
-// some compiler/linkers need us to force template instantiation
-// since the template code isn't in a header file.
-// force the static members to be instantiated in the library.
+// this function isn't called, its just here to force instantiation 
+// of template methods that aren't in the header file.
 //
 void generic_stats_force_refs()
 {
@@ -1039,12 +1075,16 @@ void generic_stats_force_refs()
    stats_entry_recent<int64_t>* pt = NULL;
    stats_entry_recent<double>* pd = NULL;
    stats_entry_recent<Probe>* pp = NULL;
-   stats_entry_recent< stats_histogram_sizes >* ph = new stats_entry_recent< stats_histogram_sizes >();
-   stats_entry_recent< stats_histogram_times >* pm = new stats_entry_recent< stats_histogram_times >();
+   stats_entry_recent_histogram< int64_t >* ph = new stats_entry_recent_histogram< int64_t >();
+   stats_entry_recent_histogram< time_t >* pm = new stats_entry_recent_histogram< time_t >();
    stats_recent_counter_timer* pc = NULL;
 
-   ph->value.set_levels(0, NULL);
-   pm->value.set_levels(0, NULL);
+   ph->value.set_levels(NULL, 0);
+   ph->value.Add(1);
+   ph->value.Remove(1);
+   pm->value.set_levels(NULL, 0);
+   pm->value.Add(1);
+   ph->value.Remove(1);
 
    StatisticsPool dummy;
    dummy.GetProbe<stats_entry_recent<int> >("");
@@ -1071,239 +1111,6 @@ void generic_stats_force_refs()
    dummy.AddProbe("",ph,NULL,0);
    dummy.AddProbe("",pm,NULL,0);
 };
-
-//int stats_histogram_sizes::cSizes;
-//int64_t stats_histogram_sizes::sizes[MAX_HIST_SIZES_LEVELS];
-#if 0
-void stats_histogram_sizes::init_sizes_from_param(const char* param_name)
-{
-	char* tmp = param(param_name);
-	int i = 0;
-	int64_t result;
-	for(const char* p = tmp;p && *p;++p){
-		if(*p != ',' && !isdigit(*p)){
-			EXCEPT("Only have digits and commas should be seen in param %s\n",param_name);
-		}
-		int saw_int = 0;
-		result = 0;
-		while(isdigit(*p)){
-			saw_int = 1;
-			result *= 10;
-			result += *p - '0';
-		}
-		if(saw_int){
-			if(i >= MAX_HIST_SIZES_LEVELS){
-				EXCEPT("param %s has too many sizes\n",param_name);
-			}
-			sizes[i] = result;
-			++i;
-			result = 0;
-		}
-	}
-	stats_histogram_sizes::cSizes = i;
-}
-void stats_histogram_sizes::init_sizes_from_vars(const int64_t* vsizes, int count)
-{
-	if (count <= MAX_HIST_SIZES_LEVELS) {
-		cSizes = count;
-		for(int i=0;i<size;++i){
-			sizes[i] = vsizes[i];
-		}
-	} else {
-		EXCEPT("Sizes array in stats_histogram_sizes too large");
-		cSizes = 0;
-	}
-}
-
-void stats_histogram_sizes::reconfig()
-{
-	levels = sizes;
-	cItems = cSizes;
-	for(int i=0;i<cSizes;++i){
-		data[i] = 0;
-	}
-}
-
-void stats_histogram_sizes::Publish(ClassAd & ad, const char * pattr, int /* flags */) const
-{ 
-	MyString str;
-	if(cItems <= 0) {
-		str += "";
-	} else {
-		str += data[0];
-		for(int i=1;i<=cItems;++i){
-			str += ", ";
-			str += data[i];
-		}
-	}
-	ad.Assign(pattr, str);
-	MyString attr(pattr);
-	attr += "Set";	
-	str = MyString();
-	str += (int)(sizes[0]/0x400); // Sizes reported in units of kilobytes
-	for(int i=1;i<cSizes;++i){
-		str += ", ";
-		str += (int)(sizes[i]/0x400);
-	}
-	ad.Assign(attr.Value(),str);
-}
-
-void stats_histogram_sizes::Unpublish(ClassAd & ad, const char * pattr) const
-{
-	MyString str(pattr);
-	ad.Delete(str.Value());
-	str += "Set";
-	ad.Delete(str.Value());	
-}
-#endif
-
-#if 0
-/*
-template <class T>
-stats_histogram<T>::~stats_histogram()
-{
-		delete [] data;
-		delete [] levels;
-}
-template<class T>
-stats_histogram<T>::stats_histogram(int num,const T* ilevels) 
-   : cItems(num), data(NULL), levels(NULL)
-{
-	if(ilevels){
-		data = new int[cItems+2];
-		levels = new T[cItems];
-		for(int i=0;i<cItems;++i){
-			levels[i] = ilevels[i];
-			data[i] = 0;
-		}
-        data[cItems] = 0;
-	}
-}
-
-template<class T>
-bool stats_histogram<T>::set_levels(int num, const T* ilevels)
-{
-   // early out if the levels being set it the same as what we currently use.
-   if (num == cItems && ilevels && levels) {
-      bool match = false;
-      for (int i=0;i<cItems;++i) {
-         if (levels[i] != ilevels[i]) {
-            match = false;
-            break;
-         }
-      }
-      if (match) return false;
-   }
-
-   delete [] data;
-   delete [] levels;
-   cItems = num;
-   if (num > 0) {
-      data = new int[cItems+1];
-      levels = new T[cItems];
-      for(int i=0;i<cItems;++i) {
-		levels[i] = ilevels[i];
-		data[i] = 0;
-      }
-      data[cItems] = 0;
-   }
-   return true;
-}
-
-template<class T>
-T stats_histogram<T>::get_level(int n) const
-{
-	if(0 <= n && n < cItems){
-		return levels[n];
-	}
-	if(n >= cItems) {
-		return std::numeric_limits<T>::max();
-	} else {
-		return std::numeric_limits<T>::min();
-	}
-}
-
-template<class T>
-bool stats_histogram<T>::set_level(int n, T val)
-{
-	bool ret = false;
-	if(0 < n && n < cItems - 1){
-		if(val > levels[n-1] && val < levels[n+1]) {
-			levels[n] = val;
-			Clear();
-			ret = true;
-		}
-	} else if(n == 0 && cItems >=2 ) {
-		if(val < levels[1]){
-			levels[0] = val;
-			Clear();
-			ret = true;
-		}
-	} else if(n == cItems - 1 && cItems >= 2) {
-		if(val > levels[n-1]) {
-			levels[n] = val;
-			Clear();
-			ret = true;
-		}
-	}
-	return ret;
-}	
-
-template<class T>
-void stats_histogram<T>::Clear()
-{
-	for(int i=0;i<cItems;++i){
-		data[i] = 0;
-	}
-	return true;
-}
-
-template<class T>
-T stats_histogram<T>::Add(T val)
-{
-	if(val < levels[0]){
-		++data[0];
-	} else if(val >= levels[cItems - 1]){
-		++data[cItems];
-	} else {
-		int count = cItems - 1;
-		for(int i=1;i<=count;++i){
-			if(val >= levels[i-1] && val < levels[i]){
-				++data[i];
-			}
-		}
-	}
-	return val;
-}
-
-template<class T>
-stats_histogram<T>& stats_histogram<T>::operator+=(const stats_histogram<T>& sh)
-{
-   // if the input histogram is null, there is nothing to do.
-   if (sh.cItems <= 0) {
-      return *this;
-   }
-
-   // if the current histogram is null, take on the size and levels of the input
-   if (this->cItems <= 0) {
-      this->set_levels(sh.cItems, sh.levels);
-   }
-
-   // to add histograms, they must both be the same size (and have the same
-   // limits array as well, should we check that?)
-   if (this->cItems != sh.cItems) {
-      EXCEPT("attempt to add histogram of %d items to histogram of %d items", 
-             sh.cItems, this->cItems);
-   }
-
-   for (int i = 0; i < cItems-1; ++i) {
-      this->data[i] += sh.data[i];
-   }
-
-   return *this;
-}
-*/
-#endif
 
 //
 // This is how you use the generic_stats functions.

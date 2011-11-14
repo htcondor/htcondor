@@ -1295,6 +1295,8 @@ int Scheduler::count_jobs()
 	SchedUniverseJobsRunning = 0;
 	LocalUniverseJobsIdle = 0;
 	LocalUniverseJobsRunning = 0;
+	stats.JobsRunningRuntimes = 0;
+	stats.JobsRunningSizes = 0;
 
 	// clear owner table contents
 	time_t current_time = time(0);
@@ -2120,6 +2122,14 @@ count( ClassAd *job )
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
+		int job_image_size = 0;
+		job->LookupInteger("ImageSize_RAW", job_image_size);
+		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
+		int job_start_date = 0;
+		int job_running_time = 0;
+		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
+			job_running_time = (time(NULL) - job_start_date);
+		scheduler.stats.JobsRunningRuntimes += job_running_time;
 	} else if (status == HELD) {
 		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
@@ -9805,11 +9815,24 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		}
 	}
 
-    // update exit code statistics
-    time_t updateTime = time(NULL);
-    stats.Tick(updateTime);
-    stats.JobsExited += 1;
-    stats.JobsSubmitted = GetJobQueuedCount();
+		// update exit code statistics
+	time_t updateTime = time(NULL);
+	stats.Tick(updateTime);
+	stats.JobsExited += 1;
+	stats.JobsSubmitted = GetJobQueuedCount();
+
+		// get attributes that we will need to update goodput & badput statistics.
+		//
+	bool is_badput = false;
+	bool is_goodput = false;
+	int universe = 0;
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE, &universe);
+	int job_image_size = 0;
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
+	int job_start_date = 0;
+	int job_running_time = 0;
+	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &job_start_date))
+		job_running_time = (updateTime - job_start_date);
 
 		// We get the name of the daemon that had a problem for 
 		// nice log messages...
@@ -9827,6 +9850,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// want to take an action but still want to report the Exception
 		//
 	bool reportException = false;
+
 		//
 		// Based on the job's exit code, we will perform different actions
 		// on the job
@@ -9857,9 +9881,23 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				DelMrec(srec->match);
 			}
             switch (exit_code) {
-               case JOB_CKPTED:         stats.JobsCheckpointed += 1; break;
-               case JOB_SHOULD_REQUEUE: stats.JobsShouldRequeue += 1; break;
-               case JOB_NOT_STARTED:    stats.JobsNotStarted += 1; break;
+               case JOB_CKPTED:
+                  stats.JobsCheckpointed += 1;
+                  is_goodput = true;
+                  break;
+               case JOB_SHOULD_REQUEUE:
+               //case JOB_NOT_CKPTED: for CONDOR_UNIVERSE_STANDARD
+                  stats.JobsShouldRequeue += 1;
+                  // for standard universe this is actually case JOB_NOT_CKPTED
+                  if (CONDOR_UNIVERSE_STANDARD == universe) {
+                     is_badput = true;
+                  } else {
+                     is_goodput = true;
+                  }
+                  break;
+               case JOB_NOT_STARTED:
+                  stats.JobsNotStarted += 1;
+                  break;
                }
 			break;
 
@@ -9888,6 +9926,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if ( q_status != HELD && q_status != IDLE ) {
 				set_job_status( job_id.cluster, job_id.proc, REMOVED );
 			}
+			is_badput = true;
             stats.JobsKilled += 1;
 			break;
 
@@ -9898,26 +9937,18 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				DelMrec(srec->match);
 			}
             stats.JobsExitedAndClaimClosing += 1;
-				// no break, fall through
+			// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
-            {
-            stats.JobsExitedNormally += 1;
-            stats.JobsCompleted += 1;
-            int image_size = 0;
-            GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &image_size);
-            stats.JobsCompletedSizes += (int64_t)image_size * 1024;
-            int start_date = 0;
-            GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
-            stats.JobsAccumRunningTime += (updateTime - start_date);
-            stats.JobsCompletedRuntimes += (updateTime - start_date); 
-            }
-				// no break, fall through and do the action
-
+			stats.JobsExitedNormally += 1;
+			stats.JobsCompleted += 1;
+			is_goodput = true;
+			// no break, fall through and do the action
 		case JOB_COREDUMPED:
-            if (JOB_COREDUMPED == exit_code) {
-               stats.JobsCoredumped += 1;
-            }
+			if (JOB_COREDUMPED == exit_code) {
+				stats.JobsCoredumped += 1;
+				is_badput = true;
+			}
 				// If the job isn't being HELD, set it to COMPLETED
 			if ( q_status != HELD ) {
 				set_job_status( job_id.cluster, job_id.proc, COMPLETED ); 
@@ -9964,6 +9995,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
 			set_job_status( job_id.cluster, job_id.proc, HELD );
+			is_badput = true;
 			
 				// If the job has a CronTab schedule, we will want
 				// to remove cached scheduling object so that if
@@ -9980,11 +10012,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				}
 			} // CronTab
 
-            if (JOB_MISSED_DEFERRAL_TIME == exit_code) {
-               stats.JobsMissedDeferralTime += 1;
-            } else {
-               stats.JobsShouldHold += 1;
-            }
+			if (JOB_MISSED_DEFERRAL_TIME == exit_code) {
+				stats.JobsMissedDeferralTime += 1;
+			} else {
+				stats.JobsShouldHold += 1;
+			}
 			break;
 		}
 
@@ -10020,10 +10052,23 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// moved down below. We just set this flag to 
 				// make sure we hit it
 			reportException = true;
-            stats.JobsExitException += 1;
+			stats.JobsExitException += 1;
+			is_badput = true;
 			break;
 	} // SWITCH
 	
+		// calculate badput and goodput statistics.
+		//
+	if (is_goodput) {
+		stats.JobsAccumRunningTime += job_running_time;
+		stats.JobsCompletedSizes += (int64_t)job_image_size * 1024;
+		stats.JobsCompletedRuntimes += job_running_time;
+	} else if (is_badput) {
+		stats.JobsAccumBadputTime += job_running_time;
+		stats.JobsBadputSizes += (int64_t)job_image_size * 1024;
+		stats.JobsBadputRuntimes += job_running_time;
+	}
+
 		// Report the ShadowException
 		// This used to be in the default case in the switch statement
 		// above, but we might need to do this in other cases in
