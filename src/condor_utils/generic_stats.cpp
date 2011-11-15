@@ -533,6 +533,7 @@ void TestProbe()
    stats.Runtime.AdvanceBy(1);
 }
 
+#if 0
 // stats_histogram code
 //
 template <class T>
@@ -652,6 +653,7 @@ T stats_histogram<T>::Remove(T val)
     data[ix] -= 1;
 	return val;
 }
+#endif
 
 // Parse a string of the form "NNN Kb, NNN Mb" and return an array of sizes in bytes
 // the valid scaling factors are b B Kb KB Mb MB Gb GB Tb TB
