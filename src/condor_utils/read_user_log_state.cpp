@@ -752,7 +752,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 
 	MyString	str;
 	GetStateString( str, "Restored reader state" );
-	dprintf( D_FULLDEBUG, str.Value() );
+	dprintf( D_FULLDEBUG, "%s", str.Value() );
 
 	return true;
 }

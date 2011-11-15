@@ -1811,7 +1811,7 @@ CStarter::removeDeferredJobs() {
 		error += this->jic->jobCluster();
 		error += ".";
 		error += this->jic->jobProc();
-		EXCEPT( error.Value() );
+		EXCEPT( "%s", error.Value() );
 		ret = false;
 	}
 	return ( ret );

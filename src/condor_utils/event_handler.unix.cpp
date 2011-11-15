@@ -80,7 +80,7 @@ display_sigset( const char *msg, sigset_t *mask )
 	NameTableIterator	next_sig( SigNames );
 
 	if( msg ) {
-		dprintf( D_ALWAYS, msg );
+		dprintf( D_ALWAYS, "%s", msg );
 	}
 	while( (signo = next_sig()) != -1 ) {
 		if( sigismember(mask,signo) ) {

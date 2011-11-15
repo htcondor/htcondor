@@ -673,7 +673,7 @@ pseudo_ulog( ClassAd *ad )
 		Shadow->exception_already_logged = true;
 
 		//lame: at the time of this writing, EXCEPT does not want const:
-		EXCEPT(critical_error);
+		EXCEPT("%s", critical_error);
 	}
 
 	delete event;
