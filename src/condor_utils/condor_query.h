@@ -171,6 +171,11 @@ class CondorQuery
 	// query.  The server will decide what, if anything to do with it
 	int addExtraAttribute(const char*);
 
+		// Set the list of desired attributes
+		// to be returned in the queried ads.
+		// If not set, all attributes are returned.
+	void setDesiredAttrs(char const * const *attrs);
+
   private:
 		// These are unimplemented, so make them private so that they
 		// can't be used.

@@ -373,7 +373,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	
 		// See if query ad asks for server-side projection
 	char *projection = NULL;
-	cad.LookupString("projection", &projection);
+	cad.LookupString(ATTR_PROJECTION, &projection);
 	SimpleList<MyString> projectionList;
 
 	::split_args(projection, &projectionList);

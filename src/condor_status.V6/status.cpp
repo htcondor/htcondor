@@ -282,22 +282,10 @@ main (int argc, char *argv[])
 		projList.AppendArg("EnteredCurrentActivity");
 	}
 
-	
-	
-	// Calculate the projected arguments, and insert into
-	// the projection query attribute
-
-	
-	MyString quotedProjStr;
-	MyString projStrError;
-
-	projList.GetArgsStringV2Quoted(&quotedProjStr, &projStrError);
-
-	MyString projStr("projection = ");
-	projStr += quotedProjStr;
-		// If it is empty, it's just quotes
-	if (quotedProjStr.Length() > 2) {
-		query->addExtraAttribute(projStr.Value());
+	if( projList.Count() > 0 ) {
+		char **attr_list = projList.GetStringArray();
+		query->setDesiredAttrs(attr_list);
+		deleteStringArray(attr_list);
 	}
 
 	// if diagnose was requested, just print the query ad
