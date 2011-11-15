@@ -1397,7 +1397,7 @@ case CONDOR_getdir:
 
 		// Get directory's contents
 		while((next = directory.Next())) {
-			msg.sprintf_cat(next);
+			msg.sprintf_cat("%s", next);
 			msg.sprintf_cat("\n");
 		}
 		terrno = (condor_errno_t)errno;

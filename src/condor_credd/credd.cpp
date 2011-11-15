@@ -263,7 +263,7 @@ get_cred_handler(Service * /*service*/, int /*i*/, Stream *stream) {
     *pColon = '\0';
     
     // Name is the second part
-    sprintf (name, (char*)(pColon+sizeof(char)));
+    sprintf (name, "%s", (char*)(pColon+sizeof(char)));
   
     if (strcmp (owner, user) != 0) { 
       dprintf (D_ALWAYS, "Requesting another user's (%s) credential %s\n", owner, name);
@@ -455,7 +455,7 @@ rm_cred_handler(Service * /*service*/, int /*i*/, Stream *stream) {
     *pColon = '\0';
     
     // Name is the second part
-    sprintf (name, (char*)(pColon+sizeof(char)));
+    sprintf (name, "%s", (char*)(pColon+sizeof(char)));
   
     if (strcmp (owner, user) != 0) { 
       dprintf (D_ALWAYS, "Requesting another user's (%s) credential %s\n", owner, name);

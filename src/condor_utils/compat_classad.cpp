@@ -612,7 +612,7 @@ void registerStrlistFunctions()
 
 void
 classad_debug_dprintf(const char *s) {
-	dprintf(D_FULLDEBUG, s);
+	dprintf(D_FULLDEBUG, "%s", s);
 }
 
 ClassAd::ClassAd()
