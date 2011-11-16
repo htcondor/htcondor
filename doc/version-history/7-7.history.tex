@@ -88,6 +88,12 @@ that were created via fork() without calling exec().  This problem
 affected \Attr{ImageSize} and \Attr{ResidentSetSize} but not
 \Attr{ProportionalSetSize}.
 
+\item Fixed a rare condition that could cause a job to remain in the
+running state indefinitely when the job was removed or put on hold
+and there was a communication failure between the \Condor{shadow}
+and the \Condor{starter}.  This problem was introduced in 7.7.2.
+\Ticket{2591}
+
 \end{itemize}
 
 \noindent Known Bugs:
