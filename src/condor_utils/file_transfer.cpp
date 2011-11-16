@@ -2583,8 +2583,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 								try_again,hold_code,hold_subcode,
 								error_desc.Value(),__LINE__);
 		}
-#endif
+#else
 		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
+#endif
 
 
 		// now we send an int to the other side to indicate the next
