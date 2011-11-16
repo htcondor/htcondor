@@ -193,7 +193,7 @@ do_REMOTE_syscall()
             and surprised if the startd/starter actually did
             what we asked when we deactivated the claim */
        if ( thisRemoteResource->wasClaimDeactivated() ) {
-           return 0;
+           return -1;
        }
 
 		if( Shadow->supportsReconnect() ) {

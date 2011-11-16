@@ -361,8 +361,10 @@ BaseShadow::shutDown( int reason )
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
-		shadow_user_policy.checkAtExit();
-			// WARNING: 'this' may have been deleted by the time we get here!!!
+		if( !waitingToUpdateSchedd() ) {
+			shadow_user_policy.checkAtExit();
+				// WARNING: 'this' may have been deleted by the time we get here!!!
+		}
 	}
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
