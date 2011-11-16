@@ -67,6 +67,12 @@ machine ad contained a string attribute ending in a backslash.
 ``Unable to process machine ClassAds'' or ``Unable to process job ClassAd''.
 \Ticket{2603}
 
+\item Fixed a bug that caused \Condor{startd} to crash after being
+reconfigured if a startd cron job was removed and was running at the
+time.
+\Ticket{2636}
+
+
 \end{itemize}
 
 \noindent Known Bugs:
