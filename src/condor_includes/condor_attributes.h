@@ -911,6 +911,7 @@ extern const char * const ATTR_TOTAL_MACHINE_DRAINING_BADPUT;
 extern const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
 extern const char * const ATTR_CHECK_EXPR;
 extern const char * const ATTR_PROJECTION;
+extern const char * const ATTR_LAST_DRAIN_START_TIME;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

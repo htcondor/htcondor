@@ -961,3 +961,4 @@ const char * const ATTR_TOTAL_MACHINE_DRAINING_BADPUT = "TotalMachineDrainingBad
 const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME = "TotalMachineDrainingUnclaimedTime";
 const char * const ATTR_CHECK_EXPR = "CheckExpr";
 const char * const ATTR_PROJECTION = "Projection";
+const char * const ATTR_LAST_DRAIN_START_TIME = "LastDrainStartTime";
