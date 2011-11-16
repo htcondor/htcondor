@@ -49,11 +49,11 @@ TransferQueueContactInfo::TransferQueueContactInfo(char const *str) {
 		if( !pos ) {
 			EXCEPT("Invalid transfer queue contact info: %s",str);
 		}
-		name.sprintf("%.*s",pos-str,str);
+		name.sprintf("%.*s",(int)(pos-str),str);
 		str = pos+1;
 
 		size_t len = strcspn(str,";");
-		value.sprintf("%.*s",len,str);
+		value.sprintf("%.*s",(int)len,str);
 		str += len;
 		if( *str == ';' ) {
 			str++;

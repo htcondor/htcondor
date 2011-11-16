@@ -95,7 +95,7 @@ VMType::~VMType()
 }
 
 bool 
-VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
+VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 {
 	// Read common parameters for vm
 	

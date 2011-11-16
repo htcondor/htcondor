@@ -921,7 +921,7 @@ is_loopback_net(uint32_t ip)
     return ((ip & 0xFF000000) == 0x7F000000); // 127/8
 }
 
-int is_loopback_net_str(char const *ip)
+int is_loopback_net_str(char const * /*ip*/)
 {
 //	struct in_addr sa;
 //	if( is_ipaddr_no_wildcard(ip,&sa) ) {

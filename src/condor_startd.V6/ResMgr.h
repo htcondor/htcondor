@@ -362,6 +362,7 @@ private:
 	bool draining_is_graceful;
 	bool resume_on_completion_of_draining;
 	int draining_id;
+	time_t last_drain_start_time;
 	int expected_graceful_draining_completion;
 	int expected_quick_draining_completion;
 	int expected_graceful_draining_badput;

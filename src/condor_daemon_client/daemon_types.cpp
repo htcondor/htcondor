@@ -57,7 +57,7 @@ daemonString( daemon_t dt )
 }
 
 daemon_t
-stringToDaemonType( char* name )
+stringToDaemonType( const char* name )
 {
 	int i;
 	for( i=0; i<_dt_threshold_; i++ ) {

@@ -39,7 +39,7 @@ SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 JobRouterHookMgr::JobRouterHookMgr()
 	: HookClientMgr(),
 	  NUM_HOOKS(4),
-	  UNDEFINED((char*)"UNDEFINED"),
+	  UNDEFINED("UNDEFINED"),
 	  m_hook_paths(MyStringHash)
 {
 	m_hook_maps[HOOK_TRANSLATE_JOB] = 1;

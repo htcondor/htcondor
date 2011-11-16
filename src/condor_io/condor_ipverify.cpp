@@ -562,7 +562,6 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
     char * slash0;
     char * slash1;
     char * at;
-	char * colon;
     char * permbuf;
 
 	if (!perm_entry || !*perm_entry) {
@@ -600,6 +599,7 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 			// COLON IS ESSENTIAL PART OF IPV6 ADDRESS
 			// look for a colon
 
+//			char * colon;
 //			colon = strchr(permbuf, ':');
 //			if (colon) {
 //				// colon points into permbuf.  permbuf is a local

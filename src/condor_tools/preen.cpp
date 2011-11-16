@@ -221,17 +221,17 @@ produce_output()
 	}
 
 	szTmp.sprintf("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
-	dprintf(D_ALWAYS, szTmp.Value()); 
+	dprintf(D_ALWAYS, "%s", szTmp.Value()); 
 		
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
-		fprintf( mailer, szTmp.Value());
+		fprintf( mailer, "%s", szTmp.Value());
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
 		szTmp.sprintf("  %s\n", str);
-		dprintf(D_ALWAYS, szTmp.Value() );
-		fprintf( mailer, szTmp.Value() );
+		dprintf(D_ALWAYS, "%s", szTmp.Value() );
+		fprintf( mailer, "%s", szTmp.Value() );
 	}
 
 	if( MailFlag ) {

@@ -2376,7 +2376,7 @@ int dc_main( int argc, char** argv )
 //
 bool dc_args_is_background(int argc, char** argv)
 {
-    bool Foreground = false; // default to background
+    bool ForegroundFlag = false; // default to background
 
 	// Scan our command line arguments for a "-f".  If we don't find a "-f",
 	// or a "-v", then we want to register as an NT Service.
@@ -2392,7 +2392,7 @@ bool dc_args_is_background(int argc, char** argv)
 			ptr++;
 			break;
 		case 'b':		// run in Background (default)
-			Foreground = false;
+			ForegroundFlag = false;
 			break;
 		case 'c':		// specify directory where Config file lives
 			ptr++;
@@ -2400,8 +2400,8 @@ bool dc_args_is_background(int argc, char** argv)
 		case 'd':		// Dynamic local directories
 			break;
 		case 't':		// log to Terminal (stderr), implies -f
-		case 'f':		// run in Foreground
-			Foreground = true;
+		case 'f':		// run in ForegroundFlag
+			ForegroundFlag = true;
 			break;
 		case 'h':		// -http
 			if ( ptr[0][2] && ptr[0][2] == 't' ) {
@@ -2436,7 +2436,7 @@ bool dc_args_is_background(int argc, char** argv)
 			}
 			break;
 		case 'v':		// display Version info and exit
-			Foreground = true;
+			ForegroundFlag = true;
 			break;
 		default:
 			done = true;
@@ -2447,5 +2447,5 @@ bool dc_args_is_background(int argc, char** argv)
 		}
 	}
 
-    return ! Foreground;
+    return ! ForegroundFlag;
 }

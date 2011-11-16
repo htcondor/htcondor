@@ -36,7 +36,7 @@ const int MAX_CONTROLLEES = 5;
 class daemon : public Service
 {
 public:
-	daemon(char *name, bool is_daemon_core = true, bool is_ha = false );
+	daemon(const char *name, bool is_daemon_core = true, bool is_ha = false );
 	~daemon();
 	daemon_t type;
 	char*	name_in_config_file;

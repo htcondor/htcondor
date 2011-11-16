@@ -129,7 +129,7 @@ int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
 
-char	*default_daemon_list[] = {
+const char	*default_daemon_list[] = {
 	"MASTER",
 	"STARTD",
 	"SCHEDD",

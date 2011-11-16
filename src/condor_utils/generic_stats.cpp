@@ -716,7 +716,7 @@ int stats_histogram_ParseSizes(
    return cSizes; 
 }
 
-void stats_histogram_PrintSizes(MyString & str, const int64_t * pSizes, int cSizes)
+void stats_histogram_PrintSizes(MyString &  /*str*/, const  int64_t *  /*pSizes*/, int  /*cSizes*/)
 {
    EXCEPT("stats_histogram::PrintSizes not implemented\n");
    // tj: WRITE THIS
@@ -801,7 +801,7 @@ int stats_histogram_ParseTimes(
    return cTimes; 
 }
 
-void stats_histogram_times_PrintTimes(MyString & str, const time_t * pTimes, int cTimes)
+void stats_histogram_times_PrintTimes(MyString &  /*str*/, const time_t *  /*pTimes*/, int /*cTimes*/)
 {
    EXCEPT("stats_histogram::PrintTimes not implemented\n");
    // tj: WRITE THIS

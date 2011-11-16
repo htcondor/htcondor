@@ -1176,7 +1176,7 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 						 "WriteUserLog Failed to convert event type # %d to XML.\n",
 						 event->eventNumber);
 			}
-			if (fprintf ( fp, adXML.Value()) < 0) {
+			if (fprintf ( fp, "%s", adXML.Value()) < 0) {
 				success = false;
 			} else {
 				success = true;
@@ -1187,7 +1187,7 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 		if (!success) {
 			fputc ('\n', fp);
 		}
-		if (fprintf ( fp, SynchDelimiter) < 0) {
+		if (fprintf ( fp, "%s", SynchDelimiter) < 0) {
 			success = false;
 		}
 	}
