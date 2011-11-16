@@ -72,6 +72,10 @@ reconfigured if a startd cron job was removed and was running at the
 time.
 \Ticket{2636}
 
+\item Configuration parameters of the form \Macro{MAX\_<SUBSYS>\_<LEVEL>\_LOG}
+now work properly on 32-bit linux. Previously, the corresponding log file
+would grow without bound.
+\Ticket{2638}
 
 \end{itemize}
 
