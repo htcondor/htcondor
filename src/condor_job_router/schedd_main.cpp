@@ -34,7 +34,7 @@ NewClassAdJobLogConsumer *log_consumer;
 
 //-------------------------------------------------------------
 
-void main_init(int argc, char *argv[])
+void main_init(int   /*argc*/, char ** /*argv*/)
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 

@@ -72,7 +72,7 @@ private:
 
 	// Constant char the denotes that a hook wasn't validated, as opposed
 	// to not being defined (NULL)
-	char* UNDEFINED;
+	const char* UNDEFINED;
 
 	char* m_default_hook_keyword;
 

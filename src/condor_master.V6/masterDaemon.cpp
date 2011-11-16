@@ -102,7 +102,7 @@ extern char*		MasterName;
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
 ///////////////////////////////////////////////////////////////////////////
-daemon::daemon(char *name, bool is_daemon_core, bool is_h )
+daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 {
 	char	buf[1000];
 
@@ -221,7 +221,6 @@ daemon::runs_on_this_host()
 	char	*tmp;
 	static bool this_host_addr_cached = false;
 	static std::vector<condor_sockaddr> this_host_addr;
-	int		i, j;
 
 
 	if ( flag_in_config_file != NULL ) {
@@ -251,8 +250,8 @@ daemon::runs_on_this_host()
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
 				return FALSE;
 			} 
-			for (i = 0; i < this_host_addr.size(); ++i) {
-				for (j = 0; j < addrs.size(); ++j) {
+			for (unsigned i = 0; i < this_host_addr.size(); ++i) {
+				for (unsigned j = 0; j < addrs.size(); ++j) {
 					if (this_host_addr[i].compare_address(addrs[j])) {
 						runs_here = TRUE;
 						break;
