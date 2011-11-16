@@ -898,6 +898,9 @@ either runs to completion or is preempted.  Therefore, you must
 configure the preemption policy if you want to transition back to the
 Owner state from Claimed Busy.
 
+If draining of the machine is initiated while in the Owner state, the
+slot transitions to Drained/Retiring (transition \Bold{36}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -981,6 +984,8 @@ Once \MacroNI{START\_BACKFILL} evaluates to TRUE, the machine will enter
 the Backfill/Idle state (transition \Bold{7}) to begin the process of
 running backfill jobs.
 
+If draining of the machine is initiated while in the Unclaimed state,
+the slot transitions to Drained/Retiring (transition \Bold{37}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Matched-State}Matched State}
@@ -1378,6 +1383,22 @@ Normally, the notification from the \Condor{negotiator} will reach the
 In this case, once the BOINC client exits, the machine will enter
 Matched/Idle (transition \Bold{32}).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Drained-State}Drained State}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{machine state!Drained}
+\index{drained state}
+
+The Drained state is used when the machine is being drained (e.g. by
+\Condor{drain} or \Condor{defrag}) and the slot has finished running
+jobs and is no longer willing to run new jobs.
+
+Slots initially enter the Drained/Retiring state.  Once all slots have
+been drained, the slots transition to the Idle activity (transition
+\Bold{33}).
+
+If draining is finalized or canceled, the slot transitions to
+Owner/Idle (transitions \Bold{34} and \Bold{35}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:State-Expression-Summary}
