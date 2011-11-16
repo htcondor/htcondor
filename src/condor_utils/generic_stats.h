@@ -939,7 +939,7 @@ public:
             }
          }
       }
-   void Publish(ClassAd & ad, const char * pattr, int flags) const {
+   void Publish(ClassAd & ad, const char * pattr, int  /*flags*/) const {
       MyString str;
       this->AppendToString(str);
       ad.Assign(pattr, str);

@@ -546,7 +546,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// just cheating and being lazy here by replicating the old
 		// behavior...
 	char* addr;
-	char* name;
+	const char* name;
 	bool connect_error = true;
 
 		// We need to know two things: what command to send, and (for

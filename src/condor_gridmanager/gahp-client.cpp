@@ -954,7 +954,7 @@ GahpServer::command_cache_proxy_from_file( GahpProxyInfo *new_proxy )
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
-		char *reason;
+		const char *reason;
 		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
@@ -985,7 +985,7 @@ GahpServer::uncacheProxy( GahpProxyInfo *gahp_proxy )
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
-		char *reason;
+		const char *reason;
 		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
@@ -1060,7 +1060,7 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
-		char *reason;
+		const char *reason;
 		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
@@ -1419,7 +1419,7 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 	Gahp_Args result;
 	read_argv(result);
 	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
-		char *reason;
+		const char *reason;
 		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {

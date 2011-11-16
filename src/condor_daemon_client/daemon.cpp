@@ -1090,11 +1090,11 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		// _name was explicitly specified as host:port, so this information can
 		// be used directly.  Further name resolution is not necessary.
 	if( nameHasPort ) {
-		condor_sockaddr addr;
+		condor_sockaddr hostaddr;
 		
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 
-		if(host && addr.from_ip_string(host) ) {
+		if(host && hostaddr.from_ip_string(host) ) {
 			buf = generate_sinful(host, _port);
 			New_addr( strnewp(buf.Value()) );
 			dprintf( D_HOSTNAME,
@@ -1105,7 +1105,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 			if(host) {
 				dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
 						 "finding IP address\n", host );
-				if (!get_fqdn_and_ip_from_hostname(host, fqdn, addr)) {
+				if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
 					// With a hostname, this is a fatal Daemon error.
 					buf.sprintf( "unknown host %s", host );
 					newError( CA_LOCATE_FAILED, buf.Value() );
@@ -1119,7 +1119,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 					return false;
 				}
 			} else return false;
-			buf = generate_sinful(addr.to_ip_string().Value(), _port);
+			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
 			New_addr( strnewp(buf.Value()) );
 			if (fqdn.Length() > 0)
@@ -1401,7 +1401,6 @@ Daemon::findCmDaemon( const char* cm_name )
 	char* host = NULL;
 	MyString buf;
 	condor_sockaddr saddr;
-	char* tmp;
 
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", cm_name ); 
 

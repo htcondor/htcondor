@@ -273,7 +273,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			MyString hostname = convert_ipaddr_to_hostname(addr);
-			if (hostname.Length() >= namelen) {
+			if (hostname.Length() >= (int) namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.Value());
@@ -349,7 +349,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			MyString hostname = convert_ipaddr_to_hostname(addr);
-			if (hostname.Length() >= namelen) {
+			if (hostname.Length() >= (int) namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.Value());
@@ -358,9 +358,6 @@ condor_gethostname(char *name, size_t namelen) {
 
 			// Last, we try gethostname()
 		if ( gethostname( tmp, MAXHOSTNAMELEN ) == 0 ) {
-
-			struct hostent *h_ent;
-			struct in_addr *inaddr;
 
 			dprintf( D_HOSTNAME, "NO_DNS: Using gethostname()='%s' "
 					 "to determine hostname\n", tmp );
@@ -376,7 +373,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			MyString hostname = convert_ipaddr_to_hostname(addrs.front());
-			if (hostname.Length() >= namelen) {
+			if (hostname.Length() >= (int) namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.Value());
