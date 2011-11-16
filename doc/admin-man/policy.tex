@@ -438,6 +438,10 @@ The cause of each transition is described below.
   This indicates that the machine is potentially available to run a
   Condor job.
 
+\item[N] The machine switches from the Owner to the Drained state
+  whenever draining of the machine is initiated (e.g. by \Condor{drain}
+  or \Condor{defrag}).
+
 \end{description}
 
 
@@ -463,6 +467,10 @@ The cause of each transition is described below.
   machine is configured to run backfill computations (see
   section~\ref{sec:Backfill}) and the \MacroNI{START\_BACKFILL}
   expression evaluates to TRUE.
+
+\item[P] The transition from Unclaimed to Drained happens
+  if draining of the machine is initiated (e.g. by \Condor{drain}
+  or \Condor{defrag}).
 
 \end{description}
 
@@ -559,6 +567,17 @@ The cause of each transition is described below.
 
 \end{description}
 
+\item Transitions out of the Drained state
+
+\begin{description}
+
+\item[O] The transition from Drained to Owner state happens when
+  draining is finalized or is canceled.  When a draining request is
+  made, the request either asks for the machine to stay in a Drained
+  state until canceled or it asks for draining to be automatically
+  finalized once all slots have finished draining.
+
+\end{description}
 
 \end{itemize}
 
