@@ -33,7 +33,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added support for detecting loadavg from the v3 Linux kernel.
+\item Added explicit support for Linux kernels with a major version number of 3,
+to detect and utilize the load average information.
 \Ticket{2579}
 
 \end{itemize}
@@ -61,20 +62,29 @@ if the job was submitted with the \Opt{-remote} or \Opt{-spool} option to
 \Condor{submit}.
 \Ticket{2569}
 
-\item Fixed a bug that caused \Opt{condor\_q -analyze} to fail if a job or
-machine ad contained a string attribute ending in a backslash.
-\Opt{condor\_q -analyze} would print the error 
-``Unable to process machine ClassAds'' or ``Unable to process job ClassAd''.
+\item Fixed a bug that caused \Condor{q} with the \Opt{-analyze} option
+to fail,
+if a job or a machine ClassAd contained a string attribute ending in 
+a backslash.
+This resulted in output of the error message
+\begin{verbatim}
+  Unable to process machine ClassAds
+\end{verbatim}
+or
+\begin{verbatim}
+  Unable to process job ClassAd
+\end{verbatim}
 \Ticket{2603}
 
-\item Fixed a bug that caused \Condor{startd} to crash after being
-reconfigured if a startd cron job was removed and was running at the
-time.
+\item Fixed a bug that caused the \Condor{startd} to crash when being
+reconfigured,
+if the reconfigure caused the \Condor{startd} to remove 
+a running Daemon ClassAd Hook job.
 \Ticket{2636}
 
-\item Configuration parameters of the form \Macro{MAX\_<SUBSYS>\_<LEVEL>\_LOG}
-now work properly on 32-bit linux. Previously, the corresponding log file
-would grow without bound.
+\item Configuration variables of the form \MacroNI{MAX\_<SUBSYS>\_<LEVEL>\_LOG}
+now work properly on 32-bit Linux platforms.
+Previously, the corresponding log file would grow without bound.
 \Ticket{2638}
 
 \end{itemize}
