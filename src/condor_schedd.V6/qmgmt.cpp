@@ -1226,7 +1226,12 @@ QmgmtSetEffectiveOwner(char const *o)
 	}
 
 	char const *real_owner = Q_SOCK->getRealOwner();
-	if( o && real_owner && strcmp(o,real_owner)==0 ) {
+	if( o && real_owner && is_same_user(o,real_owner,COMPARE_DEFAULT) ) {
+		if ( ! is_same_user(o,real_owner,COMPARE_EXACT)) {
+			dprintf(D_ALWAYS, "SetEffectiveOwner security warning: "
+					"assuming \"%s\" is the same as active owner \"%s\"\n",
+					o, real_owner);
+		}
 		// change effective owner --> real owner
 		o = NULL;
 	}
