@@ -77,6 +77,11 @@ now work properly on 32-bit linux. Previously, the corresponding log file
 would grow without bound.
 \Ticket{2638}
 
+\item Fixed a bug where Condor would fail to properly detect that it was running
+as Local System for non-english versions of Windows.  This would Condor to fail
+to run jobs on the slot accounts.
+\Ticket{2642}
+
 \end{itemize}
 
 \noindent Known Bugs:
