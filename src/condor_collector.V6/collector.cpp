@@ -106,6 +106,7 @@ OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
+bool CollectorDaemon::filterAbsentAds;
 
 //---------------------------------------------------------
 
@@ -938,7 +939,6 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	__query__ = query;
 	__numAds__ = 0;
 	__ClassAdResultList__ = results;
-	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
 	// An empty adType means don't check the MyType of the ads.
 	// This means either the command indicates we're only checking one
 	// type of ad, or the query's TargetType is "Any" (match all ad types).
@@ -950,9 +950,34 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		}
 	}
 
+	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
 	if ( __filter__ == NULL ) {
 		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
 		return;
+	}
+
+	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
+	// if ATTR_ABSENT is not alrady referenced in the query.
+	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
+		StringList job_refs;      // job attrs referenced by requirements
+		StringList machine_refs;  // machine attrs referenced by requirements
+		bool checks_absent = false;
+
+		query->GetReferences(ATTR_REQUIREMENTS,job_refs,machine_refs);
+		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
+		if (!checks_absent) {
+			MyString modified_filter;
+			modified_filter.sprintf("(%s) && (%s =!= True)",
+				ExprTreeToString(__filter__),ATTR_ABSENT);
+			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
+			__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
+			if ( __filter__ == NULL ) {
+				dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
+					modified_filter.Value());
+				return;
+			}
+			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.Value());
+		}
 	}
 
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
@@ -1340,6 +1365,13 @@ void CollectorDaemon::Config()
 		dprintf(D_ALWAYS, "Disabling CCB Server.\n");
 		delete m_ccb_server;
 		m_ccb_server = NULL;
+	}
+
+	if ( tmp=param("ABSENT_REQUIREMENTS") ) {
+		filterAbsentAds = true;
+		free(tmp);
+	} else {
+		filterAbsentAds = false;
 	}
 
 	return;

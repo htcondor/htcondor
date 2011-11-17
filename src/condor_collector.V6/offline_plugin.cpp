@@ -81,14 +81,47 @@ OfflineCollectorPlugin::configure ()
 		D_FULLDEBUG,
 		"In OfflineCollectorPlugin::configure ()\n" );
 
+	/**** Handle ABSENT_REQUIREMENTS PARAM ****/
+	char *tmp;
+	ExprTree *tmp_expr;
+
+	if (AbsentReq) delete AbsentReq;
+	AbsentReq = NULL;
+	tmp = param("ABSENT_REQUIREMENTS");
+	if( tmp ) {
+		if( ParseClassAdRvalExpr(tmp, AbsentReq) ) {
+			EXCEPT ("Error parsing ABSENT_REQUIREMENTS expression: %s",
+					tmp);
+		}
+#if !defined(WANT_OLD_CLASSADS)
+		if(AbsentReq){
+			tmp_expr = AddTargetRefs( AbsentReq, TargetMachineAttrs );
+			delete AbsentReq;
+		}
+		AbsentReq = tmp_expr;
+#endif
+		dprintf (D_ALWAYS,"ABSENT_REQUIREMENTS = %s\n", tmp);
+		free( tmp );
+		tmp = NULL;
+	} else {
+		dprintf (D_ALWAYS,"ABSENT_REQUIREMENTS = None\n");
+	}
+
+
+	/**** Handle COLLECTOR_PERSISTANT_AD_LOG PARAM ****/
+
 	if ( _persistent_store ) {
 		/* was param()'d so we must use free() */
 		free ( _persistent_store );
 		_persistent_store = NULL;
 	}
 
-	_persistent_store = param ( 
+	_persistent_store = param("COLLECTOR_PERSISTENT_AD_LOG");
+	// if not found, try depreciated name OFFLINE_LOG
+	if ( ! _persistent_store ) {
+		_persistent_store = param ( 
 		"OFFLINE_LOG" );
+	}
 
 	if ( _persistent_store ) {
 
@@ -191,20 +224,18 @@ OfflineCollectorPlugin::persistentStoreAd(const char *key, ClassAd &ad)
 
 	_ads->CommitTransaction ();
 
+	dprintf(D_ALWAYS,"Added ad to persistent store key=%s\n",key);
+
 	return true;
 }
 
 bool
 OfflineCollectorPlugin::persistentRemoveAd(const char* key)
 {
-	_ads->BeginTransaction ();
-
 	ClassAd *p;
 
 	/* can't remove ads that do not exist */
 	if ( !_ads->LookupClassAd ( key, p ) ) {
-
-		_ads->AbortTransaction ();
 		return false;
 
 	}
@@ -217,13 +248,11 @@ OfflineCollectorPlugin::persistentRemoveAd(const char* key)
 			"OfflineCollectorPlugin::update: "
 			"failed remove off-line ad from the persistent "
 			"store.\n" );
-
-		_ads->AbortTransaction ();
 		return false;
 
 	}
 
-	_ads->CommitTransaction ();
+	dprintf(D_ALWAYS,"Removed ad from persistent store key=%s\n",key);
 
 	return true;
 }
@@ -269,7 +298,9 @@ OfflineCollectorPlugin::update (
 		mergeClassAd( ad, key );
 		return;
 	}
-	else if ( UPDATE_STARTD_AD_WITH_ACK == command && !offline_explicit ) {
+
+	// Rewrite the ad if it is going offline
+	if ( UPDATE_STARTD_AD_WITH_ACK == command && !offline_explicit ) {
 
 		/* set the off-line state of the machine */
 		offline = TRUE;
@@ -377,6 +408,81 @@ OfflineCollectorPlugin::mergeClassAd (
 	}
 
 	_ads->CommitTransaction ();
+}
+
+
+bool 
+OfflineCollectorPlugin::expire ( 
+	ClassAd &ad )
+{
+	EvalResult result;
+
+	dprintf (
+		D_FULLDEBUG,
+		"In OfflineCollectorPlugin::expire()\n" );
+
+	/* bail out if the plug-in is not enabled, or if no ABSENT_REQUIREMENTS
+	   have been defined */
+	if ( !enabled() || !AbsentReq ) {
+		return false;	// return false tells collector to delete this ad
+	}
+
+	/* for now, if the ad is of any type other than a startd ad, bail out. currently
+	   absent ads only supported for ads of type Machine, because our offline storage
+	   assumes that. */
+	if ( strcmp(ad.GetMyTypeName(),STARTD_ADTYPE) ) {
+		return false;	// return false tells collector to delete this ad
+	}
+	/*	The ad may be a STARTD_PVT_ADTYPE, even though GetMyTypeName() claims 
+		it is a STARTD_ADTYPE. Sigh. This is because the startd sends private 
+		ads w/ the wrong type, because the query object queries private ads w/ the 
+		wrong type. If I were to fix the startd to label private ads with the proper
+		type, an incompatibility between startd/negotiator would have to be dealt with.
+		So here we try to distinguish if this ad is really a STARTD_PVT_ADTYPE by seeing
+		if a Capability attr is present and a State attr is not present. */
+	if ( ad.Lookup(ATTR_CAPABILITY) && !ad.Lookup(ATTR_STATE) ) {
+		// looks like a private ad, we don't want to store these
+		return false;	// return false tells collector to delete this ad
+	}
+
+
+	/* If the ad is alraedy has ABSENT=True and it is expiring, then
+	   let it be deleted as in this case it already sat around absent
+	   for the absent lifetime. */
+	bool already_absent = false;
+	ad.LookupBool(ATTR_ABSENT,already_absent);
+	if (already_absent) {
+		MyString s;
+		const char *key = makeOfflineKey(ad,s);
+		if (key) {
+			persistentRemoveAd(key);
+		}
+		return false; // return false tells collector to delete this ad
+	}
+
+	/* Test is ad against the absent requirements expression, and
+	   mark the ad absent if true */
+	if (EvalExprTree(AbsentReq,&ad,NULL,&result) &&
+		result.type == LX_INTEGER && result.i == TRUE) 
+	{
+		int lifetime, timestamp;
+
+		lifetime = param_integer ( 
+			"ABSENT_EXPIRE_ADS_AFTER",
+			60 * 60 * 24 * 30 );	// default expire absent ads in a month		
+		if ( lifetime == 0 ) lifetime = INT_MAX; // 0 means forever
+
+		ad.Assign ( ATTR_ABSENT, true );
+		ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
+		timestamp = time(NULL);
+		ad.Assign(ATTR_LAST_HEARD_FROM, timestamp);
+		ad.Assign ( ATTR_MY_CURRENT_TIME, timestamp );
+		persistentStoreAd(NULL,ad);
+		// if we marked this ad as absent, we want to keep it in the collector
+		return true;	// return true tells the collector to KEEP this ad
+	}
+
+	return false;	// return false tells collector to delete this ad
 }
 
 void

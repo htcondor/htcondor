@@ -55,6 +55,14 @@ public:
 	    */
 	void invalidate ( int command, const ClassAd &ad );
 
+	/** This ClassAd is about to removed because its lease has
+		expired (aka it is stale).
+		If it returns false, that means the Collector should go ahead
+		and remove the ad as planned; if returns true,
+		then the collector should NOT delete the ad.
+		*/
+	bool expire ( ClassAd &ad );
+
     /** Start iterations on all class-ads in the repository.
         */
     void rewind ();
@@ -77,6 +85,9 @@ private:
 
     /** Storage destination for persistent ads */
     char                *_persistent_store;
+
+	/** Storage for parsed ABSENT_REQUIREMENTS contraint */
+	ExprTree *AbsentReq;
 
 	/** overwrite attributes of ad in collection from given ad */
 	void mergeClassAd ( ClassAd &ad, char const *key );

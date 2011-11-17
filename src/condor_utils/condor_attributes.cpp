@@ -87,6 +87,7 @@ AttrGetName( CONDOR_ATTR which )
 // other than ATTR_<blah> to add/lookup expressions/variables *STOP*, add the
 // new variable to this file and use the ATTR_<blah> symbolic constant.  --RR
 
+const char * const ATTR_ABSENT                   = "Absent";
 const char * const ATTR_ACCOUNTING_GROUP         = "AccountingGroup";
 const char * const ATTR_ACTION_CONSTRAINT		 = "ActionConstraint";
 const char * const ATTR_ACTION_IDS				 = "ActionIds";

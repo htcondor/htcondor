@@ -26,6 +26,7 @@
 #ifndef __CONDOR_ATTRIBUTES_H__
 #define __CONDOR_ATTRIBUTES_H__
 
+extern const char * const  ATTR_ABSENT;
 extern const char * const  ATTR_ACCOUNTING_GROUP;
 extern const char * const  ATTR_ACTION_CONSTRAINT;
 extern const char * const  ATTR_ACTION_IDS;
