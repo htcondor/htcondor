@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+// This #define doesn't actually do anything. This value needs to be
+// defined before any system header files are included in the source file
+// to have any effect.
 #define _FILE_OFFSET_BITS 64
 
 #include <string>

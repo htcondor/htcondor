@@ -36,6 +36,11 @@
 **
 ************************************************************************/
 
+// This needs to precede all of our includes so that the off_t used in
+// dprintf_internal.h is 64 bits on 32-bit linuxes. Otherwise, we can't
+// deal with logs larger than 2GB.
+#define _FILE_OFFSET_BITS 64
+
 #include "condor_common.h"
 #include "condor_sys_types.h"
 #include "condor_debug.h"
