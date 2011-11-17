@@ -121,6 +121,14 @@ const char* get_real_username(void);
 const char* get_condor_username(void);
 void display_priv_log(void);
 
+typedef enum {
+   COMPARE_DEFAULT=0,
+   IGNORE_DOMAINS,
+   ASSUME_LOCALHOST,
+   COMPARE_EXACT,
+   } CompareUsersOpt;
+bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
+
 #if defined(__cplusplus)
 }
 #endif
