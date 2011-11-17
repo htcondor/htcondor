@@ -26,6 +26,7 @@
 #include "condor_environ.h"
 #include "condor_distribution.h"
 #include "my_username.h"
+#include "my_hostname.h"
 #include "daemon.h"
 #include "store_cred.h"
 
