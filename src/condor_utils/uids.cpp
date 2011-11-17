@@ -1782,3 +1782,53 @@ priv_identifier( priv_state s )
 	return (const char*) id;
 }
 
+// compare 2 usernames that may or may not be fully qualified
+// to see of they both refer to the same user.
+//
+bool is_same_user(
+   const char user1[],  // "user@domain" or "user"
+   const char user2[],  // "user@domain" or "user"
+   CompareUsersOpt opt)
+{
+   // for now, treat COMPARE_DEFAULT as meaning IGNORE_DOMAINS
+   // TODO: qualify domains and then compare them.
+   if (COMPARE_DEFAULT == opt) {
+      opt = IGNORE_DOMAINS;
+   }
+
+   const char * pu1 = user1;
+   const char * pu2 = user2;
+
+   // first compare the username part
+   while (pu1[0] && pu1[0] != '@') {
+
+      if (pu1[0] != pu2[0])
+         return false;
+
+      ++pu1;
+      ++pu2;
+   }
+
+   // if we hit the end of the user portion of username1
+   // and not have NOT hit the end of user portion of username2
+   // then they don't match.
+   if (pu2[0] && pu2[0] != '@')
+      return false;
+
+   if (IGNORE_DOMAINS != opt) {
+
+      if (pu1[0] == '@') ++pu1;
+      if (pu2[0] == '@') ++pu2;
+
+      if (pu1[0] == '.' || (0 == pu1[0] && ASSUME_LOCALHOST == opt))
+         pu1 = my_hostname();
+      if (pu2[0] == '.' || (0 == pu2[0] && ASSUME_LOCALHOST == opt))
+         pu2 = my_hostname();
+
+      if (strcasecmp(pu1, pu2))
+         return false;
+   }
+
+   return true;
+}
+
