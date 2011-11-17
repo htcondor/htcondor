@@ -335,7 +335,7 @@ CondorQuery::CondorQuery(AdTypes ) { not_impl();}
 
 CondorQuery::~CondorQuery() {} 
 
-char*
+const char*
 my_ip_string() {not_impl(); return 0;}
 
 void ConvertDefaultIPToSocketIP(char const *,char const *,char **,Stream& ) {

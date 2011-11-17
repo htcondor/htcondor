@@ -175,7 +175,7 @@ default_daemon_name( void )
 	if( ! name ) {
 		return NULL;
 	}
-	char* host = my_full_hostname();
+	const char* host = my_full_hostname();
 	if( ! host ) {
 		free( name );
 		return NULL;
