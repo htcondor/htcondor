@@ -92,6 +92,13 @@ was running as Local System for non-English versions of Windows.
 The bug caused Condor to fail to run jobs on the slot accounts.
 \Ticket{2642}
 
+\item Fixed a bug in the Windows version of Condor where it would try and use an
+account from the submit machine rather than from the local machine.  When that
+account failed to exist on the local machine, it would fall back to using the Everyone
+account rather than trying to use a local machine account with the same username like
+the Linux version does.
+\Ticket{2643}
+
 \end{itemize}
 
 \noindent Known Bugs:

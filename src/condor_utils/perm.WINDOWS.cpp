@@ -24,6 +24,9 @@
 #include "Lm.h"
 #include "dynuser.h"
 
+// init from param_boolean("SEC_TRY_REMOTE_USER_IN_LOCAL_DOMAIN", true)
+bool perm::try_remote_user_in_local_domain = true;
+
 //
 // get_permissions:  1 = yes, 0 = no, -1 = unknown/error
 //
@@ -123,7 +126,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 	// that nested global group permissions are not supported.
 	// C. Stolley - June 2001
 
-	ACL_SIZE_INFORMATION* acl_info = new ACL_SIZE_INFORMATION();
+	ACL_SIZE_INFORMATION acl_info;
 		// Structure contains the following members:
 		//  DWORD   AceCount; 
 		//  DWORD   AclBytesInUse; 
@@ -133,7 +136,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 
 	// first get the number of ACEs in the ACL
 		if (! GetAclInformation( pacl,		// acl to get info from
-								acl_info,	// buffer to receive info
+								&acl_info,	// buffer to receive info
 								sizeof(acl_info),  // size in bytes of buffer
 								AclSizeInformation // class of info to retrieve
 								) ) {
@@ -144,9 +147,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 		ACCESS_MASK allow = 0x0;
 		ACCESS_MASK deny = 0x0;
 
-		unsigned int aceCount = acl_info->AceCount;
-
-		delete acl_info; // all we wanted was the ACE count
+		unsigned int aceCount = acl_info.AceCount;
 		
 		int result;
 		
@@ -474,9 +475,9 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 } 
 
 perm::perm() {
-	psid =(PSID) &sidBuffer;
-	sidBufferSize = perm_max_sid_length;
-	domainBufferSize = 80;
+	psid =(PSID)sidBuffer;
+	sidBufferSize = COUNTOF(sidBuffer);
+	domainBufferSize = COUNTOF(domainBuffer);
 	must_freesid = false;
 	/*	These shouldn't be needed...
 	perm_read = FILE_GENERIC_READ;
@@ -543,10 +544,34 @@ bool perm::init( const char *accountname, const char *domain )
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
 	{
-		
+		// if we can't find the account using the given domain
+		// try without a domain
+		if (Domain_name && try_remote_user_in_local_domain) 
+		{
+			dprintf(D_ALWAYS,
+				   "perm::init: Lookup Account Name %s failed (err=%lu), trying %s\n",
+				   qualified_account, GetLastError(), accountname);
+
+			delete[] Domain_name;
+			Domain_name = NULL;
+			sidBufferSize = COUNTOF(sidBuffer);
+			domainBufferSize = COUNTOF(domainBuffer);
+			domainBuffer[0] = 0;
+
+			if (LookupAccountName( NULL, // System
+			    accountname,
+			    psid, &sidBufferSize,
+			    domainBuffer, &domainBufferSize,
+			    &snu ))
+			{
+				dprintf(D_ALWAYS,"perm::init: Using Account Name %s (in domain %s)\n",
+				       accountname, domainBuffer);
+				return true;
+			}
+		}
 		dprintf(D_ALWAYS,
 			"perm::init: Lookup Account Name %s failed (err=%lu), using Everyone\n",
-			accountname, GetLastError());
+			qualified_account, GetLastError());
 		
 		// SID_IDENTIFIER_AUTHORITY  NTAuth = SECURITY_NT_AUTHORITY;
 		SID_IDENTIFIER_AUTHORITY  NTAuth = SECURITY_WORLD_SID_AUTHORITY;
@@ -879,8 +904,8 @@ bool perm::set_owner( const char *location ) {
 	SID_NAME_USE usage;
 	char qualified_name[1024];
 
-	domainBufferSize = 80;
-	sidBufferSize = perm_max_sid_length;
+	domainBufferSize = COUNTOF(domainBuffer);
+	sidBufferSize = COUNTOF(sidBuffer);
 
 	owner_SID = (PSID)sidBuffer;
 
