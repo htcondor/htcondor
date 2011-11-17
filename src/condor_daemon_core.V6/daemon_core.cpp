@@ -2400,11 +2400,28 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 	return -1;
 }
 
-int DaemonCore::Cancel_Reaper( int )
+int DaemonCore::Cancel_Reaper( int rid )
 {
-	// stub
+	if( reapTable[rid].num == 0 ) {
+		dprintf(D_ALWAYS,"Cancel_Reaper(%d) called on unregistered reaper.\n",rid);
+		return FALSE;
+	}
 
-	// be certain to get through the pid table and edit the rids
+	reapTable[rid].num = 0;
+	reapTable[rid].handler = NULL;
+	reapTable[rid].handlercpp = NULL;
+	reapTable[rid].service = NULL;
+	reapTable[rid].data_ptr = NULL;
+
+	PidEntry *pid_entry;
+	pidTable->startIterations();
+	while( pidTable->iterate(pid_entry) ) {
+		if( pid_entry && pid_entry->reaper_id == rid ) {
+			pid_entry->reaper_id = 0;
+			dprintf(D_FULLDEBUG,"Cancel_Reaper(%d) found PID %d using the canceled reaper\n",
+					rid, (int)pid_entry->pid);
+		}
+	}
 
 	return TRUE;
 }
