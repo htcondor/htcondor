@@ -30,8 +30,6 @@ bool SetPrivilege(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivilege);
 #define MAX_ACCOUNT_LENGTH 256	// max string length
 #define MAX_GROUP_LENGTH 256	// max string length
 
-const int perm_max_sid_length = 100;
-
 class perm {
 public:
 	perm( );
@@ -64,6 +62,8 @@ public:
 	bool set_acls( const char *location );
 	bool set_owner( const char *location );
 
+    static bool try_remote_user_in_local_domain;// param_boolean("SEC_TRY_REMOTE_USER_IN_LOCAL_DOMAIN", true)
+
 protected:
 	int get_permissions( const char *location, ACCESS_MASK &rights );
 	bool volume_has_acls( const char *path );
@@ -83,7 +83,7 @@ private:
 	// char *	_account_name;
 	// char *	_domain_name;
 
-	char				sidBuffer[perm_max_sid_length];
+	char				sidBuffer[SECURITY_MAX_SID_SIZE];
 	PSID				psid;
 	unsigned long		sidBufferSize;
 	char				domainBuffer[80];
