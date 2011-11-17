@@ -422,7 +422,7 @@ reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
-	ExprTree *tmp_expr;
+	ExprTree *tmp_expr = 0;
 
 	// If we got reconfig'ed in the middle of the negotiation cycle,
 	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
