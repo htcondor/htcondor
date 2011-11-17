@@ -193,7 +193,7 @@ do_REMOTE_syscall()
             and surprised if the startd/starter actually did
             what we asked when we deactivated the claim */
        if ( thisRemoteResource->wasClaimDeactivated() ) {
-           return 0;
+           return -1;
        }
 
 		if( Shadow->supportsReconnect() ) {
@@ -1397,7 +1397,7 @@ case CONDOR_getdir:
 
 		// Get directory's contents
 		while((next = directory.Next())) {
-			msg.sprintf_cat(next);
+			msg.sprintf_cat("%s", next);
 			msg.sprintf_cat("\n");
 		}
 		terrno = (condor_errno_t)errno;

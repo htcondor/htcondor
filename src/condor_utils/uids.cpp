@@ -31,10 +31,14 @@
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
-static const char* RealUserName = NULL;
+static char* RealUserName = NULL;
 static int SwitchIds = TRUE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
+#ifdef WIN32
+// set this to false to base the result of can_switch_ids() on token privs rather than account name.
+static bool only_SYSTEM_can_switch_ids = true;
+#endif
 /*
    On Unix, the current uid is process wide.  On Win32, it is specific to each
    thread.  So on Win32 only, priv_state is TLS.
@@ -125,10 +129,127 @@ get_priv()
 	return CurrentPrivState;
 }
 
+// 
+#ifdef WIN32
+
+// SIDs of some well known users and groups
+//
+#pragma pack(push, 1)
+static const struct { 
+   SID LocalSystem;
+   SID LocalService;
+   SID AuthUser;
+   SID Admins;    DWORD AdminsRID;
+   SID Users;     DWORD UsersRID;
+   } sids = {
+      {SID_REVISION, 1, SECURITY_NT_AUTHORITY, {SECURITY_LOCAL_SYSTEM_RID}},
+      {SID_REVISION, 1, SECURITY_NT_AUTHORITY, {SECURITY_LOCAL_SERVICE_RID}},
+      {SID_REVISION, 1, SECURITY_NT_AUTHORITY, {SECURITY_AUTHENTICATED_USER_RID}},
+      {SID_REVISION, 2, SECURITY_NT_AUTHORITY, {SECURITY_BUILTIN_DOMAIN_RID}}, DOMAIN_ALIAS_RID_ADMINS,
+      {SID_REVISION, 2, SECURITY_NT_AUTHORITY, {SECURITY_BUILTIN_DOMAIN_RID}}, DOMAIN_ALIAS_RID_USERS,
+   };
+#pragma pack(pop, 1)
+
+// return a copy of the SID of the owner of the current process
+//
+const PSID my_user_Sid() 
+{
+    PSID psid = NULL;
+
+	HANDLE hToken = NULL;
+    if ( ! OpenProcessToken(GetCurrentProcess(),TOKEN_READ,&hToken)) {
+       dprintf(D_ALWAYS, "my_user_Sid: OpenProcessToken failed error = %d", GetLastError());
+       return NULL;
+    }
+
+	BYTE buf[256];
+	DWORD cbBuf = sizeof(buf);
+	if ( ! GetTokenInformation(hToken, TokenUser, &buf, cbBuf, &cbBuf)) {
+       dprintf(D_ALWAYS, "my_user_Sid: GetTokenInformation failed error = %d", GetLastError());
+	} else {
+	   TOKEN_USER * ptu = (TOKEN_USER*)buf;
+	   DWORD cbSid = GetLengthSid(ptu->User.Sid);
+	   psid = malloc(cbSid);
+	   if (psid) {
+	      CopySid(cbSid, psid, ptu->User.Sid);
+	   }
+	}
+	CloseHandle(hToken);
+
+	return psid;
+} 
+#endif WIN32
 
 int
 can_switch_ids( void )
 {
+#ifdef WIN32
+   static bool HasChecked = false;
+   // can't switch users if we're not root/SYSTEM
+   if ( ! HasChecked) {
+
+      // begin by assuming we can't switch ID's
+      SwitchIds = FALSE;
+
+      // if we are running as LocalSystem, then we really Shouldn't 
+      // run jobs without switching users first, and we can be certain
+      // that this account has all of the needed privs.
+      PSID psid = my_user_Sid();
+      if (psid) {
+         if (EqualSid(psid, const_cast<SID*>(&sids.LocalSystem)))
+            SwitchIds = TRUE;
+         free(psid);
+      }
+
+      // if SwitchIds is FALSE, then we know we aren't the system account, 
+      // So if we allow non-system accounts to switch ids
+      // set SwitchIds to true if we have the necessary privileges
+      //
+      if ( ! SwitchIds && ! only_SYSTEM_can_switch_ids) {
+
+         static const LPCTSTR needed[] = {
+            SE_INCREASE_QUOTA_NAME, //needed by CreateProcessAsUser
+            //SE_TCB_NAME,            //needed on Win2k to CreateProcessAsUser
+            SE_PROF_SINGLE_PROCESS_NAME, //needed?? to get CPU% and Memory/Disk useage for our children
+            SE_CREATE_GLOBAL_NAME,  //needed to create named shared memory
+            SE_CHANGE_NOTIFY_NAME,  //needed by CreateProcessAsUser
+            SE_SECURITY_NAME,       //needed to change file ACL's
+            SE_TAKE_OWNERSHIP_NAME, //needed to take ownership of files
+            //SE_CREATE_TOKEN_NAME,   //needed?
+            //SE_ASSIGNPRIMARYTOKEN_NAME //needed?
+            //SE_IMPERSONATE_NAME,    //needed?
+            };
+
+         struct {
+            PRIVILEGE_SET       set;
+            LUID_AND_ATTRIBUTES a[COUNTOF(needed)];
+            } privs = { 0, PRIVILEGE_SET_ALL_NECESSARY };
+
+         LUID_AND_ATTRIBUTES * pla = &privs.set.Privilege[0];
+         for (int ii = 0; ii < COUNTOF(needed); ++ii) {
+            LookupPrivilegeValue(NULL, needed[0], &pla->Luid);
+            pla->Attributes = SE_PRIVILEGE_ENABLED;
+            ++pla;
+         }
+         privs.set.PrivilegeCount = (pla - &privs.set.Privilege[0]);
+
+         HANDLE hToken = NULL;
+         if ( ! OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hToken)) {
+            dprintf(D_ALWAYS, "can_switch_ids: OpenProcessToken failed error = %d", GetLastError());
+         } else {
+            BOOL fEnabled = false;
+            if ( ! PrivilegeCheck(hToken, &privs.set, &fEnabled)) {
+               dprintf(D_ALWAYS, "can_switch_ids: PrivilegeCheck failed error = %d", GetLastError());
+            } else {
+               SwitchIds = fEnabled;
+            }
+            CloseHandle(hToken);
+         }
+      }
+
+      HasChecked = true;
+   }
+#else // *NIX
 	static bool HasCheckedIfRoot = false;
 
 	// can't switch users if we're not root/SYSTEM
@@ -138,6 +259,7 @@ can_switch_ids( void )
 		}
 		HasCheckedIfRoot = true;
 	}
+#endif
 
 	return SwitchIds;
 }
@@ -647,6 +769,16 @@ int
 is_root( void ) 
 {
 	int root = 0;
+#if 1
+    PSID psid = my_user_Sid();
+	if( ! psid ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR in is_root(): my_user_Sid() returned NULL\n" );
+		return 0;
+	}
+    root = EqualSid(psid, const_cast<SID*>(&sids.LocalSystem));
+    free (psid);
+#else
 	char* user = my_username( 0 );
 	if( ! user ) {
 		dprintf( D_ALWAYS, 
@@ -657,6 +789,7 @@ is_root( void )
 		root = 1;
 	}
 	free( user );
+#endif
 	return root;
 }
 
@@ -1559,7 +1692,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName)) ) {
+		if ( !(pcache()->get_user_name( my_uid, RealUserName)) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );

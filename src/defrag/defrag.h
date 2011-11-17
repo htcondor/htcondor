@@ -23,6 +23,7 @@
 #include <set>
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "defrag_stats.h"
 
 // Defrag is a daemon that schedules the draining of machines
 // according to a configurable policy.  The intention is to
@@ -62,6 +63,13 @@ class Defrag: public Service {
 
 	std::string m_state_file;
 
+	std::string m_defrag_name;
+	std::string m_daemon_name;
+	int m_public_ad_update_interval;
+	int m_public_ad_update_timer;
+	ClassAd m_public_ad;
+	DefragStats m_stats;
+
 	void validateExpr(char const *constraint,char const *constraint_source);
 	bool queryMachines(char const *constraint,char const *constraint_source,ClassAdList &startdAds);
 
@@ -73,7 +81,11 @@ class Defrag: public Service {
 	void loadState();
 	void saveState();
 	void slotNameToDaemonName(std::string const &name,std::string &machine);
-};
 
+	void publish(ClassAd *ad);
+	void updateCollector();
+	void invalidatePublicAd();
+	void queryDrainingCost();
+};
 
 #endif

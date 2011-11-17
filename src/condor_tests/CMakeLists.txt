@@ -60,6 +60,11 @@ if (BUILD_TESTS)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	
+	# Not all of our gccs support -Wno-div-by-zero.
+	#if (UNIX)
+	#	set_source_files_properties(x_dumpcore.cpp PROPERTIES COMPILE_FLAGS -Wno-div-by-zero)
+	#endif(UNIX)
+
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
 	endif(NOT WINDOWS)

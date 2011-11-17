@@ -433,7 +433,7 @@ email_close(FILE *mailer)
 	customSig = NULL;
 	if ((customSig = param("EMAIL_SIGNATURE")) != NULL) {
 		fprintf( mailer, "\n\n");
-		fprintf( mailer, customSig);
+		fprintf( mailer, "%s", customSig);
 		fprintf( mailer, "\n");
 		free(customSig);
 	} else {

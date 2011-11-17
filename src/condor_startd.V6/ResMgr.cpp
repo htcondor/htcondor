@@ -39,6 +39,7 @@ ResMgr::ResMgr()
 	draining_is_graceful = false;
 	resume_on_completion_of_draining = false;
 	draining_id = 0;
+	last_drain_start_time = 0;
 	expected_graceful_draining_completion = 0;
 	expected_quick_draining_completion = 0;
 	expected_graceful_draining_badput = 0;
@@ -2508,6 +2509,7 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 	}
 
 	draining = true;
+	last_drain_start_time = time(NULL);
 	draining_id += 1;
 	sprintf(new_request_id,"%d",draining_id);
 	this->resume_on_completion_of_draining = resume_on_completion;
@@ -2682,6 +2684,9 @@ ResMgr::publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask )
 	}
 	if( total_draining_unclaimed ) {
 		cap->Assign( ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME, total_draining_unclaimed );
+	}
+	if( last_drain_start_time != 0 ) {
+		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
 	}
 }
 

@@ -29,9 +29,10 @@
 #include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "condor_query.h"
-#include "defrag.h"
 #include "util_lib_proto.h"
 #include "dc_startd.h"
+#include "get_daemon_name.h"
+#include "defrag.h"
 
 char const * const ATTR_LAST_POLL = "LastPoll";
 
@@ -45,7 +46,9 @@ Defrag::Defrag():
 	m_max_draining(-1),
 	m_max_whole_machines(-1),
 	m_draining_schedule(DRAIN_GRACEFUL),
-	m_last_poll(0)
+	m_last_poll(0),
+	m_public_ad_update_interval(-1),
+	m_public_ad_update_timer(-1)
 {
 }
 
@@ -56,6 +59,7 @@ Defrag::~Defrag()
 
 void Defrag::init()
 {
+	m_stats.Init();
 	config();
 }
 
@@ -80,9 +84,8 @@ void Defrag::config()
 	}
 	else if( m_polling_timer >= 0 ) {
 		if( old_polling_interval != m_polling_interval ) {
-			daemonCore->Reset_Timer(
+			daemonCore->Reset_Timer_Period(
 				m_polling_timer,
-				m_polling_interval,
 				m_polling_interval);
 		}
 	}
@@ -159,6 +162,34 @@ void Defrag::config()
 				   rank.Value());
 		}
 	}
+
+	int update_interval = param_integer("DEFRAG_UPDATE_INTERVAL", 600);
+	if(m_public_ad_update_interval != update_interval) {
+		m_public_ad_update_interval = update_interval;
+
+		dprintf(D_FULLDEBUG, "Setting update interval to %d\n",
+			m_public_ad_update_interval);
+
+		if(m_public_ad_update_timer >= 0) {
+			daemonCore->Reset_Timer_Period(
+				m_public_ad_update_timer,
+				m_public_ad_update_interval);
+		}
+		else {
+			m_public_ad_update_timer = daemonCore->Register_Timer(
+				0,
+				m_public_ad_update_interval,
+				(TimerHandlercpp)&Defrag::updateCollector,
+				"Defrag::updateCollector",
+				this);
+		}
+	}
+
+	param(m_defrag_name,"DEFRAG_NAME");
+
+	int stats_quantum = m_polling_interval;
+	int stats_window = 10*stats_quantum;
+	m_stats.SetWindowSize(stats_window,stats_quantum);
 }
 
 void Defrag::stop()
@@ -217,6 +248,84 @@ bool Defrag::queryMachines(char const *constraint,char const *constraint_source,
 			startdAds.MyLength(), constraint_source, constraint);
 
 	return true;
+}
+
+void
+Defrag::queryDrainingCost()
+{
+	ClassAdList startdAds;
+	CondorQuery startdQuery(STARTD_AD);
+	char const *desired_attrs[6];
+	desired_attrs[0] = ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
+	desired_attrs[1] = ATTR_TOTAL_MACHINE_DRAINING_BADPUT;
+	desired_attrs[2] = ATTR_DAEMON_START_TIME;
+	desired_attrs[3] = ATTR_TOTAL_CPUS;
+	desired_attrs[4] = ATTR_LAST_HEARD_FROM;
+	desired_attrs[5] = NULL;
+
+	startdQuery.setDesiredAttrs(desired_attrs);
+	std::string query;
+	// only want one ad per machine
+	sprintf(query,"%s==1 && (%s =!= undefined || %s =!= undefined)",
+			ATTR_SLOT_ID,
+			ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME,
+			ATTR_TOTAL_MACHINE_DRAINING_BADPUT);
+	startdQuery.addANDConstraint(query.c_str());
+
+	CollectorList* collects = daemonCore->getCollectorList();
+	ASSERT( collects );
+
+	QueryResult result;
+	result = collects->query(startdQuery,startdAds);
+	if( result != Q_OK ) {
+		dprintf(D_ALWAYS,
+				"Couldn't fetch startd ads: %s\n",
+				getStrQueryResult(result));
+		return;
+	}
+
+	double avg_badput = 0.0;
+	double avg_unclaimed = 0.0;
+	int total_cpus = 0;
+
+	startdAds.Open();
+	ClassAd *startd_ad;
+	while( (startd_ad=startdAds.Next()) ) {
+		int unclaimed = 0;
+		int badput = 0;
+		int start_time = 0;
+		int cpus = 0;
+		int last_heard_from = 0;
+		startd_ad->LookupInteger(ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME,unclaimed);
+		startd_ad->LookupInteger(ATTR_TOTAL_MACHINE_DRAINING_BADPUT,badput);
+		startd_ad->LookupInteger(ATTR_DAEMON_START_TIME,start_time);
+		startd_ad->LookupInteger(ATTR_LAST_HEARD_FROM,last_heard_from);
+		startd_ad->LookupInteger(ATTR_TOTAL_CPUS,cpus);
+
+		int age = last_heard_from - start_time;
+		if( last_heard_from == 0 || start_time == 0 || age <= 0 ) {
+			continue;
+		}
+
+		avg_badput += ((double)badput)/age;
+		avg_unclaimed += ((double)unclaimed)/age;
+		total_cpus += cpus;
+	}
+	startdAds.Close();
+
+	if( total_cpus > 0 ) {
+		avg_badput = avg_badput/total_cpus;
+		avg_unclaimed = avg_unclaimed/total_cpus;
+	}
+
+	dprintf(D_ALWAYS,"Average pool draining badput = %.2f%%\n",
+			avg_badput*100);
+
+	dprintf(D_ALWAYS,"Average pool draining unclaimed = %.2f%%\n",
+			avg_unclaimed*100);
+
+	m_stats.AvgDrainingBadput = avg_badput;
+	m_stats.AvgDrainingUnclaimed = avg_unclaimed;
 }
 
 int Defrag::countMachines(char const *constraint,char const *constraint_source,	MachineSet *machines)
@@ -354,6 +463,41 @@ void Defrag::poll()
 	m_last_poll = now;
 	saveState();
 
+	m_stats.Tick();
+
+	int num_to_drain = m_draining_per_poll;
+
+	time_t last_hour    = (prev / 3600)*3600;
+	time_t current_hour = (now  / 3600)*3600;
+	time_t last_day     = (prev / (3600*24))*3600*24;
+	time_t current_day  = (now  / (3600*24))*3600*24;
+
+	if( current_hour != last_hour ) {
+		num_to_drain += prorate(m_draining_per_poll_hour,now-current_hour,3600,m_polling_interval);
+	}
+	if( current_day != last_day ) {
+		num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval);
+	}
+
+	char const *draining_constraint = "Draining && Offline=!=True";
+	int num_draining = countMachines(draining_constraint,"<InternalDrainingConstraint>");
+	m_stats.MachinesDraining = num_draining;
+
+	MachineSet whole_machines;
+	int num_whole_machines = countMachines(m_whole_machine_expr.c_str(),"DEFRAG_WHOLE_MACHINE_EXPR",&whole_machines);
+	m_stats.WholeMachines = num_whole_machines;
+
+	dprintf(D_ALWAYS,"There are currently %d draining and %d whole machines.\n",
+			num_draining,num_whole_machines);
+
+	queryDrainingCost();
+
+	if( num_to_drain <= 0 ) {
+		dprintf(D_ALWAYS,"Doing nothing, because number to drain in next %ds is calculated to be 0.\n",
+				m_polling_interval);
+		return;
+	}
+
 	if( (int)ceil(m_draining_per_hour) <= 0 ) {
 		dprintf(D_ALWAYS,"Doing nothing, because DEFRAG_DRAINING_MACHINES_PER_HOUR=%f\n",
 				m_draining_per_hour);
@@ -369,33 +513,6 @@ void Defrag::poll()
 		dprintf(D_ALWAYS,"Doing nothing, because DEFRAG_MAX_WHOLE_MACHINES=0\n");
 		return;
 	}
-
-	int num_to_drain = m_draining_per_poll;
-
-	time_t last_hour    = (prev / 3600)*3600;
-	time_t current_hour = (now  / 3600)*3600;
-	time_t last_day     = (prev / (3600*24))*3600*24;
-	time_t current_day  = (now  / (3600*24))*3600*24;
-
-	if( current_hour != last_hour ) {
-		num_to_drain += prorate(m_draining_per_poll_hour,now-current_hour,3600,m_polling_interval);
-	}
-	if( current_day != last_day ) {
-		num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval);
-	}
-	if( num_to_drain <= 0 ) {
-		dprintf(D_ALWAYS,"Doing nothing, because draining rate has already been achieved.\n");
-		return;
-	}
-
-	char const *draining_constraint = "Draining && Offline=!=True";
-	int num_draining = countMachines(draining_constraint,"<internal draining constraint>");
-
-	MachineSet whole_machines;
-	int num_whole_machines = countMachines(m_whole_machine_expr.c_str(),"DEFRAG_WHOLE_MACHINE_EXPR",&whole_machines);
-
-	dprintf(D_ALWAYS,"There are currently %d draining and %d whole machines.\n",
-			num_draining,num_whole_machines);
 
 	if( m_max_draining >= 0 ) {
 		if( num_draining >= m_max_draining ) {
@@ -533,9 +650,49 @@ Defrag::drain(ClassAd *startd_ad)
 	bool resume_on_completion = true;
 	bool rval = startd.drainJobs( m_draining_schedule, resume_on_completion, draining_check_expr.c_str(), request_id );
 	if( !rval ) {
-		dprintf(D_ALWAYS,"Failed to send request to drain %s\n",startd.name());
+		dprintf(D_ALWAYS,"Failed to send request to drain %s: %s\n",startd.name(),startd.error());
+		m_stats.DrainFailures += 1;
 		return false;
 	}
+	m_stats.DrainSuccesses += 1;
 
 	return true;
+}
+
+void
+Defrag::publish(ClassAd *ad)
+{
+	char *valid_name = build_valid_daemon_name(m_defrag_name.c_str());
+	ASSERT( valid_name );
+	m_daemon_name = valid_name;
+	delete [] valid_name;
+
+	ad->SetMyTypeName("Defrag");
+	ad->SetTargetTypeName("");
+
+	ad->Assign(ATTR_NAME,m_daemon_name.c_str());
+
+	m_stats.Tick();
+	m_stats.Publish(*ad);
+	daemonCore->publish(ad);
+}
+
+void
+Defrag::updateCollector() {
+	publish(&m_public_ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
+}
+
+void
+Defrag::invalidatePublicAd() {
+	ClassAd invalidate_ad;
+	std::string line;
+
+	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
+	invalidate_ad.SetTargetTypeName("Defrag");
+
+	sprintf(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
+	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
+	invalidate_ad.Assign(ATTR_NAME, m_daemon_name.c_str());
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }

@@ -394,7 +394,7 @@ VMGahp::findVM(int vm_id)
 
 
 int
-VMGahp::waitForCommand(int pipe_end)
+VMGahp::waitForCommand(int   /*pipe_end*/)
 {
 	MyString *line = NULL;
 

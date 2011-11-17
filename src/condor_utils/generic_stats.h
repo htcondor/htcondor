@@ -930,8 +930,16 @@ public:
 
    static const int PubValue = 1;
    static const int PubDefault = PubValue;
-   void AppendToString(MyString & str) const;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const {
+   void AppendToString(MyString & str) const {
+      if (this->cLevels > 0) {
+         str += this->data[0];
+         for (int ix = 1; ix <= this->cLevels; ++ix) {
+            str += ", ";
+            str += this->data[ix];
+            }
+         }
+      }
+   void Publish(ClassAd & ad, const char * pattr, int  /*flags*/) const {
       MyString str;
       this->AppendToString(str);
       ad.Assign(pattr, str);
@@ -970,6 +978,128 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_histogram<T>::Unpublish; };
    static void Delete(stats_entry_recent<T> * probe) { delete probe; }
 };
+
+// stats_histogram code
+//
+template <class T>
+bool stats_histogram<T>::set_levels(const T* ilevels, int num_levels)
+{
+   bool ret = false;
+   if(cLevels == 0 && ilevels != NULL) {
+      cLevels = num_levels;
+      levels = ilevels;
+      data = new int[cLevels + 1];
+      Clear();
+      ret = true;
+   }
+   return ret;
+}
+
+template<class T>
+stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
+{
+   // if the input histogram is null, there is nothing to do.
+   if (sh.cLevels <= 0) {
+      return *this;
+   }
+
+   // if the current histogram is null, take on the size and levels of the input
+   if (this->cLevels <= 0) {
+      this->set_levels(sh.levels, sh.cLevels);
+   }
+
+   // to add histograms, they must both be the same size (and have the same
+   // limits array as well, should we check that?)
+   if (this->cLevels != sh.cLevels) {
+      #ifdef EXCEPT
+       EXCEPT("attempt to add histogram of %d items to histogram of %d items\n",
+              sh.cLevels, this->cLevels);
+      #else
+       return *this;
+      #endif
+   }
+
+   if (this->levels != sh.levels) {
+      #ifdef EXCEPT
+       EXCEPT("Histogram level pointers are not the same.\n");
+      #else
+       return *this;
+      #endif
+   }
+
+   for (int i = 0; i <= cLevels; ++i) {
+      this->data[i] += sh.data[i];
+   }
+   
+   return *this;
+}
+
+GCC_DIAG_OFF(float-equal)
+template<class T>
+stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
+{
+   if(sh.cLevels == 0){
+      Clear();
+   } else if(this != &sh) {
+      if(this->cLevels > 0 && this->cLevels != sh.cLevels){
+         EXCEPT("Tried to assign different sized histograms\n");
+      return *this;
+      } else if(this->cLevels == 0) {
+         this->cLevels = sh.cLevels;
+         this->data = new int[this->cLevels+1];
+         this->levels = sh.levels;
+         for(int i=0;i<=cLevels;++i){
+            this->data[i] = sh.data[i];
+         }
+      } else {
+         for(int i=0;i<=cLevels;++i){
+            this->data[i] = sh.data[i];
+            if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
+               EXCEPT("Tried to assign different levels of histograms\n");
+               return *this;
+            }
+         }
+      }
+      this->data[this->cLevels] = sh.data[sh.cLevels];
+   }
+   return *this;
+}
+GCC_DIAG_ON(float-equal)
+
+template<class T>
+T stats_histogram<T>::Add(T val)
+{
+    int ix = 0;
+    while (ix < cLevels && val >= levels[ix])
+        ++ix;
+    data[ix] += 1;
+    /* the above code should give the same result as this...
+     if(val < levels[0]){
+        data[0] += 1;
+     } else if(val >= levels[cLevels - 1]){
+        data[cLevels] += 1;
+     } else {
+        for(int i=1;i<cLevels;++i){
+           if(val >= levels[i-1] && val < levels[i]){
+              data[i] += 1;
+           }
+        }
+     }
+    */
+
+    return val;
+															}
+
+															template<class T>
+T stats_histogram<T>::Remove(T val)
+{
+   int ix = 0;
+   while (ix < cLevels && val >= levels[ix])
+      ++ix;
+   data[ix] -= 1;
+   return val;
+}
+
 
 // helper functions for parsing configuration for histogram limits
 int stats_histogram_ParseSizes(const char * psz, int64_t * pSizes, int cMaxSizes);

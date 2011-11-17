@@ -533,6 +533,7 @@ void TestProbe()
    stats.Runtime.AdvanceBy(1);
 }
 
+#if 0
 // stats_histogram code
 //
 template <class T>
@@ -547,18 +548,6 @@ bool stats_histogram<T>::set_levels(const T* ilevels, int num_levels)
 		ret = true;	
 	}
 	return ret;
-}
-
-template<class T>
-void stats_histogram<T>::AppendToString(MyString & str) const 
-{
-   if (this->cLevels > 0) {
-      str += this->data[0];
-      for (int ix = 1; ix < this->cLevels+1; ++ix) {
-         str += ", ";
-         str += this->data[ix];
-      }
-   }
 }
 
 template<class T>
@@ -664,6 +653,7 @@ T stats_histogram<T>::Remove(T val)
     data[ix] -= 1;
 	return val;
 }
+#endif
 
 // Parse a string of the form "NNN Kb, NNN Mb" and return an array of sizes in bytes
 // the valid scaling factors are b B Kb KB Mb MB Gb GB Tb TB
@@ -726,7 +716,7 @@ int stats_histogram_ParseSizes(
    return cSizes; 
 }
 
-void stats_histogram_PrintSizes(MyString & str, const int64_t * pSizes, int cSizes)
+void stats_histogram_PrintSizes(MyString &  /*str*/, const  int64_t *  /*pSizes*/, int  /*cSizes*/)
 {
    EXCEPT("stats_histogram::PrintSizes not implemented\n");
    // tj: WRITE THIS
@@ -811,7 +801,7 @@ int stats_histogram_ParseTimes(
    return cTimes; 
 }
 
-void stats_histogram_times_PrintTimes(MyString & str, const time_t * pTimes, int cTimes)
+void stats_histogram_times_PrintTimes(MyString &  /*str*/, const time_t *  /*pTimes*/, int /*cTimes*/)
 {
    EXCEPT("stats_histogram::PrintTimes not implemented\n");
    // tj: WRITE THIS

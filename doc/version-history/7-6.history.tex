@@ -67,6 +67,21 @@ machine ad contained a string attribute ending in a backslash.
 ``Unable to process machine ClassAds'' or ``Unable to process job ClassAd''.
 \Ticket{2603}
 
+\item Fixed a bug that caused \Condor{startd} to crash after being
+reconfigured if a startd cron job was removed and was running at the
+time.
+\Ticket{2636}
+
+\item Configuration parameters of the form \Macro{MAX\_<SUBSYS>\_<LEVEL>\_LOG}
+now work properly on 32-bit linux. Previously, the corresponding log file
+would grow without bound.
+\Ticket{2638}
+
+\item Fixed a bug where Condor would fail to properly detect that it was running
+as Local System for non-english versions of Windows.  This would Condor to fail
+to run jobs on the slot accounts.
+\Ticket{2642}
+
 \end{itemize}
 
 \noindent Known Bugs:

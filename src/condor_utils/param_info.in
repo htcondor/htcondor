@@ -10361,3 +10361,35 @@ usage=Job Queue File
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=log
 id=550
+
+[DEFRAG_UPDATE_INTERVAL]
+aliases=
+default=300
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Job Queue Log file
+usage=Job Queue File
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=550
+
+[DEFRAG_NAME]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Job Queue Log file
+usage=Job Queue File
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=550

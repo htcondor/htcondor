@@ -122,7 +122,13 @@ without saving a checkpoint.
 which graceful draining of the machine could complete if it were
 initiated at the time this ad was published.  This is measured in the
 number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
-1970).
+1970).  This value is computed with the assumption that the machine
+policy will not suspend jobs during draining while the machine is
+waiting for the job to use up its retirement time.  If suspension
+happens, the upper bound on how long draining could take is
+unlimited.  To avoid suspension during draining, the \MacroNI{SUSPEND}
+and \MacroNI{CONTINUE} expressions could be configured to pay
+attention to the \AdAttr{Draining} attribute.
 %
 \index{ClassAd machine attribute!ExpectedMachineQuickDrainingBadput}
 \item[\AdAttr{ExpectedMachineGracefulQuickBadput}:] The
@@ -166,6 +172,11 @@ less than \AdAttr{ConsoleIdle}.
 \index{ClassAd machine attribute!KFlops}
 \item[\AdAttr{KFlops}:] Relative floating point performance as determined via a
 Linpack benchmark.
+%
+\index{ClassAd machine attribute!LastDrainStartTime}
+\item[\AdAttr{LastDrainStartTime}:] Time when draining of this
+\Condor{startd} was last initiated (e.g. due to \Condor{defrag} or
+\Condor{drain}).
 %
 \index{ClassAd machine attribute!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}:] Time when the Condor central manager last

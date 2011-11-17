@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
+#include "condor_arglist.h"
 
 // The order and number of the elements of the following arrays *are*
 // important.  (They follow the structure of the enumerations supplied
@@ -614,4 +615,12 @@ getStrQueryResult(QueryResult q)
 		default:
 			return "unknown error";
 	}
+}
+
+void
+CondorQuery::setDesiredAttrs(char const * const *attrs)
+{
+	MyString val;
+	::join_args(attrs,&val);
+	extraAttrs.Assign(ATTR_PROJECTION,val.Value());
 }

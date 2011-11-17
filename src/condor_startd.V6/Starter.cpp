@@ -1290,7 +1290,7 @@ Starter::startKillTimer( void )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( tmp_killing_timeout,
-						tmp_killing_timeout, 
+									max(1,tmp_killing_timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {

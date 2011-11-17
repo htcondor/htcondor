@@ -2717,7 +2717,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			// condor_basename works for URLs
-			dest_filename.sprintf_cat( condor_basename(filename) );
+			dest_filename.sprintf_cat( "%s", condor_basename(filename) );
 		}
 
 		// for command 999, this string must equal the Attribute "Filename" in
