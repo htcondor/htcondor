@@ -285,11 +285,11 @@ void CollectorDaemon::Init()
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
-    ClassAd *ad;
+    ClassAd *tmpad;
     offline_plugin_.rewind ();
-    while ( offline_plugin_.iterate ( ad ) ) {
-		ad = new ClassAd(*ad);
-	    if ( !collector.collect (UPDATE_STARTD_AD, ad, condor_sockaddr::null,
+    while ( offline_plugin_.iterate ( tmpad ) ) {
+		tmpad = new ClassAd(*tmpad);
+	    if ( !collector.collect (UPDATE_STARTD_AD, tmpad, condor_sockaddr::null,
 								 insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -304,7 +304,7 @@ void CollectorDaemon::Init()
 				    "Received malformed ad. Ignoring.\n" );
 
 	        }
-			delete ad;
+			delete tmpad;
 	    }
 
     }
@@ -1367,7 +1367,7 @@ void CollectorDaemon::Config()
 		m_ccb_server = NULL;
 	}
 
-	if ( tmp=param("ABSENT_REQUIREMENTS") ) {
+	if ( (tmp=param("ABSENT_REQUIREMENTS")) ) {
 		filterAbsentAds = true;
 		free(tmp);
 	} else {
@@ -1525,17 +1525,17 @@ void CollectorDaemon::init_classad(int interval)
 void
 CollectorDaemon::forward_classad_to_view_collector(int cmd,
 										   const char *filterAttr,
-										   ClassAd *ad)
+										   ClassAd *ad_to_forward)
 {
 	if (vc_list.empty()) return;
 
 	if (!filterAttr) {
-		send_classad_to_sock(cmd, ad);
+		send_classad_to_sock(cmd, ad_to_forward);
 		return;
 	}
 
 	std::string type;
-	if (!ad->EvaluateAttrString(std::string(filterAttr), type)) {
+	if (!ad_to_forward->EvaluateAttrString(std::string(filterAttr), type)) {
 		dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
 		return;
 	}
@@ -1543,7 +1543,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 	if (viewCollectorTypes->contains_anycase(type.c_str())) {
 		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
 				type.c_str(), getCommandString(cmd));
-		send_classad_to_sock(cmd, ad);
+		send_classad_to_sock(cmd, ad_to_forward);
 	}
 }
 
