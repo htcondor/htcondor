@@ -26,7 +26,6 @@
 #include "condor_environ.h"
 #include "condor_distribution.h"
 #include "my_username.h"
-#include "my_hostname.h"
 #include "daemon.h"
 #include "store_cred.h"
 
@@ -1782,6 +1781,8 @@ priv_identifier( priv_state s )
 
 	return (const char*) id;
 }
+
+extern char * my_hostname();
 
 // compare 2 usernames that may or may not be fully qualified
 // to see of they both refer to the same user.
