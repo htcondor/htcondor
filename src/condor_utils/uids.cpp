@@ -1782,7 +1782,7 @@ priv_identifier( priv_state s )
 	return (const char*) id;
 }
 
-extern char * my_hostname();
+extern const char * my_hostname();
 
 // compare 2 usernames that may or may not be fully qualified
 // to see of they both refer to the same user.
