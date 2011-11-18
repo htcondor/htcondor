@@ -362,6 +362,9 @@ bool privsep_enabled() { return false; }
 int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;}
 #endif
 
+// used in uids.cpp
+const char * my_hostname(void) { return "."; }
+
 // GCB me harder
 BEGIN_C_DECLS
 void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
@@ -396,6 +399,5 @@ int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
 }
 #endif
 
-const char * my_hostname(void) { return "."; }
 
 END_C_DECLS
