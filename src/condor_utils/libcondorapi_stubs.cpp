@@ -359,7 +359,7 @@ int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;
 #endif
 
 // used in uids.cpp
-const char * my_hostname(void) { return "."; }
+char * my_hostname(void) { return "."; }
 
 // GCB me harder
 BEGIN_C_DECLS
