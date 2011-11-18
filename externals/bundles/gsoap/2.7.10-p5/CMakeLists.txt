@@ -131,7 +131,9 @@ if (WITH_GSOAP)
 			# removing dependencies from condor-proper.
 			command_target( cp_smdevp cp "${GSOAP_SHARE}/plugin/smdevp.c;${GSOAP_INSTALL_LOC}/src/smdevp.cpp" "${GSOAP_INSTALL_LOC}/src/smdevp.cpp" )
 			append_var (CONDOR_EXTERNALS cp_smdevp)
-			add_dependencies(cp_smdevp gsoap)
+			if (GSOAP_REF)
+				add_dependencies(cp_smdevp ${GSOAP_REF})
+			endif()
 
 			if (${WSSEAPI} STREQUAL "WSSEAPI-NOTFOUND" )
 
@@ -139,7 +141,9 @@ if (WITH_GSOAP)
 
 			  set(WSSEAPI ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp)
 			  set(PRE_WSEAPPI_CPP ON PARENT_SCOPE)
-			  add_dependencies(cp_wsseapi gsoap)
+			  if (GSOAP_REF)
+			     add_dependencies(cp_wsseapi ${GSOAP_REF})
+			  endif()
 			  append_var (CONDOR_EXTERNALS cp_wsseapi)
 
 			endif()
