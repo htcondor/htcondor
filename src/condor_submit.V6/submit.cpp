@@ -6540,6 +6540,26 @@ full_path(const char *name, bool use_iwd)
 	return pathname.Value();
 }
 
+// check directories for input and output.  for now we do nothing
+// other than to make sure that it actually IS a directory on Windows
+// On Linux we already know that by the error code from safe_open below
+//
+static bool
+check_directory( const char* pathname, int /*flags*/, int err )
+{
+#if defined(WIN32)
+	// Make sure that it actually is a directory
+	DWORD dwAttribs = GetFileAttributes(pathname);
+	if (INVALID_FILE_ATTRIBUTES == dwAttribs)
+		return false;
+	return (dwAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+	// will just do nothing here and leave
+	// it up to the runtime to nicely report errors.
+	return (err == EISDIR);
+#endif
+}
+
 void
 check_open( const char *name, int flags )
 {
@@ -6586,8 +6606,10 @@ check_open( const char *name, int flags )
 	}
 
 	if ( !DisableFileChecks ) {
-			if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-			if( errno == EISDIR && (flags & O_WRONLY)) {
+		if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
+			if( ( errno == EISDIR || errno == EACCES ) &&
+	                   check_directory( strPathname.Value(), flags, errno ) ) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in
 					// advance.  When there is already a directory by
