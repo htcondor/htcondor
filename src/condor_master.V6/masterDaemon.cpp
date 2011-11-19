@@ -2038,7 +2038,7 @@ void
 Daemons::ExecMaster()
 {
 	int i=0,j;
-	char **argv = (const char **)malloc((condor_main_argc+2)*sizeof(char *));
+	char **argv = (char **)malloc((condor_main_argc+2)*sizeof(char *));
 
 	ASSERT( condor_main_argc>0 );
 	argv[i++] = condor_main_argv[0];

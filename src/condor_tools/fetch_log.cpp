@@ -30,7 +30,7 @@
 #include "condor_distribution.h"
 
 //Global param system wrapper for daemons
-param_functions p_funcs;
+//param_functions p_funcs;
 
 int handleHistoryDir(ReliSock *);
 
