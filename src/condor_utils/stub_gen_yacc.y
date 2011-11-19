@@ -574,6 +574,7 @@ main( int argc, char *argv[] )
 	FILE	*fp;
 
 	ProgName = *argv;
+	argc = argc;
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
 			switch( arg[1] ) {
@@ -916,7 +917,7 @@ char* consider_return_value_named_with_typecast( struct node *n, int emit_type,
 	if (emit_type == TRUE) {
 		sprintf(str, "%s = (%s)", varname, node_type(n));
 	} else {
-		sprintf(str, "%s = ", varname, node_type(n));
+		sprintf(str, "%s = ", varname);
 	}
 
 	return str;
@@ -1406,7 +1407,7 @@ output_receiver( struct node *n )
 			/* unsigned quantities get typecast into an unsigned long
 				for outputting, this is mostly correct */
 			printf( "\t\tdprintf( D_SYSCALLS, \"\t%s = %%lu\\n\", %s );\n",
-				   p->id, (unsigned long)p->id);
+				   p->id, p->id);
 		}
 	}
 

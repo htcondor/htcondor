@@ -335,7 +335,7 @@ displayHeader(FILE *file)
 void StartdRunTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d  %11l"PRIu64"  %11"PRIu64"   %-.3f\n",
+	fprintf (file, "%9d  %11"PRIu64"  %11"PRIu64"   %-.3f\n",
 		 machines, (PRIu64_t)condor_mips, (PRIu64_t)kflops, 
 			 (machines > 0) ? float(loadavg/machines) : 0);
 }

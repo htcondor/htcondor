@@ -125,7 +125,7 @@ bool condor_netaddr::from_net_string(const char* net) {
 
 		base_ = condor_sockaddr(base, 0);
 		maskbit_ = convert_maskaddr_to_maskbit(*(uint32_t*)&mask);
-		if (maskbit_ == -1)
+		if (maskbit_ == (unsigned)-1)
 			return false;
 	}
 	return true;
