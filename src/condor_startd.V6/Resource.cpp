@@ -39,7 +39,7 @@ extern FILESQL *FILEObj;
 Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
 {
 	MyString tmp;
-	char* tmpName;
+	const char* tmpName;
 
 		// we need this before we instantiate any Claim objects...
 	r_id = rid;

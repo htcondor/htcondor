@@ -104,6 +104,13 @@ convert account names to fully qualifed (including domain) before comparing to s
 if the current account was the same as the desired account.
 \Ticket{2644}
 
+\item Fixed a bug where \Macro{transfer\_input\_files} did not work for directories on Windows.
+\Ticket{2387}
+
+\item Fixed a bug that could cause failure to clean up job processes
+when using glexec after a restart of \Condor{master}.
+\Ticket{2614}
+
 \end{itemize}
 
 \noindent Known Bugs:

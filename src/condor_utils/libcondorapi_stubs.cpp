@@ -335,7 +335,7 @@ CondorQuery::CondorQuery(AdTypes ) { not_impl();}
 
 CondorQuery::~CondorQuery() {} 
 
-char*
+const char*
 my_ip_string() {not_impl(); return 0;}
 
 void ConvertDefaultIPToSocketIP(char const *,char const *,char **,Stream& ) {
@@ -361,6 +361,9 @@ bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return fal
 bool privsep_enabled() { return false; }
 int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;}
 #endif
+
+// used in uids.cpp
+const char * my_hostname(void) { return "."; }
 
 // GCB me harder
 BEGIN_C_DECLS
@@ -395,5 +398,6 @@ int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
 	return sigprocmask(how,newmask,oldmask);
 }
 #endif
+
 
 END_C_DECLS

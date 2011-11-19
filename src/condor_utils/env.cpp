@@ -212,12 +212,16 @@ Env::MergeFrom( char const * const *stringArray )
 		return false;
 	}
 	int i;
+	bool all_ok = true;
 	for( i = 0; stringArray[i] && stringArray[i][0] != '\0'; i++ ) {
 		if( !SetEnv( stringArray[i] ) ) {
-			return false;
+				// keep going so that we behave like getenv() in
+				// our treatment of invalid entries in the
+				// environment
+			all_ok = false;
 		}
 	}
-	return true;
+	return all_ok;
 }
 
 bool

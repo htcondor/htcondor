@@ -106,6 +106,7 @@ OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
+bool CollectorDaemon::filterAbsentAds;
 
 //---------------------------------------------------------
 
@@ -284,11 +285,11 @@ void CollectorDaemon::Init()
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
-    ClassAd *ad;
+    ClassAd *tmpad;
     offline_plugin_.rewind ();
-    while ( offline_plugin_.iterate ( ad ) ) {
-		ad = new ClassAd(*ad);
-	    if ( !collector.collect (UPDATE_STARTD_AD, ad, condor_sockaddr::null,
+    while ( offline_plugin_.iterate ( tmpad ) ) {
+		tmpad = new ClassAd(*tmpad);
+	    if ( !collector.collect (UPDATE_STARTD_AD, tmpad, condor_sockaddr::null,
 								 insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -303,7 +304,7 @@ void CollectorDaemon::Init()
 				    "Received malformed ad. Ignoring.\n" );
 
 	        }
-			delete ad;
+			delete tmpad;
 	    }
 
     }
@@ -938,7 +939,6 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	__query__ = query;
 	__numAds__ = 0;
 	__ClassAdResultList__ = results;
-	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
 	// An empty adType means don't check the MyType of the ads.
 	// This means either the command indicates we're only checking one
 	// type of ad, or the query's TargetType is "Any" (match all ad types).
@@ -950,9 +950,34 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		}
 	}
 
+	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
 	if ( __filter__ == NULL ) {
 		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
 		return;
+	}
+
+	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
+	// if ATTR_ABSENT is not alrady referenced in the query.
+	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
+		StringList job_refs;      // job attrs referenced by requirements
+		StringList machine_refs;  // machine attrs referenced by requirements
+		bool checks_absent = false;
+
+		query->GetReferences(ATTR_REQUIREMENTS,job_refs,machine_refs);
+		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
+		if (!checks_absent) {
+			MyString modified_filter;
+			modified_filter.sprintf("(%s) && (%s =!= True)",
+				ExprTreeToString(__filter__),ATTR_ABSENT);
+			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
+			__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
+			if ( __filter__ == NULL ) {
+				dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
+					modified_filter.Value());
+				return;
+			}
+			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.Value());
+		}
 	}
 
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
@@ -1342,6 +1367,13 @@ void CollectorDaemon::Config()
 		m_ccb_server = NULL;
 	}
 
+	if ( (tmp=param("ABSENT_REQUIREMENTS")) ) {
+		filterAbsentAds = true;
+		free(tmp);
+	} else {
+		filterAbsentAds = false;
+	}
+
 	return;
 }
 
@@ -1493,17 +1525,17 @@ void CollectorDaemon::init_classad(int interval)
 void
 CollectorDaemon::forward_classad_to_view_collector(int cmd,
 										   const char *filterAttr,
-										   ClassAd *ad)
+										   ClassAd *ad_to_forward)
 {
 	if (vc_list.empty()) return;
 
 	if (!filterAttr) {
-		send_classad_to_sock(cmd, ad);
+		send_classad_to_sock(cmd, ad_to_forward);
 		return;
 	}
 
 	std::string type;
-	if (!ad->EvaluateAttrString(std::string(filterAttr), type)) {
+	if (!ad_to_forward->EvaluateAttrString(std::string(filterAttr), type)) {
 		dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
 		return;
 	}
@@ -1511,7 +1543,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 	if (viewCollectorTypes->contains_anycase(type.c_str())) {
 		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
 				type.c_str(), getCommandString(cmd));
-		send_classad_to_sock(cmd, ad);
+		send_classad_to_sock(cmd, ad_to_forward);
 	}
 }
 

@@ -35,7 +35,7 @@ static bool network_interface_matches_all;
 static void init_hostnames();
 
 // Return our hostname in a static data buffer.
-char *
+const char *
 my_hostname()
 {
 //	if( ! hostnames_initialized ) {
@@ -44,21 +44,21 @@ my_hostname()
 //	return hostname;
     static MyString __my_hostname;
     __my_hostname = get_local_hostname();
-    return const_cast<char*>(__my_hostname.Value());
+    return __my_hostname.Value();
 }
 
 
 // Return our full hostname (with domain) in a static data buffer.
-char* my_full_hostname() {
+const char* my_full_hostname() {
     static MyString __my_full_hostname;
     __my_full_hostname = get_local_fqdn();
-    return const_cast<char*>(__my_full_hostname.Value());
+    return __my_full_hostname.Value();
 }
 
-char* my_ip_string() {
+const char* my_ip_string() {
     static MyString __my_ip_string;
     __my_ip_string = get_local_ipaddr().to_ip_string();
-    return const_cast<char*>(__my_ip_string.Value());
+    return __my_ip_string.Value();
 }
 
 //void

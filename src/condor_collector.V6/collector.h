@@ -135,6 +135,10 @@ public:
         Sock* sock;
     };
 
+#if defined ( HAVE_HIBERNATION )
+    static OfflineCollectorPlugin offline_plugin_;
+#endif
+
 protected:
 	static CollectorStats collectorStats;
 	static CollectorEngine collector;
@@ -175,11 +179,10 @@ protected:
 
 	static class CCBServer *m_ccb_server;
 
+	static bool filterAbsentAds;
+
 private:
 
-#if defined ( HAVE_HIBERNATION )
-    static OfflineCollectorPlugin offline_plugin_;
-#endif
 
 };
 
