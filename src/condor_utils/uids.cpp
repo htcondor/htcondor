@@ -178,7 +178,7 @@ const PSID my_user_Sid()
 
 	return psid;
 } 
-#endif WIN32
+#endif 
 
 int
 can_switch_ids( void )
