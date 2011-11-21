@@ -110,6 +110,8 @@
 /* to get the sysinfo() function call */
 #include <sys/sysinfo.h>
 
+#include <sys/mman.h>
+
 #if defined( I386 ) || defined( X86_64 )
 /* For the i386 execution domains for standard
 	universe executables. Under redhat 9 and later there is a
