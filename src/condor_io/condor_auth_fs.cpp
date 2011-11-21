@@ -323,10 +323,19 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				// however, normal users cannot create hardlinks to
 				// directories, only root.  -Zach 8/06
 
+				// The test of link count is historical.  In btrfs,
+				// directories have link count 1, unlike other
+				// filesystems in which the link count is 2.  We do
+				// not believe there is any reason to care about the
+				// link count, but since it was already required to be
+				// 2, and we want to make it work on btrfs, we are
+				// making a conservative change in 7.6.5 that allows
+				// the link count to be 1 or 2.  -Dan 11/11
+
 				// assume it is wrong until we see otherwise
 				bool stat_is_okay = false;
 
-				if ((stat_buf.st_nlink == 2) &&	    // check hard link count
+				if ((stat_buf.st_nlink == 1 || stat_buf.st_nlink == 2) &&
 					(!S_ISLNK(stat_buf.st_mode)) && // check for soft link
 					(S_ISDIR(stat_buf.st_mode)) )   // check for directory
 				{
