@@ -6821,7 +6821,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom(GetEnviron());
+		m_envobject.Import();
 	}
 
 		// Put the caller's env requests into the job's environment, potentially

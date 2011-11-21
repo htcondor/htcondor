@@ -319,6 +319,7 @@ static const char
 	   *V2R_MISS_NAME ="=1 two=2 three=3",
 	   *V2R_MISS_DELIM ="one1 two=2 three=3",
 	   *V2R_MISS_BOTH ="=1 two2 three=3",
+	   *ARRAY_SKIP_BAD_STR = "one=1 two2 three=3",
 	   *V2R_SEMI ="one=1 two=2 three=3 semi=;",
 	   *V2R_MARK =" one=1 two=2 three=3 semi=;",
 	*V2Q ="\"one=1 two=2 three=3\"",	//V2Quoted format
@@ -374,7 +375,8 @@ static const char
 	*ARRAY[] = {"one=1", "two=2", "three=3", ""},
 	*ARRAY_MISS_NAME[] = {"=1", "two=2", "three=3", ""},
 	*ARRAY_MISS_DELIM[] = {"one1", "two=2", "three=3", ""},
-	*ARRAY_MISS_BOTH[] = {"one1", "two=2", "three=3", ""},
+	*ARRAY_SKIP_BAD[] = {"one=1", "two2", "three=3", ""},
+	*ARRAY_SKIP_BAD_CLEAN[] = {"one=1", "three=3", ""},
 	*ARRAY_REP[] = {"one=10", "two=200", "three=3000", ""},
 	*ARRAY_REP_ADD[] = {"one=10", "two=200", "three=3000", "four=4", "five=5", 
 		""};
@@ -2058,20 +2060,24 @@ static bool test_mf_str_array_add_null() {
 }
 
 static bool test_mf_str_array_add_invalid() {
-	emit_test("Test that MergeFrom() doesn't add the environment variables "
-		"for an invalid string array.");
+	emit_test("Test that MergeFrom() skips invalid entries but adds valid "
+		"entries for an invalid string array.");
 	Env env;
 	MyString actual;
-	env.MergeFrom(ARRAY_MISS_BOTH);
+	Env expected_env;
+	MyString expected;
+	env.MergeFrom(ARRAY_SKIP_BAD);
 	env.getDelimitedStringForDisplay(&actual);
+	expected_env.MergeFrom(ARRAY_SKIP_BAD_CLEAN);
+	expected_env.getDelimitedStringForDisplay(&expected);
 	emit_input_header();
 	emit_param("Env", "%s", "");
-	emit_param("STRING ARRAY", "%s", V2R_MISS_BOTH);
+	emit_param("STRING ARRAY", "%s", ARRAY_SKIP_BAD_STR);
 	emit_output_expected_header();
-	emit_param("Env", "%s", V2R_MISS_BOTH);
+	emit_param("Env", "%s", expected.Value());
 	emit_output_actual_header();
 	emit_param("Env", "%s", actual.Value());
-	if(actual != EMPTY) {
+	if(actual != expected) {
 		FAIL;
 	}
 	PASS;
