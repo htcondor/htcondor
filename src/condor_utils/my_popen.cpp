@@ -473,7 +473,7 @@ my_popenv_impl( const char *const args[],
 		}
 		privsep_exec_set_args(fp, al);
 		Env env;
-		env.MergeFrom(GetEnviron());
+		env.Import();
 		privsep_exec_set_env(fp, env);
 		privsep_exec_set_iwd(fp, ".");
 		if (parent_reads) {
