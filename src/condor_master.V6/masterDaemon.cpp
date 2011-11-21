@@ -41,6 +41,7 @@
 #include "condor_fix_access.h"
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
+#include "setenv.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -2033,9 +2034,7 @@ Daemons::CleanupBeforeRestart()
 		// is a daemon core process.  but, its parent is gone ( we are doing
 		// an exec, so we disappear), thus we must blank out the 
 		// CONDOR_INHERIT env variable.
-	char	tmps[256];
-	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
-	putenv( tmps );
+	UnsetEnv(EnvGetName( ENV_INHERIT ));
 }
 
 void
