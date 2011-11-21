@@ -64,6 +64,3 @@ Parent NodeY2 NodeY3 Child NodeA
 Parent NodeA Child NodeB NodeC1
 Parent NodeC1 Child NodeC2
 Parent NodeB NodeC2 Child NodeD
-
-#TEMPTEMP -- check job_dagman_halt-A.nodes.out
-#TEMPTEMP -- check rescue DAG

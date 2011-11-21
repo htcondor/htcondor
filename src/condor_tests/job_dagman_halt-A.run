@@ -21,12 +21,55 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_retry.dag';
+$cmd = 'job_dagman_halt-A.dag';
 $testdesc =  'Condor submit dag - halt test - scheduler U';
 $testname = "job_dagman_halt-A";
-$dagman_args = "-verbose";
+# Maxpre specified to enforce an order for some sibling nodes.
+$dagman_args = "-verbose -maxpre 1";
+
+$node_output_file = "job_dagman_halt-A.nodes.out";
 
 my $killedchosen = 0;
+
+#TEMPTEMP -- is order strictly defined?
+@node_output_lines = ("Node NodeX starting",
+			"  NodeX sleeping",
+			"Node NodeY1 starting",
+			"  NodeY1 halting DAG",
+			"  NodeX Found halt file",
+			"Node NodeY1 succeeded",
+			"  NodeX removed halt file",
+			"Node NodeX succeeded",
+			"Node NodeY2 Pre script",
+			"Node NodeY3 Pre script",
+			"Node NodeY2 starting",
+			"Node NodeY3 starting",
+			"Node NodeY2 succeeded",
+			"Node NodeY2 Post script",
+			"Node NodeY3 succeeded",
+			"Node NodeY3 Post script",
+			"Node NodeA starting",
+			"Node NodeA succeeded",
+			"Node NodeB Pre script",
+			"Node NodeC1 starting",
+			"Node NodeB starting",
+			"  NodeB Sleeping",
+			"  NodeC1 halting DAG",
+			"  NodeB found halt file",
+			"Node NodeC1 succeeded",
+			"Node NodeB succeeded",
+			"Node NodeB Post script");
+
+@rescue_lines = ("# Total number of Nodes: 9",
+			"# Nodes premarked DONE: 7",
+			"# Nodes that failed: 0",
+			"DONE NodeX",
+			"DONE NodeY1",
+			"DONE NodeY2",
+			"DONE NodeY3",
+			"DONE NodeA",
+			"DONE NodeB",
+			"DONE NodeC1");
 
 # truly const variables in perl
 sub IDLE{1};
@@ -35,7 +78,13 @@ sub RUNNING{2};
 
 my $rescuedag = $cmd . ".rescue001";
 
-my %subinfo;
+# Get rid of the node output file and rescue DAG if they exist.
+if (-e $node_output_file) {
+	runcmd("rm -f $node_output_file");
+}
+if (-e $rescuedag) {
+	runcmd("rm -f $rescuedag");
+}
 
 $abnormal = sub 
 {
@@ -71,14 +120,65 @@ $failure = sub
 {
 	CondorTest::debug("DAG failed as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
 
-	%subinfo = @_;
-	my $joblog = $subinfo{log};
-	CondorTest::debug("Joblog is $joblog\n",1);
+	# Make sure all expected lines are in the node output file, in the
+	# correct order.
+	$checkline = shift @node_output_lines;
+	open(CHECK, "<$node_output_file") ||
+			die "Cannot open $node_output_file: $!\n";
+	while (<CHECK>) {
+		chomp();
+		$line = $_;
+		if ($line eq $checkline) {
+			CondorTest::debug("$line\n", 1);
+			$checkline = shift @node_output_lines;
+			if ( ! (defined $checkline)) {
+				# Found all of the lines we expected.
+				break;
+			}
+		}
+	}
+	close(CHECK);
 
-	CondorTest::debug("executed with failure\n",1);
+	if ( (defined $checkline)) {
+		unshift @node_output_lines, $checkline;
+	}
+	while ($checkline = shift @node_output_lines) {
+		$diditpass = 0;
+		CondorTest::debug("Missing line <$checkline> in $node_output_file\n");
+	}
 
-	#TEMPTEMP -- need to check output and rescue DAG here -- see job_dagman_job_held.run
+	# Make sure all expected lines are in the rescue DAG file, in the
+	# correct order.
+	$checkline = shift @rescue_lines;
+	open(CHECK, "<$rescuedag") ||
+			die "Cannot open $rescuedag: $!\n";
+	while (<CHECK>) {
+		chomp();
+		$line = $_;
+		if ($line eq $checkline) {
+			CondorTest::debug("$line\n", 1);
+			$checkline = shift @rescue_lines;
+			if ( ! (defined $checkline)) {
+				# Found all of the lines we expected.
+				break;
+			}
+		}
+	}
+	close(CHECK);
+
+	if ( (defined $checkline)) {
+		unshift @rescue_lines, $checkline;
+	}
+	while ($checkline = shift @rescue_lines) {
+		$diditpass = 0;
+		CondorTest::debug("Missing line <$checkline> in $rescuedag\n");
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
 };
 
 CondorTest::RegisterExitedFailure( $testname, $failure);
