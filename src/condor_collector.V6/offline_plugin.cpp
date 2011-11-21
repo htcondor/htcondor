@@ -83,7 +83,7 @@ OfflineCollectorPlugin::configure ()
 
 	/**** Handle ABSENT_REQUIREMENTS PARAM ****/
 	char *tmp;
-	ExprTree *tmp_expr;
+	ExprTree *tmp_expr = 0 ;
 
 	if (AbsentReq) delete AbsentReq;
 	AbsentReq = NULL;
