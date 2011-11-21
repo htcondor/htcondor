@@ -59,8 +59,11 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 {
 
     strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH-1 );
+	m_mac[STRING_MAC_ADDRESS_LENGTH-1] = '\0';
     strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH-1 );
+	m_subnet[MAX_IP_ADDRESS_LENGTH-1] = '\0';
     strncpy ( m_public_ip, my_ip_string (), MAX_IP_ADDRESS_LENGTH-1 );
+	m_public_ip[MAX_IP_ADDRESS_LENGTH-1] = '\0';
     m_can_wake = initialize ();	
 
 }
@@ -112,6 +115,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
         ATTR_SUBNET_MASK,
         m_subnet,
         MAX_IP_ADDRESS_LENGTH-1 );
+	m_subnet[MAX_IP_ADDRESS_LENGTH-1] = '\0';
 
     if ( !found ) {
 
