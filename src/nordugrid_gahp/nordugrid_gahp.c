@@ -456,8 +456,6 @@ gahp_sem_down( gahp_semaphore *sem)
 int 
 process_string_arg( char *input_line, char **output)
 {
-	int i = 0;
-
 	// if it's a NULL pointer, give up now.
     if(!input_line){
         return false;
@@ -762,7 +760,6 @@ void dispatch_ftp_command( ftp_cache_entry_t *entry )
 
 void begin_ftp_command( user_arg_t *user_arg )
 {
-	globus_result_t result;
 	ftp_cache_entry_t *entry;
 
 	entry = (ftp_cache_entry_t *) globus_hashtable_lookup( &ftp_cache_table, (void *)user_arg->server );
@@ -794,7 +791,6 @@ void begin_ftp_command( user_arg_t *user_arg )
 
 void finish_ftp_command( user_arg_t *user_arg )
 {
-	globus_result_t result;
 	ftp_cache_entry_t *entry;
 	ftp_handle_t *saved_handle;
 
@@ -858,7 +854,6 @@ handle_nordugrid_submit( char **input_line )
 		char *str;
 		globus_rsl_t *rsl;
 		globus_list_t *rsl_list;
-		globus_list_t *value_list = NULL;
 		globus_rsl_t *inputfiles_rsl = NULL;
 
 		rsl = globus_rsl_parse( input_line[3] );
@@ -987,7 +982,7 @@ void nordugrid_submit_write_callback( void *arg,
 								  globus_off_t offset,
 								  globus_bool_t eof )
 {
-	user_arg_t *user_arg = (user_arg_t *)arg;
+	/* user_arg_t *user_arg = (user_arg_t *)arg; */
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -1035,7 +1030,7 @@ nordugrid_submit_cwd2_callback( void *arg,
 		output = (char *) globus_libc_malloc( 10 + strlen( (const char *) user_arg->cmd[1] ) +
 									 strlen( (const char *) user_arg->buff ) );
 		globus_libc_sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
-							 user_arg->buff );
+							 (char *)user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
@@ -1309,7 +1304,6 @@ nordugrid_stage_in_start_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	char url[1024];
-	char last_file[1024];
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_stage_in_start_file_callback( arg, handle, error );
@@ -1333,7 +1327,6 @@ nordugrid_stage_in_exists_callback( void *arg,
 							   globus_object_t *error )
 {
 	user_arg_t *user_arg = (user_arg_t *)arg;
-	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
 			/* One past the last file means to stage the stage-in complete
@@ -2085,7 +2078,6 @@ handle_nordugrid_ldap_query( char **input_line )
 	char **attrs = NULL;
 	LDAPMessage *search_result = NULL;
 	LDAPMessage *next_entry = NULL;
-	int idx = 0;
 	int first_entry = 1;
 
 	if(process_string_arg( user_arg->cmd[5], &attrs_str ) &&
@@ -2145,7 +2137,7 @@ handle_nordugrid_ldap_query( char **input_line )
 	while ( next_entry ) {
 		BerElement *ber;
 		const char *next_attr;
-		char *dn;
+//		char *dn;
 
 		if ( !first_entry ) {
 			my_strcat( reply, " " );
@@ -2575,8 +2567,6 @@ handle_refresh_proxy_from_file( char **input_line )
 	OM_uint32 major_status; 
 	OM_uint32 minor_status; 
 
-	int result;
-
 	file_name = NULL;
 
 	if(!process_string_arg(input_line[1], &file_name) ) {
@@ -2668,7 +2658,7 @@ handle_initialize_from_file( char **input_line )
 void
 unlink_ref_count( ptr_ref_count* ptr, int decrement )
 {
-	gss_cred_id_t old_cred;
+	/* gss_cred_id_t old_cred; */
 	int result;
 
 	if (!ptr) return;
@@ -2887,7 +2877,6 @@ cache_proxy_return:
 int
 handle_response_prefix( char **input_line )
 {
-	int result;
 	char *prefix;
 
 	if(!process_string_arg(input_line[1], & prefix ) ) {
@@ -3093,7 +3082,7 @@ service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
 {
 	char **input_line;
 	int result;
-	globus_thread_t ignored_threadid;
+	/* globus_thread_t ignored_threadid; */
 
 		input_line = read_command(STDIN_FILENO);
 
@@ -3223,7 +3212,7 @@ quit_on_signal_with_core(int sig)
 }
 
 
-main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
 	int result, err;
 #ifndef WIN32

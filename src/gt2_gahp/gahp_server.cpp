@@ -68,7 +68,7 @@ char * __findenv(const char *name, int *offset);
 	all_args_free(user_arg);		\
 	}
 
-static char *commands_list = 
+const char *commands_list = 
 "COMMANDS "
 "GASS_SERVER_INIT " 
 "GRAM_CALLBACK_ALLOW "
@@ -129,7 +129,7 @@ ptr_ref_count * current_cred = NULL;
    to be escaped or the gahp server gets confused. :(
    !!! BEWARE !!!
 */ 
-static char *VersionString ="$GahpVersion: 1.1.3 " __DATE__ " UW\\ Gahp $";
+const char *VersionString ="$GahpVersion: 1.1.3 " __DATE__ " UW\\ Gahp $";
 
 #define NUM_GASS_LISTENERS		20
 
@@ -315,7 +315,7 @@ gahp_printf(const char *format, ...)
 
 
 void
-gahp_sem_init( gahp_semaphore *sem, int initial_value) 
+gahp_sem_init( gahp_semaphore *sem, int /*initial_value*/) 
 {
 	globus_mutex_init(&sem->mutex, NULL);
 }
@@ -446,8 +446,6 @@ all_args_free( void * args)
 int
 handle_bad_request(void * user_arg)
 {
-	char **input_line = (char **) user_arg;
-
 	HANDLE_SYNTAX_ERROR();
 
 	return 0;
@@ -523,8 +521,8 @@ void
 callback_gram_job_request(void *arg,
 						  globus_gram_protocol_error_t operation_fc,
 						  const char *job_contact,
-						  globus_gram_protocol_job_state_t job_state,
-						  globus_gram_protocol_error_t job_fc)
+						  globus_gram_protocol_job_state_t /*job_state*/,
+						  globus_gram_protocol_error_t /*job_fc*/)
 {
 	char *output;
 	user_arg_t * gram_arg;
@@ -596,7 +594,7 @@ handle_gram_job_signal(void * user_arg)
 void
 callback_gram_job_signal(void *arg,
 						 globus_gram_protocol_error_t operation_fc,
-						 const char *job_contact,
+						 const char * /*job_contact*/,
 						 globus_gram_protocol_job_state_t job_state,
 						 globus_gram_protocol_error_t job_fc)
 {
@@ -655,7 +653,7 @@ handle_gram_job_status(void * user_arg)
 void
 callback_gram_job_status(void *arg,
 						 globus_gram_protocol_error_t operation_fc,
-						 const char *job_contact,
+						 const char * /*job_contact*/,
 						 globus_gram_protocol_job_state_t job_state,
 						 globus_gram_protocol_error_t job_fc)
 {
@@ -714,9 +712,9 @@ handle_gram_job_cancel(void * user_arg)
 void
 callback_gram_job_cancel(void *arg,
 						 globus_gram_protocol_error_t operation_fc,
-						 const char *job_contact,
-						 globus_gram_protocol_job_state_t job_state,
-						 globus_gram_protocol_error_t job_fc)
+						 const char * /*job_contact*/,
+						 globus_gram_protocol_job_state_t /*job_state*/,
+						 globus_gram_protocol_error_t /*job_fc*/)
 {
 	char *output;
 	user_arg_t * gram_arg;
@@ -757,7 +755,7 @@ handle_gass_server_init(void * user_arg)
 {
 	char **input_line = (char **) user_arg;
 	int result,i;
-	char *output, *req_id, *job_contact;
+	char *output, *req_id;
 	char *gassServerUrl = NULL;
 	int port;
 	int num_listeners = NUM_GASS_LISTENERS;
@@ -901,7 +899,7 @@ handle_gram_job_callback_register(void * user_arg)
 void
 callback_gram_job_callback_register(void *arg,
 									globus_gram_protocol_error_t operation_fc,
-									const char *job_contact,
+									const char * /*job_contact*/,
 									globus_gram_protocol_job_state_t job_state,
 									globus_gram_protocol_error_t job_fc)
 {
@@ -926,7 +924,7 @@ handle_gram_ping(void * user_arg)
 {
 	char **input_line = (char **) user_arg;
 	int result;
-	char *output, *req_id, *resource_contact;
+	char *req_id, *resource_contact;
 	user_arg_t * gram_arg;
 
 	if( !process_string_arg(input_line[1], &req_id) ) {
@@ -960,9 +958,9 @@ handle_gram_ping(void * user_arg)
 void
 callback_gram_ping(void *arg,
 						 globus_gram_protocol_error_t operation_fc,
-						 const char *job_contact,
-						 globus_gram_protocol_job_state_t job_state,
-						 globus_gram_protocol_error_t job_fc)
+						 const char * /*job_contact*/,
+						 globus_gram_protocol_job_state_t /*job_state*/,
+						 globus_gram_protocol_error_t /*job_fc*/)
 {
 	char *output;
 	user_arg_t * gram_arg;
@@ -1040,9 +1038,9 @@ handle_gram_job_refresh_proxy(void * user_arg)
 void
 callback_gram_job_refresh_proxy(void *arg,
 								globus_gram_protocol_error_t operation_fc,
-								const char *job_contact,
-								globus_gram_protocol_job_state_t job_state,
-								globus_gram_protocol_error_t job_fc)
+								const char * /*job_contact*/,
+								globus_gram_protocol_job_state_t /*job_state*/,
+								globus_gram_protocol_error_t /*job_fc*/)
 {
 	char *output;
 	user_arg_t * gram_arg;
@@ -1065,7 +1063,6 @@ handle_gram_get_jobmanager_version(void * user_arg)
 	char **input_line = (char **) user_arg;
 	int result;
 	char *req_id, *resource_contact;
-	char *esc_str;
 	user_arg_t *gram_arg;
 
 	if( !process_string_arg(input_line[1], &req_id) ) {
@@ -1104,7 +1101,7 @@ handle_gram_get_jobmanager_version(void * user_arg)
 
 void
 callback_gram_get_jobmanager_version(void *arg,
-									 const char *job_contact,
+									 const char * /*job_contact*/,
 									 globus_gram_client_job_info_t *job_info)
 {
 	char *esc_str;
@@ -1196,7 +1193,6 @@ gram_callback_handler(void *callback_arg, char *job_contact, int state,
 int
 handle_commands(void * user_arg)
 {
-	char **input_line = (char **) user_arg;
 	gahp_printf("S %s\n", commands_list);
 	gahp_sem_up(&print_control);
 	all_args_free(user_arg);
@@ -1206,7 +1202,6 @@ handle_commands(void * user_arg)
 int 
 handle_results(void * user_arg)
 {
-	char **input_line = (char **) user_arg;
 	char *output;
 	int count, i;
 
@@ -1233,7 +1228,6 @@ handle_results(void * user_arg)
 int 
 handle_version(void * user_arg)
 {
-	char **input_line = (char **) user_arg;
 	gahp_printf("S %s\n", VersionString);
 
 	gahp_sem_up(&print_control);
@@ -1275,8 +1269,6 @@ handle_gram_error_string( void * user_arg)
 int
 handle_async_mode_on( void * user_arg)
 {
-	char **input_line = (char **) user_arg;
-
 	gahp_sem_down(&fifo_control);
 	AsyncResults = 1;
 	ResultsPending = 0;
@@ -1293,8 +1285,6 @@ handle_async_mode_on( void * user_arg)
 int
 handle_async_mode_off( void * user_arg)
 {
-	char **input_line = (char **) user_arg;
-
 	gahp_sem_down(&fifo_control);
 	AsyncResults = 0;
 	ResultsPending = 0;
@@ -1315,8 +1305,6 @@ handle_refresh_proxy_from_file(void * user_arg)
 	gss_cred_id_t credential_handle = GSS_C_NO_CREDENTIAL;
 	OM_uint32 major_status; 
 	OM_uint32 minor_status; 
-
-	int result;
 
 	file_name = NULL;
 
@@ -1358,9 +1346,8 @@ handle_refresh_proxy_from_file(void * user_arg)
 
 
 int 
-handle_quit(void * user_arg)
+handle_quit(void * /*user_arg*/)
 {
-	char **input_line = (char **) user_arg;
 	gahp_printf("S\n");
 	main_deactivate_globus();
 	_exit(0);
@@ -1606,7 +1593,6 @@ int
 handle_response_prefix(void * user_arg)
 {
 	char **input_line = (char **) user_arg;
-	int result;
 	char *prefix;
 
 	if(!process_string_arg(input_line[1], & prefix ) ) {
@@ -1769,11 +1755,11 @@ read_command(int stdin_fd)
 		result=handle_##x(input_line);
 
 void
-service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
+service_commands(void * /*arg*/,globus_io_handle_t* gio_handle,globus_result_t /*rest*/)
 {
 	char **input_line;
 	int result;
-	globus_thread_t ignored_threadid;
+	/* globus_thread_t ignored_threadid; */
 
 		input_line = read_command(STDIN_FILENO);
 
@@ -1905,7 +1891,7 @@ quit_on_signal_with_core(int sig)
 }
 
 
-main(int argc, char **argv)
+int main(int, char **)
 {
 	int result, err;
 #ifndef WIN32

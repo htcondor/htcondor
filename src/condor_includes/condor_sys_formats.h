@@ -48,11 +48,11 @@
 
 /* Define types that match the PRIx64_t print format strings */
 #if !defined(PRId64_t)
-# if ( SIZEOF_LONG==8 )
+# if ( SIZEOF_LONG==8 ) && !defined(Darwin)
 #  define PRId64_t long
 #  define PRIi64_t long
 #  define PRIu64_t unsigned long
-# elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) )
+# elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) ) || defined(Darwin)
 #  define PRId64_t long long
 #  define PRIi64_t long long
 #  define PRIu64_t unsigned long long
