@@ -1782,8 +1782,6 @@ priv_identifier( priv_state s )
 	return (const char*) id;
 }
 
-extern char * my_hostname();
-
 // compare 2 usernames that may or may not be fully qualified
 // to see of they both refer to the same user.
 //
@@ -1794,8 +1792,8 @@ bool is_same_user(
 {
    // for now, treat COMPARE_DEFAULT as meaning IGNORE_DOMAINS
    // TODO: qualify domains and then compare them.
-   if (COMPARE_DEFAULT == opt) {
-      opt = IGNORE_DOMAINS;
+   if (COMPARE_DOMAIN_DEFAULT == opt) {
+      opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN);
    }
 
    const char * pu1 = user1;
@@ -1817,20 +1815,59 @@ bool is_same_user(
    if (pu2[0] && pu2[0] != '@')
       return false;
 
-   if (IGNORE_DOMAINS != opt) {
+   int cmp = opt & COMPARE_MASK;
+   if (COMPARE_IGNORE_DOMAIN == cmp)
+      return true;
 
-      if (pu1[0] == '@') ++pu1;
-      if (pu2[0] == '@') ++pu2;
+   // compare domain part
+   bool fmatch = true;
 
-      if (pu1[0] == '.' || (0 == pu1[0] && ASSUME_LOCALHOST == opt))
-         pu1 = my_hostname();
-      if (pu2[0] == '.' || (0 == pu2[0] && ASSUME_LOCALHOST == opt))
-         pu2 = my_hostname();
+   if (pu1[0] == '@') ++pu1;
+   if (pu2[0] == '@') ++pu2;
 
-      if (strcasecmp(pu1, pu2))
-         return false;
+   char *domain = NULL; // in case we need to fetch UID_DOMAIN
+   if (pu1[0] == '.' || (0 == pu1[0] && (opt & ASSUME_UID_DOMAIN))) {
+      domain = param("UID_DOMAIN");
+      pu1 = domain ? domain : "";
+   }
+   if (pu2[0] == '.' || (0 == pu2[0] && (opt & ASSUME_UID_DOMAIN))) {
+      if ( ! domain) domain = param("UID_DOMAIN");
+      pu2 = domain ? domain : "";
    }
 
-   return true;
+   // compare domains, if one is a valid prefix of the other
+   // then we consider that a match. we do this so that
+   // tonic.cs.wisc.edu matches tonic
+   //
+   if (pu1 != pu2) {
+      if (COMPARE_DOMAIN_FULL == cmp) {
+         fmatch = ! strcasecmp(pu1, pu2);
+      } else if (COMPARE_DOMAIN_PREFIX == cmp) {
+         for (;;) {
+            // if the first domain ends, and the second one 
+            // has ended or is on a '.' then we call that a match
+            if ( ! pu1[0]) {
+               fmatch = ( ! pu2[0] || pu2[0] == '.');
+               break;
+            }
+            // if the domains don't match at this point, then
+            // this is a match only if the first domain is on a '.'
+            // and the second domain has ended.
+            // we know that pu1[0] cannot be 0 here because of the test above
+            //
+            if (toupper(pu1[0]) != toupper(pu2[0])) {
+               fmatch = (pu1[0] == '.') && ! pu2[0];
+               break;
+            }
+
+            ++pu1;
+            ++pu2;
+         }
+      }
+   }
+
+   if (domain) free (domain);
+
+   return fmatch;
 }
 
