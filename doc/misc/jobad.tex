@@ -258,12 +258,15 @@ with the Deltacloud service for a grid-type deltacloud job.
 \index{DiskUsage!job ClassAd attribute}
 \item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the Condor
 execute directory on the execute machine that this job has used.
-The initial estimate may be specified in the job
-submit file using the \SubmitCmd{request\_disk} command.
-If not initialized by the job's request,
+An initial value may be set at the job's request, placing into the
+job's submit description file a setting such as
+\begin{verbatim}
+  # 1 megabyte initial value
+  +DiskUsage = 1024
+\end{verbatim}
 \SubmitCmd{vm} universe jobs will default to an initial value of the disk
 image size. 
-If not initialized by the job's request,
+If not initialized by the job,
 non-\SubmitCmd{vm} universe jobs will default to an initial value of the 
 sum of the job's executable and all input files.
 
@@ -1059,10 +1062,15 @@ for this job; utilized when dynamic \Condor{startd} provisioning is enabled.
 \index{ClassAd job attribute!RequestMemory}
 \index{RequestMemory!job ClassAd attribute}
 \item[\AdAttr{RequestMemory}:]  The amount of memory space in Mbytes 
-requested for this job;
-results in setting an initial value for the job ClassAd attribute 
-\Attr{ImageSize}.
+requested for this job.
 Utilized when dynamic \Condor{startd} provisioning is enabled.
+If not set by the job, its definition is calculated with
+\footnotesize
+\begin{verbatim}
+RequestMemory = ceiling(ifThenElse(JobVMMemory =!= UNDEFINED, JobVMMemory, 
+                ImageSize/1024.0))
+\end{verbatim}
+\normalsize
 
 %%% ClassAd attribute: ResidentSetSize
 \index{ClassAd job attribute!ResidentSetSize}
