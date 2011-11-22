@@ -722,7 +722,7 @@ Scheduler::timeout()
 
 	/* Reset our timer */
 	time_to_next_run = SchedDInterval.getTimeToNextRun();
-	daemonCore->Reset_Timer(timeoutid,time_to_next_run);
+	daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
 }
 
 void
@@ -10733,10 +10733,6 @@ Scheduler::RegisterTimers()
 	Timeslice start_jobs_timeslice;
 
 	// clear previous timers
-	if (timeoutid >= 0) {
-		daemonCore->Cancel_Timer(timeoutid);
-	}
-
 	if (startjobsid >= 0) {
 		daemonCore->GetTimerTimeslice(startjobsid,start_jobs_timeslice);
 		daemonCore->Cancel_Timer(startjobsid);
@@ -10761,8 +10757,10 @@ Scheduler::RegisterTimers()
 	}
 
 	 // timer handlers
-	timeoutid = daemonCore->Register_Timer(10,
-		(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
+	if (timeoutid < 0) {
+		timeoutid = daemonCore->Register_Timer(10, 10,
+			(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
+	}
 	startjobsid = daemonCore->Register_Timer( start_jobs_timeslice,
 		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
