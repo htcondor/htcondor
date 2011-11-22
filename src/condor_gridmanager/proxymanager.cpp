@@ -215,10 +215,6 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 				proxy_subject = new ProxySubject;
 				proxy_subject->subject_name = strdup( subject_name );
 				proxy_subject->fqan = fqan ? strdup( fqan ) : NULL;
-//				if ( first_fqan ) {
-//					sprintf( tmp, "%s,%s", subject_name, first_fqan );
-//				}
-//				proxy_subject->first_fqan = first_fqan ? strdup( tmp.c_str() ) : NULL;
 				proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 				proxy_subject->has_voms_attrs = has_voms_attrs;
 
@@ -311,7 +307,6 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			free( subject_name );
 			return NULL;
 		}
-dprintf(D_ALWAYS,"JEF read first_fqan=%s, fqan=%s\n",first_fqan,fqan);
 #endif
 		if ( fqan ) {
 			has_voms_attrs = true;
@@ -344,13 +339,8 @@ dprintf(D_ALWAYS,"JEF read first_fqan=%s, fqan=%s\n",first_fqan,fqan);
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
 			proxy_subject->fqan = strdup( fqan );
-//			if ( first_fqan ) {
-//				sprintf( tmp, "%s,%s", subject_name, first_fqan );
-//			}
-//			proxy_subject->first_fqan = first_fqan ? strdup( tmp.c_str() ) : NULL;
 			proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 			proxy_subject->has_voms_attrs = true;
-dprintf(D_ALWAYS,"JEF setting first_fqan=%s, fqan=%s\n",proxy_subject->first_fqan,proxy_subject->fqan);
 
 			// Create a master proxy for our new ProxySubject
 			Proxy *new_master = new Proxy;
