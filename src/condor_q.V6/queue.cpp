@@ -133,7 +133,7 @@ static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_h
 static  int use_xml = 0;
 static  bool expert = false;
 
-static 	int malformed, running, idle, held;
+static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
@@ -1968,7 +1968,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	output_buffer->setFiller( (clusterProcString *) NULL );
 
 		// initialize counters
-	idle = running = held = malformed = 0;
+	idle = running = held = malformed = suspended = completed = removed = 0;
 	output_buffer_empty = true;
 
 	if ( run || goodput ) {
@@ -2132,9 +2132,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		// If we want to summarize, do that too.
 		if( summarize ) {
 			printf( "\n%d jobs; "
-					"%d idle, %d running, %d held",
-					idle+running+held+malformed,
-					idle,running,held);
+					"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
+					idle+running+held+malformed+suspended+completed+removed,
+					completed,removed,idle,running,held,suspended);
 			if (malformed>0) printf( ", %d malformed",malformed);
            	printf("\n");
 		}
@@ -2184,8 +2184,10 @@ process_buffer_line( ClassAd *job )
 	{
 		case IDLE:                idle++;      break;
 		case TRANSFERRING_OUTPUT: 
-		case SUSPENDED:
 		case RUNNING:             running++;   break;
+		case SUSPENDED:           suspended++; break;
+		case COMPLETED:           completed++; break;
+		case REMOVED:             removed++;   break;
 		case HELD:		          held++;	   break;
 	}
 
@@ -2410,7 +2412,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 
 			// initialize counters
-		malformed = 0; idle = 0; running = 0; held = 0;
+		malformed = idle = running = held = completed = suspended = 0;
 		
 		if( verbose || use_xml ) {
 			StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
@@ -2514,9 +2516,9 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 		if( summarize ) {
 			printf( "\n%d jobs; "
-					"%d idle, %d running, %d held",
-					idle+running+held+malformed,
-					idle,running,held);
+					"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
+					idle+running+held+malformed+suspended+completed+removed,
+					completed,removed,idle,running,held,suspended);
 			if (malformed>0) printf( ", %d malformed",malformed);
 
             printf("\n");
