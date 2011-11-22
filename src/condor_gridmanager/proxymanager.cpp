@@ -202,7 +202,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		job_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, &fqan );
 		job_ad->LookupString( ATTR_X509_USER_PROXY_FIRST_FQAN, &first_fqan );
 		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &subject_name );
-		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &email );
+		job_ad->LookupString( ATTR_X509_USER_PROXY_EMAIL, &email );
 		if ( subject_name ) {
 			if ( fqan == NULL ) {
 				fqan = strdup( subject_name );
@@ -264,6 +264,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		}
 
 		free( subject_name );
+		free( email );
 		free( fqan );
 		free( first_fqan );
 		//sprintf( error, "%s is not set in the job ad", ATTR_X509_USER_PROXY );
@@ -304,6 +305,8 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			return NULL;
 		}
 
+		email = x509_proxy_email( proxy_path.c_str() );
+
 		fqan = NULL;
 #if defined(HAVE_EXT_GLOBUS)
 		int rc = extract_VOMS_info_from_file( proxy_path.c_str(), 0, NULL,
@@ -313,6 +316,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 					 proxy_path.c_str() );
 			error = "Failed to get voms info of proxy";
 			free( subject_name );
+			free( email );
 			return NULL;
 		}
 #endif
@@ -346,6 +350,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			std::string tmp;
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
+			proxy_subject->email = strdup( email );
 			proxy_subject->fqan = strdup( fqan );
 			proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 			proxy_subject->has_voms_attrs = true;
@@ -379,6 +384,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		}
 
 		free( subject_name );
+		free( email );
 		free( fqan );
 		free( first_fqan );
 	}
