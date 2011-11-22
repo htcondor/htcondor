@@ -221,6 +221,11 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 				else
 					proxy_subject->email = NULL;
 				proxy_subject->fqan = fqan ? strdup( fqan ) : NULL;
+//				if ( first_fqan ) {
+//					sprintf( tmp, "%s,%s", subject_name, first_fqan );
+//				}
+//				proxy_subject->first_fqan = first_fqan ? strdup( tmp.c_str() ) : NULL;
+				proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 				proxy_subject->has_voms_attrs = has_voms_attrs;
 
 				// Create a master proxy for our new ProxySubject
