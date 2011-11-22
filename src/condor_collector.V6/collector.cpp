@@ -99,9 +99,7 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
-#if ( HAVE_HIBERNATION )
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
-#endif
 
 StringList *viewCollectorTypes;
 
@@ -281,7 +279,6 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update_expect_ack,
 		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
 
-#if ( HAVE_HIBERNATION )
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
@@ -308,7 +305,6 @@ void CollectorDaemon::Init()
 	    }
 
     }
-#endif
 
 	forkQuery.Initialize( );
 }
@@ -648,10 +644,8 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
-#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
-#endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -714,10 +708,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 
 	}
 
-#if ( HAVE_HIBERNATION )
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
-#endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -848,11 +840,9 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
         
     }
 
-#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
 	if(cad)
     offline_plugin_.update ( command, *cad );
-#endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -1276,9 +1266,7 @@ void CollectorDaemon::Config()
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
 
-#if ( HAVE_HIBERNATION )
     offline_plugin_.configure ();
-#endif
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
