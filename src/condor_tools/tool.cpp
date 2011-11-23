@@ -97,7 +97,7 @@ usage( const char *str, int iExitCode )
 		exit( 1 );
 	}
 
-	char* tmp = strchr( str, '_' );
+	const char* tmp = strchr( str, '_' );
 	if( !tmp ) {
 		fprintf( stderr, "Usage: %s [command] ", str );
 	} else {
