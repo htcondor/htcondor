@@ -1393,6 +1393,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
         return numSubmitsThisCycle;
 	}
 	if ( prevDagIsHalted ) {
+		debug_printf( DEBUG_QUIET,
+					"DAG going from halted to running state\n" );
 			// If going from the halted to the not halted state, we need
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.

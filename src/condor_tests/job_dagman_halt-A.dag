@@ -1,4 +1,23 @@
 # This waits until the DAG is halted, sleeps, and then un-halts the DAG.
+Job NodeW1 job_dagman_halt-A-node.cmd
+Vars NodeW1 nodename="$(JOB)"
+Vars NodeW1 args="$(JOB) -unhalt"
+Priority NodeW1 10
+
+# This node halts the DAG.
+Job NodeW2 job_dagman_halt-A-node.cmd
+Script Post NodeW2 job_dagman_halt-A-script.pl Post $JOB
+Vars NodeW2 nodename="$(JOB)"
+Vars NodeW2 args="$(JOB) -halt"
+Priority NodeW2 5
+
+# This node runs normally -- tests that things are resumed correctly
+# after the DAG is un-halted.
+Job NodeW3 job_dagman_halt-A-node.cmd
+Vars NodeW3 nodename="$(JOB)"
+Vars NodeW3 args="$(JOB)"
+
+# This waits until the DAG is halted, sleeps, and then un-halts the DAG.
 Job NodeX job_dagman_halt-A-node.cmd
 Vars NodeX nodename="$(JOB)"
 Vars NodeX args="$(JOB) -unhalt"
@@ -18,13 +37,14 @@ Script Post NodeY2 job_dagman_halt-A-script.pl Post $JOB
 Vars NodeY2 nodename="$(JOB)"
 Vars NodeY2 args="$(JOB)"
 
+# Got rid of this node to make the order deterministic.
 # This node runs normally -- tests that things are resumed correctly
 # after the DAG is un-halted.
-Job NodeY3 job_dagman_halt-A-node.cmd
-Script Pre NodeY3 job_dagman_halt-A-script.pl Pre $JOB
-Script Post NodeY3 job_dagman_halt-A-script.pl Post $JOB
-Vars NodeY3 nodename="$(JOB)"
-Vars NodeY3 args="$(JOB)"
+#Job NodeY3 job_dagman_halt-A-node.cmd
+#Script Pre NodeY3 job_dagman_halt-A-script.pl Pre $JOB
+#Script Post NodeY3 job_dagman_halt-A-script.pl Post $JOB
+#Vars NodeY3 nodename="$(JOB)"
+#Vars NodeY3 args="$(JOB)"
 
 # This node just runs normally.
 Job NodeA job_dagman_halt-A-node.cmd
@@ -58,9 +78,14 @@ Job NodeD job_dagman_halt-A-node.cmd
 Vars NodeD nodename="$(JOB)"
 Vars NodeD args="$(JOB)"
 
+Parent NodeW1 Child NodeX
+Parent NodeW2 Child NodeW3
+Parent NodeW3 Child NodeX NodeY1
 Parent NodeX Child NodeA
-Parent NodeY1 Child NodeY2 NodeY3
-Parent NodeY2 NodeY3 Child NodeA
+#Parent NodeY1 Child NodeY2 NodeY3
+Parent NodeY1 Child NodeY2
+#Parent NodeY2 NodeY3 Child NodeA
+Parent NodeY2 Child NodeA
 Parent NodeA Child NodeB NodeC1
 Parent NodeC1 Child NodeC2
 Parent NodeB NodeC2 Child NodeD

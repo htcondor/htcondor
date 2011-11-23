@@ -8,9 +8,9 @@ $halt_file = "job_dagman_halt-A.dag.halt";
 
 if ($ARGV[1] eq "-sleep") {
 	system("echo '  $ARGV[0] Sleeping' >> $outfile");
-	sleep(5);
+	sleep(1);
 	while (! -e $halt_file) {
-		sleep(5);
+		sleep(1);
 	}
 	system("echo '  $ARGV[0] found halt file' >> $outfile");
 	sleep(5);
@@ -19,18 +19,19 @@ if ($ARGV[1] eq "-sleep") {
 	sleep(15); # Allow time for sibling node to start.
 	system("echo '  $ARGV[0] halting DAG' >> $outfile");
 	system("touch $halt_file");
-	sleep(5);#TEMPTEMP!!
+	sleep(5);
 
 } elsif ($ARGV[1] eq "-unhalt") {
-	system("echo '  $ARGV[0] sleeping' >> $outfile");
-	sleep(5);
+	system("echo '  $ARGV[0] sleeping and checking for halt file' >> $outfile");
+	sleep(1);
 	while (! -e $halt_file) {
-		sleep(5);
+		sleep(1);
 	}
-	system("echo '  $ARGV[0] Found halt file' >> $outfile");
-	sleep(30); # Time for next node to start...
+	system("echo '  $ARGV[0] found halt file' >> $outfile");
+	sleep(40); # Time for next node to start...
 	system("rm -f $halt_file");
 	system("echo '  $ARGV[0] removed halt file' >> $outfile");
+
 } else {
 	sleep(10);
 }
