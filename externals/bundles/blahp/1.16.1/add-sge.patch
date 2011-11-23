@@ -1,0 +1,23 @@
+--- org.glite.ce.blahp/config/blah.config.template.orig	2011-11-22 00:22:42.091734529 -0600
++++ org.glite.ce.blahp/config/blah.config.template	2011-11-22 00:23:00.634845228 -0600
+@@ -1,5 +1,5 @@
+ #Supported batch systems
+-supported_lrms=pbs,lsf
++supported_lrms=pbs,lsf,sge
+ 
+ #DGAS logfile 
+ BLAHPD_ACCOUNTING_INFO_LOG=
+@@ -87,6 +87,13 @@
+ lsf_BLPport2=
+ 
+ #
++# SGE Configuration
++#
++sge_root=
++sge_cell=
++
++
++#
+ #LSF Updater
+ #
+ #number of logs to be read by bhist (default:3)
