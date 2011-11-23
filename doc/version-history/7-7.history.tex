@@ -47,6 +47,9 @@ attribute \Attr{EC2RemoteVirtualMachineName} instead of
 under the HOST(S) column for grid type ec2 jobs.
 \Ticket{2599}
 
+\item Condor can now submit jobs to Grid Engine via the new sge grid-type.
+\Ticket{1984}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -93,6 +96,11 @@ running state indefinitely when the job was removed or put on hold
 and there was a communication failure between the \Condor{shadow}
 and the \Condor{starter}.  This problem was introduced in 7.7.2.
 \Ticket{2591}
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause crashes
+and prevent the \Attr{x509UserProxyEmail} from being set properly for
+jobs forwarded via Condor-C.
+\Ticket{2655}
 
 \end{itemize}
 

@@ -179,6 +179,8 @@ OfflineCollectorPlugin::persistentStoreAd(const char *key, ClassAd &ad)
 	ClassAd *p = NULL;
 	MyString s;
 
+	if (!_ads) return false;
+
 		// If not given a key for the ad, make one now.
 	if ( !key ) {
 		key = makeOfflineKey(ad,s);
@@ -233,6 +235,8 @@ bool
 OfflineCollectorPlugin::persistentRemoveAd(const char* key)
 {
 	ClassAd *p;
+
+	if (!_ads) return false;
 
 	/* can't remove ads that do not exist */
 	if ( !_ads->LookupClassAd ( key, p ) ) {
@@ -369,6 +373,8 @@ OfflineCollectorPlugin::mergeClassAd (
 	char const *key )
 {
 	ClassAd *old_ad = NULL;
+
+	if (!_ads) return;
 
 	_ads->BeginTransaction ();
 

@@ -37,6 +37,10 @@ The details of each version are described below.
 to detect and utilize the load average information.
 \Ticket{2579}
 
+\item The FS authentication method now works when \File{/tmp} is
+Btrfs.  Previously, authentication failed.
+\Ticket{2583}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -110,6 +114,14 @@ if the current account was the same as the desired account.
 \item Fixed a bug that could cause failure to clean up job processes
 when using glexec after a restart of \Condor{master}.
 \Ticket{2614}
+
+\item Fixed a bug in \Condor{power} that caused it to fail when
+operating on a machine with a 15 byte subnet mask string.
+\Ticket{2651}
+
+\item Fixed a bug that could cause the \Condor{schedd} to no longer start
+idle jobs or send ads to the \Condor{collector}.
+\Ticket{2647}
 
 \end{itemize}
 
