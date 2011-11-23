@@ -123,6 +123,10 @@ operating on a machine with a 15 byte subnet mask string.
 idle jobs or send ads to the \Condor{collector}.
 \Ticket{2647}
 
+\item Fixed a bug that could cause the \Condor{schedd} to crash if a
+hold reason contained a \verb|%| character and user-log for the job
+was in xml format.
+
 \end{itemize}
 
 \noindent Known Bugs:
