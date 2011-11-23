@@ -6289,18 +6289,23 @@ DaemonCore::Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec )
 }
 
 #if !defined(WIN32)
-int g_create_process_errorpipe = -1;
+class CreateProcessForkit;
+CreateProcessForkit *g_create_process_forkit = NULL;
 
 void
-enterCreateProcessChild(int errorpipe) {
-	ASSERT( g_create_process_errorpipe == -1 );
-	g_create_process_errorpipe = errorpipe;
+enterCreateProcessChild(CreateProcessForkit *forkit) {
+	ASSERT( g_create_process_forkit == NULL );
+	g_create_process_forkit = forkit;
 }
 
 void
 exitCreateProcessChild() {
-	g_create_process_errorpipe = -1;
+	g_create_process_forkit = NULL;
 }
+
+void
+writeExecError(CreateProcessForkit *forkit,int exec_errno);
+
 #endif
 
 #if !defined(WIN32)
@@ -6330,7 +6335,7 @@ extern "C" {
 void __real_exit(int status);
 void __wrap_exit(int status)
 {
-	if ( _condor_exit_with_exec == 0 && g_create_process_errorpipe == -1 ) {
+	if ( _condor_exit_with_exec == 0 && g_create_process_forkit == NULL ) {
 			// The advantage of calling the real exit() rather than
 			// _exit() is that things like gprof and google-perftools
 			// can write a final profile dump.
@@ -6352,11 +6357,10 @@ void exit(int status)
 	fflush( stdout );
 	fflush( stderr );
 
-	if( g_create_process_errorpipe != -1 ) {
+	if( g_create_process_forkit ) {
 			// We are inside fork() or clone() and we need to tell our
 			// parent process that something has gone horribly wrong.
-		int child_errno = DaemonCore::ERRNO_EXIT;
-		write(g_create_process_errorpipe, &child_errno, sizeof(child_errno));
+		writeExecError(g_create_process_forkit,DaemonCore::ERRNO_EXIT);
 	}
 
 	if ( _condor_exit_with_exec == 0 ) {
@@ -6555,7 +6559,9 @@ public:
 	   m_priv(the_priv), m_want_command_port(the_want_command_port),
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
 	   m_core_hard_limit(core_hard_limit),
-	   m_affinity_mask(affinity_mask)
+	   m_affinity_mask(affinity_mask),
+	   m_wrote_tracking_gid(false),
+	   m_no_dprintf_allowed(false)
 	{
 	}
 
@@ -6572,6 +6578,9 @@ public:
 
 	pid_t clone_safe_getpid();
 	pid_t clone_safe_getppid();
+
+	void writeTrackingGid(gid_t tracking_gid);
+	void writeExecError(int exec_errno);
 
 private:
 		// Data passed to us from the parent:
@@ -6609,6 +6618,8 @@ private:
 	size_t *m_core_hard_limit;
 	const int    *m_affinity_mask;
 	Env m_envobject;
+	bool m_wrote_tracking_gid;
+	bool m_no_dprintf_allowed;
 };
 
 enum {
@@ -6698,7 +6709,7 @@ pid_t CreateProcessForkit::fork_exec() {
 			// SIGCHLD     - we want this signal when child dies, as opposed
 			//               to some other non-standard signal
 
-		enterCreateProcessChild(m_errorpipe[1]);
+		enterCreateProcessChild(this);
 
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
@@ -6721,7 +6732,7 @@ pid_t CreateProcessForkit::fork_exec() {
 	newpid = fork();
 	if( newpid == 0 ) {
 			// in child
-		enterCreateProcessChild(m_errorpipe[1]);
+		enterCreateProcessChild(this);
 		exec(); // never returns
 	}
 
@@ -6736,7 +6747,44 @@ int CreateProcessForkit::clone_fn( void *arg ) {
 	return 0;
 }
 
+void CreateProcessForkit::writeTrackingGid(gid_t tracking_gid)
+{
+	m_wrote_tracking_gid = true;
+	int rc = full_write(m_errorpipe[1], &tracking_gid, sizeof(tracking_gid));
+	if( rc != sizeof(tracking_gid) ) {
+			// the writing of the tracking gid _must_ succeed or we must
+			// abort before calling exec()
+		if( !m_no_dprintf_allowed ) {
+			dprintf(D_ALWAYS,"Create_Process: Failed to write tracking gid: rc=%d, errno=%d\n",rc,errno);
+		}
+		_exit(4);
+	}
+}
+
+void CreateProcessForkit::writeExecError(int child_errno)
+{
+	if( !m_wrote_tracking_gid ) {
+			// Tracking gid must come before errno on the pipe,
+			// so write a bogus gid now.  The value doesn't
+			// matter, because we are reporting failure to
+			// call exec().
+		writeTrackingGid(0);
+	}
+	int rc = full_write(m_errorpipe[1], &child_errno, sizeof(child_errno));
+	if( rc != sizeof(child_errno) ) {
+		if( !m_no_dprintf_allowed ) {
+			dprintf(D_ALWAYS,"Create_Process: Failed to write error to error pipe: rc=%d, errno=%d\n",rc,errno);
+		}
+	}
+}
+
+void writeExecError(CreateProcessForkit *forkit,int exec_errno)
+{
+	forkit->writeExecError(exec_errno);
+}
+
 void CreateProcessForkit::exec() {
+	gid_t  tracking_gid = 0;
 
 		// Keep in mind that there are two cases:
 		//   1. We got here by forking, (cannot modify parent's memory)
@@ -6797,8 +6845,7 @@ void CreateProcessForkit::exec() {
 	if( (daemonCore->pidTable->lookup(pid, pidinfo) >= 0) ) {
 			// we've already got this pid in our table! we've got
 			// to bail out immediately so our parent can retry.
-		int child_errno = DaemonCore::ERRNO_PID_COLLISION;
-		write(m_errorpipe[1], &child_errno, sizeof(child_errno));
+		writeExecError(DaemonCore::ERRNO_PID_COLLISION);
 		_exit(4);
 	}
 		// If we made it here, we didn't find the PID in our
@@ -6889,7 +6936,7 @@ void CreateProcessForkit::exec() {
 						  PIDENVID_MAX );
 					// before we exit, make sure our parent knows something
 					// went wrong before the exec...
-				write(m_errorpipe[1], &errno, sizeof(errno));
+				writeExecError(errno);
 				_exit(errno);
 			}
 
@@ -6913,7 +6960,7 @@ void CreateProcessForkit::exec() {
 					  "\"%s\" due to bad format. !\n", envid );
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
-			write(m_errorpipe[1], &errno, sizeof(errno));
+			writeExecError(errno);
 			_exit(errno);
 		}
 
@@ -6928,7 +6975,7 @@ void CreateProcessForkit::exec() {
 				  "Error.\n", envid );
 			// before we exit, make sure our parent knows something
 			// went wrong before the exec...
-		write(m_errorpipe[1], &errno, sizeof(errno));
+		writeExecError(errno);
 		_exit(errno);
 	}
 		// END pid family environment id propogation 
@@ -6970,7 +7017,7 @@ void CreateProcessForkit::exec() {
 							strerror(errno) );
 						// before we exit, make sure our parent knows something
 						// went wrong before the exec...
-					write(m_errorpipe[1], &errno, sizeof(errno));
+					writeExecError(errno);
 					_exit(errno);
 				}
 		}
@@ -7001,7 +7048,9 @@ void CreateProcessForkit::exec() {
 			//
 			gid_t* tracking_gid_ptr = NULL;
 #if defined(LINUX)
-			tracking_gid_ptr = m_family_info->group_ptr;
+			if( m_family_info->group_ptr ) {
+				tracking_gid_ptr = &tracking_gid;
+			}
 #endif
 
 			bool ok =
@@ -7015,7 +7064,7 @@ void CreateProcessForkit::exec() {
 				                            m_family_info->glexec_proxy);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
-				write(m_errorpipe[1], &errno, sizeof(errno));
+				writeExecError(errno);
 				_exit(4);
 			}
 
@@ -7024,6 +7073,9 @@ void CreateProcessForkit::exec() {
 			}
 		}
 	}
+
+		// This _must_ be called before calling exec().
+	writeTrackingGid(tracking_gid);
 
 	int openfds = getdtablesize();
 
@@ -7180,6 +7232,7 @@ void CreateProcessForkit::exec() {
 		// !! !! !! !! !! !! !! !! !! !! !! !!
 		// !! !! !! !! !! !! !! !! !! !! !! !!
 
+	m_no_dprintf_allowed = true;
 
 		// Now we want to close all fds that aren't in the
 		// sock_inherit_list.  however, this can really screw up
@@ -7244,8 +7297,7 @@ void CreateProcessForkit::exec() {
 	if ( m_priv != PRIV_ROOT ) {
 			// Final check to make sure we're not root anymore.
 		if( getuid() == 0 ) {
-			int priv_errno = DaemonCore::ERRNO_EXEC_AS_ROOT;
-			write(m_errorpipe[1], &priv_errno, sizeof(priv_errno));
+			writeExecError(DaemonCore::ERRNO_EXEC_AS_ROOT);
 			_exit(4);
 		}
 	}
@@ -7255,7 +7307,7 @@ void CreateProcessForkit::exec() {
 		if( chdir(m_cwd) == -1 ) {
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
-			write(m_errorpipe[1], &errno, sizeof(errno));
+			writeExecError(errno);
 			_exit(errno);
 		}
 	}
@@ -7270,7 +7322,7 @@ void CreateProcessForkit::exec() {
 			new_mask = &empty_mask;
 		}
 		if (sigprocmask(SIG_SETMASK, new_mask, NULL) == -1) {
-			write(m_errorpipe[1], &errno, sizeof(errno));
+			writeExecError(errno);
 			_exit(errno);
 		}
 	}
@@ -7278,7 +7330,7 @@ void CreateProcessForkit::exec() {
 #if defined(LINUX) && defined(TDP)
 	if( HAS_DCJOBOPT_SUSPEND_ON_EXEC(m_job_opt_mask) ) {
 		if(ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
-			write(m_errorpipe[1], &errno, sizeof(errno));
+			writeExecError(errno);
 			_exit (errno);
 		}
 	}
@@ -7296,7 +7348,7 @@ void CreateProcessForkit::exec() {
 			// Let's exit with our errno.
 			// before we exit, make sure our parent knows something
 			// went wrong before the exec...
-		write(m_errorpipe[1], &errno, sizeof(errno));
+		writeExecError(errno);
 		_exit(errno);
 	}
 }
@@ -8366,9 +8418,32 @@ int DaemonCore::Create_Process(
 			// close the write end of our error pipe
 		close(errorpipe[1]);
 
+			// read the tracking gid from the child.
+		gid_t child_tracking_gid = 0;
+		int tracking_gid_rc = full_read(errorpipe[0], &child_tracking_gid, sizeof(gid_t));
+		if( tracking_gid_rc != sizeof(gid_t)) {
+				// This should only happen if our child process died
+				// before writing to the pipe.  So it cannot have
+				// called exec(), because it always writes to the pipe
+				// before calling exec.
+			dprintf(D_ALWAYS,"Error: Create_Process(%s): failed to read child tracking gid: rc=%d, gid=%d, errno=%d %s.\n",
+					executable,tracking_gid_rc,child_tracking_gid,errno,strerror(errno));
+
+			int child_status;
+			waitpid(newpid, &child_status, 0);
+			close(errorpipe[0]);
+			newpid = FALSE;
+			goto wrapup;
+		}
+		if( family_info && family_info->group_ptr ) {
+				// pass the tracking gid back to our caller
+				// (Currently, we only get here in the starter.)
+			*(family_info->group_ptr) = child_tracking_gid;
+		}
+
 			// check our error pipe for any problems before the exec
 		int child_errno = 0;
-		if (read(errorpipe[0], &child_errno, sizeof(int)) == sizeof(int)) {
+		if (full_read(errorpipe[0], &child_errno, sizeof(int)) == sizeof(int)) {
 				// If we were able to read the errno from the
 				// errorpipe before it was closed, then we know the
 				// error happened before the exec.  We need to reap
