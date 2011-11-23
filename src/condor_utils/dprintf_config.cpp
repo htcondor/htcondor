@@ -320,7 +320,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
                 
-                int64_t maxlog = 0;
+                off_t maxlog = 0;
 				pval = param(pname);
 				if (pval != NULL) {
                     // because there is nothing like param_long_long() or param_off_t()

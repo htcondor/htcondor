@@ -20,6 +20,7 @@
 // This #define doesn't actually do anything. This value needs to be
 // defined before any system header files are included in the source file
 // to have any effect.
+#define _FILE_OFFSET_BITS 64
 
 #include <string>
 #include <map>
@@ -28,7 +29,7 @@ struct DebugFileInfo
 	FILE *debugFP;
 	int debugFlags;
 	std::string logPath;
-	int64_t maxLog;
+	off_t maxLog;
 	int maxLogNum;
 
 	DebugFileInfo() : debugFP(0), debugFlags(0), maxLog(0), maxLogNum(0) {}

@@ -782,7 +782,7 @@ debug_lock(int debug_flags, const char *mode, int force_lock)
 static FILE *
 debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic)
 {
-	int64_t		length = 0; // this gets assigned return value from lseek()
+	off_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
@@ -839,12 +839,8 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
-#ifdef WIN32
-	length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
-#else
-	length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
-#endif
-	if( length < 0 ) {
+
+	if( (length=lseek(fileno(debug_file_ptr), 0, SEEK_END)) < 0 ) {
 		if (dont_panic) {
 			if(locked) debug_close_lock();
 			debug_close_file(it);
@@ -856,7 +852,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
-	if( it && length > it->maxLog ) {
+	if( it->maxLog && length > it->maxLog ) {
 		if( !locked ) {
 			/*
 			 * We only need to redo everything if there is a lock defined
