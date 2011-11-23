@@ -1172,7 +1172,7 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 						 "WriteUserLog Failed to convert event type # %d to XML.\n",
 						 event->eventNumber);
 			}
-			if (fprintf ( fp, adXML.Value()) < 0) {
+			if (fprintf ( fp, "%s", adXML.Value()) < 0) {
 				success = false;
 			} else {
 				success = true;
