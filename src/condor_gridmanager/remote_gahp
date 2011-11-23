@@ -1,0 +1,133 @@
+#!/bin/sh
+
+################################################################################
+# blahp-over-ssh shim script
+#
+# Arguments:
+#   $1: remote_hostname
+#
+# Assumes public/private key pair is already created and exists on host
+#
+# Exits with 0 on success, < 0 if ssh-add failed, > 0 if ssh failed
+################################################################################
+
+# List of remote hosts to connect to
+# Customize this for different remote hosts
+#
+# Format:
+# "remote_hostname remote_script_path passphrase_location private_key_location"
+# - remote_hostname: name of server to connect to (required)
+# - remote_script_path: path to script to start up blahp (required)
+# - passphrase_location: location of passphrase protecting ssh private key
+#     (default is no passphrase required)
+# - private_key_location: location of ssh private key (default is ~/.ssh/id_rsa)
+
+REMOTE_HOSTS=(
+	"glow-c004 /home/slauson/remote-test/batch_gahp.wrapper /scratch.1/slauson/condor-blahp_over_ssh/passphrase"
+	"condor-student1 /afs/cs.wisc.edu/u/s/l/slauson/public/test /afs/cs.wisc.edu/u/s/l/slauson/private/condor/git2/CONDOR_SRC/src/passphrase"
+)
+
+################################################################################
+
+REMOTE_USER=`whoami`
+
+# Go through possible remote hosts
+for host in "${REMOTE_HOSTS[@]}" ; do
+
+	# split string on ' '
+	parts=($host)
+
+	# check if this is a host we care about
+	if [ "$1" == ${parts[0]} ] ; then
+		REMOTE_HOSTNAME=${parts[0]}
+		REMOTE_SCRIPT=${parts[1]}
+		PASSPHRASE_LOCATION=${parts[2]}
+		PRIVATE_KEY_LOCATION=${parts[3]}
+		break
+	fi
+done
+
+# if a passphrase is required, start up a ssh-agent and do ssh-add
+if [ "$PASSPHRASE_LOCATION" != "" ] ; then
+	# start the ssh-agent
+	eval `ssh-agent -s`
+
+	# get the passphrase
+	PASSPHRASE=`cat $PASSPHRASE_LOCATION`
+
+	# create a temp file for the expect script
+	SSH_ADD_SCRIPT=`mktemp`
+	chmod 700 $SSH_ADD_SCRIPT
+
+	# Create the expect script
+	echo "#!/usr/bin/expect -f
+		# get arguments
+		set num_args [llength \$argv]
+		set private_key_loc [lindex \$argv 0]
+
+		# spawn ssh-add process
+		spawn ssh-add $PRIVATE_KEY_LOCATION
+
+		set spawn_pid [exp_pid]
+
+		# set timeout for expected input
+		set timeout 5
+
+		expect {
+			# sends passphrase
+			\"*passphrase*\" {
+				send -- \"$PASSPHRASE\r\"
+			}
+			# no ssh-agent running
+			\"*authentication agent*\" {
+				exit -1
+			}
+			# incorrect private key location
+			timeout {
+				exit -2
+			}
+		}
+
+		expect {
+			# all done
+			eof	{
+				exit 0
+			}
+			# incorrect passphrase
+			\"*passphrase*\" {
+				exit -3
+			}
+			# timeout
+			timeout {
+				exit -4
+			}
+		}" > $SSH_ADD_SCRIPT
+	
+
+	# call the expect script to ssh-add identity
+	$SSH_ADD_SCRIPT
+	ADD_STATUS=$?
+
+	# remote temporary script
+	rm $SSH_ADD_SCRIPT
+
+	# check if ssh-add failed
+	if [ $ADD_STATUS != 0 ] ; then
+		# ssh-add script not found
+		if [ $ADD_STATUS == 1 ] ; then
+			ADD_STATUS=-1
+		fi
+		eval `ssh-agent -sk`
+		exit $ADD_STATUS
+	fi
+fi
+
+# use BatchMode so we fail if a password is requested
+ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME $REMOTE_SCRIPT "$@"
+
+SSH_STATUS=$?
+
+# kill the ssh-agent if it exists
+eval `ssh-agent -sk`
+
+exit $SSH_STATUS
