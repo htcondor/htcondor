@@ -195,7 +195,7 @@ VanillaProc::StartJob()
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
 	//
-	gid_t tracking_gid;
+	gid_t tracking_gid = 0;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
 		if (!can_switch_ids() &&
 		    (Starter->condorPrivSepHelper() == NULL))

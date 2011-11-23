@@ -55,6 +55,12 @@ Btrfs.  Previously, authentication failed.
 
 \begin{itemize}
 
+\item Fixed a bug that caused failure to start jobs when using privsep
+and supplemental group process tracking.  Prior to 7.6.4, this problem
+only happened when \MacroNI{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set
+to false.  In 7.6.4, the problem happened regardless of the setting.
+\Ticket{2658}
+
 \item Fixed a performance problem on Windows platforms
 that caused claim activations to
 fail when more than about 8 jobs were already running on that machine.
