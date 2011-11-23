@@ -1491,7 +1491,7 @@ bool
 RoutedJob::CleanupSharedX509UserProxy(JobRoute * /*route*/)
 {
 	if(proxy_file_copy.size()) {
-		priv_state old_priv;
+		priv_state old_priv = PRIV_UNKNOWN;
 		if(proxy_file_copy_chowned) {
 			old_priv = set_root_priv();
 		}

@@ -32,7 +32,7 @@ static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
-static void init_hostnames();
+//static void init_hostnames();
 
 // Return our hostname in a static data buffer.
 const char *

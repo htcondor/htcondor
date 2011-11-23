@@ -432,11 +432,11 @@ static bool write_classad_input_file( ClassAd *classad,
 
 const char *rsl_stringify( const std::string& src )
 {
-	int src_len = src.length();
-	int src_pos = 0;
-	int var_pos1;
-	int var_pos2;
-	int quote_pos;
+	size_t src_len = src.length();
+	size_t src_pos = 0;
+	size_t var_pos1;
+	size_t var_pos2;
+	size_t quote_pos;
 	static std::string dst;
 
 	if ( src_len == 0 ) {
