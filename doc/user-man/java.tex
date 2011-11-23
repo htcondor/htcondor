@@ -223,6 +223,45 @@ jar_files  = anexecutable.jar
 arguments  = some.main.ClassFile
 \end{verbatim}
 
+\item[Discovering the main class within a JAR file.]
+As of Java version 1.4, 
+Java virtual machines have a \Opt{-jar} option,
+which takes a single JAR file as an argument.
+With this option, 
+the Java virtual machine discovers the main class to run 
+from the contents of the Manifest file,
+which is bundled within the JAR file.  
+Condor's \SubmitCmd{java} universe does not support this discovery,
+so before submitting the job,
+the name of the main class must be identified.
+
+For a Java application which is run on the command line with
+
+\begin{verbatim}
+  java -jar OneJarFile.jar
+\end{verbatim}
+
+the equivalent version after discovery might look like
+
+\begin{verbatim}
+  java -classpath OneJarFile.jar TheMainClass
+\end{verbatim}
+
+The specified value for \verb@TheMainClass@
+can be discovered by unjarring the JAR file,
+and looking for the MainClass definition in the Manifest file.
+Use that definition in the Condor submit description file.
+Partial contents of that file Java universe submit file will appear as
+
+\begin{verbatim}
+  universe   = java
+  executable =  OneJarFile.jar
+  jar_files = OneJarFile.jar
+  Arguments = TheMainClass More-Arguments
+  queue 
+\end{verbatim}
+
+
 \item[Packages.]
 \index{Java!using packages}
 An example of a Java class that is declared in a non-default
