@@ -125,7 +125,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_COREDUMPER:BOOL'	 => 'OFF',
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
-	 '-DWITH_GCB:BOOL'			 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
