@@ -8462,11 +8462,13 @@ int DaemonCore::Create_Process(
 			newpid = FALSE;
 			goto wrapup;
 		}
+#if defined(LINUX)
 		if( family_info && family_info->group_ptr ) {
 				// pass the tracking gid back to our caller
 				// (Currently, we only get here in the starter.)
 			*(family_info->group_ptr) = child_tracking_gid;
 		}
+#endif
 
 			// check our error pipe for any problems before the exec
 		int child_errno = 0;
