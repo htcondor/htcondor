@@ -3442,7 +3442,7 @@ display to the user, or for calls to sockCache->invalidateSock.
 ClassAd *Matchmaker::
 matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &request,
 					 ClassAdListDoesNotDeleteAds &startdAds,
-					 double preemptPrio, double share,
+					 double preemptPrio, double    /*share*/,
 					 double limitUsed, double submitterLimit,
 					 double pieLeft,
 					 bool only_for_startdrank)
