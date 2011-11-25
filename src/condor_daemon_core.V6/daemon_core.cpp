@@ -6464,6 +6464,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 	}
 	if (group != NULL) {
 #if defined(LINUX)
+		*group = 0;
 		if (!m_proc_family->
 			track_family_via_allocated_supplementary_group(child_pid, *group))
 		{
@@ -6473,6 +6474,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
+		ASSERT( *group != 0 ); // tracking gid should never be group 0
 #else
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
@@ -7079,6 +7081,7 @@ void CreateProcessForkit::exec() {
 			}
 
 			if (tracking_gid_ptr != NULL) {
+				ASSERT( *tracking_gid_ptr != 0 ); // tracking group should never be group 0
 				set_user_tracking_gid(*tracking_gid_ptr);
 			}
 		}
@@ -8466,6 +8469,7 @@ int DaemonCore::Create_Process(
 		if( family_info && family_info->group_ptr ) {
 				// pass the tracking gid back to our caller
 				// (Currently, we only get here in the starter.)
+			ASSERT( child_tracking_gid != 0 ); // tracking gid should never be group 0
 			*(family_info->group_ptr) = child_tracking_gid;
 		}
 #endif

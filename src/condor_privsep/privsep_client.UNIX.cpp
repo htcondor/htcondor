@@ -327,6 +327,7 @@ privsep_exec_set_is_std_univ(FILE* fp)
 void
 privsep_exec_set_tracking_group(FILE* fp, gid_t tracking_group)
 {
+	ASSERT( tracking_group != 0 ); // tracking group should never be group 0
 	fprintf(fp, "exec-tracking-group=%u\n", tracking_group);
 }
 #endif
