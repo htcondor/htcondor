@@ -89,7 +89,7 @@ void Pigeon::initialize() {
   	dprintf(D_ALWAYS, "You need to specify the QPID executable as QPID_EXEC in your condor config \n");
   	EXCEPT("No qpid executable (QPID_EXEC) specified!\n");
   }
-  char *hostname = my_full_hostname() ;
+  const char *hostname = my_full_hostname() ;
   
   ArgList arglist; 
   arglist.AppendArg("qpidd");
@@ -108,11 +108,11 @@ void Pigeon::initialize() {
   
   MyString argString;
   arglist.GetArgsStringForDisplay(&argString);
-  dprintf(D_ALWAYS, "\n chk this chk this %s\n", argString.Value());
+  dprintf(D_ALWAYS, "\n Invoking: %s\n", argString.Value());
   path = getPortPath();
   int fd_stdout = safe_open_wrapper(path, O_RDWR|O_CREAT, 0666);
   free(path);
-  int fds[3] = {-1, fd_stdout, 0};
+  int fds[3] = {-1, fd_stdout, -1};
   int mm_pid = daemonCore->Create_Process(proc,arglist,PRIV_CONDOR_FINAL, 0,FALSE,NULL,NULL,NULL,NULL,fds);
   if (mm_pid <= 0) 
     EXCEPT("Failed to launch qpid process using Create_Process.\n ");
@@ -129,11 +129,11 @@ void Pigeon::initialize() {
     m_qpidAd.Assign("PORT", portStr.c_str());
     dprintf(D_ALWAYS,"qpid process started on port number %s \n", portStr.c_str());
   }  
-  m_qpidAd.SetMyTypeName(GENERIC_ADTYPE);
-  m_qpidAd.SetTargetTypeName("pigeon");
-  std::string hostAddr = "qpid@";
+  m_qpidAd.SetMyTypeName("pigeon");
+  m_qpidAd.SetTargetTypeName("");
+  std::string hostAddr = "pigeon@";
   hostAddr += hostname;
-  m_qpidAd.Assign(ATTR_NAME, hostAddr.c_str());
+  m_qpidAd.Assign(ATTR_NAME, "pigeon"); //hostAddr.c_str());
   m_qpidAd.Assign("Key", "qpidKey");
   m_qpidAd.Assign("IP","128" );
   daemonCore->publish(&m_qpidAd); 
@@ -165,7 +165,7 @@ void Pigeon::initialize() {
    }
 }
 
-void Pigeon::writeConfigFile() {
+/*void Pigeon::writeConfigFile() {
   MyString confFile;
   char *logdir = param("LOG");
   if (logdir == NULL) 
@@ -289,7 +289,7 @@ void Pigeon::writeConfigFile() {
   ASSERT(len == strlen(str));
   close(fd);
   free(str);
-}
+}*/
 
 
   void Pigeon::stop(bool fast) {
@@ -352,7 +352,7 @@ int Pigeon::killTimer() {
   return 0;
 }
 
-void Pigeon::startServices() {
+/*void Pigeon::startServices() {
   char *services = param ("QPID_SERVICES");
 
   if (services == NULL) {
@@ -524,7 +524,7 @@ void Pigeon::recurrBuildClasspath(const char *path) {
       recurrBuildClasspath(dir.GetFullPath());                    
     }
   }
-}
+}*/
 
 void Pigeon::publishClassAd() {
   //  dprintf(D_ALWAYS, "Calling the classAd sendUpdates()\n");
