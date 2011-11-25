@@ -55,6 +55,7 @@ using namespace std;
 
 
 int getPortNumber(char *hostname){
+	fprintf(stderr, "get port number.. \n");
 	FILE *f = popen("daemonReader", "r");
 	char buffer[256];
 	int count = 0;
