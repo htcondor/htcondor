@@ -8465,14 +8465,6 @@ int DaemonCore::Create_Process(
 			newpid = FALSE;
 			goto wrapup;
 		}
-#if defined(LINUX)
-		if( family_info && family_info->group_ptr ) {
-				// pass the tracking gid back to our caller
-				// (Currently, we only get here in the starter.)
-			ASSERT( child_tracking_gid != 0 ); // tracking gid should never be group 0
-			*(family_info->group_ptr) = child_tracking_gid;
-		}
-#endif
 
 			// check our error pipe for any problems before the exec
 		int child_errno = 0;
@@ -8573,6 +8565,17 @@ int DaemonCore::Create_Process(
 			goto wrapup;
 		}
 		close(errorpipe[0]);
+
+#if defined(LINUX)
+		if( family_info && family_info->group_ptr ) {
+				// pass the tracking gid back to our caller
+				// (Currently, we only get here in the starter.)
+				// By the time we get here, we know exec succeeded,
+				// so the tracking gid should never be group 0.
+			ASSERT( child_tracking_gid != 0 );
+			*(family_info->group_ptr) = child_tracking_gid;
+		}
+#endif
 
 			// Now that we've seen if exec worked, if we are trying to
 			// create a paused process, we need to wait for the
