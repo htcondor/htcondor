@@ -66,7 +66,6 @@ type_return newfunc( type_1 a1, ... )\
 }
 
 #define REMAP_THREE(oldfunc,newfunc,type_return,type_1,type_2,type_3) \
-type_return oldfunc( type_1, type_2, type_3 ); \
 type_return newfunc( type_1 arg_1, type_2 arg_2, type_3 arg_3 ) \
 { \
 return (type_return) oldfunc( arg_1, arg_2, arg_3 ); \
