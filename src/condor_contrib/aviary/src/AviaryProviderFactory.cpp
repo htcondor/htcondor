@@ -23,11 +23,13 @@
 #include "AviaryProvider.h"
 #include "Axis2SoapProvider.h"
 #include "Axis2SslProvider.h"
+#include "AviaryUtils.h"
 
 using namespace std;
 using namespace aviary;
 using namespace aviary::transport;
 using namespace aviary::soap;
+using namespace aviary::util;
 
 AviaryProvider* 
 AviaryProviderFactory::create(const string& log_file)
@@ -51,7 +53,7 @@ AviaryProviderFactory::create(const string& log_file)
         return NULL;
     }
     
-    int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_CRITICAL);
+    int level = getLogLevel();
     int read_timeout = param_integer("AXIS2_READ_TIMEOUT",AXIS2_HTTP_DEFAULT_SO_TIMEOUT);
     
     // which flavor of transport

@@ -26,6 +26,8 @@ using namespace compat_classad;
 namespace aviary {
 namespace util {
 
+int getLogLevel();
+
 string getPoolName();
 
 string getScheddName();
