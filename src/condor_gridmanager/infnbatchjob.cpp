@@ -120,6 +120,7 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
 		 ( strncasecmp( resource.c_str(), "blah", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "batch", 5 ) == 0 ||
 		   strncasecmp( resource.c_str(), "pbs", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "lsf", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "nqs", 3 ) == 0 ||
@@ -178,6 +179,9 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		Tokenize( buff );
 
 		token = GetNextToken( " ", false );
+		if ( !strcmp( "batch", token ) ) {
+			token = GetNextToken( " ", false );
+		}
 		batchType = strdup( token );
 
 		token = GetNextToken( " ", false );
