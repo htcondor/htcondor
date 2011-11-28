@@ -311,6 +311,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	var += dm.dag->_dagStatus;
 	args.AppendArg( var.Value() );
 
+		// Set the special FAILED_COUNT variable (mainly for use by
+		// "final" nodes).
+	args.AppendArg( "-a" );
+	var = "FAILED_COUNT = ";
+	var += dm.dag->NumNodesFailed();
+	args.AppendArg( var.Value() );
+
 		// how big is the command line so far
 	MyString display;
 	args.GetArgsStringForDisplay( &display );

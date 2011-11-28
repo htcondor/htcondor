@@ -961,6 +961,13 @@ parse_abort(
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
 	
 		// Node abort value.
 	char *abortValStr = strtok( NULL, DELIMITERS );

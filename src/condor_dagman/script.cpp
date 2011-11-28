@@ -58,7 +58,7 @@ const char *Script::GetNodeName()
 
 //-----------------------------------------------------------------------------
 int
-Script::BackgroundRun( int reaperId, int dagStatus )
+Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -113,6 +113,9 @@ Script::BackgroundRun( int reaperId, int dagStatus )
 
 		} else if (!strcasecmp(token, "$DAG_STATUS")) {
 			arg += dagStatus;
+
+		} else if (!strcasecmp(token, "$FAILED_COUNT")) {
+			arg += failedCount;
 
 		} else if (token[0] == '$') {
 			// This should probably be a fatal error when -strict is

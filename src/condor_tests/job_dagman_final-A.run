@@ -37,8 +37,8 @@ $dagman_args = "-verbose";
 $scriptfile = "job_dagman_final-A-scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@scriptlines = ("DAG_STATUS=0", "Node A_C Pre", "DAG_STATUS=0",
-	"Node A_C Post");
+@scriptlines = ("DAG_STATUS=0", "FAILED_COUNT=0", "Node A_C Pre",
+	"DAG_STATUS=0", "FAILED_COUNT=0", "Node A_C Post");
 
 my $killedchosen = 0;
 
@@ -104,13 +104,17 @@ $success = sub
 				$passed++;
 				CondorTest::debug("$name: $line\n",1);
 			}
+			if( $line =~ /^FAILED_COUNT=0$/ ) {
+				$passed++;
+				CondorTest::debug("$name: $line\n",1);
+			}
 			if( $line =~ /^OK.*$/ ) {
 				$passed++;
 				CondorTest::debug("$name: $line\n",1);
 			}
 		}
 		close(OUT);
-		if( $passed == 2 ) {
+		if( $passed == 3 ) {
 			;
 		} else {
 			CondorTest::debug("failed $name: $line\n",1);

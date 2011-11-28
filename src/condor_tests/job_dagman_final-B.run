@@ -24,6 +24,7 @@
 #TEMP -- test should make sure final node is run *last*
 #TEMP -- check node status file
 #TEMP -- check DAG_STATUS value in output
+#TEMPTEMP -- make a single file that has output from all node jobs -- easier to check -- see halt tests
 
 use CondorTest;
 use CondorUtils;
@@ -38,8 +39,8 @@ $dagman_args = "-verbose";
 $scriptfile = "job_dagman_final-B-scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@scriptlines = ("DAG_STATUS=2", "Node B_C Pre", "DAG_STATUS=2",
-    "Node B_C Post");
+@scriptlines = ("DAG_STATUS=2", "FAILED_COUNT=1", "Node B_C Pre",
+	"DAG_STATUS=2", "FAILED_COUNT=1", "Node B_C Post");
 
 my $killedchosen = 0;
 

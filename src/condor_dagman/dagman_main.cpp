@@ -4,7 +4,10 @@
 //TEMPTEMP -- if you condor_rm a DAG, the DAG_SUCCESS variable needs to be set to false when passed to the final node!
 //TEMPTEMP -- talked with Pete -- he says always run final node if it exists, but the DAG_SUCCESS value should enable it to tell whether the DAG is being removed -- hmm -- what if nodes failed *and* the DAG was removed? -- maybe be able to pass node failed count to final node?
 //TEMPTEMP -- make sure condor_rm in schedd removes node jobs before parent, otherwise that could goof up the final node
-//TEMPTEMP -- probably have tests to make sure dagman disallows things like parent/child relationships for final nodes, retries for final nodes, etc.
+//TEMPTEMP -- make tests where the final node gives the opposite return value as the rest of the DAG
+//TEMPTEMP -- make a test where the dag gets condor_rm'ed
+//TEMPTEMP -- probably have tests to make sure dagman disallows things like parent/child relationships for final nodes, retries for final nodes, etc. -- no, don't actually have tests for all of that.
+//TEMPTEMP -- tests to add: C: dag succeeds, final node fails; D: dag fails, final node succeeds; E: DAG is condor_rm'ed
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

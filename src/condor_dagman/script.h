@@ -40,7 +40,7 @@ class Script {
 	// has this script been run yet?
 	bool _done;
 
-	int BackgroundRun( int reaperId, int dagStatus );
+	int BackgroundRun( int reaperId, int dagStatus, int failedCount );
 	const char* GetNodeName();
 	Job *GetNode() { return _node; }
 
