@@ -22,7 +22,7 @@
 
 #TEMP -- test should make sure final node is run *last*
 #TEMP -- check jobstate.log
-#TEMP -- check DAG_SUCCESS value in output
+#TEMP -- check DAG_STATUS value in output
 
 use CondorTest;
 use CondorUtils;
@@ -37,7 +37,7 @@ $dagman_args = "-verbose";
 $scriptfile = "job_dagman_final-A-scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@scriptlines = ("DAG_SUCCESS=1", "Node A_C Pre", "DAG_SUCCESS=1",
+@scriptlines = ("DAG_STATUS=0", "Node A_C Pre", "DAG_STATUS=0",
 	"Node A_C Post");
 
 my $killedchosen = 0;
@@ -100,7 +100,7 @@ $success = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			if( $line =~ /^DAG_SUCCESS=1$/ ) {
+			if( $line =~ /^DAG_STATUS=0$/ ) {
 				$passed++;
 				CondorTest::debug("$name: $line\n",1);
 			}

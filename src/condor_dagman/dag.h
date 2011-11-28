@@ -386,18 +386,18 @@ class Dag {
 			exists.)
 			@return true iff the DAG is finished
 		*/
-	inline bool FinishedRunning() const;
+	bool FinishedRunning() const;
 
 		/** Determine whether the DAG is successfully completed.
 			@return true iff the DAG is successfully completed
 		*/
-	inline bool DoneSuccess() const;
+	bool DoneSuccess() const;
 
 		/** Determine whether the DAG is finished, but failed (because
 			of a node job failure, etc.).
 			@return true iff the DAG is finished but failed
 		*/
-	inline bool DoneFailed() const;
+	bool DoneFailed() const;
 
 		/** Determine whether the DAG is finished because of a cycle in
 			the DAG.  (Note that this method sometimes incorrectly returns
@@ -671,6 +671,25 @@ class Dag {
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
+
+//TEMPTEMP -- can we really distinguish 3 and 4? (not inside main_shutdown_rescue(), I think
+//TEMPTEMP -- maybe distinguish node failure from other error (eg, "scary" submit)
+	enum dag_status {
+		DAG_STATUS_OK = 0,
+		DAG_STATUS_ERROR = 1, // Error not enumerated below
+		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
+		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
+		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+	};
+
+//TEMPTEMP -- start out 0; if still 0, set to 1 when node fails; need to set properly on abort or rm
+	dag_status _dagStatus;
+
+	//TEMPTEMP -- document
+	inline bool HasFinalNode() { return _final_job != NULL; }
+
+	//TEMPTEMP -- document
+	inline bool RunningFinalNode() { return _runningFinalNode; }
 
   private:
 

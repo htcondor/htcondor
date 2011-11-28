@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-print "DAG_SUCCESS=$ARGV[2]\n";
+print "DAG_STATUS=$ARGV[2]\n";
 
 print "$ARGV[0]\n";
 

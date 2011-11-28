@@ -132,12 +132,12 @@ Job::Job( const job_type_t jobType, const char* jobName,
 			debug_printf( DEBUG_QUIET, "ERROR in "
 						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
 						errorMsg.Value() );
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 		} else if ( queueCount != 1 ) {
 			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
 						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
 						"set\n", _jobName, queueCount );
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 		}
 	}
 
@@ -487,9 +487,12 @@ Job::TerminateSuccess()
 } 
 
 bool
-Job::TerminateFailure()
+Job::TerminateFailure( Dag *dag )
 {
 	_Status = STATUS_ERROR;
+	if ( dag->_dagStatus == Dag::DAG_STATUS_OK ) {
+		dag->_dagStatus = Dag::DAG_STATUS_NODE_FAILED;
+	}
 	return true;
 } 
 

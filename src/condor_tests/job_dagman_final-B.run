@@ -23,7 +23,7 @@
 #TEMP -- add check that 'FINAL' gets properly put into rescue DAG
 #TEMP -- test should make sure final node is run *last*
 #TEMP -- check node status file
-#TEMP -- check DAG_SUCCESS value in output
+#TEMP -- check DAG_STATUS value in output
 
 use CondorTest;
 use CondorUtils;
@@ -38,7 +38,7 @@ $dagman_args = "-verbose";
 $scriptfile = "job_dagman_final-B-scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@scriptlines = ("DAG_SUCCESS=0", "Node B_C Pre", "DAG_SUCCESS=0",
+@scriptlines = ("DAG_STATUS=2", "Node B_C Pre", "DAG_STATUS=2",
     "Node B_C Post");
 
 my $killedchosen = 0;

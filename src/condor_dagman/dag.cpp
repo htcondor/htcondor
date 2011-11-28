@@ -190,6 +190,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_lastPendingNodePrintTime = 0;
 	_lastEventTime = 0;
 
+	_dagStatus = DAG_STATUS_OK;
+
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
 	return;
@@ -670,7 +672,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// etc., if we haven't already gotten an error
 			// from another job proc in this job cluster
 		if ( job->_Status != Job::STATUS_ERROR ) {
-			job->_Status = Job::STATUS_ERROR;
+			job->TerminateFailure( this );
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 				  "Condor reported %s event for job proc (%d.%d.%d)",
 				  ULogEventNumberNames[event->eventNumber],
@@ -742,7 +744,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					}
 				}
 
-				job->_Status = Job::STATUS_ERROR;
+				job->TerminateFailure( this );
 				if ( job->_queuedNodeJobProcs > 0 ) {
 				  // once one job proc fails, remove
 				  // the whole cluster
@@ -937,7 +939,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
 				// POST script failed or was killed by a signal
 
-			job->_Status = Job::STATUS_ERROR;
+			job->TerminateFailure( this );
 
 			int		mainJobRetval = job->retval;
 
@@ -1554,7 +1556,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
             job->retval = WEXITSTATUS( status );
 		}
 
-        job->_Status = Job::STATUS_ERROR;
+        job->TerminateFailure( this );
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 
@@ -1656,7 +1658,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			  // Exit here, because otherwise we'll wait forever to see
 			  // the event that we just failed to write (see gittrac #934).
 			  // wenger 2009-11-12.
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 		}
 	}
 	return true;
@@ -2340,9 +2342,11 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
 		if ( job->have_abort_dag_return_val ) {
-			main_shutdown_rescue( job->abort_dag_return_val );
+			main_shutdown_rescue( job->abort_dag_return_val,
+						job->abort_dag_return_val != 0 ? DAG_STATUS_ABORT :
+						DAG_STATUS_OK );
 		} else {
-			main_shutdown_rescue( job->retval );
+			main_shutdown_rescue( job->retval, DAG_STATUS_ABORT );
 		}
 		return true;
 	}
@@ -3388,7 +3392,7 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 					"DAGMAN_ABORT_ON_SCARY_SUBMIT to false if you are "
 					"*sure* this shouldn't cause an abort.\n",
 					message.Value() );
-		main_shutdown_rescue( EXIT_ERROR );
+		main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 		return true;
 	} else {
 		debug_printf( DEBUG_QUIET,
@@ -3513,7 +3517,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
-		node->_Status = Job::STATUS_ERROR;
+		node->TerminateFailure( this );
 		snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"No 'log =' value found in submit file %s",
 					node->GetCmdFile() );
@@ -3658,7 +3662,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 						_nfsLogIsError, _recovery, _defaultNodeLog );
 			_postScriptQ->Run( node->_scriptPost );
 		} else {
-			node->_Status = Job::STATUS_ERROR;
+			node->TerminateFailure( this );
 			_numNodesFailed++;
 		}
 
@@ -3671,7 +3675,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 					thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
- 			_readyQ->Prepend(node, -node->_nodePriority);
+			_readyQ->Prepend(node, -node->_nodePriority);
 		} else {
 			_readyQ->Append(node, -node->_nodePriority);
 		}
@@ -3694,7 +3698,7 @@ Dag::DecrementJobCounts( Job *node )
 void
 Dag::UpdateJobCounts( Job *node, int change )
 {
-    _numJobsSubmitted += change;
+	_numJobsSubmitted += change;
 	ASSERT( _numJobsSubmitted >= 0 );
 
 	if ( node->GetThrottleInfo() ) {
@@ -3722,7 +3726,7 @@ Dag::SetDirectory(char *dir)
 void
 Dag::PropogateDirectoryToAllNodes(void)
 {
-    Job *job = NULL;
+	Job *job = NULL;
 	MyString key;
 
 	if (m_directory == ".") {
@@ -3747,16 +3751,16 @@ Dag::PropogateDirectoryToAllNodes(void)
 void
 Dag::PrefixAllNodeNames(const MyString &prefix)
 {
-    Job *job = NULL;
+	Job *job = NULL;
 	MyString key;
 
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()\n");
 
-    _jobs.Rewind();
-    while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
-	  job->PrefixName(prefix);
-    }
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		ASSERT( job != NULL );
+		job->PrefixName(prefix);
+	}
 
 	// Here we must reindex the hash view with the prefixed name.
 	// also fix my node name hash view of the jobs
@@ -3768,10 +3772,10 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	}
 
 	// Then, reindex all the jobs keyed by their new name
-    _jobs.Rewind();
-    while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
-	  key = job->GetJobName();
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		ASSERT( job != NULL );
+		key = job->GetJobName();
 		if (_nodeNameHash.insert(key, job) != 0) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two jobs have an identical name, which means another
@@ -3780,7 +3784,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 			debug_error(1, DEBUG_QUIET, 
 				"Dag::PrefixAllNodeNames(): This is an impossible error\n");
 		}
-    }
+	}
 
 	debug_printf(DEBUG_DEBUG_1, "Leaving: Dag::PrefixAllNodeNames()\n");
 }

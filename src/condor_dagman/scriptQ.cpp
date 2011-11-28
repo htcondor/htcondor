@@ -68,7 +68,7 @@ ScriptQ::Run( Script *script )
 		_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
 					script->_post );
 		if( int pid = script->BackgroundRun( _scriptReaperId,
-					_dag->NumNodesFailed() == 0 ) ) {
+					_dag->_dagStatus ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );
 			debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,

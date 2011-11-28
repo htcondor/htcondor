@@ -196,7 +196,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
 				"disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
 				jobProcCount );
-	main_shutdown_rescue( EXIT_ERROR );
+	main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
   }
   
   return true;
@@ -304,11 +304,11 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( var.Value() );
 	}
 
-		// Set the special DAG_SUCCESS variable (mainly for use by
+		// Set the special DAG_STATUS variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" );
-	MyString var = "DAG_SUCCESS = ";
-	var += (dm.dag->NumNodesFailed() == 0);
+	MyString var = "DAG_STATUS = ";
+	var += dm.dag->_dagStatus;
 	args.AppendArg( var.Value() );
 
 		// how big is the command line so far
