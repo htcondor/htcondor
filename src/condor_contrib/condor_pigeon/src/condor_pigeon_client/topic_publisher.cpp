@@ -140,7 +140,6 @@ void Listener::received(Message& message) {
   char* prevStateFileName = "tempLRM.dat";
   ofstream prevStateFile ;
   prevStateFile.open(prevStateFileName,ios::out);
-  cout << "\n STOP : about to write to a file().. " <<endl;
   prevStateFile << message.getData();
   prevStateFile.close();
   rename(prevStateFileName,"LRM.dat");
@@ -198,11 +197,9 @@ void Listener::dequeue() {
   Message lMsg;
   int size = 10;
   size = local_queue.size();
-  cout << "\n STOP : about to dequeue  " <<endl;
 
   local_queue.get(lMsg,10000);
   newMessage = lMsg.getData();
-  cout << "\n STOP : after dequeue " <<endl;
 }
 
 
@@ -251,7 +248,7 @@ class ClientPub : public JobLog {
     bool compareFId(int p ,int c,int pe,int ce);
     int getMsgId(string msgTxt);
     int getMsgId(string msgTxt,string id);
-    bool validLogMsg(string msg1, string msg2);
+    bool validLogMsg(string &msg1, string &msg2);
     
     bool mustFree;
     
@@ -383,7 +380,7 @@ FUNCTION:validLogMsg
 DESC: function to compare the current message to send vs last sent message to chk for duplicates or msg loss
 RETURN : bool true for valid current msg
 */
-bool ClientPub::validLogMsg(string msg1, string msg2){
+bool ClientPub::validLogMsg(string &msg1, string &msg2){
   //NOTE: ideally this condition is not posisble...Added to take care of cases
   //where msg  not delivered in order from the broker to client listeners
   cout << "\n validLogMsg()....." << endl;
@@ -404,6 +401,13 @@ bool ClientPub::validLogMsg(string msg1, string msg2){
       prevFId = m2Id;
     }
     validFlag = compareFId(prevFId,curFId,prevMsgId,curMsgId);
+    if (!validFlag) {
+    	string msg3 = msg2;
+    	msg2 = msg1;
+    	msg1 = msg3;
+    	validFlag = true;
+    }
+    	
   }
   else{
     validFlag = false;
@@ -437,7 +441,6 @@ void ClientPub::initLoadMsg(char *loadFile)
   try {
     connection.open(host, port);
     Session session =  connection.newSession();
-
     Listener listener(session);
     bool loadFlag = listener.initListen(); 
 
@@ -448,14 +451,15 @@ void ClientPub::initLoadMsg(char *loadFile)
       connection.close();
       return;
     }
-    ifile.open(loadFile, ios::out|ios::in);
-   	
+
+   	ifile.open(loadFile, ios::in|ios::out);
     ifile.seekg (0, ios::end);
     getSize = ifile.tellg();
     ifile.seekg (0);
     char *log;
-    log =(char *)malloc(getSize);
-    if(ifile.read(log,getSize)){
+    log =new char[getSize+1];
+    if( ifile.read(log,getSize)){
+      log[getSize] = '\0';
       logMsg=log;
 
       cout <<"\n initLoadMsg() => STATUS: load from file the condor_queue with msg : " << logMsg <<endl;
@@ -470,10 +474,13 @@ void ClientPub::initLoadMsg(char *loadFile)
       async(session).messageTransfer(arg::content=message, arg::destination="amq.topic");
       ifile.close();
     }
+    delete []log;
     session.close();
     connection.close();
   } catch(const std::exception& error) {
-    std::cout << error.what() << std::endl;
+  	
+    std::cout << "ERROR: " <<  error.what() << std::endl;
+    connection.close();
   }
 }
 
@@ -664,7 +671,7 @@ void ClientPub::readLog(char* persistFile,  int eventTrack = ULOG_EXECUTE, int e
       if(outCome == ULOG_NO_EVENT)
       { 
         
-        cout << "sleep for 5 sec" <<endl; 
+        cout << "No (more) event. Sleep for 5 sec" <<endl; 
         sleep(5);
         break;
       }
@@ -720,13 +727,13 @@ int main(int argc, char*argv[]) {
   int eventTrack = 1;
   int erotate = 10;
   if (argc > 3)
-  	erotate = atoi(argv[4]);
+  	erotate = atoi(argv[3]);
   int excludeOn = 0;
   if (argc > 4)
-  	excludeOn = atoi(argv[5]);
+  	excludeOn = atoi(argv[4]);
   char *host = NULL;
   if (argc > 5)
-  	host = argv[6];
+  	host = argv[5];
   bool excludeFlag = false;
   if (excludeOn==1)
     excludeFlag = true;
@@ -736,6 +743,9 @@ int main(int argc, char*argv[]) {
   	delete cpObj;
   	return 0;
   }
+  ofstream persistFile;
+  persistFile.open("LRM.dat", ios::app);
+  persistFile.close();
   cpObj-> initLoadMsg("LRM.dat");
   cpObj->readLog(persistFName,eventTrack,erotate,excludeFlag);
   delete cpObj;
