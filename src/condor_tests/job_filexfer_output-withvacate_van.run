@@ -126,11 +126,6 @@ $evicted = sub {
 		return(0);
 	}
 	print "++++++++++++++++++++++++++++++++++++\n";
-	print "++++++++++++++++++++++++++++++++++++\n";
-	runcmd("ls $baseoutfile*");
-	print "++++++++++++++++++++++++++++++++++++\n";
-	sleep(15);
-	runcmd("ls $baseoutfile*");
 	# GGT debugging
 	{
 		print "baseoutfile is $baseoutfile \n";
@@ -141,6 +136,11 @@ $evicted = sub {
 			runcmd("ls $partialdir");
 		}
 	}
+	print "++++++++++++++++++++++++++++++++++++\n";
+	runcmd("ls $baseoutfile*");
+	print "++++++++++++++++++++++++++++++++++++\n";
+	sleep(15);
+	runcmd("ls $baseoutfile*");
 	print "++++++++++++++++++++++++++++++++++++\n";
 
 	if(!(-f "$oute")) { 
