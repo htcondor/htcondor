@@ -827,8 +827,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
-	ClassAd *ad;
-	ClassAd *clusterad;
+	ClassAd *ad = NULL;
+	ClassAd *clusterad = NULL;
 	HashKey key;
 	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
@@ -2771,7 +2771,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 		int old_cluster_id = -10;
 		int proc_id;
 		ClassAd *procad = NULL;
-		ClassAd *clusterad;
+		ClassAd *clusterad = NULL;
 
 		int counter = 0;
 		int ad_keys_size = new_ad_keys.size();
@@ -3021,7 +3021,7 @@ int
 GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
 					MyString &val )
 {
-	ClassAd	*ad;
+	ClassAd	*ad = NULL;
 	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
@@ -3085,7 +3085,7 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 int
 GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 {
-	ClassAd 	*ad;
+	ClassAd 	*ad = NULL;
 	char		key[PROC_ID_STR_BUFLEN];
 	char		*val;
 	const char	*name;
@@ -3902,7 +3902,7 @@ ClassAd *
 GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
 {
 	char	key[PROC_ID_STR_BUFLEN];
-	ClassAd	*ad;
+	ClassAd	*ad = NULL;
 
 	IdToStr(cluster_id,proc_id,key);
 	if (JobQueue->LookupClassAd(key, ad)) {
@@ -4002,7 +4002,7 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 ClassAd *
 GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 {
-	ClassAd *ad;
+	ClassAd *ad = NULL;
 	char *job_id_str;
 
 	if (initScan) {
