@@ -29,6 +29,7 @@ qsub_cmd=""
 qsub_args=""
 queue_name=""
 export_env_flag=0
+condor_keep_files=0
 
 print_description()
 {
@@ -71,6 +72,11 @@ Options:
 -b <y|n>
   If 'y', command and arguments given on the command line are wrapped into a
   shell script which is then submitted to Condor.
+
+--condor-keep-files
+  This is a non-SGE option. If given, it will prevent $scriptname from deleting
+  temporary files (generated submit files, sentinel jobs). This is mostly useful
+  for debugging.
 
 -cwd
   If given, this option will cause the 'initialdir' value in the Condor submit
@@ -170,7 +176,7 @@ done
 condor_release \$dep_job
 
 # in the end we can safely clean this sentinel script
-rm \$0
+[ $condor_keep_files -eq 0 ] && rm \$0 || true
 
 EOT
 	chmod +x $1
@@ -193,7 +199,7 @@ parse_args() {
 	# Note that we use `"$@"' to let each command-line parameter expand to a
 	# separate word. The quotes around `$@' are essential!
 	# We need CLOPTS as the `eval set --' would nuke the return value of getopt.
-	CLOPTS=`getopt -a -o b:,e:,h,l:,m:,M:,N:,o:,p:,r:,S:,t:,q:,V --long cwd,help,hold_jid:,shell:,verbose,version -n "$scriptname" -- "$@"`
+	CLOPTS=`getopt -a -o b:,e:,h,l:,m:,M:,N:,o:,p:,r:,S:,t:,q:,V --long cwd,help,hold_jid:,shell:,verbose,version,condor-keep-files -n "$scriptname" -- "$@"`
 
 	if [ $? != 0 ] ; then
 	  echo "Terminating..." >&2
@@ -207,6 +213,7 @@ parse_args() {
 	  case "$1" in
 		-b) shift; if [ "$1" = "y" ]; then binary_flag=1; fi; shift;;
 		--cwd) shift; cwd_flag=1;;
+		--condor-keep-files) shift; condor_keep_files=1;;
 		-e) shift; error_file=$1; shift;;
 		-h|--help) print_description; print_help; exit 0;;
 		--hold_jid) shift; hold_jid=$1; shift;;
@@ -248,7 +255,7 @@ parse_args $@
 # no arguments -> need to read from stdin
 if [ -z "$qsub_cmd" ]; then
 	# redirect STDIN into a file, place it into the current dir to increase the
-	# likely hood of being available on the execute host too (NFS-mounted FS)
+	# likelihood of being available on the execute host too (NFS-mounted FS)
 	# unfortunately the author cannot think of a way to clean this tempfile up
 	# as it need to be available until the last job in the cluster actually
 	# started running -- yet another sentinel could do it ....
@@ -324,9 +331,7 @@ else
 	output_file="${output_file:-$job_name.o\$(Cluster)}"
 fi
 
-# there are two main issues:
-# 2. array jobs -- solve via loops and put stuff into a submit file
-
+# main submit file
 submit_file=$(mktemp --tmpdir condor_qsub.XXXXXXXXXXXXX)
 
 # write submit file header
@@ -411,20 +416,20 @@ fi
 cluster_id="$(condor_submit - < $submit_file |grep '^** Proc' || true)"
 if [ -z "$cluster_id" ]; then
 	printf "Job submission failed.\n"
-	rm $submit_file
+	[ $condor_keep_files -eq 0 ] && rm $submit_file || true
 	exit 1
 fi
 cluster_id="$(echo "$cluster_id" | head -n1 | cut -d ' ' -f 3,3 | cut -d. -f1,1)"
 
 #cleanup
-rm $submit_file
+[ $condor_keep_files -eq 0 ] && rm $submit_file || true
 
 # deal with local job sentinel
 if [ -n "$job_deps" ]; then
 	sentinel_file="$(mktemp --tmpdir cluster${cluster_id}_sentinel.XXXXXXXXXXXXX)"
 	create_dep_sentinel $sentinel_file "$job_deps" "$cluster_id"
 	condor_submit - < $sentinel_file.submit > /dev/null
-	rm $sentinel_file.submit
+	[ $condor_keep_files -eq 0 ] && rm $sentinel_file.submit || true
 fi
 
 printf "Your job $cluster_id (\"$job_name\") has been submitted\n"
