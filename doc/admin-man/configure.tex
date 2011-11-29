@@ -2113,15 +2113,15 @@ which use DaemonCore).
 
 \label{param:UseCloneToCreateProcesses}
 \item[\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES}]
-  This setting controls how a Condor daemon creates a new process under
-  certain versions of Linux. If set to \Expr{True} (the default value),
+  A boolean value that controls how a Condor daemon creates a new process on
+  Linux platforms. If set to the default value of \Expr{True},
   the \Expr{clone} system call is used. Otherwise, the \Expr{fork} system
   call is used. \Expr{clone} provides scalability improvements for daemons
-  using a large amount of memory (e.g. a \Condor{schedd} with a lot of
-  jobs in the queue). Currently, the use of \Expr{clone} is available on
-  Linux systems other than IA-64, but not when GCB is enabled.  If
-  Condor detects that it is running under the valgrind analysis tools,
-  this setting is ignored and treated as \Expr{False} to work around
+  using a large amount of memory, for example, a \Condor{schedd} with a lot of
+  jobs in the queue. Currently, the use of \Expr{clone} is available on
+  Linux systems, but not when GCB is enabled.  If
+  Condor detects that it is running under the \Prog{valgrind} analysis tools,
+  this setting is ignored and treated as \Expr{False}, to work around
   incompatibilities.
 
 \label{param:NotRespondingTimeout}

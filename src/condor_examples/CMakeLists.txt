@@ -51,7 +51,7 @@ install (FILES
 		openmpiscript
 		DESTINATION ${C_ETC_EXAMPLES})
 
-install (FILES condor_limits_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+install (FILES condor_limits_wrapper.sh condor_schedd.init DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 
 
 #Prepare OS specific config file
