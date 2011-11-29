@@ -7,3 +7,4 @@ debian/tmp/usr/bin/* usr/bin/
 debian/tmp/usr/sbin/* usr/sbin/
 debian/tmp/usr/src/* usr/src/condor/
 debian/dmtcp/shim_dmtcp usr/lib/condor/
+debian/condor_qsub usr/bin

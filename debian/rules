@@ -82,6 +82,8 @@ doc/build:
 			   -e 's/^\s//' < $$man > $@/man/$$(basename $$man) ; \
 	done
 	rm $@/html/condor_*.1
+	# last manpage for help2man compatibles
+	help2man -N -n "minimalistic qsub emulation for Condor" debian/condor_qsub > $@/man/condor_qsub.1
 
 
 override_dh_auto_install:
