@@ -31,6 +31,7 @@ $node_output_file = "job_dagman_halt-A.nodes.out";
 
 my $killedchosen = 0;
 
+# Note: we must find these lines *in the specified order*.
 @node_output_lines = ("Node NodeW1 starting",
 			"  NodeW1 sleeping and checking for halt file",
 			"Node NodeW2 starting",
@@ -70,6 +71,7 @@ my $killedchosen = 0;
 			"Node NodeB succeeded",
 			"Node NodeB Post script");
 
+# Note: we must find these lines *in the specified order*.
 #@rescue_lines = ("# Total number of Nodes: 12",
 @rescue_lines = ("# Total number of Nodes: 11",
 			#"# Nodes premarked DONE: 10",
