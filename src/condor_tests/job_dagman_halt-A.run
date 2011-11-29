@@ -1,0 +1,215 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_halt-A.dag';
+$testdesc =  'Condor submit dag - halt test - scheduler U';
+$testname = "job_dagman_halt-A";
+# Maxpre specified to enforce an order for some sibling nodes.
+$dagman_args = "-verbose -maxpre 1";
+
+$node_output_file = "job_dagman_halt-A.nodes.out";
+
+my $killedchosen = 0;
+
+# Note: we must find these lines *in the specified order*.
+@node_output_lines = ("Node NodeW1 starting",
+			"  NodeW1 sleeping and checking for halt file",
+			"Node NodeW2 starting",
+			"  NodeW2 halting DAG",
+			"  NodeW1 found halt file",
+			"Node NodeW2 succeeded",
+			"Node NodeW2 Post script",
+			"  NodeW1 removed halt file",
+			"Node NodeW1 succeeded",
+			"Node NodeW3 starting",
+			"Node NodeW3 succeeded",
+			"Node NodeX starting",
+			"  NodeX sleeping and checking for halt file",
+			"Node NodeY1 starting",
+			"  NodeY1 halting DAG",
+			"  NodeX found halt file",
+			"Node NodeY1 succeeded",
+			"  NodeX removed halt file",
+			"Node NodeX succeeded",
+			"Node NodeY2 Pre script",
+			#"Node NodeY3 Pre script",
+			"Node NodeY2 starting",
+			#"Node NodeY3 starting",
+			"Node NodeY2 succeeded",
+			"Node NodeY2 Post script",
+			#"Node NodeY3 succeeded",
+			#"Node NodeY3 Post script",
+			"Node NodeA starting",
+			"Node NodeA succeeded",
+			"Node NodeB Pre script",
+			"Node NodeC1 starting",
+			"Node NodeB starting",
+			"  NodeB Sleeping",
+			"  NodeC1 halting DAG",
+			"  NodeB found halt file",
+			"Node NodeC1 succeeded",
+			"Node NodeB succeeded",
+			"Node NodeB Post script");
+
+# Note: we must find these lines *in the specified order*.
+#@rescue_lines = ("# Total number of Nodes: 12",
+@rescue_lines = ("# Total number of Nodes: 11",
+			#"# Nodes premarked DONE: 10",
+			"# Nodes premarked DONE: 9",
+			"# Nodes that failed: 0",
+			"DONE NodeW1",
+			"DONE NodeW2",
+			"DONE NodeW3",
+			"DONE NodeX",
+			"DONE NodeY1",
+			"DONE NodeY2",
+			#"DONE NodeY3",
+			"DONE NodeA",
+			"DONE NodeB",
+			"DONE NodeC1");
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $rescuedag = $cmd . ".rescue001";
+
+# Get rid of the node output file and rescue DAG if they exist.
+if (-e $node_output_file) {
+	runcmd("rm -f $node_output_file");
+}
+if (-e $rescuedag) {
+	runcmd("rm -f $rescuedag");
+}
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and termination from three failed retries\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	CondorTest::debug("Good. We need the dag to run\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	die("DAG is expected to fail.\n");
+};
+
+$failure = sub
+{
+	CondorTest::debug("DAG failed as expected\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	# Make sure all expected lines are in the node output file, in the
+	# correct order.
+	$checkline = shift @node_output_lines;
+	open(CHECK, "<$node_output_file") ||
+			die "Cannot open $node_output_file: $!\n";
+	while (<CHECK>) {
+		chomp();
+		$line = $_;
+		if ($line eq $checkline) {
+			CondorTest::debug("$line\n", 1);
+			$checkline = shift @node_output_lines;
+			if ( ! (defined $checkline)) {
+				# Found all of the lines we expected.
+				break;
+			}
+		}
+	}
+	close(CHECK);
+
+	if ( (defined $checkline)) {
+		unshift @node_output_lines, $checkline;
+	}
+	while ($checkline = shift @node_output_lines) {
+		$diditpass = 0;
+		CondorTest::debug("Missing line <$checkline> in $node_output_file\n");
+	}
+
+	# Make sure all expected lines are in the rescue DAG file, in the
+	# correct order.
+	$checkline = shift @rescue_lines;
+	open(CHECK, "<$rescuedag") ||
+			die "Cannot open $rescuedag: $!\n";
+	while (<CHECK>) {
+		chomp();
+		$line = $_;
+		if ($line eq $checkline) {
+			CondorTest::debug("$line\n", 1);
+			$checkline = shift @rescue_lines;
+			if ( ! (defined $checkline)) {
+				# Found all of the lines we expected.
+				break;
+			}
+		}
+	}
+	close(CHECK);
+
+	if ( (defined $checkline)) {
+		unshift @rescue_lines, $checkline;
+	}
+	while ($checkline = shift @rescue_lines) {
+		$diditpass = 0;
+		CondorTest::debug("Missing line <$checkline> in $rescuedag\n");
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedFailure( $testname, $failure);
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -361,19 +361,22 @@ class Dag {
 	}
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_PRERUN.
+	 *          Job::STATUS_PRERUN (whether or not the script is actually
+	 *			running).
 	 */
 	inline int PreRunNodeCount() const
 		{ return _preRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_POSTRUN.
+	 *          Job::STATUS_POSTRUN (whether or not the script is actually
+	 *			running).
 	 */
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN.
+	 *          Job::STATUS_PRERUN or Job::STATUS_POSTRUN (whether or not
+	 *			the script is actually running).
 	 */
 	inline int ScriptRunNodeCount() const
 		{ return _preRunNodeCount + _postRunNodeCount; }
@@ -682,6 +685,12 @@ class Dag {
 	void SetDefaultPriorities();
 	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
 	int GetDefaultPriority() const { return _defaultPriority; }
+
+	/** Determine whether the DAG is currently halted (waiting for
+		existing jobs to finish but not submitting any new ones).
+		@return true iff the DAG is halted.
+	*/
+	bool IsHalted() { return _dagIsHalted; }
 
   private:
 
@@ -1096,11 +1105,19 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+
 	// If true, run the POST script, regardless of the exit status of the PRE script
 	// Defaults to true
 	bool _alwaysRunPost;
+
 		// The default priority for nodes in this DAG. (defaults to 0)
 	int _defaultPriority;
+
+		// Whether the DAG is currently halted.
+	bool _dagIsHalted;
+
+		// The name of the halt file (we halt the DAG if that file exists).
+	MyString _haltFile;
 };
 
 #endif /* #ifndef DAG_H */

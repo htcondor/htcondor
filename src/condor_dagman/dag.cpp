@@ -191,6 +191,10 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_lastPendingNodePrintTime = 0;
 	_lastEventTime = 0;
 
+	_dagIsHalted = false;
+	_dagFiles.rewind();
+	_haltFile = HaltFileName( _dagFiles.next() );
+
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
 	return;
@@ -1378,6 +1382,24 @@ Dag::SubmitReadyJobs(const Dagman &dm)
         return numSubmitsThisCycle;
 	}
 
+		// Check whether the held file exists -- if so, we don't submit
+		// any jobs or run scripts.
+	bool prevDagIsHalted = _dagIsHalted;
+	_dagIsHalted = ( access( _haltFile.Value() , F_OK ) == 0 );
+	if ( _dagIsHalted ) {
+		debug_printf( DEBUG_QUIET,
+					"DAG is halted because halt file %s exists\n",
+					_haltFile.Value() );
+        return numSubmitsThisCycle;
+	}
+	if ( prevDagIsHalted ) {
+		debug_printf( DEBUG_QUIET,
+					"DAG going from halted to running state\n" );
+			// If going from the halted to the not halted state, we need
+			// to fire up any PRE scripts that were deferred while we were
+			// halted.
+		_preScriptQ->RunAllWaitingScripts();
+	}
 
 	bool didLogSleep = false;
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
