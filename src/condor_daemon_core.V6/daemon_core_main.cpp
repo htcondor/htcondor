@@ -1527,6 +1527,44 @@ gcb_recovery_failed_callback()
 }
 #endif
 
+const size_t OOM_RESERVE = 2048;
+static char *oom_reserve_buf;
+static void OutOfMemoryHandler()
+{
+	std::set_new_handler(NULL);
+
+		// free up some memory to improve our chances of
+		// successfully logging
+	delete [] oom_reserve_buf;
+
+	int monitor_age = 0;
+	unsigned long vsize = 0;
+	unsigned long rss = 0;
+
+	if( daemonCore && daemonCore->monitor_data.last_sample_time != -1 ) {
+		monitor_age = (int)(time(NULL)-daemonCore->monitor_data.last_sample_time);
+		vsize = daemonCore->monitor_data.image_size;
+		rss = daemonCore->monitor_data.rs_size;
+	}
+
+	dprintf_dump_stack();
+
+	EXCEPT("Out of memory!  %ds ago: vsize=%lu KB, rss=%lu KB",
+		   monitor_age,
+		   vsize,
+		   rss);
+}
+
+static void InstallOutOfMemoryHandler()
+{
+	if( !oom_reserve_buf ) {
+		oom_reserve_buf = new char[OOM_RESERVE];
+		memset(oom_reserve_buf,0,OOM_RESERVE);
+	}
+
+	std::set_new_handler(OutOfMemoryHandler);
+}
+
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
@@ -2358,6 +2396,8 @@ int dc_main( int argc, char** argv )
 	FILEObj = FILESQL::createInstance(use_sql_log); 
     // create an xml log object
     XMLObj = FILEXML::createInstanceXML();
+
+	InstallOutOfMemoryHandler();
 
 	// call the daemon's main_init()
 	dc_main_init( argc, argv );
