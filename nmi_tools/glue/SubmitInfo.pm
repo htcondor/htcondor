@@ -450,7 +450,6 @@ our %submit_info = (
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_fedora_14-updated',
 				'x86_64_opensuse_11.4-updated',
 				'x86_64_rhap_6.1-updated',
 				],
