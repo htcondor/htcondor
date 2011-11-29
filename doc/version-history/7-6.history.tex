@@ -37,10 +37,6 @@ The details of each version are described below.
 to detect and utilize the load average information.
 \Ticket{2579}
 
-\item The FS authentication method now works when \File{/tmp} is
-Btrfs.  Previously, authentication failed.
-\Ticket{2583}
-
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -54,6 +50,19 @@ Btrfs.  Previously, authentication failed.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item File System (FS) authentication now works when \File{/tmp} 
+is on a Btrfs file system.  Previously, authentication failed.
+\Ticket{2583}
+
+\item Fixed a bug that caused a failure to start jobs when using PrivSep
+and supplemental group process tracking.  
+Prior to Condor version 7.6.4, this problem
+only occurred when \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set
+to \Expr{False}.  
+In Condor version 7.6.4, the problem occurred regardless of the setting
+of this configuration variable.
+\Ticket{2658}
 
 \item Fixed a performance problem on Windows platforms
 that caused claim activations to
@@ -96,32 +105,43 @@ was running as Local System for non-English versions of Windows.
 The bug caused Condor to fail to run jobs on the slot accounts.
 \Ticket{2642}
 
-\item Fixed a bug in the Windows version of Condor where it would try and use an
-account from the submit machine rather than from the local machine.  When that
-account failed to exist on the local machine, it would fall back to using the Everyone
-account rather than trying to use a local machine account with the same username like
-the Linux version does.
+\item Fixed a bug in the Windows version of Condor,
+in which the transfer of output failed due to the use of the Everyone account,
+which lacks read permission.
+Usage of the Everyone account occurred as a fallback,
+when the account name failed to exist because it
+included the domain of the local submit machine.
+The fix adds the same capability as exists on Linux platforms,
+which uses the user name without the domain.
 \Ticket{2643}
 
-\item Fixed a bug where job submission via condor-c could fail because it did not
-convert account names to fully qualifed (including domain) before comparing to see
+\item Fixed a bug in which job submission via Condor-C could fail,
+because it did not convert account names to fully qualified (including domain)
+before comparing to see
 if the current account was the same as the desired account.
 \Ticket{2644}
 
-\item Fixed a bug where \Macro{transfer\_input\_files} did not work for directories on Windows.
+\item Fixed a bug in which use of the submit command 
+\SubmitCmd{transfer\_input\_files} did not work for directories on 
+Windows platforms.
 \Ticket{2387}
 
-\item Fixed a bug that could cause failure to clean up job processes
-when using glexec after a restart of \Condor{master}.
+\item Fixed a bug that could cause a failure in cleaning up job processes
+when using \Prog{glexec} after a restart of the \Condor{master} daemon.
 \Ticket{2614}
 
 \item Fixed a bug in \Condor{power} that caused it to fail when
-operating on a machine with a 15 byte subnet mask string.
+operating on a machine with a 15-byte subnet mask string.
 \Ticket{2651}
 
 \item Fixed a bug that could cause the \Condor{schedd} to no longer start
-idle jobs or send ads to the \Condor{collector}.
+idle jobs or send ClassAds to the \Condor{collector}.
 \Ticket{2647}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash if a
+hold reason contained a percent character (\verb|%|),
+and the user log for the job was in XML format.
+\Ticket{2660}
 
 \end{itemize}
 
