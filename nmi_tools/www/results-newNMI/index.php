@@ -46,14 +46,6 @@ $dash->print_header("Condor Build and Test Dashboard");
       $("#main1").show();
     });    
     
-    $("#menu2").click(function(){
-      $("#main2").load('nightly.php');
-
-      reset();
-      $(this).css("background-color", "#0080ff");
-      $("#main2").show();
-    });
-    
     $("#menu3").click(function(){
       $("#main3").load('one-off.php');
       
@@ -90,10 +82,6 @@ $dash->print_header("Condor Build and Test Dashboard");
   Continuous Runs
   </div>
 
-  <div id="menu2" class="menu">
-  Nightly runs
-  </div>
-    
   <div id="menu3" class="menu">
   Personal Runs
   </div>
