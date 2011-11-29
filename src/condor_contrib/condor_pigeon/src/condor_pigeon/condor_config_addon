@@ -3,6 +3,9 @@
 #
 ###
 
+# TODO: you need to edit this entry to point to your qpid installation!
+WHERE_IS_QPID = /path/to/qpid
+
 # where should condor_qpid write its log to? 
 QPID_LOG = $(LOG)/qpidLog
 
@@ -10,5 +13,5 @@ QPID_LOG = $(LOG)/qpidLog
 QPID_EXEC = $(WHERE_IS_QPID)/sbin/qpidd
 
 #Where should the file containing the current qpid port be written to?
-QPID_PORT = /scratch/condor/QPID/meta/qpidPort
+QPID_PORT = $(LOG)/qpidPort
 
