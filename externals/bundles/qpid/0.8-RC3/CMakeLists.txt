@@ -66,7 +66,7 @@ if (WITH_QPID)
 			set( QMF_GEN ${QPID_INSTALL_LOC}/managementgen/qmf-gen )
 			
 		else()
-			set( QPID_FOUND "${QPID_INSTALL_LOC}/lib/libqpidcommon.so;${QPID_INSTALL_LOC}/lib/libqpidclient.so;${QPID_INSTALL_LOC}/lib/libqmf.so;${QPID_INSTALL_LOC}/lib/libqpidtypes.so;${QPID_INSTALL_LOC}/lib/qpidmessaging.so;${QPID_INSTALL_LOC}/lib/libqmfconsole.so;${QPID_INSTALL_LOC}/lib/libqmf2.so" )
+			set( QPID_FOUND "${QPID_INSTALL_LOC}/lib/libqpidcommon.so;${QPID_INSTALL_LOC}/lib/libqpidclient.so;${QPID_INSTALL_LOC}/lib/libqmf.so;${QPID_INSTALL_LOC}/lib/libqpidtypes.so;${QPID_INSTALL_LOC}/lib/libqpidmessaging.so;${QPID_INSTALL_LOC}/lib/libqmfconsole.so;${QPID_INSTALL_LOC}/lib/libqmf2.so" )
 			# TODO: so are we going to need to install qpid.so's along with condor..? or should we -static the plugins.
 			# add linux install target
 			#set( QMF_GEN ${QPID_INSTALL_LOC}/managementgen/qmf-gen ) ?
