@@ -892,7 +892,7 @@ bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 		return true;
 	}
 
-	int rc = ulog.writeEvent((ULogEvent *)&event);
+	int rc = ulog.writeEvent(const_cast<ULogEvent *>(&event));
 
 	if (!rc) {
 		dprintf( D_FULLDEBUG,

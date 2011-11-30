@@ -20,6 +20,6 @@
 #ifndef _HISTORYFILEFINDER_H_
 #define _HISTORYFILEDINFER_H_
 
-extern char **findHistoryFiles(char *paramName, int *numHistoryFiles);
+extern char **findHistoryFiles(const char *paramName, int *numHistoryFiles);
 
 #endif

@@ -73,11 +73,11 @@ static const char *errmsgs[] = {
 /**	Global Variables */
 
 static FILE				*in		= NULL;  /* input file */
-static char				*fn_in	= NULL;  /* name of input file */
+static const char				*fn_in	= NULL;  /* name of input file */
 static char				*fn_out	= NULL;  /* name of output file */
 static const char		*name	= NULL;  /* program name */
-static char				*mac	= NULL;  /* hardware address */
-static char				*mask	= "255.255.255.255"; /*subnet to broadcast on*/
+static const char				*mac	= NULL;  /* hardware address */
+static const char				*mask	= "255.255.255.255"; /*subnet to broadcast on*/
 static int				port	= 9;	 /* port number to use */
 static bool				stdio	= false; /* if true, use stdin and stdout. */
 static ClassAd			*ad		= NULL;  /* machine class-ad */
@@ -167,7 +167,7 @@ parse_command_line( int argc, char *argv[] )
 
 	int		i, j = 0;
 	char	*s;					/* to traverse the options */
-	char	**argument = NULL;	/* option argument */
+	const char	**argument = NULL;	/* option argument */
 
 	for ( i = 1; i < argc; i++ ) {
 
@@ -190,7 +190,7 @@ parse_command_line( int argc, char *argv[] )
 					case 'h': usage ();					break;
 					case 'i': stdio	= true;				break;
 					case 'm': argument = &mac;			break;
-					case 'p': port = (int) strtol ( s, &s, port ); break;
+					case 'p': port = (int) strtol ( s, NULL, port ); break;
 					case 's': argument = &mask;			break;
 					default : error ( E_OPTION, *--s );	break;
 				}
