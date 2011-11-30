@@ -219,7 +219,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		} 
 		if( (candidatePreemptState==bestPreemptState &&
 			( (bestPreemptState == NO_PREEMPTION) ||
-			  ((bestPreemptState != NO_PREEMPTION) && (candidatePreemptRankValue == bestPreemptRankValue))
+			  ((bestPreemptState != NO_PREEMPTION) && (fabs(candidatePreemptRankValue - bestPreemptRankValue) < 0.001))
 			)) 
 			&& (candidateRankValue > bestRankValue) )	// finally by job rank
 		{
