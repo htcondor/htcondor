@@ -372,6 +372,7 @@ void CondorResource::DoScheddPoll()
 				int cluster, proc;
 				int rc2;
 				std::string job_id_string;
+				BaseJob *base_job = NULL;
 				CondorJob *job;
 
 				if( status_ads[i] == NULL ) {
@@ -386,7 +387,8 @@ void CondorResource::DoScheddPoll()
 									   poolName, cluster, proc );
 
 				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.c_str() ),
-													  (BaseJob*&)job );
+													  base_job );
+				job = dynamic_cast<CondorJob*>( base_job );
 				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
 					poll_info->m_submittedJobs.Delete( job );
