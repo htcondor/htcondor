@@ -126,16 +126,6 @@ $evicted = sub {
 		return(0);
 	}
 	print "++++++++++++++++++++++++++++++++++++\n";
-	# GGT debugging
-	{
-		print "baseoutfile is $baseoutfile \n";
-		my @intermediates = split('/', $baseoutfile);
-		my $i;
-		for ($i = 1; $i < @intermediates; $i++) {
-			my $partialdir = join('/', @intermediates[0 .. $i]);
-			runcmd("ls $partialdir");
-		}
-	}
 	print "++++++++++++++++++++++++++++++++++++\n";
 	runcmd("ls $baseoutfile*");
 	print "++++++++++++++++++++++++++++++++++++\n";
