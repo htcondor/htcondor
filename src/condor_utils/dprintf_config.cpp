@@ -24,12 +24,6 @@
 **	Set up the various dprintf variables based on the configuration file.
 **
 ************************************************************************/
-
-// This needs to precede all of our includes so that the off_t used in
-// dprintf_internal.h is 64 bits on 32-bit linuxes. Otherwise, we can't
-// deal with logs larger than 2GB.
-#define _FILE_OFFSET_BITS 64
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h" 
@@ -320,7 +314,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
                 
-                off_t maxlog = 0;
+                int64_t maxlog = 0;
 				pval = param(pname);
 				if (pval != NULL) {
                     // because there is nothing like param_long_long() or param_off_t()

@@ -35,12 +35,6 @@
 **	(*DebugId)() which takes DebugFP as an argument.
 **
 ************************************************************************/
-
-// This needs to precede all of our includes so that the off_t used in
-// dprintf_internal.h is 64 bits on 32-bit linuxes. Otherwise, we can't
-// deal with logs larger than 2GB.
-#define _FILE_OFFSET_BITS 64
-
 #include "condor_common.h"
 #include "condor_sys_types.h"
 #include "condor_debug.h"
@@ -782,7 +776,7 @@ debug_lock(int debug_flags, const char *mode, int force_lock)
 static FILE *
 debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic)
 {
-	off_t		length = 0; // this gets assigned return value from lseek()
+	int64_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
@@ -839,8 +833,16 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
-
-	if( (length=lseek(fileno(debug_file_ptr), 0, SEEK_END)) < 0 ) {
+#ifdef WIN32
+	length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
+#elif Solaris
+	length = llseek(fileno(debug_file_ptr), 0, SEEK_END);
+#elif Linux
+	length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
+#else
+	length = lseek(fileno(debug_file_ptr), 0, SEEK_END);
+#endif
+	if(length < 0 ) {
 		if (dont_panic) {
 			if(locked) debug_close_lock();
 			debug_close_file(it);
@@ -852,6 +854,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
+	//This is checking for a non-zero max length.  Zero is infinity.
 	if( it->maxLog && length > it->maxLog ) {
 		if( !locked ) {
 			/*
@@ -1186,7 +1189,13 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(debug_file_ptr), 0, SEEK_END );
+#if Solaris
+	llseek(fileno(debug_file_ptr), 0, SEEK_END);
+#elif Linux
+	lseek64(fileno(debug_file_ptr), 0, SEEK_END);
+#else
+	lseek(fileno(debug_file_ptr), 0, SEEK_END);
+#endif
 	fprintf( debug_file_ptr, "%s\n", panic_msg );
 	(void)fflush( debug_file_ptr );
 
