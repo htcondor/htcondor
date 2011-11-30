@@ -3,16 +3,34 @@
 ################################################################################
 # blahp-over-ssh shim script
 #
+# command [options] remote_hostname [remote options/arguments]
+#
+# Options:
+#   see usage string 
+#
 # Arguments:
-#   $1: remote_hostname
+#   mandatory: remote_hostname
+#
+# Remote options/arguments are passed along
 #
 # Assumes public/private key pair is already created and exists on host
 #
-# Exits with 0 on success, < 0 if ssh-add failed, > 0 if ssh failed
+# Exits with 0 on success, 1 if wrong arguments, < 0 if ssh-add failed, > 0 if ssh failed
 ################################################################################
+
+#Defaults
+REMOTE_HOSTNAME=""
+REMOTE_USER=`whoami`
+# Needs '~' because resolved on remote site
+REMOTE_SCRIPT="~/.bosco/batch_gahp"
+# Needs $HOME, else [ -f ... ] fails
+PASSPHRASE_LOCATION="$HOME/.bosco/.pass"
+PRIVATE_KEY_LOCATION="$HOME/.ssh/id_rsa"
+
 
 # List of remote hosts to connect to
 # Customize this for different remote hosts
+# This overrides the default and is overridden by options
 #
 # Format:
 # "remote_hostname remote_script_path passphrase_location private_key_location"
@@ -27,19 +45,53 @@ REMOTE_HOSTS=(
 	"condor-student1 /afs/cs.wisc.edu/u/s/l/slauson/public/test /afs/cs.wisc.edu/u/s/l/slauson/private/condor/git2/CONDOR_SRC/src/passphrase"
 )
 
-################################################################################
 
-REMOTE_USER=`whoami`
+###### Setting options #####
+# 1. defaults
+# 2. host defaults from REMOTE_HOSTS list
+# 3. command line options
+# Higher number overrides the lower one
 
-# Go through possible remote hosts
+# Parse command line arguments 
+PROG_NAME=$0
+USAGE="Usage: $PROG_NAME [options] remote_hostname [remote options and arguments]\n \
+ --rgahp-user REMOTE_USER \tuser name on the remote host\n \
+ --rgahp-key PRIVATE-KEY-PATH \tlocation of ssh private key (~/.ssh/id_rsa)\n \
+ --rgahp-nokey  \t\tno ssh private key or key already enabled (same as empty rgahp-key)\n \
+ --rgahp-pass PASSPHRASE \tlocation of passphrase protecting ssh private key (~/.bosco/.pass)\n \
+ --rgahp-nopass \t\tno passphrase protecting ssh private key (same as empty rgahp-pass)\n \
+ --rgahp-script SCRIPT \tpath to script to start up blahp (~/.bosco/batch_gahp)\n \
+ --help, -h \t\t\tprint this\n \
+"
+TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
+
+if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+
+eval set -- "$TEMP"
+
+# Remote hostname is mandatory
+# It is the first argument after the rgahp options
+tmp_found=1
+for i; do
+	if [ $tmp_found -eq 0 ] ; then 
+		REMOTE_HOSTNAME="$i"
+		break
+	fi
+	if [ "$i" = "--" ]; then tmp_found=0; fi
+done
+
+if [ "X${REMOTE_HOSTNAME}X" = "XX" ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+
+
+# Go through possible remote hosts and set eventual host default
 for host in "${REMOTE_HOSTS[@]}" ; do
 
 	# split string on ' '
 	parts=($host)
 
 	# check if this is a host we care about
-	if [ "$1" == ${parts[0]} ] ; then
-		REMOTE_HOSTNAME=${parts[0]}
+	if [ "$REMOTE_HOSTNAME" == ${parts[0]} ] ; then
+		#REMOTE_HOSTNAME=${parts[0]}
 		REMOTE_SCRIPT=${parts[1]}
 		PASSPHRASE_LOCATION=${parts[2]}
 		PRIVATE_KEY_LOCATION=${parts[3]}
@@ -47,13 +99,42 @@ for host in "${REMOTE_HOSTS[@]}" ; do
 	fi
 done
 
+# Set values specified in command line arguments (these override defaults and REMOTE_HOSTS)
+for i; do
+	case "$i" in
+		-h | --help  ) echo -e "$USAGE"
+			exit 0;;
+		--rgahp-user  ) REMOTE_USER="$2"
+			shift 2;;
+		--rgahp-nokey  ) PRIVATE_KEY_LOCATION=""
+			shift ;;
+		--rgahp-key  ) PRIVATE_KEY_LOCATION="$2"
+			shift ; shift  ;;
+		--rgahp-pass  ) PASSPHRASE_LOCATION="$2"
+			shift 2;;
+		--rgahp-nopass  ) PASSPHRASE_LOCATION=""
+			shift ;;
+		--rgahp-script ) REMOTE_SCRIPT="$2"
+			shift 2;;
+		--  ) shift; break ;;
+	esac
+done
+
+
+##### Handling authentication #####
+# Start and init ssh agent if key file is specified
+
+
 # if a passphrase is required, start up a ssh-agent and do ssh-add
-if [ "$PASSPHRASE_LOCATION" != "" ] ; then
+if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# start the ssh-agent
 	eval `ssh-agent -s`
 
 	# get the passphrase
-	PASSPHRASE=`cat $PASSPHRASE_LOCATION`
+        PASSPHRASE=""
+        if [ -f $PASSPHRASE_LOCATION ]; then
+		PASSPHRASE=`cat $PASSPHRASE_LOCATION`
+        fi
 
 	# create a temp file for the expect script
 	SSH_ADD_SCRIPT=`mktemp`
@@ -74,6 +155,10 @@ if [ "$PASSPHRASE_LOCATION" != "" ] ; then
 		set timeout 5
 
 		expect {
+			# no passphrase required
+			\"*Identity added*\" {
+				exit 0
+			}
 			# sends passphrase
 			\"*passphrase*\" {
 				send -- \"$PASSPHRASE\r\"
@@ -108,7 +193,7 @@ if [ "$PASSPHRASE_LOCATION" != "" ] ; then
 	$SSH_ADD_SCRIPT
 	ADD_STATUS=$?
 
-	# remote temporary script
+	# remove temporary script
 	rm $SSH_ADD_SCRIPT
 
 	# check if ssh-add failed
@@ -122,7 +207,14 @@ if [ "$PASSPHRASE_LOCATION" != "" ] ; then
 	fi
 fi
 
+
+##### Running remote command and cleanup #####
+
+# remove hostname from arglist
+shift
+
 # use BatchMode so we fail if a password is requested
+echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME $REMOTE_SCRIPT \"$@\""
 ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME $REMOTE_SCRIPT "$@"
 
 SSH_STATUS=$?
