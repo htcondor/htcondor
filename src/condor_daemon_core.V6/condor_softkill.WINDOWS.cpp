@@ -63,7 +63,7 @@ check_window(HWND wnd, LPARAM = 0)
 
 		window_found = true;
 
-		debug(L"posting WM_CLOSE to window owned by thread of pid %u\n", target_pid);
+		debug(L"posting WM_CLOSE to window 0x%X owned by thread of pid %u\n", wnd, target_pid);
 
 		// if debugging's on, print out the name of the process we're killing
 		//
@@ -207,7 +207,10 @@ wWinMain(HINSTANCE, HINSTANCE, wchar_t*, int)
 	// see if a debug output file was given
 	//
 	if (__argc > 2) {
-		debug_fp = _wfopen(__wargv[2], L"w");
+		wchar_t * opt = L"w";
+		wchar_t * pszFile = __wargv[2];
+		if (pszFile[0] == '+') { ++pszFile; opt = L"a"; }
+		debug_fp = _wfopen(pszFile, opt);
 		if (debug_fp == NULL) {
 			return SOFTKILL_INVALID_INPUT;
 		}
