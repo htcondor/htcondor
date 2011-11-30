@@ -57,6 +57,13 @@ a running DAG.  See section ~\ref{sec:DagSuspend} for details.
 \item Improved logging in more cases when Condor daemons run out of memory.
 \Ticket{2559}
 
+\item Improved verbose logging when \Dflag{MACHINE} is enabled in
+\MacroNI{NEGOTIATOR\_DEBUG}.  Previously, it logged whether each
+candidate machine matched or did not match with each job.  Now, it
+additionally logs whether the match was subsequently rejected for
+other reasons, such as insufficient priority, rank, or fair share
+allocation.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
