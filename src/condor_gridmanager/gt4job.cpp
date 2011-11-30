@@ -128,6 +128,7 @@ gt4GramCallbackHandler( void * /* user_arg */, const char *job_contact,
 						const int exit_code )
 {
 	int rc;
+	BaseJob *base_job = NULL;
 	GT4Job *this_job;
 	std::string job_id;
 
@@ -136,7 +137,8 @@ gt4GramCallbackHandler( void * /* user_arg */, const char *job_contact,
 
 	// Find the right job object
 	rc = BaseJob::JobsByRemoteId.lookup( HashKey( job_id.c_str() ),
-										 (BaseJob*&)this_job );
+										 base_job );
+	this_job = dynamic_cast<GT4Job*>( base_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gt4GramCallbackHandler: Can't find record for globus job with "
