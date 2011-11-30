@@ -3603,17 +3603,17 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			// the candidate offer and request must match
 		bool is_a_match = IsAMatch(&request, candidate);
 
+		int cluster_id=-1,proc_id=-1;
+		MyString machine_name;
 		if( DebugFlags & D_MACHINE ) {
-			int cluster_id=-1,proc_id=-1;
-			MyString name;
 			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
 			request.LookupInteger(ATTR_PROC_ID,proc_id);
-			candidate->LookupString(ATTR_NAME,name);
+			candidate->LookupString(ATTR_NAME,machine_name);
 			dprintf(D_MACHINE,"Job %d.%d %s match with %s.\n",
 					cluster_id,
 					proc_id,
 					is_a_match ? "does" : "does not",
-					name.Value());
+					machine_name.Value());
 		}
 
 		if( !is_a_match ) {
@@ -3645,6 +3645,10 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
 					// So try the next offer...
+				dprintf(D_MACHINE,
+						"Ignoring %s because it is unclaimed and we are currently "
+						"only considering startd rank preemption for job %d.%d.\n",
+						machine_name.Value(), cluster_id, proc_id);
 				continue;
 			}
 			if ( !(EvalExprTree(rankCondStd, candidate, &request, &result) && 
@@ -3652,6 +3656,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 
+				dprintf(D_MACHINE,
+						"Job %d.%d does not have higher startd rank than existing job on %s.\n",
+						cluster_id, proc_id, machine_name.Value());
 				continue;
 			}
 			// If we made it here, we have a candidate which strictly prefers
@@ -3682,6 +3689,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
 					rejPreemptForPolicy++;
+					dprintf(D_MACHINE,
+							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
+							cluster_id, proc_id, machine_name.Value());
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
@@ -3691,6 +3701,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
+					dprintf(D_MACHINE,
+							"Job %d.%d has lower startd rank than existing job on %s.\n",
+							cluster_id, proc_id, machine_name.Value());
 					continue;
 				}
 			} else {
@@ -3701,6 +3714,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						// preempt one of our own jobs!
 					rejPreemptForPrio++;
 				}
+				dprintf(D_MACHINE,
+						"Job %d.%d has insufficient priority to preempt existing job on %s.\n",
+						cluster_id, proc_id, machine_name.Value());
 				continue;
 			}
 		}
@@ -3714,6 +3730,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
+			dprintf(D_MACHINE,
+					"User's share of the pool is too small for job %d.%d to claim %s.\n",
+					cluster_id, proc_id, machine_name.Value());
 			continue;
 		}
 
