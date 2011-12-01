@@ -147,7 +147,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	std::string buff;
 	std::string error_string = "";
 	char *gahp_path;
-	std::string cluster_name;
+	MyString args_str;
 	ArgList gahp_args;
 
 	gahpAd = NULL;
@@ -182,9 +182,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		}
 		batchType = strdup( token );
 
-		token = GetNextToken( " ", false );
-		if ( token ) {
-			cluster_name = token;
+		while ( (token = GetNextToken( " ", false )) ) {
+			gahp_args.AppendArg( token );
 		}
 	} else {
 		sprintf( error_string, "%s is not set in the job ad",
@@ -213,11 +212,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		}
 	}
 
-	if ( cluster_name != "" ) {
-		gahp_args.AppendArg( cluster_name.c_str() );
-	}
-
-	sprintf( buff, "%s/%s", batchType, cluster_name.c_str() );
+	gahp_args.GetArgsStringForDisplay( &args_str );
+	sprintf( buff, "%s/%s", batchType, args_str.Value() );
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
