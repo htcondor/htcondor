@@ -1,8 +1,10 @@
 #! /usr/bin/env perl
 
-print "DAG_STATUS=$ARGV[2]\n";
-print "FAILED_COUNT=$ARGV[3]\n";
+$outfile = "job_dagman_final-B.nodes.out";
 
-print "$ARGV[0]\n";
+system("echo '  DAG_STATUS=$ARGV[2]' >> $outfile");
+system("echo '  FAILED_COUNT=$ARGV[3]' >> $outfile");
+
+system("echo '$ARGV[0]' >> $outfile");
 
 exit($ARGV[1]);

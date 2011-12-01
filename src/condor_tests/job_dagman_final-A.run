@@ -32,18 +32,18 @@ $testname = "job_dagman_final-A";
 $dagman_args = "-verbose";
 
 $outfile = "job_dagman_final-A.nodes.out";
-$scriptfile = "job_dagman_final-A-scripts.out";
+$scriptfile = "job_dagman_final-A.scripts.out";
 
 # Note: we must find these lines *in the specified order*.
 @node_output_lines = ("  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"OK done with A",
+			"OK done with A_A",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"OK done with B",
+			"OK done with A_B",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"OK done with C");
+			"OK done with A_C");
 
 # Note: we must find these lines *in the specified order*.
 @script_output_lines = ("  DAG_STATUS=0",
@@ -119,7 +119,6 @@ $success = sub
 			CondorTest::debug("Mismatch at line $lineindex: expected <$node_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
 	}
-	$lineindex = 0;
 
 	# Make sure all expected lines are in the script output file, in the
 	# correct order, and there aren't any "extra" lines.
@@ -139,7 +138,6 @@ $success = sub
 			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
 	}
-	$lineindex = 0;
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";

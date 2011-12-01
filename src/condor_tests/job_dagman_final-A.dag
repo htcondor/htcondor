@@ -5,5 +5,5 @@ JOB A_B job_dagman_final-A-nodeB.cmd
 FINAL A_C job_dagman_final-A-nodeC.cmd
 SCRIPT PRE A_C job_dagman_final-A-script.pl A_C Pre $DAG_STATUS $FAILED_COUNT 0
 SCRIPT POST A_C job_dagman_final-A-script.pl A_C Post $DAG_STATUS $FAILED_COUNT $RETURN
-VARS A_C msg="OK done with C"
+VARS A_C msg="OK done with A_C"
 PARENT A_A CHILD A_B
