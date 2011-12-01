@@ -1707,7 +1707,7 @@ PROCD_MAX_SNAPSHOT_INTERVAL = 60
 # On Windows, we send a process a "soft kill" via a WM_CLOSE message.
 # This binary is used by the ProcD (and other Condor daemons if PRIVSEP
 # is not enabled) to help when sending soft kills.
-WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
+WINDOWS_SOFTKILL = $(SBIN)\condor_softkill
 WINDOWS_SOFTKILL_DEBUG_lOG = +$(LOG)\softkill
 
 ##--------------------------------------------------------------------
