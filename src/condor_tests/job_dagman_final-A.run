@@ -20,9 +20,8 @@
 
 # This test tests the final DAG node when the DAG succeeds.
 
-#TEMP -- test should make sure final node is run *last*
-#TEMP -- check jobstate.log
-#TEMP -- check DAG_STATUS value in output
+# Note: we should check that the jobstate.log file is correct, but I'm
+# skipping that for now.  wenger 2011-12-01
 
 use CondorTest;
 use CondorUtils;
@@ -32,13 +31,27 @@ $testdesc =  'Condor submit dag - basic final node test A - scheduler U';
 $testname = "job_dagman_final-A";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_final-A-nodeA.out", "job_dagman_final-A-nodeB.out",
-	"job_dagman_final-A-nodeC.out");
+$outfile = "job_dagman_final-A.nodes.out";
 $scriptfile = "job_dagman_final-A-scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@scriptlines = ("DAG_STATUS=0", "FAILED_COUNT=0", "Node A_C Pre",
-	"DAG_STATUS=0", "FAILED_COUNT=0", "Node A_C Post");
+@node_output_lines = ("  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"OK done with A",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"OK done with B",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"OK done with C");
+
+# Note: we must find these lines *in the specified order*.
+@script_output_lines = ("  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"Node A_C Pre",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"Node A_C Post");
 
 my $killedchosen = 0;
 
@@ -48,10 +61,8 @@ sub HELD{5};
 sub RUNNING{2};
 
 # Get rid of any existing output files.
-foreach $name (@outfiles) {
-	if (-e $name) {
-		runcmd("rm -f $name");
-	}
+if (-e $outfile) {
+	runcmd("rm -f $outfile");
 }
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
@@ -89,70 +100,46 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^DAG_STATUS=0$/ ) {
-				$passed++;
-				CondorTest::debug("$name: $line\n",1);
-			}
-			if( $line =~ /^FAILED_COUNT=0$/ ) {
-				$passed++;
-				CondorTest::debug("$name: $line\n",1);
-			}
-			if( $line =~ /^OK.*$/ ) {
-				$passed++;
-				CondorTest::debug("$name: $line\n",1);
-			}
-		}
-		close(OUT);
-		if( $passed == 3 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name: $line\n",1);
-			$diditpass = 0;
-		}
-	}
 
-	$lineindex = 0;
-	$line = "";
-	$passed = 0;
-	$canopen = open(OUT,"<$scriptfile");
-	if( ! (defined $canopen)) {
-		CondorTest::debug("Can not open outfile<$scriptfile>:$!\n",1);
-		$diditpass = 0;
-	}
-	while(<OUT>) {
-		chomp();
-		$line = $_;
-		$target = $scriptlines[$lineindex];
-		if( $line =~ /$target/ ) {
-			CondorTest::debug("$name: $line\n",1);
-			$lineindex++;
-			if ($lineindex > $#scriptlines) {
-				$passed = 1;
-				break;
-			}
+	# Make sure all expected lines are in the node output file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $outfile\n",1);
+	open(CHECK, "<$outfile") ||
+			die "Cannot open $outfile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#node_output_lines > $#lines ? $#node_output_lines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line eq $node_output_lines[$lineindex]) {
+			CondorTest::debug("$line\n", 1);
 		} else {
-			CondorTest::debug("failed: \"extra\" output line $line\n");
 			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$node_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
 	}
-	close(OUT);
-	if($passed == 1 ) {
-		;
-	} else {
-		CondorTest::debug("failed: missing output line $target\n",1);
-		$diditpass = 0;
+	$lineindex = 0;
+
+	# Make sure all expected lines are in the script output file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $scriptfile\n",1);
+	open(CHECK, "<$scriptfile") ||
+			die "Cannot open $scriptfile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#script_output_lines > $#lines ? $#script_output_lines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line eq $script_output_lines[$lineindex]) {
+			CondorTest::debug("$line\n", 1);
+		} else {
+			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
+		}
 	}
+	$lineindex = 0;
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";

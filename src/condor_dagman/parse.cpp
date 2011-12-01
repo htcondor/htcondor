@@ -1574,6 +1574,13 @@ parse_splice(
 		return false;
 	}
 
+	// Splices cannot have final nodes.
+	if ( splice_dag->HasFinalNode() ) {
+		debug_printf( DEBUG_QUIET, "ERROR: splice %s has a final node; "
+					"splices cannot have final nodes\n", spliceName.Value() );
+		return false;
+	}
+
 	// munge the splice name
 	spliceName = munge_job_name(spliceName.Value());
 
