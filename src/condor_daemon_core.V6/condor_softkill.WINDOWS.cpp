@@ -214,6 +214,15 @@ wWinMain(HINSTANCE, HINSTANCE, wchar_t*, int)
 		if (debug_fp == NULL) {
 			return SOFTKILL_INVALID_INPUT;
 		}
+
+		// if we have a debug log, print out the time and pid of the softkill request
+		// this will serve as a header.
+		SYSTEMTIME tim;
+		GetLocalTime(&tim);
+		debug(L"%02d/%02d/%02d %02d:%02d:%02d ****** Softkill requested for pid=%d\n", 
+		      tim.wMonth, tim.wDay, tim.wYear % 100,
+		      tim.wHour, tim.wMinute, tim.wSecond,
+		      target_pid);
 	}
 
 	// ask windows to enumerate the window stations for us
