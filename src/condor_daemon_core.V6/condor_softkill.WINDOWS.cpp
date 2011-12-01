@@ -55,7 +55,7 @@ debug(wchar_t* format, ...)
 }
 
 static BOOL CALLBACK
-check_window(HWND wnd, LPARAM = 0)
+check_window(HWND wnd, LPARAM lParam)
 {
 	DWORD window_pid = 0;
 	GetWindowThreadProcessId(wnd, &window_pid);
@@ -63,7 +63,8 @@ check_window(HWND wnd, LPARAM = 0)
 
 		window_found = true;
 
-		debug(L"posting WM_CLOSE to window 0x%X owned by thread of pid %u\n", wnd, target_pid);
+		debug(L"posting WM_CLOSE to %s 0x%X owned by thread of pid %u\n", 
+		      lParam ? (LPWSTR)lParam : L"", wnd, target_pid);
 
 		// if debugging's on, print out the name of the process we're killing
 		//
@@ -99,6 +100,43 @@ check_window(HWND wnd, LPARAM = 0)
 	}
 
 	return TRUE;
+}
+
+static BOOL check_this_winsta()
+{
+	// it appears that Windows is smart in the way it handles console
+	// windows when not on WinSta0: it makes them message-only. while this
+	// is probably done to conserve resources, it also means that console
+	// windows won't show up when enumerating. thus, we use FindWindowEx
+	// to look through the message-only windows
+	//
+	HWND hwnd = NULL;
+	while (true) {
+		SetLastError(ERROR_SUCCESS);
+		hwnd = FindWindowEx(HWND_MESSAGE, hwnd, L"ConsoleWindowClass", NULL);
+		if (hwnd == NULL) {
+			if (GetLastError() != ERROR_SUCCESS) {
+				debug(L"FindWindowEx error: %u\n", GetLastError());
+			}
+			break;
+		}
+		check_window(hwnd, (LPARAM)L"MSG");
+		if (window_found) {
+			return TRUE;
+		}
+	}
+
+	// see if the process owns a window that lives among the top-level
+	// windows on the current desktop
+	//
+	SetLastError(ERROR_SUCCESS);
+	if ((EnumWindows(check_window, NULL) == FALSE) && (GetLastError() != ERROR_SUCCESS)) {
+		debug(L"EnumWindows error: %u\n", GetLastError());
+	}
+	if (window_found) {
+		return TRUE;
+	}
+	return FALSE;
 }
 
 static BOOL CALLBACK
@@ -146,43 +184,14 @@ check_winsta(wchar_t* winsta_name, LPARAM)
 		debug(L"CloseDesktop error: %u\n", GetLastError());
 	}
 
-	// it appears that Windows is smart in the way it handles console
-	// windows when not on WinSta0: it makes them message-only. while this
-	// is probably done to conserve resources, it also means that console
-	// windows won't show up when enumerating. thus, we use FindWindowEx
-	// to look through the message-only windows
+	// check my winsta returns TRUE if it found the pid, FALSE if not
+	// we have to return TRUE to keep searching. 
 	//
-	HWND wnd = NULL;
-	while (true) {
+	BOOL found = check_this_winsta();
+	if (found) {
 		SetLastError(ERROR_SUCCESS);
-		wnd = FindWindowEx(HWND_MESSAGE, wnd, L"ConsoleWindowClass", NULL);
-		if (wnd == NULL) {
-			if (GetLastError() != ERROR_SUCCESS) {
-				debug(L"FindWindowEx error: %u\n", GetLastError());
-			}
-			break;
-		}
-		check_window(wnd);
-		if (window_found) {
-			SetLastError(ERROR_SUCCESS);
-			return FALSE;
-		}
 	}
-
-	// see if the process owns a window that lives among the top-level
-	// windows on the current desktop
-	//
-	if ((EnumWindows(check_window, NULL) == FALSE) && (GetLastError() != ERROR_SUCCESS)) {
-		debug(L"EnumWindows error: %u\n", GetLastError());
-	}
-	if (window_found) {
-		SetLastError(ERROR_SUCCESS);
-		return FALSE;
-	}
-
-	// haven't found it yet; keep enumerating
-	//
-	return TRUE;
+	return ! found;
 }
 
 int WINAPI
@@ -225,10 +234,12 @@ wWinMain(HINSTANCE, HINSTANCE, wchar_t*, int)
 		      target_pid);
 	}
 
-	// ask windows to enumerate the window stations for us
-	//
-	if ((EnumWindowStations(check_winsta, NULL) == FALSE) && (GetLastError() != ERROR_SUCCESS)) {
-		debug(L"EnumWindowStations error: %u\n", GetLastError());
+	// first look for the window in the current window station, if that doesn't
+	// work, try enumerating all window stations
+	if ( ! check_this_winsta()) {
+		if ((EnumWindowStations(check_winsta, NULL) == FALSE) && (GetLastError() != ERROR_SUCCESS)) {
+			debug(L"EnumWindowStations error: %u\n", GetLastError());
+		}
 	}
 
 	if (!window_found) {
