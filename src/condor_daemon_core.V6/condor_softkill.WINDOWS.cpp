@@ -73,13 +73,13 @@ check_window(HWND wnd, LPARAM lParam)
 			if (process == NULL) {
 				debug(L"OpenProcess error: %u\n", GetLastError());
 				SetLastError(ERROR_SUCCESS);
-				return FALSE;
+				//TJ: don't fail to post just because we can't open the process!! return FALSE;
 			}
 			wchar_t buffer[1024];
 			if (GetModuleBaseName(process, NULL, buffer, 1024) == 0) {
 				debug(L"GetModuleBaseName error: %u\n", GetLastError());
 				SetLastError(ERROR_SUCCESS);
-				return FALSE;
+				//TJ: don't fail to post just because we can't open the process!! return FALSE;
 			}
 			debug(L"executable for process is %s\n", buffer);
 		}
