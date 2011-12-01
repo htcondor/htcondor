@@ -61,6 +61,9 @@ static char const *StartTimeAttr="StartTime";
 
 static char const *SlotWeightAttr=ATTR_SLOT_WEIGHT;
 
+/* Disable gcc warnings about floating point comparisons */
+GCC_DIAG_OFF(float-equal)
+
 //------------------------------------------------------------------
 // Constructor - One time initialization
 //------------------------------------------------------------------
@@ -1737,3 +1740,6 @@ float Accountant::GetSlotWeight(ClassAd *candidate)
 	}
 	return SlotWeight;
 }
+
+GCC_DIAG_ON(float-equal)
+

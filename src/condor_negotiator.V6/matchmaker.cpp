@@ -73,6 +73,8 @@ MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
 char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
 
+GCC_DIAG_OFF(float-equal)
+
 class NegotiationCycleStats
 {
 public:
@@ -5177,3 +5179,6 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
         SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT, i, s->submitters_share_limit);
 	}
 }
+
+GCC_DIAG_ON(float-equal)
+

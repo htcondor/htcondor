@@ -87,6 +87,9 @@ struct GroupEntry {
     map<string, size_type, Accountant::ci_less> chmap;
 };
 
+/* Disable floating-point equality warnings */
+
+GCC_DIAG_OFF(float-equal)
 
 class Matchmaker : public Service
 {
@@ -479,7 +482,7 @@ class Matchmaker : public Service
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
 };
-
+GCC_DIAG_ON(float-equal)
 
 
 #endif//__MATCHMAKER_H__
