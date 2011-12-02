@@ -1007,6 +1007,10 @@ sub CreateLocalConfig
 	print FIX "MAX_MASTER_LOG          = $logsize\n";
 	print FIX "MASTER_DEBUG            = D_COMMAND\n";
 
+	if($iswindows == 1) {
+		print FIX "WINDOWS_SOFTKILL_LOG = \$(LOG)\\SoftKillLog\n";
+	}
+
 	# Add a shorter check time for periodic policy issues
 	print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
 	print FIX "PERIODIC_EXPR_TIMESLICE = .95\n";
