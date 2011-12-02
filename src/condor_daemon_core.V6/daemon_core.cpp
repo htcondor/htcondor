@@ -6044,7 +6044,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	args.AppendArg(softkill_binary);
 	free(softkill_binary);
 	args.AppendArg(pid);
-	char* softkill_log = param("WINDOWS_SOFTKILL_DEBUG_LOG");
+	char* softkill_log = param("WINDOWS_SOFTKILL_LOG");
 	if (softkill_log) {
 		args.AppendArg(softkill_log);
 		free(softkill_log);
