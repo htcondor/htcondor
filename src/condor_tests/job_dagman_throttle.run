@@ -62,6 +62,7 @@ $submitted = sub
 $success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
+	$joblog = "job_dagman_throttle.log";
 	my $result = system("./x_read_joblog.exe $joblog MAXJOBS $maxjobs");
 	if( $result != 0)
 	{
