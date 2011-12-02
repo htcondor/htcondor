@@ -358,6 +358,15 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 	}
 
 	BaseResource::UnregisterJob( job );
+
+		// We have trouble maintaining the shared lease with the cream
+		// server while we have no jobs for this resource object.
+		// This can lead to trouble if a new job shows up before we're
+		// deleted. So delete immediately until we can overhaul the
+		// lease-update code.
+	if ( IsEmpty() ) {
+		daemonCore->Reset_Timer( deleteMeTid, 0 );
+	}
 }
 
 const char *CreamResource::GetHashName()
@@ -727,7 +736,7 @@ GahpClient * CreamResource::BatchGahp() { return status_gahp; }
 const char *CreamResource::getLeaseId()
 {
 	// TODO trigger a DoUpdateLeases() if we don't have a lease set yet
-	if ( m_sharedLeaseExpiration ) {
+	if ( lastUpdateLeases ) {
 		return m_leaseId.c_str();
 	} else {
 		return NULL;

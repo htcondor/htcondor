@@ -55,53 +55,50 @@ debug(wchar_t* format, ...)
 }
 
 static BOOL CALLBACK
-check_window(HWND wnd, LPARAM lParam)
+check_window(HWND hwnd, LPARAM lParam)
 {
 	DWORD window_pid = 0;
-	GetWindowThreadProcessId(wnd, &window_pid);
-	if (window_pid == target_pid) {
+	GetWindowThreadProcessId(hwnd, &window_pid);
+	if (window_pid != target_pid)
+		return TRUE; // TRUE tells EnumWindows keep enumerating
 
-		window_found = true;
+	window_found = true;
 
-		debug(L"posting WM_CLOSE to %s 0x%X owned by thread of pid %u\n", 
-		      lParam ? (LPWSTR)lParam : L"", wnd, target_pid);
-
-		// if debugging's on, print out the name of the process we're killing
-		//
-		if (debug_fp != NULL) {
-			HANDLE process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, target_pid);
-			if (process == NULL) {
-				debug(L"OpenProcess error: %u\n", GetLastError());
-				SetLastError(ERROR_SUCCESS);
-				return FALSE;
-			}
-			wchar_t buffer[1024];
-			if (GetModuleBaseName(process, NULL, buffer, 1024) == 0) {
+	// if debugging's on, print the name and window handle of the process we're killing
+	//
+	wchar_t szName[MAX_PATH] = {0};
+	if (debug_fp != NULL) {
+		HANDLE hproc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, target_pid);
+		if (hproc == NULL) {
+			debug(L"OpenProcess error: %u\n", GetLastError());
+		} else {
+			if (GetModuleBaseName(hproc, NULL, szName, sizeof(szName)/sizeof(szName[0])) == 0) {
 				debug(L"GetModuleBaseName error: %u\n", GetLastError());
-				SetLastError(ERROR_SUCCESS);
-				return FALSE;
 			}
-			debug(L"executable for process is %s\n", buffer);
 		}
-
-		// actually post the WM_CLOSE message
-		//
-		if (PostMessage(wnd, WM_CLOSE, 0, 0) == TRUE) {
-			message_posted = true;
-		}
-		else {
-			debug(L"PostMessage error: %u\n", GetLastError());
-		}
-
-		// return FALSE so we stop enumerating
-		//
 		SetLastError(ERROR_SUCCESS);
-		return FALSE;
+
+		debug(L"posting WM_CLOSE to %s %sWindow 0x%X  pid %u\n", 
+		      szName, lParam ? (LPWSTR)lParam : L"", hwnd, target_pid);
 	}
 
-	return TRUE;
+	// post the WM_CLOSE message
+	//
+	if (PostMessage(hwnd, WM_CLOSE, 0, 0) == TRUE) {
+		message_posted = true;
+	} else {
+		debug(L"PostMessage error: %u\n", GetLastError());
+	}
+
+	// return FALSE so we stop enumerating
+	//
+	SetLastError(ERROR_SUCCESS);
+	return FALSE;
 }
 
+// search the current desktop for windows that are owned by target_pid
+// returns TRUE if the window was found, false if not.
+//
 static BOOL check_this_winsta()
 {
 	// it appears that Windows is smart in the way it handles console
@@ -111,7 +108,7 @@ static BOOL check_this_winsta()
 	// to look through the message-only windows
 	//
 	HWND hwnd = NULL;
-	while (true) {
+	for (;;) {
 		SetLastError(ERROR_SUCCESS);
 		hwnd = FindWindowEx(HWND_MESSAGE, hwnd, L"ConsoleWindowClass", NULL);
 		if (hwnd == NULL) {
@@ -184,13 +181,13 @@ check_winsta(wchar_t* winsta_name, LPARAM)
 		debug(L"CloseDesktop error: %u\n", GetLastError());
 	}
 
-	// check my winsta returns TRUE if it found the pid, FALSE if not
-	// we have to return TRUE to keep searching. 
+	// check_this_winsta() returns TRUE if it found the pid, FALSE if not
 	//
 	BOOL found = check_this_winsta();
 	if (found) {
 		SetLastError(ERROR_SUCCESS);
 	}
+	// return TRUE to keep searching
 	return ! found;
 }
 
@@ -216,16 +213,14 @@ wWinMain(HINSTANCE, HINSTANCE, wchar_t*, int)
 	// see if a debug output file was given
 	//
 	if (__argc > 2) {
-		wchar_t * opt = L"w";
+		wchar_t * opt = L"a";
 		wchar_t * pszFile = __wargv[2];
-		if (pszFile[0] == '+') { ++pszFile; opt = L"a"; }
 		debug_fp = _wfopen(pszFile, opt);
 		if (debug_fp == NULL) {
 			return SOFTKILL_INVALID_INPUT;
 		}
 
 		// if we have a debug log, print out the time and pid of the softkill request
-		// this will serve as a header.
 		SYSTEMTIME tim;
 		GetLocalTime(&tim);
 		debug(L"%02d/%02d/%02d %02d:%02d:%02d ****** Softkill requested for pid=%d\n", 
