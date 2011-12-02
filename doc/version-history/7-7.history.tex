@@ -30,6 +30,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \OptArg{-sort} option for \Condor{status} has been generalized to
+accept expressions instead of just simple named attributes.
+\Ticket{2661}
+
 \item A new command \Condor{drain} may be used to control the draining
 of an execute machine.  While a machine is draining, no new jobs may
 start.  Once draining is complete, it enters the Drained/Idle state.
