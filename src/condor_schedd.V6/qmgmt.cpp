@@ -2377,7 +2377,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 					// now compute the rounded value
 					// set base to be 10^exp
-				for (base=1 ; exp > 0; exp--, base *= 10);
+				for (base=1 ; exp > 0; exp--, base *= 10) { }
 
 					// round it.  note we always round UP!!  
 				ivalue = ((ivalue + base - 1) / base) * base;

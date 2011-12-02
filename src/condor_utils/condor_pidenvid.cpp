@@ -247,7 +247,7 @@ pidenvid_shuffle_to_front(char **env)
 	size_t prefix_len = strlen( PIDENVID_PREFIX );
 	int changed;
 
-	for( count=0; env[count]; count++ );
+	for( count=0; env[count]; count++ ) { }
 
 	if( count == 0 ) {
 		return; // no environment

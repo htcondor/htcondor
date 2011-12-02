@@ -895,7 +895,7 @@ void main_init (int argc, char ** const argv) {
 	}
 
 		// if requested, wait for someone to attach with a debugger...
-	while( wait_for_debug );
+	while( wait_for_debug ) { }
 
     {
 		MyString cwd;

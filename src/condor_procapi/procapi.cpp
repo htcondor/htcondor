@@ -3266,7 +3266,7 @@ ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 #else // everything else
 
 int
-ProcAPI::confirmProcessId(ProcessId& procId, int& status){
+ProcAPI::confirmProcessId(ProcessId& /*procId*/, int& status){
 		// do nothing
 	status = PROCAPI_OK;
 	return PROCAPI_SUCCESS;

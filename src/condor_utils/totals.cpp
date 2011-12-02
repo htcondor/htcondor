@@ -126,7 +126,7 @@ displayTotals (FILE *file, int keyLength)
 		allTotals.iterate(key, ct);
 		// find the position where we want to insert the key
 		int pos;
-		for (pos = 0; pos < k && strcmp(keys[pos], key.Value()) < 0; pos++);
+		for (pos = 0; pos < k && strcmp(keys[pos], key.Value()) < 0; pos++) { }
 		if (pos < k) {
 			// if we are not inserting at the end of the array, then
 			// we must shift the elements to the right to make room;

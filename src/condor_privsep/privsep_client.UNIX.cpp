@@ -162,7 +162,7 @@ privsep_get_switchboard_response(FILE* err_fp)
 	// the error pipe
 	//
 	MyString err;
-	while (err.readLine(err_fp, true));
+	while (err.readLine(err_fp, true)) { }
 	fclose(err_fp);
 	
 	// if there was something there, print it out and return

@@ -41,7 +41,7 @@ UsageMonitor::Request(double units)
 
 	// clean up any old records at the head of the history list
 	for (rec = first; rec && rec->timestamp < current_time - interval;
-		 first = rec->next, delete rec, rec = first);
+		 first = rec->next, delete rec, rec = first) { }
 	if (first == NULL) last = NULL;
 
 	// special case: units > max_units -- reserve larger window of time

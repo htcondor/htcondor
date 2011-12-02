@@ -154,7 +154,9 @@ limit( int resource, rlim_t new_limit, int kind, char const *resource_str )
 					dprintf( D_ALWAYS, "Workaround enabled. The %s limit for "
 						"%s is this: "
 						"new = [rlim_cur = %lu, rlim_max = %lu]\n",
-						kind_str,resource_str, desired.rlim_cur, desired.rlim_max);
+						kind_str,resource_str,
+						(unsigned long)desired.rlim_cur,
+						(unsigned long)desired.rlim_max);
 				}
 			} else {
 				dprintf( D_ALWAYS, "Workaround not applicable, no %s limit "

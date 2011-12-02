@@ -435,7 +435,7 @@ ReplicatorStateMachine::gidSelectionHandler( )
     }
     int temporaryGid = 0;
 
-    while( ( temporaryGid = rand( ) ) == m_myVersion.getGid( ) );
+    while( ( temporaryGid = rand( ) ) == m_myVersion.getGid( ) ) { }
     m_myVersion.setGid( temporaryGid );
 
     dprintf( D_ALWAYS, "ReplicatorStateMachine::gidSelectionHandler "

@@ -36,13 +36,13 @@ static unsigned int hashFunction (const StatsHashKey &key)
 	const char *p;
 
     for (p = key.type.Value(); p && *p;
-	     result = (result<<5) + result + (unsigned int)(*(p++)));
+	     result = (result<<5) + result + (unsigned int)(*(p++))) { }
 
     for (p = key.name.Value(); p && *p;
-	     result = (result<<5) + result + (unsigned int)(*(p++)));
+	     result = (result<<5) + result + (unsigned int)(*(p++))) { }
 
     for (p = key.ip_addr.Value(); p && *p;
-	     result = (result<<5) + result + (unsigned int)(*(p++)));
+	     result = (result<<5) + result + (unsigned int)(*(p++))) { }
 
     return result;
 }
