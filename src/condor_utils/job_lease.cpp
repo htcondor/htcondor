@@ -41,6 +41,9 @@ bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
 	if ( default_duration != -1 ) {
 		lease_duration = default_duration;
 	}
+	if ( lease_duration < -1 ) {
+		lease_duration = -1;
+	}
 
 	if ( renew_time ) {
 		*renew_time = (time_t)INT_MAX;
@@ -52,8 +55,10 @@ bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
 	//job_ad->LookupInteger( ATTR_PROC_ID, proc );
 	job_ad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_received );
 	job_ad->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, expire_sent );
+	/*
 	job_ad->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
 						last_renewal_failed );
+	*/
 	job_ad->LookupInteger( ATTR_JOB_LEASE_DURATION,	lease_duration );
 
 		// If we didn't receive a lease, there's no lease to renew
