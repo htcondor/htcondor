@@ -268,7 +268,7 @@ function get_results($dash, $info, $runid, $user, $run_result) {
       elseif($type == "test") {
         $html .= "<td class='noresults' align='center'>\n";
         $html .= "  <table cellpadding='1' cellspacing='0' width='100%' class='details'>\n";
-        $html .= "    <tr><td colspan='2' class='detail_url'><a href='$detail_url'>None</a></td></tr>\n";
+        $html .= "    <tr><td colspan='2' class='left detail_url'><a href='$detail_url'>None</a></td></tr>\n";
         $html .= "    <tr><td colspan='2'>&nbsp;</td></tr>\n";
         $html .= "    <tr><td colspan='2'>&nbsp;</td></tr>\n";
         $html .= "    <tr><td colspan='2'>&nbsp;</td></tr>\n";
@@ -286,7 +286,7 @@ function get_results($dash, $info, $runid, $user, $run_result) {
     else {
       $html .= "<td class='$color' align='center' valign='top'>\n";
       $html .= "  <table cellpadding='1' cellspacing='0' width='100%' class='details'>\n";
-      $html .= "    <tr><td colspan='2' class='detail_url'><a href='$detail_url'>$status</a></td></tr>";
+      $html .= "    <tr><td colspan='2' class='left detail_url'><a href='$detail_url'>$status</a></td></tr>";
 
       //
       // Show the different status tallies for platforms
@@ -303,8 +303,8 @@ function get_results($dash, $info, $runid, $user, $run_result) {
         }
         
         $html .= "<tr>\n";
-        $html .= "  <td width=\"75%\">$name_display</td>\n";
-        $html .= "  <td width=\"25%\">$num_display</td>\n";
+        $html .= "  <td width=\"75%\" class='left'>$name_display</td>\n";
+        $html .= "  <td width=\"25%\" class='left'>$num_display</td>\n";
         $html .= "</tr>\n";
       }
       $html .= "</table></td>\n";
