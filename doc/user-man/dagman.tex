@@ -820,36 +820,54 @@ in Condor's queue.
 \subsection{\label{sec:DagSuspend}Suspending a Running DAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-You may want to temporarily suspend a running DAG (for example, the load may
-be high on your submit machine, and you may want to prevent DAGMan from
-submitting any more jobs until the load goes down).  There are two ways
-to suspend (and resume) a DAG:
+It may be desired to temporarily suspend a running DAG.
+For example, the load may be high on the submit machine,
+and therefore it is desired to prevent DAGMan from
+submitting any more jobs until the load goes down.
+There are two ways to suspend (and resume) a running DAG.
 
 \begin{itemize}
-\item \Condor{hold}/\Condor{release}
-\item A DAG halt file
-\end{itemize}
+\item Use \Condor{hold}/\Condor{release} on the \Condor{dagman} job.
 
-When you \Condor{hold} a DAGMan job, no new node jobs will be submitted,
-and no PRE or POST scripts will be run; but any node jobs already in
-the Condor queue will continue undisturbed.  If you leave the DAGMan job
-on hold, it will remain in the Condor queue after all of the node jobs
-are finished.  To resume the DAG, \Condor{release} the DAGMan job.
+After placing the \Condor{dagman} job on hold,
+no new node jobs will be submitted,
+and no PRE or POST scripts will be run.
+Any node jobs already in the Condor queue will continue undisturbed.
+If the \Condor{dagman} job is left on hold,
+it will remain in the Condor queue after all of the currently running
+node jobs are finished.
+To resume the DAG, use \Condor{release} on the \Condor{dagman} job.
 
-Note that while the DAGMan job is on hold, no updates will be made to
-the \File{dagman.out} file.
+Note that while the \Condor{dagman} job is on hold,
+no updates will be made to the \File{dagman.out} file.
 
-The second way of suspending a DAG is to create a file called 
-\File{\textless{dag\_file}\textgreater.halt}
-(for example, if your DAG file is \File{test1.dag}, your halt file would
-be \File{test1.dag.halt}).  As long as such a file exists, the DAG will
-be in a halted state:  no PRE scripts will be run, and no node jobs
-will be submitted.  As when the DAG is held, existing node jobs will
-continue undisturbed.  Unlike a held DAG, though, a halted DAG will still
-run POST scripts and will still update the \File{dagman.out} file.
+\item Use a DAG halt file.
+
+The second way of suspending a DAG uses the existence of a specially-named
+file to change the state of the DAG.
+When in this halted state,
+no PRE scripts will be run, and no node jobs will be submitted.  
+Running node jobs will continue undisturbed.
+A halted DAG will still run POST scripts,
+and it will still update the \File{dagman.out} file.
+This differs from behavior of a DAG that is held.
 Furthermore, a halted DAG will not remain in the queue indefinitely;
-when all of the node jobs have finished, DAGMan will create a rescue DAG
-and exit.  To resume a halted DAG, simply remove the halt file.
+when all of the running node jobs have finished, 
+DAGMan will create a Rescue DAG and exit.
+
+To resume a halted DAG, remove the halt file.
+
+The specially-named file must be placed in the same directory
+as the DAG input file.
+The naming is the same as the DAG input file concatenated with the
+string \File{.halt}.
+For example, if the DAG input file is \File{test1.dag}, 
+then \File{test1.dag.halt} will be the required name of the halt file.
+
+As any DAG is first submitted with \Condor{submit\_dag}, 
+a check is made for a halt file.
+If one exists, it is removed.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:AdvDAGMan}Advanced Features of DAGMan}
