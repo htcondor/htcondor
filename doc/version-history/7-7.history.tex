@@ -64,6 +64,13 @@ additionally logs whether the match was subsequently rejected for
 other reasons, such as insufficient priority, rank, or fair share
 allocation.
 
+\item By default, if a node has child nodes, then \Condor{dagman} uses the
+KeepClaimIdle attribute, introduced in Condor version 7.7.1, to hold onto a
+claim.  This is a slight optimization, as it avoids waiting for a negotiation
+cycle.  The hold time defaults to 20 seconds.  This is controlled by the
+\Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
+\Ticket{2673}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

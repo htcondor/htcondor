@@ -3599,7 +3599,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							node->GetJobName(), parents,
 							node->varNamesFromDag, node->varValsFromDag,
 							node->GetDirectory(), logFile,
-							ProhibitMultiJobs() );
+							ProhibitMultiJobs(),
+							node->NumChildren() > 0 && dm._claim_hold_time > 0);
 			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
