@@ -672,7 +672,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// etc., if we haven't already gotten an error
 			// from another job proc in this job cluster
 		if ( job->_Status != Job::STATUS_ERROR ) {
-			job->TerminateFailure( this );
+			job->TerminateFailure();
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 				  "Condor reported %s event for job proc (%d.%d.%d)",
 				  ULogEventNumberNames[event->eventNumber],
@@ -744,7 +744,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					}
 				}
 
-				job->TerminateFailure( this );
+				job->TerminateFailure();
 				if ( job->_queuedNodeJobProcs > 0 ) {
 				  // once one job proc fails, remove
 				  // the whole cluster
@@ -875,6 +875,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 			if ( job->_queuedNodeJobProcs == 0 ) {
 				_numNodesFailed++;
+				if ( _dagStatus == DAG_STATUS_OK ) {
+					_dagStatus = DAG_STATUS_NODE_FAILED;
+				}
 			}
 
 			return;
@@ -939,7 +942,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
 				// POST script failed or was killed by a signal
 
-			job->TerminateFailure( this );
+			job->TerminateFailure();
 
 			int		mainJobRetval = job->retval;
 
@@ -982,6 +985,9 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			} else {
 					// no more retries -- node failed
 				_numNodesFailed++;
+				if ( _dagStatus == DAG_STATUS_OK ) {
+					_dagStatus = DAG_STATUS_NODE_FAILED;
+				}
 
 				MyString	errMsg;
 
@@ -1556,7 +1562,10 @@ Dag::PreScriptReaper( const char* nodeName, int status )
             job->retval = WEXITSTATUS( status );
 		}
 
-        job->TerminateFailure( this );
+			//TEMP -- this will have to get changed when this is merged
+			// and therefore combined with the 'always run post script'
+			// feature
+        job->TerminateFailure();
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 
@@ -1564,6 +1573,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			RestartNode( job, false );
 		} else {
 			_numNodesFailed++;
+			if ( _dagStatus == DAG_STATUS_OK ) {
+				_dagStatus = DAG_STATUS_NODE_FAILED;
+			}
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
@@ -2215,6 +2227,9 @@ Dag::RestartNode( Job *node, bool recovery )
                       "(last attempt returned %d)\n",
                       node->GetJobName(), node->retval);
         _numNodesFailed++;
+		if ( _dagStatus == DAG_STATUS_OK ) {
+			_dagStatus = DAG_STATUS_NODE_FAILED;
+		}
         return;
     }
 	node->_Status = Job::STATUS_READY;
@@ -3084,6 +3099,9 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	else if( node->GetStatus() == Job::STATUS_ERROR ) {
 		_numNodesFailed--;
 		ASSERT( _numNodesFailed >= 0 );
+		if ( _numNodesFailed == 0 && _dagStatus == DAG_STATUS_NODE_FAILED ) {
+			_dagStatus = DAG_STATUS_OK;
+		}
 	}
 	else if( node->GetStatus() == Job::STATUS_READY ) {
 		ASSERT( _readyQ );
@@ -3517,11 +3535,14 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
-		node->TerminateFailure( this );
+		node->TerminateFailure();
 		snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"No 'log =' value found in submit file %s",
 					node->GetCmdFile() );
 	  	_numNodesFailed++;
+		if ( _dagStatus == DAG_STATUS_OK ) {
+			_dagStatus = DAG_STATUS_NODE_FAILED;
+		}
 		result = SUBMIT_RESULT_NO_SUBMIT;
 
 	} else {
@@ -3662,8 +3683,11 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 						_nfsLogIsError, _recovery, _defaultNodeLog );
 			_postScriptQ->Run( node->_scriptPost );
 		} else {
-			node->TerminateFailure( this );
+			node->TerminateFailure();
 			_numNodesFailed++;
+			if ( _dagStatus == DAG_STATUS_OK ) {
+				_dagStatus = DAG_STATUS_NODE_FAILED;
+			}
 		}
 
 	} else {

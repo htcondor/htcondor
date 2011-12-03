@@ -487,12 +487,9 @@ Job::TerminateSuccess()
 } 
 
 bool
-Job::TerminateFailure( Dag *dag )
+Job::TerminateFailure()
 {
 	_Status = STATUS_ERROR;
-	if ( dag->_dagStatus == Dag::DAG_STATUS_OK ) {
-		dag->_dagStatus = Dag::DAG_STATUS_NODE_FAILED;
-	}
 	return true;
 } 
 

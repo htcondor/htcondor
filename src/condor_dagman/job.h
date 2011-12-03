@@ -299,7 +299,7 @@ class Job {
 
 		// should be called when the job terminates
 	bool TerminateSuccess();
-	bool TerminateFailure( Dag *dag );
+	bool TerminateFailure();
 
     /** Returns true if the node's pre script, batch job, or post
         script are currently submitted or running.

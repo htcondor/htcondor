@@ -3,4 +3,4 @@
 CONFIG job_dagman_submit_fails_post.config
 
 JOB A job_dagman_submit_fails_post-nodeA.cmd
-SCRIPT POST A job_dagman_submit_fails_post-nodeA-post.pl
+SCRIPT POST A job_dagman_submit_fails_post-nodeA-post.pl $RETURN
