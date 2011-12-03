@@ -47,23 +47,28 @@ $rescuefile = "job_dagman_final-C.dag.rescue001";
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
 			"  OK done with C_A",
-			"FAILED done with C_B",
+			"Job for node C_B",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"FAILED done with C_C",
+			"  FAILED done with C_B",
+			"Job for node C_C",
 			"  DAG_STATUS=0",
-			"  FAILED_COUNT=0");
+			"  FAILED_COUNT=0",
+			"  FAILED done with C_C");
 
 # Note: we must find these lines *in the specified order*.
 @scriptlines = ("Node C_B Post",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
+			"  RETURN=1",
 			"Node C_C Pre",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
+			"  RETURN=-1",
 			"Node C_C Post",
 			"  DAG_STATUS=0",
-			"  FAILED_COUNT=0");
+			"  FAILED_COUNT=0",
+			"  RETURN=1");
 
 # Note: we must find these lines *in the specified order*.
 @rescuelines = ('# Rescue DAG file, created after running',
@@ -81,11 +86,11 @@ $rescuefile = "job_dagman_final-C.dag.rescue001";
 			'RETRY C_A 1',
 			'^',
 			'JOB C_B job_dagman_final-C-nodeB.cmd DONE',
-			'SCRIPT POST C_B job_dagman_final-C-script.pl C_B Post \$DAG_STATUS \$FAILED_COUNT 0',
+			'SCRIPT POST C_B job_dagman_final-C-script.pl C_B Post 0 \$DAG_STATUS \$FAILED_COUNT \$RETURN',
 			'^',
 			'FINAL C_C job_dagman_final-C-nodeC.cmd ',
-			'SCRIPT PRE  C_C job_dagman_final-C-script.pl C_C Pre \$DAG_STATUS \$FAILED_COUNT 0',
-			'SCRIPT POST C_C job_dagman_final-C-script.pl C_C Post \$DAG_STATUS \$FAILED_COUNT \$RETURN',
+			'SCRIPT PRE  C_C job_dagman_final-C-script.pl C_C Pre 0 \$DAG_STATUS \$FAILED_COUNT -1',
+			'SCRIPT POST C_C job_dagman_final-C-script.pl C_C Post \$RETURN \$DAG_STATUS \$FAILED_COUNT \$RETURN',
 			'^',
 			'^',
 			'PARENT C_A CHILD C_B');

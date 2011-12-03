@@ -1,0 +1,163 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This test tests the final DAG node when the rest of the DAG fails, but
+# the final node succeeds and therefore the overal DAG succeeds.
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_final-D.dag';
+$testdesc =  'Condor submit dag - basic final node test A - scheduler U';
+$testname = "job_dagman_final-D";
+$dagman_args = "-verbose";
+
+$outfile = "job_dagman_final-D.nodes.out";
+$scriptfile = "job_dagman_final-D.scripts.out";
+
+# Note: we must find these lines *in the specified order*.
+@node_output_lines = ("Job for node A_A",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  OK done with A_A",
+			"Job for node D_B",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  FAILED done with D_B",
+			"Job for node D_C",
+			"  DAG_STATUS=2",
+			"  FAILED_COUNT=1",
+			"  OK done with D_C");
+
+# Note: we must find these lines *in the specified order*.
+@script_output_lines = ("Node D_C Pre",
+			"  DAG_STATUS=2",
+			"  FAILED_COUNT=1",
+			"  RETURN=-1",
+			"Node D_C Post",
+			"  DAG_STATUS=2",
+			"  FAILED_COUNT=1",
+			"  RETURN=0");
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing output files.
+if (-e $outfile) {
+	runcmd("rm -f $outfile");
+}
+if (-e $scriptfile) {
+	runcmd("rm -f $scriptfile");
+}
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	# Make sure all expected lines are in the node output file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $outfile\n",1);
+	open(CHECK, "<$outfile") ||
+			die "Cannot open $outfile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#node_output_lines > $#lines ? $#node_output_lines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line eq $node_output_lines[$lineindex]) {
+			CondorTest::debug("$line\n", 1);
+		} else {
+			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$node_output_lines[$lineindex]>, got <$line>\n", 1);
+		}
+	}
+
+	# Make sure all expected lines are in the script output file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $scriptfile\n",1);
+	open(CHECK, "<$scriptfile") ||
+			die "Cannot open $scriptfile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#script_output_lines > $#lines ? $#script_output_lines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line eq $script_output_lines[$lineindex]) {
+			CondorTest::debug("$line\n", 1);
+		} else {
+			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
+		}
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterExecute($testname, $executed );
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

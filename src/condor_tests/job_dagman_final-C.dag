@@ -8,12 +8,12 @@ RETRY C_A 1
 # For this node, the job fails, but the POST script succeeds, to make sure
 # the DAG status gets updated properly in that case.
 JOB C_B job_dagman_final-C-nodeB.cmd
-SCRIPT POST C_B job_dagman_final-C-script.pl C_B Post $DAG_STATUS $FAILED_COUNT 0
+SCRIPT POST C_B job_dagman_final-C-script.pl C_B Post 0 $DAG_STATUS $FAILED_COUNT $RETURN
 
 # Condor job and POST script will fail for this node, overriding the
 # success of the rest of the DAG.
 FINAL C_C job_dagman_final-C-nodeC.cmd
-SCRIPT PRE C_C job_dagman_final-C-script.pl C_C Pre $DAG_STATUS $FAILED_COUNT 0
-SCRIPT POST C_C job_dagman_final-C-script.pl C_C Post $DAG_STATUS $FAILED_COUNT $RETURN
+SCRIPT PRE C_C job_dagman_final-C-script.pl C_C Pre 0 $DAG_STATUS $FAILED_COUNT -1
+SCRIPT POST C_C job_dagman_final-C-script.pl C_C Post $RETURN $DAG_STATUS $FAILED_COUNT $RETURN
 
 PARENT C_A CHILD C_B
