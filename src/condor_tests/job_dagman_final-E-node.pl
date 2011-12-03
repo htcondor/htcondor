@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-$outfile = "job_dagman_final-D.nodes.out";
+$outfile = "job_dagman_final-E.nodes.out";
 
 system("echo 'Job for node $ARGV[0]' >> $outfile");
 

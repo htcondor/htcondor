@@ -4,4 +4,5 @@ error = job_dagman_final-D-nodeB.err
 log = job_dagman_final-D-nodeB.log
 arguments = "D_B 1 $(DAG_STATUS) $(FAILED_COUNT)"
 universe = scheduler
+notification = NEVER
 queue

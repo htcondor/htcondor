@@ -18,64 +18,24 @@
 ##
 ##**************************************************************
 
-# This test tests the final DAG node when the DAG fails.
-
-# Note: we should check that the node status file is correct, but I'm
-# skipping that for now.  wenger 2011-12-01
+# This test tests the final DAG node when the DAG is condor_rm'ed.
 
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_final-B.dag';
-$testdesc =  'Condor submit dag - basic final node test B - scheduler U';
-$testname = "job_dagman_final-B";
+$cmd = 'job_dagman_final-E.dag';
+$testdesc =  'Condor submit dag - basic final node test A - scheduler U';
+$testname = "job_dagman_final-E";
 $dagman_args = "-verbose";
 
-$outfile = "job_dagman_final-B.nodes.out";
-$scriptfile = "job_dagman_final-B.scripts.out";
-$rescuefile = "job_dagman_final-B.dag.rescue001";
+$outfile = "job_dagman_final-E.nodes.out";
+$scriptfile = "job_dagman_final-E.scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@nodelines = ("  DAG_STATUS=0",
-			 "  FAILED_COUNT=0",
-			"OK done with B_A",
-			"  DAG_STATUS=0",
-			"  FAILED_COUNT=0",
-			"FAILED done with B_B",
-			"  DAG_STATUS=2",
-			"  FAILED_COUNT=1",
-			"FAILED done with B_C");
+@node_output_lines = ();#TEMPTEMP
 
 # Note: we must find these lines *in the specified order*.
-@scriptlines = ("  DAG_STATUS=2",
-			"  FAILED_COUNT=1",
-			"Node B_C Pre",
-			"  DAG_STATUS=2",
-			"  FAILED_COUNT=1",
-			"Node B_C Post");
-
-# Note: we must find these lines *in the specified order*.
-@rescuelines = ('# Rescue DAG file, created after running',
-			'#   the job_dagman_final-B.dag DAG file',
-			'# Created .*/.*/.* .*:.*:.* UTC',
-			'#',
-			'# Total number of Nodes: 3',
-			'# Nodes premarked DONE: 1',
-			'# Nodes that failed: 2',
-			'#   B_B,B_C,<ENDLIST>',
-			'^',
-			'NODE_STATUS_FILE job_dagman_final-B.status',
-			'^',
-			'JOB B_A job_dagman_final-B-nodeA.cmd DONE',
-			'^',
-			'JOB B_B job_dagman_final-B-nodeB.cmd',
-			'^',
-			'FINAL B_C job_dagman_final-B-nodeC.cmd',
-			'SCRIPT PRE  B_C job_dagman_final-B-script.pl B_C Pre \$DAG_STATUS \$FAILED_COUNT 0',
-			'SCRIPT POST B_C job_dagman_final-B-script.pl B_C Post \$DAG_STATUS \$FAILED_COUNT \$RETURN',
-			'^',
-			'^',
-			'PARENT B_A CHILD B_B');
+@script_output_lines = ();#TEMPTEMP
 
 my $killedchosen = 0;
 
@@ -91,8 +51,6 @@ if (-e $outfile) {
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
 }
-runcmd("rm -f job_dagman_final-B.dag.rescue*");
-
 
 $abnormal = sub 
 {
@@ -123,12 +81,7 @@ $submitted = sub
 
 $success = sub
 {
-	die "Error: DAG should fail!\n";
-};
-
-$failure = sub
-{
-	CondorTest::debug("executed with failure\n",1);
+	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 
@@ -139,15 +92,15 @@ $failure = sub
 			die "Cannot open $outfile: $!\n";
 	@lines = <CHECK>;
 	close(CHECK);
-	$max = $#nodelines > $#lines ? $#nodelines : $#lines;
+	$max = $#node_output_lines > $#lines ? $#node_output_lines : $#lines;
 	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
 		$line = $lines[$lineindex];
 		chomp($line);
-		if ($line eq $nodelines[$lineindex]) {
+		if ($line eq $node_output_lines[$lineindex]) {
 			CondorTest::debug("$line\n", 1);
 		} else {
 			$diditpass = 0;
-			CondorTest::debug("Mismatch at line $lineindex: expected <$nodelines[$lineindex]>, got <$line>\n", 1);
+			CondorTest::debug("Mismatch at line $lineindex: expected <$node_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
 	}
 
@@ -158,34 +111,15 @@ $failure = sub
 			die "Cannot open $scriptfile: $!\n";
 	@lines = <CHECK>;
 	close(CHECK);
-	$max = $#scriptlines > $#lines ? $#scriptlines : $#lines;
+	$max = $#script_output_lines > $#lines ? $#script_output_lines : $#lines;
 	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
 		$line = $lines[$lineindex];
 		chomp($line);
-		if ($line eq $scriptlines[$lineindex]) {
+		if ($line eq $script_output_lines[$lineindex]) {
 			CondorTest::debug("$line\n", 1);
 		} else {
 			$diditpass = 0;
-			CondorTest::debug("Mismatch at line $lineindex: expected <$scriptlines[$lineindex]>, got <$line>\n", 1);
-		}
-	}
-
-	# Make sure all expected lines are in the rescue DAG file, in the
-	# correct order, and there aren't any "extra" lines.
-	CondorTest::debug("Checking $rescuefile\n",1);
-	open(CHECK, "<$rescuefile") ||
-			die "Cannot open $rescuefile: $!\n";
-	@lines = <CHECK>;
-	close(CHECK);
-	$max = $#rescuelines > $#lines ? $#rescuelines : $#lines;
-	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
-		$line = $lines[$lineindex];
-		chomp($line);
-		if ($line =~ /$rescuelines[$lineindex]/) {
-			CondorTest::debug("$line\n", 1);
-		} else {
-			$diditpass = 0;
-			CondorTest::debug("Mismatch at line $lineindex: expected <$rescuelines[$lineindex]>, got <$line>\n", 1);
+			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
 	}
 
@@ -195,7 +129,6 @@ $failure = sub
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );
-CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed );
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );

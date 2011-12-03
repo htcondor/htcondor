@@ -25,7 +25,7 @@ use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_final-D.dag';
-$testdesc =  'Condor submit dag - basic final node test A - scheduler U';
+$testdesc =  'Condor submit dag - basic final node test D - scheduler U';
 $testname = "job_dagman_final-D";
 $dagman_args = "-verbose";
 
@@ -33,10 +33,10 @@ $outfile = "job_dagman_final-D.nodes.out";
 $scriptfile = "job_dagman_final-D.scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@node_output_lines = ("Job for node A_A",
+@node_output_lines = ("Job for node D_A",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"  OK done with A_A",
+			"  OK done with D_A",
 			"Job for node D_B",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",

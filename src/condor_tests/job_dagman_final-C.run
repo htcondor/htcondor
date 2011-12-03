@@ -30,7 +30,7 @@ use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_final-C.dag';
-$testdesc =  'Condor submit dag - basic final node test B - scheduler U';
+$testdesc =  'Condor submit dag - basic final node test C - scheduler U';
 $testname = "job_dagman_final-C";
 $dagman_args = "-verbose";
 
@@ -109,9 +109,7 @@ if (-e $outfile) {
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
 }
-if (-e $rescuefile) {
-	runcmd("rm -f $rescuefile");
-}
+runcmd("rm -f job_dagman_final-C.dag.rescue*");
 
 # So node C_A fails the first time through...
 runcmd("touch job_dagman_final-C-nodeA.fails");
