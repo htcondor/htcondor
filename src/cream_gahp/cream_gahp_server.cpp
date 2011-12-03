@@ -1912,7 +1912,7 @@ int handle_response_prefix( char **input_line )
 	char *prefix;
 	
 	if ( count_args( input_line ) != 2 ) {
-		for(int i=0;input_line[i];i++){fprintf(stderr,"input_line[%d]=\"%s\" (len=%d)\n",i,input_line[i],strlen(input_line[i]));}
+		for(int i=0;input_line[i];i++){fprintf(stderr,"input_line[%d]=\"%s\" (len=%ld)\n",i,input_line[i],strlen(input_line[i]));}
 		HANDLE_SYNTAX_ERROR();
 	}
 
@@ -2287,7 +2287,7 @@ void *worker_main(void * /*ignored*/)
 				//deque<Request *> requestQueue;
 				pthread_mutex_lock( &requestQueueLock );
 				typedef deque<Request*> ReqDeque;
-				int size = requestQueue.size()+1;//+1 = we pop_fronted earlier
+				//int size = requestQueue.size()+1;//+1 = we pop_fronted earlier
 				for(ReqDeque::iterator it = requestQueue.begin();
 					it != requestQueue.end(); ) {
 					if(is_a_batchable_set(rv, *it)) {
