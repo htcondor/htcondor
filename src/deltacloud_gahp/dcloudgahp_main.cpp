@@ -459,7 +459,7 @@ static void registerAllDcloudCommands(void)
                               dcloud_start_auto_worker);
 }
 
-int main(int argc, char *argv[])
+int main(int /*argc*/, char */*argv*/[])
 {
     const char *debug_file = getenv("DELTACLOUD_GAHP_DEBUG_FILE");
     if (debug_file) {
