@@ -872,8 +872,8 @@ ProcAPI::checkBootTime(long now)
 		if( (fp = safe_fopen_wrapper_follow("/proc/uptime","r")) ) {
 			double uptime=0;
 			double dummy=0;
-			fgets( s, 256, fp );
-			if (sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
+			char *r = fgets( s, 256, fp );
+			if (r && sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
 				// uptime is number of seconds since boottime
 				// convert to nearest time stamp
 				uptime_boottime = (unsigned long)(now - uptime + 0.5);
@@ -883,9 +883,9 @@ ProcAPI::checkBootTime(long now)
 
 		// get stat_boottime
 		if( (fp = safe_fopen_wrapper_follow("/proc/stat", "r")) ) {
-			fgets( s, 256, fp );
-			while( strstr(s, "btime") == NULL ) {
-				fgets( s, 256, fp );
+			char * r = fgets( s, 256, fp );
+			while( r && strstr(s, "btime") == NULL ) {
+				r = fgets( s, 256, fp );
 			}
 			sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
