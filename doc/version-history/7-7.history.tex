@@ -89,6 +89,10 @@ but not big enough to hold the whole contents of the spool directory.
 
 \begin{itemize}
 
+\item \Condor{submit} would allow ec2\_secret\_access\_key and
+  ec2\_access\_key\_id to be directories.
+\Ticket{2619}
+
 \item Communication errors were not always correctly handled when
 fetching results of a query when using the \Opt{-stream} option to
 \Condor{q}.  This problem was introduced in 7.7.0.
