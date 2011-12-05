@@ -75,6 +75,7 @@ check_window(HWND hwnd, LPARAM lParam)
 			if (GetModuleBaseName(hproc, NULL, szName, sizeof(szName)/sizeof(szName[0])) == 0) {
 				debug(L"GetModuleBaseName error: %u\n", GetLastError());
 			}
+			CloseHandle(hproc);
 		}
 		SetLastError(ERROR_SUCCESS);
 
