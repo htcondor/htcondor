@@ -1678,7 +1678,7 @@ dprintf_wrapup_fork_child( ) {
 
 #if HAVE_BACKTRACE
 
-static void
+static int
 safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned int num_args)
 {
 	unsigned int arg_index;
@@ -1687,14 +1687,15 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 	char *intbuf_pos;
 
 	for(;*msg;msg++) {
+		int r;
 		if( *msg != '%' ) {
-			write(fd,msg,1);
+			r = write(fd,msg,1);
 		}
 		else {
 				// format is % followed by index of argument in args array
 			arg_index = *(++msg)-'0';
 			if( arg_index >= num_args || !*msg ) {
-				write(fd," INVALID! ",10);
+				r = write(fd," INVALID! ",10);
 				break;
 			}
 			arg = args[arg_index];
@@ -1708,7 +1709,7 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 				// intbuf now contains the base-10 digits of arg
 				// in order of least to most significant
 			while( intbuf_pos-- > intbuf ) {
-				write(fd,intbuf_pos,1);
+				r = write(fd,intbuf_pos,1);
 			}
 		}
 	}
