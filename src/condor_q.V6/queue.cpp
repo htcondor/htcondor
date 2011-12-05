@@ -2367,7 +2367,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		} else {
 				// fetch queue from schedd	
 			int fetchResult;
-			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddress, scheddVersion, &errstack) != Q_OK ) {
+			if( (fetchResult = Q.fetchQueueFromHost(jobs, attrs,scheddAddress, scheddVersion, &errstack) != Q_OK)) {
 			// The parse + fetch failed, print out why
 			switch(fetchResult) {
 				case Q_PARSE_ERROR:
