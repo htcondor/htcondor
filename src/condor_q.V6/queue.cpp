@@ -193,6 +193,7 @@ static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
+static  const char *user_constraint; // just the constraint given by the user
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
 static	AttrListPrintMask 	mask;
@@ -1112,6 +1113,7 @@ processCommandLineArguments (int argc, char *argv[])
 				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
 				exit (1);
 			}
+			user_constraint = argv[i];
 			summarize = 0;
 		} 
 		else
@@ -2097,13 +2099,23 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			// stash the schedd daemon object for use by process_buffer_line
 		g_cur_schedd_for_process_buffer_line = new Daemon( schedd );
 
-		if( Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
+		int fetchResult;
+		if( (fetchResult = Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
 											process_buffer_line,
 											useFastPath,
-											&errstack) != Q_OK ) {
-			fprintf(stderr,
-				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-				scheddAddress, scheddMachine, errstack.getFullText(true) );
+											&errstack) != Q_OK)) {
+			
+			// The parse + fetch failed, print out why
+			switch(fetchResult) {
+				case Q_PARSE_ERROR:
+				case Q_INVALID_CATEGORY:
+					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_constraint);
+					break;
+				default:
+					fprintf(stderr,
+						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+						scheddAddress, scheddMachine, errstack.getFullText(true) );
+			}
 
 			delete output_buffer;
 			return false;
@@ -2354,11 +2366,22 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 #endif /* HAVE_EXT_POSTGRESQL */
 		} else {
 				// fetch queue from schedd	
+			int fetchResult;
 			if( Q.fetchQueueFromHost(jobs, attrs,scheddAddress, scheddVersion, &errstack) != Q_OK ) {
-				fprintf( stderr,
-					"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-					scheddAddress, scheddMachine, errstack.getFullText(true) );
-				return false;
+			// The parse + fetch failed, print out why
+			switch(fetchResult) {
+				case Q_PARSE_ERROR:
+				case Q_INVALID_CATEGORY:
+					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_constraint);
+					break;
+				default:
+					fprintf(stderr,
+						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+						scheddAddress, scheddMachine, errstack.getFullText(true) );
+			}
+
+			delete output_buffer;
+			return false;
 			}
 		}
 	}
