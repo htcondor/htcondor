@@ -5019,6 +5019,12 @@ SetGridParams()
 				exit(1);
 			}
 			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
 		}
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -5038,6 +5044,12 @@ SetGridParams()
 				exit(1);
 			}
 			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
 		}
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
