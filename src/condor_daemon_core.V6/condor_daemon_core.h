@@ -60,6 +60,7 @@
 #include "condor_sinful.h"
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
+#include "filesystem_remap.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -1108,27 +1109,30 @@ class DaemonCore : public Service
         ...
         @param err_return_msg Returned with error message pertaining to
                failure inside the method.  Ignored if NULL (default).
+        @param remap Performs bind mounts for the child process.
+               Ignored if NULL (default).  Ignored on non-Linux.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
-        const char    *name,
-        ArgList const &arglist,
-        priv_state    priv                 = PRIV_UNKNOWN,
-        int           reaper_id            = 1,
-        int           want_commanand_port  = TRUE,
-        Env const     *env                 = NULL,
-        const char    *cwd                 = NULL,
-        FamilyInfo    *family_info         = NULL,
-        Stream        *sock_inherit_list[] = NULL,
-        int           std[]                = NULL,
-        int           fd_inherit_list[]    = NULL,
-        int           nice_inc             = 0,
-        sigset_t      *sigmask             = NULL,
-        int           job_opt_mask         = 0,
-        size_t        *core_hard_limit     = NULL,
-		int			  *affinity_mask	   = NULL,
-		char const    *daemon_sock         = NULL,
-        MyString      *err_return_msg      = NULL
+        const char      *name,
+        ArgList const   &arglist,
+        priv_state      priv                 = PRIV_UNKNOWN,
+        int             reaper_id            = 1,
+        int             want_commanand_port  = TRUE,
+        Env const       *env                 = NULL,
+        const char      *cwd                 = NULL,
+        FamilyInfo      *family_info         = NULL,
+        Stream          *sock_inherit_list[] = NULL,
+        int             std[]                = NULL,
+        int             fd_inherit_list[]    = NULL,
+        int             nice_inc             = 0,
+        sigset_t        *sigmask             = NULL,
+        int             job_opt_mask         = 0,
+        size_t          *core_hard_limit     = NULL,
+        int              *affinity_mask	     = NULL,
+        char const      *daemon_sock         = NULL,
+        MyString        *err_return_msg      = NULL,
+        FilesystemRemap *remap               = NULL
         );
 
     //@}

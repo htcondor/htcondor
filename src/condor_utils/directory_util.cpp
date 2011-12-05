@@ -126,6 +126,11 @@ dirscat( const char *dirpath, const char *subdir )
 	return rval;
 }
 
+char*
+dirscat( std::string &dirpath, std::string &subdir ) {
+	return dirscat(dirpath.c_str(), subdir.c_str());
+}
+
 int 
 rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos) 
 {
