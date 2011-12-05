@@ -31,7 +31,6 @@
 #include "condor_io.h"
 #include "startup.h"
 #include "fileno.h"
-#include "renice_self.h"
 #include "condor_environ.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_procd/proc_family_client.h"
@@ -121,6 +120,27 @@ extern "C" int REMOTE_CONDOR_get_iwd(char *&path);
 extern NameTable JobClasses;
 extern NameTable ProcStates;
 
+int
+renice_self( const char* param_name ) {
+	int i = 0;
+	int r = 0;
+#ifndef WIN32
+	char* ptmp = param( param_name );
+	if ( ptmp ) {
+		i = atoi(ptmp);
+		if ( i > 0 && i < 20 ) {
+			r = nice(i);
+		} else if ( i >= 20 ) {
+			i = 19;
+			r = nice(i);
+		} else {
+			i = 0;
+		}
+		free(ptmp);
+	}
+#endif
+	return r;
+}
 
 UserProc::~UserProc()
 {
