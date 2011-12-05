@@ -7877,8 +7877,10 @@ the HDFS XML configuration.
   configuration.
 
 \label{param:HDFS}
-\item[\Macro{HDFS\_NODETYPE}]
-  A host name, to identify the machine acting as the Name node.
+\item[\Macro{HDFS\_NODETYPE}] This parameter specifies the type of
+  HDFS service provided by this machine.  Possible values are
+  \Expr{HDFS\_NAMENODE} and \Expr{HDFS\_DATANODE}.  The default value
+  is \Expr{HDFS\_DATANODE}.
 
 \label{param:HDFSBackupnode}
 \item[\Macro{HDFS\_BACKUPNODE}]
