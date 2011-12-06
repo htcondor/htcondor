@@ -137,10 +137,12 @@ main(int argc, char* argv[])
 	fatal_error();
 }
 
+static int error_return;
+
 static void
 fatal_error()
 {
-	write(sock_fd, err.Value(), err.Length() + 1);
+	error_return = write(sock_fd, err.Value(), err.Length() + 1);
 	exit(1);
 }
 
