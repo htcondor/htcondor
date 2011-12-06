@@ -30,6 +30,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added the \OptArg{-expand} option to condor\_config\_val.  If \OptArg{-dump}
+and \OptArg{-expand} are given to the command, all config file macros are
+expanded before they are printed out.
+
 \item The \OptArg{-sort} option for \Condor{status} has been generalized to
 accept expressions instead of just simple named attributes.
 \Ticket{2661}

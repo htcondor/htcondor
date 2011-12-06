@@ -16,6 +16,9 @@
  #
  ###############################################################
 
+
+add_definitions(-D_FORTIFY_SOURCE=2)
+
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)

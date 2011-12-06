@@ -5879,7 +5879,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			// we just need to write something to ensure that the
 			// select() in Driver() does not block.
 			if ( async_sigs_unblocked == TRUE ) {
-				write(async_pipe[1],"!",1);
+				_condor_full_write(async_pipe[1],"!",1);
 			}
 #endif
 			msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
@@ -7191,20 +7191,29 @@ void CreateProcessForkit::exec() {
 
 	// This requires rootly power
 	if (m_fs_remap) {
+		int ret = 0;
 		if (can_switch_ids()) {
 			m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
 #ifdef HAVE_UNSHARE
 			int rc = ::unshare(CLONE_NEWNS|CLONE_FS);
 			if (rc) {
 				dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
-				write(m_errorpipe[1], &errno, sizeof(errno));
-				_exit(errno);
+				ret = write(m_errorpipe[1], &errno, sizeof(errno));
+				if (ret < 1) {
+					_exit(errno);
+				} else {
+					_exit(errno);
+				}
 			}
 #else
 			dprintf(D_ALWAYS, "Can not remount filesystems because this system does not have unshare(2)\n");
 			errno = ENOSYS;
-			write(m_errorpipe[1], &errno, sizeof(errno));
-			_exit(errno);
+			ret = write(m_errorpipe[1], &errno, sizeof(errno));
+			if (ret < 1) {
+				_exit(errno);
+			} else {
+				_exit(errno);
+			}
 #endif
 		} else {
 			dprintf(D_ALWAYS, "Not remapping FS as requested, due to lack of privileges.\n");
@@ -7213,8 +7222,12 @@ void CreateProcessForkit::exec() {
 	}
 
 	if (m_fs_remap && m_fs_remap->PerformMappings()) {
-		write(m_errorpipe[1], &errno, sizeof(errno));
-		_exit(errno);
+		int ret = write(m_errorpipe[1], &errno, sizeof(errno));
+		if (ret < 1) {
+			_exit(errno);
+		} else {
+			_exit(errno);
+		}
 	}
 
 	// And back to normal userness
@@ -9011,9 +9024,13 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            write(errorpipe[1], &child_errno, sizeof(child_errno));
+            int ret = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
-            exit(4);
+			if (ret < 1) {
+				exit(4);
+			} else {
+				exit(4);
+			}
         }
 			// if we got this far, we know we don't need the errorpipe
 			// anymore, so we can close it now...

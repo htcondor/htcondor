@@ -448,8 +448,8 @@ globus_gass_server_ez_put_memory_done(void * arg,
 
 static void
 globus_l_gass_server_ez_close_callback(
-				void * user_arg,
-				globus_gass_transfer_listener_t listener)
+							   void * /*user_arg*/,
+							   globus_gass_transfer_listener_t /*listener*/)
 {
     /* should be cleaning up things related to the listener here
      * get rid of server struct stuff (hashtable) etc.

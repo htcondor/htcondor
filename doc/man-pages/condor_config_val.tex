@@ -35,6 +35,8 @@
 
 \SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-dump}
 
+\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-expand}
+
 \index{Condor commands!condor\_config\_val}
 \index{condor\_config\_val command}
 
@@ -112,6 +114,10 @@ then the specific configuration file which defined each macro,
 along with the line number of its definition is also printed. 
 \Note The output of this argument is likely to change 
 in a future revision of Condor.
+
+If the \Opt{-expand} option is given in addition to the \Opt{-dump}
+option, then macros in the config files are expanded before
+being printed out.
 
 \begin{Options}
   \OptItem{\OptArg{-name}{machine\_name}}{ Query the specified
