@@ -695,7 +695,9 @@ linux_sig_coredump(int signum)
 	setgid(0);
 
 	if (core_dir != NULL) {
-		chdir(core_dir);
+		if (chdir(core_dir)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", core_dir, strerror(errno));
+		}
 	}
 
 	WriteCoreDump("core");
