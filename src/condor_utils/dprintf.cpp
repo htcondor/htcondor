@@ -1690,8 +1690,8 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 	char intbuf[50];
 	char *intbuf_pos;
 
+	int r = 0;
 	for(;*msg;msg++) {
-		int r;
 		if( *msg != '%' ) {
 			r = write(fd,msg,1);
 		}
@@ -1717,6 +1717,7 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 			}
 		}
 	}
+	return r;
 }
 
 void
