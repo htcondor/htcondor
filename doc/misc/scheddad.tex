@@ -273,14 +273,20 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   in the previous \AdAttr{RecentStatsLifetime} seconds.
 
 \index{ClassAd Scheduler attribute!RecentShadowsReconnections}
-\item[\AdAttr{RecentShadowsReconnections}:] Number of times \Condor{shadow}s lost 
-  connection to their \Condor{starter}s and successfully reconnected
+\item[\AdAttr{RecentShadowsReconnections}:] Number of times that \Condor{shadow}  daemons lost 
+  connection to their \Condor{starter} daemons and successfully reconnected
   in the previous \AdAttr{RecentStatsLifetime} seconds.
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
   
 \index{ClassAd Scheduler attribute!RecentShadowsRecycled}
 \item[\AdAttr{RecentShadowsRecycled}:] Number of times Shadow processes have been 
   recycled for use with a new job
   in the previous \AdAttr{RecentStatsLifetime} seconds.
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!RecentShadowsStarted}
 \item[\AdAttr{RecentShadowsStarted}:] Number of \Condor{shadow}s started
@@ -294,9 +300,15 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
 \item[\AdAttr{RecentStatsTickTime}:] The time that Recent statistics were last updated
   represented as the number of seconds elapsed since
     the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!RecentWindowMax}
 \item[\AdAttr{RecentWindowMax}:] The maximum time in seconds over which Recent statistics are collected.
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!ScheddIpAddr}
 \item[\AdAttr{ScheddIpAddr}:] String with the IP and port address of the
@@ -309,11 +321,17 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
 \item[\AdAttr{ShadowsReconnections}:] Number of times \Condor{shadow}s lost 
   connection to their \Condor{starter}s and successfully reconnected
   in the previous \AdAttr{StatsLifetime} seconds.
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!ShadowsRecycled}
 \item[\AdAttr{ShadowsRecycled}:] Number of times Shadow processes have been 
   recycled for use with a new job
   in the previous \AdAttr{StatsLifetime} seconds.
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!ShadowsRunning}
 \item[\AdAttr{ShadowsRunning}:] The number of \Condor{shadow}s currently running 
@@ -343,10 +361,16 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
 \item[\AdAttr{StatsLastUpdateTime}:] The time that Jobs statistics were last updated
   represented as the number of seconds elapsed since
     the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!StatsLifetime}
 \item[\AdAttr{StatsLifetime}:] The time in seconds over which statistics values have been collected
   for values with attribute names that do not begin with Recent.
+  This statistic only appears in the Scheduler ClassAd if the level of
+  verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
+  is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!TotalFlockedJobs}
 \item[\AdAttr{TotalFlockedJobs}:] The total number of jobs from this
