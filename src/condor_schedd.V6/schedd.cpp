@@ -12943,7 +12943,10 @@ Scheduler::claimLocalStartd()
 		priv_state old_priv = set_condor_priv(); 
 		FILE* fp=safe_fopen_wrapper_follow(file_name,"r");
 		if ( fp ) {
-			fscanf(fp,"%150s\n",claim_id);
+			if (fscanf(fp,"%150s\n",claim_id) != 1) {
+				dprintf(D_ALWAYS, "Failed to fscanf claim_id from file %s\n", file_name);
+				continue;
+			}
 			fclose(fp);
 		}
 		set_priv(old_priv);	// switch our priv state back
