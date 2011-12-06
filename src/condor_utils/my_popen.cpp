@@ -426,7 +426,7 @@ my_popenv_impl( const char *const args[],
 			/* If we get here, inform the parent of our errno */
 		char result_buf[10];
 		int len = snprintf(result_buf, 10, "%d", errno);
-		write(pipe_d2[1], result_buf, len);
+		int ret = write(pipe_d2[1], result_buf, len);
 
 		_exit( errno );
 	}
