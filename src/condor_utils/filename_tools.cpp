@@ -81,6 +81,10 @@ void filename_url_parse_malloc( char const *input, char **method, char **server,
 	*path = strdup(p);
 }
 
+int is_relative_to_cwd( std::string &path ) {
+	return is_relative_to_cwd(path.c_str());
+}
+
 int is_relative_to_cwd( const char *path )
 {
 #if WIN32

@@ -836,7 +836,7 @@ Condor_Auth_Passwd::spc_memset(volatile void *dst, int c, size_t len)
 		// This should get changed to the lib func when it's there.
 	volatile char *buf;
    
-	for (buf = (volatile char *)dst;  len;  buf[--len] = c);
+	for (buf = (volatile char *)dst;  len;  buf[--len] = c) { }
 	return dst;
 }
 void

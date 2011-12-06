@@ -562,7 +562,9 @@ get_keyboard_info(idle_t *fill_me)
 		return FALSE;
 	}
 
-	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
+	if (!fgets(buf, BUFFER_SIZE, intr_fs)) {  /* Ignore header line */
+		dprintf(D_ALWAYS, "Failed to ignore header on /proc/interrupts in get_keyboard_info\n");
+	}
 	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
 		if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
 
@@ -617,7 +619,9 @@ get_mouse_info(idle_t *fill_me)
 	    return FALSE;
 	}
 
-	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
+	if (!fgets(buf, BUFFER_SIZE, intr_fs)) {  /* Ignore header line */
+		dprintf(D_ALWAYS, "Failed to ignore header on /proc/interrupts in get_mouse_info\n");
+	}
 	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
 	    if (strstr(buf, "i8042") && !first_i8042) {
 		first_i8042 = TRUE;

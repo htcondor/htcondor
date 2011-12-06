@@ -16,6 +16,9 @@
  #
  ###############################################################
 
+
+add_definitions(-D_FORTIFY_SOURCE=2)
+
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -177,6 +180,7 @@ if( NOT WINDOWS)
 	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
 	check_function_exists("readdir64" HAVE_READDIR64)
 	check_function_exists("backtrace" HAVE_BACKTRACE)
+	check_function_exists("unshare" HAVE_UNSHARE)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)

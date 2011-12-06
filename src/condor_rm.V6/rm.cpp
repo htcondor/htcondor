@@ -310,8 +310,8 @@ main( int argc, char *argv[] )
 					exit(1);
 				}		
 				char *end = NULL;
-				/* long code = */ strtol(*argv,&end,10);
-				if( !end || *end || end==*argv ) {
+				long code = strtol(*argv,&end,10);
+				if( code == LONG_MIN || !end || *end || end==*argv ) {
 					fprintf( stderr, "Invalid -subcode %s!\n", *argv );
 					exit(1);
 				}

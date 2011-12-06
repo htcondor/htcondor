@@ -2749,7 +2749,7 @@ DaemonCore::reconfig(void) {
 		// If we are NOT the schedd, then do not use clone, as only
 		// the schedd benefits from clone, and clone is more susceptable
 		// to failures/bugs than fork.
-	if ( !(get_mySubSystem()->isType(SUBSYSTEM_TYPE_SCHEDD)) ) {
+	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_SCHEDD)) {
 		m_use_clone_to_create_processes = false;
 	}
 #endif /* HAVE CLONE */
@@ -3144,7 +3144,7 @@ void DaemonCore::Driver()
 		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to
 		// non-blocking mode via fcntl, so the read below will not block.
-		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
+		while( read(async_pipe[0],asyncpipe_buf,8) > 0 ) { }
 #else
 		// windows version of this code is after selector.execute()
 #endif
@@ -5879,7 +5879,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			// we just need to write something to ensure that the
 			// select() in Driver() does not block.
 			if ( async_sigs_unblocked == TRUE ) {
-				write(async_pipe[1],"!",1);
+				(void) write(async_pipe[1],"!",1);
 			}
 #endif
 			msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
@@ -6560,7 +6560,8 @@ public:
 		int the_want_command_port,
 		const sigset_t *the_sigmask,
 		size_t *core_hard_limit,
-		int		*affinity_mask
+		int		*affinity_mask,
+		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
 	   m_inheritbuf(the_inheritbuf),
@@ -6576,6 +6577,7 @@ public:
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
 	   m_core_hard_limit(core_hard_limit),
 	   m_affinity_mask(affinity_mask),
+ 	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
 	   m_no_dprintf_allowed(false)
 	{
@@ -6634,8 +6636,10 @@ private:
 	size_t *m_core_hard_limit;
 	const int    *m_affinity_mask;
 	Env m_envobject;
+    FilesystemRemap *m_fs_remap;
 	bool m_wrote_tracking_gid;
 	bool m_no_dprintf_allowed;
+	priv_state m_priv_state;
 };
 
 enum {
@@ -7094,6 +7098,8 @@ void CreateProcessForkit::exec() {
 		// This _must_ be called before calling exec().
 	writeTrackingGid(tracking_gid);
 
+		// Create new filesystem namespace if wanted
+
 	int openfds = getdtablesize();
 
 		// Here we have to handle re-mapping of std(in|out|err)
@@ -7178,6 +7184,55 @@ void CreateProcessForkit::exec() {
 				}
 			}
 		}
+	}
+
+	// Now remount filesystems with fs_bind option, to give this
+	// process per-process tree mount table
+
+	// This requires rootly power
+	if (m_fs_remap) {
+		int ret = 0;
+		if (can_switch_ids()) {
+			m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+#ifdef HAVE_UNSHARE
+			int rc = ::unshare(CLONE_NEWNS|CLONE_FS);
+			if (rc) {
+				dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
+				ret = write(m_errorpipe[1], &errno, sizeof(errno));
+				if (ret < 1) {
+					_exit(errno);
+				} else {
+					_exit(errno);
+				}
+			}
+#else
+			dprintf(D_ALWAYS, "Can not remount filesystems because this system does not have unshare(2)\n");
+			errno = ENOSYS;
+			ret = write(m_errorpipe[1], &errno, sizeof(errno));
+			if (ret < 1) {
+				_exit(errno);
+			} else {
+				_exit(errno);
+			}
+#endif
+		} else {
+			dprintf(D_ALWAYS, "Not remapping FS as requested, due to lack of privileges.\n");
+			m_fs_remap = NULL;
+		}
+	}
+
+	if (m_fs_remap && m_fs_remap->PerformMappings()) {
+		int ret = write(m_errorpipe[1], &errno, sizeof(errno));
+		if (ret < 1) {
+			_exit(errno);
+		} else {
+			_exit(errno);
+		}
+	}
+
+	// And back to normal userness
+	if (m_fs_remap) {
+		set_priv_no_memory_changes( m_priv_state );
 	}
 
 
@@ -7389,7 +7444,8 @@ int DaemonCore::Create_Process(
 			size_t        *core_hard_limit,
 			int			  *affinity_mask,
 			char const    *daemon_sock,
-			MyString      *err_return_msg
+			MyString      *err_return_msg,
+			FilesystemRemap *remap
             )
 {
 	int i, j;
@@ -7398,6 +7454,9 @@ int DaemonCore::Create_Process(
 	int numInheritFds = 0;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
+
+	// Remap our executable and CWD if necessary.
+	std::string alt_executable_fullpath, alt_cwd;
 
 	// For automagic DC std pipes.
 	int dc_pipe_fds[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
@@ -8402,6 +8461,15 @@ int DaemonCore::Create_Process(
 		}
 	}
 
+	if (remap) {
+		alt_executable_fullpath = remap->RemapFile(executable_fullpath);
+		alt_cwd = remap->RemapDir(cwd);
+		if (alt_executable_fullpath.compare(executable_fullpath))
+			dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
+		if (alt_cwd.compare(cwd))
+			dprintf(D_ALWAYS, "Remapped cwd: %s\n", alt_cwd.c_str());
+	}
+
 	{
 			// Create a "forkit" object to hold all the state that we need in the child.
 			// In some cases, the "fork" will actually be a clone() operation, which
@@ -8418,9 +8486,9 @@ int DaemonCore::Create_Process(
 			time_of_fork,
 			mii,
 			family_info,
-			cwd,
+			alt_cwd.length() ? alt_cwd.c_str() : cwd,
 			executable,
-			executable_fullpath,
+			alt_executable_fullpath.length() ? alt_executable_fullpath.c_str() : executable_fullpath,
 			std,
 			numInheritFds,
 			inheritFds,
@@ -8429,7 +8497,8 @@ int DaemonCore::Create_Process(
 			want_command_port,
 			sigmask,
 			core_hard_limit,
-			affinity_mask);
+			affinity_mask,
+			remap);
 
 		newpid = forkit.fork_exec();
 	}
@@ -8955,9 +9024,13 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            write(errorpipe[1], &child_errno, sizeof(child_errno));
+            int ret = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
-            exit(4);
+			if (ret < 1) {
+				exit(4);
+			} else {
+				exit(4);
+			}
         }
 			// if we got this far, we know we don't need the errorpipe
 			// anymore, so we can close it now...

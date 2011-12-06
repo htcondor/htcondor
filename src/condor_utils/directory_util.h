@@ -20,6 +20,7 @@
 #ifndef DIRECTORY_UTIL_H
 #define DIRECTORY_UTIL_H
 
+#include <string>
 
 /** Returns a path to subdirectory to use for temporary files.
   @return The pointer returned must be de-allocated by the caller w/ free()
@@ -47,6 +48,7 @@ char* dircat( const char* dirpath, const char* filename );
   @param subdir The subdirectory.
   @return A string created with new() that contains the full pathname.
 */
+char* dirscat( std::string &dirpath, std::string &subdir );
 char* dirscat( const char* dirpath, const char* subdir );
 
 /** Touch a file and create directory path as well if necessary

@@ -216,7 +216,7 @@ readJobAd( void )
 		dprintf( D_ALWAYS, "Job requested shadow should wait for "
 			"debugger with %s=%d, going into infinite loop\n",
 			ATTR_SHADOW_WAIT_FOR_DEBUG, shadow_should_wait );
-		while( shadow_should_wait );
+		while( shadow_should_wait ) { }
 	}
 
 	return ad;

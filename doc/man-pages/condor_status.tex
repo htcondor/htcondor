@@ -106,8 +106,15 @@ options} may be specified.
     \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages}
     \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds 
       (same as \Opt{-verbose})}
-    \OptItem{\OptArg{-sort}{attr}}{(Display option) Display entries in
-      ascending order based on the value of the named attribute} 
+    \OptItem{\OptArg{-sort}{expr}}{(Display option) Display entries in
+      ascending order based on the value of the given expression.
+      This option may be supplied multiple times on the command line.
+      If multiple \OptArg{-sort} expressions are provided, the primary sort
+      will be on the first-occurring sort expression, the secondary sort 
+      will be on the second expression, etc.   Two special attributes are
+      inserted into each of the sorted classads: \AdAttr{CondorStatusSortKeyExpr<N>}
+      is the Nth sort expression.  \AdAttr{CondorStatusSortKey<N>}
+      gives the result of evaluating the Nth sort expression.}
     \OptItem{\Opt{-total}}{(Display option) Display totals only}
     \OptItem{\Opt{-verbose}}{(Display option) Display entire ClassAds.  Implies
       that totals will not be displayed.}

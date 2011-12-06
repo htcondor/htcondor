@@ -30,6 +30,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added the \OptArg{-expand} option to condor\_config\_val.  If \OptArg{-dump}
+and \OptArg{-expand} are given to the command, all config file macros are
+expanded before they are printed out.
+
+\item The \OptArg{-sort} option for \Condor{status} has been generalized to
+accept expressions instead of just simple named attributes.
+\Ticket{2661}
+
 \item A new command \Condor{drain} may be used to control the draining
 of an execute machine.  While a machine is draining, no new jobs may
 start.  Once draining is complete, it enters the Drained/Idle state.
@@ -84,6 +92,10 @@ but not big enough to hold the whole contents of the spool directory.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Condor{submit} would allow ec2\_secret\_access\_key and
+  ec2\_access\_key\_id to be directories.
+\Ticket{2619}
 
 \item Communication errors were not always correctly handled when
 fetching results of a query when using the \Opt{-stream} option to

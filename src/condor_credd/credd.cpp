@@ -1054,8 +1054,14 @@ StoreData (const char * file_name, const void * data, const int data_size) {
   }
 
   // Change to user owning the cred (assume init_user_ids() has been called)
-  fchmod (fd, S_IRUSR | S_IWUSR);
-  fchown (fd, get_user_uid(), get_user_gid());
+  if (fchmod (fd, S_IRUSR | S_IWUSR)) {
+	  dprintf(D_ALWAYS, "Failed to fchmod %s to S_IRUSR | S_IWUSR: %s\n",
+			  file_name, strerror(errno));
+  }
+  if (fchown (fd, get_user_uid(), get_user_gid())) {
+	  dprintf(D_ALWAYS, "Failed to fchown %s to %d.%d: %s\n",
+			  file_name, get_user_uid(), get_user_gid(), strerror(errno));
+  }
 
   write (fd, data, data_size);
 

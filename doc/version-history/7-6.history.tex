@@ -143,6 +143,17 @@ hold reason contained a percent character (\verb|%|),
 and the user log for the job was in XML format.
 \Ticket{2660}
 
+\item Fixed a bug in \Condor{softkill} that would cause it to fail
+to kill the target process when run by a personal Condor inside a
+System Condor slot account on Windows 7 and Vista.
+\Ticket{2677}
+
+\item \MacroNI{HDFS} was not listed in the default
+\MacroNI{DC\_DAEMON\_LIST}, so \Condor{hdfs} exited
+shortly after being started, and the HDFS service
+did not run.
+\Ticket{849}
+
 \end{itemize}
 
 \noindent Known Bugs:

@@ -622,8 +622,12 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 						   new directory and set a flag so we
 						   retry the safe_open_wrapper(). */
 #ifndef WIN32
-						chown( dirpath, get_condor_uid(),
-							   get_condor_gid() );
+						if (chown( dirpath, get_condor_uid(),
+								   get_condor_gid() )) {
+							fprintf( stderr, "Failed to chown(%s) to %d.%d: %s\n",
+									 dirpath, get_condor_uid(),
+									 get_condor_gid(), strerror(errno) );
+						}
 #endif
 						retry = 1;
 					}
@@ -1678,7 +1682,7 @@ dprintf_wrapup_fork_child( ) {
 
 #if HAVE_BACKTRACE
 
-static void
+static int
 safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned int num_args)
 {
 	unsigned int arg_index;
@@ -1686,15 +1690,16 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 	char intbuf[50];
 	char *intbuf_pos;
 
+	int r = 0;
 	for(;*msg;msg++) {
 		if( *msg != '%' ) {
-			write(fd,msg,1);
+			r = write(fd,msg,1);
 		}
 		else {
 				// format is % followed by index of argument in args array
 			arg_index = *(++msg)-'0';
 			if( arg_index >= num_args || !*msg ) {
-				write(fd," INVALID! ",10);
+				r = write(fd," INVALID! ",10);
 				break;
 			}
 			arg = args[arg_index];
@@ -1708,10 +1713,11 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 				// intbuf now contains the base-10 digits of arg
 				// in order of least to most significant
 			while( intbuf_pos-- > intbuf ) {
-				write(fd,intbuf_pos,1);
+				r = write(fd,intbuf_pos,1);
 			}
 		}
 	}
+	return r;
 }
 
 void

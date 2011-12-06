@@ -139,7 +139,7 @@ const char	*default_daemon_list[] = {
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
 "REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT, "
 "DEFRAG";
 

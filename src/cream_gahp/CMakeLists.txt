@@ -24,6 +24,8 @@ if ( HAVE_EXT_CREAM AND NOT PROPER )
 	link_directories ( ${CREAM_STAGE}/lib )
 	add_definitions(-D_REENTRANT)
 	
+	set_source_files_properties(cream_gahp_server.cpp PROPERTIES COMPILE_FLAGS -Wno-shadow)
+
 	condor_exe( cream_gahp
 		"cream_gahp_server.cpp"
 		${C_SBIN}

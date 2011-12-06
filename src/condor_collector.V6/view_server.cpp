@@ -633,8 +633,12 @@ int ViewServer::FindFileStartTime(const char *Name)
 	int T=-1;
 	FILE* fp=safe_fopen_wrapper_follow(Name,"r");
 	if (fp) {
-		fgets(Line,sizeof(Line),fp);
-		T=ReadTime(Line);
+		if (fgets(Line,sizeof(Line),fp)) {
+			T=ReadTime(Line);
+		} else {
+			T=-1; // fgets failed, return -1 instead of parsing uninit memory
+			dprintf(D_ALWAYS, "Failed to parse first line of %s\n", Name);
+		}
 		fclose(fp);
 	}
 	dprintf(D_ALWAYS,"FileName=%s , StartTime=%d\n",Name,T);
