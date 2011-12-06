@@ -154,6 +154,12 @@ in which it would fail to kill the target process,
 when run by a Personal Condor inside a System Condor slot account.
 \Ticket{2677}
 
+\item A possible fix has been made for a problem in which the
+CCB-enabled daemon took an unexpectedly long time to timeout when
+reading from the CCB server.  Additional information is logged
+to help identify the problem if it still remains.
+\Ticket{2695}
+
 \end{itemize}
 
 \noindent Known Bugs:
