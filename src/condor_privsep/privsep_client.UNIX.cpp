@@ -180,6 +180,8 @@ privsep_get_switchboard_response(FILE* err_fp)
 	return true;
 }
 
+static int write_error_code;
+
 static pid_t
 privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
 {
@@ -235,7 +237,7 @@ privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
 	            cmd.Value(),
 	            strerror(errno),
 	            errno);
-	write(child_err_fd, err.Value(), err.Length());
+	write_error_code = write(child_err_fd, err.Value(), err.Length());
 	_exit(1);
 }
 
