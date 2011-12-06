@@ -434,22 +434,22 @@ static void cleanup() {
 	if(chdir("delete_dir_11") == 0) {
 		remove("file");
 		rmdir("dir");
-		chdir("..");
+		cut_assert_z(chdir(".."));
 	}
 	if(chdir("delete_dir_12") == 0) {
 		remove("file");
 		rmdir("dir");
-		chdir("..");
+		cut_assert_z(chdir(".."));
 	}
 	if(chdir("delete_dir_13") == 0) {
 		remove("file");
 		rmdir("dir");
-		chdir("..");
+		cut_assert_z(chdir(".."));
 	}
 	if(chdir("dir") == 0) {
 		remove("file");
 		rmdir("dir");
-		chdir("..");
+		cut_assert_z(chdir(".."));
 	}
 	rmdir("delete_dir_11");
 	rmdir("delete_dir_12");
