@@ -460,7 +460,11 @@ do_kill()
 		}
 	}
 	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
-		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
+		if (fscanf( PID_FILE, "%lu", &tmp_ul_int ) != 1) {
+			fprintf( stderr, "DaemonCore: ERROR: fscanf failed processing pid file %s\n",
+					 pidFile );
+			exit( 1 );
+		}
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
 	} else {
