@@ -460,7 +460,11 @@ do_kill()
 		}
 	}
 	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
-		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
+		if (fscanf( PID_FILE, "%lu", &tmp_ul_int ) != 1) {
+			fprintf( stderr, "DaemonCore: ERROR: fscanf failed processing pid file %s\n",
+					 pidFile );
+			exit( 1 );
+		}
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
 	} else {
@@ -695,7 +699,9 @@ linux_sig_coredump(int signum)
 	setgid(0);
 
 	if (core_dir != NULL) {
-		chdir(core_dir);
+		if (chdir(core_dir)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", core_dir, strerror(errno));
+		}
 	}
 
 	WriteCoreDump("core");

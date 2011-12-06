@@ -7554,7 +7554,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
 	condor_getcwd(tmpCwd);
-	chdir(iwd.Value());
+	if (chdir(iwd.Value())) {
+		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", iwd.Value(), strerror(errno));
+	}
 	
 	// now open future in|out|err files
 	
@@ -7592,7 +7594,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	//change back to whence we came
 	if ( tmpCwd.Length() ) {
-		chdir( tmpCwd.Value() );
+		if (chdir(tmpCwd.Value())) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n",
+					tmpCwd.Value(), strerror(errno));
+		}
 	}
 	
 	if ( cannot_open_files ) {
@@ -12938,7 +12943,10 @@ Scheduler::claimLocalStartd()
 		priv_state old_priv = set_condor_priv(); 
 		FILE* fp=safe_fopen_wrapper_follow(file_name,"r");
 		if ( fp ) {
-			fscanf(fp,"%150s\n",claim_id);
+			if (fscanf(fp,"%150s\n",claim_id) != 1) {
+				dprintf(D_ALWAYS, "Failed to fscanf claim_id from file %s\n", file_name);
+				continue;
+			}
 			fclose(fp);
 		}
 		set_priv(old_priv);	// switch our priv state back

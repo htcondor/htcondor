@@ -127,7 +127,11 @@ reserve_for_afs_cache()
 	if( !fp ) {
 		return 0;
 	}
-	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
+	if (fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size ) != 2) {
+		dprintf( D_ALWAYS, "Failed to parse AFS cache parameters, assuming no cache\n" );
+		cache_size = 0;
+		cache_in_use = 0;
+	}
 	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",
 		cache_in_use,
