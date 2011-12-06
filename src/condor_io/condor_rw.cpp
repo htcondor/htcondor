@@ -206,7 +206,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 							 not_null_peer_description(peer_description,fd,sinbuf));
 				}
 				else {
-					int lapse = time(NULL)-start_time;
+					int lapse = (int)(time(NULL)-start_time);
 					dprintf( D_ALWAYS,
 							 "condor_read(): UNEXPECTED read timeout after %ds during non-blocking read from %s (desired timeout=%ds)\n",
 							 lapse,
