@@ -1,11 +1,7 @@
-//TEMPTEMP -- how does final node show up in jobstate.log file???  and node status file...
-//TEMPTEMP -- if you condor_rm a DAG, the DAG_SUCCESS variable needs to be set to false when passed to the final node!
-//TEMPTEMP -- talked with Pete -- he says always run final node if it exists, but the DAG_SUCCESS value should enable it to tell whether the DAG is being removed -- hmm -- what if nodes failed *and* the DAG was removed? -- maybe be able to pass node failed count to final node?
 //TEMPTEMP -- make sure condor_rm in schedd removes node jobs before parent, otherwise that could goof up the final node
-//TEMPTEMP -- make tests where the final node gives the opposite return value as the rest of the DAG
-//TEMPTEMP -- make a test where the dag gets condor_rm'ed
-//TEMPTEMP -- probably have tests to make sure dagman disallows things like parent/child relationships for final nodes, retries for final nodes, etc. -- no, don't actually have tests for all of that.
-//TEMPTEMP -- tests to add: C: dag succeeds, final node fails; D: dag fails, final node succeeds; E: DAG is condor_rm'ed; F: hit abort-dag-on value
+//TEMPTEMP -- make sure final node can never be marked as DONE when DAG is parsed.
+//TEMPTEMP -- overwrite the rescue DAG if we generate it twice
+//TEMPTEMP -- cycle check doesn't work when you have a final node...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -436,39 +432,14 @@ void main_shutdown_graceful() {
 	DC_Exit( EXIT_RESTART );
 }
 
-//TEMPTEMP -- we also get here on node abort...
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 	dagman.dag->_dagStatus = dagStatus;
-	if ( dagman.dag->HasFinalNode() && !dagman.dag->RunningFinalNode() ) {
-		debug_printf( DEBUG_QUIET, "Aborting DAG and running final node...\n" );//TEMPTEMP -- change wording???
-#if 1 //TEMPTEMP -- move to its own function?
-		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
-					dagman.dag->NumJobsSubmitted() );
-		if( dagman.dag->NumJobsSubmitted() > 0 ) {
-			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-			dagman.dag->RemoveRunningJobs(dagman);
-		}
-		if ( dagman.dag->NumScriptsRunning() > 0 ) {
-			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
-			dagman.dag->RemoveRunningScripts();
-		}
-		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
-#endif //TEMPTEMP
-		dagman.dag->StartFinalNode();
-		return;
-	}
-//TEMPTEMP -- make sure rescue dag gets written if we condor_rm a DAG with a final node and it fails...
-/*TEMPTEMP
-	if ( final node && not running final node already && run final on rm) {
-		set DAG_STATUS to ?... (at least if exitVal is non-zero)
-		dump rescue dag??? (if so, we should overwrite the same one at the end)
-		remove existing jobs
-		start final node
-	}
-TEMPTEMP*/
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
+		// Avoid writing two different rescue DAGs if the "main" DAG and
+		// the final node (if any) both fail.
+	static bool wroteRescue = false;
 	if( dagman.dag ) {
-			// we write the rescue DAG *before* removing jobs because
+			// We write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
@@ -479,16 +450,18 @@ TEMPTEMP*/
 							dagman.rescueFileToWrite );
 				dagman.dag->WriteRescue( dagman.rescueFileToWrite,
 							dagman.primaryDagFile.Value() );
+				wroteRescue = true;
 			} else if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-							dagman.multiDags, dagman.maxRescueDagNum );
+							dagman.multiDags, dagman.maxRescueDagNum,
+							wroteRescue );
+				wroteRescue = true;
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
 			}
 		}
 
-#if 1 //TEMPTEMP -- move to its own function?
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
 					dagman.dag->NumJobsSubmitted() );
 		if( dagman.dag->NumJobsSubmitted() > 0 ) {
@@ -500,11 +473,14 @@ TEMPTEMP*/
 			dagman.dag->RemoveRunningScripts();
 		}
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
-#endif //TEMPTEMP
+	}
+		// Start the final node if we have one.
+	if ( dagman.dag->StartFinalNode() ) {
+			// We started a final node; return here so we wait for the
+			// final node to finish, instead of exiting immediately.
+		return;
 	}
 	dagman.dag->DumpNodeStatus( false, true );
-	//TEMPTEMP -- should we submit the final node before or after dumping node status?
-	dagman.dag->StartFinalNode();
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
     dagman.CleanUp();
@@ -1051,7 +1027,7 @@ void main_init (int argc, char ** const argv) {
 							"because of -DumpRescue flag\n" );
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							true );
+							false, true );
 			}
 
 				// Note: debug_error calls DC_Exit().
@@ -1103,8 +1079,7 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-					dagman.multiDags, dagman.maxRescueDagNum );
-		//TEMPTEMP -- hmm -- I don't think we want to run the final node in this case...
+					dagman.multiDags, dagman.maxRescueDagNum, false );
 		ExitSuccess();
 		return;
 	}
@@ -1290,21 +1265,20 @@ void condor_event_timer () {
 		return;
     }
 
-		//TEMPTEMP?
-	dagman.dag->StartFinalNode();
-
     //
     // If no jobs are submitted and no scripts are running, but the
     // dag is not complete, then at least one job failed, or a cycle
     // exists.
     // 
     if( dagman.dag->FinishedRunning() ) {
+		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
 		if( dagman.dag->DoneFailed() ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
 				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
+			dagStatus = Dag::DAG_STATUS_NODE_FAILED;
 		} else {
 			// no jobs failed, so a cycle must exist
 			debug_printf( DEBUG_QUIET, "ERROR: DAG finished but not all "
@@ -1312,18 +1286,33 @@ void condor_event_timer () {
 			if( dagman.dag->isCycle() ) {
 				debug_printf (DEBUG_QUIET, "... ERROR: a cycle exists "
 							"in the dag, plese check input\n");
+				dagStatus = Dag::DAG_STATUS_CYCLE;
 			} else {
 				debug_printf (DEBUG_QUIET, "... ERROR: no cycle found; "
 							"unknown error condition\n");
+				dagStatus = Dag::DAG_STATUS_ERROR;
 			}
 			if ( debug_level >= DEBUG_NORMAL ) {
 				dagman.dag->PrintJobList();
 			}
 		}
 
-		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
+		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 		return;
     }
+
+	//
+	// If everything except the final node is done and we have one,
+	// run it (dumping a rescue DAG first if there are errors).
+	//
+	if ( dagman.dag->FinishedExceptFinal() && dagman.dag->HasFinalNode() ) {
+		if ( dagman.dag->_dagStatus != Dag::DAG_STATUS_OK ) {
+			main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
+		} else {
+			dagman.dag->StartFinalNode();
+		}
+		return;
+	}
 }
 
 

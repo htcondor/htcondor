@@ -1376,18 +1376,18 @@ Dag::StartNode( Job *node, bool isRetry )
 }
 
 //-------------------------------------------------------------------------
-void
+bool
 Dag::StartFinalNode()
 {
-	if ( NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
-				ScriptRunNodeCount() == 0 ) {
-			// Finished except for final node.
-		if ( _final_job && !_runningFinalNode ) {
-			_final_job->_Status = Job::STATUS_READY;
-			StartNode( _final_job, false );
-			_runningFinalNode = true;
-		}
+	if ( _final_job && !_runningFinalNode ) {
+		debug_printf( DEBUG_QUIET, "Running final node...\n" );
+		_final_job->_Status = Job::STATUS_READY;
+		StartNode( _final_job, false );
+		_runningFinalNode = true;
+		return true;
 	}
+
+	return false;
 }
 
 //-------------------------------------------------------------------------
@@ -1732,8 +1732,7 @@ Dag::FinishedRunning() const
 		return false;
 	}
 
-	return ( NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
-				ScriptRunNodeCount() == 0 );
+	return FinishedExceptFinal();
 }
 
 //---------------------------------------------------------------------------
@@ -1872,7 +1871,7 @@ void Dag::RemoveRunningScripts ( ) const {
 
 //-----------------------------------------------------------------------------
 void Dag::Rescue ( const char * dagFile, bool multiDags,
-			int maxRescueDagNum, bool parseFailed ) /* const */
+			int maxRescueDagNum, bool overwrite, bool parseFailed ) /* const */
 {
 	MyString rescueDagFile;
 	if ( parseFailed ) {
@@ -1881,7 +1880,12 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 	} else {
 		int nextRescue = FindLastRescueDagNum( dagFile, multiDags,
 					maxRescueDagNum ) + 1;
-		if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
+		if ( overwrite && nextRescue > 1 ) {
+			nextRescue--;
+		}
+		if ( nextRescue > maxRescueDagNum ) {
+			nextRescue = maxRescueDagNum;
+		}
 		rescueDagFile = RescueDagName( dagFile, multiDags, nextRescue );
 	}
 

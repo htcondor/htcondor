@@ -30,6 +30,7 @@ $dagman_args = "-verbose";
 
 $outfile = "job_dagman_final-E.nodes.out";
 $scriptfile = "job_dagman_final-E.scripts.out";
+$rescuefile = "job_dagman_final-E.dag.rescue001";
 
 # Note: we must find these lines *in the specified order*.
 @node_output_lines = ("Job for node E_A",
@@ -45,7 +46,7 @@ $scriptfile = "job_dagman_final-E.scripts.out";
 			"  Removing parent DAGMan",
 			"Job for node E_C",
 			"  DAG_STATUS=4",
-			"  FAILED_COUNT=2",
+			"  FAILED_COUNT=0",
 			"  OK done with E_C");
 
 # Note: we must find these lines *in the specified order*.
@@ -55,8 +56,6 @@ $scriptfile = "job_dagman_final-E.scripts.out";
 			"Node E_A Post",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0");
-
-#TEMPTEMP -- should this generate a rescue DAG? -- I think so...
 
 my $killedchosen = 0;
 
@@ -72,6 +71,7 @@ if (-e $outfile) {
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
 }
+runcmd("rm -f job_dagman_final-E.dag.rescue*");
 
 $abnormal = sub 
 {
@@ -120,6 +120,11 @@ $aborted = sub
 			$diditpass = 0;
 			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
+	}
+
+	if (! -e $rescuefile) {
+		CondorTest::debug("Expected rescue DAG $rescuefile does not exist\n");
+		$diditpass = 0;
 	}
 
 	if($diditpass == 0) {

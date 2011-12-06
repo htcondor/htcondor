@@ -360,16 +360,16 @@ class Dag {
 	}
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_PRERUN.
+	 *          Job::STATUS_PRERUN (whether or not their PRE
+	 *			script is actually running).
 	 */
-	//TEMPTEMP -- is this different than NumPreScriptsRunning()?
 	inline int PreRunNodeCount() const
 		{ return _preRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_POSTRUN.
+	 *          Job::STATUS_POSTRUN (whether or not their POST
+	 *			script is actually running).
 	 */
-	//TEMPTEMP -- is this different than NumPostScriptsRunning()?
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
 
@@ -387,6 +387,10 @@ class Dag {
 			@return true iff the DAG is finished
 		*/
 	bool FinishedRunning() const;
+
+		//TEMPTEMP -- document
+	bool FinishedExceptFinal() const { return NumJobsSubmitted() == 0 &&
+				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
 
 		/** Determine whether the DAG is successfully completed.
 			@return true iff the DAG is successfully completed
@@ -416,7 +420,7 @@ class Dag {
     int SubmitReadyJobs(const Dagman &dm);
 
 		//TEMPTEMP -- document -- only if other stuff is finished??
-	void StartFinalNode();
+	bool StartFinalNode();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -441,10 +445,14 @@ class Dag {
         @param datafile The original DAG file
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
+		@param overwrite Whether to overwrite the highest-numbered
+			rescue DAG (because with a final node you can write the
+			rescue DAG twice)
 		@param parseFailed whether parsing the DAG(s) failed
     */
     void Rescue (const char * dagFile, bool multiDags,
-				int maxRescueDagNum, bool parseFailed = false) /* const */;
+				int maxRescueDagNum, bool overwrite,
+				bool parseFailed = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
@@ -672,17 +680,15 @@ class Dag {
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 
-//TEMPTEMP -- can we really distinguish 3 and 4? (not inside main_shutdown_rescue(), I think
-//TEMPTEMP -- maybe distinguish node failure from other error (eg, "scary" submit)
 	enum dag_status {
 		DAG_STATUS_OK = 0,
 		DAG_STATUS_ERROR = 1, // Error not enumerated below
 		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
 		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
 		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
 	};
 
-//TEMPTEMP -- start out 0; if still 0, set to 1 when node fails; need to set properly on abort or rm
 	dag_status _dagStatus;
 
 	//TEMPTEMP -- document
