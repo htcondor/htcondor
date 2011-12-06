@@ -7554,7 +7554,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
 	condor_getcwd(tmpCwd);
-	chdir(iwd.Value());
+	if (chdir(iwd.Value())) {
+		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", iwd.Value(), strerror(errno));
+	}
 	
 	// now open future in|out|err files
 	
@@ -7592,7 +7594,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	//change back to whence we came
 	if ( tmpCwd.Length() ) {
-		chdir( tmpCwd.Value() );
+		if (chdir(tmpCwd.Value())) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n",
+					tmpCwd.Value(), strerror(errno));
+		}
 	}
 	
 	if ( cannot_open_files ) {
