@@ -2,8 +2,9 @@ CONFIG job_dagman_final-E.config
 
 #TEMP -- add an 'always run post' for this node after merging.
 JOB E_A job_dagman_final-E-nodeA.cmd
+SCRIPT PRE E_A job_dagman_final-E-script.pl E_A Pre $DAG_STATUS $FAILED_COUNT 0
+SCRIPT POST E_A job_dagman_final-E-script.pl E_A Post $DAG_STATUS $FAILED_COUNT $RETURN
 
-#TEMPTEMP -- have this node sleep so it's in the queue when stuff is removed
 JOB E_B1 job_dagman_final-E-nodeB1.cmd
 # This job will condor_rm the DAG.
 JOB E_B2 job_dagman_final-E-nodeB2.cmd

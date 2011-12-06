@@ -96,7 +96,7 @@ runcmd("rm -f job_dagman_final-B.dag.rescue*");
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	die "Want to see only submit, execute and failed completion\n";
 };
 
 $aborted = sub 
@@ -118,7 +118,7 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and failed completion\n",1);
 };
 
 $success = sub

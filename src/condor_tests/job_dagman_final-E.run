@@ -32,10 +32,31 @@ $outfile = "job_dagman_final-E.nodes.out";
 $scriptfile = "job_dagman_final-E.scripts.out";
 
 # Note: we must find these lines *in the specified order*.
-@node_output_lines = ();#TEMPTEMP
+@node_output_lines = ("Job for node E_A",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  OK done with E_A",
+			"Job for node E_B1",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"Job for node E_B2",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  Removing parent DAGMan",
+			"Job for node E_C",
+			"  DAG_STATUS=4",
+			"  FAILED_COUNT=2",
+			"  OK done with E_C");
 
 # Note: we must find these lines *in the specified order*.
-@script_output_lines = ();#TEMPTEMP
+@script_output_lines = ("Node E_A Pre",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"Node E_A Post",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0");
+
+#TEMPTEMP -- should this generate a rescue DAG? -- I think so...
 
 my $killedchosen = 0;
 
@@ -58,28 +79,6 @@ $abnormal = sub
 };
 
 $aborted = sub 
-{
-	die "Abort event NOT expected\n";
-};
-
-$held = sub 
-{
-	die "Held event NOT expected\n";
-};
-
-$executed = sub
-{
-	my %info = @_;
-
-	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
-};
-
-$submitted = sub
-{
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
-};
-
-$success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
@@ -126,6 +125,28 @@ $success = sub
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	die "Error: DAG should be removed!\n";
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );
