@@ -622,8 +622,12 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 						   new directory and set a flag so we
 						   retry the safe_open_wrapper(). */
 #ifndef WIN32
-						chown( dirpath, get_condor_uid(),
-							   get_condor_gid() );
+						if (chown( dirpath, get_condor_uid(),
+								   get_condor_gid() )) {
+							fprintf( stderr, "Failed to chown(%s) to %d.%d: %s\n",
+									 dirpath, get_condor_uid(),
+									 get_condor_gid(), strerror(errno) );
+						}
 #endif
 						retry = 1;
 					}
