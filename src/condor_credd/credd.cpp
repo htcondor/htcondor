@@ -711,10 +711,22 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
 	return FALSE;
   }
   // TODO: check write() return values for errors, short writes.
-  write (proxy->get_delegation_password_pipe[1],
+  int written = write (proxy->get_delegation_password_pipe[1],
 	 myproxy_password,
 	 strlen (myproxy_password));
-  write (proxy->get_delegation_password_pipe[1], "\n", 1);
+
+  if (written < (long)strlen(myproxy_password)) {
+	dprintf (D_ALWAYS, "Write to proxy delegation pipe failed (%s)", strerror(errno));
+	proxy->get_delegation_reset();
+	return FALSE;
+  }
+
+  written = write (proxy->get_delegation_password_pipe[1], "\n", 1);
+  if (written < 1) {
+	dprintf (D_ALWAYS, "Write newline to proxy delegation pipe failed (%s)", strerror(errno) );
+	proxy->get_delegation_reset();
+	return FALSE;
+  }
 
 
   // Figure out user name;
@@ -1063,7 +1075,13 @@ StoreData (const char * file_name, const void * data, const int data_size) {
 			  file_name, get_user_uid(), get_user_gid(), strerror(errno));
   }
 
-  write (fd, data, data_size);
+  int written = write (fd, data, data_size);
+  if (written < data_size) {
+    dprintf (D_ALWAYS, "Can't write to %s: (%d) \n", file_name, errno);
+    set_priv(priv);
+	close(fd);
+    return FALSE;
+  }
 
   close (fd);
 
