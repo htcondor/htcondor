@@ -344,7 +344,15 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 			the file is opened in text mode.  
 		*/
 	memset(psBuf,0,iLength+1);
-	fread(psBuf, 1, iLength, pFile);
+	int ret = fread(psBuf, 1, iLength, pFile);
+	if (ret == 0) {
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
+				"fread failed with errno %d (%s)\n", 
+				errno, strerror(errno) );
+		fclose(pFile);
+		return "";
+	}
+	
 	fclose(pFile);
 
 	strToReturn = psBuf;
