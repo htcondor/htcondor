@@ -310,7 +310,10 @@ email_open_implementation( const char * final_args[])
 		/* this is a simple daemon that if it needs to stat . should be
 			able to. You might not be able to if the shadow's cwd is in the
 			user dir somewhere and not readable by the Condor Account. */
-		chdir("/");
+		int ret = chdir("/");
+		if (ret == -1) {
+			EXCEPT("EMAIL PROCESS: Could not cd /\n");
+		}
 		umask(0);
 
 		/* Change my userid permanently to "condor" */
