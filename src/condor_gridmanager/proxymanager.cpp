@@ -805,7 +805,12 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 
 	// Print password (this will end up in stdin for myproxy-get-delegation)
-	pipe (myProxyEntry->get_delegation_password_pipe);
+	if (pipe (myProxyEntry->get_delegation_password_pipe)) {
+		dprintf(D_ALWAYS,
+				"Failed to pipe(2) in RefreshProxyThruMyProxy "
+				"for writing password, aborting\n");
+		return FALSE;
+	}
 	write (myProxyEntry->get_delegation_password_pipe[1],
 		   myProxyEntry->myproxy_password,
 		   strlen (myProxyEntry->myproxy_password));
