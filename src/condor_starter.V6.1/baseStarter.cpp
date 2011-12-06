@@ -2819,7 +2819,9 @@ CStarter::removeTempExecuteDir( void )
 		// since we chdir()'d to the execute directory, we can't
 		// delete it until we get out (at least on WIN32). So lets
 		// just chdir() to EXECUTE so we're sure we can remove it. 
-		chdir(Execute);
+		if (chdir(Execute)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
+		}
 
 		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
 				 DIR_DELIM_CHAR, dir_name.Value() );
@@ -2841,7 +2843,9 @@ CStarter::exitAfterGlexec( int code )
 	// using glexec. this directory will be the parent directory of
 	// EXECUTE. we first "cd /", so that our working directory
 	// is not in the directory we're trying to delete
-	chdir( "/" );
+	if (chdir( "/" )) {
+		dprintf(D_ALWAYS, "Error: chdir(\"/\") failed: %s\n", strerror(errno));
+	}
 	char* glexec_dir_path = condor_dirname( Execute );
 	ASSERT( glexec_dir_path );
 	Directory glexec_dir( glexec_dir_path );
