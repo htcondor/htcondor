@@ -131,7 +131,9 @@ class Job {
         If you update this enum, you *must* also update status_t_names
 		and the IsActive() method, etc.
     */
+	// WARNING!  status_t and status_t_names must be kept in sync!!
     enum status_t {
+		/** Job is not ready (for final) */ STATUS_NOT_READY,
         /** Job is ready for submission */ STATUS_READY,
         /** Job waiting for PRE script */  STATUS_PRERUN,
         /** Job has been submitted */      STATUS_SUBMITTED,
@@ -143,6 +145,7 @@ class Job {
     /** The string names for the status_t enumeration.  Use this the same
         way you would use the queue_t_names array.
     */
+	// WARNING!  status_t and status_t_names must be kept in sync!!
     static const char * status_t_names[];
 
 	// explanation text for errors
@@ -179,8 +182,10 @@ class Job {
 	bool AddPostScript( const char *cmd, MyString &whynot );
 	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
+	void SetFinal(bool value) { _final = value; }
+	bool GetFinal() const { return _final; }
 	void SetNoop( bool value ) { _noop = value; }
-	bool GetNoop( void ) { return _noop; }
+	bool GetNoop( void ) const { return _noop; }
 
 	Script * _scriptPre;
 	Script * _scriptPost;
@@ -488,12 +493,6 @@ class Job {
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
 private:
-
-		// Note: Init moved to private section because calling int more than
-		// once will cause a memory leak.  wenger 2005-06-24.
-	void Init( const char* jobName, const char *directory,
-				const char* cmdFile );
-  
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
   	void LogMonitorFailed();
@@ -600,6 +599,8 @@ private:
 		PRE_SKIP_MAX = 0xff,
 		NO_PRE_VALUE = -1
 	};
+	// whether this is a final job
+	bool _final;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

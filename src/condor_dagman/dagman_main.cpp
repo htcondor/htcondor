@@ -1,3 +1,7 @@
+//TEMPTEMP -- make sure condor_rm in schedd removes node jobs before parent, otherwise that could goof up the final node
+//TEMPTEMP -- make sure final node can never be marked as DONE when DAG is parsed.
+//TEMPTEMP -- overwrite the rescue DAG if we generate it twice
+//TEMPTEMP -- cycle check doesn't work when you have a final node...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -456,16 +460,20 @@ void main_shutdown_graceful() {
 	DC_Exit( EXIT_RESTART );
 }
 
-void main_shutdown_rescue( int exitVal ) {
-		// Avoid possible infinite recursion if you hit a fatal error
-		// while writing a rescue DAG.
+void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus )
+{
 	static bool inShutdownRescue = false;
-	if ( inShutdownRescue) return;
+	if( inShutdownRescue ) {
+		return;
+	}
 	inShutdownRescue = true;
-
+	dagman.dag->_dagStatus = dagStatus;
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
+		// Avoid writing two different rescue DAGs if the "main" DAG and
+		// the final node (if any) both fail.
+	static bool wroteRescue = false;
 	if( dagman.dag ) {
-			// we write the rescue DAG *before* removing jobs because
+			// We write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
@@ -473,7 +481,8 @@ void main_shutdown_rescue( int exitVal ) {
 			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							false, dagman._writePartialRescueDag );
+							wroteRescue );
+				wroteRescue = true;
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
@@ -494,8 +503,16 @@ void main_shutdown_rescue( int exitVal ) {
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
+		// Start the final node if we have one.
+	if ( dagman.dag->StartFinalNode() ) {
+			// We started a final node; return here so we wait for the
+			// final node to finish, instead of exiting immediately.
+		return;
+	}
+	dagman.dag->DumpNodeStatus( false, true );
+	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
-    dagman.CleanUp();
+	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit( exitVal );
 }
@@ -505,7 +522,7 @@ void main_shutdown_rescue( int exitVal ) {
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
-	main_shutdown_rescue( EXIT_ABORT );
+	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM );
 	return FALSE;
 }
 
@@ -1006,7 +1023,7 @@ void main_init (int argc, char ** const argv) {
 							"because of -DumpRescue flag\n" );
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							true, false );
+							false, true,false );
 			}
 			
 			dagman.dag->RemoveRunningJobs(dagman, true);
@@ -1109,7 +1126,8 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-					dagman.multiDags, dagman.maxRescueDagNum, false, false );
+					dagman.multiDags, dagman.maxRescueDagNum, false, false,
+					false );
 		ExitSuccess();
 		return;
 	}
@@ -1231,8 +1249,10 @@ void condor_event_timer () {
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
+			debug_printf( DEBUG_NORMAL,
+						"ProcessLogEvents(CONDORLOG) returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
 	}
@@ -1240,9 +1260,9 @@ void condor_event_timer () {
 	if( dagman.dag->DetectDaPLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
 			debug_printf( DEBUG_NORMAL,
-						"ProcessLogEvents(DAPLOG) returned false\n");
+						"ProcessLogEvents(DAPLOG) returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
 	}
@@ -1304,7 +1324,7 @@ void condor_event_timer () {
 				dagman.dag->PostRunNodeCount() == 0 ) {
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
-		main_shutdown_rescue( EXIT_ERROR );
+		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 	}
 
     //
@@ -1313,12 +1333,14 @@ void condor_event_timer () {
     // exists.
     // 
     if( dagman.dag->FinishedRunning() ) {
+		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
 		if( dagman.dag->DoneFailed() ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
 				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
+			dagStatus = Dag::DAG_STATUS_NODE_FAILED;
 		} else {
 			// no jobs failed, so a cycle must exist
 			debug_printf( DEBUG_QUIET, "ERROR: DAG finished but not all "
@@ -1326,18 +1348,33 @@ void condor_event_timer () {
 			if( dagman.dag->isCycle() ) {
 				debug_printf (DEBUG_QUIET, "... ERROR: a cycle exists "
 							"in the dag, plese check input\n");
+				dagStatus = Dag::DAG_STATUS_CYCLE;
 			} else {
 				debug_printf (DEBUG_QUIET, "... ERROR: no cycle found; "
 							"unknown error condition\n");
+				dagStatus = Dag::DAG_STATUS_ERROR;
 			}
 			if ( debug_level >= DEBUG_NORMAL ) {
 				dagman.dag->PrintJobList();
 			}
 		}
 
-		main_shutdown_rescue( EXIT_ERROR );
+		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 		return;
     }
+
+	//
+	// If everything except the final node is done and we have one,
+	// run it (dumping a rescue DAG first if there are errors).
+	//
+	if ( dagman.dag->FinishedExceptFinal() && dagman.dag->HasFinalNode() ) {
+		if ( dagman.dag->_dagStatus != Dag::DAG_STATUS_OK ) {
+			main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
+		} else {
+			dagman.dag->StartFinalNode();
+		}
+		return;
+	}
 }
 
 

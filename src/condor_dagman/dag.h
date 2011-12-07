@@ -160,7 +160,6 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
-  
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
@@ -388,26 +387,29 @@ class Dag {
 			exists.)
 			@return true iff the DAG is finished
 		*/
-	inline bool FinishedRunning() const { return NumJobsSubmitted() == 0 &&
+	bool FinishedRunning() const;
+
+		//TEMPTEMP -- document
+	bool FinishedExceptFinal() const { return NumJobsSubmitted() == 0 &&
 				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
 
 		/** Determine whether the DAG is successfully completed.
 			@return true iff the DAG is successfully completed
 		*/
-	inline bool DoneSuccess() const { return NumNodesDone() == NumNodes(); }
+	bool DoneSuccess() const;
 
 		/** Determine whether the DAG is finished, but failed (because
 			of a node job failure, etc.).
 			@return true iff the DAG is finished but failed
 		*/
-	inline bool DoneFailed() const { return FinishedRunning() &&
-				NumNodesFailed() > 0; }
+	bool DoneFailed() const;
 
 		/** Determine whether the DAG is finished because of a cycle in
 			the DAG.  (Note that this method sometimes incorrectly returns
 			true for errors other than cycles in the DAG.  wenger 2010-07-30.)
 			@return true iff the DAG is finished but there is a cycle
 		*/
+	//TEMPTEMP -- this doesn't seem right to me...
 	inline bool DoneCycle() { return FinishedRunning() &&
 				NumNodesFailed() == 0; }
 
@@ -417,6 +419,9 @@ class Dag {
 			@return number of jobs successfully submitted
 		*/
     int SubmitReadyJobs(const Dagman &dm);
+
+		//TEMPTEMP -- document -- only if other stuff is finished??
+	bool StartFinalNode();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -441,13 +446,16 @@ class Dag {
         @param datafile The original DAG file
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
+		@param overwrite Whether to overwrite the highest-numbered
+			rescue DAG (because with a final node you can write the
+			rescue DAG twice)
 		@param parseFailed whether parsing the DAG(s) failed
 		@param isPartial whether the rescue DAG is only a partial
 			DAG file (needs to be parsed in combination with the original
 			DAG file)
     */
     void Rescue (const char * dagFile, bool multiDags,
-				int maxRescueDagNum, bool parseFailed = false,
+				int maxRescueDagNum, bool overwrite, bool parseFailed = false,
 				bool isPartial = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
@@ -692,6 +700,23 @@ class Dag {
 	*/
 	bool IsHalted() { return _dagIsHalted; }
 
+	enum dag_status {
+		DAG_STATUS_OK = 0,
+		DAG_STATUS_ERROR = 1, // Error not enumerated below
+		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
+		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
+		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
+	};
+
+	dag_status _dagStatus;
+
+	//TEMPTEMP -- document
+	inline bool HasFinalNode() { return _final_job != NULL; }
+
+	//TEMPTEMP -- document
+	inline bool RunningFinalNode() { return _runningFinalNode; }
+
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -831,6 +856,14 @@ class Dag {
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
 
+		/** Write the given node to the rescue DAG.
+			@param The file pointer to the rescue DAG fle
+			@param The node to write
+			@param Whether retries should be reset for a rescue DAG
+		*/
+	void WriteNodeToRescue( FILE *fp, /* const */ Job *node,
+				bool reset_retries_upon_rescue ) const;
+
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.
 			@param whether the node is a NOOP node
@@ -881,9 +914,14 @@ class Dag {
 		*/
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
+	bool _runningFinalNode;
 
     /// List of Job objects
     List<Job>     _jobs;
+
+		// Note: the final node is in the _jobs list; this pointer is just
+		// for convenience.
+	Job* _final_job;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 

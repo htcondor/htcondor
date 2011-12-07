@@ -75,7 +75,40 @@ ScriptQ::Run( Script *script )
 		// running limit.
 	int maxScripts =
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
-	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
+	// if we have no script limit, or we're under the limit, run now
+	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
+		debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
+					  prefix, script->GetNodeName() );
+		_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
+					script->_post );
+		if( int pid = script->BackgroundRun( _scriptReaperId,
+					_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
+			_numScriptsRunning++;
+			_scriptPidTable->insert( pid, script );
+			debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,
+						  script->_cmd );
+			return 1;
+		}
+		// BackgroundRun() returned pid 0
+		debug_printf( DEBUG_NORMAL, "  error: daemonCore->Create_Process() "
+					  "failed; %s script of Job %s failed\n", prefix,
+					  script->GetNodeName() );
+
+		// Putting this code here fixes PR 906 (Missing PRE or POST script
+		// causes DAGMan to hang); also, without this code a node for which
+		// the script spawning fails will permanently add to the running
+		// script count, which will throw off the maxpre/maxpost throttles.
+		// wenger 2007-11-08
+		const int returnVal = 1<<8;
+		if( ! script->_post ) {
+			_dag->PreScriptReaper( script->GetNodeName(), returnVal );
+		} else {
+			_dag->PostScriptReaper( script->GetNodeName(), returnVal );
+		}
+
+		return 0;
+	}
+	else {
 			// max scripts already running
 		debug_printf( DEBUG_DEBUG_1, "Max %s scripts (%d) already running; "
 					  "deferring %s script of Job %s\n", prefix, maxScripts,
@@ -93,7 +126,8 @@ ScriptQ::Run( Script *script )
 				  prefix, script->GetNodeName() );
 	_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
 				script->_post );
-	if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
+	if( int pid = script->BackgroundRun( _scriptReaperId,
+			_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
 		_numScriptsRunning++;
 		_scriptPidTable->insert( pid, script );
 		debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,

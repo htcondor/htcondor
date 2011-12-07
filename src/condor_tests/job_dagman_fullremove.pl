@@ -30,41 +30,8 @@ use Cwd;
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
+# Allow time for this job to get removed before it exits normally.
+sleep(120);
+
 print "Returning error from test job\n";
 exit(3);
-
-sub verbose_system 
-{
-	my @args = @_;
-	my $rc = 0xffff & system @args;
-
-	printf "system(%s) returned %#04x: ", @args, $rc;
-
-	if ($rc == 0) 
-	{
-		print "ran with normal exit\n";
-		return $rc;
-	}
-	elsif ($rc == 0xff00) 
-	{
-		print "command failed: $!\n";
-		return $rc;
-	}
-	elsif (($rc & 0xff) == 0) 
-	{
-		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
-		return $rc;
-	}
-	else 
-	{
-		print "ran with ";
-		if ($rc &   0x80) 
-		{
-			$rc &= ~0x80;
-			print "coredump from ";
-			return $rc;
-		}
-		print "signal $rc\n"
-	}
-}

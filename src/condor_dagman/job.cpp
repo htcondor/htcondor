@@ -47,6 +47,7 @@ const char *Job::queue_t_names[] = {
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the status_t enum
 const char * Job::status_t_names[] = {
+    "STATUS_NOT_READY",
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
     "STATUS_SUBMITTED",
@@ -101,47 +102,40 @@ Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
 	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _pre_status( NO_PRE_VALUE )
 {
-	Init( jobName, directory, cmdFile );
-}
-
-//---------------------------------------------------------------------------
-void Job::Init( const char* jobName, const char* directory,
-			const char* cmdFile )
-{
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
 
-	debug_printf( DEBUG_DEBUG_1, "Job::Init(%s, %s, %s)\n", jobName,
-				directory, cmdFile );
+	debug_printf( DEBUG_DEBUG_1, "Job::Job(%s, %s, %s)\n", jobName,
+			directory, cmdFile );
 
-    _scriptPre = NULL;
-    _scriptPost = NULL;
-    _Status = STATUS_READY;
+	_scriptPre = NULL;
+	_scriptPost = NULL;
+	_Status = STATUS_READY;
 	_isIdle = false;
 	countedAsDone = false;
 
-    _jobName = strnewp (jobName);
+	_jobName = strnewp (jobName);
 	_directory = strnewp (directory);
-    _cmdFile = strnewp (cmdFile);
+	_cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
 	_logIsMonitored = false;
 	_useDefaultLog = false;
 
-    // _condorID struct initializes itself
+		// _condorID struct initializes itself
 
-    // jobID is a primary key (a database term).  All should be unique
-    _jobID = _jobID_counter++;
+		// jobID is a primary key (a database term).  All should be unique
+	_jobID = _jobID_counter++;
 
-    retry_max = 0;
-    retries = 0;
-    _submitTries = 0;
+	retry_max = 0;
+	retries = 0;
+	_submitTries = 0;
 	retval = -1; // so Coverity is happy
-    have_retry_abort_val = false;
-    retry_abort_val = 0xdeadbeef;
-    have_abort_dag_val = false;
+	have_retry_abort_val = false;
+	retry_abort_val = 0xdeadbeef;
+	have_abort_dag_val = false;
 	abort_dag_val = -1; // so Coverity is happy
-    have_abort_dag_return_val = false;
+	have_abort_dag_return_val = false;
 	abort_dag_return_val = -1; // so Coverity is happy
 	_visited = false;
 	_dfsOrder = -1; // so Coverity is happy
@@ -151,7 +145,7 @@ void Job::Init( const char* jobName, const char* directory,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
-    _logFile = NULL;
+	_logFile = NULL;
 	_logFileIsXml = false;
 
 	_noop = false;
@@ -391,6 +385,10 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		whynot = "parent == NULL";
 		return false;
 	}
+	if(GetFinal()) {
+		whynot = "Tried to add a parent to a Final node";
+		return false;
+	}
 
 		// we don't currently allow a new parent to be added to a
 		// child that has already been started (unless the parent is
@@ -455,7 +453,10 @@ Job::CanAddChild( Job* child, MyString &whynot )
 		whynot = "child == NULL";
 		return false;
 	}
-
+	if(GetFinal()) {
+		whynot = "Tried to add a child to a final node";
+		return false;
+	}
 	whynot = "n/a";
 	return true;
 }
