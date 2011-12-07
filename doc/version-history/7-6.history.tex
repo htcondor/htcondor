@@ -51,6 +51,10 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
+\item Fixed JAVA_CLASSPATH_SEPARATOR on windows, which caused 
+failure of Java universe.
+\Ticket{2586}
+
 \item \MacroNI{HDFS} was not listed in the default
 \MacroNI{DC\_DAEMON\_LIST}, so the \Condor{hdfs} daemon exited
 shortly after being started,

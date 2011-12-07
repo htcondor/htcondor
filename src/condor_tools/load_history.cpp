@@ -47,7 +47,7 @@
 
 #define NUM_PARAMETERS 3
 
-void Usage(char* name, int iExitCode=1)
+void Usage(char* name, int iExitCode=1);
 
 void Usage(char* name, int iExitCode) 
 {
