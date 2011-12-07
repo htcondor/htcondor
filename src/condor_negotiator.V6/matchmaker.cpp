@@ -943,22 +943,9 @@ void round_for_precision(double& x) {
 }
 
 
-double starvation_ratio(double usage, double allocated) {
-    return (allocated > 0) ? (usage / allocated) : DBL_MAX;
-}
-
-struct starvation_order {
+struct group_order {
     bool operator()(const GroupEntry* a, const GroupEntry* b) const {
-        // "starvation order" is ordering by the ratio usage/allocated, so that
-        // most-starved groups are allowed to negotiate first, to minimize group
-        // starvation over time.
-        double sa = starvation_ratio(a->usage, a->allocated);
-        double sb = starvation_ratio(b->usage, b->allocated);
-        if (sa < sb) return true;
-        if (sa > sb) return false;
-        // If ratios are the same, sub-order by group priority.
-        // Most likely to be relevant when comparing groups with zero usage.
-        return (a->priority < b->priority);
+        return a->sort_key < b->sort_key;
     }
 };
 
@@ -1272,9 +1259,28 @@ negotiationTime ()
                 ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
             }
 
+            // fill in sorting classad attributes for configurable sorting
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+                ClassAd* ad = group->sort_ad;
+                ad->Assign(ATTR_GROUP_QUOTA, group->quota);
+                ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
+                ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
+                // Do this after all attributes are filled in
+                float v = 0;
+                if (!ad->EvalFloat(ATTR_SORT_EXPR, NULL, v)) {
+                    v = FLT_MAX;
+                    string e;
+                    ad->LookupString(ATTR_SORT_EXPR_STRING, e);
+                    dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
+                            e.c_str(), group->name.c_str(), v);
+                }
+                group->sort_key = v;
+            }
+
             // present accounting groups for negotiation in "starvation order":
             vector<GroupEntry*> negotiating_groups(hgq_groups);
-            std::sort(negotiating_groups.begin(), negotiating_groups.end(), starvation_order());
+            std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order());
 
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
             // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
@@ -1290,8 +1296,7 @@ negotiationTime ()
                 for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
                     GroupEntry* group = *j;
 
-                    dprintf(D_FULLDEBUG, "Group %s - starvation= %g (%g/%g)  prio= %g\n", 
-                            group->name.c_str(), starvation_ratio(group->usage, group->allocated), group->usage, group->allocated, group->priority);
+                    dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
 
                     if (group->allocated <= 0) {
                         dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
@@ -1536,6 +1541,24 @@ void Matchmaker::hgq_construct_tree() {
         for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
             grpq.push_back(*j);
         }
+    }
+
+    string group_sort_expr;
+    if (!param(group_sort_expr, "GROUP_SORT_EXPR")) {
+        // Should never fail! Default provided via param-info
+        EXCEPT("Failed to obtain value for GROUP_SORT_EXPR\n");
+    }
+    ExprTree* test_sort_expr = NULL;
+    if (ParseClassAdRvalExpr(group_sort_expr.c_str(), test_sort_expr)) {
+        EXCEPT("Failed to parse GROUP_SORT_EXPR = %s\n", group_sort_expr.c_str());
+    }
+    delete test_sort_expr;
+    for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        GroupEntry* group = *j;
+        group->sort_ad->Assign(ATTR_ACCOUNTING_GROUP, group->name);
+        // group-specific values might be supported in the future:
+        group->sort_ad->AssignExpr(ATTR_SORT_EXPR, group_sort_expr.c_str());
+        group->sort_ad->Assign(ATTR_SORT_EXPR_STRING, group_sort_expr);
     }
 }
 
@@ -1990,7 +2013,8 @@ GroupEntry::GroupEntry():
     subtree_rr_time(0),
     parent(NULL),
     children(),
-    chmap()
+    chmap(),
+    sort_ad(new ClassAd())
 {
 }
 
@@ -2011,6 +2035,8 @@ GroupEntry::~GroupEntry() {
 
         delete submitterAds;
     }
+
+    if (NULL != sort_ad) delete sort_ad;
 }
 
 

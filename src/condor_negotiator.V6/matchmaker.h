@@ -85,6 +85,10 @@ struct GroupEntry {
     GroupEntry* parent;
     vector<GroupEntry*> children;
     map<string, size_type, Accountant::ci_less> chmap;
+
+    // attributes for configurable sorting
+    ClassAd* sort_ad;
+    double sort_key;
 };
 
 
