@@ -28,7 +28,7 @@ NOT ${SYSTEM_NAME} MATCHES "rhel3"  AND NOT ${SYSTEM_NAME} MATCHES "rhel4" )
     # Build the GAHP; curl requires libz on some systems.
 	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
-	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
+	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${EXPAT_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
     	OFF )
 
     # Build an executable needed by the tests.
