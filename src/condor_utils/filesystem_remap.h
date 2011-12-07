@@ -34,12 +34,13 @@
  * This is meant to give Condor the ability to provide per-job temporary directories.
  */
 typedef std::pair<std::string, std::string> pair_strings;
+typedef std::pair<std::string, bool> pair_str_bool;
 
 class FilesystemRemap {
 
 public:
 
-	FilesystemRemap() : m_mappings() {};
+	FilesystemRemap();
 
 	/**
 	 * Add a mapping to the filesystem remap.
@@ -64,7 +65,7 @@ public:
 	 * @param Directory to consider.
 	 * @return Renamed directory.
 	 */
-	std::string RemapDir(std::string);
+	std::string RemapDir(const std::string);
 
 	/**
 	 * Determine where a file will be accessible from after the mapping.
@@ -75,7 +76,19 @@ public:
 
 private:
 
+	/**
+	 * Parse /proc/self/mountinfo file; look for mounts that are shared
+	 */
+	void ParseMountinfo();
+
+	/**
+	 * Check to see if the desired mount point is going to be shared
+	 * outside the current namespace.  If so, remount it as private.
+	 */
+	int CheckMapping(const std::string &);
+
 	std::list<pair_strings> m_mappings;
+	std::list<pair_str_bool> m_mounts_shared;
 
 };
 #endif

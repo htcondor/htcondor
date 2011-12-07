@@ -231,6 +231,70 @@ VanillaProc::StartJob()
 		}
 	}
 #endif
+/*
+{
+        // Have Condor manage a chroot
+	std::string requested_root_dir;
+	JobAd->EvalString(ATTR_JOB_ROOT_DIR, NULL, requested_root_dir);
+	const char * allowed_root_dirs = param("ALLOWED_ROOT_DIRS");
+	if (requested_root_dir.size()) {
+		TemporaryPrivSentry priv_sentry(PRIV_ROOT);
+		if (get_priv() != PRIV_ROOT) {
+			dprintf(D_ALWAYS, "Unable switch to root privileges; Condor must be run as root to use the ALLOWED_ROOT_DIRS features.\n");
+			return FALSE;
+		}
+		StringList chroot_list(allowed_root_dirs);
+		chroot_list.rewind();
+		const char * next_dir;
+		bool acceptable_chroot = false;
+		while ( (next_dir=chroot_list.next()) ) {
+			dprintf(D_FULLDEBUG, "Considering directory for chroot: %s.\n", next_dir);
+			if (IsDirectory(next_dir) && (strcmp(requested_root_dir.c_str(), next_dir) == 0)) {
+				acceptable_chroot = true;
+			}
+		}
+		// TODO: path to chroot MUST be all root-owned, or we have a nice security exploit.
+		if (!acceptable_chroot) {
+			return FALSE;
+		}
+		dprintf(D_FULLDEBUG, "Will attempt to set the chroot to %s.\n", requested_root_dir.c_str());
+
+		std::string execute_dir(Starter->GetExecuteDir());
+		const char * full_dir = dirscat(requested_root_dir, execute_dir);
+		std::string full_dir_str;
+		if (full_dir) {
+			full_dir_str = full_dir;
+		} else {
+			dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", requested_root_dir.c_str(), execute_dir.c_str());
+			return FALSE;
+		}
+		delete [] full_dir;
+		if (IsDirectory(execute_dir.c_str())) {
+			if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
+				dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+				return FALSE;
+			}
+			if (!fs_remap) {
+				fs_remap = new FilesystemRemap();
+			}
+			dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", execute_dir.c_str(), full_dir_str.c_str());
+			if (fs_remap->AddMapping(execute_dir, full_dir_str)) {
+				// FilesystemRemap object prints out an error message for us.
+				return FALSE;
+			}
+			dprintf(D_FULLDEBUG, "Adding mapping %s -> %s.\n", requested_root_dir.c_str(), "/");
+			std::string root_str("/");
+			if (fs_remap->AddMapping(requested_root_dir, root_str)) {
+				return FALSE;
+			}
+		} else {
+			dprintf(D_ALWAYS, "Unable to do chroot because working dir %s does not exist.\n", execute_dir.c_str());
+		}
+	} else {
+		dprintf(D_ALWAYS, "Value of RootDir is unset.\n");
+	}
+}
+*/
 
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
