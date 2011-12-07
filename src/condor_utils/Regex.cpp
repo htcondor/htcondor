@@ -144,7 +144,7 @@ Regex::clone_re(pcre * re)
 	size_t size;
 	pcre_fullinfo(re, NULL, PCRE_INFO_SIZE, &size);
 
-	pcre * newre = (pcre *) malloc(size * sizeof(char));
+	pcre * newre = (pcre *) pcre_malloc(size * sizeof(char));
 	if (!newre) {
 			// XXX: EXCEPTing sucks
 		EXCEPT("No memory to allocate re clone");
