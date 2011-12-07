@@ -30,9 +30,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Linux systems which support bind type of filesystem mount (generally,
+RHEL 5 systems and newer), the administrator can configure the condor\_startd 
+to provide per-job filesystem mounts.  One use might be to provide each job
+it's own view of /tmp and /var/tmp, which are private to that Condor job,
+and cleared when the job exits.  This is implemented with the
+MOUNT\_UNDER\_SCRATCH parameter, which describes which directories to
+bind mount.
+\Ticket{2015}
+
 \item Added the \OptArg{-expand} option to condor\_config\_val.  If \OptArg{-dump}
 and \OptArg{-expand} are given to the command, all config file macros are
 expanded before they are printed out.
+\Ticket{2867}
 
 \item The \OptArg{-sort} option for \Condor{status} has been generalized to
 accept expressions instead of just simple named attributes.
