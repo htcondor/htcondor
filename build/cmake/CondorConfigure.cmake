@@ -145,6 +145,7 @@ if( NOT WINDOWS)
     endif()
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
+	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)
