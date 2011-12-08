@@ -321,10 +321,10 @@ GahpServer::Reaper(Service *,int pid,int status)
 
 	if ( dead_server ) {
 		sprintf_cat( buf, " unexpectedly" );
-		EXCEPT( buf.c_str() );
+		EXCEPT( "%s", buf.c_str() );
 	} else {
 		sprintf_cat( buf, "\n" );
-		dprintf( D_ALWAYS, buf.c_str() );
+		dprintf( D_ALWAYS, "%s", buf.c_str() );
 	}
 }
 
