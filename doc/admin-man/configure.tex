@@ -4751,6 +4751,24 @@ availability statistics in the \Condor{startd}.
 
 \end{description}
 
+The following macros control the optional computation of resource
+availability statistics in the \Condor{startd}.
+
+\begin{description}
+\label{param:MountUnderScratch}
+\item[\Macro{MOUNT\_UNDER\_SCRATCH}]
+On Linux systems which provide "bind" mounts and per-process tree
+mount tables, such as Red Hat Enterprise Linux 5, the administrator
+can optionally configure Condor to provide new filesystem bind mounts
+for each job.  This is useful, for example, to give each jobs it's own
+/tmp or /var/tmp filesystem mapping, independent of any other job.
+This is controlled with the MOUNT\_UNDER\_SCRATCH parameter.  If set,
+this is a comma separated list of directories to provide new mounts for.
+If it is set to /tmp, Condor will make a directory under the execute
+side sandbox called tmp, and bind mount that directory to /tmp.
+
+\end{description}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}\condor{schedd}
 Configuration File Entries}
