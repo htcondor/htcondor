@@ -566,7 +566,7 @@ int SafeSock::handle_incoming_packet()
 		return FALSE;
 	}
     char str[50];
-    sprintf(str, sock_to_string(_sock));
+    sprintf(str, "%s", sock_to_string(_sock));
     dprintf( D_NETWORK, "RECV %d bytes at %s from %s\n",
 			 received, str, _who.to_sinful().Value());
     //char temp_str[10000];

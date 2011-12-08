@@ -240,7 +240,7 @@ validate_entries( bool ignore_invalid_entry ) {
 		if(ignore_invalid_entry) {
 			dprintf(D_ALWAYS, "%s", output.Value());
 		} else {
-			EXCEPT(output.Value());
+			EXCEPT("%s", output.Value());
 		}
 	}
 }
