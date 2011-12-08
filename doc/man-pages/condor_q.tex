@@ -324,6 +324,10 @@ is rapidly changing state) which cannot be accurately diagnosed.
 universe jobs, since they rely on values computed when a job
 checkpoints.
 
+It is possible to to hold jobs that are in the X state, to avoid this it 
+is best to construct a \OptArg{-constraint}{expression} that contains
+'JobStatus != 3' if the user wishes to avoid this condition. 
+
 \Examples
 
 The \Opt{-format} option provides a way to specify both the job attributes
