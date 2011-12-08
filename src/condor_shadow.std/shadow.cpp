@@ -1371,7 +1371,7 @@ regular_setup( char *host, char *cluster, char *proc )
 }
 
 void
-pipe_setup( char *cluster, char *proc, char *capability )
+pipe_setup( char *cluster, char *proc, char *  /*capability*/ )
 {
 	static char	host[1024];
 
@@ -1422,7 +1422,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 }
 
 void
-reaper(int unused)
+reaper(int  /*unused*/)
 {
 	pid_t		pid;
 	int			status;
@@ -1473,7 +1473,7 @@ display_uids()
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
 void
-handle_sigusr1( int unused )
+handle_sigusr1( int  /*unused */ )
 {
 	dprintf( D_ALWAYS, 
 			 "Shadow received SIGUSR1 (rm command from schedd)\n" );
@@ -1493,7 +1493,7 @@ handle_sigusr1( int unused )
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
 void
-handle_sigquit( int unused )
+handle_sigquit( int  /*unused*/ )
 {
 	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
 	check_static_policy = 0;
@@ -1507,7 +1507,7 @@ handle_sigquit( int unused )
   try to do a graceful shutdown and allow our job to checkpoint. 
 */
 void
-handle_sigterm( int unused )
+handle_sigterm( int   /*unused*/ )
 {
 	dprintf( D_ALWAYS, "Shadow recieved SIGTERM (graceful shutdown)\n" ); 
 	check_static_policy = 0;
