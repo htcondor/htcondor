@@ -117,8 +117,6 @@ usage()
 void
 main_init( int argc, char ** const argv )
 {
-	set_mySubSystem("C_GAHP", SUBSYSTEM_TYPE_GAHP);
-
 	dprintf(D_FULLDEBUG, "C-GAHP IO thread\n");
 
 	std::string schedd_addr;
@@ -758,6 +756,8 @@ main_pre_command_sock_init( )
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("C_GAHP", SUBSYSTEM_TYPE_GAHP);
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;
