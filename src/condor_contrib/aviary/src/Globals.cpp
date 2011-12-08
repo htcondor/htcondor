@@ -26,4 +26,39 @@ SubmissionCollectionType g_submissions;
 OwnerlessClusterType g_ownerless_clusters;
 OwnerlessSubmissionType g_ownerless_submissions;
 
+// when it absolutely, positively has to be right...
+void global_reset() {
+
+	for (JobCollectionType::iterator i = g_jobs.begin();
+	     g_jobs.end() != i; i++) {
+		// Skip clusters for now
+		if ('0' != (*i).second->getKey()[0]) {
+			delete (*i).second;
+			g_jobs.erase(i);
+		}
+	}
+
+	for (JobCollectionType::iterator i = g_jobs.begin();
+		  g_jobs.end() != i; i++) {
+		     delete (*i).second;
+		     g_jobs.erase(i);
+	}
+
+	for (OwnerlessClusterType::iterator i = g_ownerless_clusters.begin();
+		       g_ownerless_clusters.end() != i; i++) {
+			  g_ownerless_clusters.erase(i);
+	}
+
+	for (OwnerlessSubmissionType::iterator i = g_ownerless_submissions.begin();
+		       g_ownerless_submissions.end() != i; i++) {
+			  g_ownerless_submissions.erase(i);
+	}
+
+	for (SubmissionCollectionType::iterator i = g_submissions.begin();
+		       g_submissions.end() != i; i++) {
+			  delete (*i).second;
+			  g_submissions.erase(i);
+	}
+}
+
 }}

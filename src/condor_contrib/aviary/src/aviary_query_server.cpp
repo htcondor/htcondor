@@ -237,9 +237,7 @@ HandleResetSignal(Service *, int)
 
 void ProcessHistoryTimer(Service*) {
 	dprintf(D_FULLDEBUG, "ProcessHistoryTimer() called\n");
-    processHistoryDirectory();
-    processOrphanedIndices();
-    processCurrentHistory();
+    process_history_files();
 }
 
 
