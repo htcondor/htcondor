@@ -60,8 +60,6 @@ void init_pipes();
 void
 main_init( int argc, char ** const argv )
 {
-	set_mySubSystem( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
-
 	dprintf(D_FULLDEBUG, "Welcome to the C-GAHP\n");
 
 	// handle specific command line args
@@ -206,6 +204,8 @@ main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;
