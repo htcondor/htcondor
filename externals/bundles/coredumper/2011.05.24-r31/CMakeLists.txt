@@ -39,7 +39,7 @@ if (WITH_COREDUMPER)
 				    DOWNLOAD_DIR ${COREDUMPER_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${COREDUMPER_VER} && ./configure --prefix=${COREDUMPER_INSTALL_LOC}
+				    CONFIGURE_COMMAND cd ${COREDUMPER_VER} && CFLAGS=-D_GNU_SOURCE ./configure --prefix=${COREDUMPER_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd ${COREDUMPER_VER} && make
 				    BUILD_IN_SOURCE 1
