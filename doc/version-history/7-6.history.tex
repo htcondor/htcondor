@@ -51,8 +51,8 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
-\item Fixed JAVA_CLASSPATH_SEPARATOR on windows, which caused 
-failure of Java universe.
+\item The Windows installer had a bad value set for the configuration variable
+\Macro{JAVA\_CLASSPATH\_SEPARATOR}, causing java universe jobs to fail. 
 \Ticket{2586}
 
 \item \MacroNI{HDFS} was not listed in the default
