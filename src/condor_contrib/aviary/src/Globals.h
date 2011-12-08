@@ -46,6 +46,8 @@ extern SubmissionCollectionType g_submissions;
 extern OwnerlessClusterType g_ownerless_clusters;
 extern OwnerlessSubmissionType g_ownerless_submissions;
 
+void global_reset();
+
 }}
 
 #endif /* _GLOBALS_H */

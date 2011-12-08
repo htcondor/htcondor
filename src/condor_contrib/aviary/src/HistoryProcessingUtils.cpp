@@ -47,13 +47,17 @@ using namespace std;
 typedef set<long unsigned int> HistoryFileListType;
 static HistoryFileListType m_historyFiles;
 MyString m_path;
+bool force_reset;
 
 // force a reset of history processing
-void aviary::history::init_history_files() {
-    m_historyFiles.clear();
+void aviary::history::process_history_files() {
+    if (force_reset) {
+        dprintf ( D_FULLDEBUG, "global_reset triggered\n");
+        global_reset();
+    }
     processHistoryDirectory();
     processOrphanedIndices();
-    processCurrentHistory(true);
+    processCurrentHistory(force_reset);
 }
 
 // Processing jobs from history file must allow for
@@ -111,6 +115,9 @@ void
 aviary::history::processHistoryDirectory()
 {
     const char *file = NULL;
+
+    // each time through we rebuild our set of inodes
+    m_historyFiles.clear();
 
     Directory dir ( m_path.Value() );
     dir.Rewind();
@@ -202,20 +209,20 @@ aviary::history::processOrphanedIndices()
  * 4) detect rotations
  */
 void
-aviary::history::processCurrentHistory(bool force_reset)
+aviary::history::processCurrentHistory(bool do_reset)
 {
     static MyString currentHistoryFilename = m_path + DIR_DELIM_STRING + "history";
     static HistoryFile currentHistory ( currentHistoryFilename.Value() );
 
     CondorError errstack;
 
-    if (force_reset) {
+    if (do_reset) {
        currentHistory.cleanup();
     }
 
 	// (1)
     long unsigned int id;
-    if ( !currentHistory.getId ( id ) || force_reset)
+    if ( !currentHistory.getId ( id ) || do_reset)
     {
         if ( !currentHistory.init ( errstack ) )
         {
@@ -261,5 +268,8 @@ aviary::history::processCurrentHistory(bool force_reset)
         }
         ASSERT ( currentHistory.getId ( id ) );
         m_historyFiles.insert ( id );
+        force_reset = true;
+        return;
     }
+    force_reset = false;
 }
