@@ -160,7 +160,7 @@ read_env()
 		else {
 			err.sprintf("short read of env size: %d of %u bytes",
 			            bytes,
-			            sizeof(env_len));
+			            (unsigned)sizeof(env_len));
 		}
 		fatal_error();
 	}
