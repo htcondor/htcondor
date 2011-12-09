@@ -1912,7 +1912,7 @@ int handle_response_prefix( char **input_line )
 	char *prefix;
 	
 	if ( count_args( input_line ) != 2 ) {
-		for(int i=0;input_line[i];i++){fprintf(stderr,"input_line[%d]=\"%s\" (len=%ld)\n",i,input_line[i],strlen(input_line[i]));}
+		for(int i=0;input_line[i];i++){fprintf(stderr,"input_line[%d]=\"%s\" (len=%lu)\n",i,input_line[i],(unsigned long)strlen(input_line[i]));}
 		HANDLE_SYNTAX_ERROR();
 	}
 

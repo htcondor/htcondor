@@ -2133,7 +2133,7 @@ GT4Job::printXMLParam (const char * name, const char * value) {
 // gridmanger scratch dir. NOT thread-safe.
 const char*
 GT4Job::getDummyJobScratchDir() {
-	const int dir_mode = 0500;
+	const unsigned int dir_mode = 0500;
 	const char *return_val = NULL;
 	static std::string dirname;
 	static time_t last_check = 0;
