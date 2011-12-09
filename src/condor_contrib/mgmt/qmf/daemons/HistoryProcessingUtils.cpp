@@ -124,7 +124,9 @@ ProcessHistoryDirectory()
 {
     const char *file = NULL;
 
-    m_historyFiles.clear();
+    if (force_reset) {
+        m_historyFiles.clear();
+    }
 
     Directory dir ( m_path.Value() );
     dir.Rewind();
