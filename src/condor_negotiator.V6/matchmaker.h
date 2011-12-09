@@ -59,10 +59,11 @@ struct GroupEntry {
     double config_quota;
 	bool static_quota;
 	bool accept_surplus;
+    bool autoregroup;
 
     // current usage information coming into this negotiation cycle
     double usage;
-    ClassAdList* submitterAds;
+    ClassAdListDoesNotDeleteAds* submitterAds;
     double priority;
 
     // slot quota as computed by HGQ
@@ -452,6 +453,7 @@ class Matchmaker : public Service
         string hgq_root_name;
         vector<GroupEntry*> hgq_groups;
         map<string, GroupEntry*> group_entry_map;
+        bool autoregroup;
 
         void hgq_construct_tree();
         void hgq_assign_quotas(GroupEntry* group, double quota);

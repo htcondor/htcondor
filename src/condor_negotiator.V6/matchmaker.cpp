@@ -203,6 +203,7 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+    autoregroup = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -944,9 +945,28 @@ void round_for_precision(double& x) {
 
 
 struct group_order {
+    bool autoregroup;
+    GroupEntry* root_group;
+
+    group_order(bool arg, GroupEntry* rg): autoregroup(arg), root_group(rg) {
+        if (autoregroup) {
+            dprintf(D_ALWAYS, "group quotas: autoregroup mode: forcing group %s to negotiate last\n", root_group->name.c_str());
+        }
+    }
+
     bool operator()(const GroupEntry* a, const GroupEntry* b) const {
+        if (autoregroup) {
+            // root is never before anybody:
+            if (a == root_group) return false;
+            // a != root, and b = root, so a has to be before b:
+            if (b == root_group) return true;
+        }
         return a->sort_key < b->sort_key;
     }
+
+    private:
+    // I don't want anybody defaulting this obj by accident
+    group_order(){}
 };
 
 
@@ -1125,7 +1145,7 @@ negotiationTime ()
             group->allocated = 0;
             group->subtree_quota = 0;
             group->subtree_requested = 0;
-            if (NULL == group->submitterAds) group->submitterAds = new ClassAdList;
+            if (NULL == group->submitterAds) group->submitterAds = new ClassAdListDoesNotDeleteAds;
             group->submitterAds->Open();
             while (ClassAd* ad = group->submitterAds->Next()) {
                 group->submitterAds->Remove(ad);
@@ -1169,6 +1189,23 @@ negotiationTime ()
             int numrunning=0;
             ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
             group->requested += numrunning + numidle;
+        }
+
+        // Any groups with autoregroup are allowed to also negotiate in root group ("none")
+        if (autoregroup) {
+            unsigned long n = 0;
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+                if (group == hgq_root_group) continue;
+                if (!group->autoregroup) continue;
+                group->submitterAds->Open();
+                while (ClassAd* ad = group->submitterAds->Next()) {
+                    hgq_root_group->submitterAds->Insert(ad);
+                }
+                group->submitterAds->Close();
+                ++n;
+            }
+            dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
         }
 
         // assign slot quotas based on the config-quotas
@@ -1227,6 +1264,11 @@ negotiationTime ()
                 surplus_quota += hgq_recover_remainders(hgq_root_group);
             }
 
+            if (autoregroup) {
+                dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+                hgq_root_group->allocated = hgq_total_quota;
+            }
+
             double maxdelta = 0;
             double requested_total = 0;
             double allocated_total = 0;
@@ -1280,7 +1322,7 @@ negotiationTime ()
 
             // present accounting groups for negotiation in "starvation order":
             vector<GroupEntry*> negotiating_groups(hgq_groups);
-            std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order());
+            std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order(autoregroup, hgq_root_group));
 
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
             // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
@@ -1325,9 +1367,17 @@ negotiationTime ()
                         slots = floor(slots);
                     }
 
-                    negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
-                                       startdAds, claimIds, *(group->submitterAds), 
-                                       slots, group->name.c_str());
+                    if (autoregroup && (group == hgq_root_group)) {
+                        // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
+                        dprintf(D_ALWAYS, "group quotas: autoregroup mode: negotiating with autoregroup for %s\n", group->name.c_str());
+                        negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
+                                           startdAds, claimIds, *(group->submitterAds),
+                                           slots, NULL);
+                    } else {
+                        negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
+                                           startdAds, claimIds, *(group->submitterAds), 
+                                           slots, group->name.c_str());
+                    }
                 }
 
                 // Halt when we have negotiated with full deltas
@@ -1443,14 +1493,12 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map.clear();
     group_entry_map[hgq_root_name] = hgq_root_group;
 
-    bool tdas = false;
-    if (param_defined("GROUP_ACCEPT_SURPLUS")) {
-        tdas = param_boolean("GROUP_ACCEPT_SURPLUS", false);
-    } else {
-        // backward compatability
-        tdas = param_boolean("GROUP_AUTOREGROUP", false);
-    }
-    const bool default_accept_surplus = tdas;
+    bool accept_surplus = false;
+    autoregroup = false;
+    const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
+    const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+    if (default_autoregroup) autoregroup = true;
+    if (default_accept_surplus) accept_surplus = true;
 
     // build the tree structure from our group path info
     for (unsigned long j = 0;  j < groups.size();  ++j) {
@@ -1520,13 +1568,15 @@ void Matchmaker::hgq_construct_tree() {
 
         // accept surplus
 	    vname.sprintf("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
-        if (param_defined(vname.Value())) {
-            group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
-        } else {
-            // backward compatability
-            vname.sprintf("GROUP_AUTOREGROUP_%s", gname.c_str());
-            group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
-        }
+        group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
+	    vname.sprintf("GROUP_AUTOREGROUP_%s", gname.c_str());
+        group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
+        if (group->autoregroup) autoregroup = true;
+        if (group->accept_surplus) accept_surplus = true;
+    }
+
+    if (autoregroup && accept_surplus) {
+        EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
     // With the tree structure in place, we can make a list of groups in breadth-first order
@@ -1732,6 +1782,12 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
 
     // Nothing to allocate
     if (surplus <= 0) return 0;
+
+    // If we are in autoregroup mode, proportional surplus allocation is disabled
+    if (autoregroup) {
+        dprintf(D_ALWAYS, "group quotas: autoregroup mode: proportional surplus allocation disabled\n");
+        return surplus;
+    }
 
     // If entire subtree requests nothing, halt now
     if (group->subtree_requested <= 0) return surplus;
@@ -2001,6 +2057,7 @@ GroupEntry::GroupEntry():
     config_quota(0),
     static_quota(false),
     accept_surplus(false),
+    autoregroup(false),
     usage(0),
     submitterAds(NULL),
     quota(0),
@@ -2130,9 +2187,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// If operating on a group with a quota, consider the size of 
 			// the "pie" to be limited to the groupQuota, so each user in 
 			// the group gets a reasonable sized slice.
-		if ( numStartdAds > groupQuota ) {
-			numStartdAds = groupQuota;
-		}
 		slotWeightTotal = untrimmedSlotWeightTotal;
 		if ( slotWeightTotal > groupQuota ) {
 			slotWeightTotal = groupQuota;
