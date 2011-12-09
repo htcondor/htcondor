@@ -1802,7 +1802,6 @@ static MyString current_splice_scope(void)
 		// on all the file systems we use (whereas : can't be a file system
 		// character on windows). The plus, and really anything other than :,
 		// isn't the best choice. Sorry.
-		scope += tmp + "+";
 		tmp = _spliceScope[_spliceScope.length() - 1];
 		scope = tmp + "+";
 	}
