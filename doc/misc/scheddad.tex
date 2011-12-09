@@ -2,9 +2,12 @@
 \begin{description}
 
 \index{ClassAd Scheduler attribute!DaemonCoreDutyCycle}
-\item[\AdAttr{DaemonCoreDutyCycle}:] The ratio of the time spent handling 
-messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Condor{schedd}.
-  A value near 0.0 indicates an idle daemon, while a value near 1.0 indicates a daemon running at or above capacity.
+\item[\AdAttr{DaemonCoreDutyCycle}:] A Statistics attribute defining
+  the ratio of the time spent handling 
+  messages and events over elapsed time for the time period defined by
+  \AdAttr{StatsLifetime} of this \Condor{schedd}.
+  A value near 0.0 indicates an idle daemon, 
+  while a value near 1.0 indicates a daemon running at or above capacity.
 
 \index{ClassAd Scheduler attribute!DaemonStartTime}
 \item[\AdAttr{DaemonStartTime}:] The time that this daemon was
@@ -21,100 +24,119 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
 \item[\AdAttr{JobQueueBirthdate}:] Description is not yet written.
 
 \index{ClassAd Scheduler attribute!JobsAccumRunningTime}
-\item[\AdAttr{JobsAccumRunningTime}:] Sum of the all of the time jobs 
-  have spent running
+\item[\AdAttr{JobsAccumRunningTime}:]  A Statistics attribute defining
+  the sum of the all of the time jobs have spent running
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsAccumTimeToStart}
-\item[\AdAttr{JobsAccumTimeToStart}:] Sum of all the time jobs have spent 
-  waiting to start
+\item[\AdAttr{JobsAccumTimeToStart}:] A Statistics attribute defining
+  the sum of all the time jobs have spent waiting to start
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsCheckpointed}
-\item[\AdAttr{JobsCheckpointed}:] Number of times jobs that have exited 
-  with status Checkpointed
+\item[\AdAttr{JobsCheckpointed}:] A Statistics attribute defining
+  the number of times jobs that have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_CKPTED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsCompleted}
-\item[\AdAttr{JobsCompleted}:] Number of jobs successfully completed
+\item[\AdAttr{JobsCompleted}:] A Statistics attribute defining
+  the number of jobs successfully completed
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsCoredumped}
-\item[\AdAttr{JobsCoredumped}:] Number of times that jobs have exited 
-  with status Coredumped
+\item[\AdAttr{JobsCoredumped}:] A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_COREDUMPED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsDebugLogError}
-\item[\AdAttr{JobsDebugLogError}:] Number of times that jobs have exited 
-  with status DebugLogError
+\item[\AdAttr{JobsDebugLogError}:] A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{?}  DebugLogError
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsExecFailed}
-\item[\AdAttr{JobsExecFailed}:] Number of times that jobs have exited 
-  with status ExecFailed
+\item[\AdAttr{JobsExecFailed}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_EXEC\_FAILED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsExited}
-\item[\AdAttr{JobsExited}:] Number of times that jobs that exited 
+\item[\AdAttr{JobsExited}:]  A Statistics attribute defining
+  the number of times that jobs that exited 
   (successfully or not)
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsExitedAndClaimClosing}
-\item[\AdAttr{JobsExitedAndClaimClosing}:] Number of times jobs have exited 
-  with status ExitAndClaimClosing
+\item[\AdAttr{JobsExitedAndClaimClosing}:]  A Statistics attribute defining
+  the number of times jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_EXITED\_AND\_CLAIM\_CLOSING}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsExitedNormally}
-\item[\AdAttr{JobsExitedNormally}:] Number of times that jobs have exited 
-  with status Success or with status ExitAndClaimClosing
+\item[\AdAttr{JobsExitedNormally}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_EXITED} or with an
+  exit code of \Expr{JOB\_EXITED\_AND\_CLAIM\_CLOSING}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsExitException}
-\item[\AdAttr{JobsExitException}:] Number of times that jobs have exited 
+\item[\AdAttr{JobsExitException}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status Exception or with an unknown status
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsKilled}
-\item[\AdAttr{JobsKilled}:] Number of times that jobs have exited 
+\item[\AdAttr{JobsKilled}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status Killed
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsMissedDeferralTime}
-\item[\AdAttr{JobsMissedDeferralTime}:] Number of times that jobs have exited 
+\item[\AdAttr{JobsMissedDeferralTime}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status MissedDeferralTime
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsNotStarted}
-\item[\AdAttr{JobsNotStarted}:] Number of times that jobs have exited 
+\item[\AdAttr{JobsNotStarted}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status NotStarted
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsShadowNoMemory}
-\item[\AdAttr{JobsShadowNoMemory}:] Number of times that jobs have exited 
+\item[\AdAttr{JobsShadowNoMemory}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   because there was not enough memory to start the \Condor{shadow}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsShouldHold}
-\item[\AdAttr{JobsShouldHold}:] Number of time that jobs have exited 
+\item[\AdAttr{JobsShouldHold}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status ShouldHold
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsShouldRemove}
-\item[\AdAttr{JobsShouldRemove}:] Number of time that jobs have exited 
+\item[\AdAttr{JobsShouldRemove}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status ShouldRemove
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsShouldRequeue}
-\item[\AdAttr{JobsShouldRequeue}:] Number of time that jobs have exited 
+\item[\AdAttr{JobsShouldRequeue}:]  A Statistics attribute defining
+  the number of times that jobs have exited 
   with status ShouldRequeue
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsStarted}
-\item[\AdAttr{JobsStarted}:] Number of jobs started
+\item[\AdAttr{JobsStarted}:] A Statistics attribute defining
+  the number of jobs started
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!JobsSubmitted}
-\item[\AdAttr{JobsSubmitted}:] Number of jobs submitted
+\item[\AdAttr{JobsSubmitted}:] A Statistics attribute defining
+  the number of jobs submitted
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
 \index{ClassAd Scheduler attribute!Machine}
@@ -190,110 +212,134 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   page~\pageref{param:QuillEnabled}.
 
 \index{ClassAd Scheduler attribute!RecentDaemonCoreDutyCycle}
-\item[\AdAttr{RecentDaemonCoreDutyCycle}:] The ratio of the time spent 
+\item[\AdAttr{RecentDaemonCoreDutyCycle}:] A Statistics attribute defining
+  the ratio of the time spent 
   handling messages and events over elapsed time 
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsAccumRunningTime}
-\item[\AdAttr{RecentJobsAccumRunningTime}:] Sum of the all of the time jobs 
+\item[\AdAttr{RecentJobsAccumRunningTime}:] A Statistics attribute defining
+  the sum of the all of the time jobs 
   which have exited 
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}
   spent running.
 
 \index{ClassAd Scheduler attribute!RecentJobsAccumTimeToStart}
-\item[\AdAttr{RecentJobsAccumTimeToStart}:] Sum of all the time jobs 
+\item[\AdAttr{RecentJobsAccumTimeToStart}:] A Statistics attribute defining
+  the sum of all the time jobs 
   which have exited
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}
   had spent waiting to start.
 
 \index{ClassAd Scheduler attribute!RecentJobsCheckpointed}
-\item[\AdAttr{RecentJobsCheckpointed}:] Number of times jobs that have exited 
-  with status Checkpointed
+\item[\AdAttr{RecentJobsCheckpointed}:] A Statistics attribute defining
+  the number of times jobs that have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_CKPTED}
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsCompleted}
-\item[\AdAttr{RecentJobsCompleted}:] Number of jobs successfully completed
+\item[\AdAttr{RecentJobsCompleted}:] A Statistics attribute defining
+  the number of jobs successfully completed
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsCoredumped}
-\item[\AdAttr{RecentJobsCoredumped}:] Number of times that jobs have exited 
-  with status Coredumped
+\item[\AdAttr{RecentJobsCoredumped}:] A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_COREDUMPED} 
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsDebugLogError}
-\item[\AdAttr{RecentJobsDebugLogError}:] Number of times that jobs have exited 
+\item[\AdAttr{RecentJobsDebugLogError}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status DebugLogError
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsExecFailed}
-\item[\AdAttr{RecentJobsExecFailed}:] Number of times that jobs have exited 
-  with status ExecFailed
+\item[\AdAttr{RecentJobsExecFailed}:] A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_EXEC\_FAILED} 
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsExited}
-\item[\AdAttr{RecentJobsExited}:] Number of times that jobs have exited normally
+\item[\AdAttr{RecentJobsExited}:] A Statistics attribute defining
+  the number of times that jobs have exited normally
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsExitedAndClaimClosing}
-\item[\AdAttr{RecentJobsExitedAndClaimClosing}:] Number of times that jobs 
-  have exited with status ExitAndClaimClosing
+\item[\AdAttr{RecentJobsExitedAndClaimClosing}:] A Statistics attribute defining
+  the number of times that jobs 
+  have exited with a \Condor{shadow} exit code of 
+  \Expr{JOB\_EXITED\_AND\_CLAIM\_CLOSING}
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsExitedNormally}
-\item[\AdAttr{RecentJobsExitedNormally}:] Number of times that jobs have exited 
-  with status Success or status ExitAndClaimClosing
+\item[\AdAttr{RecentJobsExitedNormally}:] A Statistics attribute defining
+  the number of times that jobs have exited 
+  with a \Condor{shadow} exit code of \Expr{JOB\_EXITED} or with an
+  exit code of \Expr{JOB\_EXITED\_AND\_CLAIM\_CLOSING}
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsExitException}
-\item[\AdAttr{RecentJobsExitException}:] Number of times that jobs have exited 
+\item[\AdAttr{RecentJobsExitException}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status Exception or with an unknown status
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsKilled}
-\item[\AdAttr{RecentJobsKilled}:] Number of times that jobs have exited 
+\item[\AdAttr{RecentJobsKilled}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status Killed
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsMissedDeferralTime}
-\item[\AdAttr{RecentJobsMissedDeferralTime}:] Number of times that jobs 
+\item[\AdAttr{RecentJobsMissedDeferralTime}:] A Statistics attribute defining
+  the number of times that jobs 
   have exited with status MissedDeferralTime
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsNotStarted}
-\item[\AdAttr{RecentJobsNotStarted}:] Number of times that jobs have exited 
+\item[\AdAttr{RecentJobsNotStarted}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status NotStarted
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsShadowNoMemory}
-\item[\AdAttr{RecentJobsShadowNoMemory}:] Number of times that jobs have exited 
+\item[\AdAttr{RecentJobsShadowNoMemory}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   because there was not enough memory to start the \Condor{shadow}
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsShouldHold}
-\item[\AdAttr{RecentJobsShouldHold}:] Number of time that jobs have exited 
+\item[\AdAttr{RecentJobsShouldHold}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status ShouldHold
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsShouldRemove}
-\item[\AdAttr{RecentJobsShouldRemove}:] Number of time that jobs have exited 
+\item[\AdAttr{RecentJobsShouldRemove}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status ShouldRemove
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsShouldRequeue}
-\item[\AdAttr{RecentJobsShouldRequeue}:] Number of time that jobs have exited 
+\item[\AdAttr{RecentJobsShouldRequeue}:] A Statistics attribute defining
+  the number of times that jobs have exited 
   with status ShouldRequeue
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsStarted}
-\item[\AdAttr{RecentJobsStarted}:] Number of jobs started
+\item[\AdAttr{RecentJobsStarted}:] A Statistics attribute defining
+  the number of jobs started
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentJobsSubmitted}
-\item[\AdAttr{RecentJobsSubmitted}:] Number of jobs submitted
+\item[\AdAttr{RecentJobsSubmitted}:] A Statistics attribute defining
+  the number of jobs submitted
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentShadowsReconnections}
-\item[\AdAttr{RecentShadowsReconnections}:] Number of times that \Condor{shadow}  daemons lost 
+\item[\AdAttr{RecentShadowsReconnections}:] A Statistics attribute defining
+  the number of times that \Condor{shadow}  daemons lost 
   connection to their \Condor{starter} daemons and successfully reconnected
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
   This statistic only appears in the Scheduler ClassAd if the level of
@@ -301,7 +347,8 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   is set to 2 or higher.
   
 \index{ClassAd Scheduler attribute!RecentShadowsRecycled}
-\item[\AdAttr{RecentShadowsRecycled}:] Number of times \Condor{shadow} 
+\item[\AdAttr{RecentShadowsRecycled}:] A Statistics attribute defining
+  the number of times \Condor{shadow} 
   processes have been recycled for use with a new job
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
   This statistic only appears in the Scheduler ClassAd if the level of
@@ -309,23 +356,27 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!RecentShadowsStarted}
-\item[\AdAttr{RecentShadowsStarted}:] Number of \Condor{shadow}s started
+\item[\AdAttr{RecentShadowsStarted}:] A Statistics attribute defining
+  the number of \Condor{shadow} daemons started
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
 \index{ClassAd Scheduler attribute!RecentStatsLifetime}
-\item[\AdAttr{RecentStatsLifetime}:] The time in seconds over which statistics values have been collected 
+\item[\AdAttr{RecentStatsLifetime}:] A Statistics attribute defining
+  the time in seconds over which statistics values have been collected 
   for values with attribute names beginning with Recent
 
 \index{ClassAd Scheduler attribute!RecentStatsTickTime}
-\item[\AdAttr{RecentStatsTickTime}:] The time that Recent statistics were last updated
+\item[\AdAttr{RecentStatsTickTime}:] A Statistics attribute defining
+  the time that Recent statistics were last updated
   represented as the number of seconds elapsed since
-    the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+  the Unix epoch (00:00:00 UTC, Jan 1, 1970).
   This statistic only appears in the Scheduler ClassAd if the level of
   verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
   is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!RecentWindowMax}
-\item[\AdAttr{RecentWindowMax}:] The maximum time in seconds over which Recent statistics are collected.
+\item[\AdAttr{RecentWindowMax}:] A Statistics attribute defining
+  the maximum time in seconds over which Recent statistics are collected.
   This statistic only appears in the Scheduler ClassAd if the level of
   verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
   is set to 2 or higher.
@@ -338,7 +389,8 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
 \item[\AdAttr{ServerTime}:] Description is not yet written.
 
 \index{ClassAd Scheduler attribute!ShadowsReconnections}
-\item[\AdAttr{ShadowsReconnections}:] Number of times \Condor{shadow}s lost 
+\item[\AdAttr{ShadowsReconnections}:] A Statistics attribute defining
+  the number of times \Condor{shadow}s lost 
   connection to their \Condor{starter}s and successfully reconnected
   in the previous \AdAttr{StatsLifetime} seconds.
   This statistic only appears in the Scheduler ClassAd if the level of
@@ -346,7 +398,8 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!ShadowsRecycled}
-\item[\AdAttr{ShadowsRecycled}:] Number of times Shadow processes have been 
+\item[\AdAttr{ShadowsRecycled}:] A Statistics attribute defining
+  the number of times \Condor{shadow} processes have been 
   recycled for use with a new job
   in the previous \AdAttr{StatsLifetime} seconds.
   This statistic only appears in the Scheduler ClassAd if the level of
@@ -354,15 +407,19 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!ShadowsRunning}
-\item[\AdAttr{ShadowsRunning}:] The number of \Condor{shadow}s currently running 
+\item[\AdAttr{ShadowsRunning}:] A Statistics attribute defining
+  the number of \Condor{shadow} daemons currently running 
   that are owned by this \Condor{schedd}.
 
 \index{ClassAd Scheduler attribute!ShadowsRunningPeak}
-\item[\AdAttr{ShadowsRunningPeak}:] The maximum number of \Condor{shadow}s running at one time
-  that were owned by this \Condor{schedd} over the lifetime of this this \Condor{schedd}.
+\item[\AdAttr{ShadowsRunningPeak}:] A Statistics attribute defining
+  the maximum number of \Condor{shadow} daemons running at one time
+  that were owned by this \Condor{schedd} over the lifetime of 
+  this \Condor{schedd}.
 
 \index{ClassAd Scheduler attribute!ShadowsStarted}
-\item[\AdAttr{ShadowsStarted}:] Number of \Condor{shadow}s started
+\item[\AdAttr{ShadowsStarted}:] A Statistics attribute defining
+  the number of \Condor{shadow} daemons started
   in the previous \AdAttr{StatsLifetime} seconds.
 
 \index{ClassAd Scheduler attribute!StartLocalUniverse}
@@ -378,16 +435,18 @@ messages and events over elapsed time for the \AdAttr{StatsLifetime} of this \Co
   page~\pageref{param:StartSchedulerUniverse}.
 
 \index{ClassAd Scheduler attribute!StatsLastUpdateTime}
-\item[\AdAttr{StatsLastUpdateTime}:] The time that Jobs statistics were last updated
+\item[\AdAttr{StatsLastUpdateTime}:] A Statistics attribute defining
+  the time that statistics about jobs were last updated,
   represented as the number of seconds elapsed since
-    the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+  the Unix epoch (00:00:00 UTC, Jan 1, 1970).
   This statistic only appears in the Scheduler ClassAd if the level of
   verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
   is set to 2 or higher.
 
 \index{ClassAd Scheduler attribute!StatsLifetime}
-\item[\AdAttr{StatsLifetime}:] The time in seconds over which statistics values have been collected
-  for values with attribute names that do not begin with Recent.
+\item[\AdAttr{StatsLifetime}:] A Statistics attribute defining
+  the time in seconds over which statistics values have been collected
+  for values with attribute names that do not begin with \Expr{Recent}.
   This statistic only appears in the Scheduler ClassAd if the level of
   verbosity set by the configuration variable \MacroNI{STATISTICS\_TO\_PUBLISH}
   is set to 2 or higher.
