@@ -117,7 +117,9 @@ aviary::history::processHistoryDirectory()
     const char *file = NULL;
 
     // each time through we rebuild our set of inodes
-    m_historyFiles.clear();
+    if (force_reset) {
+        m_historyFiles.clear();
+    }
 
     Directory dir ( m_path.Value() );
     dir.Rewind();
