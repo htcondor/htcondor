@@ -1763,7 +1763,7 @@ use_special_access( const char *file )
 }
 
 int
-access_via_afs( const char *file )
+access_via_afs( const char * /*file*/ )
 {
 	dprintf( D_SYSCALLS, "\tentering access_via_afs()\n" );
 
@@ -1796,7 +1796,7 @@ access_via_afs( const char *file )
 }
 
 int
-access_via_nfs( const char *file )
+access_via_nfs( const char * /*file*/ )
 {
 	dprintf( D_SYSCALLS, "\tentering access_via_nfs()\n" );
 
@@ -1969,8 +1969,8 @@ simp_log( const char *msg )
 	(void)umask( omask );
 }
 
-int pseudo_get_IOServerAddr(const int *reqtype, const char *filename,
-							char *host, int *port )
+int pseudo_get_IOServerAddr(const int * /*reqtype*/, const char * /*filename*/,
+							char * /*host*/, int * /*port*/ )
 {
         /* Should query the collector or look in the config file for server
            names.  Always return -1 until this can be fixed.  -Jim B. */
@@ -2044,7 +2044,7 @@ pseudo_suspended(int /*suspended*/)
 
 
 int
-pseudo_subproc_status(int subproc, int *statp, struct rusage *rusagep)
+pseudo_subproc_status(int /*subproc*/, int * /*statp*/, struct rusage *rusagep)
 {
 	struct rusage local_rusage;
 

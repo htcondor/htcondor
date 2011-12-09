@@ -2247,7 +2247,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// the "pie" to be limited to the groupQuota, so each user in 
 			// the group gets a reasonable sized slice.
 		if ( numStartdAds > groupQuota ) {
-			numStartdAds = groupQuota;
+			numStartdAds = (int)groupQuota;
 		}
 		slotWeightTotal = untrimmedSlotWeightTotal;
 		if ( slotWeightTotal > groupQuota ) {

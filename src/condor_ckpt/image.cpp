@@ -770,16 +770,16 @@ Image::Save()
 	position = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
 	for( i=0; i<head.N_Segs(); i++ ) {
 		position = map[i].SetPos( position );
-		dprintf( D_CKPT,"Pos: %ld\n",position);
+		dprintf( D_CKPT,"Pos: %ld\n",(long)position);
 	}
 
 	if( position < 0 ) {
 		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %ld\n",
-													position );
+													(long)position );
 		Suicide();
 	}
 
-	dprintf( D_ALWAYS, "Size of ckpt image = %ld bytes\n", position );
+	dprintf( D_ALWAYS, "Size of ckpt image = %ld bytes\n", (long)position );
 	len = position;
 
 	valid = TRUE;
@@ -1317,7 +1317,7 @@ Image::Write( int file_d )
 
 		ack = ntohl( ack );	// Ack is in network byte order, fix here
 		if( ack != (long) len ) {
-			dprintf( D_ALWAYS, "Ack - expected %ld, but got %d\n", len, ack );
+			dprintf( D_ALWAYS, "Ack - expected %ld, but got %d\n", (long)len, ack );
 			return -1;
 		}
 	}
@@ -1402,7 +1402,7 @@ SegMap::Read( int fd, ssize_t pos )
 				"greater than UINT_MAX. Sorry.\n");
 		} else {
 			dprintf( D_ALWAYS, "Checkpoint sequence error (%ld != %u)\n", 
-				pos, (unsigned int)file_loc );
+					 (long)pos, (unsigned int)file_loc );
 		}
 		Suicide();
 	}
@@ -1593,7 +1593,7 @@ SegMap::Write( int fd, ssize_t pos )
 				"greater than UINT_MAX. Sorry.\n");
 		} else {
 			dprintf( D_ALWAYS, "Checkpoint sequence error (%ld != %u)\n", 
-				pos, (unsigned int)file_loc );
+					 (long)pos, (unsigned int)file_loc );
 		}
 		Suicide();
 	}

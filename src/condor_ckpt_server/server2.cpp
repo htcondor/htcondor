@@ -345,7 +345,8 @@ int Server::SetUpPort(u_short port)
 
 void Server::SetUpPeers()
 {
-	char *peers, *peer, peer_addr[256], *ckpt_host;
+	char *peers, *peer, *ckpt_host;
+	//char peer_addr[256];
 	StringList peer_name_list;
 
 	if ((peers = param("CKPT_SERVER_HOSTS")) == NULL) {
@@ -2509,7 +2510,7 @@ void UnblockSignals()
 }
 
 
-int main( int argc, char **argv )
+int main( int /*argc*/, char **argv )
 {
 	/* For daemonCore, etc. */
 	set_mySubSystem( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );

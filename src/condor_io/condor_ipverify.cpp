@@ -904,7 +904,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 							"original ip address = %s",
 							PermString(perm),
 							peer_description.Value(),
-							hostnames.size(),
+							(unsigned long)hostnames.size(),
 							ipstr);
 					}
 				}

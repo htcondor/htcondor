@@ -3471,7 +3471,7 @@ DedicatedScheduler::displayResourceRequests( void )
 {
 	dprintf( D_FULLDEBUG,
 			 "Waiting to negotiate for %lu dedicated resource request(s)\n",
-			 resource_requests.size() );
+			 (unsigned long)resource_requests.size() );
 }
 
 

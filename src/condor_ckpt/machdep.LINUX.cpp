@@ -162,7 +162,7 @@ stack_end_addr()
   time than they were at checkpoint time.
 */
 void
-patch_registers( void *generic_ptr )
+patch_registers( void * /*generic_ptr*/ )
 {
 	//Any Needed??  Don't think so.
 }

@@ -88,7 +88,7 @@ file_info_node* FileInformation::AddFileInfo(const condor_sockaddr& machine_IP,
 					     const char*    file_name,
 					     u_lint         file_size,
 					     file_state     state,
-					     time_t*        last_modified_ptr)
+					     time_t*        /*last_modified_ptr*/ )
 {
   file_info_node* n;
   char           temp_name[INET6_ADDRSTRLEN];
