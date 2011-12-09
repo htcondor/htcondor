@@ -90,11 +90,10 @@ $success = sub
 			$diditpass = 0;
 		}
 		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+			chomp;
+			if( /^*.EXITING WITH STATUS 0*.$/ ) {
 				$passed = 1;
-				CondorTest::debug("$name: $line\n",1);
+				CondorTest::debug("$name: $_\n",1);
 			}
 		}
 		close(OUT);

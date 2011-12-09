@@ -3677,11 +3677,11 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
     Job *job = NULL;
 	MyString key;
 
-	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()\n");
+	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()"
+		" with prefix %s\n",prefix.Value());
 
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
 	  job->PrefixName(prefix);
     }
 
@@ -3697,7 +3697,6 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	// Then, reindex all the jobs keyed by their new name
     _jobs.Rewind();
     while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
 	  key = job->GetJobName();
 		if (_nodeNameHash.insert(key, job) != 0) {
 			// I'm reinserting everything newly, so this should never happen
@@ -3831,25 +3830,6 @@ Dag::LiftSplices(SpliceLayer layer)
 	// base case is above.
 	return NULL;
 }
-
-//---------------------------------------------------------------------------
-void
-Dag::LiftChildSplices(void)
-{
-	MyString key;
-	Dag *splice = NULL;
-
-	debug_printf(DEBUG_DEBUG_1, "Lifting child splices of %s...\n",
-				_spliceScope.Value());
-	_splices.startIterations();
-	while( _splices.iterate(key, splice) ) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting child splice: %s\n", key.Value());
-		splice->LiftSplices(SELF);
-	}
-	debug_printf(DEBUG_DEBUG_1, "Done lifting child splices of %s.\n",
-				_spliceScope.Value());
-}
-
 
 //---------------------------------------------------------------------------
 // Grab all of the nodes out of the splice, and place them into here.
