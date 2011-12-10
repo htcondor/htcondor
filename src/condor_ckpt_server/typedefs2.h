@@ -156,7 +156,7 @@ typedef struct service_req_pkt
 {
   u_lint  ticket;
   u_short service;
-  u_lint  key;
+  int  key;
   char    owner_name[MAX_NAME_LENGTH]; 
   char    file_name[MAX_CONDOR_FILENAME_LENGTH];
   char    new_file_name[MAX_CONDOR_FILENAME_LENGTH-4]; /* -4 to fit shadowIP */
