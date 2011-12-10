@@ -1,0 +1,16 @@
+CONFIG job_dagman_final-F.config
+
+#TEMPTEMP -- add a pre_skip test here after merging
+JOB F_A job_dagman_final-F-nodeA.cmd
+SCRIPT PRE F_A job_dagman_final-F-script.pl F_C Pre 0 $DAG_STATUS $FAILED_COUNT -1
+
+JOB F_B1 job_dagman_final-F-nodeB1.cmd
+# This job will abort the DAG.
+JOB F_B2 job_dagman_final-F-nodeB2.cmd
+ABORT-DAG-ON F_B2 2
+
+# Condor job and POST script will succeed for this node, overriding the
+# failure of the rest of the DAG.
+FINAL F_C job_dagman_final-F-nodeC.cmd
+
+PARENT F_A CHILD F_B1 F_B2

@@ -47,6 +47,7 @@ const char *Job::queue_t_names[] = {
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the status_t enum
 const char * Job::status_t_names[] = {
+    "STATUS_NOT_READY",
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
     "STATUS_SUBMITTED",
@@ -99,14 +100,8 @@ Job::~Job() {
 //---------------------------------------------------------------------------
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
-	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _pre_status( NO_PRE_VALUE )
-{
-	Init( jobName, directory, cmdFile );
-}
-
-//---------------------------------------------------------------------------
-void Job::Init( const char* jobName, const char* directory,
-			const char* cmdFile )
+	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ),
+			_pre_status( NO_PRE_VALUE ), _final( false )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -391,6 +386,10 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		whynot = "parent == NULL";
 		return false;
 	}
+	if(GetFinal()) {
+		whynot = "Tried to add a parent to a Final node";
+		return false;
+	}
 
 		// we don't currently allow a new parent to be added to a
 		// child that has already been started (unless the parent is
@@ -455,7 +454,10 @@ Job::CanAddChild( Job* child, MyString &whynot )
 		whynot = "child == NULL";
 		return false;
 	}
-
+	if(GetFinal()) {
+		whynot = "Tried to add a child to a final node";
+		return false;
+	}
 	whynot = "n/a";
 	return true;
 }

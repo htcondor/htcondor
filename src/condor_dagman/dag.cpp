@@ -88,6 +88,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
+	_final_job (0),
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
@@ -184,6 +185,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_recovery = false;
 	_abortOnScarySubmit = true;
 	_configFile = NULL;
+	_runningFinalNode = false;
 		
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
@@ -194,6 +196,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagIsHalted = false;
 	_dagFiles.rewind();
 	_haltFile = HaltFileName( _dagFiles.next() );
+
+	_dagStatus = DAG_STATUS_OK;
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 
@@ -673,7 +677,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// etc., if we haven't already gotten an error
 			// from another job proc in this job cluster
 		if ( job->_Status != Job::STATUS_ERROR ) {
-			job->_Status = Job::STATUS_ERROR;
+			job->TerminateFailure();
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 				  "Condor reported %s event for job proc (%d.%d.%d)",
 				  ULogEventNumberNames[event->eventNumber],
@@ -745,7 +749,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					}
 				}
 
-				job->_Status = Job::STATUS_ERROR;
+				job->TerminateFailure();
 				if ( job->_queuedNodeJobProcs > 0 ) {
 				  // once one job proc fails, remove
 				  // the whole cluster
@@ -868,6 +872,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
 				_numNodesFailed++;
+				if ( _dagStatus == DAG_STATUS_OK ) {
+					_dagStatus = DAG_STATUS_NODE_FAILED;
+				}
 			}
 		}
 		return;
@@ -928,7 +935,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->GetJobName() );
 		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
 				// POST script failed or was killed by a signal
-			job->_Status = Job::STATUS_ERROR;
+			job->TerminateFailure();
 
 			int mainJobRetval = job->retval;
 
@@ -973,6 +980,9 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			} else {
 					// no more retries -- node failed
 				_numNodesFailed++;
+				if ( _dagStatus == DAG_STATUS_OK ) {
+					_dagStatus = DAG_STATUS_NODE_FAILED;
+				}
 
 				MyString	errMsg;
 
@@ -1364,6 +1374,21 @@ Dag::StartNode( Job *node, bool isRetry )
 }
 
 //-------------------------------------------------------------------------
+bool
+Dag::StartFinalNode()
+{
+	if ( _final_job && !_runningFinalNode ) {
+		debug_printf( DEBUG_QUIET, "Running final node...\n" );
+		_final_job->_Status = Job::STATUS_READY;
+		StartNode( _final_job, false );
+		_runningFinalNode = true;
+		return true;
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------
 // returns number of jobs submitted
 int
 Dag::SubmitReadyJobs(const Dagman &dm)
@@ -1519,6 +1544,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	return numSubmitsThisCycle;
 }
 
+#if 0 //TEMPTEMP!!!!!!!
 //---------------------------------------------------------------------------
 int
 Dag::PreScriptReaper( const char* nodeName, int status )
@@ -1583,6 +1609,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			TerminateJob( job, false, false );
 		}
 
+//TEMPTEMP -- crap -- nasty conflict here because of refactoring!
+<<<<<<< HEAD
 			// Check for POST script.
 		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
 				// PRE script Failed.  The return code is in retval member.
@@ -1590,6 +1618,14 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
 			RunPostScript( job, _alwaysRunPost, job->retval );
 		}
+=======
+			//TEMP -- this will have to get changed when this is merged
+			// and therefore combined with the 'always run post script'
+			// feature
+        job->TerminateFailure();
+		_preRunNodeCount--;
+		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+>>>>>>> V7_7-allow_cleanup_final_dag_node-branch
 
 			// Check for retries.
 		else if( job->GetRetries() < job->GetRetryMax() ) {
@@ -1600,6 +1636,124 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			// None of the above apply -- the node has failed.
 		else {
 			_numNodesFailed++;
+			if ( _dagStatus == DAG_STATUS_OK ) {
+				_dagStatus = DAG_STATUS_NODE_FAILED;
+			}
+			if( job->GetRetryMax() > 0 ) {
+				// add # of retries to error_text
+				char *tmp = strnewp( job->error_text );
+				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+						"%s (after %d node retries)", tmp,
+						job->GetRetries() );
+				delete [] tmp;   
+			}
+		}
+
+	} else {
+		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
+				"successfully.\n", job->GetJobName() );
+		job->retval = 0; // for safety on retries
+		job->_Status = Job::STATUS_READY;
+		if ( _submitDepthFirst ) {
+			_readyQ->Prepend( job, -job->_nodePriority );
+		} else {
+			_readyQ->Append( job, -job->_nodePriority );
+		}
+	}
+//TEMPTEMP -- crap -- here's a really nasty conflict, too!
+<<<<<<< HEAD
+
+	CheckForDagAbort(job, "PRE script");
+	// if dag abort happened, we never return here!
+	return true;
+}
+#else //TEMPTEMP!!!!!
+//TEMPTEMP -- the version below is from the master, with the final node changes manually added
+//---------------------------------------------------------------------------
+int
+Dag::PreScriptReaper( const char* nodeName, int status )
+{
+	ASSERT( nodeName != NULL );
+	Job* job = FindNodeByName( nodeName );
+	ASSERT( job != NULL );
+	if ( job->GetStatus() != Job::STATUS_PRERUN ) {
+		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
+	}
+
+	_preRunNodeCount--;
+
+	bool preScriptFailed = false;
+	if ( WIFSIGNALED( status ) ) {
+			// if script was killed by a signal
+		preScriptFailed = true;
+		debug_printf( DEBUG_QUIET, "PRE Script of Job %s died on %s\n",
+					  job->GetJobName(),
+					  daemonCore->GetExceptionString(status) );
+		snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+				"PRE Script died on %s",
+				daemonCore->GetExceptionString(status) );
+		job->retval = ( 0 - WTERMSIG(status ) );
+	} else if ( WEXITSTATUS( status ) != 0 ) {
+			// if script returned failure
+		preScriptFailed = true;
+		debug_printf( DEBUG_QUIET,
+					  "PRE Script of Job %s failed with status %d\n",
+					  job->GetJobName(), WEXITSTATUS(status) );
+		snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+				"PRE Script failed with status %d",
+				WEXITSTATUS(status) );
+		job->retval = WEXITSTATUS( status );
+	} else {
+			// if script succeeded
+		if( job->_scriptPost != NULL ) {
+			job->_scriptPost->_retValScript = 0;
+		}
+		job->retval = 0;
+	}
+
+	_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+
+	if ( preScriptFailed ) {
+		job->TerminateFailure();
+
+			// Check for PRE_SKIP.
+		if ( job->HasPreSkip() && job->GetPreSkip() == job->retval ) {
+				// The PRE script exited with a non-zero status, but
+				// because that status matches the PRE_SKIP value,
+				// we're skipping the node job and the POST script
+				// and considering the node successful.
+			debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
+					"value %d indicates we are done (successfully) with node %s\n",
+					job->retval, job->GetJobName() );
+			job->retval = 0; // Job _is_ successful!
+				// TEMP -- we probably need to write something to the
+				// jobstate.log file here, but JOB_SUCCESS is not the
+				// right thing.  wenger 2011-09-01
+			// _jobstateLog.WriteJobSuccessOrFailure( job );
+			TerminateJob( job, false, false );
+		}
+
+			// Check for POST script.
+		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
+				// PRE script Failed.  The return code is in retval member.
+			job->_scriptPost->_retValScript = job->retval;
+			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
+			RunPostScript( job, _alwaysRunPost, job->retval );
+		}
+
+			// Check for retries.
+		else if( job->GetRetries() < job->GetRetryMax() ) {
+			job->TerminateFailure();
+			RestartNode( job, false );
+		}
+
+			// None of the above apply -- the node has failed.
+		else {
+			_numNodesFailed++;
+			//TEMPTEMP -- make sure this is right...
+			if ( _dagStatus == DAG_STATUS_OK ) {
+				_dagStatus = DAG_STATUS_NODE_FAILED;
+			}
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
@@ -1626,6 +1780,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 	// if dag abort happened, we never return here!
 	return true;
 }
+#endif //TEMPTEMP!!!!!
 
 //---------------------------------------------------------------------------
 // This is the only way a POST script runs.
@@ -1635,7 +1790,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 {
 	// A little defensive programming. Just check that we are
 	// allowed to run this script.  Because callers can be a little
-        // sloppy...
+	// sloppy...
 	if( ( !ignore_status && status != 0 ) || !job->_scriptPost ) {
 		return false;
 	}
@@ -1725,7 +1880,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			  // Exit here, because otherwise we'll wait forever to see
 			  // the event that we just failed to write (see gittrac #934).
 			  // wenger 2009-11-12.
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 		}
 	}
 	return true;
@@ -1775,6 +1930,48 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 		}
 		dprintf( D_ALWAYS | D_NOHEADER, "\n" );
 	}
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::FinishedRunning() const
+{
+	if ( _final_job && !_runningFinalNode ) {
+			// Make sure we don't incorrectly return true if we get called
+			// just before a final node is started...
+		return false;
+	}
+
+	return FinishedExceptFinal();
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::DoneSuccess() const
+{
+	if ( NumNodesDone() == NumNodes() ) {
+		return true;
+	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
+			// Final node can override the overall DAG status.
+		return true;
+	}
+
+	return false;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::DoneFailed() const
+{
+	if ( !FinishedRunning() ) {
+			// Note: if final node is running we should get to here...
+		return false;
+	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
+			// Success of final node overrides failure of any other node.
+		return false;
+	}
+
+	return NumNodesFailed() > 0;
 }
 
 //---------------------------------------------------------------------------
@@ -1885,7 +2082,8 @@ void Dag::RemoveRunningScripts ( ) const {
 
 //-----------------------------------------------------------------------------
 void Dag::Rescue ( const char * dagFile, bool multiDags,
-			int maxRescueDagNum, bool parseFailed, bool isPartial ) /* const */
+			int maxRescueDagNum, bool overwrite, bool parseFailed,
+			bool isPartial ) /* const */
 {
 	MyString rescueDagFile;
 	if ( parseFailed ) {
@@ -1894,7 +2092,12 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 	} else {
 		int nextRescue = FindLastRescueDagNum( dagFile, multiDags,
 					maxRescueDagNum ) + 1;
-		if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
+		if ( overwrite && nextRescue > 1 ) {
+			nextRescue--;
+		}
+		if ( nextRescue > maxRescueDagNum ) {
+			nextRescue = maxRescueDagNum;
+		}
 		rescueDagFile = RescueDagName( dagFile, multiDags, nextRescue );
 	}
 
@@ -1906,8 +2109,397 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 	WriteRescue( rescueDagFile.Value(), dagFile, parseFailed, isPartial );
 }
 
-static const char *RESCUE_DAG_VERSION = "2.0.0";
+static const char *RESCUE_DAG_VERSION = "2.0.1";
 
+#if 0 //TEMPTEMP!!!!!!
+//-----------------------------------------------------------------------------
+void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
+			bool parseFailed, bool isPartial) /* const */
+{
+	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
+				rescue_file );
+
+    FILE *fp = safe_fopen_wrapper_follow(rescue_file, "w");
+    if (fp == NULL) {
+        debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
+					  rescue_file);
+        return;
+    }
+
+	bool reset_retries_upon_rescue =
+		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
+
+
+	if ( parseFailed ) {
+    	fprintf(fp, "# \"Rescue\" DAG file, created after failure parsing\n");
+    	fprintf(fp, "#   the %s DAG file\n", dagFile);
+	} else {
+    	fprintf(fp, "# Rescue DAG file, created after running\n");
+    	fprintf(fp, "#   the %s DAG file\n", dagFile);
+	}
+
+	time_t timestamp;
+	(void)time( &timestamp );
+	const struct tm *tm;
+	tm = gmtime( &timestamp );
+	fprintf( fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1,
+				tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
+				tm->tm_sec );
+	fprintf( fp, "# Rescue DAG version: %s (%s)\n", RESCUE_DAG_VERSION,
+				isPartial ? "partial" : "full" );
+
+    fprintf(fp, "#\n");
+    fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
+    fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
+    fprintf(fp, "# Nodes that failed: %d\n", _numNodesFailed);
+
+    //
+    // Print the names of failed Jobs
+    //
+    fprintf(fp, "#   ");
+    ListIterator<Job> it (_jobs);
+    Job * job;
+    while (it.Next(job)) {
+        if (job->GetStatus() == Job::STATUS_ERROR) {
+            fprintf(fp, "%s,", job->GetJobName());
+        }
+    }
+    fprintf(fp, "<ENDLIST>\n\n");
+
+	//
+	// REJECT tells DAGMan to reject this DAG if we try to run it
+	// (which we shouldn't).
+	//
+	if ( parseFailed && !isPartial ) {
+		fprintf(fp, "REJECT\n\n");
+	}
+
+	//
+	// Print the CONFIG file, if any.
+	//
+	if ( _configFile && !isPartial ) {
+    	fprintf( fp, "CONFIG %s\n\n", _configFile );
+		
+	}
+
+	//
+	// Print the node status file, if any.
+	//
+	if ( _statusFileName && !isPartial ) {
+		fprintf( fp, "NODE_STATUS_FILE %s\n\n", _statusFileName );
+	}
+
+	//
+	// Print the jobstate.log file, if any.
+	//
+	if ( _jobstateLog.LogFile() && !isPartial ) {
+		fprintf( fp, "JOBSTATE_LOG %s\n\n", _jobstateLog.LogFile() );
+	}
+
+    //
+    // Print per-node information.
+    //
+    it.ToBeforeFirst();
+    while (it.Next(job)) {
+		WriteNodeToRescue( fp, job, reset_retries_upon_rescue, isPartial );
+    }
+
+    //
+    // Print Dependency Section
+    //
+<<<<<<< HEAD
+	if ( !isPartial ) {
+    	fprintf(fp, "\n");
+    	it.ToBeforeFirst();
+    	while (it.Next(job)) {
+
+        	set<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
+        	if (!_queue.empty()) {
+            	fprintf(fp, "PARENT %s CHILD", job->GetJobName());
+
+				set<JobID_t>::const_iterator qit;
+				for (qit = _queue.begin(); qit != _queue.end(); qit++) {
+                	Job * child = FindNodeByNodeID( *qit );
+                	ASSERT( child != NULL );
+                	fprintf(fp, " %s", child->GetJobName());
+				}
+            	fprintf(fp, "\n");
+        	}
+    	}
+	}
+
+	//
+	// Print "throttle by node category" settings.
+	//
+	if ( !isPartial ) {
+		_catThrottles.PrintThrottles( fp );
+	}
+
+    fclose( fp );
+}
+
+//-----------------------------------------------------------------------------
+void
+Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
+			bool isPartial )
+{
+		// Print the JOB/DATA line.
+	const char *keyword = "";
+	if ( node->JobType() == Job::TYPE_CONDOR ) {
+		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
+	} else if( node->JobType() == Job::TYPE_STORK ) {
+		keyword = "DATA";
+	} else {
+		EXCEPT( "Illegal node type (%d)\n", node->JobType() );
+	}
+
+	if ( !isPartial ) {
+		fprintf( fp, "\n%s %s %s ", keyword, node->GetJobName(),
+					node->GetDagFile() ? node->GetDagFile() :
+					node->GetCmdFile() );
+		if ( strcmp( node->GetDirectory(), "" ) ) {
+			fprintf( fp, "DIR %s ", node->GetDirectory() );
+		}
+		if ( node->GetNoop() ) {
+			fprintf( fp, "NOOP " );
+		}
+		fprintf( fp, "\n" );
+
+			// Print the SCRIPT PRE line, if any.
+		if ( node->_scriptPre != NULL ) {
+			fprintf( fp, "SCRIPT PRE  %s %s\n", 
+			node->GetJobName(), node->_scriptPre->GetCmd() );
+		}
+
+			// Print the PRE_SKIP line, if any.
+		if ( node->HasPreSkip() != 0 ) {
+			fprintf( fp, "PRE_SKIP %s %d\n", node->GetJobName(), node->GetPreSkip() );
+		}
+
+			// Print the SCRIPT POST line, if any.
+		if ( node->_scriptPost != NULL ) {
+			fprintf( fp, "SCRIPT POST %s %s\n", 
+						node->GetJobName(), node->_scriptPost->GetCmd() );
+		}
+
+			// Print the VARS line, if any.
+		if ( !node->varNamesFromDag->IsEmpty() ) {
+			fprintf( fp, "VARS %s", node->GetJobName() );
+	
+			ListIterator<MyString> names( *node->varNamesFromDag );
+			ListIterator<MyString> vals( *node->varValsFromDag );
+			names.ToBeforeFirst();
+			vals.ToBeforeFirst();
+			MyString *strName, *strVal;
+			while ( (strName = names.Next() ) && (strVal = vals.Next()) ) {
+				fprintf(fp, " %s=\"", strName->Value());
+					// now we print the value, but we have to re-escape certain characters
+				for( int i = 0; i < strVal->Length(); i++ ) {
+					char c = (*strVal)[i];
+					if ( c == '\"' ) {
+						fprintf( fp, "\\\"" );
+					} else if (c == '\\') {
+						fprintf( fp, "\\\\" );
+					} else {
+						fprintf( fp, "%c", c );
+					}
+				}
+				fprintf( fp, "\"" );
+			}
+			fprintf( fp, "\n" );
+		}
+
+			// Print the ABORT-DAG-ON line, if any.
+		if ( node->have_abort_dag_val ) {
+			fprintf( fp, "ABORT-DAG-ON %s %d", node->GetJobName(),
+						node->abort_dag_val );
+			if ( node->have_abort_dag_return_val ) {
+				fprintf( fp, " RETURN %d", node->abort_dag_return_val );
+			}
+			fprintf( fp, "\n" );
+		}
+
+			// Print the PRIORITY line, if any.
+			// Note: when gittrac #2167 gets merged, we need to think
+			// about how this code will interact with that code.
+			// wenger/nwp 2011-08-24
+		if ( node->_hasNodePriority ) {
+			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
+						node->_nodePriority );
+		}
+
+			// Print the CATEGORY line, if any.
+		if ( node->GetThrottleInfo() ) {
+			fprintf( fp, "CATEGORY %s %s\n", node->GetJobName(),
+						node->GetThrottleInfo()->_category->Value() );
+		}
+	}
+
+	if ( node->_Status == Job::STATUS_DONE ) {
+		fprintf(fp, "DONE %s\n", node->GetJobName() );
+	}
+=======
+    fprintf(fp, "\n");
+    it.ToBeforeFirst();
+    while (it.Next(job)) {
+>>>>>>> V7_7-allow_cleanup_final_dag_node-branch
+
+		// Print the RETRY line, if any.
+	if( node->retry_max > 0 ) {
+		int retriesLeft = (node->retry_max - node->retries);
+
+		if ( node->_Status == Job::STATUS_ERROR
+					&& node->retries < node->retry_max 
+					&& node->have_retry_abort_val
+					&& node->retval == node->retry_abort_val ) {
+			fprintf( fp, "# %d of %d retries performed; remaining attempts "
+						"aborted after node returned %d\n", 
+						node->retries, node->retry_max, node->retval );
+		} else {
+			if ( !reset_retries_upon_rescue ) {
+				fprintf( fp,
+							"# %d of %d retries already performed; %d remaining\n",
+							node->retries, node->retry_max, retriesLeft );
+			}
+		}
+
+		ASSERT( node->retries <= node->retry_max );
+		if ( !reset_retries_upon_rescue ) {
+			fprintf( fp, "RETRY %s %d", node->GetJobName(), retriesLeft );
+		} else {
+			fprintf( fp, "RETRY %s %d", node->GetJobName(), node->retry_max );
+		}
+		if ( node->have_retry_abort_val ) {
+			fprintf( fp, " UNLESS-EXIT %d", node->retry_abort_val );
+		}
+		fprintf( fp, "\n" );
+	}
+}
+
+//-----------------------------------------------------------------------------
+void
+Dag::WriteNodeToRescue( FILE *fp, /* const */ Job *node,
+			bool reset_retries_upon_rescue ) const
+{
+		// Print the JOB/DATA line.
+	const char *keyword = "";
+	if ( node->GetFinal() ) {
+		keyword = "FINAL";
+	} else if ( node->JobType() == Job::TYPE_CONDOR ) {
+		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
+	} else if ( node->JobType() == Job::TYPE_STORK ) {
+		keyword = "DATA";
+	} else {
+		EXCEPT( "Illegal node type (%d)\n", node->JobType() );
+	}
+	fprintf( fp, "%s %s %s ", keyword, node->GetJobName(),
+				node->GetDagFile() ? node->GetDagFile() :
+				node->GetCmdFile() );
+	if ( strcmp( node->GetDirectory(), "" ) ) {
+		fprintf(fp, "DIR %s ", node->GetDirectory());
+	}
+	if ( node->GetNoop() ) {
+		fprintf( fp, "NOOP " );
+	}
+	fprintf( fp, "%s\n",
+				node->_Status == Job::STATUS_DONE ? "DONE" : "" );
+
+		// Print the SCRIPT PRE line, if any.
+	if ( node->_scriptPre != NULL ) {
+		fprintf( fp, "SCRIPT PRE  %s %s\n", 
+					node->GetJobName(), node->_scriptPre->GetCmd() );
+	}
+
+		// Print the SCRIPT POST line, if any.
+	if ( node->_scriptPost != NULL ) {
+		fprintf( fp, "SCRIPT POST %s %s\n", 
+					node->GetJobName(), node->_scriptPost->GetCmd() );
+	}
+
+		// Print the RETRY line, if any.
+	if ( node->retry_max > 0 ) {
+		int retriesLeft = (node->retry_max - node->retries);
+
+		if ( node->_Status == Job::STATUS_ERROR &&
+					node->retries < node->retry_max &&
+					node->have_retry_abort_val &&
+					node->retval == node->retry_abort_val ) {
+			fprintf( fp, "# %d of %d retries performed; remaining attempts "
+						"aborted after node returned %d\n", 
+						node->retries, node->retry_max, node->retval );
+		} else {
+			if ( !reset_retries_upon_rescue ) {
+				fprintf( fp,
+							"# %d of %d retries already performed; %d remaining\n",
+							node->retries, node->retry_max, retriesLeft );
+			}
+		}
+
+		ASSERT( node->retries <= node->retry_max );
+		if ( !reset_retries_upon_rescue ) {
+			fprintf( fp, "RETRY %s %d", node->GetJobName(), retriesLeft );
+		} else {
+			fprintf( fp, "RETRY %s %d", node->GetJobName(), node->retry_max );
+		}
+		if ( node->have_retry_abort_val ) {
+			fprintf( fp, " UNLESS-EXIT %d", node->retry_abort_val );
+		}
+		fprintf( fp, "\n" );
+	}
+
+		// Print the VARS line, if any.
+	if ( !node->varNamesFromDag->IsEmpty() ) {
+		fprintf( fp, "VARS %s", node->GetJobName() );
+	
+		ListIterator<MyString> names( *node->varNamesFromDag );
+		ListIterator<MyString> vals( *node->varValsFromDag );
+		names.ToBeforeFirst();
+		vals.ToBeforeFirst();
+		MyString *strName, *strVal;
+		while ( (strName = names.Next()) && (strVal = vals.Next()) ) {
+			fprintf( fp, " %s=\"", strName->Value() );
+				// now we print the value, but we have to re-escape certain characters
+				for ( int i = 0; i < strVal->Length(); i++ ) {
+				char c = (*strVal)[i];
+				if ( c == '\"' ) {
+					fprintf( fp, "\\\"" );
+				} else if ( c == '\\' ) {
+					fprintf( fp, "\\\\" );
+				} else {
+					fprintf( fp, "%c", c );
+				}
+			}
+			fprintf( fp, "\"" );
+		}
+		fprintf( fp, "\n" );
+	}
+
+		// Print the ABORT-DAG-ON line, if any.
+	if ( node->have_abort_dag_val ) {
+		fprintf( fp, "ABORT-DAG-ON %s %d", node->GetJobName(),
+					node->abort_dag_val );
+		if ( node->have_abort_dag_return_val ) {
+			fprintf( fp, " RETURN %d", node->abort_dag_return_val );
+		}
+		fprintf( fp, "\n" );
+	}
+
+		// Print the PRIORITY line, if any.
+	if ( node->_hasNodePriority ) {
+		fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
+					node->_nodePriority );
+	}
+
+		// Print the CATEGORY line, if any.
+	if ( node->GetThrottleInfo() ) {
+		fprintf( fp, "CATEGORY %s %s\n", node->GetJobName(),
+					node->GetThrottleInfo()->_category->Value() );
+	}
+
+	fprintf( fp, "\n" );
+}
+#else //TEMPTEMP!!!!
+//TEMPTEMP -- the version below is strictly the version from the master, without the final node stuff.
 //-----------------------------------------------------------------------------
 void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 			bool parseFailed, bool isPartial) /* const */
@@ -2165,6 +2757,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		fprintf( fp, "\n" );
 	}
 }
+#endif //TEMPTEMP!!!
 
 //===========================================================================
 // Private Methods
@@ -2258,6 +2851,9 @@ Dag::RestartNode( Job *node, bool recovery )
                       "(last attempt returned %d)\n",
                       node->GetJobName(), node->retval);
         _numNodesFailed++;
+		if ( _dagStatus == DAG_STATUS_OK ) {
+			_dagStatus = DAG_STATUS_NODE_FAILED;
+		}
         return;
     }
 	node->_Status = Job::STATUS_READY;
@@ -2385,9 +2981,11 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
 		if ( job->have_abort_dag_return_val ) {
-			main_shutdown_rescue( job->abort_dag_return_val );
+			main_shutdown_rescue( job->abort_dag_return_val,
+						job->abort_dag_return_val != 0 ? DAG_STATUS_ABORT :
+						DAG_STATUS_OK );
 		} else {
-			main_shutdown_rescue( job->retval );
+			main_shutdown_rescue( job->retval, DAG_STATUS_ABORT );
 		}
 		return true;
 	}
@@ -3077,9 +3675,20 @@ bool Dag::Add( Job& job )
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
+		// Final node is not added to the "normal" node list here, so
+		// it won't get run via the ready queue.
+	if ( job.GetFinal() ) {
+		if ( _final_job ) {
+        	debug_printf( DEBUG_QUIET, "Error: DAG already has a final "
+						"node %s; attempting to add final node %s\n",
+						_final_job->GetJobName(), job.GetJobName() );
+			return false;
+		}
+		job._Status = Job::STATUS_NOT_READY;
+		_final_job = &job;
+	}
 	return _jobs.Append(&job);
 }
-
 
 //---------------------------------------------------------------------------
 bool
@@ -3116,6 +3725,9 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	else if( node->GetStatus() == Job::STATUS_ERROR ) {
 		_numNodesFailed--;
 		ASSERT( _numNodesFailed >= 0 );
+		if ( _numNodesFailed == 0 && _dagStatus == DAG_STATUS_NODE_FAILED ) {
+			_dagStatus = DAG_STATUS_OK;
+		}
 	}
 	else if( node->GetStatus() == Job::STATUS_READY ) {
 		ASSERT( _readyQ );
@@ -3424,7 +4036,7 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 					"DAGMAN_ABORT_ON_SCARY_SUBMIT to false if you are "
 					"*sure* this shouldn't cause an abort.\n",
 					message.Value() );
-		main_shutdown_rescue( EXIT_ERROR );
+		main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 		return true;
 	} else {
 		debug_printf( DEBUG_QUIET,
@@ -3566,11 +4178,14 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
-		node->_Status = Job::STATUS_ERROR;
+		node->TerminateFailure();
 		snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"No 'log =' value found in submit file %s",
 					node->GetCmdFile() );
 	  	_numNodesFailed++;
+		if ( _dagStatus == DAG_STATUS_OK ) {
+			_dagStatus = DAG_STATUS_NODE_FAILED;
+		}
 		result = SUBMIT_RESULT_NO_SUBMIT;
 
 	} else {
@@ -3706,8 +4321,11 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
 			(void)RunPostScript( node, _alwaysRunPost, 0 );
 		} else {
-			node->_Status = Job::STATUS_ERROR;
+			node->TerminateFailure();
 			_numNodesFailed++;
+			if ( _dagStatus == DAG_STATUS_OK ) {
+				_dagStatus = DAG_STATUS_NODE_FAILED;
+			}
 		}
 	} else {
 		// We have more submit attempts left, put this node back into the
@@ -3741,7 +4359,7 @@ Dag::DecrementJobCounts( Job *node )
 void
 Dag::UpdateJobCounts( Job *node, int change )
 {
-    _numJobsSubmitted += change;
+	_numJobsSubmitted += change;
 	ASSERT( _numJobsSubmitted >= 0 );
 
 	if ( node->GetThrottleInfo() ) {
@@ -3769,7 +4387,7 @@ Dag::SetDirectory(char *dir)
 void
 Dag::PropogateDirectoryToAllNodes(void)
 {
-    Job *job = NULL;
+	Job *job = NULL;
 	MyString key;
 
 	if (m_directory == ".") {
@@ -3794,16 +4412,16 @@ Dag::PropogateDirectoryToAllNodes(void)
 void
 Dag::PrefixAllNodeNames(const MyString &prefix)
 {
-    Job *job = NULL;
+	Job *job = NULL;
 	MyString key;
 
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()\n");
 
-    _jobs.Rewind();
-    while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
-	  job->PrefixName(prefix);
-    }
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		ASSERT( job != NULL );
+		job->PrefixName(prefix);
+	}
 
 	// Here we must reindex the hash view with the prefixed name.
 	// also fix my node name hash view of the jobs
@@ -3815,10 +4433,10 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	}
 
 	// Then, reindex all the jobs keyed by their new name
-    _jobs.Rewind();
-    while( (job = _jobs.Next()) ) {
-      ASSERT( job != NULL );
-	  key = job->GetJobName();
+	_jobs.Rewind();
+	while( (job = _jobs.Next()) ) {
+		ASSERT( job != NULL );
+		key = job->GetJobName();
 		if (_nodeNameHash.insert(key, job) != 0) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two jobs have an identical name, which means another
@@ -3827,7 +4445,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 			debug_error(1, DEBUG_QUIET, 
 				"Dag::PrefixAllNodeNames(): This is an impossible error\n");
 		}
-    }
+	}
 
 	debug_printf(DEBUG_DEBUG_1, "Leaving: Dag::PrefixAllNodeNames()\n");
 }

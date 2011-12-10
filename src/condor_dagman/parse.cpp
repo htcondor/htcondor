@@ -236,10 +236,19 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   "submitfile");
 		}
 
+		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
 						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
+		}
+
+		// Handle a FINAL spec
+		else if(strcasecmp(token, "FINAL") == 0) {
+			parsed_line_successfully = parse_node( dag, 
+					   Job::TYPE_CONDOR, token,
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile" );
 		}
 
 		// Handle a SCRIPT spec
@@ -350,7 +359,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SPLICE, NODE_STATUS_FILE, or PRE_SKIP token\n",
+				"CONFIG, SPLICE, FINAL, NODE_STATUS_FILE, or PRE_SKIP token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
@@ -536,8 +545,9 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	}
 
 	// looks ok, so add it
+	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
 	if( !AddNode( dag, nodeType, nodeName, directory,
-			submitFile, NULL, NULL, noop, done, whynot ) )
+				submitFile, NULL, NULL, noop, done, isFinal, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -880,6 +890,13 @@ parse_retry(
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have retries\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
 	
 	char *s = strtok( NULL, DELIMITERS );
 	if( s == NULL ) {
@@ -976,6 +993,13 @@ parse_abort(
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
@@ -1315,6 +1339,13 @@ parse_priority(
 		}
 	}
 
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have priority\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
 	//
 	// Next token is the priority value.
 	//
@@ -1407,6 +1438,13 @@ parse_category(
 						  filename, lineNumber, jobNameOrig );
 			return false;
 		}
+	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have category\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
 	}
 
 	//
@@ -1588,6 +1626,13 @@ parse_splice(
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to original directory: %s\n",
 					errMsg.Value() );
+		return false;
+	}
+
+	// Splices cannot have final nodes.
+	if ( splice_dag->HasFinalNode() ) {
+		debug_printf( DEBUG_QUIET, "ERROR: splice %s has a final node; "
+					"splices cannot have final nodes\n", spliceName.Value() );
 		return false;
 	}
 
