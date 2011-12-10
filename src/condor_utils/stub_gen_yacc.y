@@ -83,6 +83,7 @@ char * abbreviate( char *type_name );
 void Trace( char *msg );
 char * find_type_name( char *param_name, struct node *param_list );
 int has_out_params( struct node *action_func_list );
+int yyparse(void);
 
 #define MATCH 0 /* for strcmp() */
 
@@ -1165,6 +1166,9 @@ output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr,
 {
 	struct node	*p;
 
+	/* warning removal */
+	rtn_type = rtn_type ; is_ptr = is_ptr;
+
 	printf( "\t\tvoid *handle;\n");
 	printf( "\t\t%s (*fptr)(", node_type(n));
 	for( p=list->next; p != list; p = p->next ) {
@@ -2156,10 +2160,11 @@ abbreviate( char *type_name )
 }
 
 void
-Trace( char *msg )
+Trace( char *msg)
 {
 #define TRACE 0
 #if TRACE == 0		/* keep quiet */
+	msg = msg;
 	return;
 #elif TRACE == 1	/* trace info to the terminal */
 	fprintf( stderr, "Production: \"%s\"\n", msg );
