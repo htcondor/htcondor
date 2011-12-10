@@ -219,7 +219,11 @@ DeleteFromStorageFile(string key)
 		m[0]='*';
 		m=m+'\n';
 		lseek(filed,offset,SEEK_SET);
-		write(filed,(void *)(m.c_str()),m.size());
+		int ret = write(filed,(void *)(m.c_str()),m.size());
+		if (ret < 0) {
+			fsync(filed);
+			return false;
+		}
 		fsync(filed);
 		Index.erase(key);
 		return true;
