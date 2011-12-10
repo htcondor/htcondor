@@ -456,7 +456,7 @@ main_shutdown_fast()
 void main_shutdown_graceful() {
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
-    dagman.CleanUp();
+	dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
 
@@ -518,7 +518,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
 	unlink( lockFileName ); 
-    dagman.CleanUp();
+	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit( exitVal );
 }
@@ -536,7 +536,7 @@ void ExitSuccess() {
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	unlink( lockFileName ); 
-    dagman.CleanUp();
+	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
 }
 

@@ -106,18 +106,18 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
 
-	debug_printf( DEBUG_DEBUG_1, "Job::Init(%s, %s, %s)\n", jobName,
-				directory, cmdFile );
+	debug_printf( DEBUG_DEBUG_1, "Job::Job(%s, %s, %s)\n", jobName,
+			directory, cmdFile );
 
-    _scriptPre = NULL;
-    _scriptPost = NULL;
-    _Status = STATUS_READY;
+	_scriptPre = NULL;
+	_scriptPost = NULL;
+	_Status = STATUS_READY;
 	_isIdle = false;
 	countedAsDone = false;
 
-    _jobName = strnewp (jobName);
+	_jobName = strnewp (jobName);
 	_directory = strnewp (directory);
-    _cmdFile = strnewp (cmdFile);
+	_cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
 	_logIsMonitored = false;
@@ -125,18 +125,18 @@ Job::Job( const job_type_t jobType, const char* jobName,
 
     // _condorID struct initializes itself
 
-    // jobID is a primary key (a database term).  All should be unique
-    _jobID = _jobID_counter++;
+		// jobID is a primary key (a database term).  All should be unique
+	_jobID = _jobID_counter++;
 
-    retry_max = 0;
-    retries = 0;
-    _submitTries = 0;
+	retry_max = 0;
+	retries = 0;
+	_submitTries = 0;
 	retval = -1; // so Coverity is happy
-    have_retry_abort_val = false;
-    retry_abort_val = 0xdeadbeef;
-    have_abort_dag_val = false;
+	have_retry_abort_val = false;
+	retry_abort_val = 0xdeadbeef;
+	have_abort_dag_val = false;
 	abort_dag_val = -1; // so Coverity is happy
-    have_abort_dag_return_val = false;
+	have_abort_dag_return_val = false;
 	abort_dag_return_val = -1; // so Coverity is happy
 	_visited = false;
 	_dfsOrder = -1; // so Coverity is happy
@@ -146,7 +146,7 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
-    _logFile = NULL;
+	_logFile = NULL;
 	_logFileIsXml = false;
 
 	_noop = false;

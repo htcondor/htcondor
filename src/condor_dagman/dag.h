@@ -857,6 +857,7 @@ class Dag {
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
 
+#if 0 //TEMPTEMP?
 		/** Write the given node to the rescue DAG.
 			@param The file pointer to the rescue DAG fle
 			@param The node to write
@@ -865,6 +866,7 @@ class Dag {
 	//TEMPTEMP -- ended up with two copies of this method declaration...
 	void WriteNodeToRescue( FILE *fp, /* const */ Job *node,
 				bool reset_retries_upon_rescue ) const;
+#endif //TEMPTEMP
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.

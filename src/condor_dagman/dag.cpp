@@ -196,7 +196,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagIsHalted = false;
 	_dagFiles.rewind();
 	_haltFile = HaltFileName( _dagFiles.next() );
-
 	_dagStatus = DAG_STATUS_OK;
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
@@ -1609,8 +1608,11 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			TerminateJob( job, false, false );
 		}
 
+<<<<<<< HEAD
 //TEMPTEMP -- crap -- nasty conflict here because of refactoring!
 <<<<<<< HEAD
+=======
+>>>>>>> 762a28c19756c105c76b58b77a033574bcfda3d9
 			// Check for POST script.
 		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
 				// PRE script Failed.  The return code is in retval member.
@@ -1618,6 +1620,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
 			RunPostScript( job, _alwaysRunPost, job->retval );
 		}
+<<<<<<< HEAD
 =======
 			//TEMP -- this will have to get changed when this is merged
 			// and therefore combined with the 'always run post script'
@@ -1626,6 +1629,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 >>>>>>> V7_7-allow_cleanup_final_dag_node-branch
+=======
+>>>>>>> 762a28c19756c105c76b58b77a033574bcfda3d9
 
 			// Check for retries.
 		else if( job->GetRetries() < job->GetRetryMax() ) {
@@ -1660,6 +1665,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			_readyQ->Append( job, -job->_nodePriority );
 		}
 	}
+<<<<<<< HEAD
 //TEMPTEMP -- crap -- here's a really nasty conflict, too!
 <<<<<<< HEAD
 
@@ -2208,6 +2214,9 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     // Print Dependency Section
     //
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 762a28c19756c105c76b58b77a033574bcfda3d9
 	if ( !isPartial ) {
     	fprintf(fp, "\n");
     	it.ToBeforeFirst();
@@ -2338,12 +2347,15 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	if ( node->_Status == Job::STATUS_DONE ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
+<<<<<<< HEAD
 =======
     fprintf(fp, "\n");
     it.ToBeforeFirst();
     while (it.Next(job)) {
 >>>>>>> V7_7-allow_cleanup_final_dag_node-branch
 
+=======
+>>>>>>> 762a28c19756c105c76b58b77a033574bcfda3d9
 		// Print the RETRY line, if any.
 	if( node->retry_max > 0 ) {
 		int retriesLeft = (node->retry_max - node->retries);
