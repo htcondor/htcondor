@@ -56,14 +56,14 @@ int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 }
 
 int FilesystemRemap::CheckMapping(const std::string & mount_point) {
+#ifndef HAVE_UNSHARE
+	dprintf(D_ALWAYS, "This system doesn't support remounting of filesystems: %s\n", mount_point.c_str());
+	return -1;
+#else
 	bool best_is_shared = false;
 	size_t best_len = 0;
 	const std::string *best = NULL;
 
-#ifndef HAVE_UNSHARE
-	dprintf(D_ALWAYS, "This system doesn't support remounting of filesystems\n");
-	return -1;
-#else
 	dprintf(D_FULLDEBUG, "Checking the mapping of mount point %s.\n", mount_point.c_str());
 
 	for (std::list<pair_str_bool>::const_iterator it = m_mounts_shared.begin(); it != m_mounts_shared.end(); it++) {
