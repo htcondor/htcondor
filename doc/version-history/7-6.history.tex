@@ -164,9 +164,10 @@ reading from the CCB server.  Additional information is logged
 to help identify the problem if it still remains.
 \Ticket{2695}
 
-\item Fixed a bug wherein nested splices, where the parent splice 
-contained only splices, not actual nodes, would cause \Condor{dagman}
-to fail.
+\item Fixed a bug in \Condor{dagman} that occurred when 
+dealing with nested splices.
+\Condor{dagman} incorrectly issued a parse error and exited
+in the case where the parent splice contained only splices, and no nodes jobs.
 \Ticket{1751}
 
 \end{itemize}
