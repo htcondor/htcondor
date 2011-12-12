@@ -48,10 +48,10 @@ mkdir $_CONDOR_SCRATCH_DIR/tmp
 hostkey=$_CONDOR_SCRATCH_DIR/tmp/hostkey
 rm -f $hostkey $hostkey.pub
 $KEYGEN -q -f $hostkey -t rsa -N '' 
-
-if [ $? -ne 0 ]
+_TEST=$?
+if [ $_TEST -ne 0 ]
 then
-	echo ssh keygenerator $KEYGEN returned error $? exiting
+	echo ssh keygenerator $KEYGEN returned error $_TEST exiting
 	exit -1
 fi
 
@@ -59,17 +59,19 @@ idkey=$_CONDOR_SCRATCH_DIR/tmp/$_CONDOR_PROCNO.key
 
 # Create the identity key
 $KEYGEN -q -f $idkey -t rsa -N '' 
-if [ $? -ne 0 ]
+_TEST=$?
+if [ $_TEST -ne 0 ]
 then
-	echo ssh keygenerator $KEYGEN returned error $? exiting
+	echo ssh keygenerator $KEYGEN returned error $_TEST exiting
 	exit -1
 fi
 
 # Send the identity keys back home
 $CONDOR_CHIRP put -perm 0700 $idkey $_CONDOR_REMOTE_SPOOL_DIR/$_CONDOR_PROCNO.key
-if [ $? -ne 0 ]
+_TEST=$?
+if [ $_TEST -ne 0 ]
 then
-	echo error $? chirp putting identity keys back
+	echo error $_TEST chirp putting identity keys back
 	exit -1
 fi
 
@@ -111,9 +113,10 @@ thisrun=`$CONDOR_CHIRP get_job_attr EnteredCurrentStatus`
 echo "$_CONDOR_PROCNO $hostname $PORT $user $currentDir $thisrun"  |
 	$CONDOR_CHIRP put -mode cwa - $_CONDOR_REMOTE_SPOOL_DIR/contact 
 
-if [ $? -ne 0 ]
+_TEST=$?
+if [ $_TEST -ne 0 ]
 then
-	echo error $? chirp putting contact info back to submit machine
+	echo error $_TEST chirp putting contact info back to submit machine
 	exit -1
 fi
 
