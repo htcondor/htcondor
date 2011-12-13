@@ -51,9 +51,11 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
-\item The \Condor{schedd} did not properly restore accounting group information to
-submitters on restart.
-\ticket{2705}
+\item Fixed a hierarchical accounting groups bug in which
+the \Condor{schedd} did not properly restore accounting group 
+information to submitters on a restart of the \Condor{schedd},
+and therefore negotiated for and allocated machines incorrectly.
+\Ticket{2705}
 
 \item The Windows installer had a bad value set for the configuration variable
 \Macro{JAVA\_CLASSPATH\_SEPARATOR}, causing java universe jobs to fail. 
