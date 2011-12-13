@@ -23,6 +23,11 @@
 \index{ClassAd Scheduler attribute!JobQueueBirthdate}
 \item[\AdAttr{JobQueueBirthdate}:] Description is not yet written.
 
+\index{ClassAd Scheduler attribute!JobsAccumBadputTime}
+\item[\AdAttr{JobsAccumBadputTime}:] A Statistics attribute defining
+  the sum of the all of the time jobs which did not complete successfully 
+  have spent running over the lifetime of this \Condor{schedd}.
+
 \index{ClassAd Scheduler attribute!JobsAccumRunningTime}
 \item[\AdAttr{JobsAccumRunningTime}:]  A Statistics attribute defining
   the sum of the all of the time jobs have spent running
@@ -32,6 +37,26 @@
 \item[\AdAttr{JobsAccumTimeToStart}:] A Statistics attribute defining
   the sum of all the time jobs have spent waiting to start
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsBadputRuntimes}
+\item[\AdAttr{JobsBadputRuntimes}:] A Statistics attribute defining
+  a histogram count of jobs that did not complete successfully, 
+  as classified by time spent running,
+  over the lifetime of this \Condor{schedd}.
+  Counts within the histogram are separated by a comma and a space, 
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsBadputSizes}
+\item[\AdAttr{JobsBadputSizes}:] A Statistics attribute defining
+  a histogram count of jobs that did not complete successfully,
+  as classified by image size,
+  over the lifetime of this \Condor{schedd}.
+  Counts within the histogram are separated by a comma and a space, 
+  where the size classification is defined in the ClassAd attribute
+  \Attr{JobsSizesHistogramBuckets}.
 
 \index{ClassAd Scheduler attribute!JobsCheckpointed}
 \item[\AdAttr{JobsCheckpointed}:] A Statistics attribute defining
@@ -43,6 +68,26 @@
 \item[\AdAttr{JobsCompleted}:] A Statistics attribute defining
   the number of jobs successfully completed
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsCompletedRuntimes}
+\item[\AdAttr{JobsCompletedRuntimes}:] A Statistics attribute defining
+  a histogram count of jobs that completed successfully 
+  as classified by time spent running,
+  over the lifetime of this \Condor{schedd}.
+  Counts within the histogram are separated by a comma and a space, 
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsCompletedSizes}
+\item[\AdAttr{JobsCompletedSizes}:] A Statistics attribute defining
+  a histogram count of jobs that completed successfully
+  as classified by image size,
+  over the lifetime of this \Condor{schedd}.
+  Counts within the histogram are separated by a comma and a space, 
+  where the size classification is defined in the ClassAd attribute
+  \Attr{JobsSizesHistogramBuckets}.
 
 \index{ClassAd Scheduler attribute!JobsCoredumped}
 \item[\AdAttr{JobsCoredumped}:] A Statistics attribute defining
@@ -108,6 +153,37 @@
   \Expr{JOB\_NOT\_STARTED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsRunningRuntimes}
+\item[\AdAttr{JobsRunningRuntimes}:] A Statistics attribute defining
+  a histogram count of jobs currently running,
+  as classified by elapsed runtime.
+  Counts within the histogram are separated by a comma and a space, 
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsRunningSizes}
+\item[\AdAttr{JobsRunningSizes}:] A Statistics attribute defining
+  a histogram count of jobs currently running,
+  as classified by image size.
+  Counts within the histogram are separated by a comma and a space, 
+  where the size classification is defined in the ClassAd attribute
+  \Attr{JobsSizesHistogramBuckets}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsRuntimesHistogramBuckets}
+\item[\AdAttr{JobsRuntimesHistogramBuckets}:] A Statistics attribute defining
+  the predefined bucket boundaries for histogram statistics that
+  classify run times.
+  Defined as
+\footnotesize
+\begin{verbatim}
+  JobsRuntimesHistogramBuckets = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 
+          6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day"
+\end{verbatim}
+\normalsize
+
 \index{ClassAd Scheduler attribute!JobsShadowNoMemory}
 \item[\AdAttr{JobsShadowNoMemory}:]  A Statistics attribute defining
   the number of times that jobs have exited 
@@ -131,6 +207,19 @@
   the number of times that jobs 
   have exited with a \Condor{shadow} exit code of \Expr{JOB\_SHOULD\_REQUEUE}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!JobsSizesHistogramBuckets}
+\item[\AdAttr{JobsSizesHistogramBuckets}:] A Statistics attribute defining
+  the predefined bucket boundaries for histogram statistics that
+  classify image sizes.
+  Defined as
+\footnotesize
+\begin{verbatim}
+  JobsSizesHistogramBuckets = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb,
+          1Gb, 4Gb, 16Gb, 64Gb, 256Gb"
+\end{verbatim}
+\normalsize
 
 \index{ClassAd Scheduler attribute!JobsStarted}
 \item[\AdAttr{JobsStarted}:] A Statistics attribute defining
@@ -220,6 +309,13 @@
   handling messages and events to the elapsed time 
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
 
+\index{ClassAd Scheduler attribute!RecentJobsAccumBadputTime}
+\item[\AdAttr{RecentJobsAccumBadputTime}:] A Statistics attribute defining
+  the sum of the all of the time that jobs which did not complete successfully 
+  have spent running 
+  in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
+
+
 \index{ClassAd Scheduler attribute!RecentJobsAccumRunningTime}
 \item[\AdAttr{RecentJobsAccumRunningTime}:] A Statistics attribute defining
   the sum of the all of the time jobs 
@@ -234,6 +330,26 @@
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}
   had spent waiting to start.
 
+% histogram statistic
+\index{ClassAd Scheduler attribute!RecentJobsBadputRuntimes}
+\item[\AdAttr{RecentJobsBadputRuntimes}:] A Statistics attribute defining
+  a histogram count of jobs that did not complete successfully,
+  as classified by time spent running,
+  in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
+  Counts within the histogram are separated by a comma and a space,
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!RecentJobsBadputSizes}
+\item[\AdAttr{RecentJobsBadputSizes}:]  A Statistics attribute defining
+  a histogram count of jobs that did not complete successfully,
+  as classified by image size,
+  in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
+  Counts within the histogram are separated by a comma and a space, 
+  where the size classification is defined in the ClassAd attribute
+  \Attr{JobsSizesHistogramBuckets}.
+
 \index{ClassAd Scheduler attribute!RecentJobsCheckpointed}
 \item[\AdAttr{RecentJobsCheckpointed}:] A Statistics attribute defining
   the number of times jobs that have exited 
@@ -244,6 +360,26 @@
 \item[\AdAttr{RecentJobsCompleted}:] A Statistics attribute defining
   the number of jobs successfully completed
   in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!RecentJobsCompletedRuntimes}
+\item[\AdAttr{RecentJobsCompletedRuntimes}:] A Statistics attribute defining
+  a histogram count of jobs that completed successfully, 
+  as classified by time spent running,
+  in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
+  Counts within the histogram are separated by a comma and a space,
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+% histogram statistic
+\index{ClassAd Scheduler attribute!RecentJobsCompletedSizes}
+\item[\AdAttr{RecentJobsCompletedSizes}:] A Statistics attribute defining
+  a histogram count of jobs that completed successfully,
+  as classified by image size,
+  in the previous time interval defined by attribute \Attr{RecentStatsLifetime}.
+  Counts within the histogram are separated by a comma and a space, 
+  where the size classification is defined in the ClassAd attribute
+  \Attr{JobsSizesHistogramBuckets}.
 
 \index{ClassAd Scheduler attribute!RecentJobsCoredumped}
 \item[\AdAttr{RecentJobsCoredumped}:] A Statistics attribute defining
