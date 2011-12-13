@@ -51,6 +51,10 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
+\item The \Condor{schedd} did not properly restore accounting group information to
+submitters on restart.
+\ticket{2705}
+
 \item The Windows installer had a bad value set for the configuration variable
 \Macro{JAVA\_CLASSPATH\_SEPARATOR}, causing java universe jobs to fail. 
 \Ticket{2586}
@@ -169,6 +173,10 @@ dealing with nested splices.
 \Condor{dagman} incorrectly issued a parse error and exited
 in the case where the parent splice contained only splices, and no nodes jobs.
 \Ticket{1751}
+
+\item Fixed a bug that caused grid universe jobs submitted via SOAP to
+be held when trying to write output files into the spool directory.
+\Ticket{2568}
 
 \end{itemize}
 

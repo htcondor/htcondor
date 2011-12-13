@@ -477,7 +477,7 @@ main (int argc, char *argv[])
                 // This will properly render all supported value types,
                 // including undefined and error, although current semantic
                 // pre-filters classads where sort expressions are undef/err:
-                vs << v;
+                vs << ((v.IsStringValue())?"\"":"") << v << ((v.IsStringValue())?"\"":"");
                 ad->AssignExpr(ss->keyAttr.c_str(), vs.str().c_str());
                 // Save the full expr in case user wants to examine on output:
                 ad->AssignExpr(ss->keyExprAttr.c_str(), ss->arg.c_str());

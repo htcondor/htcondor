@@ -619,6 +619,20 @@ ScheddTransaction::commit()
 		// XXX: This will need to take a transaction
 	CommitTransaction();
 
+	PROC_ID currentKey;
+	Job *job;
+	ClassAd *job_ad;
+	int universe;
+	jobs.startIterations();
+	while (jobs.iterate(currentKey, job)) {
+		job_ad = GetJobAd( currentKey.cluster, currentKey.proc );
+		if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
+			 universe == CONDOR_UNIVERSE_GRID ) {
+
+			aboutToSpawnJobHandler( currentKey.cluster, currentKey.proc, NULL );
+		}
+	}
+
 	return 0;
 }
 
