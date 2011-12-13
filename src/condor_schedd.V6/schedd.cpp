@@ -5484,13 +5484,14 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	// NOTE: match_ad could be deallocated when this function returns,
 	// so if we need to keep it around, we must make our own copy of it.
-
-	if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
-			// we've got big trouble, just give up.
-		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
-				 ATTR_OWNER, cluster, proc );
-		mark_job_stopped( job );
-		return;
+	if( GetAttributeStringNew(cluster, proc, ATTR_ACCOUNTING_GROUP, &owner) < 0 ) {
+		if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
+				// we've got big trouble, just give up.
+			dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
+					 ATTR_OWNER, cluster, proc );
+			mark_job_stopped( job );
+			return;
+		}
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_CLAIM_ID, &claim_id) < 0 ) {
 			//
