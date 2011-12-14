@@ -30,8 +30,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Linux system, the starter can now optionally measure the
+PSS (Proportional Set Size) of each Condor job, if the config file
+option USE\_PSS is set to true.  Previously, it was unconditionally
+on, which can cause performance problems in the procd when running
+many short lived jobs.
+
 \item On Linux systems, the \Condor{starter} now has an ability to run a 
-job under a chroot'ed directory.  
+job under a cheroot directory.  
 If the configuration variable \Macro{NAMED\_CHROOT} is set to a list
 of directories on an execute machine, 
 the job has attribute \Attr{RequestedChroot} defined,
