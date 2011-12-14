@@ -422,6 +422,9 @@ extern const char * const  ATTR_OFFLINE;
 extern const char * const  ATTR_OPSYS;
 extern const char * const  ATTR_OPSYSVER;
 extern const char * const  ATTR_OPSYS_AND_VER;
+extern const char * const  ATTR_OPSYS_MAJOR_VER;
+extern const char * const  ATTR_OPSYS_NAME;
+extern const char * const  ATTR_OPSYS_DISTRO;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
 extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OUTPUT_DESTINATION;
@@ -913,6 +916,13 @@ extern const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
 extern const char * const ATTR_CHECK_EXPR;
 extern const char * const ATTR_PROJECTION;
 extern const char * const ATTR_LAST_DRAIN_START_TIME;
+
+// temporary attributes for raw utsname info
+extern const char * const ATTR_UTSNAME_SYSNAME;
+extern const char * const ATTR_UTSNAME_NODENAME;
+extern const char * const ATTR_UTSNAME_RELEASE;
+extern const char * const ATTR_UTSNAME_VERSION;
+extern const char * const ATTR_UTSNAME_MACHINE;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

@@ -1318,6 +1318,51 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
+#if ! defined WIN32
+	int major_ver = sysapi_opsys_major_version();
+	if (major_ver > 0) {
+		val.sprintf("%d", major_ver);
+		insert( "OPSYS_MAJOR_VER", val.Value(), ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_MAJOR_VER");
+	}
+
+	if( (tmp = sysapi_opsys_name()) != NULL ) {
+		insert( "OPSYS_NAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_NAME");
+	}
+	
+	if( (tmp = sysapi_opsys_distro()) != NULL ) {
+		insert( "OPSYS_DISTRO", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_DISTRO");
+	}
+
+        // temporary attributes for raw utsname info
+	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
+		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_SYSNAME");
+	}
+
+	if( (tmp = sysapi_utsname_nodename()) != NULL ) {
+		insert( "UTSNAME_NODENAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_NODENAME");
+	}
+
+	if( (tmp = sysapi_utsname_release()) != NULL ) {
+		insert( "UTSNAME_RELEASE", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_RELEASE");
+	}
+
+	if( (tmp = sysapi_utsname_version()) != NULL ) {
+		insert( "UTSNAME_VERSION", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_VERSION");
+	}
+
+	if( (tmp = sysapi_utsname_machine()) != NULL ) {
+		insert( "UTSNAME_MACHINE", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_MACHINE");
+	}
+#endif
+
 	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("SUBSYSTEM");
 
