@@ -29,6 +29,7 @@
 #include "exit.h"               // for possible job exit_reason values
 #include "metric_units.h"
 #include "condor_arglist.h"
+#include "condor_holdcodes.h"
 
 
 extern "C" char* d_format_time(double);   // this should be in a .h
@@ -214,6 +215,7 @@ Email::init()
 	fp = NULL;
 	cluster = -1;
 	proc = -1;
+	email_admin = false;
 }
 
 
@@ -228,6 +230,33 @@ void
 Email::sendRemove( ClassAd* ad, const char* reason )
 {
 	sendAction( ad, reason, "removed" );
+}
+
+void
+Email::sendRelease( ClassAd* ad, const char* reason )
+{
+	sendAction( ad, reason, "released from hold" );
+}
+
+void
+Email::sendHoldAdmin( ClassAd* ad, const char* reason )
+{
+	email_admin = true;
+	sendAction( ad, reason, "put on hold" );
+}
+
+void
+Email::sendRemoveAdmin( ClassAd* ad, const char* reason )
+{
+	email_admin = true;
+	sendAction( ad, reason, "removed" );
+}
+
+void
+Email::sendReleaseAdmin( ClassAd* ad, const char* reason )
+{
+	email_admin = true;
+	sendAction( ad, reason, "released from hold" );
 }
 
 
@@ -280,7 +309,11 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 		full_subject += " ";
 		full_subject += subject;
 	}
-	fp = email_user_open_id( ad, cluster, proc, full_subject.Value() );
+	if(email_admin) {
+		fp = email_admin_open( full_subject.Value() );
+	} else {
+		fp = email_user_open_id( ad, cluster, proc, full_subject.Value() );
+	}
 	return fp; 
 }
 
@@ -363,7 +396,7 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	time_t now = time(NULL);
 
 	writeJobId( ad );
-	MyString msg = "has ";
+	MyString msg;
 	if( ! printExitString(ad, exit_reason, msg)	) {
 		msg += "exited in an unknown way";
 	}
@@ -394,8 +427,11 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	double rutime = remote_user_cpu;
 	double rstime = remote_sys_cpu;
 	double trtime = rutime + rstime;
-	double wall_time = now - shadow_bday;
+	double wall_time = 0;
 	fprintf(fp, "Statistics from last run:\n");
+	if(shadow_bday != 0) {	// Handle cases where this wasn't set (grid)
+		wall_time = now - shadow_bday;
+	}
 	fprintf(fp, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
 	fprintf(fp, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
 	fprintf(fp, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
@@ -495,6 +531,7 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 
 	int ad_cluster = 0, ad_proc = 0;
 	int exit_by_signal = FALSE;
+	int code = -1, status = -1;
 
 	// send email if user requested it
 	int notification = NOTIFY_COMPLETE;	// default
@@ -521,6 +558,17 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 			ad->LookupBool( ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal );
 			if( exit_reason == JOB_EXITED && exit_by_signal ) {
 				return true;
+			}
+				// send mail if job was put on hold because of some problem
+				// (not via condor_hold, periodic hold, or submitted on hold)
+			if( (ad->LookupInteger(ATTR_JOB_STATUS, status) &&
+				status == HELD) &&
+				(ad->LookupInteger(ATTR_HOLD_REASON_CODE, code) &&
+				code != CONDOR_HOLD_CODE_UserRequest &&
+				code != CONDOR_HOLD_CODE_JobPolicy &&
+				code != CONDOR_HOLD_CODE_SubmittedOnHold) )
+			{
+					return true;
 			}
 			break;
 		default:

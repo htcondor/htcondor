@@ -56,6 +56,7 @@
  */
 
 #include "globus_ftp_client.h"
+#include "globus_ftp_client_plugin.h"
 
 EXTERN_C_BEGIN
 

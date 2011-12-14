@@ -1438,7 +1438,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 		return;
 	}
 
-	assert( offset + length == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
 
 	if ( eof ) {
 		free( buffer );
@@ -2369,7 +2369,7 @@ void gridftp_transfer_write_callback( void *arg,
 		return;
 	}
 
-	assert( offset + length == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
 
 	if ( eof ) {
 		free( buffer );

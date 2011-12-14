@@ -257,7 +257,6 @@ int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 	fd_set			writefds;
 	int				nfound;
 	int				nfds;
-	int				tmp_errno;
 	socklen_t		sz;
 	int				val = 0;
 	int				save_errno;
@@ -280,7 +279,6 @@ int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 
 	/* try the connect, which will return immediately */
 	if(condor_connect(sockfd, serv_addr) < 0) {
-		tmp_errno = errno;
 		switch( errno ) {
 			case EAGAIN:
 			case EINPROGRESS:
