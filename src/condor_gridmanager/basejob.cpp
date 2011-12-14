@@ -1603,37 +1603,8 @@ WriteJobStatusKnownEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
-// TODO: This appears three times in the Condor source.  Unify?
-//   (It only is made visible in condor_shadow.jim's prototypes.h.)
-static char *
-d_format_time( double dsecs )
-{
-	int days, hours, minutes, secs;
-	static char answer[25];
-
-	const int SECONDS = 1;
-	const int MINUTES = (60 * SECONDS);
-	const int HOURS   = (60 * MINUTES);
-	const int DAYS    = (24 * HOURS);
-
-	secs = (int)dsecs;
-
-	days = secs / DAYS;
-	secs %= DAYS;
-
-	hours = secs / HOURS;
-	secs %= HOURS;
-
-	minutes = secs / MINUTES;
-	secs %= MINUTES;
-
-	(void)sprintf(answer, "%3d %02d:%02d:%02d", days, hours, minutes, secs);
-
-	return( answer );
-}
-
 void
-EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
+EmailTerminateEvent(ClassAd * job_ad, bool   /*exit_status_known*/)
 {
 	if ( !job_ad ) {
 		dprintf(D_ALWAYS, 
