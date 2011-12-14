@@ -179,15 +179,6 @@ static const char* utsname_release = NULL;
 static const char* utsname_version = NULL;
 static const char* utsname_machine = NULL;
 
-// new attrs for ticket #2366 
-
-// OpSys =       "LINUX" ==> "RedHat"
-// OpSysAndVer = "LINUX" ==> "RedHat5"
-// OpSysVer =        206 ==> "501"
-// OpSysName =       N/A ==> "Red Hat 5.1"
-// OpSysMajorVer =   N/A ==> "5"
-
-
 #ifdef HPUX
 const char* get_hpux_arch();
 #endif
@@ -229,7 +220,7 @@ init_utsname(void)
 	if( !utsname_machine ) {
 		EXCEPT( "Out of memory!" );
 	}
-        // todo - do all attrs exist on all platforms?
+        
 	if ( utsname_sysname && utsname_nodename && utsname_release ) {
 		utsname_inited = TRUE;
 	}
@@ -256,14 +247,15 @@ init_arch(void)
 
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
 
+	// Changes for Linux attrs
  	dprintf(D_ALWAYS, "uname_opsys is %s \n", uname_opsys);
-	// OpSys =       "LINUX" ==> "RedHat"
+	// OpSys =       "LINUX" ==> "LINUX"
 	// OpSysAndVer = "LINUX" ==> "RedHat5"
 	// OpSysVer =        206 ==> "501"
 	// OpSysName =       N/A ==> "Red Hat 5.1"
 	// OpSysMajorVer =   N/A ==> "5"
+	// OpSysDistro =     N/A ==> "RedHat"
 
-	// Leave opsys == LINUX, add distro param 
 	if( !strcasecmp(uname_opsys, "linux") )
         {
           	opsys_name = sysapi_get_distro_info();
@@ -293,19 +285,12 @@ init_arch(void)
 	}
 }
 
-// use /etc/issue since it's more human-readable than output from lsb_release 
 const char *
 sysapi_get_distro_info(void)
 {
         FILE *my_fp;
-        char* distro_str = "Unknown";
+        char* distro_str;
         const char * etc_issue_path = "/etc/issue";
-
-	if (access(etc_issue_path, X_OK) != 0)
-        {
-		// fail	
-		dprintf(D_ALWAYS, "Can't access /etc/issue to determine Linux information, errno %d \n", errno); 
-	}
 
         // read the first line only
         my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
@@ -321,19 +306,22 @@ sysapi_get_distro_info(void)
     			tmp_str[len-1] = 0;
 		}
 		distro_str = strdup( tmp_str );
-  		if( !distro_str ) {
-                	EXCEPT( "Out of memory!" );
-        	}
-        }
+        } else 
+	{
+		distro_str = strdup( "Unknown" );
+	}
+  
+	if( !distro_str ) {
+               	EXCEPT( "Out of memory!" );
+       	}
 
         return distro_str;
 }
 
-
 const char *
 sysapi_find_distro( const char *distro_name )
 {
-	char* distro = "LINUX";
+	char* distro;
 
 	char* distro_name_lc = strdup( distro_name );
 	int i = 0;
@@ -372,8 +360,11 @@ sysapi_find_distro( const char *distro_name )
         else if ( strstr(distro_name_lc, "centos") )
         {
                 distro = strdup("CentOS");
-        }
-
+        } else 
+	{
+                distro = strdup("LINUX");
+ 	}
+	
   	if( !distro ) {
                 EXCEPT( "Out of memory!" );
         }
