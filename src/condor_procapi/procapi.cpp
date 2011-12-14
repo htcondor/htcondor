@@ -472,6 +472,12 @@ ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status )
 	int number_of_attempts;
 	const int max_attempts = 5;
 
+	char *use_pss;
+	use_pss = getenv("_condor_USE_PSS");
+	if ((use_pss == 0) || (*use_pss == 'f') || (*use_pss == 'F')) {
+		return PROCAPI_SUCCESS;
+	}
+
 		// Note that HAVE_PSS may be true at compile-time, but that
 		// does not mean /proc/pid/smaps will actually contain
 		// Pss info at run-time.  Therefore, we do not treat missing
