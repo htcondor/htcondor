@@ -465,9 +465,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
 	if ( inShutdownRescue ) {
-		//TEMPTEMP -- I think this is messing up final nodes...
-		//TEMPTEMP -- are we going to goof something up here??
-		//TEMPTEMP!!!! return;
+		return;
 	}
 	inShutdownRescue = true;
 
@@ -482,7 +480,6 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
 		if( exitVal != 0 ) {
-			//TEMPTEMP -- make sure merge is correct here!
 			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
@@ -507,11 +504,11 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		}
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 
-		//TEMPTEMP -- make sure merge here is correct!
 			// Start the final node if we have one.
 		if ( dagman.dag->StartFinalNode() ) {
 				// We started a final node; return here so we wait for the
 				// final node to finish, instead of exiting immediately.
+			inShutdownRescue = false;
 			return;
 		}
 		dagman.dag->DumpNodeStatus( false, true );
@@ -1029,7 +1026,6 @@ void main_init (int argc, char ** const argv) {
 							"because of -DumpRescue flag\n" );
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							//TEMPTEMP -- make sure merge here is correct
 							false, true, false );
 			}
 			
@@ -1133,7 +1129,6 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-					//TEMPTEMP -- make sure merge here is correct!
 					dagman.multiDags, dagman.maxRescueDagNum, false,
 					false, false );
 		ExitSuccess();
