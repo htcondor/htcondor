@@ -944,7 +944,7 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 // TODO: put the code into a shared file.
 
 void
-EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
+EmailTerminateEvent(ClassAd * job_ad, bool   /*exit_status_known*/)
 {
 	if ( !job_ad ) {
 		dprintf(D_ALWAYS, 
