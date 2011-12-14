@@ -180,6 +180,11 @@ in the case where the parent splice contained only splices, and no nodes jobs.
 be held when trying to write output files into the spool directory.
 \Ticket{2568}
 
+\item Fixed a bug that caused \Condor{credd} and possibly other
+daemons to crash when the file used for \MacroNI{CERTIFICATE\_MAPFILE}
+contained more than 80 entries.
+\Ticket{2409}
+
 \end{itemize}
 
 \noindent Known Bugs:
