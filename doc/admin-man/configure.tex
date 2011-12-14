@@ -5665,6 +5665,41 @@ SYSTEM_PERIODIC_REMOVE = \
   in addition to the rotations that occur due to the definition of  
   \MacroNI{MAX\_HISTORY\_LOG} that rotate due to size.
 
+\label{param:StatisticsToPublish}
+\item[\Macro{STATISTICS\_TO\_PUBLISH}]
+  A comma and/or space separated list that identifies which daemons are to
+  publish Statistics attributes in their ClassAds, as well as a level of
+  verbosity to identify which attributes to include and which to omit from
+  the ClassAd. 
+  The syntax defines the two aspects by separating them with a colon;
+  the first aspect defines which daemon is to publish the statistics,
+  and the second aspect defines the verbosity.
+  This first aspect may be \Expr{SCHEDD} or \Expr{SCHEDULER} to publish
+  Statistics attributes in the ClassAd of the \Condor{schedd}.
+  Or, it may be \Expr{DC} or \Expr{DAEMONCORE} to publish 
+  DaemonCore statistics.
+  After the colon may be the value \Expr{0}, \Expr{1}, \Expr{2}, or \Expr{3}.
+  A value of  \Expr{0} turns off the publishing of any Statistics attributes.
+  A value of  \Expr{1} is the default level, where some Statistics attributes
+  are published and others are omitted.
+  A value of  \Expr{2} is the verbose level, where all Statistics attributes
+  are published.
+  A value of  \Expr{3} is the super verbose level, which is currently unused,
+  but intended to be all Statistics attributes published at the verbose
+  level plus extra information.
+  As an example, to cause a verbose setting of the publication of Statistics
+  attributes for the \Condor{schedd}:
+\begin{verbatim}
+  STATISTICS_TO_PUBLISH = SCHEDD:2
+\end{verbatim}
+  
+
+\label{param:StatisticsWindowSeconds}
+\item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
+  The amount of time given in seconds defining the interval of time over
+  which \Condor{schedd} daemon Statistics attributes are quantized.
+  Defaults to 1200 seconds, which is 20 minutes.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
