@@ -35,16 +35,19 @@
     command line.
    
 	@param dm the appropriate Dagman object
-    @param cmdFile the job's Condor command file.
-    @param condorID will hold the ID for the submitted job (if successful)
-    @param DAGNodeName the name of the job's DAG node
+	@param cmdFile the job's Condor command file.
+	@param condorID will hold the ID for the submitted job (if successful)
+	@param DAGNodeName the name of the job's DAG node
 	@param DAGParentNodeNames a delimited string listing the node's parents
 	@param names the names of any parameters for this node
 	@param vals the values of any parameters for this node
-    @param directory the directory in which to run this job
+	@param directory the directory in which to run this job
 	@param log file to force this job to use (should be null if submit
 		file specifies log file)
-    @return true on success, false on failure
+	@return true on success, false on failure
+	@param prohibitMultiJobs flag that prohibits multiple jobs in a
+		cluster from being submitted.
+	@param hold_claim is true if DAGMAN_HOLD_CLAIM_IDLE is positive
 */
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,

@@ -28,7 +28,6 @@
 use CondorTest;
 use CondorUtils;
 
-Condor::DebugLevel 10;
 $cmd = 'job_dagman_use_hold_claim.dag';
 $testdesc =  'Condor submit dag - Test that DAGman uses hold claim';
 $testname = "job_dagman_use_hold_claim";
@@ -112,7 +111,8 @@ $success = sub {
 				}
 			}
 			if($cmdname eq 'job_dagman_use_hold_claim-C'){ # only line!
-				
+					# As node C does not have an children, we expect to have
+					# KeepClaimIdle undefined.
 				if(/job_dagman_use_hold_claim-C\s+KeepClaimIdle undefined$/){
 					$claimIdC = $_;
 					$verifyC = 1;

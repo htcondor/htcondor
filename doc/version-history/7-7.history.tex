@@ -86,6 +86,10 @@ frequently written to \File{job\_queue.log},
 but not big enough to hold the whole contents of the spool directory.
 \Ticket{2598}
 
+\item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
+specifies the amount of time in seconds that \Condor{schedd} will hold a claim
+idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
