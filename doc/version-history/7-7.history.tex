@@ -100,6 +100,13 @@ the job is placed on hold because of a failure and not by user request.
 Previously, email would be sent only if the job was terminated via signal.
 \Ticket{1976}
 
+\item By default, if a node has child nodes, then \Condor{dagman} uses the
+KeepClaimIdle attribute, introduced in Condor version 7.7.1, to hold onto a
+claim.  This is a slight optimization, as it avoids waiting for a negotiation
+cycle.  The hold time defaults to 20 seconds.  This is controlled by the
+\Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
+\Ticket{2673}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -114,6 +121,10 @@ useful if there is a solid state drive which is big enough to hold the
 frequently written to \File{job\_queue.log},
 but not big enough to hold the whole contents of the spool directory.
 \Ticket{2598}
+
+\item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
+specifies the amount of time in seconds that \Condor{schedd} will hold a claim
+idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
 
 \end{itemize}
 

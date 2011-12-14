@@ -398,6 +398,12 @@ ProcFamilyProxy::start_procd()
 		free(procd_log_size);
 	}
 	
+	Env env;
+	// The procd can't param, so pass this via the environment
+	if (param_boolean("USE_PSS", false)) {
+		env.SetEnv("_condor_USE_PSS=TRUE");
+	}
+
 	// the (optional) maximum snapshot interval
 	// (the procd will default to every minute)
 	//
@@ -540,7 +546,7 @@ ProcFamilyProxy::start_procd()
 		                                         PRIV_ROOT,
 		                                         m_reaper_id,
 		                                         FALSE,
-		                                         NULL,
+		                                         &env,
 		                                         NULL,
 		                                         NULL,
 		                                         NULL,

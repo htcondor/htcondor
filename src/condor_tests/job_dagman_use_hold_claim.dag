@@ -1,0 +1,6 @@
+CONFIG job_dagman_use_hold_claim.cfg
+JOB job_dagman_use_hold_claim-A job_dagman_use_hold_claim-A.cmd
+JOB job_dagman_use_hold_claim-B job_dagman_use_hold_claim-B.cmd
+JOB job_dagman_use_hold_claim-C job_dagman_use_hold_claim-C.cmd
+parent job_dagman_use_hold_claim-A child job_dagman_use_hold_claim-B
+parent job_dagman_use_hold_claim-B child job_dagman_use_hold_claim-C

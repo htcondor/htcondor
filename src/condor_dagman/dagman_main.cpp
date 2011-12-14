@@ -130,7 +130,8 @@ Dagman::Dagman() :
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100),
 	_runPost(true),
-	_defaultPriority(0)
+	_defaultPriority(0),
+	_claim_hold_time(20)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -403,6 +404,7 @@ Dagman::Config()
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
 				0, 1000000 );
+	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME", _claim_hold_time, 0, 3600);
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",

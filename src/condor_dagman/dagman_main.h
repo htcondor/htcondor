@@ -203,6 +203,7 @@ class Dagman {
 	bool _runPost;
 		// Default priority that DAGman uses for nodes.
 	int _defaultPriority;
+	int _claim_hold_time;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

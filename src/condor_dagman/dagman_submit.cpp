@@ -231,7 +231,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
 			   const char* directory, const char *logFile,
-			   bool prohibitMultiJobs )
+			   bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -354,6 +354,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		args.AppendArgsFromArgList( parentNameArgs );
+	}
+
+	if( hold_claim ){
+		args.AppendArg( "-a" );
+		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
+			+ dm._claim_hold_time;
+		args.AppendArg( holdit.Value() );	
 	}
 
 	args.AppendArg( cmdFile );
