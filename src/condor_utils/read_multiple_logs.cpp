@@ -197,7 +197,13 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 		dprintf( D_ALWAYS, "MultiLogFiles: truncating log file %s\n",
 					filename );
 	}
-	int fd = safe_create_keep_if_exists( filename, flags );
+
+		// Two-phase attempt at open here is to make things work if
+		// a log file is a symlink to another file (see gittrac #2704).
+	int fd = safe_create_fail_if_exists( filename, flags );
+	if ( fd < 0 && errno == EEXIST ) {
+		fd = safe_open_no_create_follow( filename, flags );
+	}
 	if ( fd < 0 ) {
 		errstack.pushf("MultiLogFiles", UTIL_ERR_OPEN_FILE,
 					"Error (%d, %s) opening file %s for creation "
