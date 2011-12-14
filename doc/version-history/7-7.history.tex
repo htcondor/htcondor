@@ -90,6 +90,11 @@ additionally logs whether the match was subsequently rejected for
 other reasons, such as insufficient priority, rank, or fair share
 allocation.
 
+\item Condor will now send email if submit notification is set to error and
+the job is placed on hold because of a failure and not by user request.
+Previously, email would be sent only if the job was terminated via signal.
+\Ticket{1976}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
