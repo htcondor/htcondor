@@ -484,6 +484,9 @@ const char * const ATTR_OFFLINE                  ="Offline";
 const char * const ATTR_OPSYS                    = "OpSys";
 const char * const ATTR_OPSYSVER                 = "OpSysVer";
 const char * const ATTR_OPSYS_AND_VER            = "OpSysAndVer";
+const char * const ATTR_OPSYS_MAJOR_VER            = "OpSysMajorVer";
+const char * const ATTR_OPSYS_NAME            = "OpSysName";
+const char * const ATTR_OPSYS_DISTRO            = "OpSysDistro";
 const char * const ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
 const char * const ATTR_OTHER_JOB_REMOVE_REQUIREMENTS    = "OtherJobRemoveRequirements"; 
 const char * const ATTR_OWNER                    = "Owner"; 
@@ -963,3 +966,10 @@ const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME = "TotalMachineDra
 const char * const ATTR_CHECK_EXPR = "CheckExpr";
 const char * const ATTR_PROJECTION = "Projection";
 const char * const ATTR_LAST_DRAIN_START_TIME = "LastDrainStartTime";
+
+// temporary attributes for raw utsname info
+extern const char * const ATTR_UTSNAME_SYSNAME = "UtsnameSysname";
+extern const char * const ATTR_UTSNAME_NODENAME = "UtsnameNodename";
+extern const char * const ATTR_UTSNAME_RELEASE = "UtsnameRelease";
+extern const char * const ATTR_UTSNAME_VERSION = "UtsnameVersion";
+extern const char * const ATTR_UTSNAME_MACHINE = "UtsnameMachine";

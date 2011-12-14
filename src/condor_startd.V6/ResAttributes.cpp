@@ -39,6 +39,9 @@ MachAttributes::MachAttributes()
 	m_opsys = NULL;
 	m_opsysver = 0;
 	m_opsys_and_ver = NULL;
+	m_opsys_major_ver = 0;
+	m_opsys_name = NULL;
+	m_opsys_distro = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
@@ -80,6 +83,14 @@ MachAttributes::MachAttributes()
 		// identification of the checkpointing platform signature
 	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 
+        // temporary attributes for raw utsname info
+	m_utsname_sysname = NULL;
+	m_utsname_nodename = NULL;
+	m_utsname_release = NULL;
+	m_utsname_version = NULL;
+	m_utsname_machine = NULL;
+
+
 #if defined ( WIN32 )
 	// Get the version information of the copy of Windows 
 	// we are running
@@ -110,9 +121,17 @@ MachAttributes::~MachAttributes()
 	if( m_arch ) free( m_arch );
 	if( m_opsys ) free( m_opsys );
 	if( m_opsys_and_ver ) free( m_opsys_and_ver );
+	if( m_opsys_name ) free( m_opsys_name );
+	if( m_opsys_distro ) free( m_opsys_distro );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
+
+	if( m_utsname_sysname ) free( m_utsname_sysname );
+	if( m_utsname_nodename ) free( m_utsname_nodename );
+	if( m_utsname_release ) free( m_utsname_release );
+	if( m_utsname_version ) free( m_utsname_version );
+	if( m_utsname_machine ) free( m_utsname_machine );
 
     AttribValue *val = NULL;
     m_lst_dynamic.Rewind();
@@ -327,6 +346,40 @@ MachAttributes::compute( amask_t how_much )
 			free( m_opsys_and_ver );
 		}
 		m_opsys_and_ver = param( "OPSYS_AND_VER" );
+		m_opsys_major_ver = param_integer( "OPSYS_MAJOR_VER", 0 );
+
+		if( m_opsys_name ) {
+			free( m_opsys_name );
+                } 
+		m_opsys_name = param( "OPSYS_NAME" );
+
+		if( m_opsys_distro ) {
+			free( m_opsys_distro );
+                } 
+		m_opsys_distro = param( "OPSYS_DISTRO" );
+
+       		// temporary attributes for raw utsname info
+		if( m_utsname_sysname ) {
+			free( m_utsname_sysname );
+		}
+		if( m_utsname_nodename ) {
+			free( m_utsname_nodename );
+		}
+		if( m_utsname_release ) {
+			free( m_utsname_release );
+		}
+		if( m_utsname_version ) {
+			free( m_utsname_version );
+		}
+		if( m_utsname_machine ) {
+			free( m_utsname_machine );
+		}
+
+       		m_utsname_sysname = param( "UTSNAME_SYSNAME" );
+		m_utsname_nodename = param( "UTSNAME_NODENAME" );
+		m_utsname_release = param( "UTSNAME_RELEASE" );
+		m_utsname_version = param( "UTSNAME_VERSION" );
+		m_utsname_machine = param( "UTSNAME_MACHINE" );
 
 		if( m_uid_domain ) {
 			free( m_uid_domain );
@@ -419,6 +472,8 @@ MachAttributes::compute( amask_t how_much )
 			m_condor_load = m_load;
 		}
 	}
+
+
 }
 
 void
@@ -443,13 +498,23 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		cp->Assign( ATTR_STARTD_IP_ADDR,
 					daemonCore->InfoCommandSinfulString() );
 
-        cp->Assign( ATTR_ARCH, m_arch );
+        	cp->Assign( ATTR_ARCH, m_arch );
 
 		cp->Assign( ATTR_OPSYS, m_opsys );
-        if (m_opsysver) {
+       	 	if (m_opsysver) {
 			cp->Assign( ATTR_OPSYSVER, m_opsysver );
-        }
+ 	        }
 		cp->Assign( ATTR_OPSYS_AND_VER, m_opsys_and_ver );
+
+       	 	if (m_opsys_major_ver) {
+			cp->Assign( ATTR_OPSYS_MAJOR_VER, m_opsys_major_ver );
+        	}
+        	if (m_opsys_name) {
+			cp->Assign( ATTR_OPSYS_NAME, m_opsys_name );
+	        }
+        	if (m_opsys_distro) {
+			cp->Assign( ATTR_OPSYS_DISTRO, m_opsys_distro );
+	        }
 
 		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
 
@@ -602,6 +667,13 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 			if (pav) pav->AssignToClassAd(cp);
 		}
 	}
+
+        // temporary attributes for raw utsname info
+	cp->Assign( ATTR_UTSNAME_SYSNAME, m_utsname_sysname );
+	cp->Assign( ATTR_UTSNAME_NODENAME, m_utsname_nodename );
+	cp->Assign( ATTR_UTSNAME_RELEASE, m_utsname_release );
+	cp->Assign( ATTR_UTSNAME_VERSION, m_utsname_version );
+	cp->Assign( ATTR_UTSNAME_MACHINE, m_utsname_machine );
 
 }
 
