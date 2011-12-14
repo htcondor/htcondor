@@ -8634,6 +8634,13 @@ in section~\ref{sec:DAG-configuration}.
   behavior of \Condor{dagman}, which is that the failure of a PRE script causes
   the POST script to not be executed.
 
+\label{param:DAGmanHoldClaimTime}
+\item[\Macro{DAGMAN\_HOLD\_CLAIM\_TIME}]
+  An integer defining the number of seconds \Condor{dagman} will hold onto a
+  claim after a job is finished, using the \Attr{KeepClaimIdle} attribute.  The
+  default value is 20. Setting this value to 0 causes \Condor{dagman} not to set
+  the attribute.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
