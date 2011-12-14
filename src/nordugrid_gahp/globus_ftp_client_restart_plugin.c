@@ -350,7 +350,8 @@ globus_module_descriptor_t globus_i_ftp_client_restart_plugin_module =
     globus_l_ftp_client_restart_plugin_deactivate,
     GLOBUS_NULL,
     GLOBUS_NULL,
-    &local_version
+    &local_version,
+    GLOBUS_NULL
 };
 
 
@@ -870,7 +871,6 @@ void
 l_ticker_cb(
     void *                              user_arg)
 {
-    globus_result_t                         result;
     globus_l_ftp_client_restart_plugin_t *  d;
     globus_abstime_t	                    when;
     globus_bool_t                           retry = GLOBUS_TRUE;
@@ -919,7 +919,7 @@ l_ticker_cb(
             switch(d->operation)
             {
                 case GLOBUS_FTP_CLIENT_GET:
-                    result = globus_ftp_client_plugin_restart_get(
+                    globus_ftp_client_plugin_restart_get(
                         d->ticker_ftp_handle,
                         d->source_url,
                         &d->source_attr,
@@ -927,7 +927,7 @@ l_ticker_cb(
                         &when);
                     break;
                 case GLOBUS_FTP_CLIENT_PUT:
-                    result = globus_ftp_client_plugin_restart_put(
+                    globus_ftp_client_plugin_restart_put(
                         d->ticker_ftp_handle,
                         d->dest_url,
                         &d->dest_attr,
@@ -935,7 +935,7 @@ l_ticker_cb(
                         &when);
                     break;
                 case GLOBUS_FTP_CLIENT_TRANSFER:
-                    result = globus_ftp_client_plugin_restart_third_party_transfer(
+                    globus_ftp_client_plugin_restart_third_party_transfer(
                         d->ticker_ftp_handle,
                         d->source_url,
                         &d->source_attr,

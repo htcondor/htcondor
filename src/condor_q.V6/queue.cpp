@@ -323,6 +323,7 @@ int main (int argc, char **argv)
 	useDB = checkDBconfig();
 #else 
 	useDB = FALSE;
+	if (useDB) {} /* Done to suppress set-but-not-used warnings */
 #endif /* HAVE_EXT_POSTGRESQL */
 
 #if !defined(WIN32)
@@ -2085,6 +2086,8 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		if(dbconn) {
 			free(dbconn);
 		}
+#else
+		if (query_password) {} /* Done to suppress set-but-not-used warnings */
 #endif /* HAVE_EXT_POSTGRESQL */
 	} else {
 			// fetch queue from schedd and stash it in output_buffer.
@@ -2363,6 +2366,8 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			if(dbconn) {
 				free(dbconn);
 			}
+#else
+			if (query_password) {} /* Done to suppress set-but-not-used warnings */
 #endif /* HAVE_EXT_POSTGRESQL */
 		} else {
 				// fetch queue from schedd	

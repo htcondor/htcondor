@@ -52,7 +52,7 @@ main(int, char* argv[])
 	int sock_fd = dup(0);
 	if (sock_fd == -1) {
 		err.sprintf("dup error on FD 0: %s", strerror(errno));
-		write(0, err.Value(), err.Length() + 1);
+		full_write(0, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 
@@ -65,7 +65,7 @@ main(int, char* argv[])
 	MyString merge_err;
 	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
 		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	env.MergeFrom(environ);
@@ -77,14 +77,14 @@ main(int, char* argv[])
 	int job_fd = read_fd(sock_fd);
 	if (dup2(job_fd, 0) == -1) {
 		err.sprintf("dup2 to FD 0 error: %s", strerror(errno));
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	close(job_fd);
 	if (fcntl(sock_fd, F_SETFD, FD_CLOEXEC) == -1) {
 		err.sprintf("fcntl error setting close-on-exec: %s",
 		            strerror(errno));
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 
@@ -95,7 +95,7 @@ main(int, char* argv[])
 	char** envp = env.getStringArray();
 	execve(argv[1], &argv[1], envp);
 	err.sprintf("execve error: %s", strerror(errno));
-	write(sock_fd, err.Value(), err.Length() + 1);
+	full_write(sock_fd, err.Value(), err.Length() + 1);
 	exit(1);
 }
 
@@ -112,22 +112,22 @@ read_env(int sock_fd)
 			            strerror(errno));
 		}
 		else {
-			err.sprintf("short read of env size: %d of %d bytes",
+			err.sprintf("short read of env size: %d of %lu bytes",
 			            bytes,
 			            sizeof(env_len));
 		}
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	if (env_len <= 0) {
 		err.sprintf("invalid env size %d read from stdin", env_len);
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	char* env_buf = new char[env_len];
 	if (env_buf == NULL) {
 		err.sprintf("failure to allocate %d bytes", env_len);
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	bytes = full_read(0, env_buf, env_len);
@@ -141,7 +141,7 @@ read_env(int sock_fd)
 			            bytes,
 			            env_len);
 		}
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	return env_buf;
@@ -160,11 +160,11 @@ read_fd(int sock_fd)
 			            strerror(errno));
 		}
 		else {
-			err.sprintf("short read of flag: %d of %d bytes",
+			err.sprintf("short read of flag: %d of %lu bytes",
 			            bytes,
 			            sizeof(flag));
 		}
-		write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.Value(), err.Length() + 1);
 		exit(1);
 	}
 	int fd;
@@ -172,7 +172,7 @@ read_fd(int sock_fd)
 		fd = fdpass_recv(sock_fd);
 		if (fd == -1) {
 			err.sprintf("fdpass_recv failed\n");
-			write(sock_fd, err.Value(), err.Length() + 1);
+			full_write(sock_fd, err.Value(), err.Length() + 1);
 			exit(1);
 		}
 	}
@@ -181,7 +181,7 @@ read_fd(int sock_fd)
 		if (fd == -1) {
 			err.sprintf("error opening /dev/null: %s",
 			            strerror(errno));
-			write(sock_fd, err.Value(), err.Length() + 1);
+			full_write(sock_fd, err.Value(), err.Length() + 1);
 			exit(1);
 		}
 	}

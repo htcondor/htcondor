@@ -189,8 +189,6 @@ parse_gahp_command (const char* raw, Gahp_Args* args) {
 
 	args->reset();
 
-	int beginning = 0;
-
 	int len=strlen(raw);
 
 	char * buff = (char*)malloc(len+1);
@@ -215,7 +213,6 @@ parse_gahp_command (const char* raw, Gahp_Args* args) {
 			args->add_arg( strdup(buff) );
 			buff_len = 0;	// re-set temporary buffer
 
-			beginning = i+1; // next char will be one after whitespace
 		}
 		else {
 			// It's just a regular character, save it

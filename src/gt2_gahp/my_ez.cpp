@@ -132,14 +132,16 @@ globus_l_gass_server_ez_activate(void);
 static int
 globus_l_gass_server_ez_deactivate(void);
 
+static char module_name [] = "globus_gass_server_ez";
 globus_module_descriptor_t globus_i_gass_server_ez_module =
 {
-    "globus_gass_server_ez",
+    module_name,
     globus_l_gass_server_ez_activate,
     globus_l_gass_server_ez_deactivate,
     GLOBUS_NULL,
     GLOBUS_NULL,
-    &local_version
+    &local_version,
+    GLOBUS_NULL
 };
 
 
@@ -270,10 +272,10 @@ globus_gass_server_ez_init(globus_gass_transfer_listener_t * listener,
     server->callback=callback;
 
     globus_hashtable_insert(&globus_l_gass_server_ez_listeners,
-			    (void *)*listener,
+			    (void *)(intptr_t(*listener)),
 			    server);
 
-    rc=globus_gass_transfer_register_listen(*listener,
+    rc=globus_gass_transfer_register_listen((*listener),
 				globus_l_gass_server_ez_listen_callback,
 					(void *)reqattr);
 
@@ -471,7 +473,7 @@ globus_l_gass_server_ez_listen_callback(
 				 user_arg,
 				 listener,
 				 globus_l_gass_server_ez_register_accept_callback,
-				 (void *)listener);
+				 (void *)(intptr_t(listener)));
 
 	if ( number_open > 1 ) {
 		try_to_listen();
@@ -504,6 +506,8 @@ globus_l_gass_server_ez_register_accept_callback(
     globus_byte_t * buf;
     int amt;
     int flags=0;
+    char fourohfour[] = "File Not Found";
+    char badrequest[] = "Bad Request";
 
     /* lookup our options */
     s=(globus_l_gass_server_ez_t *)globus_hashtable_lookup(
@@ -516,7 +520,7 @@ globus_l_gass_server_ez_register_accept_callback(
     if(rc != GLOBUS_SUCCESS ||
        parsed_url.url_path == GLOBUS_NULL || strlen(parsed_url.url_path) == 0U)
     {
-        globus_gass_transfer_deny(request, 404, "File Not Found");
+        globus_gass_transfer_deny(request, 404, fourohfour);
         globus_gass_transfer_request_destroy(request);
         if (rc == GLOBUS_SUCCESS)
             globus_url_destroy(&parsed_url);
@@ -622,7 +626,7 @@ globus_l_gass_server_ez_register_accept_callback(
                                                1024,
                                                1,
                                                globus_l_gass_server_ez_put_callback,
-                                               (void *) rc);
+                                               (void *) (intptr_t)rc);
 	    }
             break;
 
@@ -651,7 +655,7 @@ globus_l_gass_server_ez_register_accept_callback(
 	    }
 	    else
 	    {
-		globus_gass_transfer_deny(request, 404, "File Not Found");
+		globus_gass_transfer_deny(request, 404, fourohfour);
 		globus_gass_transfer_request_destroy(request);
 		goto reregister;
 	    }
@@ -671,11 +675,11 @@ globus_l_gass_server_ez_register_accept_callback(
                                             amt,
                                             GLOBUS_FALSE,
                                             globus_l_gass_server_ez_get_callback,
-                                            (void *) rc);
+                                            (void *) (intptr_t)rc);
 	  break;
 	default:
 	deny:
-	  globus_gass_transfer_deny(request, 400, "Bad Request");
+	  globus_gass_transfer_deny(request, 400, badrequest);
 	  globus_gass_transfer_request_destroy(request);
 
 	}
@@ -778,7 +782,39 @@ globus_l_gass_server_ez_put_callback(
 
     fd = (long) arg;
 
-    globus_libc_write(fd, bytes, len);
+#ifndef TARGET_ARCH_WIN32
+    ssize_t rc;
+#else
+        int rc;
+#endif
+    size_t written = 0;
+
+    while(written < len)
+    {
+        rc = globus_libc_write(fd,
+                               bytes  + written,
+                               len    - written);
+        if(rc < 0)
+        {
+            switch(errno)
+            {
+            case EAGAIN:
+            case EINTR:
+                break;
+            default:
+                goto cleanup;
+            }
+        }
+        else
+        {
+            written += rc;
+        }
+    }
+
+    // NOTE: Errors are completely ignored!
+
+cleanup:
+
     if(!last_data)
     {
         globus_gass_transfer_receive_bytes(request,
@@ -1017,7 +1053,7 @@ my_globus_gass_server_ez_init(globus_gass_transfer_listener_t * listener,
 
 	number_open++;
     globus_hashtable_insert(&globus_l_gass_server_ez_listeners,
-			    (void *)*listener,
+			    (void *)(intptr_t)*listener,
 			    server);
 
 /* insert error handling here*/
@@ -1048,7 +1084,7 @@ void try_to_listen(void)
     if (n==-1) return;
 
     s = (globus_l_gass_server_ez_t *)globus_hashtable_lookup(
-                                                     &globus_l_gass_server_ez_listeners,(void *)gassServerListeners[n]);
+                                                     &globus_l_gass_server_ez_listeners,(void *)(intptr_t)gassServerListeners[n]);
 
     result = globus_gass_transfer_register_listen(
                                 gassServerListeners[n],

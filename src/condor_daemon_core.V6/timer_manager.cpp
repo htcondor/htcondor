@@ -573,7 +573,6 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 void TimerManager::Start()
 {
 	struct timeval		timer;
-	int					rv;
 
 	for(;;)
 	{
@@ -590,12 +589,12 @@ void TimerManager::Start()
 			// no timer events registered...  only a signal
 			// can save us now!!
 			dprintf(D_DAEMONCORE,"TimerManager::Start() about to block with no events!\n");
-			rv = select(0,0,0,0,NULL);
+			select(0,0,0,0,NULL);
 		} else {
 			dprintf(D_DAEMONCORE,
 				"TimerManager::Start() about to block, timeout=%ld\n",
 				(long)timer.tv_sec);
-			rv = select(0,0,0,0, &timer);
+			select(0,0,0,0, &timer);
 		}		
 	}
 }

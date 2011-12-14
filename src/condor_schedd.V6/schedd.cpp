@@ -88,6 +88,7 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
+#include "condor_email.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -8923,109 +8924,6 @@ Scheduler::mail_problem_message()
 	email_close(mailer);
 }
 
-void
-Scheduler::NotifyUser(shadow_rec* srec, const char* msg, int status, int JobStatus)
-{
-	int notification;
-	MyString owner;
-	MyString subject;
-	MyString cmd;
-	MyString args;
-
-	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
-						ATTR_JOB_NOTIFICATION, &notification) < 0) {
-		dprintf(D_ALWAYS, "GetAttributeInt() failed "
-				"-- presumably job was just removed\n");
-		return;
-	}
-
-	switch(notification) {
-	case NOTIFY_NEVER:
-		return;
-	case NOTIFY_ALWAYS:
-		break;
-	case NOTIFY_COMPLETE:
-		if (JobStatus == COMPLETED) {
-			break;
-		} else {
-			return;
-		}
-	case NOTIFY_ERROR:
-		if( (JobStatus == REMOVED) ) {
-			break;
-		} else {
-			return;
-		}
-	default:
-		dprintf(D_ALWAYS, "Condor Job %d.%d has a notification of %d\n",
-				srec->job_id.cluster, srec->job_id.proc, notification );
-	}
-
-	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-						   ATTR_NOTIFY_USER, owner) < 0) {
-		if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-							   ATTR_OWNER, owner) < 0) {
-			EXCEPT("GetAttributeString(%d, %d, \"%s\")",
-					srec->job_id.cluster,
-					srec->job_id.proc, ATTR_OWNER);
-		}
-	}
-
-	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc, 
-							ATTR_JOB_CMD,
-							cmd) < 0) {
-		EXCEPT("GetAttributeString(%d, %d, \"cmd\")", srec->job_id.cluster,
-				srec->job_id.proc);
-	}
-	{
-		ClassAd *job_ad = GetJobAd(srec->job_id.cluster,srec->job_id.proc);
-		if(!job_ad) {
-			EXCEPT("Failed to get job ad when sending notification.");
-		}
-		ArgList::GetArgsStringForDisplay(job_ad,&args);
-	}
-
-	// Send mail to user
-	subject.sprintf("Condor Job %d.%d", srec->job_id.cluster, 
-					srec->job_id.proc);
-	dprintf( D_FULLDEBUG, "Unknown user notification selection\n");
-	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",subject.Value());
-
-	FILE* mailer = email_open(owner.Value(), subject.Value());
-	if( mailer ) {
-		fprintf( mailer, "Your condor job %s%d.\n\n", msg, status );
-		fprintf( mailer, "Job: %s %s\n", cmd.Value(), args.Value() );
-		email_close( mailer );
-	}
-
-/*
-	sprintf(url, "mailto:%s", owner);
-	if ((fd = open_url(url, O_WRONLY)) < 0) {
-		EXCEPT("condor_open_mailto_url(%s, %d, 0)", owner, O_WRONLY, 0);
-	}
-
-//	sprintf(subject, "From: Condor\n");
-//	write(fd, subject, strlen(subject));
-//	sprintf(subject, "To: %s\n", owner);
-//	write(fd, subject, strlen(subject));
-	sprintf(subject, "Subject: Condor Job %d.%d\n\n", srec->job_id.cluster,
-			srec->job_id.proc);
-	write(fd, subject, strlen(subject));
-	sprintf(subject, "Your condor job\n\t");
-	write(fd, subject, strlen(subject));
-	write(fd, cmd.Value(), cmd.Length());
-	write(fd, " ", 1);
-	write(fd, args, strlen(args));
-	write(fd, "\n", 1);
-	write(fd, msg, strlen(msg));
-	sprintf(subject, "%d.\n", status);
-	write(fd, subject, strlen(subject));
-	close(fd);
-*/
-
-}
-
-
 static bool
 IsSchedulerUniverse( shadow_rec* srec )
 {
@@ -9660,13 +9558,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason = "Unknown user policy expression";
 		}
 	}
-	FreeJobAd(job_ad);
-	job_ad = NULL;
 
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
-			scheduler_univ_job_leave_queue(job_id, status, srec);
+			scheduler_univ_job_leave_queue(job_id, status, job_ad);
 			break;
 
 		case STAYS_IN_QUEUE:
@@ -9685,7 +9581,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"(%d.%d) Job exited.  User policy attempted to release "
 				"job, but it wasn't on hold.  Allowing job to exit queue.\n", 
 				job_id.cluster, job_id.proc);
-			scheduler_univ_job_leave_queue(job_id, status, srec);
+			scheduler_univ_job_leave_queue(job_id, status, job_ad);
 			break;
 
 		case UNDEFINED_EVAL:
@@ -9713,22 +9609,18 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			break;
 	}
 
+	FreeJobAd(job_ad);
+	job_ad = NULL;
 }
 
 
 void
-Scheduler::scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec)
+Scheduler::scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad)
 {
-	ASSERT(srec);
 	set_job_status( job_id.cluster,	job_id.proc, COMPLETED ); 
 	WriteTerminateToUserLog( job_id, status );
-	if(WIFEXITED(status)) {
-		NotifyUser( srec, "exited with status ",
-					WEXITSTATUS(status), COMPLETED );
-	} else { // signal
-		NotifyUser( srec, "was killed by signal ",
-					WTERMSIG(status), COMPLETED );
-	}
+	Email email;
+	email.sendExit(ad, JOB_EXITED);
 }
 
 void
@@ -12499,31 +12391,15 @@ holdJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		MyString msg_buf;
-		msg_buf.sprintf( "Condor job %d.%d has been put on hold.\n%s\n"
-						 "Please correct this problem and release the "
-						 "job with \"condor_release\"\n",
-						 cluster, proc, reason );
-
-		MyString msg_subject;
-		msg_subject.sprintf( "Condor job %d.%d put on hold", cluster, proc );
-
-		FILE* fp;
 		if( email_user ) {
-			fp = email_user_open( job_ad, msg_subject.Value() );
-			if( fp ) {
-				fprintf( fp, "%s", msg_buf.Value() );
-				email_close( fp );
-			}
+			Email email;
+			email.sendHold( job_ad, reason );
+		}
+		if( email_admin ) {
+			Email email;
+			email.sendHoldAdmin( job_ad, reason );
 		}
 		FreeJobAd( job_ad );
-		if( email_admin ) {
-			fp = email_admin_open( msg_subject.Value() );
-			if( fp ) {
-				fprintf( fp, "%s", msg_buf.Value() );
-				email_close( fp );
-			}
-		}			
 	}
 	return true;
 }
@@ -12645,30 +12521,15 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		MyString msg_buf;
-		msg_buf.sprintf( "Condor job %d.%d has been released from being "
-						 "on hold.\n%s", cluster, proc, reason );
-
-		MyString msg_subject;
-		msg_subject.sprintf( "Condor job %d.%d released from hold state",
-							 cluster, proc );
-
-		FILE* fp;
 		if( email_user ) {
-			fp = email_user_open( job_ad, msg_subject.Value() );
-			if( fp ) {
-				fprintf( fp, "%s", msg_buf.Value() );
-				email_close( fp );
-			}
+			Email email;
+			email.sendRelease( job_ad, reason );
+		}
+		if( email_admin ) {
+			Email email;
+			email.sendReleaseAdmin( job_ad, reason );
 		}
 		FreeJobAd( job_ad );
-		if( email_admin ) {
-			fp = email_admin_open( msg_subject.Value() );
-			if( fp ) {
-				fprintf( fp, "%s", msg_buf.Value() );
-				email_close( fp );
-			}
-		}			
 	}
 	return true;
 }

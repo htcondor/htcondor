@@ -148,7 +148,6 @@ FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
 			int maxRescueDagNum )
 {
 	int lastRescue = 0;
-	bool done = false;
 
 	for ( int test = 1; test <= maxRescueDagNum; test++ ) {
 		MyString testName = RescueDagName( primaryDagFile, multiDags,
@@ -172,7 +171,6 @@ FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
 		dprintf( D_ALWAYS,
 					"Warning: FindLastRescueDagNum() hit maximum "
 					"rescue DAG number: %d\n", maxRescueDagNum );
-		done = true;
 	}
 
 	return lastRescue;

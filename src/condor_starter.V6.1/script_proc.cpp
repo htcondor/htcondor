@@ -138,12 +138,11 @@ ScriptProc::StartJob()
 	args.AppendArg(arg0.Value());
 
 	MyString args_error;
-	bool args_success = false;
 	if(args2 && *args2) {
-		args_success = args.AppendArgsV2Raw(args2,&args_error);
+		args.AppendArgsV2Raw(args2,&args_error);
 	}
 	else if(args1 && *args1) {
-		args_success = args.AppendArgsV1Raw(args1,&args_error);
+		args.AppendArgsV1Raw(args1,&args_error);
 	}
 	else {
 		dprintf( D_FULLDEBUG, "neither %s nor %s could be found in JobAd\n",

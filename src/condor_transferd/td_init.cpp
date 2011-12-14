@@ -325,7 +325,6 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 	MyString encap_end_line;
 	EncapMethod em;
 	char *str = NULL;
-	int rval;
 
 	dprintf(D_ALWAYS, 
 		"Entering TransferD::accept_transfer_request_handler()\n");
@@ -363,7 +362,7 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 			break;
 
 		case ENCAP_METHOD_OLD_CLASSADS:
-			rval = accept_transfer_request_encapsulation_old_classads(sock);
+			accept_transfer_request_encapsulation_old_classads(sock);
 			break;
 
 		default:
