@@ -210,7 +210,7 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 	ThreadArg *thread_arg = (ThreadArg*)targ;
 	ReliSock *rsock = (ReliSock*)sock;
 	TransferRequest *treq = NULL;
-	int protocol;
+	// int protocol;
 	SimpleList<ClassAd*> *jad_list = NULL;
 	ClassAd *jad = NULL;
 	int cluster, proc;
@@ -235,7 +235,7 @@ TransferD::write_files_thread(void *targ, Stream *sock)
 
 	// even though I'm in a new process, I got here either through forking
 	// or through a thread, so this memory is a copy.
-	protocol = thread_arg->protocol;
+	// protocol = thread_arg->protocol;
 	treq = thread_arg->treq;
 	delete thread_arg;
 

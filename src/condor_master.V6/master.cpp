@@ -719,7 +719,6 @@ void
 init_daemon_list()
 {
 	char	*daemon_name;
-	class daemon	*new_daemon;
 	StringList daemon_names, dc_daemon_names;
 
 	daemons.ordered_daemon_names.clearAll();
@@ -785,9 +784,9 @@ init_daemon_list()
 		while( (daemon_name = ha_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
 				if( dc_daemon_names.contains(daemon_name) ) {
-					new_daemon = new class daemon(daemon_name, true, true );
+					new class daemon(daemon_name, true, true );
 				} else {
-					new_daemon = new class daemon(daemon_name, false, true );
+					new class daemon(daemon_name, false, true );
 				}
 			}
 		}
@@ -838,16 +837,16 @@ init_daemon_list()
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
 				if( dc_daemon_names.contains(daemon_name) ) {
-					new_daemon = new class daemon(daemon_name);
+					new class daemon(daemon_name);
 				} else {
-					new_daemon = new class daemon(daemon_name, false);
+					new class daemon(daemon_name, false);
 				}
 			}
 		}
 	} else {
 		daemons.ordered_daemon_names.create_union( dc_daemon_names, false );
 		for(int i = 0; default_daemon_list[i]; i++) {
-			new_daemon = new class daemon(default_daemon_list[i]);
+			new class daemon(default_daemon_list[i]);
 		}
 	}
 

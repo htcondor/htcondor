@@ -468,7 +468,7 @@ globus_ftp_client_handleattr_get_clientinfo(
 
         goto error_exit;
     }
-    i_attr = *(const globus_i_ftp_client_handleattr_t **) attr;
+    i_attr = *(const globus_i_ftp_client_handleattr_t * const*) attr;
 
     if(app_name && i_attr->clientinfo_app_name)
     {
@@ -1163,7 +1163,7 @@ globus_ftp_client_operationattr_set_storage_module(
     const char *                            module_name,
     const char *                            module_args)
 {
-    char *                                  m_args="";
+    const char *                                  m_args="";
     globus_object_t *				err;
     globus_i_ftp_client_operationattr_t *	i_attr;
     GlobusFuncName(globus_ftp_client_operationattr_set_parallelism);
@@ -1177,7 +1177,7 @@ globus_ftp_client_operationattr_set_storage_module(
 
     if(module_args != NULL)
     {
-        m_args = (char *)module_args;
+        m_args = module_args;
     }
     if(module_name != NULL)
     {
