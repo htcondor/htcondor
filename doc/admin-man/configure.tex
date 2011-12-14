@@ -6007,6 +6007,15 @@ These settings affect the \Condor{starter}.
   environment, the user job's definition takes precedence.
   This variable does not apply to standard universe jobs.
 
+\label{param:NamedChroot} 
+\item[\Macro{NAMED\_CHROOT}]
+  A comma and/or space separated list of full paths to one or more directories,
+  under which the \Condor{starter} may run a chroot-ed job.
+  This allows Condor to invoke \Procedure{chroot} before launching a job,
+  if the job requests such by defining the job ClassAd attribute
+  \Attr{RequestedChroot} with a directory that matches one in this list.
+  There is no default value for this variable.
+
 \label{param:StarterUploadTimeout} 
 \item[\Macro{STARTER\_UPLOAD\_TIMEOUT}]
   An integer value that specifies the network communication timeout to use
