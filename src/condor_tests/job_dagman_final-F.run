@@ -34,11 +34,7 @@ $scriptfile = "job_dagman_final-F.scripts.out";
 $rescuefile = "job_dagman_final-F.dag.rescue001";
 
 # Note: we must find these lines *in the specified order*.
-@node_output_lines = ("Job for node F_A",
-			"  DAG_STATUS=0",
-			"  FAILED_COUNT=0",
-			"  OK done with F_A",
-			"Job for node F_B1",
+@node_output_lines = ("Job for node F_B1",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
 			"  OK done with F_B1",

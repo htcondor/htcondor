@@ -1,8 +1,9 @@
 CONFIG job_dagman_final-F.config
 
-#TEMPTEMP -- add a pre_skip test here after merging
+# This node now uses the 'pre skip' feature.
 JOB F_A job_dagman_final-F-nodeA.cmd
-SCRIPT PRE F_A job_dagman_final-F-script.pl F_C Pre 0 $DAG_STATUS $FAILED_COUNT -1
+PRE_SKIP F_A 5
+SCRIPT PRE F_A job_dagman_final-F-script.pl F_C Pre 5 $DAG_STATUS $FAILED_COUNT -1
 
 JOB F_B1 job_dagman_final-F-nodeB1.cmd
 # This job will abort the DAG.

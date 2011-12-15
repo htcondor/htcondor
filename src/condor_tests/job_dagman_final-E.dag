@@ -1,9 +1,9 @@
 CONFIG job_dagman_final-E.config
 
-#TEMPTEMP -- add an 'always run post' for this node after merging.
+# This node now uses the 'always run post' feature.
 JOB E_A job_dagman_final-E-nodeA.cmd
-SCRIPT PRE E_A job_dagman_final-E-script.pl E_A Pre $DAG_STATUS $FAILED_COUNT 0
-SCRIPT POST E_A job_dagman_final-E-script.pl E_A Post $DAG_STATUS $FAILED_COUNT $RETURN
+SCRIPT PRE E_A job_dagman_final-E-script.pl E_A Pre $DAG_STATUS $FAILED_COUNT 1
+SCRIPT POST E_A job_dagman_final-E-script.pl E_A Post $DAG_STATUS $FAILED_COUNT 0
 
 JOB E_B1 job_dagman_final-E-nodeB1.cmd
 # This job will condor_rm the DAG.
