@@ -294,11 +294,13 @@ sysapi_get_distro_info(void)
 
         // read the first line only
         my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
-        if ( my_fp != NULL )
-	{
-        	char tmp_str[200] = {0};
-                fgets(tmp_str, sizeof(tmp_str), my_fp);
-        	fclose(my_fp);
+        if ( my_fp != NULL ) {
+			char tmp_str[200] = {0};
+			char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
+			if (ret == 0) {
+				return NULL;
+			}
+			fclose(my_fp);
 
 		int len = strlen(tmp_str);
 		if( tmp_str[len-1] == '\n' )
