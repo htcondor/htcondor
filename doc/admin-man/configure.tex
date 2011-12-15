@@ -4607,9 +4607,10 @@ Power Management for more details.
   A default executable in that location which meets these specifications is
   shipped with Condor. 
 
-  The \Condor{startd} initially invokes this plug-in with the argument
-  \Arg{ad}, and expects the plug-in to output a ClassAd to
-  its standard output stream.
+  The \Condor{startd} initially invokes this plug-in with both the
+  value defined for \MacroNI{HIBERNATION\_PLUGIN\_ARGS}
+  and the argument \Arg{ad}, 
+  and expects the plug-in to output a ClassAd to its standard output stream.
   The \Condor{startd} will use this ClassAd to determine what low power
   setting to use on further invocations of the plug-in.
   To that end, the ClassAd must contain the attribute
@@ -4626,15 +4627,16 @@ Power Management for more details.
   is an integer which represents the bit mask of the modes detected.
 
   Subsequent \Condor{startd} invocations of the plug-in have command
-  line arguments \OptArg{set}{<power-mode>}, where \Arg{<power-mode>}
+  line arguments defined by \MacroNI{HIBERNATION\_PLUGIN\_ARGS} plus the
+  argument \OptArg{set}{<power-mode>}, where \Arg{<power-mode>}
   is one of the supported states as given in the attribute
   \Attr{HibernationSupportedStates}.
 
 \label{param:HibernationPluginArgs}
 \item[\Macro{HIBERNATION\_PLUGIN\_ARGS}]
   Command line arguments appended to the command that invokes the plug-in.
-  Used only when the \Condor{startd} is \emph{not} initially invoking the
-  plug-in to determine the low power states supported.
+  The additional argument \Arg{ad} is appended  
+  when the \Condor{startd} initially invokes the plug-in.
 
 \label{param:HibernationOverrideWOL}
 \item[\Macro{HIBERNATION\_OVERRIDE\_WOL}]
