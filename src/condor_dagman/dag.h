@@ -389,7 +389,10 @@ class Dag {
 		*/
 	bool FinishedRunning() const;
 
-		//TEMPTEMP -- document
+		/** Determine whether the DAG has finished running (not counting
+			the final node, if there is one).
+			@return true iff the DAG is finished
+		*/
 	bool FinishedExceptFinal() const { return NumJobsSubmitted() == 0 &&
 				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
 
@@ -405,12 +408,10 @@ class Dag {
 	bool DoneFailed() const;
 
 		/** Determine whether the DAG is finished because of a cycle in
-			the DAG.  (Note that this method sometimes incorrectly returns
-			true for errors other than cycles in the DAG.  wenger 2010-07-30.)
+			the DAG.
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	//TEMPTEMP -- this doesn't seem right to me...
-	inline bool DoneCycle() { return FinishedRunning() &&
+	inline bool DoneCycle() { return FinishedRunning() && !DoneSuccess() &&
 				NumNodesFailed() == 0; }
 
 		/** Submit all ready jobs, provided they are not waiting on a
@@ -420,7 +421,11 @@ class Dag {
 		*/
     int SubmitReadyJobs(const Dagman &dm);
 
-		//TEMPTEMP -- document -- only if other stuff is finished??
+		/** Start the DAG's final node if there is one.  Note that this
+			method will not re-start the final node if it has already
+			been started.
+			@return true iff the final node was actually started.
+		*/
 	bool StartFinalNode();
 
     /** Remove all jobs (using condor_rm) that are currently running.
@@ -707,15 +712,20 @@ class Dag {
 		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
 		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
 		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
-		DAG_STATUS_HALTED, // DAG was halted and submitted jobs finished
+		DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
 	};
 
 	dag_status _dagStatus;
 
-	//TEMPTEMP -- document
+	/** Determine whether this DAG has a final node.
+		@return true iff the DAG has a final node.
+	*/
 	inline bool HasFinalNode() { return _final_job != NULL; }
 
-	//TEMPTEMP -- document
+	/** Determine whether the final node (if any) of this DAG is
+		running (or has been run).
+		@return true iff the final node is running or has been run
+	*/
 	inline bool RunningFinalNode() { return _runningFinalNode; }
 
   private:
@@ -856,17 +866,6 @@ class Dag {
 		// the Job object)
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
-
-#if 0 //TEMPTEMP?
-		/** Write the given node to the rescue DAG.
-			@param The file pointer to the rescue DAG fle
-			@param The node to write
-			@param Whether retries should be reset for a rescue DAG
-		*/
-	//TEMPTEMP -- ended up with two copies of this method declaration...
-	void WriteNodeToRescue( FILE *fp, /* const */ Job *node,
-				bool reset_retries_upon_rescue ) const;
-#endif //TEMPTEMP
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.

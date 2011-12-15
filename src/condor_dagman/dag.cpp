@@ -1379,9 +1379,10 @@ Dag::StartFinalNode()
 	if ( _final_job && !_runningFinalNode ) {
 		debug_printf( DEBUG_QUIET, "Running final node...\n" );
 		_final_job->_Status = Job::STATUS_READY;
-		StartNode( _final_job, false );
-		_runningFinalNode = true;
-		return true;
+		if ( StartNode( _final_job, false ) ) {
+			_runningFinalNode = true;
+			return true;
+		}
 	}
 
 	return false;

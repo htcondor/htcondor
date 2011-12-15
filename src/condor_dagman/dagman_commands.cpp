@@ -76,6 +76,13 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		failReason = why;
 		return false;
 	}
+	if( done && isFinal) {
+		failReason.sprintf( "Warning: FINAL Job %s cannot be set to DONE\n",
+					name );
+        debug_printf( DEBUG_QUIET, failReason.Value() );
+		(void)check_warning_strictness( DAG_STRICT_1, false );
+		done = false;
+	}
 	Job* node = new Job( type, name, directory, submitFile );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );

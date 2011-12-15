@@ -1,6 +1,5 @@
 //TEMPTEMP -- make sure condor_rm in schedd removes node jobs before parent, otherwise that could goof up the final node
-//TEMPTEMP -- make sure final node can never be marked as DONE when DAG is parsed.
-//TEMPTEMP -- overwrite the rescue DAG if we generate it twice
+//TEMPTEMP -- make sure final node can never be marked as DONE when DAG is parsed. (or at least is never marked as done in a rescue DAG)
 //TEMPTEMP -- cycle check doesn't work when you have a final node...
 /***************************************************************
  *
@@ -1106,7 +1105,7 @@ void main_init (int argc, char ** const argv) {
 #ifndef NOT_DETECT_CYCLE
 	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{
-		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
+		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, please check input\n");
 	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
@@ -1338,7 +1337,8 @@ void condor_event_timer () {
     //
     // If no jobs are submitted and no scripts are running, but the
     // dag is not complete, then at least one job failed, or a cycle
-    // exists.
+    // exists.  (Note that if the DAG completed successfully, we already
+	// returned from this function above.)
     // 
     if( dagman.dag->FinishedRunning() ) {
 		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
@@ -1355,7 +1355,7 @@ void condor_event_timer () {
 						"nodes are complete -- checking for a cycle...\n" );
 			if( dagman.dag->isCycle() ) {
 				debug_printf (DEBUG_QUIET, "... ERROR: a cycle exists "
-							"in the dag, plese check input\n");
+							"in the dag, please check input\n");
 				dagStatus = Dag::DAG_STATUS_CYCLE;
 			} else {
 				debug_printf (DEBUG_QUIET, "... ERROR: no cycle found; "

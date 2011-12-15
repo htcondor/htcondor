@@ -254,7 +254,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				// We don't just return false here because that would
 				// cause us to re-try the submit, which would obviously
 				// just fail again.
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR/* TEMPTEMP?*/ );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return false; // We won't actually get to here.
 		} else if ( queueCount != 1 ) {
 			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
@@ -263,7 +263,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				// We don't just return false here because that would
 				// cause us to re-try the submit, which would obviously
 				// just fail again.
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR/* TEMPTEMP?*/ );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return false; // We won't actually get to here.
 		}
 	}

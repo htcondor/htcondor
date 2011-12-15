@@ -266,7 +266,7 @@ bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
 		debug_printf( DEBUG_QUIET, "ERROR: Warning is fatal "
 					"error because of DAGMAN_USE_STRICT setting\n" );
 		if ( quit_if_error ) {
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR/*TEMPTEMP?*/ );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 		}
 
 		return true;

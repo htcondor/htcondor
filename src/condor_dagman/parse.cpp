@@ -1999,6 +1999,13 @@ parse_done(
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
+					  filename, lineNumber, jobNameOrig );
+		return !check_warning_strictness( DAG_STRICT_1, false );
+	}
+
 	job->SetStatus( Job::STATUS_DONE );
 	
 	return true;
