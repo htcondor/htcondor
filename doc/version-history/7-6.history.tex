@@ -189,6 +189,14 @@ daemons to crash when the file used for \MacroNI{CERTIFICATE\_MAPFILE}
 contained more than 80 entries.
 \Ticket{2409}
 
+\item Fixed a bug that caused hibernation to fail on certain Linux platforms
+for certain hibernation states.
+To work correctly on these Linux platforms,
+the plug-in needs the command line arguments defined by
+\Macro{HIBERNATION\_PLUGIN\_ARGS} when initially invoked, 
+as well as for other invocations.  
+\Ticket{2561}
+
 \end{itemize}
 
 \noindent Known Bugs:
