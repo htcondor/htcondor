@@ -5939,9 +5939,10 @@ These settings affect the \Condor{starter}.
   This is useful for glidein jobs that need to
   access environment variables from the batch system running the glidein
   daemons.
-  When both the user job and \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
+  When the user job and/or \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
   an environment variable that is in the \Condor{starter}'s
-  environment, the user job's definition takes precedence.
+  environment, the setting from the \Condor{starter}'s environment
+  is overridden.
   This variable does not apply to standard universe jobs.
 
 \label{param:StarterUploadTimeout} 
