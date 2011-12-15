@@ -6620,7 +6620,7 @@ check_open( const char *name, int flags )
 	}
 
 	if ( !DisableFileChecks ) {
-		if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
 			if( ( errno == EISDIR || errno == EACCES ) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
