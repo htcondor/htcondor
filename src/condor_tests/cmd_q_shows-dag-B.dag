@@ -1,0 +1,5 @@
+SUBDAG EXTERNAL B_A cmd_q_shows-dag-B_A.dag
+JOB B_B cmd_q_shows-dag-B_B.cmd
+VARS B_B JOB="B_B"
+JOB B_C cmd_q_shows-dag-B_C.cmd
+VARS B_C JOB="B_C"
