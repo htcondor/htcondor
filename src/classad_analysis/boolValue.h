@@ -97,7 +97,6 @@ class BoolTable
 	bool AndOfColumn( int col, BoolValue &result );
 	bool OrOfRow( int row, BoolValue &result );
 	bool OrOfColumn( int col, BoolValue &result );
-	bool GenerateABVList( List<AnnotatedBoolVector> &result);
 	bool GenerateMaxTrueABVList( List<AnnotatedBoolVector> &result );
 	bool GenerateMaximalTrueBVList( List< BoolVector > &result );
 	bool GenerateMinimalFalseBVList( List< BoolVector > &result );

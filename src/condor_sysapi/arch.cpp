@@ -17,12 +17,23 @@
  *
  ***************************************************************/
 
+// char  sysname[]  name of this implementation of the operating system
+// char  nodename[] name of this node within an implementation-dependent
+//                 communications network
+// char  release[]  current release level of this implementation
+// char  version[]  current version level of this release
+// char  machine[]  name of the hardware type on which the system is running
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "match_prefix.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
 
 #if defined(Darwin)
 #include <sys/sysctl.h>
@@ -150,12 +161,23 @@ int sysapi_opsys_version()
 #else
 
 static int arch_inited = FALSE;
+static int utsname_inited = FALSE;
 static const char* arch = NULL;
 static const char* uname_arch = NULL;
 static const char* opsys = NULL;
 static const char* opsys_versioned = NULL;
 static const char* uname_opsys = NULL;
 static int opsys_version = 0;
+static const char* opsys_name = NULL;
+static int opsys_major_version = 0;
+static const char* opsys_distro = NULL;
+
+// temporary attributes for raw utsname info
+static const char* utsname_sysname = NULL;
+static const char* utsname_nodename = NULL;
+static const char* utsname_release = NULL;
+static const char* utsname_version = NULL;
+static const char* utsname_machine = NULL;
 
 #ifdef HPUX
 const char* get_hpux_arch();
@@ -164,6 +186,45 @@ const char* get_hpux_arch();
 #ifdef AIX
 const char* get_aix_arch( struct utsname* );
 #endif
+
+void 
+init_utsname(void)
+{
+	struct utsname buf;
+
+	if( uname(&buf) < 0 ) {
+		return;
+	}
+
+	utsname_sysname = strdup( buf.sysname );
+	if( !utsname_sysname ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	utsname_nodename = strdup( buf.nodename );
+	if( !utsname_nodename ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	utsname_release = strdup( buf.release );
+	if( !utsname_release ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	utsname_version = strdup( buf.version );
+	if( !utsname_version ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	utsname_machine = strdup( buf.machine );
+	if( !utsname_machine ) {
+		EXCEPT( "Out of memory!" );
+	}
+        
+	if ( utsname_sysname && utsname_nodename && utsname_release ) {
+		utsname_inited = TRUE;
+	}
+}
 
 void
 init_arch(void)
@@ -185,13 +246,176 @@ init_arch(void)
 	}
 
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
-	opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
-	opsys_versioned = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, true );
-    opsys_version = sysapi_translate_opsys_version( buf.sysname, buf.release, buf.version );
+
+	// Changes for Linux attrs
+ 	dprintf(D_ALWAYS, "uname_opsys is %s \n", uname_opsys);
+	// OpSys =       "LINUX" ==> "LINUX"
+	// OpSysAndVer = "LINUX" ==> "RedHat5"
+	// OpSysVer =        206 ==> "501"
+	// OpSysName =       N/A ==> "Red Hat 5.1"
+	// OpSysMajorVer =   N/A ==> "5"
+	// OpSysDistro =     N/A ==> "RedHat"
+
+	if( !strcasecmp(uname_opsys, "linux") )
+        {
+          	opsys_name = sysapi_get_distro_info();
+                opsys = strdup( "LINUX" );
+                opsys_distro = sysapi_find_distro( opsys_name );
+                opsys_major_version = sysapi_distro_major_version( opsys_name );
+                opsys_version = sysapi_translate_opsys_version( opsys_name, opsys_name, opsys_name );
+                opsys_versioned = sysapi_distro_versioned( opsys, opsys_major_version );
+
+                dprintf(D_ALWAYS, "Values for Linux opsys are: \n %s \n %s \n %d \n %d \n %s \n %s \n", opsys, opsys_distro, opsys_major_version, opsys_version, opsys_versioned, opsys_name);
+     	} else
+        {
+                opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
+                opsys_versioned = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, true );
+                opsys_version = sysapi_translate_opsys_version( buf.sysname, buf.release, buf.version );
+        }
+
+        if (!opsys) {
+                opsys = strdup("Unknown");
+        }
+        if (!opsys_versioned) {
+                opsys_versioned = strdup("Unknown");
+        }
 
 	if ( arch && opsys ) {
 		arch_inited = TRUE;
 	}
+}
+
+const char *
+sysapi_get_distro_info(void)
+{
+        FILE *my_fp;
+        char* distro_str;
+        const char * etc_issue_path = "/etc/issue";
+
+        // read the first line only
+        my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
+        if ( my_fp != NULL ) {
+			char tmp_str[200] = {0};
+			char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
+			if (ret == 0) {
+				return NULL;
+			}
+			fclose(my_fp);
+
+		int len = strlen(tmp_str);
+		if( tmp_str[len-1] == '\n' )
+		{
+    			tmp_str[len-1] = 0;
+		}
+		distro_str = strdup( tmp_str );
+        } else 
+	{
+		distro_str = strdup( "Unknown" );
+	}
+  
+	if( !distro_str ) {
+               	EXCEPT( "Out of memory!" );
+       	}
+
+        return distro_str;
+}
+
+const char *
+sysapi_find_distro( const char *distro_name )
+{
+	char* distro;
+
+	char* distro_name_lc = strdup( distro_name );
+	int i = 0;
+        char c;
+        while (distro_name_lc[i])
+        {
+                c = distro_name_lc[i];
+                distro_name_lc[i] = tolower(c);
+                i++;
+        }
+
+	if ( strstr(distro_name_lc, "red") && strstr(distro_name_lc, "hat") )
+	{
+                distro = strdup( "RedHat" );
+	}	
+	else if ( strstr(distro_name_lc, "fedora") )
+	{
+		distro = strdup( "Fedora" );
+	}
+	else if ( strstr(distro_name_lc, "ubuntu") )
+	{
+		distro = strdup( "Ubuntu" );
+	}
+	else if ( strstr(distro_name_lc, "debian") )
+	{
+		distro = strdup( "Debian" );
+	}
+   	else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "cern") )
+        {
+                distro = strdup("ScientificLinuxCern");
+        }
+        else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "slf") )
+        {
+                distro = strdup("ScientificLinuxFermi");
+        }
+        else if ( strstr(distro_name_lc, "centos") )
+        {
+                distro = strdup("CentOS");
+        } else 
+	{
+                distro = strdup("LINUX");
+ 	}
+	
+  	if( !distro ) {
+                EXCEPT( "Out of memory!" );
+        }
+	return distro;
+}
+
+int 
+sysapi_distro_major_version ( const char *distro_name ) 
+{
+    	const char * verstr = distro_name;
+    	int major = 0;
+
+	// In the case where something fails above and verstr = Unknown, return 0
+	if ( !strcmp(verstr, "Unknown") ){
+		return major;
+	}
+
+    	// skip any leading non-digits.
+   	while (verstr[0] && (verstr[0] < '0' || verstr[0] > '9')) { 
+       		++verstr;
+  	}
+    	// parse digits until the first non-digit as the
+  	// major version number.
+ 	//
+    	while (verstr[0]) {
+        	if (verstr[0] >= '0' && verstr[0] <= '9') {
+            		major = major * 10 + (verstr[0] - '0');
+        	} else {
+           		break;
+        	}
+		++verstr;
+	}
+
+	return major;
+}
+
+const char *
+sysapi_distro_versioned( const char *tmp_opsys, int tmp_opsys_major_version )
+{
+        char tmp_distro_versioned[strlen(tmp_opsys) + 1 + 10];
+        char *distro_versioned;
+
+        sprintf( tmp_distro_versioned, "%s%d", tmp_opsys, tmp_opsys_major_version);
+
+	distro_versioned = strdup( tmp_distro_versioned );
+        if( !distro_versioned ) {
+                EXCEPT( "Out of memory!" );
+        }
+        return distro_versioned;
 }
 
 const char *
@@ -312,24 +536,17 @@ sysapi_translate_arch( const char *machine, const char *)
 
 const char *
 sysapi_translate_opsys( const char *sysname,
-						const char *release,
-						const char *version,
+			const char *release,
+			const char *version,
                         int         append_version)
 {
 	char tmp[64];
-    char ver[24];
-    const char * pver="";
+	char ver[24];
+	const char * pver="";
 	char *tmpopsys;
 
-		// Get OPSYS
-	if( !strcmp(sysname, "Linux") ) {
-		sprintf( tmp, "LINUX" );
-	}
-	else if( !strcmp(sysname, "linux") ) { //LDAP entry
-		sprintf( tmp, "LINUX" );
-	}
-
-	else if( !strcmp(sysname, "SunOS")
+	// Get OPSYS
+	if( !strcmp(sysname, "SunOS")
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
         sprintf( tmp, "SOLARIS" );
@@ -430,6 +647,12 @@ int sysapi_translate_opsys_version(
 	const char * /*version*/ )
 {
     const char * psz = release;
+    int major = 0;
+
+    // In the case where retrieving distro info fails and release = Unknown, return 0
+    if ( !strcmp(psz, "Unknown") ){
+	return major;
+    }
 
     // skip any leading non-digits.
     while (psz[0] && (psz[0] < '0' || psz[0] > '9')) {
@@ -439,7 +662,6 @@ int sysapi_translate_opsys_version(
     // parse digits until the first non-digit as the
     // major version number.
     //
-    int major = 0;
     while (psz[0]) {
         if (psz[0] >= '0' && psz[0] <= '9') {
             major = major * 10 + (psz[0] - '0');
@@ -520,6 +742,80 @@ sysapi_uname_opsys(void)
 		init_arch();
 	}
 	return uname_opsys;
+}
+
+int
+sysapi_opsys_major_version(void)
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return opsys_major_version;
+}
+
+const char *
+sysapi_opsys_name(void)
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return opsys_name;
+}
+
+const char *
+sysapi_opsys_distro(void)
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return opsys_distro;
+}
+
+// temporary attributes for raw utsname info
+const char *
+sysapi_utsname_sysname(void)
+{
+	if( ! utsname_inited ) {
+		init_utsname();
+	}
+	return utsname_sysname;
+}
+
+const char *
+sysapi_utsname_nodename(void)
+{
+	if( ! utsname_inited ) {
+		init_utsname();
+	}
+	return utsname_nodename;
+}
+
+const char *
+sysapi_utsname_release(void)
+{
+	if( ! utsname_inited ) {
+		init_utsname();
+	}
+	return utsname_release;
+}
+
+const char *
+sysapi_utsname_version(void)
+{
+	if( ! utsname_inited ) {
+		init_utsname();
+	}
+	return utsname_version;
+}
+
+
+const char *
+sysapi_utsname_machine(void)
+{
+	if( ! utsname_inited ) {
+		init_utsname();
+	}
+	return utsname_machine;
 }
 
 

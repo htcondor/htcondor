@@ -386,7 +386,7 @@ pseudo_send_a_file( const char *path, mode_t mode )
 {
 	char	buf[ CONDOR_IO_BUF_SIZE ];
 	int rval = 0;
-	int	bytes_to_go;
+	size_t	bytes_to_go;
 	int	file_len;
 	int	checksum;
 	int	fd;
@@ -451,7 +451,8 @@ pseudo_get_file( const char *name )
 	char	buf[ CONDOR_IO_BUF_SIZE ];
 	int	len;
 	int	read_status = 0;
-	int	file_size, bytes_to_go;
+	int	file_size;
+	size_t bytes_to_go;
 	int	fd;
 
 		/* Open the remote file and return status from the open */
@@ -706,7 +707,7 @@ pseudo_get_file_stream(
 	int		connect_sock;
 	int		data_sock;
 	int		file_fd;
-	int		bytes_sent;
+	size_t	bytes_sent;
 	pid_t	child_pid;
 	int		rval;
 	PROC *p = (PROC *)Proc;
@@ -797,7 +798,7 @@ pseudo_get_file_stream(
 		bytes_sent = stream_file_xfer( file_fd, data_sock, *len );
 		if (bytes_sent != *len) {
 			dprintf(D_ALWAYS,
-					"Failed to transfer %lu bytes (only sent %d)\n",
+					"Failed to transfer %lu bytes (only sent %ld)\n",
 					(unsigned long)*len, bytes_sent);
 			exit(1);
 		}
@@ -851,7 +852,7 @@ pseudo_put_file_stream(
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
-	dprintf( D_ALWAYS, "\tlen = %u\n", len );
+	dprintf( D_ALWAYS, "\tlen = %lu\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
 
     // ip_addr will be updated down below because I changed create_tcp_port so that
@@ -1031,7 +1032,7 @@ file_size( int fd )
 	}
 
 		/* determine the file's size */
-	if( (answer=lseek(fd,0,2)) < 0 ) {
+	if( (answer=lseek(fd,0,2)) == (size_t)-1) {
 		return 0;
 	}
 

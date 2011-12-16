@@ -51,6 +51,11 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
+\item Fixed a bug in mapping users using the \Macro{CERTIFICATE\_MAPFILE}
+mechanism, where entries using the NTSSPI method on Windows would not be mapped
+using the map file, but would instead fall back to just the user name.
+\Ticket{2709}
+
 \item Fixed a hierarchical accounting groups bug in which
 the \Condor{schedd} did not properly restore accounting group 
 information to submitters on a restart of the \Condor{schedd},
@@ -184,6 +189,14 @@ be held when trying to write output files into the spool directory.
 daemons to crash when the file used for \MacroNI{CERTIFICATE\_MAPFILE}
 contained more than 80 entries.
 \Ticket{2409}
+
+\item Fixed a bug that caused hibernation to fail on certain Linux platforms
+for certain hibernation states.
+To work correctly on these Linux platforms,
+the plug-in needs the command line arguments defined by
+\Macro{HIBERNATION\_PLUGIN\_ARGS} when initially invoked, 
+as well as for other invocations.  
+\Ticket{2561}
 
 \end{itemize}
 

@@ -89,6 +89,16 @@ const char* sysapi_opsys(void);
 const char* sysapi_uname_opsys(void);
 const char* sysapi_opsys_versioned(void);
         int sysapi_opsys_version(void);
+const char* sysapi_opsys_name(void);
+        int sysapi_opsys_major_version(void);
+const char* sysapi_opsys_distro(void);
+
+// temporary attributes for raw utsname info
+const char* sysapi_utsname_sysname(void);
+const char* sysapi_utsname_nodename(void);
+const char* sysapi_utsname_release(void);
+const char* sysapi_utsname_version(void);
+const char* sysapi_utsname_machine(void);
 
 /* return information about how many 1K blocks of swap space there are.
 	If there are more 1K blocks than INT_MAX, then INT_MAX is returned */
@@ -111,6 +121,12 @@ const char *sysapi_translate_opsys( const char *sysname,
 int sysapi_translate_opsys_version( const char *sysname,
 									const char *release,
 									const char *version);
+/* Linux specific params for opsys */
+const char * sysapi_get_distro_info(void);
+const char * sysapi_find_distro( const char *opsys_name );
+int sysapi_distro_major_version( const char *opsys_name );
+const char * sysapi_distro_versioned( const char *opsys_name, int opsys_major_version );
+
 
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );

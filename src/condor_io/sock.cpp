@@ -36,10 +36,6 @@
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-#endif
-
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
 #include "condor_crypt_3des.h"
@@ -2259,28 +2255,10 @@ Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loop
 {
 	int rval;
 
-#if HAVE_EXT_GCB
-	if (outbound || loopback) {
-		rval = GCB_local_bind(fd, 
-			/* XXX This evil, evil typecast is here because
-				this codepath only exists on linux. The
-				real way to fix this is to parameterize
-				the functions signatures all the way down to the
-				the Generic_bind() call in the GCB
-				external. */
-                addr.to_sockaddr(),
-				addr.get_socklen());
-	}
-	else {
-			//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
-		rval = condor_bind(fd, addr);
-	}
-#else
 	if (outbound) {} // To remove unused variable warning
 	if (loopback) {} // To remove unused variable warning
 		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 	rval = condor_bind(fd, addr);
-#endif /* HAVE_EXT_GCB */
 	return rval;
 }
 

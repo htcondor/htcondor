@@ -31,7 +31,6 @@
 #include "match_prefix.h"
 #include "get_daemon_name.h"
 #include "MyString.h"
-#include "extArray.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
@@ -51,7 +50,8 @@
 #include "condor_open.h"
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
-
+#include <map>
+#include <vector>
 #include "../classad_analysis/analysis.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -169,20 +169,64 @@ public:
 	int cluster;
 	int proc;
 	char * string;
+	clusterProcString *parent;
+	std::vector<clusterProcString*> children;
 };
 
-clusterProcString::
-clusterProcString() {
-	dagman_cluster_id = -1;
-	dagman_proc_id    = -1;
-	cluster = -1;
-	proc = -1;
-	string = 0;
-	return;
-}
+class clusterProcMapper {
+public:
+	int dagman_cluster_id;
+	int dagman_proc_id;
+	int cluster;
+	int proc;
+	clusterProcMapper(const clusterProcString& cps) : dagman_cluster_id(cps.dagman_cluster_id),
+		dagman_proc_id(cps.dagman_proc_id), cluster(cps.cluster), proc(cps.proc) {}
+	clusterProcMapper(int dci) : dagman_cluster_id(dci), dagman_proc_id(0), cluster(dci),
+		proc(0) {}
+};
 
-static  ExtArray<clusterProcString *> *output_buffer;
-static	bool		output_buffer_empty = true;
+class clusterIDProcIDMapper {
+public:
+	int cluster;
+	int proc;
+	clusterIDProcIDMapper(const clusterProcString& cps) :  cluster(cps.cluster), proc(cps.proc) {}
+	clusterIDProcIDMapper(int dci) : cluster(dci), proc(0) {}
+};
+
+class CompareProcMaps {
+public:
+	bool operator()(const clusterProcMapper& a, const clusterProcMapper& b) const {
+		if (a.dagman_cluster_id < b.dagman_cluster_id) { return true; }
+		if (a.dagman_cluster_id > b.dagman_cluster_id) { return false; }
+		if (a.dagman_proc_id < b.dagman_proc_id) { return true; }
+		if (a.dagman_proc_id > b.dagman_proc_id) { return false; }
+		if (a.cluster < b.cluster ) { return true; }
+		if (a.cluster > b.cluster ) { return false; }
+		if (a.proc    < b.proc    ) { return true; }
+		if (a.proc    > b.proc    ) { return false; }
+		return false;
+	}
+};
+
+class CompareProcIDMaps {
+public:
+	bool operator()(const clusterIDProcIDMapper& a, const clusterIDProcIDMapper& b) const {
+		if (a.cluster < b.cluster ) { return true; }
+		if (a.cluster > b.cluster ) { return false; }
+		if (a.proc    < b.proc    ) { return true; }
+		if (a.proc    > b.proc    ) { return false; }
+		return false;
+	}
+};
+
+/* To save typing */
+typedef std::map<clusterProcMapper,clusterProcString*,CompareProcMaps> dag_map_type;
+typedef std::map<clusterIDProcIDMapper,clusterProcString*,CompareProcIDMaps> dag_cluster_map_type;
+dag_map_type dag_map;
+dag_cluster_map_type dag_cluster_map;
+
+clusterProcString::clusterProcString() : dagman_cluster_id(-1), dagman_proc_id(-1),
+	cluster(-1), proc(-1), string(0), parent(0) {}
 
 static	bool		usingPrintMask = false;
 static 	bool		customFormat = false;
@@ -1268,6 +1312,11 @@ processCommandLineArguments (int argc, char *argv[])
 		else if( match_prefix( arg, "dag" ) ) {
 			dag = true;
 			attrs.clearAll();
+			if( g_stream_results  ) {
+				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
 		}
 		else if (match_prefix(arg, "expert")) {
 			expert = true;
@@ -1305,6 +1354,11 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix (arg, "stream")) {
 			g_stream_results = true;
+			if( dag ) {
+				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
 		}
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
@@ -1691,20 +1745,18 @@ format_owner (char *owner, AttrList *ad)
 	// >= v6.3 inserts "unknown..." into DAGManJobId when run under a
 	// pre-v6.3 schedd)
 
-	if ( dag ) {
-		if ( ad->LookupExpr( ATTR_DAGMAN_JOB_ID ) ) {
+	if ( dag && ad->LookupExpr( ATTR_DAGMAN_JOB_ID ) ) {
+			// We have a DAGMan job ID, this means we have a DAG node
+			// -- don't worry about what type the DAGMan job ID is.
+		char *dag_node_name;
 
-				// We have a DAGMan job ID, this means we have a DAG node
-				// -- don't worry about what type the DAGMan job ID is.
-			char *dag_node_name;
-			if ( ad->LookupString( ATTR_DAG_NODE_NAME, &dag_node_name ) ) {
-				sprintf( result_format, " |-%-11.11s", dag_node_name );
-				free(dag_node_name);
-				return result_format;
-			} else {
-				fprintf(stderr, "DAG node job with no %s attribute!\n",
-						ATTR_DAG_NODE_NAME);
-			}
+		if ( ad->LookupString( ATTR_DAG_NODE_NAME, &dag_node_name ) ) {
+			snprintf( result_format, 15, " |-%-11.11s", dag_node_name );
+			free(dag_node_name);
+			return result_format;
+		} else {
+			fprintf(stderr, "DAG node job with no %s attribute!\n",
+					ATTR_DAG_NODE_NAME);
 		}
 	}
 
@@ -1879,32 +1931,6 @@ usage (const char *myName)
 			myName);
 }
 
-int
-output_sorter( const void * va, const void * vb ) {
-
-	clusterProcString **a, **b;
-
-	a = ( clusterProcString ** ) va;
-	b = ( clusterProcString ** ) vb;
-
-	// when -dag is specified, we want to display DAG jobs under the
-	// DAGMan that started them, so we sort by the dagman job's
-	// cluster and proc id first. For jobs that aren't run by dagman,
-	// these have been set to the jobs cluster and proc id.
-	// --alain, 30-oct-2002
-	if ((*a)->dagman_cluster_id < (*b)->dagman_cluster_id) { return -1; }
-	if ((*a)->dagman_cluster_id > (*b)->dagman_cluster_id) { return 1; }
-	if ((*a)->dagman_proc_id < (*b)->dagman_proc_id) { return -1; }
-	if ((*a)->dagman_proc_id > (*b)->dagman_proc_id) { return 1; }
-
-	if ((*a)->cluster < (*b)->cluster ) { return -1; }
-	if ((*a)->cluster > (*b)->cluster ) { return  1; }
-	if ((*a)->proc    < (*b)->proc    ) { return -1; }
-	if ((*a)->proc    > (*b)->proc    ) { return  1; }
-
-	return 0;
-}
-
 void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char const *db_name,char const *lastUpdate, char const *scheddName, char const *scheddAddress,char const *scheddMachine)
 {
 	if (! customFormat && !verbose ) {
@@ -1931,16 +1957,68 @@ void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char c
 	}
 }
 
+void edit_string(clusterProcString *cps)
+{
+	if(!cps->parent) {
+		return;	// Nothing to do
+	}
+	std::string s;
+	int generations = 0;
+	for( clusterProcString* ccps = cps->parent; ccps; ccps = ccps->parent ) {
+		++generations;
+	}
+	generations = ( generations > 1 ) ? ( generations - 1 ) : 0;
+	int state = 0;
+	for(const char* p = cps->string; *p; ++p){
+		if(state != 4 || *p != ' ' || generations <= 0) {
+			s += *p;
+		} else {
+			if( --generations <= 0 ) {
+				state = 5;
+			}
+		}
+		if( *p != ' ' && state == 0 ) {
+			state = 1;
+		}
+		if( *p == ' ' && state == 1 ) {
+			for(int i=0;i<generations;++i) {
+				s += ' ';
+			}
+			state = 2;
+		}
+		if( *p != ' ' && state == 2 ) {
+			state = 3;
+		}
+		if( *p == ' ' && state == 3 ) {
+			state = 4;
+		}
+	}
+	char* cpss = cps->string;
+	cps->string = strnewp( s.c_str() );
+	delete[] cpss;
+}
+
+void write_node(clusterProcString* cps,int level)
+{
+	if(cps->parent && level <= 0){
+		return;
+	}
+	printf("%s",cps->string);
+	for(std::vector<clusterProcString*>::iterator p = cps->children.begin();
+			p != cps->children.end(); ++p) {
+		write_node(*p,level+1);
+	}
+}
+
 /* The parameters v1, v2, and v3 will be intepreted immediately on the top 
    of the function based on the value of useDB. For more details, please 
    refer to the prototype of this function on the top of this file 
 */
+
 static bool
 show_queue_buffered( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
 {
 	static bool	setup_mask = false;
-	clusterProcString **the_output;
-
 	const char *scheddAddress = 0;
 	const char *scheddName = 0;
 	const char *scheddMachine = 0;
@@ -1949,9 +2027,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	const char *db_ipAddr = 0;
 	const char *db_name = 0;
 	const char *query_password;
-	int i;
-
-	output_buffer = new ExtArray<clusterProcString*>;
 
 	char *lastUpdate=NULL;
 
@@ -1968,11 +2043,8 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		scheddMachine = v3;
 	}
 
-	output_buffer->setFiller( (clusterProcString *) NULL );
-
 		// initialize counters
 	idle = running = held = malformed = suspended = completed = removed = 0;
-	output_buffer_empty = true;
 
 	if ( run || goodput ) {
 		summarize = false;
@@ -2073,8 +2145,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 					"server %s\n%s\n",
 					db_name, db_ipAddr, errstack.getFullText(true) );
 
-			delete output_buffer;
-
 			if(dbconn) {
 				free(dbconn);
 			}
@@ -2120,7 +2190,6 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 						scheddAddress, scheddMachine, errstack.getFullText(true) );
 			}
 
-			delete output_buffer;
 			return false;
 		}
 	}
@@ -2128,22 +2197,53 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	// If this is a global, don't print anything if this schedd is empty.
 	// If this is NOT global, print out the header and footer to show that we
 	//    did something.
-	if (!global || !output_buffer_empty || g_stream_results) {
-		the_output = &(*output_buffer)[0];
-		qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
-			output_sorter);
-
+	if (!global || dag_map.size() > 0 || g_stream_results) {
 		if( !g_stream_results ) {
 			full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
 		}
 
-		if (!output_buffer_empty) {
-			for (i=0;i<=output_buffer->getlast(); i++) {
-				if ((*output_buffer)[i])
-					printf("%s",((*output_buffer)[i])->string);
+			// Assumptions of this code: DAG Parent nodes always
+			// have cluster ids that are less than those of child
+			// nodes. condor_dagman processes have ProcID == 0 (only one per
+			// cluster)
+
+			// First Pass: Find all the DAGman nodes, and link them up
+		if( dag ) {
+			for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+				clusterProcString* cpps = cps->second;
+				if(cpps->dagman_cluster_id != cpps->cluster) {
+						// Its probably a DAGman job
+						// This next line is where we assume all condor_dagman
+						// jobs have ProcID == 0
+					clusterProcMapper parent_id(cpps->dagman_cluster_id);
+					dag_map_type::iterator dmp = dag_map.find(parent_id);
+					if( dmp != dag_map.end() ) { // found it!
+						cpps->parent = dmp->second;
+						dmp->second->children.push_back(cpps);
+					} else { // Now search dag_cluster_map
+							// Necessary to find children of dags
+							// which are themselves children (that is,
+							// subdags)
+						clusterIDProcIDMapper cipim(cpps->dagman_cluster_id);
+						dag_cluster_map_type::iterator dcmti = dag_cluster_map.find(cipim);
+						if(dcmti != dag_cluster_map.end() ) {
+							cpps->parent = dcmti->second;
+							dcmti->second->children.push_back(cpps);
+						}
+					}
+				}
+			}
+
+				// Second pass: edit the strings
+			for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+				edit_string(cps->second);
 			}
 		}
 
+			// Third pass: write the strings
+		for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+			write_node(cps->second,0);
+		}
 		// If we want to summarize, do that too.
 		if( summarize ) {
 			printf( "\n%d jobs; "
@@ -2163,16 +2263,13 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		}
 	}
 
-	if (!output_buffer_empty) {
-		for (i=0;i<=output_buffer->getlast(); i++) {
-			if ((*output_buffer)[i]) {
-				delete[] ((*output_buffer)[i])->string;
-				delete ((*output_buffer)[i]);
-			}
-		}
+	for(std::map<clusterProcMapper,clusterProcString*,CompareProcMaps>::iterator
+			cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+		delete[] cps->second->string;
+		delete cps->second;
 	}
-	delete output_buffer;
-
+	dag_map.clear();
+	dag_cluster_map.clear();
 	if(lastUpdate) {
 		free(lastUpdate);
 	}
@@ -2210,6 +2307,7 @@ process_buffer_line( ClassAd *job )
 	// itself), then set the dagman_cluster_id equal to cluster so that
 	// it sorts properly against dagman jobs.
 	char *dagman_job_string = NULL;
+	bool dci_initialized = false;
 	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, &dagman_job_string)) {
 			// we failed to find an DAGManJobId string attribute, 
 			// let's see if we find one that is an integer.
@@ -2219,12 +2317,14 @@ process_buffer_line( ClassAd *job )
 				// just the regular job id
 			tempCPS->dagman_cluster_id = tempCPS->cluster;
 			tempCPS->dagman_proc_id    = tempCPS->proc;
+			dci_initialized = true;
 		} else {
 				// in this case, we found DAGManJobId set as
 				// an integer, not a string --- this means it is
 				// the cluster id.
 			tempCPS->dagman_cluster_id = temp_cluster;
 			tempCPS->dagman_proc_id    = 0;
+			dci_initialized = true;
 		}
 	} else {
 		// We've gotten a string, probably something like "201.0"
@@ -2240,17 +2340,45 @@ process_buffer_line( ClassAd *job )
 		}
 		if (isdigit(*dagman_job_string)) {
 			tempCPS->dagman_cluster_id = atoi(dagman_job_string);
+			dci_initialized = true;
 		} else {
 			// It must not be a cluster id, because it's not a number.
 			tempCPS->dagman_cluster_id = tempCPS->cluster;
+			dci_initialized = true;
 		}
 
 		if (proc_string_start != NULL && isdigit(*proc_string_start)) {
 			tempCPS->dagman_proc_id = atoi(proc_string_start);
+			dci_initialized = true;
 		} else {
 			tempCPS->dagman_proc_id = 0;
+			dci_initialized = true;
 		}
 		free(dagman_job_string);
+	}
+	if( !g_stream_results && dci_initialized ) {
+		clusterProcMapper cpm(*tempCPS);
+		std::pair<dag_map_type::iterator,bool> pp = dag_map.insert(
+			std::pair<clusterProcMapper,clusterProcString*>(
+				cpm, tempCPS ) );
+		if( !pp.second ) {
+			fprintf( stderr, "Error: Two clusters with the same ID.\n" );
+			fprintf( stderr, "tempCPS: %d %d %d %d\n", tempCPS->dagman_cluster_id,
+				tempCPS->dagman_proc_id, tempCPS->cluster, tempCPS->proc );
+			dag_map_type::iterator ppp = dag_map.find(cpm);
+			fprintf( stderr, "Comparing against: %d %d %d %d\n",
+				ppp->second->dagman_cluster_id, ppp->second->dagman_proc_id,
+				ppp->second->cluster, ppp->second->proc );
+			exit( 1 );
+		}
+		clusterIDProcIDMapper cipim(*tempCPS);
+		std::pair<dag_cluster_map_type::iterator,bool> pq = dag_cluster_map.insert(
+			std::pair<clusterIDProcIDMapper,clusterProcString*>(
+				cipim,tempCPS ) );
+		if( !pq.second ) {
+			fprintf( stderr, "Error: Clusters have nonunique IDs.\n" );
+			exit( 1 );
+		}
 	}
 
 	if (use_xml) {
@@ -2279,14 +2407,10 @@ process_buffer_line( ClassAd *job )
 
 	if( g_stream_results ) {
 		printf("%s",tempCPS->string);
+		delete[] tempCPS->string;
 		delete tempCPS;
 		tempCPS = NULL;
 	}
-	else {
-		(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
-		output_buffer_empty = false;
-	}
-
 	return true;
 }
 
@@ -2384,8 +2508,6 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
 						scheddAddress, scheddMachine, errstack.getFullText(true) );
 			}
-
-			delete output_buffer;
 			return false;
 			}
 		}

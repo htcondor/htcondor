@@ -49,7 +49,7 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	# job etl daemon
 	############################
 	condor_exe( ods_job_etl_server "${ETL_SERVER_SRCS}"
-	  			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
+	  			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${MONGODB_FOUND}" OFF )
 
 	############################
 	# history loader tool

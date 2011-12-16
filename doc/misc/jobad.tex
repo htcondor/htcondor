@@ -1065,6 +1065,12 @@ utilized when dynamic \Condor{startd} provisioning is enabled.
 \item[\AdAttr{RequestDisk}:]  The amount of disk space in Kbytes requested 
 for this job; utilized when dynamic \Condor{startd} provisioning is enabled.
 
+%%% ClassAd attribute: RequestedChroot
+\index{ClassAd job attribute!RequestedChroot}
+\index{RequestedChroot!job ClassAd attribute}
+\item[\AdAttr{RequestedChroot}:]  A full path to the directory that the job
+requests the \Condor{starter} use as an argument to \Procedure{chroot}.
+
 %%% ClassAd attribute: RequestMemory
 \index{ClassAd job attribute!RequestMemory}
 \index{RequestMemory!job ClassAd attribute}

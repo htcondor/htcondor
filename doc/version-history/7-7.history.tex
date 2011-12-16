@@ -30,12 +30,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item On Linux systems, the starter now has an ability to run a job under
-a chroot'ed directory.  If the parameter NAMED\_CHROOT is set to a list
-of directories an execute machine, and the job has a attribute
-RequestedChroot, and the RequestedChroot matches an entry in the NAMED\_CHROOT
-list, then the starter calls chroot with that directory as an argument.  Note
-it is up to the administrator to provide a full environment for the job to run in.
+\item On Linux system, the starter can now optionally measure the
+PSS (Proportional Set Size) of each Condor job, if the config file
+option USE\_PSS is set to true.  Previously, it was unconditionally
+on, which can cause performance problems in the procd when running
+many short lived jobs.
+
+\item On Linux systems, the \Condor{starter} now has an ability to run a 
+job under a cheroot directory.  
+If the configuration variable \Macro{NAMED\_CHROOT} is set to a list
+of directories on an execute machine, 
+the job has attribute \Attr{RequestedChroot} defined,
+and the value of \Attr{RequestedChroot} matches an entry 
+in the list defined by \MacroNI{NAMED\_CHROOT},
+then the \Condor{starter} calls \Procedure{chroot} with that directory 
+as an argument.  
+Note that it is up to the administrator to provide a full environment 
+for the job to run in.
 \Ticket{2698}
 
 \item On Linux systems which support bind type of filesystem mount (generally,
@@ -95,6 +106,17 @@ the job is placed on hold because of a failure and not by user request.
 Previously, email would be sent only if the job was terminated via signal.
 \Ticket{1976}
 
+\item By default, if a node has child nodes, then \Condor{dagman} uses the
+KeepClaimIdle attribute, introduced in Condor version 7.7.1, to hold onto a
+claim.  This is a slight optimization, as it avoids waiting for a negotiation
+cycle.  The hold time defaults to 20 seconds.  This is controlled by the
+\Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
+\Ticket{2673}
+
+\item Improved output of \Condor{q} \Opt{-dag} to show the dag structure as a tree,
+with children indented below their parents.
+\Ticket{1281}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -109,6 +131,10 @@ useful if there is a solid state drive which is big enough to hold the
 frequently written to \File{job\_queue.log},
 but not big enough to hold the whole contents of the spool directory.
 \Ticket{2598}
+
+\item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
+specifies the amount of time in seconds that \Condor{schedd} will hold a claim
+idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
 
 \end{itemize}
 

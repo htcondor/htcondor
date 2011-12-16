@@ -261,9 +261,6 @@
 /* Do we have the coredumper external (used)*/
 #cmakedefine HAVE_EXT_COREDUMPER 1
 
-/* Do we have the gcb external (USED)*/
-#cmakedefine HAVE_EXT_GCB 1
-
 /* Do we have the globus external (USED)*/
 #cmakedefine HAVE_EXT_GLOBUS 1
 

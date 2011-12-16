@@ -85,10 +85,6 @@
 #include "param_info.h"
 #include "Regex.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-#endif
-
 extern "C" {
 	
 // Function prototypes
@@ -472,10 +468,10 @@ condor_net_remap_config( bool force_param )
 			/*
 			  this stuff is already set.  unless the caller is forcing
 			  us to call param() again (e.g. the master is trying to
-			  re-bind() if the GCB broker is down and it's got a list
+			  re-bind() if the CCB broker is down and it's got a list
 			  to try) we should return immediately and leave our
 			  environment alone.  this way, the master can choose what
-			  GCB broker to use for itself and all its children, even
+			  CCB broker to use for itself and all its children, even
 			  if there's a list and we're using $RANDOM_CHOICE().
 			*/
 		return;
@@ -485,15 +481,15 @@ condor_net_remap_config( bool force_param )
 		  this method is only called if we're enabling a network remap
 		  service.  if we do, we always need to force condor to bind()
 		  to all interfaces (INADDR_ANY).  since we don't want to rely
-		  on users to set this themselves to get GCB working, we'll
+		  on users to set this themselves to get CCB working, we'll
 		  set it automatically.  the only harm of setting this is that
 		  we need Condor to automatically handle hostallow stuff for
 		  "localhost", or users need to add localhost to their
 		  hostallow settings as appropriate.  we can't rely on the
 		  later, and the former only works on some platforms.
 		  luckily, the automatic localhost stuff works on all
-		  platforms where GCB works (linux, and we hope, solaris), so
-		  it's safe to turn this on whenever we're using GCB
+		  platforms where CCB works (linux, and we hope, solaris), so
+		  it's safe to turn this on whenever we're using CCB
 		*/
 	insert( "BIND_ALL_INTERFACES", "TRUE", ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("BIND_ALL_INTERFACES");
@@ -502,68 +498,7 @@ condor_net_remap_config( bool force_param )
     SetEnv( "NET_REMAP_ENABLE", "true");
     str = param("NET_REMAP_SERVICE");
     if (str) {
-        if (!strcasecmp(str, "GCB")) {
-            SetEnv( "GCB_ENABLE", "true" );
-            free(str);
-            str = NULL;
-            // Env: InAgent
-            if( (str = param("NET_REMAP_INAGENT")) ) {
-					// NET_REMAP_INAGENT is a list of GCB brokers.
-				const char *next_broker;
-				StringList all_brokers( str );
-				StringList working_brokers;
-
-					// Pick a random working GCB broker.
-				all_brokers.rewind();
-				while ( (next_broker = all_brokers.next()) ) {
-					int rc = 0;
-
-#if HAVE_EXT_GCB
-					int num_slots = 0;	/* only used w/HAVE_EXT_GCB */
-					rc = GCB_broker_query( next_broker,
-										   GCB_DATA_QUERY_FREE_SOCKS,
-										   &num_slots );
-#endif
-					if ( rc == 0 ) {
-						working_brokers.append( next_broker );
-					}
-				}
-
-				if ( working_brokers.number() > 0 ) {
-					int rand_entry = (get_random_int() % working_brokers.number()) + 1;
-					int i = 0;
-					working_brokers.rewind();
-					while ( (i < rand_entry) &&
-							(next_broker=working_brokers.next()) ) {
-						i++;
-					}
-
-					dprintf( D_FULLDEBUG,"Using GCB broker %s\n",next_broker );
-					SetEnv( "GCB_INAGENT", next_broker );
-				} else {
-						// TODO How should we indicate that we tried and
-						//   failed to find a working broker? For now, we
-						//   set GCB_INAGENT to a valid, but non-existent
-						//   IP address. That should cause a failure when
-						//   we try to make a socket. The address we use
-						//   is defined in our header file, so callers
-						//   can check GCB_INAGENT to see if we failed to
-						//   find a broker.
-					dprintf( D_ALWAYS,"No usable GCB brokers were found. "
-							 "Setting GCB_INAGENT=%s\n",
-							 CONDOR_GCB_INVALID_BROKER );
-					SetEnv( "GCB_INAGENT", CONDOR_GCB_INVALID_BROKER );
-				}
-				free( str );
-                str = NULL;
-            }
-            // Env: Routing table
-            if( (str = param("NET_REMAP_ROUTE")) ) {
-                SetEnv( "GCB_ROUTE", str );
-				free( str );
-                str = NULL;
-            }
-        } else if (!strcasecmp(str, "DPF")) {
+	if (!strcasecmp(str, "DPF")) {
             SetEnv( "DPF_ENABLE", "true" );
             free(str);
             str = NULL;
@@ -739,7 +674,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 
 	// The following lines should be placed very carefully. Must be after
 	// global and local config sources being processed but before any
-	// call that may be interposed by GCB
+	// call that may be interposed by CCB
     if ( param_boolean("NET_REMAP_ENABLE", false) ) {
         condor_net_remap_config();
     }
@@ -1317,6 +1252,51 @@ fill_attributes()
 		insert( "UNAME_OPSYS", tmp, ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
+
+#if ! defined WIN32
+	int major_ver = sysapi_opsys_major_version();
+	if (major_ver > 0) {
+		val.sprintf("%d", major_ver);
+		insert( "OPSYS_MAJOR_VER", val.Value(), ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_MAJOR_VER");
+	}
+
+	if( (tmp = sysapi_opsys_name()) != NULL ) {
+		insert( "OPSYS_NAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_NAME");
+	}
+	
+	if( (tmp = sysapi_opsys_distro()) != NULL ) {
+		insert( "OPSYS_DISTRO", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_DISTRO");
+	}
+
+        // temporary attributes for raw utsname info
+	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
+		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_SYSNAME");
+	}
+
+	if( (tmp = sysapi_utsname_nodename()) != NULL ) {
+		insert( "UTSNAME_NODENAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_NODENAME");
+	}
+
+	if( (tmp = sysapi_utsname_release()) != NULL ) {
+		insert( "UTSNAME_RELEASE", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_RELEASE");
+	}
+
+	if( (tmp = sysapi_utsname_version()) != NULL ) {
+		insert( "UTSNAME_VERSION", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_VERSION");
+	}
+
+	if( (tmp = sysapi_utsname_machine()) != NULL ) {
+		insert( "UTSNAME_MACHINE", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UTSNAME_MACHINE");
+	}
+#endif
 
 	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("SUBSYSTEM");

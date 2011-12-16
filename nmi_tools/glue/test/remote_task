@@ -44,14 +44,11 @@ my $dir = dirname($0);
 unshift @INC, $dir;
 require "TestGlue.pm";
 TestGlue::setup_test_environment();
-TestGlue::setup_task_environment();
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
 }
 my $fulltestname = $ENV{_NMI_TASKNAME};
-
-out("Test environment variable GCBTARGET = '$ENV{GCBTARGET}'");
 
 if( $fulltestname =~ /remote_task/) {
     die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";

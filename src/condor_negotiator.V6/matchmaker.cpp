@@ -2957,7 +2957,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
 	}
 
-	// Because of GCB, we may end up contacting a different
+	// Because of CCB, we may end up contacting a different
 	// address than scheddAddr!  This is used for logging (to identify
 	// the schedd) and to uniquely identify the host in the socketCache.
 	// Do not attempt direct connections to this sinful string!
@@ -3438,7 +3438,7 @@ SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pi
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
-schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
+schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
@@ -3980,7 +3980,7 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
-schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
+schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 int Matchmaker::
