@@ -31,15 +31,15 @@
 
   WARNING: This code was lifted directly from the Condor source tree,
   slightly modified to use the autoconf-way instead of including
-  condor_common.h, converted to use GCB's error logging interface
+  condor_common.h, converted to use CCB's error logging interface
   (ERROR()) instead of Condor's logging interface (dprintf()), and
-  checked into GCB's source tree.  Yes, this isn't ideal, but the real
+  checked into CCB's source tree.  Yes, this isn't ideal, but the real
   solution for sharing an exact copy of the source between the two
-  projects would be a totally seperate utility library that both GCB
+  projects would be a totally seperate utility library that both CCB
   and Condor used as an external.  That's overkill for this 1 file,
   and I don't have time to do that right now.  So, for now, just know
-  that if you modify the copy here, you should fix GCB's copy in
-  gcb/src/common/get_exec_path.c.
+  that if you modify the copy here, you should fix CCB's copy in
+  ccb/src/common/get_exec_path.c.
 
 */
 

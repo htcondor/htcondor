@@ -201,14 +201,6 @@ _condor_fd_panic( int line, const char* file )
 }
 #endif /* ! LOOSE32 */
 
-#if HAVE_EXT_GCB
-int
-GCB_local_bind(int fd, struct sockaddr *my_addr, socklen_t addrlen)
-{
-	return bind(fd, my_addr, addrlen);
-}
-#endif /* HAVE_EXT_GCB */
-
 /* For MyString */
 int vprintf_length(const char *  /*format*/, va_list  /*args*/) { return 0; }
 

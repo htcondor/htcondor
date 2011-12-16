@@ -141,8 +141,7 @@ void Server::Init()
 		// We have to do this after we call config, not in the Server
 		// constructor, or we won't have NETWORK_INTERFACE yet.
         // Commented out the following line so that server_addr is determined after
-        // the socket is bound to an address. This is a part of making Condor GCB
-        // friendly. -- Sonny 5/18/2005
+        // the socket is bound to an address. -- Sonny 5/18/2005
 	//server_addr.s_addr = htonl( my_ip_addr() );
 
 	dprintf( D_ALWAYS,

@@ -431,15 +431,10 @@ class DaemonCore : public Service
     /** Returns the Sinful String <host:port> of the DaemonCore
 		command socket of this process
 		@param usePrivateAddress
-			- If false, return whatever getpeername provides,
-		       which may be a white lie if GCB is involved.
-			- If true, return the "real" local address, no GCB
-			   deception allowed.  Note that the true (no GCB deception)
-			   result should not be passed to another machine; doing
-			   so defeats the entire point of GCB.  This functionality
-			   is provided only for passing to other processes on the
-			   same machine as an optimization.
-        @return A pointer into a <b>static buffer</b>, or NULL on error */
+			- If false, return our address
+			- If true, return our local address, which
+			  may not be valid outside of this machine
+		@return A pointer into a <b>static buffer</b>, or NULL on error */
 	char const * InfoCommandSinfulStringMyself(bool usePrivateAddress);
 
 		/**
@@ -452,7 +447,7 @@ class DaemonCore : public Service
 
 		/**
 		   @return Pointer to a static buffer containing the daemon's
-		   true, local IP address and port if GCB is involved,
+		   true, local IP address and port if CCB is involved,
 		   otherwise NULL.  Nearly the same as
 		   InfoCommandSinfulStringMyself(true) but with a more obvious
 		   name which matches the underlying ClassAd attribute where

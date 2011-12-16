@@ -157,13 +157,6 @@ find lib/ -name \*.jar -o -name \*.wsdl -o -name \*.class -o -name \*.xsd | xarg
 #Mostly they are 3rd-party component
 #Executables
 find lib/glite/bin/ -type f -not -name \*.sh | xargs strip --remove-section=.comment --remove-section=.note
-if [ -e sbin/gcb_broker_query ]; then
-  strip --remove-section=.comment --remove-section=.note sbin/gcb_broker_query
-fi
-if [ -e libexec/gcb_broker ]; then
-  strip --remove-section=.comment --remove-section=.note libexec/gcb_broker
-fi
-
 #Shared lib
 find lib/ -type f -name \*.so | xargs strip --remove-section=.comment --remove-section=.note
 find libexec/ -type f -name *server | xargs strip --remove-section=.comment --remove-section=.note

@@ -362,7 +362,7 @@ bool privsep_enabled() { return false; }
 int privsep_open(uid_t, gid_t, const char*, int, mode_t) { not_impl(); return 0;}
 #endif
 
-// GCB me harder
+// CCB me harder
 BEGIN_C_DECLS
 void Generic_set_log_va(void(*app_log_va)(int level,char*fmt,va_list args))
 {

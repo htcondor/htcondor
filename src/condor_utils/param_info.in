@@ -8904,22 +8904,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=541
 
-[MASTER_GCB_RECONNECT_TIMEOUT]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Gcb Reconnect Timeout
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=542
-
 [DC_DAEMON_LIST]
 aliases=
 default=
@@ -8983,22 +8967,6 @@ usage=one from this setting.
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=546
-
-[MASTER_WAITS_FOR_GCB_BROKER]
-aliases=
-default=true
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Waits For Gcb Broker
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=549
 
 [COLLECTOR_LOG]
 aliases=

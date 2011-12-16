@@ -96,9 +96,6 @@ public:
 		  query.  If you pass in a NULL (the default), we assume you
 		  want the local pool.
 
-		  WARNING: This code cannot implement the PRIVATE_NETWORK_NAME
-		  GCB optimization.
-
 		  @param type The type of the daemon, specified in a daemon_t
 		  @param name The name (or sinful string) of the daemon, NULL if you want local
 		  @param pool The name of the pool, NULL if you want local */
@@ -109,9 +106,6 @@ public:
 			and gets all the info out of that instead of having to
 			query a collector to locate it.  You can also optionally
 			pass in the name of the collector you got it from.
-
-		    This code automatically handles the PRIVATE_NETWORK_NAME
-		    GCB optimization.
 		*/
 	Daemon( const ClassAd* ad, daemon_t type, const char* pool );
 

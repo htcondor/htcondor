@@ -85,13 +85,6 @@ sub setup_test_environment {
     }
 }
 
-
-
-sub setup_task_environment {
-    set_env("GCBTARGET", "nmi-s006.cs.wisc.edu");
-}
-
-
 sub set_env {
     my ($key, $val) = @_;;
     print "Setting environment variable:\n";

@@ -31,13 +31,6 @@
 
 #include "condor_socket_types.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-extern "C" {
-void Generic_stop_logging();
-}
-#endif
-
 #if HAVE_CLONE
 #include <sched.h>
 #include <sys/syscall.h>
@@ -1148,18 +1141,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_private_network_name = tmp;
 		}
 
-#if HAVE_EXT_GCB
-		if (sinful_private == NULL
-			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
-				// If the knob wasn't defined, and GCB is enabled, ask GCB.
-			struct sockaddr_in addr;
-			SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
-			SOCKET sockd = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_file_desc();
-			if (GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) >= 0) {
-				sinful_private = strdup(sin_to_string(&addr));
-			}
-		}
-#endif /* HAVE_EXT_GCB */
 		initialized_sinful_private = true;
 		m_dirty_sinful = true;
 	}
@@ -7317,15 +7298,6 @@ void CreateProcessForkit::exec() {
 		// once again, make sure that if the dprintf code opened a
 		// lock file and has an fd, that we close it before we
 		// exec() so we don't leak it.
-#if HAVE_EXT_GCB
-		/*
-		  this method currently only lives in libGCB.a, so don't even
-		  try to param() or call this function unless we're on a
-		  platform where we're using the GCB external
-		*/
-	Generic_stop_logging();
-#endif
-
 	dprintf_wrapup_fork_child();
 
 	bool found;
@@ -7539,7 +7511,7 @@ int DaemonCore::Create_Process(
 	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
-		//  GCB's trickery if present.  As this address is
+		//  CCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
 	{
