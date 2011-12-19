@@ -12106,6 +12106,7 @@ Scheduler::sendAlives()
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
+			int renew_time;
 			if ( mrec->m_startd_sends_alives ) {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
@@ -12115,10 +12116,14 @@ Scheduler::sendAlives()
 				// to update the queue persistently all in one transaction, even
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
 				GetAttributeInt(mrec->cluster,mrec->proc,
-								ATTR_LAST_JOB_LEASE_RENEWAL,&now);
+								ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			} else {
+				// If we're sending the alives, then we need to set
+				// ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
 			}
 			SetAttributeInt( mrec->cluster, mrec->proc, 
-							 ATTR_LAST_JOB_LEASE_RENEWAL, now ); 
+							 ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
 	CommitTransaction();
@@ -12130,6 +12135,35 @@ Scheduler::sendAlives()
 
 			if( sendAlive( mrec ) ) {
 				numsent++;
+			}
+		}
+
+		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE ) {
+			int lease_duration = -1;
+			int last_lease_renewal = -1;
+			GetAttributeInt( mrec->cluster, mrec->proc,
+							 ATTR_JOB_LEASE_DURATION, &lease_duration );
+			GetAttributeInt( mrec->cluster, mrec->proc,
+							 ATTR_LAST_JOB_LEASE_RENEWAL, &last_lease_renewal );
+
+			// If the job has no lease attribute, the startd sets the
+			// claim lease to 6 times the alive_interval we sent when we
+			// requested the claim.
+			if ( lease_duration <= 0 ) {
+				lease_duration = 6 * alive_interval;
+			}
+
+			if ( last_lease_renewal + lease_duration < now ) {
+				// The claim lease has expired. Kill the match
+				// and the shadow, but make the job requeue and
+				// don't try to notify the startd.
+				shadow_rec *srec = mrec->shadowRec;
+				ASSERT( srec );
+				mrec->needs_release_claim = false;
+				DelMrec( mrec );
+				jobExitCode( srec->job_id, JOB_SHOULD_REQUEUE );
+				srec->exit_already_handled = true;
+				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}
 		}
 	}
