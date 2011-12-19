@@ -946,3 +946,9 @@ const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownlo
 const char * const ATTR_MACHINE_MAX_VACATE_TIME = "MachineMaxVacateTime";
 const char * const ATTR_JOB_MAX_VACATE_TIME = "JobMaxVacateTime";
 const char * const ATTR_WANT_GRACEFUL_REMOVAL = "WantGracefulRemoval";
+
+const char* const ATTR_GROUP_QUOTA = "GroupQuota";
+const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";
+const char* const ATTR_GROUP_RESOURCES_IN_USE = "GroupResourcesInUse";
+const char* const ATTR_SORT_EXPR = "SortExpr";
+const char* const ATTR_SORT_EXPR_STRING = "SortExprString";

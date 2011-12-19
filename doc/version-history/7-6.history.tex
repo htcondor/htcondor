@@ -106,6 +106,16 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
+\item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to its pre-HGQ
+mode: submitters with no accounting group (group ``<none>'') negotiate last
+and any accounting groups with autoregroup enabled also negotiate with
+the group-less submitters.
+\Ticket{2679}
+
+\item Exposed the negotiation order of accounting groups to configuration
+via the configuration parameter \Macro{GROUP\_SORT\_EXPR}.
+\Ticket{2678}
+
 \item Fixed a bug in mapping users using the \Macro{CERTIFICATE\_MAPFILE}
 mechanism, where entries using the NTSSPI method on Windows would not be mapped
 using the map file, but would instead fall back to just the user name.
