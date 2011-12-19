@@ -1085,6 +1085,10 @@ void round_for_precision(double& x) {
 }
 
 
+double starvation_ratio(double usage, double allocated) {
+    return (allocated > 0) ? (usage / allocated) : FLT_MAX;
+}
+
 struct group_order {
     bool autoregroup;
     GroupEntry* root_group;
@@ -1516,11 +1520,11 @@ negotiationTime ()
                     if (autoregroup && (group == hgq_root_group)) {
                         // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
                         dprintf(D_ALWAYS, "group quotas: autoregroup mode: negotiating with autoregroup for %s\n", group->name.c_str());
-                        negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
+                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
                                            startdAds, claimIds, *(group->submitterAds),
                                            slots, NULL);
                     } else {
-                        negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
+                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
                                            startdAds, claimIds, *(group->submitterAds), 
                                            slots, group->name.c_str());
                     }
