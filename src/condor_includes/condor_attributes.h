@@ -897,6 +897,13 @@ extern const char * const ATTR_MACHINE_MAX_VACATE_TIME;
 extern const char * const ATTR_JOB_MAX_VACATE_TIME;
 extern const char * const ATTR_WANT_GRACEFUL_REMOVAL;
 
+// Introduced for configurable sorting of accounting groups
+extern const char* const ATTR_GROUP_QUOTA;
+extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
+extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
+extern const char* const ATTR_SORT_EXPR;
+extern const char* const ATTR_SORT_EXPR_STRING;
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {

@@ -282,6 +282,7 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+    autoregroup = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -1088,19 +1089,29 @@ double starvation_ratio(double usage, double allocated) {
     return (allocated > 0) ? (usage / allocated) : FLT_MAX;
 }
 
-struct starvation_order {
-    bool operator()(const GroupEntry* a, const GroupEntry* b) const {
-        // "starvation order" is ordering by the ratio usage/allocated, so that
-        // most-starved groups are allowed to negotiate first, to minimize group
-        // starvation over time.
-        double sa = starvation_ratio(a->usage, a->allocated);
-        double sb = starvation_ratio(b->usage, b->allocated);
-        if (sa < sb) return true;
-        if (sa > sb) return false;
-        // If ratios are the same, sub-order by group priority.
-        // Most likely to be relevant when comparing groups with zero usage.
-        return (a->priority < b->priority);
+struct group_order {
+    bool autoregroup;
+    GroupEntry* root_group;
+
+    group_order(bool arg, GroupEntry* rg): autoregroup(arg), root_group(rg) {
+        if (autoregroup) {
+            dprintf(D_ALWAYS, "group quotas: autoregroup mode: forcing group %s to negotiate last\n", root_group->name.c_str());
+        }
     }
+
+    bool operator()(const GroupEntry* a, const GroupEntry* b) const {
+        if (autoregroup) {
+            // root is never before anybody:
+            if (a == root_group) return false;
+            // a != root, and b = root, so a has to be before b:
+            if (b == root_group) return true;
+        }
+        return a->sort_key < b->sort_key;
+    }
+
+    private:
+    // I don't want anybody defaulting this obj by accident
+    group_order(){}
 };
 
 
@@ -1283,7 +1294,7 @@ negotiationTime ()
             group->allocated = 0;
             group->subtree_quota = 0;
             group->subtree_requested = 0;
-            if (NULL == group->submitterAds) group->submitterAds = new ClassAdList;
+            if (NULL == group->submitterAds) group->submitterAds = new ClassAdListDoesNotDeleteAds;
             group->submitterAds->Open();
             while (ClassAd* ad = group->submitterAds->Next()) {
                 group->submitterAds->Remove(ad);
@@ -1327,6 +1338,23 @@ negotiationTime ()
             int numrunning=0;
             ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
             group->requested += numrunning + numidle;
+        }
+
+        // Any groups with autoregroup are allowed to also negotiate in root group ("none")
+        if (autoregroup) {
+            unsigned long n = 0;
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+                if (group == hgq_root_group) continue;
+                if (!group->autoregroup) continue;
+                group->submitterAds->Open();
+                while (ClassAd* ad = group->submitterAds->Next()) {
+                    hgq_root_group->submitterAds->Insert(ad);
+                }
+                group->submitterAds->Close();
+                ++n;
+            }
+            dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
         }
 
         // assign slot quotas based on the config-quotas
@@ -1386,6 +1414,11 @@ negotiationTime ()
                 surplus_quota += hgq_recover_remainders(hgq_root_group);
             }
 
+            if (autoregroup) {
+                dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+                hgq_root_group->allocated = hgq_total_quota;
+            }
+
             double maxdelta = 0;
             double requested_total = 0;
             double allocated_total = 0;
@@ -1418,9 +1451,28 @@ negotiationTime ()
                 ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
             }
 
+            // fill in sorting classad attributes for configurable sorting
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+                ClassAd* ad = group->sort_ad;
+                ad->Assign(ATTR_GROUP_QUOTA, group->quota);
+                ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
+                ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
+                // Do this after all attributes are filled in
+                float v = 0;
+                if (!ad->EvalFloat(ATTR_SORT_EXPR, NULL, v)) {
+                    v = FLT_MAX;
+                    string e;
+                    ad->LookupString(ATTR_SORT_EXPR_STRING, e);
+                    dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
+                            e.c_str(), group->name.c_str(), v);
+                }
+                group->sort_key = v;
+            }
+
             // present accounting groups for negotiation in "starvation order":
             vector<GroupEntry*> negotiating_groups(hgq_groups);
-            std::sort(negotiating_groups.begin(), negotiating_groups.end(), starvation_order());
+            std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order(autoregroup, hgq_root_group));
 
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
             // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
@@ -1436,8 +1488,7 @@ negotiationTime ()
                 for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
                     GroupEntry* group = *j;
 
-                    dprintf(D_FULLDEBUG, "Group %s - starvation= %g (%g/%g)  prio= %g\n", 
-                            group->name.c_str(), starvation_ratio(group->usage, group->allocated), group->usage, group->allocated, group->priority);
+                    dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
 
                     if (group->allocated <= 0) {
                         dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
@@ -1466,9 +1517,17 @@ negotiationTime ()
                         slots = floor(slots);
                     }
 
-                    negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
-                                       startdAds, claimIds, *(group->submitterAds), 
-                                       slots, group->name.c_str());
+                    if (autoregroup && (group == hgq_root_group)) {
+                        // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
+                        dprintf(D_ALWAYS, "group quotas: autoregroup mode: negotiating with autoregroup for %s\n", group->name.c_str());
+                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
+                                           startdAds, claimIds, *(group->submitterAds),
+                                           slots, NULL);
+                    } else {
+                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
+                                           startdAds, claimIds, *(group->submitterAds), 
+                                           slots, group->name.c_str());
+                    }
                 }
 
                 // Halt when we have negotiated with full deltas
@@ -1584,14 +1643,12 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map.clear();
     group_entry_map[hgq_root_name] = hgq_root_group;
 
-    bool tdas = false;
-    if (param_defined("GROUP_ACCEPT_SURPLUS")) {
-        tdas = param_boolean("GROUP_ACCEPT_SURPLUS", false);
-    } else {
-        // backward compatability
-        tdas = param_boolean("GROUP_AUTOREGROUP", false);
-    }
-    const bool default_accept_surplus = tdas;
+    bool accept_surplus = false;
+    autoregroup = false;
+    const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
+    const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+    if (default_autoregroup) autoregroup = true;
+    if (default_accept_surplus) accept_surplus = true;
 
     // build the tree structure from our group path info
     for (unsigned long j = 0;  j < groups.size();  ++j) {
@@ -1661,13 +1718,15 @@ void Matchmaker::hgq_construct_tree() {
 
         // accept surplus
 	    vname.sprintf("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
-        if (param_defined(vname.Value())) {
-            group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
-        } else {
-            // backward compatability
-            vname.sprintf("GROUP_AUTOREGROUP_%s", gname.c_str());
-            group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
-        }
+        group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
+	    vname.sprintf("GROUP_AUTOREGROUP_%s", gname.c_str());
+        group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
+        if (group->autoregroup) autoregroup = true;
+        if (group->accept_surplus) accept_surplus = true;
+    }
+
+    if (autoregroup && accept_surplus) {
+        EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
     // With the tree structure in place, we can make a list of groups in breadth-first order
@@ -1682,6 +1741,24 @@ void Matchmaker::hgq_construct_tree() {
         for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
             grpq.push_back(*j);
         }
+    }
+
+    string group_sort_expr;
+    if (!param(group_sort_expr, "GROUP_SORT_EXPR")) {
+        // Should never fail! Default provided via param-info
+        EXCEPT("Failed to obtain value for GROUP_SORT_EXPR\n");
+    }
+    ExprTree* test_sort_expr = NULL;
+    if (ParseClassAdRvalExpr(group_sort_expr.c_str(), test_sort_expr)) {
+        EXCEPT("Failed to parse GROUP_SORT_EXPR = %s\n", group_sort_expr.c_str());
+    }
+    delete test_sort_expr;
+    for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        GroupEntry* group = *j;
+        group->sort_ad->Assign(ATTR_ACCOUNTING_GROUP, group->name);
+        // group-specific values might be supported in the future:
+        group->sort_ad->AssignExpr(ATTR_SORT_EXPR, group_sort_expr.c_str());
+        group->sort_ad->Assign(ATTR_SORT_EXPR_STRING, group_sort_expr);
     }
 }
 
@@ -1855,6 +1932,12 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
 
     // Nothing to allocate
     if (surplus <= 0) return 0;
+
+    // If we are in autoregroup mode, proportional surplus allocation is disabled
+    if (autoregroup) {
+        dprintf(D_ALWAYS, "group quotas: autoregroup mode: proportional surplus allocation disabled\n");
+        return surplus;
+    }
 
     // If entire subtree requests nothing, halt now
     if (group->subtree_requested <= 0) return surplus;
@@ -2124,6 +2207,7 @@ GroupEntry::GroupEntry():
     config_quota(0),
     static_quota(false),
     accept_surplus(false),
+    autoregroup(false),
     usage(0),
     submitterAds(NULL),
     quota(0),
@@ -2136,7 +2220,8 @@ GroupEntry::GroupEntry():
     subtree_rr_time(0),
     parent(NULL),
     children(),
-    chmap()
+    chmap(),
+    sort_ad(new ClassAd())
 {
 }
 
@@ -2157,6 +2242,8 @@ GroupEntry::~GroupEntry() {
 
         delete submitterAds;
     }
+
+    if (NULL != sort_ad) delete sort_ad;
 }
 
 
@@ -2244,9 +2331,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// If operating on a group with a quota, consider the size of 
 			// the "pie" to be limited to the groupQuota, so each user in 
 			// the group gets a reasonable sized slice.
-		if ( numStartdAds > groupQuota ) {
-			numStartdAds = groupQuota;
-		}
 		slotWeightTotal = untrimmedSlotWeightTotal;
 		if ( slotWeightTotal > groupQuota ) {
 			slotWeightTotal = groupQuota;
