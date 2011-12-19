@@ -844,6 +844,13 @@ extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD;
 extern const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME;
 extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
 
+// Introduced for configurable sorting of accounting groups
+extern const char* const ATTR_GROUP_QUOTA;
+extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
+extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
+extern const char* const ATTR_SORT_EXPR;
+extern const char* const ATTR_SORT_EXPR_STRING;
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {

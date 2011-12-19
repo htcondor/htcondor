@@ -10168,3 +10168,18 @@ url=
 tags=shadow
 id=602
 
+[GROUP_SORT_EXPR]
+aliases=
+default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Accounting Group Sorting Expression
+usage=
+url=
+tags=negotiator
+id=666
