@@ -58,12 +58,12 @@ MOUNT\_UNDER\_SCRATCH parameter, which describes which directories to
 bind mount.
 \Ticket{2015}
 
-\item Added the \OptArg{-expand} option to condor\_config\_val.  If \OptArg{-dump}
-and \OptArg{-expand} are given to the command, all config file macros are
-expanded before they are printed out.
-\Ticket{2867}
+\item Added the new \Opt{-expand} option to \Condor{config\_val}.
+If both \Opt{-dump} and \Opt{-expand} options are specified,
+all configuration variables are expanded before they are printed out.
+\Ticket{2687}
 
-\item The \OptArg{-sort} option for \Condor{status} has been generalized to
+\item The \Opt{-sort} option for \Condor{status} has been generalized to
 accept expressions instead of just simple named attributes.
 \Ticket{2661}
 
