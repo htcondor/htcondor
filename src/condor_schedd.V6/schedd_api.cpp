@@ -619,6 +619,13 @@ ScheddTransaction::commit()
 		// XXX: This will need to take a transaction
 	CommitTransaction();
 
+		// aboutToSpawnJobHandler() needs to be called before a job
+		// can potentially run. For most job types, it's called just
+		// before spawning the shadow or starter. For grid jobs, we
+		// call it at the end of job submission.
+		// If we don't call it at all, job files in the spool directory
+		// will be owned by the condor user, and we'll get permission
+		// errors when attempting to access them as the user.
 	PROC_ID currentKey;
 	Job *job;
 	ClassAd *job_ad;
