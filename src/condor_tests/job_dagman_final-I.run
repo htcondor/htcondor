@@ -18,40 +18,45 @@
 ##
 ##**************************************************************
 
-# This test tests the final DAG node when the DAG is condor_rm'ed.
+# Tests DAG halt/final node combination.
 
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_final-E.dag';
-$testdesc =  'Condor submit dag - basic final node test E - scheduler U';
-$testname = "job_dagman_final-E";
+$cmd = 'job_dagman_final-I.dag';
+$testdesc =  'Condor submit dag - basic final node test I - scheduler U';
+$testname = "job_dagman_final-I";
 $dagman_args = "-verbose";
 
-$outfile = "job_dagman_final-E.nodes.out";
-$scriptfile = "job_dagman_final-E.scripts.out";
-$rescuefile = "job_dagman_final-E.dag.rescue001";
+$outfile = "job_dagman_final-I.nodes.out";
+$scriptfile = "job_dagman_final-I.scripts.out";
+$rescuefile = "job_dagman_final-I.dag.rescue001";
+$haltfile = "job_dagman_final-I.dag.halt";
 
 # Note: we must find these lines *in the specified order*.
-@node_output_lines = ("Job for node E_B1",
+@node_output_lines = ("Job for node I_A",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"Job for node E_B2",
+			"  OK done with I_A",
+			"Job for node I_B",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"  Removing parent DAGMan",
-			"Job for node E_C",
-			"  DAG_STATUS=4",
+			"  Halting DAG",
+			"  OK done with I_B",
+			"Job for node I_D",
+			"  DAG_STATUS=6",
 			"  FAILED_COUNT=0",
-			"  OK done with E_C");
+			"  OK done with I_D");
 
 # Note: we must find these lines *in the specified order*.
-@script_output_lines = ("Node E_A Pre",
-			"  DAG_STATUS=0",
+@script_output_lines = ("Node I_D Pre",
+			"  DAG_STATUS=6",
 			"  FAILED_COUNT=0",
-			"Node E_A Post",
-			"  DAG_STATUS=0",
-			"  FAILED_COUNT=0");
+			"  RETURN=-1",
+			"Node I_D Post",
+			"  DAG_STATUS=6",
+			"  FAILED_COUNT=0",
+			"  RETURN=0");
 
 my $killedchosen = 0;
 
@@ -67,7 +72,12 @@ if (-e $outfile) {
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
 }
-runcmd("rm -f job_dagman_final-E.dag.rescue*");
+runcmd("rm -f job_dagman_final-I.dag.rescue*");
+
+# Get rid of halt file if it exists.
+if (-e $haltfile) {
+	runcmd("rm -f $haltfile");
+}
 
 $abnormal = sub 
 {
@@ -75,6 +85,28 @@ $abnormal = sub
 };
 
 $aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
@@ -126,28 +158,6 @@ $aborted = sub
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
-};
-
-$held = sub 
-{
-	die "Held event NOT expected\n";
-};
-
-$executed = sub
-{
-	my %info = @_;
-
-	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
-};
-
-$submitted = sub
-{
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
-};
-
-$success = sub
-{
-	die "Error: DAG should be removed!\n";
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );

@@ -6,12 +6,21 @@ PRE_SKIP F_A 5
 SCRIPT PRE F_A job_dagman_final-F-script.pl F_C Pre 5 $DAG_STATUS $FAILED_COUNT -1
 
 JOB F_B1 job_dagman_final-F-nodeB1.cmd
+
 # This job will abort the DAG.
 JOB F_B2 job_dagman_final-F-nodeB2.cmd
 ABORT-DAG-ON F_B2 2
 
+JOB F_B3 job_dagman_final-F-nodeB3.cmd
+# Make sure this runs *after* F_B2
+PRIORITY F_B3 -1
+# This script gets run, and it shouldn't...
+#TEMPTEMP SCRIPT PRE F_B3 job_dagman_final-F-script.pl F_B3 Pre 0 $DAG_STATUS $FAILED_COUNT -1
+
 # Condor job and POST script will succeed for this node, overriding the
 # failure of the rest of the DAG.
 FINAL F_C job_dagman_final-F-nodeC.cmd
+SCRIPT PRE F_C job_dagman_final-F-script.pl F_C Pre 0 $DAG_STATUS $FAILED_COUNT -1
+SCRIPT POST F_C job_dagman_final-F-script.pl F_C Post 0 $DAG_STATUS $FAILED_COUNT $RETURN
 
-PARENT F_A CHILD F_B1 F_B2
+PARENT F_A CHILD F_B1 F_B2 F_B3

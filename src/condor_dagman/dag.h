@@ -380,6 +380,8 @@ class Dag {
 	inline int ScriptRunNodeCount() const
 		{ return _preRunNodeCount + _postRunNodeCount; }
 
+//TEMPTEMP -- needs new doc
+//TEMPTEMP -- note that true here doesn't mean the DAG is *complete*...
 		/** Determine whether the DAG has finished running (whether
 			successfully or unsuccessfully).
 	    	(If no jobs are submitted and no scripts are running, but the
@@ -387,14 +389,16 @@ class Dag {
 			exists.)
 			@return true iff the DAG is finished
 		*/
-	bool FinishedRunning() const;
+	bool FinishedRunning( bool includeFinalNode ) const;
 
+#if 0 //TEMPTEMP
 		/** Determine whether the DAG has finished running (not counting
 			the final node, if there is one).
 			@return true iff the DAG is finished
 		*/
 	bool FinishedExceptFinal() const { return NumJobsSubmitted() == 0 &&
 				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
+#endif //TEMPTEMP
 
 		/** Determine whether the DAG is successfully completed.
 			@return true iff the DAG is successfully completed
@@ -411,7 +415,7 @@ class Dag {
 			the DAG.
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	inline bool DoneCycle() { return FinishedRunning() && !DoneSuccess() &&
+	inline bool DoneCycle() { return FinishedRunning( true/*TEMPTEMP?*/ ) && !DoneSuccess() &&
 				NumNodesFailed() == 0; }
 
 		/** Submit all ready jobs, provided they are not waiting on a
@@ -918,6 +922,8 @@ class Dag {
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
 
+		// True iff the final node is ready to be run, or is running
+		// (including PRE and POST scripts, if any.
 	bool _runningFinalNode;
 
     /// List of Job objects

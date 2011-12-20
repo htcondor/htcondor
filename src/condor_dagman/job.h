@@ -420,7 +420,6 @@ class Job {
 	int GetPreSkip() const;
 	
     /** */ CondorID _CondorID;
-    /** */ status_t _Status;
 
     // maximum number of times to retry this node
     int retry_max;
@@ -517,6 +516,8 @@ private:
   
     // name given to the job by the user
     char* _jobName;
+
+    /** */ status_t _Status;
   
     /*  Job queues
 	    NOTE: indexed by queue_t

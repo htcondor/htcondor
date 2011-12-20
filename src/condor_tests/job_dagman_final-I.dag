@@ -1,0 +1,13 @@
+# Test DAG halt in combination with final node -- node B will halt the
+# DAG.
+
+JOB I_A job_dagman_final-I-nodeA.cmd
+JOB I_B job_dagman_final-I-nodeB.cmd
+JOB I_C1 job_dagman_final-I-nodeC.cmd
+JOB I_C2 job_dagman_final-I-nodeC.cmd
+FINAL I_D job_dagman_final-I-nodeD.cmd
+SCRIPT PRE I_D job_dagman_final-I-script.pl I_D Pre 0 $DAG_STATUS $FAILED_COUNT -1
+SCRIPT POST I_D job_dagman_final-I-script.pl I_D Post 0 $DAG_STATUS $FAILED_COUNT $RETURN
+
+PARENT I_A CHILD I_B
+PARENT I_B CHILD I_C1 I_C2

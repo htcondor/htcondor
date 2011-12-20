@@ -1106,6 +1106,7 @@ void main_init (int argc, char ** const argv) {
 	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{
 		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, please check input\n");
+		//TEMPTEMP -- should probably run final node here...
 	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
@@ -1212,6 +1213,7 @@ print_status() {
 }
 
 void condor_event_timer () {
+	debug_printf( DEBUG_QUIET, "condor_event_timer()\n" );//TEMPTEMP
 
 	ASSERT( dagman.dag != NULL );
 
@@ -1323,7 +1325,8 @@ void condor_event_timer () {
 		// for PRE scripts because they'll be re-run when the rescue
 		// DAG is run anyhow).
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
-				dagman.dag->PostRunNodeCount() == 0 ) {
+				dagman.dag->PostRunNodeCount() == 0 &&
+				!dagman.dag->RunningFinalNode() ) {
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		// It's possible that the DAG succeeded here, if the last job was
@@ -1340,7 +1343,7 @@ void condor_event_timer () {
     // exists.  (Note that if the DAG completed successfully, we already
 	// returned from this function above.)
     // 
-    if( dagman.dag->FinishedRunning() ) {
+    if( dagman.dag->FinishedRunning( true/*TEMPTEMP?*/ ) ) {
 		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
 		if( dagman.dag->DoneFailed() ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
@@ -1375,7 +1378,7 @@ void condor_event_timer () {
 	// If everything except the final node is done and we have one,
 	// run it (dumping a rescue DAG first if there are errors).
 	//
-	if ( dagman.dag->FinishedExceptFinal() && dagman.dag->HasFinalNode() ) {
+	if ( dagman.dag->FinishedRunning( false/*TEMPTEMP?*/ ) && dagman.dag->HasFinalNode() ) {
 		if ( dagman.dag->_dagStatus != Dag::DAG_STATUS_OK ) {
 			main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
 		} else {

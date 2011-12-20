@@ -675,7 +675,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// Only change the node status, error info,
 			// etc., if we haven't already gotten an error
 			// from another job proc in this job cluster
-		if ( job->_Status != Job::STATUS_ERROR ) {
+		if ( job->GetStatus() != Job::STATUS_ERROR ) {
 			job->TerminateFailure();
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 				  "Condor reported %s event for job proc (%d.%d.%d)",
@@ -725,7 +725,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 				// Only change the node status, error info, etc.,
 				// if we haven't already gotten an error on this node.
-			if ( job->_Status != Job::STATUS_ERROR ) {
+			if ( job->GetStatus() != Job::STATUS_ERROR ) {
 				if( termEvent->normal ) {
 					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 							"Job proc (%d.%d.%d) failed with status %d",
@@ -762,7 +762,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 				// Only change the node status if we haven't already
 				// gotten an error on this node.
-			if ( job->_Status != Job::STATUS_ERROR ) {
+			if ( job->GetStatus() != Job::STATUS_ERROR ) {
 				job->retval = 0;
 				if ( job->_scriptPost != NULL) {
 						// let the script know the job's exit status
@@ -887,14 +887,14 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			// if a POST script is specified for the job, run it
 		if(job->_scriptPost != NULL) {
 			if ( recovery ) {
-				job->_Status = Job::STATUS_POSTRUN;
+				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
 				(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 						_nfsLogIsError, _recovery, _defaultNodeLog );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
-		} else if( job->_Status != Job::STATUS_ERROR ) {
+		} else if( job->GetStatus() != Job::STATUS_ERROR ) {
 			// no POST script was specified, so update DAG with
 			// node's successful completion if the node succeeded.
 			TerminateJob( job, recovery );
@@ -1095,7 +1095,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 			}
 		}
 
-		job->_Status = Job::STATUS_SUBMITTED;
+		job->SetStatus( Job::STATUS_SUBMITTED );
 		return;
 	}
 
@@ -1349,7 +1349,7 @@ Dag::StartNode( Job *node, bool isRetry )
 	// actual job to Condor if/when the script exits successfully
 
     if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
-		node->_Status = Job::STATUS_PRERUN;
+		node->SetStatus( Job::STATUS_PRERUN );
 		_preRunNodeCount++;
 		_preScriptQ->Run( node->_scriptPre );
 		return true;
@@ -1376,9 +1376,24 @@ Dag::StartNode( Job *node, bool isRetry )
 bool
 Dag::StartFinalNode()
 {
-	if ( _final_job && !_runningFinalNode ) {
-		debug_printf( DEBUG_QUIET, "Running final node...\n" );
-		_final_job->_Status = Job::STATUS_READY;
+	if ( _final_job && _final_job->GetStatus() == Job::STATUS_NOT_READY ) {
+		debug_printf( DEBUG_QUIET, "Starting final node...\n" );
+
+//TEMPTEMP -- test for multiple jobs...
+			// Clear out the empty queue so "regular" jobs don't run
+			// when we run the final node (this is really just needed
+			// for the DAG abort and DAG halt cases).
+		Job* job;
+		_readyQ->Rewind();
+		while ( _readyQ->Next( job ) ) {
+			if ( !job->GetFinal() ) {
+				debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "Removing node %s from ready queue\n", job->GetJobName() );
+				_readyQ->DeleteCurrent();
+			}
+		}
+
+			// Now start up the final node.
+		_final_job->SetStatus( Job::STATUS_READY );
 		if ( StartNode( _final_job, false ) ) {
 			_runningFinalNode = true;
 			return true;
@@ -1394,6 +1409,7 @@ int
 Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
+	debug_printf( DEBUG_QUIET, "Dag::SubmitReadyJobs()\n" );//TEMPTEMP
 
 		// Jobs deferred by category throttles.
 	PrioritySimpleList<Job*> deferredJobs;
@@ -1411,15 +1427,34 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		// any jobs or run scripts.
 	bool prevDagIsHalted = _dagIsHalted;
 	_dagIsHalted = ( access( _haltFile.Value() , F_OK ) == 0 );
+
+//TEMPTEMP -- IsHalted should still return true
+#if 0 //TEMPTEMP
+		// We need to allow the final node, if any, to run.
+	if ( _dagIsHalted && _runningFinalNode ) {
+		debug_printf( DEBUG_QUIET,
+					"Temporarily un-halting DAG to run final node\n" );
+		_dagIsHalted = false;
+	}
+#endif //TEMPTEMP
+
 	if ( _dagIsHalted ) {
 		debug_printf( DEBUG_QUIET,
 					"DAG is halted because halt file %s exists\n",
 					_haltFile.Value() );
-        return numSubmitsThisCycle;
+		if ( _runningFinalNode ) {
+		//if ( HasFinalNode() && _final_job->GetStatus() == Job::STATUS_READY ) {
+			debug_printf( DEBUG_QUIET,
+						"Continuing to allow final node to run\n" );
+		} else {
+        	return numSubmitsThisCycle;
+		}
 	}
 	if ( prevDagIsHalted ) {
-		debug_printf( DEBUG_QUIET,
-					"DAG going from halted to running state\n" );
+		if ( !_dagIsHalted ) {
+			debug_printf( DEBUG_QUIET,
+						"DAG going from halted to running state\n" );
+		}
 			// If going from the halted to the not halted state, we need
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.
@@ -1642,7 +1677,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 				"successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
-		job->_Status = Job::STATUS_READY;
+		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
@@ -1669,7 +1704,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 	}
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
-	job->_Status = Job::STATUS_POSTRUN;
+	job->SetStatus( Job::STATUS_POSTRUN );
 	if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 			_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
 		debug_printf(DEBUG_QUIET, "Unable to monitor user logfile for node %s\n",
@@ -1807,15 +1842,16 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 
 //---------------------------------------------------------------------------
 bool
-Dag::FinishedRunning() const
+Dag::FinishedRunning( bool includeFinalNode ) const
 {
-	if ( _final_job && !_runningFinalNode ) {
+	if ( includeFinalNode && _final_job && !_runningFinalNode ) {
 			// Make sure we don't incorrectly return true if we get called
 			// just before a final node is started...
 		return false;
 	}
 
-	return FinishedExceptFinal();
+	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
+				ScriptRunNodeCount() == 0;
 }
 
 //---------------------------------------------------------------------------
@@ -1824,7 +1860,7 @@ Dag::DoneSuccess() const
 {
 	if ( NumNodesDone() == NumNodes() ) {
 		return true;
-	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
+	} else if ( _final_job && _final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
 		return true;
 	}
@@ -1836,10 +1872,10 @@ Dag::DoneSuccess() const
 bool
 Dag::DoneFailed() const
 {
-	if ( !FinishedRunning() ) {
+	if ( !FinishedRunning( true/*TEMPTEMP?*/ ) ) {
 			// Note: if final node is running we should get to here...
 		return false;
-	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
+	} else if ( _final_job && _final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Success of final node overrides failure of any other node.
 		return false;
 	}
@@ -2208,7 +2244,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 	}
 
-	if ( node->_Status == Job::STATUS_DONE ) {
+	if ( node->GetStatus() == Job::STATUS_DONE ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
 
@@ -2216,7 +2252,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	if( node->retry_max > 0 ) {
 		int retriesLeft = (node->retry_max - node->retries);
 
-		if ( node->_Status == Job::STATUS_ERROR
+		if ( node->GetStatus() == Job::STATUS_ERROR
 					&& node->retries < node->retry_max 
 					&& node->have_retry_abort_val
 					&& node->retval == node->retry_abort_val ) {
@@ -2254,6 +2290,10 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
+
+	if ( job == _final_job ) {
+		_runningFinalNode = false;
+	}
 
 	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
@@ -2328,7 +2368,7 @@ void
 Dag::RestartNode( Job *node, bool recovery )
 {
     ASSERT( node != NULL );
-	if ( node->_Status != Job::STATUS_ERROR ) {
+	if ( node->GetStatus() != Job::STATUS_ERROR ) {
 		EXCEPT( "Node %s is not in ERROR state", node->GetJobName() );
 	}
     if( node->have_retry_abort_val && node->retval == node->retry_abort_val ) {
@@ -2341,7 +2381,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		}
         return;
     }
-	node->_Status = Job::STATUS_READY;
+	node->SetStatus( Job::STATUS_READY );
 	node->retries++;
 	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
@@ -2653,7 +2693,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	bool tooSoon = (_minStatusUpdateTime > 0) &&
 				((startTime - _lastStatusUpdateTimestamp) <
 				_minStatusUpdateTime);
-	if ( tooSoon && !held && !removed && !FinishedRunning() ) {
+	if ( tooSoon && !held && !removed && !FinishedRunning( true/*TEMPTEMP?*/ ) ) {
 		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because min. status update time has not yet passed\n" );
 		return;
@@ -2753,7 +2793,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	time_t endTime = time( NULL );
 
 	fprintf( outfile, "Next scheduled update: " );
-	if ( FinishedRunning() || removed ) {
+	if ( FinishedRunning( true/*TEMPTEMP?*/ ) || removed ) {
 		fprintf( outfile, "none\n" );
 	} else {
 		time_t nextTime = endTime + _minStatusUpdateTime;
@@ -3169,7 +3209,7 @@ bool Dag::Add( Job& job )
 						_final_job->GetJobName(), job.GetJobName() );
 			return false;
 		}
-		job._Status = Job::STATUS_NOT_READY;
+		job.SetStatus( Job::STATUS_NOT_READY );
 		_final_job = &job;
 	}
 	return _jobs.Append(&job);
@@ -3739,7 +3779,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
 	}
 
-    node->_Status = Job::STATUS_SUBMITTED;
+    node->SetStatus( Job::STATUS_SUBMITTED );
 
 		// Note: I assume we're incrementing this here instead of when
 		// we see the submit events so that we don't accidentally exceed

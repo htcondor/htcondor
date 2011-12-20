@@ -25,7 +25,7 @@ use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_final-F.dag';
-$testdesc =  'Condor submit dag - basic final node test A - scheduler U';
+$testdesc =  'Condor submit dag - basic final node test F - scheduler U';
 $testname = "job_dagman_final-F";
 $dagman_args = "-verbose";
 
@@ -51,7 +51,15 @@ $rescuefile = "job_dagman_final-F.dag.rescue001";
 @script_output_lines = ("Node F_C Pre",
 			"  DAG_STATUS=0",
 			"  FAILED_COUNT=0",
-			"  RETURN=-1");
+			"  RETURN=-1",
+			"Node F_C Pre",
+			"  DAG_STATUS=3",
+			"  FAILED_COUNT=0",
+			"  RETURN=-1",
+			"Node F_C Post",
+			"  DAG_STATUS=3",
+			"  FAILED_COUNT=0",
+			"  RETURN=0");
 
 my $killedchosen = 0;
 
