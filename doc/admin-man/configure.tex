@@ -7038,31 +7038,31 @@ The following configuration macros affect negotiation for group users.
   machine ClassAd attribute \Attr{SlotWeight}. 
   When \Expr{False}, each slot effectively has a weight of 1.
 
-\label{param:GroupSortExpr}
-\item[\Macro{GROUP\_SORT\_EXPR}]
-  A classad expression which evaluates to a numeric value that is used
-  to sort accounting groups to determine which order they negotiate in.
-  The classad expression for \Macro{GROUP\_SORT\_EXPR} may involve any of
-  the following:
-  \begin{itemize}
-      \item AccountingGroup -- the name of the accounting group
-      \item GroupQuota -- the resource quota assigned to the group for the current negotiation cycle
-      \item GroupResourcesAllocated -- the resources allocated to this group by the HGQ algorithm
-      \item GroupResourcesInUse -- the resources currently in use by jobs associated with this group
-  \end{itemize}
-  An example group sorting expression that causes the root group (``<none>'') to always negotiate 
-  last, and other groups to negotiate in order of quota-based starvation:
-\begin{verbatim}
-GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="<none>", 3.4e+38,
-  ifThenElse(GroupQuota > 0, GroupResourcesInUse/GroupQuota, 3.3e+38))
-\end{verbatim}
-  If an expression fails to evaluate to a numeric value for a group, then
-  that group's sorting value will default to FLT\_MAX (3.40282e+38).
-  GROUP\_SORT\_EXPR defaults to the backward compatible starvation ratio:
-\begin{verbatim}
-GROUP_SORT_EXPR = ifThenElse(GroupResourcesAllocated>0.0,
-  GroupResourcesInUse/GroupResourcesAllocated, 3.40282e+38)
-\end{verbatim}
+%\label{param:GroupSortExpr}
+%\item[\Macro{GROUP\_SORT\_EXPR}]
+%  A classad expression which evaluates to a numeric value that is used
+%  to sort accounting groups to determine which order they negotiate in.
+%  The classad expression for \Macro{GROUP\_SORT\_EXPR} may involve any of
+%  the following:
+%  \begin{itemize}
+%      \item AccountingGroup -- the name of the accounting group
+%      \item GroupQuota -- the resource quota assigned to the group for the current negotiation cycle
+%      \item GroupResourcesAllocated -- the resources allocated to this group by the HGQ algorithm
+%      \item GroupResourcesInUse -- the resources currently in use by jobs associated with this group
+%  \end{itemize}
+%  An example group sorting expression that causes the root group (``<none>'') to always negotiate 
+%  last, and other groups to negotiate in order of quota-based starvation:
+%\begin{verbatim}
+%GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="<none>", 3.4e+38,
+%  ifThenElse(GroupQuota > 0, GroupResourcesInUse/GroupQuota, 3.3e+38))
+%\end{verbatim}
+%  If an expression fails to evaluate to a numeric value for a group, then
+%  that group's sorting value will default to FLT\_MAX (3.40282e+38).
+%  GROUP\_SORT\_EXPR defaults to the backward compatible starvation ratio:
+%\begin{verbatim}
+%GROUP_SORT_EXPR = ifThenElse(GroupResourcesAllocated>0.0,
+%  GroupResourcesInUse/GroupResourcesAllocated, 3.40282e+38)
+%\end{verbatim}
 
 \end{description}
 
