@@ -98,6 +98,7 @@ char		*myName;
 vector<SortSpec> sortSpecs;
 bool            javaMode = false;
 bool			vmMode = false;
+bool        absentMode = false;
 char 		*target = NULL;
 ClassAd		*targetAd = NULL;
 ArgList projList;		// Attributes that we want the server to send us
@@ -273,6 +274,18 @@ main (int argc, char *argv[])
 		projList.AppendArg(ATTR_JAVA_VENDOR);
 		projList.AppendArg(ATTR_JAVA_VERSION);
 
+	}
+	
+	if(absentMode) {
+	    sprintf( buffer, "%s == TRUE", ATTR_ABSENT );
+	    if (diagnose) {
+	        printf( "Adding constraint %s\n", buffer );
+	    }
+	    query->addANDConstraint( buffer );
+	    
+	    projList.AppendArg( ATTR_ABSENT );
+	    projList.AppendArg( ATTR_LAST_HEARD_FROM );
+	    projList.AppendArg( ATTR_CLASSAD_LIFETIME );
 	}
 
 	if(vmMode) {
@@ -681,6 +694,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-java", 2)) {
 			javaMode = true;
+		} else
+		if (matchPrefix (argv[i], "-absent", 3)) {
+			absentMode = true;
 		} else
 		if (matchPrefix (argv[i], "-vm", 3)) {
 			vmMode = true;
