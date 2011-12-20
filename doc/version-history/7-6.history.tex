@@ -26,6 +26,24 @@ The details of each version are described below.
 \item Condor version 7.6.5 not yet released.
 %\item Condor version 7.6.5 released on Month Date, 2011.
 
+\item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to the
+behavior it exhibited before Hierarchical Group Quotas were introduced
+in Condor version 7.5.6.
+That behavior has submitters with no accounting group,
+which are listed as \Expr{<none>}, negotiate last.
+And, in addition, any accounting groups with \MacroNI{GROUP\_AUTOREGROUP}
+enabled negotiate both normally and then also along with the 
+submitters with no accounting group.
+For Condor versions 7.5.6 through 7.6.4, configuration variable
+\MacroNI{GROUP\_AUTOREGROUP} (or \MacroNI{GROUP\_AUTOREGROUP\_<groupname>})
+was a synonym for 
+\Macro{GROUP\_ACCEPT\_SURPLUS} 
+(or \MacroNI{GROUP\_ACCEPT\_SURPLUS\_<groupname>}).
+They now implement distinct features,
+and it is not legal to set both to \Expr{True} in the configuration
+for the \Condor{negotiator}.
+\Ticket{2679}
+
 \end{itemize}
 
 
@@ -51,16 +69,6 @@ to detect and utilize the load average information.
 
 \begin{itemize}
 
-
-\item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to the
-behavior it exhibited before Hierarchical Group Quotas were introduced
-in Condor.
-That behavior has submitters with no accounting group,
-which are listed as \Expr{<none>}, negotiate last.
-And, in addition, any accounting groups with \MacroNI{GROUP\_AUTOREGROUP}
-enabled negotiate both normally and then also along with the 
-submitters with no accounting group.
-\Ticket{2679}
 
 %\item Exposed the negotiation order of accounting groups to configuration
 %via the configuration parameter \Macro{GROUP\_SORT\_EXPR}.
