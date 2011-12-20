@@ -117,6 +117,12 @@ cycle.  The hold time defaults to 20 seconds.  This is controlled by the
 with children indented below their parents.
 \Ticket{1281}
 
+\item Fixed the output of \Condor{q} \Opt{-dag} so that children of a
+non-existent DAGman node would not be mistakenly shown as belonging to another
+DAGman. This can happen, for example, when a \Condor{dagman} process dies while
+its children are still running.
+\Ticket{2463}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
