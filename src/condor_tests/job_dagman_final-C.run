@@ -82,7 +82,6 @@ $rescuefile = "job_dagman_final-C.dag.rescue001";
 			'#   C_C,<ENDLIST>',
 			'^',
 			'DONE C_A',
-			#TEMPTEMP -- check whether we should get this retry line
 			'RETRY C_A 1',
 			'DONE C_B');
 

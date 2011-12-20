@@ -309,16 +309,14 @@ class Dag {
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
 
-//TEMPTEMP -- needs new doc
-    /** @return the total number of nodes in the DAG
+    /** @param whether to include final node, if any, in the count
+		@return the total number of nodes in the DAG
      */
-    //TEMPTEMP inline int NumNodes() const { return _jobs.Number(); }
     int NumNodes( bool includeFinal ) const;
 
-//TEMPTEMP -- needs new doc
-    /** @return the number of nodes completed
+    /** @param whether to include final node, if any, in the count
+    	@return the number of nodes completed
      */
-    //TEMPTEMP inline int NumNodesDone() const { return _numNodesDone; }
     int NumNodesDone( bool includeFinal ) const;
 
     /** @return the number of nodes that failed in the DAG
@@ -384,34 +382,32 @@ class Dag {
 	inline int ScriptRunNodeCount() const
 		{ return _preRunNodeCount + _postRunNodeCount; }
 
-//TEMPTEMP -- needs new doc
-//TEMPTEMP -- note that true here doesn't mean the DAG is *complete*...
 		/** Determine whether the DAG has finished running (whether
 			successfully or unsuccessfully).
 	    	(If no jobs are submitted and no scripts are running, but the
 		    dag is not complete, then at least one job failed, or a cycle
 			exists.)
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is finished
 		*/
 	bool FinishedRunning( bool includeFinalNode ) const;
 
-//TEMPTEMP -- needs new doc
-//TEMPTEMP -- note that true here doesn't mean the DAG is *complete*...
 		/** Determine whether the DAG is successfully completed.
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is successfully completed
 		*/
 	bool DoneSuccess( bool includeFinalNode ) const;
 
-//TEMPTEMP -- needs new doc
 		/** Determine whether the DAG is finished, but failed (because
 			of a node job failure, etc.).
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but failed
 		*/
 	bool DoneFailed( bool includeFinalNode ) const;
 
-//TEMPTEMP -- needs new doc
 		/** Determine whether the DAG is finished because of a cycle in
 			the DAG.
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but there is a cycle
 		*/
 	inline bool DoneCycle( bool includeFinalNode) {

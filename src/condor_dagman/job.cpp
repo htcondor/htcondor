@@ -324,8 +324,10 @@ Job::GetStatus() const
 bool
 Job::SetStatus( status_t newStatus )
 {
+	 debug_printf( DEBUG_DEBUG_1, "Job(%s)::SetStatus(%s)\n",
+	 			GetJobName(), status_t_names[newStatus] );
+
 		// TODO: add some state transition sanity-checking here?
-	debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "Job(%s)::SetStatus(%s)\n", GetJobName(), status_t_names[newStatus] );
 	_Status = newStatus;
 	return true;
 }

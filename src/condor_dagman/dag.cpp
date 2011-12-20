@@ -1386,7 +1386,9 @@ Dag::StartFinalNode()
 		_readyQ->Rewind();
 		while ( _readyQ->Next( job ) ) {
 			if ( !job->GetFinal() ) {
-				debug_printf( DEBUG_QUIET/*TEMPTEMP*/, "Removing node %s from ready queue\n", job->GetJobName() );
+				debug_printf( DEBUG_DEBUG_1,
+							"Removing node %s from ready queue\n",
+							job->GetJobName() );
 				_readyQ->DeleteCurrent();
 			}
 		}
@@ -1408,7 +1410,6 @@ int
 Dag::SubmitReadyJobs(const Dagman &dm)
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitReadyJobs()\n" );
-	debug_printf( DEBUG_QUIET, "Dag::SubmitReadyJobs()\n" );//TEMPTEMP
 
 		// Jobs deferred by category throttles.
 	PrioritySimpleList<Job*> deferredJobs;
@@ -2259,7 +2260,8 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 	}
 
-	if ( node->GetStatus() == Job::STATUS_DONE ) {
+		// Never mark a FINAL node as done.
+	if ( node->GetStatus() == Job::STATUS_DONE && !node->GetFinal() ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
 
@@ -3215,8 +3217,9 @@ bool Dag::Add( Job& job )
 	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
 	ASSERT( insertResult == 0 );
 
-		// Final node is not added to the "normal" node list here, so
-		// it won't get run via the ready queue.
+		// Final node status is set to STATUS_NOT_READY here, so it
+		// won't get run even though it has no parents; its status
+		// will get changed when it should be run.
 	if ( job.GetFinal() ) {
 		if ( _final_job ) {
         	debug_printf( DEBUG_QUIET, "Error: DAG already has a final "
