@@ -280,6 +280,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_final-F "Simple Dagman Final Node F" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-G "Simple Dagman Final Node G" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
 	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")

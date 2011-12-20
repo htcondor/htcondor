@@ -309,13 +309,17 @@ class Dag {
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
 
+//TEMPTEMP -- needs new doc
     /** @return the total number of nodes in the DAG
      */
-    inline int NumNodes() const { return _jobs.Number(); }
+    //TEMPTEMP inline int NumNodes() const { return _jobs.Number(); }
+    int NumNodes( bool includeFinal ) const;
 
+//TEMPTEMP -- needs new doc
     /** @return the number of nodes completed
      */
-    inline int NumNodesDone() const { return _numNodesDone; }
+    //TEMPTEMP inline int NumNodesDone() const { return _numNodesDone; }
+    int NumNodesDone( bool includeFinal ) const;
 
     /** @return the number of nodes that failed in the DAG
      */
@@ -391,31 +395,28 @@ class Dag {
 		*/
 	bool FinishedRunning( bool includeFinalNode ) const;
 
-#if 0 //TEMPTEMP
-		/** Determine whether the DAG has finished running (not counting
-			the final node, if there is one).
-			@return true iff the DAG is finished
-		*/
-	bool FinishedExceptFinal() const { return NumJobsSubmitted() == 0 &&
-				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
-#endif //TEMPTEMP
-
+//TEMPTEMP -- needs new doc
+//TEMPTEMP -- note that true here doesn't mean the DAG is *complete*...
 		/** Determine whether the DAG is successfully completed.
 			@return true iff the DAG is successfully completed
 		*/
-	bool DoneSuccess() const;
+	bool DoneSuccess( bool includeFinalNode ) const;
 
+//TEMPTEMP -- needs new doc
 		/** Determine whether the DAG is finished, but failed (because
 			of a node job failure, etc.).
 			@return true iff the DAG is finished but failed
 		*/
-	bool DoneFailed() const;
+	bool DoneFailed( bool includeFinalNode ) const;
 
+//TEMPTEMP -- needs new doc
 		/** Determine whether the DAG is finished because of a cycle in
 			the DAG.
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	inline bool DoneCycle() { return FinishedRunning( true/*TEMPTEMP?*/ ) && !DoneSuccess() &&
+	inline bool DoneCycle( bool includeFinalNode) {
+				return FinishedRunning( includeFinalNode ) &&
+				!DoneSuccess( includeFinalNode ) &&
 				NumNodesFailed() == 0; }
 
 		/** Submit all ready jobs, provided they are not waiting on a
@@ -724,7 +725,7 @@ class Dag {
 	/** Determine whether this DAG has a final node.
 		@return true iff the DAG has a final node.
 	*/
-	inline bool HasFinalNode() { return _final_job != NULL; }
+	inline bool HasFinalNode() const { return _final_job != NULL; }
 
 	/** Determine whether the final node (if any) of this DAG is
 		running (or has been run).

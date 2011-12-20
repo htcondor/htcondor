@@ -248,7 +248,7 @@ bool Dag::Bootstrap (bool recovery)
 		}
     }
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
-				  NumNodesDone() );
+				  NumNodesDone( true ) );
     
     if (recovery) {
 		_recovery = true;
@@ -1379,7 +1379,6 @@ Dag::StartFinalNode()
 	if ( _final_job && _final_job->GetStatus() == Job::STATUS_NOT_READY ) {
 		debug_printf( DEBUG_QUIET, "Starting final node...\n" );
 
-//TEMPTEMP -- test for multiple jobs...
 			// Clear out the empty queue so "regular" jobs don't run
 			// when we run the final node (this is really just needed
 			// for the DAG abort and DAG halt cases).
@@ -1428,22 +1427,11 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	bool prevDagIsHalted = _dagIsHalted;
 	_dagIsHalted = ( access( _haltFile.Value() , F_OK ) == 0 );
 
-//TEMPTEMP -- IsHalted should still return true
-#if 0 //TEMPTEMP
-		// We need to allow the final node, if any, to run.
-	if ( _dagIsHalted && _runningFinalNode ) {
-		debug_printf( DEBUG_QUIET,
-					"Temporarily un-halting DAG to run final node\n" );
-		_dagIsHalted = false;
-	}
-#endif //TEMPTEMP
-
 	if ( _dagIsHalted ) {
 		debug_printf( DEBUG_QUIET,
 					"DAG is halted because halt file %s exists\n",
 					_haltFile.Value() );
 		if ( _runningFinalNode ) {
-		//if ( HasFinalNode() && _final_job->GetStatus() == Job::STATUS_READY ) {
 			debug_printf( DEBUG_QUIET,
 						"Continuing to allow final node to run\n" );
 		} else {
@@ -1856,11 +1844,12 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 
 //---------------------------------------------------------------------------
 bool
-Dag::DoneSuccess() const
+Dag::DoneSuccess( bool includeFinalNode ) const
 {
-	if ( NumNodesDone() == NumNodes() ) {
+	if ( NumNodesDone( includeFinalNode ) == NumNodes( includeFinalNode ) ) {
 		return true;
-	} else if ( _final_job && _final_job->GetStatus() == Job::STATUS_DONE ) {
+	} else if ( includeFinalNode && _final_job &&
+				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
 		return true;
 	}
@@ -1870,17 +1859,43 @@ Dag::DoneSuccess() const
 
 //---------------------------------------------------------------------------
 bool
-Dag::DoneFailed() const
+Dag::DoneFailed( bool includeFinalNode ) const
 {
-	if ( !FinishedRunning( true/*TEMPTEMP?*/ ) ) {
+	if ( !FinishedRunning( includeFinalNode ) ) {
 			// Note: if final node is running we should get to here...
 		return false;
-	} else if ( _final_job && _final_job->GetStatus() == Job::STATUS_DONE ) {
+	} else if ( includeFinalNode && _final_job &&
+				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Success of final node overrides failure of any other node.
 		return false;
 	}
 
 	return NumNodesFailed() > 0;
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::NumNodes( bool includeFinal ) const
+{
+	int result = _jobs.Number();
+	if ( !includeFinal && HasFinalNode() ) {
+		result--;
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::NumNodesDone( bool includeFinal ) const
+{
+	int result = _numNodesDone;
+	if ( !includeFinal && HasFinalNode() &&
+				_final_job->GetStatus() == Job::STATUS_DONE ) {
+		result--;
+	}
+
+	return result;
 }
 
 //---------------------------------------------------------------------------
@@ -2057,7 +2072,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 				isPartial ? "partial" : "full" );
 
     fprintf(fp, "#\n");
-    fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
+    fprintf(fp, "# Total number of Nodes: %d\n", NumNodes( true ));
     fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
     fprintf(fp, "# Nodes that failed: %d\n", _numNodesFailed);
 
@@ -2693,7 +2708,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	bool tooSoon = (_minStatusUpdateTime > 0) &&
 				((startTime - _lastStatusUpdateTimestamp) <
 				_minStatusUpdateTime);
-	if ( tooSoon && !held && !removed && !FinishedRunning( true/*TEMPTEMP?*/ ) ) {
+	if ( tooSoon && !held && !removed && !FinishedRunning( true ) ) {
 		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because min. status update time has not yet passed\n" );
 		return;
@@ -2769,13 +2784,13 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
-	if ( DoneSuccess() ) {
+	if ( DoneSuccess( true ) ) {
 		dagStatus = Job::STATUS_DONE;
 		statusNote = "success";
-	} else if ( DoneFailed() ) {
+	} else if ( DoneFailed( true ) ) {
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "failed";
-	} else if ( DoneCycle() ) {
+	} else if ( DoneCycle( true ) ) {
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
 	} else if ( held ) {
@@ -2793,7 +2808,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	time_t endTime = time( NULL );
 
 	fprintf( outfile, "Next scheduled update: " );
-	if ( FinishedRunning( true/*TEMPTEMP?*/ ) || removed ) {
+	if ( FinishedRunning( true ) || removed ) {
 		fprintf( outfile, "none\n" );
 	} else {
 		time_t nextTime = endTime + _minStatusUpdateTime;

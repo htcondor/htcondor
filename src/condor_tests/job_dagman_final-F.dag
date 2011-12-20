@@ -14,8 +14,6 @@ ABORT-DAG-ON F_B2 2
 JOB F_B3 job_dagman_final-F-nodeB3.cmd
 # Make sure this runs *after* F_B2
 PRIORITY F_B3 -1
-# This script gets run, and it shouldn't...
-#TEMPTEMP SCRIPT PRE F_B3 job_dagman_final-F-script.pl F_B3 Pre 0 $DAG_STATUS $FAILED_COUNT -1
 
 # Condor job and POST script will succeed for this node, overriding the
 # failure of the rest of the DAG.

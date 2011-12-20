@@ -505,6 +505,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 
 			// Start the final node if we have one.
 		if ( dagman.dag->StartFinalNode() ) {
+debug_printf( DEBUG_QUIET, "DIAG 1010\n" );//TEMPTEMP
 				// We started a final node; return here so we wait for the
 				// final node to finish, instead of exiting immediately.
 			inShutdownRescue = false;
@@ -1110,7 +1111,7 @@ void main_init (int argc, char ** const argv) {
 	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
-				  dagman.dag->NumNodes() );
+				  dagman.dag->NumNodes( true ) );
 
 	MyString firstLocation;
 	if ( dagman.dag->GetReject( firstLocation ) ) {
@@ -1190,8 +1191,8 @@ void main_init (int argc, char ** const argv) {
 
 void
 print_status() {
-	int total = dagman.dag->NumNodes();
-	int done = dagman.dag->NumNodesDone();
+	int total = dagman.dag->NumNodes( true );
+	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
 	int submitted = dagman.dag->NumJobsSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
@@ -1241,6 +1242,7 @@ void condor_event_timer () {
     static int prevScriptRunNodes = 0;
     static int prevJobsHeld = 0;
 
+debug_printf( DEBUG_QUIET, "DIAG 1310\n" );//TEMPTEMP
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
 	if( justSubmitted ) {
@@ -1249,6 +1251,7 @@ void condor_event_timer () {
 		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
 				  	justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
+debug_printf( DEBUG_QUIET, "DIAG 1320\n" );//TEMPTEMP
 
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
@@ -1270,10 +1273,11 @@ void condor_event_timer () {
 			return;
 		}
 	}
+debug_printf( DEBUG_QUIET, "DIAG 1330\n" );//TEMPTEMP
 
     // print status if anything's changed (or we're in a high debug level)
-    if( prevJobsDone != dagman.dag->NumNodesDone()
-        || prevJobs != dagman.dag->NumNodes()
+    if( prevJobsDone != dagman.dag->NumNodesDone( true )
+        || prevJobs != dagman.dag->NumNodes( true )
         || prevJobsFailed != dagman.dag->NumNodesFailed()
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
@@ -1282,8 +1286,8 @@ void condor_event_timer () {
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
-        prevJobsDone = dagman.dag->NumNodesDone();
-        prevJobs = dagman.dag->NumNodes();
+        prevJobsDone = dagman.dag->NumNodesDone( true );
+        prevJobs = dagman.dag->NumNodes( true );
         prevJobsFailed = dagman.dag->NumNodesFailed();
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
@@ -1294,16 +1298,18 @@ void condor_event_timer () {
 			dagman.dag->DumpDotFile();
 		}
 	}
+debug_printf( DEBUG_QUIET, "DIAG 1340\n" );//TEMPTEMP
 
 	dagman.dag->DumpNodeStatus( false, false );
 
-    ASSERT( dagman.dag->NumNodesDone() + dagman.dag->NumNodesFailed()
-			<= dagman.dag->NumNodes() );
+    ASSERT( dagman.dag->NumNodesDone( true ) + dagman.dag->NumNodesFailed()
+			<= dagman.dag->NumNodes( true ) );
+debug_printf( DEBUG_QUIET, "DIAG 1350\n" );//TEMPTEMP
 
     //
     // If DAG is complete, hurray, and exit.
     //
-    if( dagman.dag->DoneSuccess() ) {
+    if( dagman.dag->DoneSuccess( true ) ) {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
@@ -1317,6 +1323,25 @@ void condor_event_timer () {
 		ExitSuccess();
 		return;
     }
+debug_printf( DEBUG_QUIET, "DIAG 1360\n" );//TEMPTEMP
+
+	//
+	// DAG has failed -- dump rescue DAG.
+	//
+    if( dagman.dag->DoneFailed( true ) ) {
+		main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );//TEMPTEMP?
+		return;
+	}
+
+	//
+	// DAG has failed but we haven't run final node yet, so do that.
+	//
+    if( dagman.dag->DoneSuccess( false ) ) {
+		//TEMPTEMP -- do we need any other tests here?
+		dagman.dag->StartFinalNode();
+		return;
+	}
+debug_printf( DEBUG_QUIET, "DIAG 1370\n" );//TEMPTEMP
 
 		// If the DAG is halted, we don't want to actually exit yet if
 		// jobs are still in the queue, or any POST scripts need to be
@@ -1332,10 +1357,11 @@ void condor_event_timer () {
 		// It's possible that the DAG succeeded here, if the last job was
 		// already in the queue before the DAG was held, so we need to
 		// check for that.
-		Dag::dag_status dagStatus = dagman.dag->DoneSuccess() ?
+		Dag::dag_status dagStatus = dagman.dag->DoneSuccess( true/*TEMPTEMP?*/ ) ?
 					Dag::DAG_STATUS_OK : Dag::DAG_STATUS_HALTED;
 		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 	}
+debug_printf( DEBUG_QUIET, "DIAG 1380\n" );//TEMPTEMP
 
     //
     // If no jobs are submitted and no scripts are running, but the
@@ -1343,9 +1369,11 @@ void condor_event_timer () {
     // exists.  (Note that if the DAG completed successfully, we already
 	// returned from this function above.)
     // 
-    if( dagman.dag->FinishedRunning( true/*TEMPTEMP?*/ ) ) {
+    if( dagman.dag->FinishedRunning( false ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 1120\n" );//TEMPTEMP
 		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
-		if( dagman.dag->DoneFailed() ) {
+		if( dagman.dag->DoneFailed( false ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 1130\n" );//TEMPTEMP
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
@@ -1373,7 +1401,10 @@ void condor_event_timer () {
 		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 		return;
     }
+debug_printf( DEBUG_QUIET, "DIAG 1390\n" );//TEMPTEMP
 
+#if 0 //TEMPTEMP?
+//TEMPTEMP -- do we need this anymore?
 	//
 	// If everything except the final node is done and we have one,
 	// run it (dumping a rescue DAG first if there are errors).
@@ -1382,10 +1413,13 @@ void condor_event_timer () {
 		if ( dagman.dag->_dagStatus != Dag::DAG_STATUS_OK ) {
 			main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
 		} else {
+debug_printf( DEBUG_QUIET, "DIAG 1110\n" );//TEMPTEMP
 			dagman.dag->StartFinalNode();
 		}
 		return;
 	}
+#endif //TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG 1400\n" );//TEMPTEMP
 }
 
 

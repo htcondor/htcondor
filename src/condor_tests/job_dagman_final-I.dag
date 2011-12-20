@@ -5,6 +5,7 @@ JOB I_A job_dagman_final-I-nodeA.cmd
 JOB I_B job_dagman_final-I-nodeB.cmd
 JOB I_C1 job_dagman_final-I-nodeC.cmd
 JOB I_C2 job_dagman_final-I-nodeC.cmd
+SCRIPT PRE I_C2 job_dagman_final-I-script.pl I_C2 Pre 0 $DAG_STATUS $FAILED_COUNT -1
 FINAL I_D job_dagman_final-I-nodeD.cmd
 SCRIPT PRE I_D job_dagman_final-I-script.pl I_D Pre 0 $DAG_STATUS $FAILED_COUNT -1
 SCRIPT POST I_D job_dagman_final-I-script.pl I_D Post 0 $DAG_STATUS $FAILED_COUNT $RETURN
