@@ -196,6 +196,8 @@ public:
 class CompareProcMaps {
 public:
 	bool operator()(const clusterProcMapper& a, const clusterProcMapper& b) const {
+		if (a.cluster < 0 || a.proc < 0) return true;
+		if (b.cluster < 0 || b.proc < 0) return false;
 		if (a.dagman_cluster_id < b.dagman_cluster_id) { return true; }
 		if (a.dagman_cluster_id > b.dagman_cluster_id) { return false; }
 		if (a.dagman_proc_id < b.dagman_proc_id) { return true; }
@@ -211,6 +213,8 @@ public:
 class CompareProcIDMaps {
 public:
 	bool operator()(const clusterIDProcIDMapper& a, const clusterIDProcIDMapper& b) const {
+		if (a.cluster < 0 || a.proc < 0) return true;
+		if (b.cluster < 0 || b.proc < 0) return false;
 		if (a.cluster < b.cluster ) { return true; }
 		if (a.cluster > b.cluster ) { return false; }
 		if (a.proc    < b.proc    ) { return true; }
