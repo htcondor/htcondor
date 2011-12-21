@@ -7,7 +7,7 @@ DMTCP_FILES = $(DMTCP_BIN)/dmtcp_checkpoint \
 	$(DMTCP_BIN)/dmtcp_restart \
 	$(DMTCP_LIB)/dmtcphijack.so \
 	$(DMTCP_LIB)/libmtcp.so \
-	$(DMTCP_LIB)/mtcp_restart
+	$(DMTCP_BIN)/mtcp_restart
 
 all: refresh foo
 

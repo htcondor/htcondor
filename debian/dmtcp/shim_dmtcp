@@ -7,7 +7,15 @@ set -u
 # Figure out what happens when a program checkpoints while slowly reading
 # stdin, does it restart properly?
 
-# These are required to be here, don't mess it up. :)
+# DEFAULTS, some not sane, some sane
+
+# This first one is the default for debian installations...
+DMTCP_PATH=/usr/lib/dmtcp
+
+# This next one is a default for UW-Madison pools. It is the "release_dir".
+CONDOR_PATH=/unsup/condor-production
+
+# These are sane defaults.
 LOG="/dev/null"
 STDIN="/dev/null"
 STDOUT="/dev/null"
@@ -16,7 +24,7 @@ CKPTINT=1800
 
 # The version of the shim script. Useful for debugging between groups using
 # this shim script.
-VERSION=0.2
+VERSION=0.4
 SCRIPTNAME=$(basename $0)
 
 host=`/bin/hostname | /bin/sed -e 's/\.cs\.wisc\.edu//g'`
@@ -24,61 +32,6 @@ host=`/bin/hostname | /bin/sed -e 's/\.cs\.wisc\.edu//g'`
 ###############################################################
 # cmdline args
 ###############################################################
-
-# Parse commandline options
-# Note that we use `"$@"' to let each command-line parameter expand to a
-# separate word. The quotes around `$@' are essential!
-# We need CLOPTS as the `eval set --' would nuke the return value of getopt.
-CLOPTS=`getopt -o h --long help,version,log:,stdin:,stdout:,stderr:,ckptint: -n "$SCRIPTNAME" -- "$@"`
-
-if [ $? != 0 ] ; then
-  echo "Terminating..." >&2
-  exit 1
-fi
-
-# Note the quotes around `$CLOPTS': they are essential!
-eval set -- "$CLOPTS"
-
-while true ; do
-  case "$1" in
-    -h|--help) print_description; print_help; exit 0;;
-    --version) print_version; exit 0;;
-    --log) shift; LOG=$1; shift;;
-    --stdin) shift; STDIN=$1; shift;;
-    --stdout) shift; STDOUT=$1; shift;;
-    --stderr) shift; STDERR=$1; shift;;
-    --ckptint) shift; CKPTINT=$1; shift;;
-    --) shift ; break ;;
-    *) echo "Internal error! ($1)"; exit 1;;
-  esac
-done
-
-if [ ! $# -ge 1 ]; then
-  printf "Need at least one argument.\n\n"
-  print_help
-  exit 1
-fi
-
-
-print_description()
-{
-cat << EOT
-Shim script for DMTCP-based checkpointing of Condor vanilla universe jobs.
-
-EOT
-}
-
-print_version()
-{
-cat << EOT
-$SCRIPTNAME $VERSION
-
-This code is under the Apache V2.0 License. It was written by
-Peter Keller <psilord@cs.wisc.edu> and later on modified by
-Michael Hanke <michael.hanke@gmail.com>.
-
-EOT
-}
 
 print_help()
 {
@@ -91,6 +44,20 @@ Options:
 
 --version
   Print version information and exit.
+
+--with-dmtcp path
+  A path to an installation of DMTCP. If not specified, it defaults to
+  /usr/lib/dmtcp. The current working directory of the shim_script when
+  it executes will always be tested for a DMTCP installation before using
+  whatever is specified with --with-dmtcp regardless of its definition. 
+  The default may change in the future.
+
+--with-condor path
+  A path to an installation of Condor-aka the "release_dir". If not 
+  specified, it defaults to /unsup/condor-production. The condor functionality
+  the shim script utilizes is not required by the shim script, but it'll 
+  make debugging certain failures a lot easier.
+  The default may change in the future.
 
 --log
   Logfile name. By default no logfile is created.
@@ -110,6 +77,63 @@ Options:
 EOT
 }
 
+print_description()
+{
+cat << EOT
+Shim script for DMTCP-based checkpointing of Condor vanilla universe jobs.
+
+EOT
+}
+
+print_version()
+{
+cat << EOT
+$SCRIPTNAME $VERSION
+
+This code is under the Apache V2.0 License. It was written by
+Peter Keller <psilord@cs.wisc.edu>.
+
+Additional modifications by:
+    Michael Hanke <michael.hanke@gmail.com>.
+
+EOT
+}
+
+# Parse commandline options
+# Note that we use `"$@"' to let each command-line parameter expand to a
+# separate word. The quotes around `$@' are essential!
+# We need CLOPTS as the `eval set --' would nuke the return value of getopt.
+CLOPTS=`getopt -o h --long with-condor:,with-dmtcp:,help,version,log:,stdin:,stdout:,stderr:,ckptint: -n "$SCRIPTNAME" -- "$@"`
+
+if [ $? != 0 ] ; then
+  echo "Terminating..." >&2
+  exit 1
+fi
+
+# Note the quotes around `$CLOPTS': they are essential!
+eval set -- "$CLOPTS"
+
+while true ; do
+  case "$1" in
+    -h|--help) print_description; print_help; exit 0;;
+    --version) print_version; exit 0;;
+    --with-dmtcp) shift; DMTCP_PATH=$1; shift;;
+    --with-condor) shift; CONDOR_PATH=$1; shift;;
+    --log) shift; LOG=$1; shift;;
+    --stdin) shift; STDIN=$1; shift;;
+    --stdout) shift; STDOUT=$1; shift;;
+    --stderr) shift; STDERR=$1; shift;;
+    --ckptint) shift; CKPTINT=$1; shift;;
+    --) shift ; break ;;
+    *) echo "Internal error! ($1)"; exit 1;;
+  esac
+done
+
+if [ ! $# -ge 1 ]; then
+  printf "Need at least one argument.\n\n"
+  print_help
+  exit 1
+fi
 
 logit()
 {
@@ -153,14 +177,14 @@ dmtcphijack.so
 libmtcp.so
 mtcp_restart"
 	
-	logit "Checking DMTCP manifest."
+	logit "Checking DMTCP manifest. An install in cwd overrides default choice."
 
 	for file in $files
 	do
 		if [ -f "./$file" ] ; then
 			eval ${file%*.so}="./${file}"
-		elif [ -f "/usr/lib/dmtcp/$file" ]; then
-			eval ${file%*.so}="/usr/lib/dmtcp/${file}"
+		elif [ -f "${DMTCP_PATH}/$file" ]; then
+			eval ${file%*.so}="${DMTCP_PATH}/${file}"
 		else
 			die_bad_manifest "$file"
 		fi
@@ -189,8 +213,8 @@ ckptsignature()
 	logit "GCC revision: $ret"
 
 	# See if there is a checkpoint platform
-	if [ -x /unsup/condor-production/bin/condor_status ] ; then
-		ckptsig=`/unsup/condor-production/bin/condor_status -l $host 2>&1 | /bin/egrep -i '^checkpointplatform' | /usr/bin/uniq`
+	if [ -x "${CONDOR_PATH}/bin/condor_status" ] ; then
+		ckptsig=`${CONDOR_PATH}/bin/condor_status -l $host 2>&1 | /bin/egrep -i '^checkpointplatform' | /usr/bin/uniq`
 		logit "Checkpoint platform: $ckptsig"
 	else
 		logit "Checkpoint platform: Unknown"

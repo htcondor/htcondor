@@ -1,7 +1,7 @@
 # analog to job.sub, but this one assumes a cluster-wide installed dmtcp
 # and submits a python script, hence snapshotting the python intepreter
 universe = vanilla
-executable = /usr/lib/condor/shim_dmtcp
+executable = shim_dmtcp
 coresize=-1
 
 ###############################################################################
@@ -28,7 +28,7 @@ coresize=-1
 # 1			the executable name you should have transferred in
 # 2+		arguments to the executable
 ###############################################################################
-arguments = --log shim_dmtcp.$(CLUSTER).$(PROCESS).log --stdin foo.c --stdout job.$(CLUSTER).$(PROCESS).out --stderr job.$(CLUSTER).$(PROCESS).err --ckptint 1800 ./foo.py 7200 output_file.$(CLUSTER).$(PROCESS).out
+arguments = --log shim_dmtcp.$(CLUSTER).$(PROCESS).log --stdin foo.py --stdout job.$(CLUSTER).$(PROCESS).out --stderr job.$(CLUSTER).$(PROCESS).err --ckptint 1800 ./foo.py 7200 output_file.$(CLUSTER).$(PROCESS).out
 
 ###############################################################################
 # Enable file transfer. Here is where you 'mixin' the user's input and
@@ -37,7 +37,7 @@ arguments = --log shim_dmtcp.$(CLUSTER).$(PROCESS).log --stdin foo.c --stdout jo
 ###############################################################################
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT_OR_EVICT
-transfer_input_files = foo.py,foo.c
+transfer_input_files = foo.py
 
 ###############################################################################
 # Set up various environment variables. If you need to specify more, mix them

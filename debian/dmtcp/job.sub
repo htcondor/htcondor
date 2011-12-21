@@ -18,13 +18,13 @@ coresize=-1
 ###############################################################################
 # Argument	Meaning
 #------------------
-# --log		log file name for actions in shim_dmtcp script, if n/a use /dev/null
-# --stdin	stdin file, if n/a use /dev/null
-# --stdout	stdout file, if n/a use /dev/null
-# --stderr	stderr file, if n/a use /dev/null
-# --ckptint	checkpointing interval in seconds
-# 1			the executable name you should have transferred in
-# 2+		arguments to the executable
+# --log     log file name for actions in shim_dmtcp script, if n/a use /dev/null
+# --stdin   stdin file, if n/a use /dev/null
+# --stdout  stdout file, if n/a use /dev/null
+# --stderr  stderr file, if n/a use /dev/null
+# --ckptint checkpointing interval in seconds
+# 1         the executable name you should have transferred in
+# 2+        arguments to the executable
 ###############################################################################
 arguments = --log shim_dmtcp.$(CLUSTER).$(PROCESS).log --stdin foo.c --stdout job.$(CLUSTER).$(PROCESS).out --stderr job.$(CLUSTER).$(PROCESS).err --ckptint 1800 ./foo 7200 output_file.$(CLUSTER).$(PROCESS).out
 
