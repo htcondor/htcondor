@@ -75,9 +75,6 @@ StringList::StringList( const StringList &other )
 		ASSERT( dup );
 		m_strings.Append( dup );
 	}
-	if ( other.getDelimiters( ) ) {
-		m_delimiters = strnewp( other.getDelimiters() );
-	}
 }
 
 void
