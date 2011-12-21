@@ -62,12 +62,11 @@ int IOProxy::connect_callback( Stream * /*stream*/ )
 	success = server->accept(*client);
 	if(success) {
 		if(get_local_ipaddr().compare_address(client->peer_addr())) {
-			dprintf(D_ALWAYS,"IOProxy: rejecting connection from %s: invalid ip addr\n",client->peer_ip_str());
-		} else {
 			dprintf(D_ALWAYS,"IOProxy: accepting connection from %s\n",client->peer_ip_str());
 			accept_client = true;
+		} else {
+			dprintf(D_ALWAYS,"IOProxy: rejecting connection from %s: invalid ip addr\n",client->peer_ip_str());
 		}
-		accept_client = true;
 	} else {
 		dprintf(D_ALWAYS,"IOProxy: Couldn't accept connection: %s\n",strerror(errno));
 	}

@@ -23,11 +23,11 @@ endif()
   
 if (WITH_KRB5)
 
-	find_multiple( "krb5;com_err;k5crypto;krb5support" KRB5_FOUND )
+	find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
 
 	if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
-		condor_pre_external( KRB5 krb5-1.4.3-p0 "lib;include" "include/krb5.h")
+		condor_pre_external( KRB5 krb5-1.4.3-p1 "lib;include" "include/krb5.h")
 
 		if (WINDOWS)
 			# Just so it is noted this is a complete and total hack build of an arcane 
@@ -59,9 +59,9 @@ if (WITH_KRB5)
 			               nmake NODEBUG=1 "DEFS=-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_NON_CONFORMING_SWPRINTFS -wd4002 -wd4005 -wd4013 -wd4018 -wd4028 -wd4047 -wd4090 -wd4091 -wd4101 -wd4102 -wd4133 -wd4146 -wd4244 -wd4700 -wd4996")
 
 			# Something is wrong with the default install (make install suck-o)
-			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${KRB5_INSTALL_LOC}/include/win-mac.h \r\n
-							  cp -r src/lib/obj/i386/rel/* ${KRB5_INSTALL_LOC}/lib \r\n
+			set (KRB5_INSTALL cp -r src/lib/obj/i386/rel/* ${KRB5_INSTALL_LOC}/lib \r\n
 							  cp -r src/include/* ${KRB5_INSTALL_LOC}/include \r\n
+							  cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${KRB5_INSTALL_LOC}/include/win-mac.h \r\n
 							  cd \"\\\" \r\n
 							  cd /D "${KRB5_INSTALL_LOC}/lib" \r\n 
 							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
@@ -82,6 +82,7 @@ if (WITH_KRB5)
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${KRB5_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz
+				    #URL C:/Scratch/Build/test-externals/${KRB5_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_PATCH}
 				    #--Configure step ----------

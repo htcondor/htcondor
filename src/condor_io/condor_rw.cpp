@@ -198,6 +198,22 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 					 "errno = %d %s, reading %d bytes from %s.\n",
 					 fd, nro, the_error, the_errorstr, sz,
 					 not_null_peer_description(peer_description,fd,sinbuf) );
+
+			if( the_error == ETIMEDOUT ) {
+				if( timeout <= 0 ) {
+					dprintf( D_ALWAYS,
+							 "condor_read(): read timeout during blocking read from %s\n",
+							 not_null_peer_description(peer_description,fd,sinbuf));
+				}
+				else {
+					int lapse = (int)(time(NULL)-start_time);
+					dprintf( D_ALWAYS,
+							 "condor_read(): UNEXPECTED read timeout after %ds during non-blocking read from %s (desired timeout=%ds)\n",
+							 lapse,
+							 not_null_peer_description(peer_description,fd,sinbuf),
+							 timeout);
+				}
+			}
 			return -1;
 		}
 		nr += nro;
@@ -210,7 +226,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 
 
 int
-condor_write( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags )
+condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, int timeout, int flags )
 {
 	Selector selector;
 	int nw = 0, nwo = 0;

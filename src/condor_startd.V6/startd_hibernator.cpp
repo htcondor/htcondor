@@ -88,14 +88,30 @@ StartdHibernator::update( void )
 bool
 StartdHibernator::initialize( void )
 {
-	char	*args [] =
-		{ const_cast<char*>(m_plugin_path.Value()), "ad", NULL};
+	ArgList	argList;
+	argList.AppendArg( m_plugin_path.Value() );
 
+	if ( m_plugin_args ) {
+		m_plugin_args->rewind();
+		char	*tmp;
+		while( ( tmp = m_plugin_args->next() ) != NULL ) {
+			argList.AppendArg( tmp );
+		}
+	}
+
+	argList.AppendArg( "ad" );
 
 		// Run the plugin with the "ad" option,
 		// and grab the output as a ClassAd
 	m_ad.Clear();
-	FILE *fp = my_popenv( args, "r", FALSE );
+	char **args = argList.GetStringArray();
+	FILE *fp = my_popenv( args, "r", TRUE );
+	deleteStringArray( args );
+
+	MyString	cmd;
+	argList.GetArgsStringForDisplay( &cmd );
+	dprintf( D_FULLDEBUG,
+			 "Initially invoking hibernation plugin '%s'\n", cmd.Value() );
 
 	if( ! fp ) {
 		dprintf( D_ALWAYS, "Failed to run hibernation plugin '%s ad'\n",

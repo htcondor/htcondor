@@ -20,7 +20,9 @@
 
 #ifndef MAPS_H
 #define MAPS_H
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #define MAX_SEGS 2048
 #define MAX_TAB_SIZE (128 * 1024)
 
@@ -64,4 +66,7 @@ int segment_table_find_vdso(SegmentTable *st);
 
 int segment_table_fix_vsyscall_page_perms(SegmentTable *st);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -31,7 +31,7 @@ static void displayJobShort(AttrList* ad);
 static void short_header(void);
 static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
 static void shorten (char *, int);
-static char* format_date( time_t date );
+static const char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
 
@@ -161,7 +161,7 @@ short_print(
   Format a date expressed in "UNIX time" into "month/day hour:minute".
 */
 
-static char* format_date( time_t date )
+static const char* format_date( time_t date )
 {
         static char     buf[ 12 ];
         struct tm       *tm;

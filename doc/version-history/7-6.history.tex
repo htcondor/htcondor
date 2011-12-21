@@ -16,6 +16,295 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-6}Version 7.6.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.6 not yet released.
+%\item Condor version 7.6.6 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-5}Version 7.6.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.5 not yet released.
+%\item Condor version 7.6.5 released on Month Date, 2011.
+
+\item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to the
+behavior it exhibited before Hierarchical Group Quotas were introduced
+in Condor version 7.5.6.
+That behavior has submitters with no accounting group,
+which are listed as \Expr{<none>}, negotiate last.
+And, in addition, any accounting groups with \MacroNI{GROUP\_AUTOREGROUP}
+enabled negotiate both normally and then also along with the 
+submitters with no accounting group.
+For Condor versions 7.5.6 through 7.6.4, configuration variable
+\MacroNI{GROUP\_AUTOREGROUP} (or \MacroNI{GROUP\_AUTOREGROUP\_<groupname>})
+was a synonym for 
+\Macro{GROUP\_ACCEPT\_SURPLUS} 
+(or \MacroNI{GROUP\_ACCEPT\_SURPLUS\_<groupname>}).
+They now implement distinct features,
+and it is not legal to set both to \Expr{True} in the configuration
+for the \Condor{negotiator}.
+\Ticket{2679}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added explicit support for Linux kernels with a major version number of 3,
+to detect and utilize the load average information.
+\Ticket{2579}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+
+%\item Exposed the negotiation order of accounting groups to configuration
+%via the configuration parameter \Macro{GROUP\_SORT\_EXPR}.
+%\Ticket{2678}
+
+\item Fixed a bug in Chirp when using absolute file paths. This bug caused
+most MPI jobs to fail in the parallel universe.
+\Ticket{2630}
+
+\item Fixed a bug in mapping users using the \Macro{CERTIFICATE\_MAPFILE}
+mechanism, where entries using the NTSSPI method on Windows would not be mapped
+using the map file, but would instead fall back to just the user name.
+\Ticket{2709}
+
+\item Fixed a hierarchical accounting groups bug in which
+the \Condor{schedd} did not properly restore accounting group 
+information to submitters on a restart of the \Condor{schedd},
+and therefore negotiated for and allocated machines incorrectly.
+\Ticket{2705}
+
+\item The Windows installer had a bad value set for the configuration variable
+\Macro{JAVA\_CLASSPATH\_SEPARATOR}, causing java universe jobs to fail. 
+\Ticket{2586}
+
+\item \MacroNI{HDFS} was not listed in the default
+\MacroNI{DC\_DAEMON\_LIST}, so the \Condor{hdfs} daemon exited
+shortly after being started,
+and the HDFS service did not run.
+\Ticket{849}
+
+\item File System (FS) authentication now works when \File{/tmp} 
+is on a Btrfs file system.  Previously, authentication failed.
+\Ticket{2583}
+
+\item Fixed a bug that caused a failure to start jobs when using PrivSep
+and supplemental group process tracking.  
+Prior to Condor version 7.6.4, this problem
+only occurred when \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set
+to \Expr{False}.  
+In Condor version 7.6.4, the problem occurred regardless of the setting
+of this configuration variable.
+\Ticket{2658}
+
+\item Fixed a performance problem on Windows platforms
+that caused claim activations to
+fail when more than about 8 jobs were already running on that machine.
+\Ticket{2441}
+
+\item Fixed a bug in which the submit event would not be written to the user
+job log,
+if the job was submitted with the \Opt{-remote} or \Opt{-spool} option to
+\Condor{submit}.
+\Ticket{2569}
+
+\item Fixed a bug that caused \Condor{q} with the \Opt{-analyze} option
+to fail,
+if a job or a machine ClassAd contained a string attribute ending in 
+a backslash.
+This resulted in output of the error message
+\begin{verbatim}
+  Unable to process machine ClassAds
+\end{verbatim}
+or
+\begin{verbatim}
+  Unable to process job ClassAd
+\end{verbatim}
+\Ticket{2603}
+
+\item Fixed a bug that caused the \Condor{startd} to crash when being
+reconfigured,
+if the reconfigure caused the \Condor{startd} to remove 
+a running Daemon ClassAd Hook job.
+\Ticket{2636}
+
+\item Configuration variables of the form \MacroNI{MAX\_<SUBSYS>\_<LEVEL>\_LOG}
+now work properly on 32-bit Linux platforms.
+Previously, the corresponding log file would grow without bound.
+\Ticket{2638}
+
+\item Fixed a bug in which Condor would fail to properly detect that it 
+was running as Local System for non-English versions of Windows.
+The bug caused Condor to fail to run jobs on the slot accounts.
+\Ticket{2642}
+
+\item Fixed a bug in the Windows version of Condor,
+in which the transfer of output failed due to the use of the Everyone account,
+which lacks read permission.
+Usage of the Everyone account occurred as a fallback,
+when the account name failed to exist because it
+included the domain of the local submit machine.
+The fix adds the same capability as exists on Linux platforms,
+which uses the user name without the domain.
+\Ticket{2643}
+
+\item Fixed a bug in which job submission via Condor-C could fail,
+because it did not convert account names to fully qualified (including domain)
+before comparing to see
+if the current account was the same as the desired account.
+\Ticket{2644}
+
+\item Fixed a bug in which use of the submit command 
+\SubmitCmd{transfer\_input\_files} did not work for directories on 
+Windows platforms.
+\Ticket{2387}
+
+\item Fixed a bug that could cause a failure in cleaning up job processes
+when using \Prog{glexec} after a restart of the \Condor{master} daemon.
+\Ticket{2614}
+
+\item Fixed a bug in \Condor{power} that caused it to fail when
+operating on a machine with a 15-byte subnet mask string.
+\Ticket{2651}
+
+\item Fixed a bug that could cause the \Condor{schedd} to no longer start
+idle jobs or send ClassAds to the \Condor{collector}.
+\Ticket{2647}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash if a
+hold reason contained a percent character (\verb|%|),
+and the user log for the job was in XML format.
+\Ticket{2660}
+
+\item Fixed a Windows 7 and Vista bug in \Condor{softkill},
+in which it would fail to kill the target process,
+when run by a Personal Condor inside a System Condor slot account.
+\Ticket{2677}
+
+\item A possible fix has been made for a problem in which the
+CCB-enabled daemon took an unexpectedly long time to timeout when
+reading from the CCB server.  Additional information is logged
+to help identify the problem if it still remains.
+\Ticket{2695}
+
+\item Fixed a bug in \Condor{dagman} that occurred when 
+dealing with nested splices.
+\Condor{dagman} incorrectly issued a parse error and exited
+in the case where the parent splice contained only splices, and no nodes jobs.
+\Ticket{1751}
+
+\item Fixed a bug that caused grid universe jobs submitted via SOAP to
+be held when trying to write output files into the spool directory.
+\Ticket{2568}
+
+\item Fixed a bug that caused \Condor{credd} and possibly other
+daemons to crash when the file used for \MacroNI{CERTIFICATE\_MAPFILE}
+contained more than 80 entries.
+\Ticket{2409}
+
+\item Fixed a bug that caused hibernation to fail on certain Linux platforms
+for certain hibernation states.
+To work correctly on these Linux platforms,
+the plug-in needs the command line arguments defined by
+\Macro{HIBERNATION\_PLUGIN\_ARGS} when initially invoked, 
+as well as for other invocations.  
+\Ticket{2561}
+
+\item The \Condor{schedd} now aborts the claim and reschedules the job,
+if it does not hear from the \Condor{startd} for longer than the job
+lease duration.
+\Ticket{2706}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-6-4}Version 7.6.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +312,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.6.4 not yet released.
-%\item Condor version 7.6.4 released on Month Date, 2011.
+%\item Condor version 7.6.4 not yet released.
+\item Condor version 7.6.4 released on October 21, 2011.
 
 \end{itemize}
 
@@ -51,10 +340,31 @@ and was fixed in Condor version 7.6.2.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}
+defines the number of seconds that the \Condor{starter} will wait
+before continuing with a shut down,
+if a hook defined by \MacroNI{<Keyword>\_HOOK\_JOB\_EXIT} has not completed.
+The addition of this configuration variable fixes the bug described below.
+\Ticket{2543}
+
+\item The new configuration variable \Macro{SKIP\_WINDOWS\_LOGON\_NETWORK} 
+is a boolean value which specifies whether the Windows
+\Expr{LOGON\_NETWORK} authentication is skipped or not.
+If skipped, Condor tries \Expr{LOGON\_INTERACTIVE} authentication first.
+The addition of this configuration variable fixes the bug described below.
+\Ticket{2549}  
+
+% This actually should have gone into 7.6.1, where it was committed.
+% It appears here in the 7.6.4 history by wrangler's order, without
+% owning up to the improper appearance in this version.
+\item The new configuration variable \Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS} 
+defaults to \Expr{False}.
+When \Expr{True}, 
+it allows the \Condor{shadow} daemon to run jobs remotely submitted from 
+users not in the local password file.
+\Ticket{2004}
 
 \end{itemize}
-
 \noindent Bugs Fixed:
 
 \begin{itemize}
@@ -95,17 +405,18 @@ These jobs now correctly transition to the idle state.
 \Ticket{2486}
 
 \item Corrected a hierarchical group quota bug in which
-the accountant allowed submitter records to be deleted,
+the user accounting mechanism in the \Condor{negotiator} daemon allowed 
+submitter records to be deleted,
 if the submitter's priority factor was explicitly set and
-the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
+the value was equal to that defined by \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 \Ticket{2442}
 
-\item Fixed CPU detection on Windows so that the correct number is detected
-when there are more than 32 CPUs.
+\item Fixed CPU detection on Windows, such that the correct number of CPUs
+is detected when there are more than 32 CPUs.
 \Ticket{2381}
 
 \item Fixed a memory leak in the \Condor{negotiator},
-caused by failure to
+caused by the failure to
 free memory returned from some calls to \Procedure{param\_without\_default}.
 \Ticket{2299}
 
@@ -156,11 +467,63 @@ it now understands the proper format.
 subdirectories for local locks.
 \Ticket{2495}
 
+\item In 32-bit Condor binaries, the \Attr{ImageSize} of processes larger than 
+4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
+
 \item \SubmitCmd{vm} universe jobs using Xen or KVM would fail to start,
 if the disk image files were transferred from the submit machine
 and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
 The script did not provide absolute path names for the files.
 \Ticket{2511}
+
+\item Fixed a bug in which a completed Xen or KVM \SubmitCmd{vm} universe 
+job's modified disk image files would not be transferred back 
+to the submit machine.
+\Ticket{2530}
+
+\item Fixed a bug in which a \Condor{starter} configured to use job hooks 
+could fail to run a job, 
+but not wait for the job exit hook to complete before exiting.  
+The bug fix introduces the new configuration variable
+\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT},
+which defines the number of seconds the \Condor{starter} will wait
+before continuing with a shut down,
+if the job exit hook has not completed.
+\Ticket{2543}
+
+\item In Condor version 7.5.4, an improvement was made to avoid reliance on
+the machine specified by \MacroNI{NEGOTIATOR\_HOST} 
+matching a reverse DNS look up of the \Condor{negotiator}.
+However, this improvement was not made to the dedicated scheduler,
+so matchmaking of parallel jobs was still subject to the
+problems associated with the old algorithm.  
+Now, the dedicated scheduler benefits from the same improved algorithm as the
+non-dedicated scheduler.
+\Ticket{2540}
+  
+\item Occasionally there have been problems with Windows 
+\Expr{LOGON\_NETWORK} authentication,
+leading to users being locked out from their account.
+The new configuration variable \MacroNI{SKIP\_WINDOWS\_LOGON\_NETWORK},
+when set to \Expr{True},
+fixes the problem by allowing this mechanism to be skipped entirely,
+instead proceeding straight to the \Expr{LOGON\_INTERACTIVE} authentication. 
+This bug only affected users using the \Condor{credd}. 
+\Ticket{2549}  
+
+\item Condor now correctly groups CREAM jobs based on how CREAM servers 
+authorize and map them.
+The servers map them based on X.509 proxy subject name 
+and first VOMS attribute. 
+Previously, all VOMS attributes were considered.
+This could cause unexpected behavior due to the aliasing of CREAM leases
+and proxy delegations.
+\Ticket{2271}
+
+\item Communication errors in the job lease renewal protocol were
+sometimes not correctly handled.  This resulted in the job being
+killed.
+\Ticket{2563}
 
 \end{itemize}
 

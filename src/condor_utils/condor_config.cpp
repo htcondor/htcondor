@@ -125,6 +125,8 @@ extern bool condor_fsync_on;
 MyString global_config_source;
 StringList local_config_sources;
 
+param_functions config_p_funcs;
+
 static int ParamValueNameAscendingSort(const void *l, const void *r);
 
 
@@ -238,7 +240,7 @@ validate_entries( bool ignore_invalid_entry ) {
 		if(ignore_invalid_entry) {
 			dprintf(D_ALWAYS, "%s", output.Value());
 		} else {
-			EXCEPT(output.Value());
+			EXCEPT("%s", output.Value());
 		}
 	}
 }
@@ -800,17 +802,21 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		free( config_source );
 	}
 
+	// init_ipaddr and init_full_hostname is now obsolete
+	init_network_interfaces(TRUE);
+
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
 		// is set, we need to re-initialize my_full_hostname().
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
-		init_full_hostname();
+		//init_full_hostname();
 		init_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
 		// parameter at this point, if it's set.
-	init_ipaddr( TRUE );
+	//init_ipaddr( TRUE );
+
 
 		// The IPv6 code currently caches some results that depend
 		// on configuration settings such as NETWORK_INTERFACE.
@@ -883,17 +889,9 @@ process_locals( const char* param_name, const char* host )
 {
 	StringList sources_to_process, sources_done;
 	char *source, *sources_value;
-	char *tmp;
 	int local_required;
-	
-	local_required = true;	
-    tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-    if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-    }
+
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	sources_value = param( param_name );
 	if( sources_value ) {
@@ -973,18 +971,10 @@ process_directory( char* dirlist, char* host )
 	Directory *files;
 	const char *file, *dirpath;
 	char **paths;
-	char *tmp;
 	int local_required;
 	Regex excludeFilesRegex;
 	
-	local_required = true;	
-	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-	if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-	}
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
@@ -2684,4 +2674,13 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	}
 	free( param_value );
 	return found;
+}
+
+param_functions* get_param_functions()
+{
+	config_p_funcs.set_param_func(&param);
+	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
+	config_p_funcs.set_param_wo_default_func(&param_without_default);
+
+	return &config_p_funcs;
 }

@@ -283,12 +283,18 @@ SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
 	if ( IsDirectory(spool_path.c_str()) ) {
 		Directory spool_dir(spool_path.c_str());
 		spool_dir.Remove_Entire_Directory();
-	}
-	if( rmdir(spool_path.c_str()) == -1 ) {
-		if( errno != ENOENT ) {
-			dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-					spool_path.c_str(), strerror(errno), errno );
+		if( rmdir(spool_path.c_str()) == -1 ) {
+			if( errno != ENOENT ) {
+				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+				spool_path.c_str(), strerror(errno), errno );
+		  	}
 		}
+	} else {
+		// In this case, we can be fairly sure that these other spool directories
+		// that are removed later in this function do not exist.  If they do, they
+		// should be removed by preen.  By returning now, we avoid many potentially-
+		// expensive filesystem operations.
+		return;
 	}
 
 	std::string tmp_spool_path = spool_path;
@@ -296,11 +302,11 @@ SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
 	if ( IsDirectory(tmp_spool_path.c_str()) ) {
 		Directory spool_dir(tmp_spool_path.c_str());
 		spool_dir.Remove_Entire_Directory();
-	}
-	if( rmdir(tmp_spool_path.c_str()) == -1 ) {
-		if( errno != ENOENT ) {
-			dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-					tmp_spool_path.c_str(), strerror(errno), errno );
+		if( rmdir(tmp_spool_path.c_str()) == -1 ) {
+			if( errno != ENOENT ) {
+				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+						tmp_spool_path.c_str(), strerror(errno), errno );
+			}
 		}
 	}
 
@@ -334,11 +340,11 @@ SpooledJobFiles::removeJobSwapSpoolDirectory(int cluster, int proc)
 	if ( IsDirectory(swap_spool_path.c_str()) ) {
 		Directory spool_dir(swap_spool_path.c_str());
 		spool_dir.Remove_Entire_Directory();
-	}
-	if( rmdir(swap_spool_path.c_str()) == -1 ) {
-		if( errno != ENOENT ) {
-			dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-					swap_spool_path.c_str(), strerror(errno), errno );
+		if( rmdir(swap_spool_path.c_str()) == -1 ) {
+			if( errno != ENOENT ) {
+				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+						swap_spool_path.c_str(), strerror(errno), errno );
+			}
 		}
 	}
 }
@@ -347,7 +353,15 @@ void
 SpooledJobFiles::removeClusterSpooledFiles(int cluster)
 {
 	std::string spool_path;
+	std::string parent_path,junk;
+
 	getJobSpoolPath(cluster,ICKPT,spool_path);
+	int cluster_spool_dir_exists = filename_split(spool_path.c_str(),parent_path,junk) && IsDirectory( parent_path.c_str() );
+	
+	if ( !cluster_spool_dir_exists ) {
+	  // if there is no parent directory of the spool path, there is no cluster spool directory
+	  return;
+	}
 
 	if( unlink( spool_path.c_str() ) == -1 ) {
 		if( errno != ENOENT ) {
@@ -362,8 +376,7 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster)
 		// the directory may not be empty, in which case we expect
 		// rmdir to fail.
 
-	std::string parent_path,junk;
-	if( filename_split(spool_path.c_str(),parent_path,junk) ) {
+	if( cluster_spool_dir_exists ) {
 		if( rmdir(parent_path.c_str()) == -1 ) {
 			if( errno != ENOTEMPTY && errno != ENOENT ) {
 				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",

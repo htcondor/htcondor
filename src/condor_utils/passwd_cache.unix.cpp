@@ -219,10 +219,8 @@ bool passwd_cache::cache_groups(const char* user) {
 	bool result;
 	group_entry *group_cache_entry;
 	gid_t user_gid;
-	int count;
    
 	group_cache_entry = NULL;
-	count = 0;
 	result = true;
 
 	if ( user == NULL ) {
@@ -243,7 +241,6 @@ bool passwd_cache::cache_groups(const char* user) {
 		 * we're going to call initgroups() first, then call get groups
 		 * so we can cache whatever we get.*/
 
-		count = 0;
 		if ( initgroups(user, user_gid) != 0 ) {
 			dprintf(D_ALWAYS, "passwd_cache: initgroups() failed! errno=%s\n",
 					strerror(errno));

@@ -708,8 +708,8 @@ pseudo_ulog( ClassAd *ad )
 		if(!hold_reason) {
 			hold_reason = "Job put on hold by remote host.";
 		}
-		Shadow->holdJob(hold_reason,hold_reason_code,hold_reason_sub_code);
-		//should never get here, because holdJob() exits.
+		Shadow->holdJobAndExit(hold_reason,hold_reason_code,hold_reason_sub_code);
+		//should never get here, because holdJobAndExit() exits.
 	}
 
 	if( critical_error ) {
@@ -717,7 +717,7 @@ pseudo_ulog( ClassAd *ad )
 		Shadow->exception_already_logged = true;
 
 		//lame: at the time of this writing, EXCEPT does not want const:
-		EXCEPT(critical_error);
+		EXCEPT("%s", critical_error);
 	}
 
 	delete event;

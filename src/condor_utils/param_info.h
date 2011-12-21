@@ -59,7 +59,7 @@ typedef struct param_info_t_s {
 
 struct param_info_str_t_s {
    param_info_t hdr;
-   const char * str_val;
+//   const char * str_val;
 };
 
 struct param_info_str_ranged_t_s {

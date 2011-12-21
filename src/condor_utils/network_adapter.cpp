@@ -2,13 +2,13 @@
 *
 * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you
 * may not use this file except in compliance with the License.  You may
 * obtain a copy of the License at
-* 
+*
 *    http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -51,45 +51,43 @@ NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
 
 
 /***************************************************************
- * NetworkAdapterBase static members 
+ * NetworkAdapterBase static members
  ***************************************************************/
-NetworkAdapterBase* 
+NetworkAdapterBase*
 NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 										   bool is_primary )
 {
-    
+
 	if ( NULL == sinful_or_name ) {
-		
+
 		dprintf (
 			D_FULLDEBUG,
 			"Warning: Can't create network adapter\n" );
-		
+
 		return NULL;
 
 	}
 
 # if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
-	
-	NetworkAdapterBase *adapter = NULL;
-	
-	if ( is_valid_sinful ( sinful_or_name ) ) {
-		
-		adapter = new NetworkAdapter ( 
-			string_to_ipstr ( sinful_or_name ),
-			string_to_ip ( sinful_or_name )  );
 
+	NetworkAdapterBase *adapter = NULL;
+
+	condor_sockaddr addr;
+
+	// if from_sinful() returns true, it surely is valid sinful and
+	// has a numeric IP address.
+	if ( addr.from_sinful(sinful_or_name) ) {
+		adapter = new NetworkAdapter ( addr );
 	}
 	else {
-
 		adapter = new NetworkAdapter ( sinful_or_name );
-
 	}
 
 	// Try to initialize it; delete it if it fails
 	if ( !adapter->doInitialize () ) {
 
-        dprintf ( 
-            D_FULLDEBUG, 
+        dprintf (
+            D_FULLDEBUG,
             "doInitialize() failed for %s\n",
             sinful_or_name );
 
@@ -97,7 +95,7 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 		adapter = NULL;
 
 	} else {
-	
+
 		adapter->setIsPrimary ( is_primary );
 
 	}
@@ -111,7 +109,7 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 
 
 /***************************************************************
- * NetworkAdapterBase members 
+ * NetworkAdapterBase members
  ***************************************************************/
 bool
 NetworkAdapterBase::doInitialize ()
@@ -120,7 +118,7 @@ NetworkAdapterBase::doInitialize ()
 	return m_initialization_status;
 }
 
-void 
+void
 NetworkAdapterBase::publish ( ClassAd &ad )
 {
     ad.Assign ( ATTR_HARDWARE_ADDRESS, hardwareAddress () );
@@ -157,7 +155,7 @@ static WolTable wol_table [] =
 	{ NetworkAdapterBase::WOL_UCAST,		"UniCast Packet", },
 	{ NetworkAdapterBase::WOL_MCAST,		"MultiCast Packet" },
 	{ NetworkAdapterBase::WOL_BCAST,		"BroadCast Packet" },
-	{ NetworkAdapterBase::WOL_ARP,			"ARP Packet" }, 
+	{ NetworkAdapterBase::WOL_ARP,			"ARP Packet" },
 	{ NetworkAdapterBase::WOL_MAGIC,		"Magic Packet" },
 	{ NetworkAdapterBase::WOL_MAGICSECURE,	"Secure Magic Packet" },
 	{ NetworkAdapterBase::WOL_NONE,			NULL },
@@ -194,43 +192,43 @@ NetworkAdapterBase::getWolString ( unsigned bits, MyString &s ) const
 	return s;
 }
 
-bool 
+bool
 NetworkAdapterBase::setIsPrimary ( bool is_primary )
 {
 	return m_is_primary = is_primary;
 }
 
-bool 
+bool
 NetworkAdapterBase::isPrimary () const
 {
 	return m_is_primary;
 }
 
-bool 
+bool
 NetworkAdapterBase::isWakeSupported () const
 {
 	return (m_wol_support_bits & WOL_SUPPORTED) ? true : false;
 }
 
-unsigned 
+unsigned
 NetworkAdapterBase::wakeSupportedBits () const
 {
 	return m_wol_support_bits;
 }
 
-MyString& 
+MyString&
 NetworkAdapterBase::wakeSupportedString ( MyString &s ) const
 {
 	return getWolString ( m_wol_support_bits, s );
 }
 
-bool 
+bool
 NetworkAdapterBase::isWakeEnabled () const
 {
 	return ( m_wol_enable_bits & WOL_SUPPORTED ) ? true : false;
 }
 
-unsigned 
+unsigned
 NetworkAdapterBase::wakeEnabledBits () const
 {
 	return m_wol_enable_bits;
@@ -242,37 +240,37 @@ NetworkAdapterBase::wakeEnabledString ( MyString &s ) const
 	return getWolString ( m_wol_enable_bits, s );
 }
 
-bool 
+bool
 NetworkAdapterBase::isWakeable () const
 {
 	return ( m_wol_support_bits & m_wol_enable_bits ) ? true : false;
 }
 
-bool 
+bool
 NetworkAdapterBase::getInitStatus ()
 {
 	return m_initialization_status;
 }
 
-void 
+void
 NetworkAdapterBase::wolResetSupportBits ()
 {
 	m_wol_support_bits = 0;
 }
 
-unsigned 
+unsigned
 NetworkAdapterBase::wolEnableSupportBit ( WOL_BITS bit )
 {
 	m_wol_support_bits|= bit; return m_wol_support_bits;
 }
 
-void 
+void
 NetworkAdapterBase::wolResetEnableBits ()
 {
 	m_wol_enable_bits = 0;
 }
 
-unsigned 
+unsigned
 NetworkAdapterBase::wolEnableEnableBit ( WOL_BITS bit )
 {
 	m_wol_enable_bits|= bit; return m_wol_enable_bits;

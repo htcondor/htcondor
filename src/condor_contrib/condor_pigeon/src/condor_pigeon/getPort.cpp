@@ -57,7 +57,7 @@ char *getPortPath(void) {
 //internal function for deducting port number
 char *getPort(bool def)
 {
-  dprintf(D_ALWAYS, "\n *********get port # called\n");//%s\n", str3);
+  dprintf(D_ALWAYS, "***get port # called\n");//%s\n", str3);
 	
   char *path;
   path = getPortPath();

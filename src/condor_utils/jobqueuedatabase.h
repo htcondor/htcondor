@@ -190,13 +190,13 @@ public:
 		this->releaseQueryResult();		
 	}
 
-	void emailDBError(int errorcode, const char *dbtype) {
+	void emailDBError(int errorcode, const char *dbtype2) {
 		FILE *email;
 		char msg_body[4000];
 		
 		snprintf(msg_body, 4000, "Database system error occurred: error code = "
 				 "%d, database type = %s\n", 
-				 errorcode, dbtype);
+				 errorcode, dbtype2);
 
 		email = email_admin_open(msg_body);
 

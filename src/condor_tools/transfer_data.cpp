@@ -44,13 +44,12 @@ bool All = false;
 
 SandboxTransferMethod st_method = STM_USE_SCHEDD_ONLY;
 
-void usage();
+void usage(int iExitCode=1);
 void procArg(const char*);
 void addConstraint(const char *);
 void handleAll();
 
-void
-usage()
+void usage(int iExitCode)
 {
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
 	fprintf( stderr, " where [options] is zero or more of:\n" );
@@ -75,7 +74,7 @@ usage()
 	fprintf( stderr, "  -constraint expr    transfer data for all jobs matching the boolean expression\n" );
 	fprintf( stderr, "  -all                transfer data for all jobs "
 			 "(cannot be used with other constraints)\n" );
-	exit( 1 );
+	exit( iExitCode );
 }
 
 void
@@ -181,6 +180,7 @@ main(int argc, char *argv[])
 	char* scheddAddr = NULL;
 	MyString method;
 	char *tmp;
+	param_functions *p_funcs = NULL;
 
 	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
@@ -210,7 +210,8 @@ main(int argc, char *argv[])
 			case 'd':
 				// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL");
+				p_funcs = get_param_functions();
+				dprintf_config ("TOOL", p_funcs);
 				break;
 			case 'c':
 				args[nArgs] = arg;
@@ -292,7 +293,7 @@ main(int argc, char *argv[])
 				version();
 				break;
 			case 'h':
-				usage();
+				usage(0);
 				break;
 			default:
 				fprintf( stderr, "Unrecognized option: %s\n", arg ); 

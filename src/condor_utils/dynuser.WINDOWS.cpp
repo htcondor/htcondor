@@ -157,12 +157,7 @@ bool dynuser::init_user() {
 		char* tmp = NULL;
 		char slot_num[10];
 
-		char *x = param("reuse_condor_run_account");
-		if ( x && ( x[0]=='F' || x[0]=='f' ) ) {
-			reuse_account = false;
-			free(x);
-			x = NULL;
-		}
+		reuse_account = param_boolean_crufty("REUSE_CONDOR_RUN_ACCOUNT", true);
 	 
 		if ( reuse_account ) {
 	

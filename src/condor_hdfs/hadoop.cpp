@@ -486,8 +486,8 @@ void Hadoop::startService( NodeType type ) {
 		// somewhere the first argument still gets stripped out, therefore this line is needed 
 		// until somebody figures out what the -classpath arg is eaten by - not pretty but makes
 		// it work for now. Sigh.
-                arglist.InsertArg("-cp", 0);
-		arglist.AppendArg(m_dataNodeClass);
+        	arglist.InsertArg(m_java.Value(), 0);
+			arglist.AppendArg(m_dataNodeClass);
         }
 
         int stdoutFds[2];

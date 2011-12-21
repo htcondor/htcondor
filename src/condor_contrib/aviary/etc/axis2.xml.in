@@ -61,8 +61,6 @@
 	<!-- ================================================= -->
 	<!-- SSL  -->
 	<!-- ================================================= -->
-	<!-- NOTE: server-side SSL support currently unavailable for aviary components -->
-	<!-- alternatives include the use of a SSL-enabled proxy server such as squid; -->
 	<!-- the following settings would apply to Axis2/C clients only if enabled -->
 	<!-- set the server's SSL certificate here -->
 	<!--parameter name="SERVER_CERT">/path/to/ca/certificate</parameter-->

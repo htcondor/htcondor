@@ -61,6 +61,7 @@ class NMI {
     
     return $config;
   }
+
 }
 
 ?>

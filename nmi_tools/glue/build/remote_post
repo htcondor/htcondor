@@ -37,15 +37,15 @@ my $SrcDir = "$BaseDir/src";
 my $pub_dir = "$BaseDir/public";
 my $pub_logs = "$pub_dir/logs";
 my $pub_testbin = "$pub_dir/testbin";
-my $failed = $ENV{_NMI_STEP_FAILED};
 
-# This is debugging output for the sake of the NWO infrastructure.
-# However, it might be useful to us some day so we can see what's
-# going on in case of failures...
 if( defined $ENV{_NMI_STEP_FAILED} ) { 
+    my $exit_status = 1;
     my $nmi_task_failure = "$ENV{_NMI_STEP_FAILED}";
-    print "The value of _NMI_STEP_FAILED is: '$nmi_task_failure'\n";
-} else {
+    print "A previous step failed.  _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
+    print "Exiting now with exit status $exit_status.\n";
+    exit $exit_status;
+}
+else {
     print "The _NMI_STEP_FAILED variable is not set\n";
 }
 

@@ -1584,10 +1584,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int hold_code = 0;
 	int hold_subcode = 0;
 	MyString error_buf;
-	file_transfer_record record;
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
-  char daemon[15];
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
@@ -2025,19 +2023,26 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		*total_bytes += bytes;
 
+#ifdef HAVE_EXT_POSTGRESQL
+	        file_transfer_record record;
 		record.fullname = fullname.Value();
 		record.bytes = bytes;
 		record.elapsed  = elapsed;
     
 			// Get the name of the daemon calling DoDownload
+		char daemon[16]; daemon[15] = '\0';
 		strncpy(daemon, get_mySubSystem()->getName(), 15);
 		record.daemon = daemon;
 
 		record.sockp =s;
 		record.transfer_time = start;
 		record.delegation_method_id = delegation_method;
-#ifdef HAVE_EXT_POSTGRESQL
 		file_transfer_db(&record, &jobAd);
+#else
+		// Get rid of compiler set-but-not-used warnings on Linux
+		// Hopefully the compiler can just prune out the emitted code.
+		if (delegation_method) {}
+		if (elapsed) {}
 #endif
 	}
 
@@ -2579,6 +2584,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 								error_desc.Value(),__LINE__);
 		}
 #endif
+		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
 
 
 		// now we send an int to the other side to indicate the next
@@ -2710,7 +2716,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			// condor_basename works for URLs
-			dest_filename.sprintf_cat( condor_basename(filename) );
+			dest_filename.sprintf_cat( "%s", condor_basename(filename) );
 		}
 
 		// for command 999, this string must equal the Attribute "Filename" in

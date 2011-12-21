@@ -943,4 +943,12 @@ const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD = "TransferQueueNum
 const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD = "TransferQueueNumWaitingToDownload";
 const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME = "TransferQueueUploadWaitTime";
 const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownloadWaitTime";
+const char * const ATTR_MACHINE_MAX_VACATE_TIME = "MachineMaxVacateTime";
+const char * const ATTR_JOB_MAX_VACATE_TIME = "JobMaxVacateTime";
+const char * const ATTR_WANT_GRACEFUL_REMOVAL = "WantGracefulRemoval";
 
+const char* const ATTR_GROUP_QUOTA = "GroupQuota";
+const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";
+const char* const ATTR_GROUP_RESOURCES_IN_USE = "GroupResourcesInUse";
+const char* const ATTR_SORT_EXPR = "SortExpr";
+const char* const ATTR_SORT_EXPR_STRING = "SortExprString";

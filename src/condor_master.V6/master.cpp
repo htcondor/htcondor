@@ -62,7 +62,7 @@ void gcbBrokerDownCallback();
 
 #include "firewall.WINDOWS.h"
 
-extern void register_service();
+extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
@@ -139,7 +139,7 @@ char	*default_daemon_list[] = {
 // examples in src/condor_examples
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
-"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, "
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
 "REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT";
 
 // create an object of class daemons.
@@ -228,16 +228,6 @@ main_init( int argc, char* argv[] )
 {
     extern int runfor;
 	char	**ptr;
-
-#ifdef WIN32
-	// Daemon Core will call main_init with argc -1 if need to register
-	// as a WinNT Service.
-	if ( argc == -1 ) {
-		NT_ServiceFlag = TRUE;
-		register_service();
-		return;
-	}
-#endif
 
 	if ( argc > 3 ) {
 		usage( argv[0] );
@@ -657,27 +647,18 @@ init_params()
 		dprintf( D_FULLDEBUG, "Using name: %s\n", MasterName );
 	}
 			
-	tmp = param( "START_MASTER" );
-	if( tmp ) {
-		if( *tmp == 'F' || *tmp == 'f' ) {
-			dprintf( D_ALWAYS, "START_MASTER was set to %s, shutting down.\n", tmp );
+	if (!param_boolean_crufty("START_MASTER", true)) {
+			dprintf( D_ALWAYS, "START_MASTER was set to FALSE, shutting down.\n" );
 			StartDaemons = FALSE;
 			main_shutdown_graceful();
-		}
-		free( tmp );
 	}
 
 		
 	StartDaemons = TRUE;
-	tmp = param("START_DAEMONS");
-	if( tmp ) {
-		if( *tmp == 'f' || *tmp == 'F' ) {
+	if (!param_boolean_crufty("START_DAEMONS", true)) {
 			dprintf( D_ALWAYS, 
-					 "START_DAEMONS flag was set to %s.  Not starting daemons.\n",
-					 tmp );
+					 "START_DAEMONS flag was set to FALSE.  Not starting daemons.\n" );
 			StartDaemons = FALSE;
-		}
-		free( tmp );
 	} 
 		// If we were sent the daemons_off command, don't forget that
 		// here. 
@@ -685,14 +666,7 @@ init_params()
 		StartDaemons = FALSE;
 	}
 
-	PublishObituaries = TRUE;
-	tmp = param("PUBLISH_OBITUARIES");
-	if( tmp ) {
-		if( (*tmp == 'f' || *tmp == 'F') ) {
-			PublishObituaries = FALSE;
-		}
-		free( tmp );
-	}
+	PublishObituaries = param_boolean_crufty("PUBLISH_OBITUARIES", true) ? TRUE : FALSE;
 
 	Lines = param_integer("OBITUARY_LOG_LENGTH",20);
 
@@ -1322,9 +1296,37 @@ main_pre_command_sock_init()
 	}
 }
 
+#ifdef WIN32
+bool main_has_console() 
+{
+    DWORD displayMode;
+    if (GetConsoleDisplayMode(&displayMode))
+       return true;
+
+        // if you need to debug service startup code
+        // recompile with this code enabled, then attach the debugger
+        // within 90 seconds of running "net start condor"
+   #ifdef _DEBUG
+    //for (int ii = 0; ii < 90*1000/500 && ! IsDebuggerPresent(); ++ii) { Sleep(500); } DebugBreak();
+   #endif
+
+    return false;
+}
+#endif
+
+
 int
 main( int argc, char **argv )
 {
+    // parse args to see if we have been asked to run as a service.
+    // services are started without a console, so if we have one
+    // we can't possibly run as a service.
+    //
+#ifdef WIN32
+    bool has_console = main_has_console();
+    bool is_daemon = dc_args_is_background(argc, argv);
+#endif
+
 		// If we don't clear this, then we'll use the same GCB broker
 		// as our parent or previous incarnation. If there's a list of
 		// brokers, we want to choose from the whole list.
@@ -1337,9 +1339,31 @@ main( int argc, char **argv )
 	dc_main_shutdown_fast = main_shutdown_fast;
 	dc_main_shutdown_graceful = main_shutdown_graceful;
 	dc_main_pre_command_sock_init = main_pre_command_sock_init;
+
+#ifdef WIN32
+    // if we have been asked to start as a daemon, on Windows
+    // first try and start as a service, if that doesn't work try
+    // to start as a background process. Note that we don't return
+    // from the call to start_as_service() if the service successfully
+    // started - just like dc_main().
+    //
+    NT_ServiceFlag = FALSE;
+    if (is_daemon) {
+       NT_ServiceFlag = TRUE;
+	   DWORD err = start_as_service();
+       if (err == 0x666) {
+          // 0x666 is a special error code that tells us 
+          // the Service Control Manager didn't create this process
+          // so we should go ahead run as normal background 'daemon'
+          NT_ServiceFlag = FALSE;
+       } else {
+          return (int)err;
+       }
+    }
+#endif
+
 	return dc_main( argc, argv );
 }
-
 
 void init_firewall_exceptions() {
 #ifdef WIN32

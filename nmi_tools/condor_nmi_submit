@@ -1231,7 +1231,6 @@ sub writeCommonInfo
     	}
 	}
     print $fh "notify = $notify\n";
-    print $fh "private_web_users = condor-team\n";
     print $fh "priority = 1\n";
 
 	if (defined $notify_fail_only) {

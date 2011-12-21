@@ -178,6 +178,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 	char *subject_name = NULL;
 	char *fqan = NULL;
 	char *email = NULL;
+	char *first_fqan = NULL;
 	std::string proxy_path;
 	std::string owner;
 	char *param_str = NULL;
@@ -199,6 +200,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 
 		// Special handling for "use best proxy"
 		job_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, &fqan );
+		job_ad->LookupString( ATTR_X509_USER_PROXY_FIRST_FQAN, &first_fqan );
 		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &subject_name );
 		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &email );
 		if ( subject_name ) {
@@ -211,19 +213,20 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 										proxy_subject ) != 0 ) {
 				// We don't know about this proxy subject yet,
 				// create a new ProxySubject and fill it out
+				std::string tmp;
 				proxy_subject = new ProxySubject;
 				proxy_subject->subject_name = strdup( subject_name );
 				if (email)
 					proxy_subject->email = strdup( email );
 				else
 					proxy_subject->email = NULL;
-				proxy_subject->fqan = strdup( fqan );
+				proxy_subject->fqan = fqan ? strdup( fqan ) : NULL;
+				proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 				proxy_subject->has_voms_attrs = has_voms_attrs;
 
 				// Create a master proxy for our new ProxySubject
 				Proxy *new_master = new Proxy;
 				new_master->id = next_proxy_id++;
-				std::string tmp;
 				sprintf( tmp, "%s/master_proxy.%d", masterProxyDirectory,
 							 new_master->id );
 				new_master->proxy_filename = strdup( tmp.c_str() );
@@ -255,12 +258,14 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			if ( email )
 				free( email );
 			free( fqan );
+			free( first_fqan );
 			return proxy;
 
 		}
 
 		free( subject_name );
 		free( fqan );
+		free( first_fqan );
 		//sprintf( error, "%s is not set in the job ad", ATTR_X509_USER_PROXY );
 		error = "";
 		return NULL;
@@ -302,7 +307,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		fqan = NULL;
 #if defined(HAVE_EXT_GLOBUS)
 		int rc = extract_VOMS_info_from_file( proxy_path.c_str(), 0, NULL,
-											  NULL, &fqan );
+											  &first_fqan, &fqan );
 		if ( rc != 0 && rc != 1 ) {
 			dprintf( D_ALWAYS, "Failed to get voms info of proxy %s\n",
 					 proxy_path.c_str() );
@@ -338,15 +343,16 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		if ( SubjectsByName.lookup( HashKey(fqan), proxy_subject ) != 0 ) {
 			// We don't know about this proxy subject yet,
 			// create a new ProxySubject and fill it out
+			std::string tmp;
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
 			proxy_subject->fqan = strdup( fqan );
+			proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 			proxy_subject->has_voms_attrs = true;
 
 			// Create a master proxy for our new ProxySubject
 			Proxy *new_master = new Proxy;
 			new_master->id = next_proxy_id++;
-			std::string tmp;
 			sprintf( tmp, "%s/master_proxy.%d", masterProxyDirectory,
 						 new_master->id );
 			new_master->proxy_filename = strdup( tmp.c_str() );
@@ -374,6 +380,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 
 		free( subject_name );
 		free( fqan );
+		free( first_fqan );
 	}
 
 		// MyProxy crap
@@ -551,6 +558,7 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 			if ( proxy_subject->email )
 				free( proxy_subject->email );
 			free( proxy_subject->fqan );
+			free( proxy_subject->first_fqan );
 			delete proxy_subject;
 		}
 

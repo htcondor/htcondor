@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd      = 'job_filexfer_base-input4_van.cmd';
 $testdesc =  'Jobs run with input when transfer_input = false - vanilla U';
@@ -110,7 +111,7 @@ open(CMD,"<$cmd") || die "Can not open command file: $!\n";
 open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
 while(<CMD>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	CondorTest::debug("$_\n",1);
 	$line = $_;
 	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)

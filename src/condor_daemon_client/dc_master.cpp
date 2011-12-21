@@ -70,7 +70,6 @@ DCMaster::sendMasterCommand( bool insure_update, int my_cmd )
 	}
 
 	ReliSock reli_sock;
-	Sock* tmp;
 	bool  result;
 
 	if( insure_update ) {
@@ -84,10 +83,8 @@ DCMaster::sendMasterCommand( bool insure_update, int my_cmd )
 		}
 
 		result = sendCommand( master_cmd, (Sock*)&reli_sock, 0, &errstack );
-		tmp = &reli_sock;
 	} else {
 		result = sendCommand( master_cmd, (Sock*)m_master_safesock, 0, &errstack );
-		tmp = m_master_safesock;
 	}
 	if( ! result ) {
 		dprintf( D_FULLDEBUG, 

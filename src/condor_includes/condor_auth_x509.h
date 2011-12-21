@@ -129,7 +129,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
         looking for a proxy which it does not need. */
     void  erase_env();
     
-    void  print_log(OM_uint32 ,OM_uint32 ,int , char*);
+    void  print_log(OM_uint32 ,OM_uint32 ,int , const char*);
 
     //------------------------------------------
     // Data (private)

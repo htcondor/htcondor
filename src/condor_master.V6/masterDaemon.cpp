@@ -41,6 +41,7 @@
 #include "condor_fix_access.h"
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
+#include "setenv.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -220,10 +221,8 @@ int
 daemon::runs_on_this_host()
 {
 	char	*tmp;
-	char	hostname[512];
 	static bool this_host_addr_cached = false;
 	static std::vector<condor_sockaddr> this_host_addr;
-	struct hostent	*hp;
 	int		i, j;
 
 
@@ -577,7 +576,7 @@ int daemon::RealStart( )
 	shortname = condor_basename( process_name );
 
 	if( access(process_name,X_OK) != 0 ) {
-		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
+		dprintf(D_ALWAYS, "%s: Cannot execute (errno=%d, %s)\n", process_name, errno, strerror(errno) );
 		pid = 0; 
 		// Schedule to try and restart it a little later
 		Restart();
@@ -2035,9 +2034,7 @@ Daemons::CleanupBeforeRestart()
 		// is a daemon core process.  but, its parent is gone ( we are doing
 		// an exec, so we disappear), thus we must blank out the 
 		// CONDOR_INHERIT env variable.
-	char	tmps[256];
-	sprintf( tmps, "%s=", EnvGetName( ENV_INHERIT ) );
-	putenv( tmps );
+	UnsetEnv(EnvGetName( ENV_INHERIT ));
 }
 
 void

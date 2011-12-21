@@ -248,9 +248,7 @@ using the \MacroNI{RANK} expression.
 It is an
 expression, like any other in a machine ClassAd.
 It can
-reference any attribute found in either the machine ClassAd or a
-request ad (normally, in fact, it references things in the request
-ad).
+reference any attribute found in either the machine ClassAd or a job ClassAd.
 The most common use of this expression is likely to configure a
 machine to prefer to run jobs from the owner of that machine, or by
 extension, a group of machines to prefer jobs from the owners of those
@@ -263,84 +261,85 @@ These machines are owned by the 4 users
 coltrane, tyner, garrison, and jones,
 respectively.  
 
-Assume that there is a large Condor pool in your department,
-but you spent a lot of money on really fast machines for your group.
-You want to implement a policy
-that gives priority on your machines to
-anyone in your group.
-To achieve this, set the \MacroNI{RANK}
-expression on your machines to reference the \Attr{Owner} attribute and
-prefer requests where that attribute matches one of the people in your
+Assume that there is a large Condor pool in the department,
+and this small research group has spent a lot of money on really fast machines 
+for the group.
+As part of the larger pool, 
+but to implement a policy that gives priority on the fast machines to
+anyone in the small research group,
+set the \MacroNI{RANK}
+expression on the machines to reference the \Attr{Owner} attribute and
+prefer requests where that attribute matches one of the people in the
 group as in
 \begin{verbatim}
-        RANK = Owner == "coltrane" || Owner == "tyner" \
-               || Owner == "garrison" || Owner == "jones"
+  RANK = Owner == "coltrane" || Owner == "tyner" \
+    || Owner == "garrison" || Owner == "jones"
 \end{verbatim}
 
 The \MacroNI{RANK} expression is evaluated as a floating point number.
 However, like in C, boolean expressions evaluate to either 1 or 0
-depending on if they are TRUE or FALSE.
+depending on if they are \Expr{True} or \Expr{False}.
 So, if this expression
-evaluated to 1 (because the remote job was owned by one of the 
-preferred users), it would be a larger value than any other
-user (for whom the expression would evaluate to 0).
+evaluated to 1, 
+because the remote job was owned by one of the preferred users,
+it would be a larger value than any other
+user for whom the expression would evaluate to 0.
 
 A more complex \MacroNI{RANK} expression
 has the same basic set up,
-where anyone from your group has priority on your machines.
+where anyone from the group has priority on their fast machines.
 Its difference is that
 the machine owner has better priority on their own machine.
-To set this up for Jimmy Garrison,
-place the following entry in Jimmy Garrison's local
-configuration file \File{bass.local}:
+To set this up for Garrison's machine (\Expr{bass}),
+place the following entry in the local configuration file 
+of machine \Expr{bass}:
 \begin{verbatim}
-        RANK = (Owner == "coltrane") + (Owner == "tyner") \
-               + ((Owner == "garrison") * 10) + (Owner == "jones")
+  RANK = (Owner == "coltrane") + (Owner == "tyner") \
+    + ((Owner == "garrison") * 10) + (Owner == "jones")
 \end{verbatim}
-\Note The parentheses in this expression are important, because ``+''
-      operator has higher default precedence than ``==''.
+Note that the parentheses in this expression are important, because 
+the \Expr{+} operator has higher default precedence than \Expr{==}.
 
-The use of ``+'' instead of ``\Bar\Bar'' allows us to 
-distinguish which terms matched and which ones didn't.
-If anyone not in the John Coltrane quartet was running a job on
-the machine called bass,
+The use of \Expr{+} instead of \Expr{||} allows us to 
+distinguish which terms matched and which ones did not.
+If anyone not in the research group quartet was running a job on
+the machine called \Expr{bass},
 the \MacroNI{RANK} would evaluate numerically to 0, since none
 of the boolean terms evaluates to 1, and 0+0+0+0 still equals 0.
 
 Suppose Elvin Jones submits a job.
-His job would match this
-machine (assuming the \MacroNI{START} was True for him at that time) and
-the \MacroNI{RANK} would numerically evaluate to 1.
-Therefore, Elvin would preempt the Condor job currently running.
-Assume that later Jimmy submits a job.
-The \MacroNI{RANK} evaluates to 10, since the boolean that matches Jimmy
-gets multiplied by 10.
-Jimmy would preempt Elvin, and Jimmy's job would run on
-Jimmy's machine.
+His job would match the \Expr{bass} machine,
+assuming \MacroNI{START} evaluated to \Expr{True} for him at that time.
+The \MacroNI{RANK} would numerically evaluate to 1.
+Therefore, the Elvin Jones job could preempt the Condor job currently running.
+Further assume that later Jimmy Garrison submits a job.
+The \MacroNI{RANK} evaluates to 10 on machine \Expr{bass}, 
+since the boolean that matches gets multiplied by 10.
+Due to this, Jimmy Garrison's job could preempt Elvin Jones' job
+on the \Expr{bass} machine where Jimmy Garrison's jobs are preferred.
 
 The \MacroNI{RANK} expression is not required to reference the
 \Attr{Owner} of the jobs.
 Perhaps there is one machine with an enormous amount of memory,
 and others with not much at all.
-You can configure your
+Perhaps configure this
 large-memory machine to prefer to run jobs with larger memory
 requirements:
 \begin{verbatim}
-        RANK = ImageSize
+  RANK = ImageSize
 \end{verbatim}
 
 That's all there is to it.
-The bigger the job, the more this machine
-wants to run it.
+The bigger the job, the more this machine wants to run it.
 It is an altruistic preference, always servicing
 the largest of jobs, no matter who submitted them.
-A little less altruistic is John's \MacroNI{RANK} that
-prefers his jobs over those with the largest
+A little less altruistic is the \MacroNI{RANK} on Coltrane's machine that
+prefers John Coltrane's jobs over those with the largest
 \Attr{Imagesize}:
 \begin{verbatim}
-        RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
+  RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 \end{verbatim}
-This \MacroNI{RANK} breaks if a job is submitted with an image
+This \MacroNI{RANK} does not work if a job is submitted with an image
 size of more $10^{12}$ Kbytes.
 However, with that size, this \MacroNI{RANK} expression
 preferring that job would not be Condor's
@@ -353,8 +352,7 @@ only problem!
 \index{state!of a machine}
 \index{machine state}
 A machine is assigned a \Term{state} by Condor.
-The state
-depends on whether or not the machine is available to run Condor
+The state depends on whether or not the machine is available to run Condor
 jobs, and if so, what point in the negotiations has been reached.
 The possible states are
 
@@ -1210,6 +1208,12 @@ If the machine is in the Vacating activity, it keeps evaluating the
 \MacroNI{KILL} expression.
 As soon as this expression evaluates to TRUE,
 the machine enters the Killing activity (transition \Bold{21}).
+If the Vacating activity lasts for as long as the maximum
+vacating time, then the machine also enters the Killing activity.
+The maximum vacating time is determined by the configuration variable
+\Macro{MachineMaxVacateTime}.
+This may be adjusted by the setting of the job ClassAd
+attribute \Attr{JobMaxVacateTime}.
 
 When the starter exits, or if there was no starter running when the
 machine enters the Preempting state (transition \Bold{10}),
@@ -1394,10 +1398,24 @@ as an infinite claim worklife, so claims may be held indefinitely (as
 long as they are not preempted and the schedd does not relinquish
 them, of course).
 
+\item[\Macro{MachineMaxVacateTime}] When the machine enters the
+Preempting/Vacating state, this expression specifies the maximum
+time in seconds that the \Condor{startd} will wait for the job to
+finish.  The job may adjust the wait time by setting
+\AdAttr{JobMaxVacateTime}.  If the job's setting is less than the
+machine's, the job's is used.  If the job's setting is larger than
+the machine's, the result depends on whether the job has any excess
+retirement time.  If the job has more retirement time left than the
+machine's maximum vacate time setting, then retirement time will be
+converted into vacating time, up to the amount of
+\Attr{JobMaxVacateTime}.  Once the vacating time expires, the
+job is hard-killed.  The \Macro{KILL} expression may be used
+to abort the graceful shutdown of the job at any time.
+
 \item[\Macro{MAXJOBRETIREMENTTIME}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
-seconds) that the \Condor{startd} will wait for the job to finish naturally
-(without any kill signals from the \Condor{startd}).  The clock starts when the
+seconds) that the \Condor{startd} will wait for the job to finish.
+The clock starts when the
 job is started and is paused during any suspension.  The job may
 provide its own expression for \Attr{MaxJobRetirementTime}, but this
 can only be used to take \emph{less} than the time granted by the
@@ -1406,8 +1424,13 @@ nice\_user jobs are submitted with a default retirement time of 0, so
 they will never wait in retirement unless the user overrides the
 default.
 
-Once the job finishes or if the retirement time expires, the machine
-enters the Preempting state.
+The machine enters the Preempting state with the goal of finishing
+shutting down the job by the end of the retirement time.  If the job
+vacating policy grants the job X seconds of vacating time, the
+transition to the Preempting state will happen X seconds before the
+end of the retirement time, so that the hard-killing of the job will not
+happen until the end of the retirement time, if the job does not finish
+shutting down before then.
 
 This expression is evaluated in the context of the job ClassAd, so it
 may refer to attributes of the current job as well as machine
@@ -1522,9 +1545,6 @@ clearly.
 \item[\MacroNI{MaxSuspendTime}] Amount of time a job may be
   suspended before more drastic measures are taken.
 
-\item[\MacroNI{MaxVacateTime}] Amount of time a job may be
-  checkpointing before we give up and kill it outright.
-
 \item[\MacroNI{KeyboardBusy}] A boolean expression that evaluates to TRUE
     when the keyboard is being used.
 
@@ -1560,7 +1580,6 @@ HighLoad                = 0.5
 StartIdleTime           = 15 * $(MINUTE)
 ContinueIdleTime        = 5 * $(MINUTE)
 MaxSuspendTime          = 10 * $(MINUTE)
-MaxVacateTime           = 10 * $(MINUTE)
 
 KeyboardBusy            = KeyboardIdle < $(MINUTE)
 ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
@@ -1636,7 +1655,11 @@ MAXJOBRETIREMENTTIME = 0
 
 Kill jobs that take too long leaving gracefully.
 \begin{verbatim}
-KILL            = $(ActivityTimer) > $(MaxVacateTime)
+MachineMaxVacateTime = 10 * $(MINUTE)
+\end{verbatim}
+
+\begin{verbatim}
+KILL            = False
 \end{verbatim}
 
 Finally, specify periodic checkpointing.  
@@ -1674,7 +1697,6 @@ HighLoad                = 0.5
 StartIdleTime           = 15 * $(MINUTE)
 ContinueIdleTime        = 5 * $(MINUTE)
 MaxSuspendTime          = 10 * $(MINUTE)
-MaxVacateTime           = 10 * $(MINUTE)
 
 KeyboardBusy            = KeyboardIdle < $(MINUTE)
 ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
@@ -1699,7 +1721,8 @@ PREEMPT	        = ( ((Activity == "Suspended") && \
                     ($(ActivityTimer) > $(MaxSuspendTime))) \
                     || (SUSPEND && (WANT_SUSPEND == False)) )
 MAXJOBRETIREMENTTIME = 0
-KILL            = $(ActivityTimer) > $(MaxVacateTime)
+MachineMaxVacateTime = 10 * $(MINUTE)
+KILL                 = False
 PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                           ( $(LastCkpt) > (12 * $(HOUR)) )
@@ -1885,7 +1908,8 @@ PREEMPT = ( ((Activity == "Suspended") && \
 MAXJOBRETIREMENTTIME = (IsDesktop =!= True) * 0
 
 # Kill jobs if they have taken too long to vacate gracefully
-KILL = $(ActivityTimer) > $(MaxVacateTime) 
+MachineMaxVacateTime = 10 * $(MINUTE)
+KILL = False
 
 \end{verbatim}
 

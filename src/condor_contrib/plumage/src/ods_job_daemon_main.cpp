@@ -33,9 +33,6 @@
 #include "stat_info.h"
 #include "JobLogMirror.h"
 
-// about self
-DECL_SUBSYSTEM("JOB_ETL_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 using namespace std;
 using namespace plumage::etl;
 
@@ -51,7 +48,7 @@ void ProcessHistoryTimer(Service*);
 
 //-------------------------------------------------------------
 
-int main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
@@ -88,8 +85,6 @@ int main_init(int /* argc */, char * /* argv */ [])
             EXCEPT("Failed to register history timer");
         }
     }
-
-	return TRUE;
 }
 
 void ProcessHistoryTimer(Service*) {
@@ -125,12 +120,10 @@ init_classad()
 
 //-------------------------------------------------------------
 
-int 
+void
 main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
@@ -148,26 +141,36 @@ void Stop()
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 
 	Stop();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 
 	Stop();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
+}
+
+int
+main( int argc, char **argv )
+{
+	set_mySubSystem("JOB_ETL_SERVER", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
 
 //-------------------------------------------------------------

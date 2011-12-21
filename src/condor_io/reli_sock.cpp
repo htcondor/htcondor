@@ -261,7 +261,7 @@ ReliSock::put_line_raw( char *buffer )
 	int length = strlen(buffer);
 	result = put_bytes_raw(buffer,length);
 	if(result!=length) return -1;
-	result = put_bytes_raw("\n",1);
+	result = put_bytes_raw("\n", 1);
 	if(result!=1) return -1;
 	return length;
 }
@@ -287,7 +287,7 @@ ReliSock::get_line_raw( char *buffer, int length )
 }
 
 int 
-ReliSock::put_bytes_raw( char *buffer, int length )
+ReliSock::put_bytes_raw( const char *buffer, int length )
 {
 	return condor_write(peer_description(),_sock,buffer,length,_timeout);
 }
@@ -434,6 +434,10 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
+		// since we are trying to read from the socket, we can assume
+		// that it is no longer ok for there to be no message at all.
+	allow_empty_message_flag = FALSE;
+
 	/* do not queue up more than one message at a time on reliable sockets */
 	/* but return 1, because old message can still be read.						*/
 	if (rcv_msg.ready) {
@@ -479,17 +483,18 @@ ReliSock::end_of_message()
 				if ( rcv_msg.buf.consumed() ) {
 					ret_val = TRUE;
 				}
-				else if( !allow_empty_message_flag ) {
+				else {
 					char const *ip = get_sinful_peer();
 					dprintf(D_FULLDEBUG,"Failed to read end of message from %s.\n",ip ? ip : "(null)");
 				}
 				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
 			}
-			if ( allow_empty_message_flag ) {
+			else if ( allow_empty_message_flag ) {
 				allow_empty_message_flag = FALSE;
 				return TRUE;
 			}
+			allow_empty_message_flag = FALSE;
 			break;
 
 		default:
@@ -518,7 +523,7 @@ const char * ReliSock :: isIncomingDataMD5ed()
 int 
 ReliSock::put_bytes(const void *data, int sz)
 {
-	int		tw, header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
+	int		tw=0, header_size = isOutgoing_MD5_on() ? MAX_HEADER_SIZE:NORMAL_HEADER_SIZE;
 	int		nw, l_out;
         unsigned char * dta = NULL;
 

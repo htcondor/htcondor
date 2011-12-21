@@ -84,7 +84,7 @@ CreamResource *CreamResource::FindOrCreateResource( const char *resource_name,
 	const char *canonical_name = CanonicalName( resource_name );
 	ASSERT(canonical_name);
 
-	const char *hash_name = HashName( canonical_name, proxy->subject->fqan );
+	const char *hash_name = HashName( canonical_name, proxy->subject->subject_name, proxy->subject->first_fqan );
 	ASSERT(hash_name);
 
 	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
@@ -111,6 +111,7 @@ CreamResource::CreamResource( const char *resource_name,
 	initialized = false;
 	proxySubject = strdup( proxy->subject->subject_name );
 	proxyFQAN = strdup( proxy->subject->fqan );
+	proxyFirstFQAN = strdup( proxy->subject->first_fqan );
 	delegationTimerId = daemonCore->Register_Timer( 0,
 							(TimerHandlercpp)&CreamResource::checkDelegation,
 							"CreamResource::checkDelegation", (Service*)this );
@@ -175,7 +176,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_
 		free( serviceUri );
 	}
 
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject, proxyFirstFQAN ) ) );
 
 	daemonCore->Cancel_Timer( delegationTimerId );
 	if ( gahp != NULL ) {
@@ -190,6 +191,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_
 		free( proxySubject );
 	}
 	free( proxyFQAN );
+	free( proxyFirstFQAN );
 }
 
 bool CreamResource::Init()
@@ -201,7 +203,7 @@ bool CreamResource::Init()
 		// TODO This assumes that at least one CreamJob has already
 		// initialized the gahp server. Need a better solution.
 	std::string gahp_name;
-	sprintf( gahp_name, "CREAM/%s", proxyFQAN );
+	sprintf( gahp_name, "CREAM/%s/%s", proxySubject, proxyFirstFQAN );
 
 	gahp = new GahpClient( gahp_name.c_str() );
 
@@ -285,11 +287,13 @@ const char *CreamResource::CanonicalName( const char *name )
 }
 
 const char *CreamResource::HashName( const char *resource_name,
-									 const char *proxy_subject )
+									 const char *proxy_subject,
+									 const char *proxy_first_fqan )
 {
 	static std::string hash_name;
 
-	sprintf( hash_name, "cream %s#%s", resource_name, proxy_subject );
+	sprintf( hash_name, "cream %s#%s#%s", resource_name, proxy_subject,
+			 proxy_first_fqan );
 
 	return hash_name.c_str();
 }
@@ -354,11 +358,20 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 	}
 
 	BaseResource::UnregisterJob( job );
+
+		// We have trouble maintaining the shared lease with the cream
+		// server while we have no jobs for this resource object.
+		// This can lead to trouble if a new job shows up before we're
+		// deleted. So delete immediately until we can overhaul the
+		// lease-update code.
+	if ( IsEmpty() ) {
+		daemonCore->Reset_Timer( deleteMeTid, 0 );
+	}
 }
 
 const char *CreamResource::GetHashName()
 {
-	return HashName( resourceName, proxyFQAN );
+	return HashName( resourceName, proxySubject, proxyFirstFQAN );
 }
 
 void CreamResource::PublishResourceAd( ClassAd *resource_ad )
@@ -367,6 +380,7 @@ void CreamResource::PublishResourceAd( ClassAd *resource_ad )
 
 	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
 	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
+	resource_ad->Assign( ATTR_X509_USER_PROXY_FIRST_FQAN, proxyFirstFQAN );
 }
 
 void CreamResource::registerDelegationURI( const char *deleg_uri,
@@ -722,7 +736,7 @@ GahpClient * CreamResource::BatchGahp() { return status_gahp; }
 const char *CreamResource::getLeaseId()
 {
 	// TODO trigger a DoUpdateLeases() if we don't have a lease set yet
-	if ( m_sharedLeaseExpiration ) {
+	if ( lastUpdateLeases ) {
 		return m_leaseId.c_str();
 	} else {
 		return NULL;

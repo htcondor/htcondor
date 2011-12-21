@@ -260,6 +260,8 @@ close_unused_file_descriptors()
 {
 	long		open_max;
 	long		i;
+	std::map<int,bool> open_fds;
+	bool need_open = false;
 
 
 		/* first find out how many fd's are available on this system */
@@ -274,34 +276,22 @@ close_unused_file_descriptors()
 		}
 	}
 
-	int fd_count = 0;
-	int *open_fds = (int*)malloc(sizeof(int) * (D_NUMLEVELS+1));
-	if(!open_fds)
-		EXCEPT("Out of memory!\n");
-
-	fd_count = debug_open_fds(open_fds);
+	need_open = debug_open_fds(open_fds);
 
 		/* now close everything except the ones we use */
 	for( i=0; i<open_max; i++ ) {
 		bool is_log = false;
-		if(fd_count > 0)
+		if(need_open)
 		{
-			for(int index = 0; index <= D_NUMLEVELS; index++)
-			{
-				if(i == open_fds[index])
-				{
-					is_log = true;
-				}
+			if(open_fds.find(i) != open_fds.end()) {
+				is_log = true;
 			}
 		}
-
 
 		if(!is_log && !needed_fd(i)) {
 			(void) close( i );
 		}
 	}
-
-	free(open_fds);
 
 	dprintf( D_FULLDEBUG, "Done closing file descriptors\n" );
 }
@@ -313,8 +303,6 @@ close_unused_file_descriptors()
 void
 init_params()
 {
-	char	*tmp;
-
 	if( (Execute=param("EXECUTE")) == NULL ) {
 		EXCEPT( "Execute directory not specified in config file" );
 	}
@@ -332,15 +320,7 @@ init_params()
 		UidDomain[0] = '\0';
 	}
 
-	TrustUidDomain = false;
-	tmp = param( "TRUST_UID_DOMAIN" );
-	if( tmp ) {
-		if( tmp[0] == 't' || tmp[0] == 'T' ) { 
-			TrustUidDomain = true;
-		}			
-		free( tmp );
-	}
-
+	TrustUidDomain = param_boolean_crufty("TRUST_UID_DOMAIN", false);
 
 	// We can configure how many times the starter wishes to attempt to
 	// pull over the initial checkpoint
@@ -809,15 +789,11 @@ spawn_all()
 int
 test_connection()
 {
-	char    *pval;
-
 	if ( write(CLIENT_LOG,"\0\n",2) == -1 ) {
 		
-        pval = param( "STARTER_LOCAL_LOGGING" );
-        if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
+		if( param_boolean_crufty( "STARTER_LOCAL_LOGGING", false ) ) {
 			dprintf( D_ALWAYS, "Lost our connection to the shadow! Exiting.\n" );
 		}
-		free( pval );
 
 			// Send a SIGKILL to our whole process group
 		set_root_priv();

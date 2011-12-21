@@ -34,13 +34,19 @@ $execute = sub {
     sleep 10;
     
     # check if shell environment is same as job
-    my $scratch_dir = `condor_ssh_to_job -auto-retry $cluster "pwd;echo \$_CONDOR_SCRATCH_DIR"`;
+    my $scratch_dir = `condor_ssh_to_job -debug -auto-retry $cluster "pwd;echo \$_CONDOR_SCRATCH_DIR"`;
     print "_CONDOR_SCRATCH_DIR: $scratch_dir\n";
     
     # check if simple command works
     my $cmd = "condor_ssh_to_job -auto-retry $cluster \"echo ssh_to_job_success > ./$temp_file\"";
     if(system($cmd)) {
-        die "'$cmd' failed: $?";
+        my $rc=$?;
+
+        print "\nContents of sshd.log:\n\n";
+        system("find `condor_config_val EXECUTE` -name .condor_ssh_to_job_1 -exec cat '{}/sshd.log' \\;");
+        print "\nEnd of contents of sshd.log.\n";
+
+        die "'$cmd' failed: $rc";
     }
     
     my $result = ($scratch_dir ne "");

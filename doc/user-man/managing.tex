@@ -474,7 +474,7 @@ It might occur more than once.
 
 \noindent\Bold{Event Number:} 002 \\
 \Bold{Event Name:} Error in executable \\
-\Bold{Event Description:} The job couldn't be run because the
+\Bold{Event Description:} The job could not be run because the
 executable was bad.
 
 \noindent\Bold{Event Number:} 003 \\
@@ -487,7 +487,7 @@ because the checkpointing can happen periodically.
 \noindent\Bold{Event Number:} 004 \\
 \Bold{Event Name:} Job evicted from machine \\
 \Bold{Event Description:} A job was removed from a machine before it finished,
-usually for a policy reason: perhaps an interactive user has claimed
+usually for a policy reason. Perhaps an interactive user has claimed
 the computer, or perhaps another job is higher priority.
 
 \noindent\Bold{Event Number:} 005 \\
@@ -496,9 +496,9 @@ the computer, or perhaps another job is higher priority.
 
 \noindent\Bold{Event Number:} 006 \\
 \Bold{Event Name:} Image size of job updated \\
-\Bold{Event Description:} This is informational. 
-It is referring to the memory that the job is using while running. It
-does not reflect the state of the job.
+\Bold{Event Description:} An informational event, 
+to update the amount of memory that the job is using while running. 
+It does not reflect the state of the job.
 
 \noindent\Bold{Event Number:} 007 \\
 \Bold{Event Name:} Shadow exception \\
@@ -520,7 +520,7 @@ the queue.
 \Bold{Event Name:} Job was suspended \\
 \Bold{Event Description:} The job is still on the computer, but it is no longer
 executing. 
-This is usually for a policy reason, like an interactive user using
+This is usually for a policy reason, such as an interactive user using
 the computer. 
 
 \noindent\Bold{Event Number:} 011 \\
@@ -530,22 +530,20 @@ suspended earlier.
 
 \noindent\Bold{Event Number:} 012 \\
 \Bold{Event Name:} Job was held \\
-\Bold{Event Description:} The user has paused the job, perhaps with
-the \Condor{hold} command.
-It was stopped, and will go back into the queue again until it is
-aborted or released. 
+\Bold{Event Description:} The job has transitioned to the hold state.
+This might happen if the user applies the \Condor{hold} command to the job.
 
 \noindent\Bold{Event Number:} 013 \\
 \Bold{Event Name:} Job was released \\
-\Bold{Event Description:} The user is requesting that a job on hold be re-run.
+\Bold{Event Description:} The job was in the hold state and is to be re-run.
 
 \noindent\Bold{Event Number:} 014 \\
 \Bold{Event Name:} Parallel node executed \\
-\Bold{Event Description:} A parallel (MPI) program is running on a node.
+\Bold{Event Description:} A parallel universe program is running on a node.
 
 \noindent\Bold{Event Number:} 015 \\
 \Bold{Event Name:} Parallel node terminated \\
-\Bold{Event Description:} A parallel (MPI) program has completed on a node.
+\Bold{Event Description:} A parallel universe program has completed on a node.
 
 \noindent\Bold{Event Number:} 016 \\
 \Bold{Event Name:} POST script terminated \\
@@ -558,6 +556,7 @@ This event signals that the post script has completed.
 \Bold{Event Name:} Job submitted to Globus \\
 \Bold{Event Description:} A grid job has been delegated to Globus
 (version 2, 3, or 4).
+This event is no longer used.
 
 \noindent\Bold{Event Number:} 018 \\
 \Bold{Event Name:} Globus submit failed \\
@@ -568,11 +567,13 @@ failed.
 \Bold{Event Name:} Globus resource up \\
 \Bold{Event Description:} The Globus resource that a job wants to run
 on was unavailable, but is now available.
+This event is no longer used.
 
 \noindent\Bold{Event Number:} 020 \\
 \Bold{Event Name:} Detected Down Globus Resource \\
 \Bold{Event Description:} The Globus resource that a job wants to run
 on has become unavailable. 
+This event is no longer used.
 
 \noindent\Bold{Event Number:} 021 \\
 \Bold{Event Name:} Remote error \\
@@ -613,7 +614,7 @@ and is under the auspices of the grid resource.
 
 \noindent\Bold{Event Number:} 028 \\
 \Bold{Event Name:} Job ad information event triggered. \\
-\Bold{Event Description:} Extra job ad attributes. This event is
+\Bold{Event Description:} Extra job ClassAd attributes are noted. This event is
 written as a supplement to other events when the configuration
 parameter \Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} is set.
 
@@ -627,25 +628,43 @@ have been received for 15 minutes.
 \Bold{Event Description:} An update has been received for a job whose
 remote status was previous logged as unknown.
 
+\noindent\Bold{Event Number:} 031 \\
+\Bold{Event Name:} Unused \\
+\Bold{Event Description:} This event number is not used.
+
+\noindent\Bold{Event Number:} 032 \\
+\Bold{Event Name:} Unused \\
+\Bold{Event Description:} This event number is not used.
+
+\noindent\Bold{Event Number:} 033 \\
+\Bold{Event Name:} Attribute update \\
+\Bold{Event Description:} Definition not yet written.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!completion}
 
-When your Condor job completes(either through normal means or abnormal
-termination by signal), Condor will remove it from the job queue (i.e.,
-it will no longer appear in the output of \Condor{q}) and insert it into
-the job history file.  You can examine the job history file with the
-\Condor{history} command. If you specified a log file in your submit
-description file, then the job exit status will be recorded there as well.
+When a Condor job completes,
+either through normal means or by abnormal termination by signal,
+Condor will remove it from the job queue.
+That is,
+the job will no longer appear in the output of \Condor{q},
+and the job will be inserted into the job history file.
+Examine the job history file with the \Condor{history} command. 
+If there is a log file specified in the submit description file for the job, 
+then the job exit status will be recorded there as well.
 
-By default, Condor will send you an email message
-when your job completes.  You can modify this behavior with the
-\Condor{submit} ``notification'' command.
-The message will include the exit status of your job (i.e., the
-argument your job passed to the exit system call when it completed) or
-notification that your job was killed by a signal.  It will also
-include the following statistics (as appropriate) about your job:
+\index{submit commands!notification}
+By default, Condor sends an email message when the job completes.
+Modify this behavior with the
+\SubmitCmd{notification} command in the submit description file.
+The message will include the exit status of the job,
+which is the argument that the job passed to the exit system call 
+when it completed,
+or it will be notification that the job was killed by a signal.  
+Notification will also
+include the following statistics (as appropriate) about the job:
 
 \begin{description}
 
@@ -653,61 +672,37 @@ include the following statistics (as appropriate) about your job:
 
 \item[Completed at:] when the job completed
 
-\item[Real Time:] elapsed time between when the job was submitted and
-when it completed (days hours:minutes:seconds)
-
-\item[Run Time:] total time the job was running (i.e., real time minus
-queuing time)
-
-\item[Committed Time:] total run time that contributed to job
-completion (i.e., run time minus the run time that was lost because
-the job was evicted without performing a checkpoint)
-
-\item[Remote User Time:] total amount of committed time the job spent
-executing in user mode
-
-\item[Remote System Time:] total amount of committed time the job spent
-executing in system mode 
-
-\item[Total Remote Time:] total committed CPU time for the job
-
-\item[Local User Time:] total amount of time this job's
-\Condor{shadow} (remote system call server) spent executing in user
-mode
-
-\item[Local System Time:] total amount of time this job's
-\Condor{shadow} spent executing in system mode
-
-\item[Total Local Time:] total CPU usage for this job's \Condor{shadow}
-
-\item[Leveraging Factor:] the ratio of total remote time to total
-system time (a factor below 1.0 indicates that the job ran
-inefficiently, spending more CPU time performing remote system calls
-than actually executing on the remote machine)
+\item[Real Time:] the elapsed time between when the job was submitted and
+when it completed, given in a form of \Expr{<days> <hours>:<minutes>:<seconds>}
 
 \item[Virtual Image Size:] memory size of the job, computed when the
 job checkpoints
 
-\item[Checkpoints written:] number of successful checkpoints performed
-by the job
+\end{description}
 
-\item[Checkpoint restarts:] number of times the job successfully
-restarted from a checkpoint
+Statistics about just the last time the job ran:
 
-\item[Network:] total network usage by the job for checkpointing and
-remote system calls
+\begin{description}
+\item[Run Time:] total time the job was running,
+given in the form \Expr{<days> <hours>:<minutes>:<seconds>}
 
-\item[Buffer Configuration:] configuration of remote system call I/O
-buffers
+\item[Remote User Time:] total CPU time the job spent
+executing in user mode on remote machines; 
+this does not count time spent on run attempts that were evicted 
+without a checkpoint.
+Given in the form \Expr{<days> <hours>:<minutes>:<seconds>}
 
-\item[Total I/O:] total file I/O detected by the remote system call
-library
-
-\item[I/O by File:] I/O statistics per file produced by the remote
-system call library
-
-\item[Remote System Calls:] listing of all remote system calls
-performed (both Condor-specific and Unix system calls) with a count of
-the number of times each was performed
+\item[Remote System Time:] total CPU time the job spent
+executing in system mode (the time spent at system calls);
+this does not count time spent on run attempts that were evicted 
+without a checkpoint.  
+Given in the form \Expr{<days> <hours>:<minutes>:<seconds>}
 
 \end{description}
+
+The Run Time accumulated by all run attempts are summarized with
+the time given in the form \Expr{<days> <hours>:<minutes>:<seconds>}.
+
+And, statistics about the bytes sent and received by the last
+run of the job and summed over all attempts at running the job
+are given.

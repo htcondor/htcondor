@@ -16,6 +16,9 @@
  #
  ###############################################################
 
+
+add_definitions(-D_FORTIFY_SOURCE=2)
+
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -121,12 +124,6 @@ if( NOT WINDOWS)
 	endif()
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
-
-	# when we want to distro dynamic libraries only with localized rpaths.
-	set (CMAKE_SKIP_RPATH TRUE)
-	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
-	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
@@ -333,12 +330,12 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
-	check_include_files("linux/ethtool.h" HAVE_LINUX_ETHTOOL_H)
+	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
+	check_include_files("linux/types.h;linux/ethtool.h" HAVE_LINUX_ETHTOOL_H)
 	check_include_files("linux/magic.h" HAVE_LINUX_MAGIC_H)
 	check_include_files("linux/nfsd/const.h" HAVE_LINUX_NFSD_CONST_H)
 	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
-	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
 
 	find_library(HAVE_X11 X11)
 	dprint("Threaded functionality only enable in Linux and Windows")
@@ -393,6 +390,8 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
+#####################################
+# PROPER option
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
@@ -410,6 +409,25 @@ else()
   option(CLIPPED "disable the standard universe" ON)
 endif()
 
+if (NOT CLIPPED AND NOT LINUX)
+	message (FATAL_ERROR "standard universe is *only* supported on Linux")
+endif()
+
+#####################################
+# RPATH option
+if (LINUX)
+	option(CMAKE_SKIP_RPATH "Skip RPATH on executables" OFF)
+else()
+	option(CMAKE_SKIP_RPATH "Skip RPATH on executables" ON)
+endif()
+
+if ( NOT CMAKE_SKIP_RPATH )
+	set( CMAKE_INSTALL_RPATH ${CONDOR_RPATH} )
+	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
+endif()
+
+#####################################
+# KBDD option
 if (NOT WINDOWS)
     if (HAVE_X11)
         if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
@@ -420,10 +438,8 @@ else()
     option(HAVE_KBDD "Support for condor_kbdd" ON)
 endif()
 
-if (NOT CLIPPED AND NOT LINUX)
-	message (FATAL_ERROR "standard universe is *only* supported on Linux")
-endif()
-
+#####################################
+# KBDD option
 if (NOT HPUX)
 	option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
 	if (NOT WINDOWS)
@@ -431,6 +447,8 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
+#####################################
+# ssh_to_job option
 if (NOT WINDOWS) 
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
@@ -444,8 +462,7 @@ endif(BUILD_TESTS)
 # setup for the externals, the variables defined here
 # are used in the construction of externals within
 # the condor build.  The point of main interest is
-# how "cacheing" is performed by performing the build
-# external to the tree itself.
+# how "cacheing" is performed.
 if (PROPER)
 	message(STATUS "********* Configuring externals using [local env] a.k.a. PROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -453,12 +470,6 @@ else()
 	cmake_minimum_required(VERSION 2.8)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
-
-	if (LINUX)
-		set(CMAKE_SKIP_RPATH FALSE)
-		set(CMAKE_INSTALL_RPATH ${CONDOR_RPATH})
-		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-	endif()
 endif(PROPER)
 
 if (WINDOWS)
@@ -505,7 +516,7 @@ endif()
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
@@ -937,6 +948,8 @@ dprint ( "CMAKE_SKIP_INSTALL_ALL_DEPENDENCY: ${CMAKE_SKIP_INSTALL_ALL_DEPENDENCY
 
 # If set, runtime paths are not added when using shared libraries. Default it is set to OFF
 dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
+dprint ( "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
+dprint ( "CMAKE_BUILD_WITH_INSTALL_RPATH: ${CMAKE_BUILD_WITH_INSTALL_RPATH}")
 
 # set this to true if you are using makefiles and want to see the full compile and link
 # commands instead of only the shortened ones

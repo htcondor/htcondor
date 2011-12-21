@@ -42,7 +42,7 @@ main(int argc, char* argv[])
 	for( i=1; i < argc; i++) {
         if (strcmp(argv[i],"-help")==0) {
 			usage(argv[0]);
-            exit(1);
+            exit(0);
 		}
 	}
 
@@ -62,7 +62,6 @@ static void
 usage(char* name) 
 {
 	printf("Usage: %s [-help] <list of history files>\n",name);
-	exit(1);
 }
 
 static void

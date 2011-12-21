@@ -62,12 +62,7 @@ Axis2SslProvider::init(int _port, int _read_timeout, std::string& _error) {
 
     char* tmp = NULL;
     axis2_char_t *server_cert, *server_key, *ca_file, *ca_dir;
-
-    // init our parent
-    if (!Axis2SoapProvider::init(_port,_read_timeout,_error)) {
-        dprintf(D_ALWAYS, "%s\n",_error.c_str());
-        return false;
-    }
+	server_cert = server_key = ca_file = ca_dir = NULL;
 
     // collect our certs, ca, etc.
     if ((tmp = param("AVIARY_SSL_SERVER_CERT"))) {
@@ -93,6 +88,12 @@ Axis2SslProvider::init(int _port, int _read_timeout, std::string& _error) {
                                                NULL);
     if (!m_ctx) {
         dprintf(D_ALWAYS, "axis2_ssl_utils_initialize_ctx failed\n");
+        return false;
+    }
+
+    // init our parent AFTER checking that SSL is configured OK
+    if (!Axis2SoapProvider::init(_port,_read_timeout,_error)) {
+        dprintf(D_ALWAYS, "%s\n",_error.c_str());
         return false;
     }
 

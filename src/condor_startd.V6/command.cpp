@@ -1476,7 +1476,7 @@ bool
 accept_request_claim( Resource* rip )
 {
 	int interval = -1;
-	char *client_addr = NULL, *tmp;
+	char *client_addr = NULL;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 
@@ -1532,6 +1532,7 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Figure out the hostname of our client.
+	ASSERT(sock->peer_addr().is_valid());
 	MyString hostname = get_full_hostname(sock->peer_addr());
 	if(hostname.IsEmpty()) {
 		MyString ip = sock->peer_addr().to_ip_string();
@@ -1747,8 +1748,13 @@ activate_claim( Resource* rip, Stream* stream )
 		stRec.server_name = strdup( my_full_hostname() );
 	
 			// Send our local IP address, too.
-		memcpy( &stRec.ip_addr, my_sin_addr(), sizeof(struct in_addr) );
 		
+		// stRec.ip_addr actually is never used.
+		// Just make sure that it does not have 0 value.
+		condor_sockaddr local_addr = get_local_ipaddr();
+		struct in_addr local_in_addr = local_addr.to_sin().sin_addr;
+		memcpy( &stRec.ip_addr, &local_in_addr, sizeof(struct in_addr) );
+
 		stream->encode();
 		if (!stream->code(stRec)) {
 			ABORT;

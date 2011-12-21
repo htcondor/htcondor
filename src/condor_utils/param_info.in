@@ -4433,7 +4433,7 @@ customization=seldom
 friendly_name=Collector Host
 usage=COLLECTOR_HOST = $(CONDOR_HOST):1234
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
+tags=gridmanager
 id=252
 
 [UNICORE_GAHP]
@@ -10169,3 +10169,35 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=602
+
+[MachineMaxVacateTime]
+aliases=
+default=600
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=602
+
+[GROUP_SORT_EXPR]
+aliases=
+default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Accounting Group Sorting Expression
+usage=
+url=
+tags=negotiator
+id=666

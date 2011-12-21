@@ -432,7 +432,6 @@ the changed value.
   \index{macro!subsystem names}
   \begin{itemize}
   \label{list:subsystem names}
-  \item \verb@AMAZON_GAHP@
   \item \verb@C_GAHP@
   \item \verb@CKPT_SERVER@
   \item \verb@COLLECTOR@
@@ -1308,8 +1307,7 @@ File System Configuration File Entries''.
   addition to certain keep alive messages and other non-essential
   communication.
   However, in certain situations, it might be desirable to disable the
-  UDP command port (for example, to reduce the number of ports
-  represented by a GCB broker, etc).
+  UDP command port.
 
   Unfortunately, due to a limitation in how these command sockets are
   created, it is not possible to define this setting on a per-daemon
@@ -2114,15 +2112,15 @@ which use DaemonCore).
 
 \label{param:UseCloneToCreateProcesses}
 \item[\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES}]
-  This setting controls how a Condor daemon creates a new process under
-  certain versions of Linux. If set to \Expr{True} (the default value),
+  A boolean value that controls how a Condor daemon creates a new process on
+  Linux platforms. If set to the default value of \Expr{True},
   the \Expr{clone} system call is used. Otherwise, the \Expr{fork} system
   call is used. \Expr{clone} provides scalability improvements for daemons
-  using a large amount of memory (e.g. a \Condor{schedd} with a lot of
-  jobs in the queue). Currently, the use of \Expr{clone} is available on
-  Linux systems other than IA-64, but not when GCB is enabled.  If
-  Condor detects that it is running under the valgrind analysis tools,
-  this setting is ignored and treated as \Expr{False} to work around
+  using a large amount of memory, for example, a \Condor{schedd} with a lot of
+  jobs in the queue. Currently, the use of \Expr{clone} is available on
+  Linux systems.  If
+  Condor detects that it is running under the \Prog{valgrind} analysis tools,
+  this setting is ignored and treated as \Expr{False}, to work around
   incompatibilities.
 
 \label{param:NotRespondingTimeout}
@@ -2313,18 +2311,17 @@ limit above the hard limit (on maximum open files) that it inherits.
   If two Condor daemons are trying to communicate with each other, and
   they both belong to the same private network, this setting will
   allow them to communicate directly using the private network
-  interface, instead of having to use CCB or the Generic Connection Broker
-  (GCB) or to go through a public IP address.
+  interface, instead of having to use CCB or to go through a public IP address.
   Each private network should be assigned a unique network name.
   This string can have any form, but it must be unique for a
   particular private network.
   If another Condor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
   daemon using its private network address.
-  Even for sites using CCB or GCB, this is an important optimization, since
+  Even for sites using CCB, this is an important optimization, since
   it means that two daemons on the same network can communicate
   directly, without having to go through the broker.
-  If CCB/GCB is enabled, and the \MacroNI{PRIVATE\_NETWORK\_NAME} is
+  If CCB is enabled, and the \MacroNI{PRIVATE\_NETWORK\_NAME} is
   defined, the daemon's private address will be defined automatically.
   Otherwise, you can specify a particular private IP address to use by
   defining the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} setting
@@ -2357,10 +2354,10 @@ limit above the hard limit (on maximum open files) that it inherits.
   daemon using the IP address specified here.
   The syntax for specifying an IP address is identical to 
   \MacroNI{NETWORK\_INTERFACE}.
-  Sites using CCB or the Generic Connection Broker (GCB) only need to define
+  Sites using CCB only need to define
   the \MacroNI{PRIVATE\_NETWORK\_NAME},
   and the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} will be defined automatically.
-  Unless CCB/GCB is enabled, there is no default value for this variable.
+  Unless CCB is enabled, there is no default value for this variable.
   After changing this variable and running \Condor{reconfig}, 
   it may take up to one \Condor{collector} update interval 
   before the change becomes visible.
@@ -2554,69 +2551,6 @@ limit above the hard limit (on maximum open files) that it inherits.
   When \Expr{True}, the establishment of TCP connections
   from the \Condor{negotiator} daemon to the \Condor{startd} daemon
   for a security-enabled pool are done in a nonblocking manner.
-
-\end{description}
-
-The following settings are specific to enabling Generic Connection
-Brokering or GCB in your Condor pool.  The functionality of GCB is
-being replaced with CCB, so consider using CCB if it fits your needs.
-More information about GCB and how to configure it can be found in
-section~\ref{sec:GCB} on page~\pageref{sec:GCB}.
-
-\begin{description}
-
-\label{param:NetRemapEnable}
-\item[\Macro{NET\_REMAP\_ENABLE}] 
-  A boolean variable, that when defined to \Expr{True}, enables a network 
-  remapping service for Condor.
-  The service to use is controlled by \MacroNI{NET\_REMAP\_SERVICE}.
-  This boolean value defaults to \Expr{False}.
-
-\label{param:NetRemapService}
-\item[\Macro{NET\_REMAP\_SERVICE}]
-  If \MacroNI{NET\_REMAP\_ENABLE} is
-  defined to \Expr{True}, this setting controls what network remapping
-  service should be used.
-  Currently, the only value supported is \verb@GCB@.
-  The default is undefined.
-
-\label{param:NetRemapInagent}
-\item[\Macro{NET\_REMAP\_INAGENT}]
-  A comma or space-separated list of IP addresses for GCB brokers.
-  Upon start up, the \Condor{master} chooses one at random from
-  among the working brokers in the list.
-  There is no default if not defined.
-
-\label{param:NetRemapRoute}
-\item[\Macro{NET\_REMAP\_ROUTE}]
-  Hosts with the GCB network remapping service enabled that would like
-  to use a GCB routing table 
-  GCB broker specify
-  the full path to their routing table with this setting.
-  There is no default value if undefined.
-
-\label{param:MasterWaitsForGCBBroker}
-\item[\Macro{MASTER\_WAITS\_FOR\_GCB\_BROKER}]
-  A boolean value that defaults to \Expr{True}.
-  This variable determines the behavior of the \Condor{master}
-  with GCB enabled.
-  With no GCB broker working upon either the start up of the \Condor{master}, 
-  or once the \Condor{master} has successfully communicated with a
-  GCB broker, but the communication fails,
-  if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{True},
-  the \Condor{master} waits while attempting to find a
-  working GCB broker.
-  With no GCB broker working upon the start up of the \Condor{master}, 
-  if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{False},
-  the \Condor{master} fails and exits, without restarting.
-  Once the \Condor{master} has successfully communicated with a
-  GCB broker, but the communication fails,
-  if \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} is \Expr{False},
-  the \Condor{master} kills all its children, exits, and restarts.
-
-  The set up task of \Condor{glidein} explicitly sets
-  \MacroNI{MASTER\_WAITS\_FOR\_GCB\_BROKER} to \Expr{False} in the
-  configuration file it produces.
 
 \end{description}
 
@@ -3693,9 +3627,12 @@ WANT_HOLD_REASON = \
 \item[\Macro{KILL}]
   A boolean expression that, when \Expr{True},
   causes Condor to immediately stop the
-  execution of a currently running job, without delay, and
-  without taking the time to produce a checkpoint (for a standard
-  universe job).
+  execution of a vacating job, without delay.
+  The job is hard-killed, so any attempt by the job to checkpoint or
+  clean up will be aborted.  This expression should normally be
+  \Expr{False}.  When desired, it may be used to abort the graceful
+  shutdown of a job earlier than the limit imposed by
+  \Macro{MachineMaxVacateTime}.
 
 \label{param:PeriodicCheckpoint}
 \item[\Macro{PERIODIC\_CHECKPOINT}]
@@ -3748,7 +3685,10 @@ WANT_HOLD_REASON = \
 \label{param:WantVacate}
 \item[\Macro{WANT\_VACATE}]
   A boolean expression that, when \Expr{True}, defines that a preempted
-  Condor job is to be vacated, instead of killed.
+  Condor job is to be vacated, instead of killed.  This means the
+  job will be soft-killed and given time to checkpoint or clean up.
+  The amount of time given depends on \Macro{MachineMaxVacateTime}
+  and \Macro{KILL}.
 
 \label{param:EnableVersionedOpsys}
 \item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
@@ -3850,12 +3790,35 @@ WANT_HOLD_REASON = \
   with all further updates occurring at fixed 300
   second intervals following the initial update.
 
+\label{param:MachineMaxVacateTime}
+\item[\Macro{MachineMaxVacateTime}] An integer expression representing
+  the number of seconds the machine is willing to wait for a job that
+  has been soft-killed to gracefully shut down.  The default value is
+  600 seconds (10 minutes).  This expression is evaluated when the job
+  starts running.  The job may adjust the wait time by setting
+  \Attr{JobMaxVacateTime}.  If the job's setting is less than the
+  machine's, the job's specification is used.  
+  If the job's setting is larger than the machine's,
+  the result depends on whether the job has any excess
+  retirement time.  If the job has more retirement time left than the
+  machine's maximum vacate time setting, then retirement time will be
+  converted into vacating time, up to the amount of
+  \Attr{JobMaxVacateTime}.  The \Macro{KILL} expression may be used
+  to abort the graceful shutdown of the job at any time.  At the time
+  when the job is preempted, the \Macro{WANT\_VACATE} expression may
+  be used to skip the graceful shutdown of the job.
+
 \label{param:MaxJobRetirementTime}
 \item[\Macro{MAXJOBRETIREMENTTIME}]
   An integer value representing the number of seconds a preempted job
   will be allowed to run before being evicted. The default value of 0
   (when the configuration variable is not present) means that the job
-  gets no retirement time.  Note that in peaceful shutdown mode of the
+  gets no retirement time.  If the job vacating policy grants the job
+  X seconds of vacating time, a preempted job will be soft-killed X seconds
+  before the end of its retirement time, so that hard-killing of the job
+  will not happen until the end of the retirement time if the job does
+  not finish shutting down before then.
+  Note that in peaceful shutdown mode of the
   \Condor{startd}, retirement time is treated as though infinite.
   In graceful shutdown mode, the job will not be preempted until the
   configured retirement time expires or \Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}
@@ -4579,9 +4542,10 @@ Power Management for more details.
   A default executable in that location which meets these specifications is
   shipped with Condor. 
 
-  The \Condor{startd} initially invokes this plug-in with the argument
-  \Arg{ad}, and expects the plug-in to output a ClassAd to
-  its standard output stream.
+  The \Condor{startd} initially invokes this plug-in with both the
+  value defined for \MacroNI{HIBERNATION\_PLUGIN\_ARGS}
+  and the argument \Arg{ad}, 
+  and expects the plug-in to output a ClassAd to its standard output stream.
   The \Condor{startd} will use this ClassAd to determine what low power
   setting to use on further invocations of the plug-in.
   To that end, the ClassAd must contain the attribute
@@ -4598,15 +4562,16 @@ Power Management for more details.
   is an integer which represents the bit mask of the modes detected.
 
   Subsequent \Condor{startd} invocations of the plug-in have command
-  line arguments \OptArg{set}{<power-mode>}, where \Arg{<power-mode>}
+  line arguments defined by \MacroNI{HIBERNATION\_PLUGIN\_ARGS} plus the
+  argument \OptArg{set}{<power-mode>}, where \Arg{<power-mode>}
   is one of the supported states as given in the attribute
   \Attr{HibernationSupportedStates}.
 
 \label{param:HibernationPluginArgs}
 \item[\Macro{HIBERNATION\_PLUGIN\_ARGS}]
   Command line arguments appended to the command that invokes the plug-in.
-  Used only when the \Condor{startd} is \emph{not} initially invoking the
-  plug-in to determine the low power states supported.
+  The additional argument \Arg{ad} is appended  
+  when the \Condor{startd} initially invokes the plug-in.
 
 \label{param:HibernationOverrideWOL}
 \item[\Macro{HIBERNATION\_OVERRIDE\_WOL}]
@@ -5731,6 +5696,12 @@ These settings affect the \Condor{shadow}.
   proxy updates could happen very frequently, 
   potentially creating a lot of load on the submit machine.
 
+\label{param:ShadowRunUnknownUserJobs}
+\item[\Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}]
+  A boolean that defaults to \Expr{False}.
+  When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs 
+  as user \Login{nobody} when remotely submitted and from
+  users not in the local password file.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5868,7 +5839,7 @@ These settings affect the \Condor{starter}.
   in the job submission file.  If this is set, then the executable does
   not need to be fully qualified, for example
 \begin{verbatim}
-        # Let this exectuable be resolved by user's path in the wrapper
+        # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
 \end{verbatim}
   As opposed to
@@ -5905,9 +5876,10 @@ These settings affect the \Condor{starter}.
   This is useful for glidein jobs that need to
   access environment variables from the batch system running the glidein
   daemons.
-  When both the user job and \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
+  When the user job and/or \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
   an environment variable that is in the \Condor{starter}'s
-  environment, the user job's definition takes precedence.
+  environment, the setting from the \Condor{starter}'s environment
+  is overridden.
   This variable does not apply to standard universe jobs.
 
 \label{param:StarterUploadTimeout} 
@@ -6719,24 +6691,30 @@ These macros affect the \Condor{negotiator}.
   If utilized attributes will change during the 
   negotiation period time interval, then set this variable to \Expr{False}.
 
+\label{param:NegotiatorSlotConstraint}
+\item[\Macro{NEGOTIATOR\_SLOT\_CONSTRAINT}]
+  An expression which constrains which machine ClassAds are fetched from the
+  \Condor{collector} by the \Condor{negotiator} during a negotiation
+  cycle.
+
+\label{param:NegotiatorSlotPoolsizeConstraint}
 \label{param:GroupDynamicMachConstraint}
-\item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
+\item[\Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} or
+  \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
   This optional expression specifies which machine ClassAds should be counted
-  when computing the size of the pool,
-  for purposes of group quota allocation.
+  when computing the size of the pool.
+  It applies both for group quota allocation and when there are no groups.
   The default is to count all machine ClassAds.
   When extra slots exist for special purposes,
   as, for example, suspension slots or file transfer slots,
   this expression can be used to inform the \Condor{negotiator} that 
   only normal slots should be counted when computing how big each group's 
   share of the pool should be.
-
-\label{param:NegotiatorStartdConstraintRemove}
-\item[\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}]
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, any ClassAds not satisfying the expression 
-  in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
-  list of \Condor{startd} ClassAds considered for negotiation.
+ 
+  The name \MacroNI{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} replaces
+  \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} as of Condor version 7.7.3.
+  Using the older name causes a warning to be logged, although the
+  behavior is unchanged.
 
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
@@ -6840,6 +6818,13 @@ These macros affect the \Condor{negotiator}.
   if the stashed ClassAd's sequence number is older than its potential
   replacement.
 
+\label{param:NegotiatorUpdateAfterCycle}
+\item[\Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it will force the \Condor{negotiator} daemon to publish 
+  an update to the \Condor{collector} at the end of every negotiation cycle.
+  This is useful if monitoring statistics for the previous negotiation cycle. 
+
 \end{description}
 
 The following configuration macros affect negotiation for group users.
@@ -6912,7 +6897,7 @@ The following configuration macros affect negotiation for group users.
 \item[\Macro{GROUP\_AUTOREGROUP}]
   A boolean value (defaults to \Expr{False}) that when \Expr{True},
   causes users who submitted to a specific group to
-  also negotiate a second time with the \verb@none@ group,
+  also negotiate a second time with the \Expr{<none>} group,
   to be considered with the independent job submitters. 
   This allows group submitted jobs to be matched with idle machines
   even if the group is over its quota.  The user name that is
@@ -6980,6 +6965,32 @@ The following configuration macros affect negotiation for group users.
   When \Expr{True}, the \Condor{negotiator} pays attention to the
   machine ClassAd attribute \Attr{SlotWeight}. 
   When \Expr{False}, each slot effectively has a weight of 1.
+
+%\label{param:GroupSortExpr}
+%\item[\Macro{GROUP\_SORT\_EXPR}]
+%  A classad expression which evaluates to a numeric value that is used
+%  to sort accounting groups to determine which order they negotiate in.
+%  The classad expression for \Macro{GROUP\_SORT\_EXPR} may involve any of
+%  the following:
+%  \begin{itemize}
+%      \item AccountingGroup -- the name of the accounting group
+%      \item GroupQuota -- the resource quota assigned to the group for the current negotiation cycle
+%      \item GroupResourcesAllocated -- the resources allocated to this group by the HGQ algorithm
+%      \item GroupResourcesInUse -- the resources currently in use by jobs associated with this group
+%  \end{itemize}
+%  An example group sorting expression that causes the root group (``<none>'') to always negotiate 
+%  last, and other groups to negotiate in order of quota-based starvation:
+%\begin{verbatim}
+%GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="<none>", 3.4e+38,
+%  ifThenElse(GroupQuota > 0, GroupResourcesInUse/GroupQuota, 3.3e+38))
+%\end{verbatim}
+%  If an expression fails to evaluate to a numeric value for a group, then
+%  that group's sorting value will default to FLT\_MAX (3.40282e+38).
+%  GROUP\_SORT\_EXPR defaults to the backward compatible starvation ratio:
+%\begin{verbatim}
+%GROUP_SORT_EXPR = ifThenElse(GroupResourcesAllocated>0.0,
+%  GroupResourcesInUse/GroupResourcesAllocated, 3.40282e+38)
+%\end{verbatim}
 
 \end{description}
 
@@ -7168,6 +7179,15 @@ These macros affect the \Condor{credd}.
   secure password store.
   Subsequent uses of that password do not require
   communication with the \Condor{credd} daemon.
+  
+\label{param:SkipWindowsLogonNetwork}
+\item[\Macro{SKIP\_WINDOWS\_LOGON\_NETWORK}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Windows authentication skips trying authentication
+  with the \Expr{LOGON\_NETWORK} method first, 
+  and attempts authentication  with \Expr{LOGON\_INTERACTIVE} method. 
+  This can be useful if many authentication failures are noticed, 
+  potentially leading to users getting locked out.
 
 \end{description}
 
@@ -7405,36 +7425,11 @@ These macros affect the \Condor{gridmanager}.
   The necessary Glite software is included with Condor,
   and is required for pbs and lsf jobs.
 
-\label{param:AmazonEC2URL}
-\item[\Macro{AMAZON\_EC2\_URL}]
-  The URL Condor should use when contacting the Amazon EC2 (SOAP) service.
-  This URL may include a user name and password as in the implied
-  syntax example:
-\footnotesize
-\begin{verbatim}
-  protocol://username:password@domain:port/path/to/resource
-\end{verbatim}
-\normalsize
-  The default value is \MacroNI{https://ec2.amazonaws.com/}.
-  This parameter is only used for queued jobs when upgrading to Condor
-  7.5.4 or beyond.
-
-\label{param:AmazonHttpProxy}
-\item[\Macro{AMAZON\_HTTP\_PROXY}]
-  The http proxy that Condor should use when contacting the Amazon EC2 (SOAP)
-  service. The default is to not use a proxy.
-
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
   The complete path and file name of the Condor GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
-
-\label{param:AmazonGAHP}
-\item[\Macro{AMAZON\_GAHP}]
-  The complete path and file name of the Amazon GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/amazon\_gahp}.
 
 \label{param:EC2GAHP}
 \item[\Macro{EC2\_GAHP}]
@@ -7846,8 +7841,10 @@ the HDFS XML configuration.
   configuration.
 
 \label{param:HDFS}
-\item[\Macro{HDFS\_NODETYPE}]
-  A host name, to identify the machine acting as the Name node.
+\item[\Macro{HDFS\_NODETYPE}] This parameter specifies the type of
+  HDFS service provided by this machine.  Possible values are
+  \Expr{HDFS\_NAMENODE} and \Expr{HDFS\_DATANODE}.  The default value
+  is \Expr{HDFS\_DATANODE}.
 
 \label{param:HDFSBackupnode}
 \item[\Macro{HDFS\_BACKUPNODE}]
@@ -9092,6 +9089,27 @@ They specify items related to the \Condor{vm-gahp}.
   For Xen and KVM only, a required string if bridge networking is to be
   enabled.  It specifies the networking interface that vm universe jobs
   will use.
+
+\label{param:LibvirtXmlScript}
+\item[\Macro{LIBVIRT\_XML\_SCRIPT}]
+  For Xen and KVM only, a path and executable specifying a program.
+  When the \Condor{vm-gahp} is ready to start a Xen or KVM 
+  \SubmitCmd{vm} universe job, 
+  it will invoke this program to generate the XML description of 
+  the virtual machine,
+  which it then provides to the virtualization software.
+  The job ClassAd will be provided to this program via standard input. 
+  This program should print the XML to standard output.
+  If this configuration variable is not set,
+  the \Condor{vm-gahp} will generate the XML itself. 
+  The provided script in \File{\MacroUNI{LIBEXEC}/libvirt\_simple\_script.awk} 
+  will generate the same XML that the \Condor{vm-gahp} would.
+
+\label{param:LibvirtXmlScriptArgs}
+\item[\Macro{LIBVIRT\_XML\_SCRIPT\_ARGS}]
+  For Xen and KVM only, the command-line arguments to be given to 
+  the program specified by  \MacroNI{LIBVIRT\_XML\_SCRIPT}. 
+
 \end{description}
 
 The following configuration variables are specific to the VMware
@@ -9867,8 +9885,6 @@ Configuration File Macros Affecting APIs}
   CA will be authenticated.
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
-  This variable is also used when communicating with an Amazon EC2 (SOAP) server
-  (possibly through a proxy), although it is not required in that case.
   There is no default value.
 
 \label{param:SoapSSLDhFile}
@@ -10276,7 +10292,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program to invoke whenever the \Condor{startd}
   wants to fetch work.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
   There is no default.
 
@@ -10286,7 +10302,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program to invoke when the hook defined by
   \MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}  returns data and the the \Condor{startd}
   decides if it is going to accept the fetched job or not.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:HookReplyClaim}
@@ -10294,7 +10310,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program to invoke whenever the \Condor{startd}
   finishes fetching a job and decides what to do with it.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
 
   between sets of hooks.
   There is no default.
@@ -10304,7 +10320,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program invoked by the \Condor{starter} before it
   runs the job.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:HookUpdateJobInfo}
@@ -10328,7 +10344,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   As a Job Router hook,
   the full path to the program invoked when the Job Router polls the status
   of routed jobs at intervals set by \MacroNI{JOB\_ROUTER\_POLLING\_PERIOD}.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \label{param:HookEvictClaim}
@@ -10336,7 +10352,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program to invoke whenever the \Condor{startd}
   needs to evict a fetched claim.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
   There is no default.
 
@@ -10346,7 +10362,16 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked by the \Condor{starter}
   whenever a job exits,
   either on its own or when being evicted from an execution slot. 
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookJobExitTimeout}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}]
+  For the fetch work hooks,
+  the number of seconds the \Condor{starter} will wait for the hook
+  defined by \MacroNI{<Keyword>\_HOOK\_JOB\_EXIT} hook to exit,
+  before continuing with job clean up.  Defaults to 30 seconds.
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:FetchWorkDelay}
@@ -10379,7 +10404,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked when the Job Router has determined
   that a job meets the definition for a route.  
   This hook is responsible for doing the transformation of the job.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \label{param:HookJobFinalize}
@@ -10387,7 +10412,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   A Job Router hook,
   the full path to the program invoked when the Job Router has determined
   that the job completed.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \label{param:HookJobCleanup}
@@ -10395,7 +10420,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   A Job Router hook,
   the full path to the program invoked when the Job Router finishes 
   managing the job.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \end{description}

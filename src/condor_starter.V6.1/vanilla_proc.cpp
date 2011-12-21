@@ -195,7 +195,7 @@ VanillaProc::StartJob()
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
 	//
-	gid_t tracking_gid;
+	gid_t tracking_gid = 0;
 	if (param_boolean("USE_GID_PROCESS_TRACKING", false)) {
 		if (!can_switch_ids() &&
 		    (Starter->condorPrivSepHelper() == NULL))
@@ -301,10 +301,6 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
-#if !defined(WIN32)
-	cancelEscalationTimer();
-#endif
-
 	if (pid == JobPid) {
 			// Make sure that nothing was left behind.
 		daemonCore->Kill_Family(JobPid);
@@ -384,13 +380,6 @@ VanillaProc::ShutdownGraceful()
 	// OsProc::ShutdownGraceful does, so call it.
 	//
 	OsProc::ShutdownGraceful();
-#if !defined(WIN32)
-	if (Starter->remoteStateChanged() == false)
-	{
-		startEscalationTimer();
-	}
-	Starter->resetStateChanged();
-#endif
 	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
 }
 
@@ -412,30 +401,6 @@ VanillaProc::ShutdownFast()
 	// step is to hard kill it.
 	requested_exit = true;
 
-#if !defined(WIN32)
-	int kill_sig = -1;
-
-	// Determine if a custom kill signal is provided in the job
-	kill_sig = findRmKillSig( JobAd );
-	if ( kill_sig == -1 )
-	{
-		kill_sig = findSoftKillSig( JobAd );
-	}
-
-	// If a custom kill signal was given, send that signal to the
-	// job
-	if ( kill_sig != -1 ) {
-		if ( daemonCore->Signal_Process( JobPid, kill_sig ) == FALSE ) {
-			dprintf(D_ALWAYS,
-				"Error: Failed to send signal %d to "
-				"job with pid %u\n", kill_sig, JobPid);
-		}
-		else {
-			startEscalationTimer();
-			return false;
-		}
-	}
-#endif
 	return finishShutdownFast();
 }
 
@@ -452,61 +417,3 @@ VanillaProc::finishShutdownFast()
 
 	return false;	// shutdown is pending, so return false
 }
-
-#if !defined(WIN32)
-bool
-VanillaProc::startEscalationTimer()
-{
-	int job_kill_time = 0;
-	int killing_timeout = param_integer( "KILLING_TIMEOUT", 30 );
-	int escalation_delay;
-
-	if ( m_escalation_tid >= 0 ) {
-		return true;
-	}
-
-	if ( !JobAd->LookupInteger(ATTR_KILL_SIG_TIMEOUT, job_kill_time) ) {
-		job_kill_time = killing_timeout;
-	}
-
-	escalation_delay = std::max(std::min(killing_timeout-1, job_kill_time), 0);
-
-	dprintf(D_FULLDEBUG, "Using escalation delay %d for Escalation Timer\n", escalation_delay);
-	m_escalation_tid = daemonCore->Register_Timer(escalation_delay,
-						escalation_delay,
-						(TimerHandlercpp)&VanillaProc::EscalateSignal,
-						"EscalateSignal", this);
-
-	if ( m_escalation_tid < 0 ) {
-		dprintf(D_ALWAYS, "Error: Unable to register signal esclation timer.  timeout attmepted: %d\n", escalation_delay);
-	}
-	return true;
-}
-
-void
-VanillaProc::cancelEscalationTimer()
-{
-	int rval;
-	if ( m_escalation_tid != -1 ) {
-		rval = daemonCore->Cancel_Timer( m_escalation_tid );
-		if ( rval < 0 ) {
-			dprintf(D_ALWAYS, "Failed to cancel signal escalation "
-					"timer (%d): daemonCore error\n", m_escalation_tid);
-		}
-		else {
-			dprintf(D_FULLDEBUG, "Cancel signal escalation timer (%d)\n", m_escalation_tid);
-		}
-		m_escalation_tid = -1;
-	}
-}
-
-bool
-VanillaProc::EscalateSignal()
-{
-	dprintf(D_FULLDEBUG, "Esclation Timer fired.  Killing job\n");
-	cancelEscalationTimer();
-	finishShutdownFast();
-
-	return true;
-}
-#endif

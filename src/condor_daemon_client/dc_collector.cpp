@@ -179,35 +179,6 @@ DCCollector::reconfig( void )
 		}
 	}
 
-	StringList tcp_collectors;
-
-	switch( up_type ) {
-	case TCP:
-		use_tcp = true;
-		break;
-	case UDP:
-		use_tcp = false;
-		break;
-	case CONFIG:
-		use_tcp = false;
-		tmp = param( "TCP_UPDATE_COLLECTORS" );
-		if( tmp ) {
-			tcp_collectors.initializeFromString( tmp );
-			free( tmp );
- 			if( _name && 
-				tcp_collectors.contains_anycase_withwildcard(_name) )
-			{	
-				use_tcp = true;
-				break;
-			}
-		}
-		use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", use_tcp );
-		if( !hasUDPCommandPort() ) {
-			use_tcp = true;
-		}
-		break;
-	}
-
 		// Blacklist this collector if last failed contact took more
 		// than 1% of the time that has passed since that operation
 		// started.  (i.e. if contact fails quickly, don't worry, but
@@ -227,6 +198,35 @@ DCCollector::reconfig( void )
 void
 DCCollector::parseTCPInfo( void )
 {
+	switch( up_type ) {
+	case TCP:
+		use_tcp = true;
+		break;
+	case UDP:
+		use_tcp = false;
+		break;
+	case CONFIG:
+		use_tcp = false;
+		char *tmp = param( "TCP_UPDATE_COLLECTORS" );
+		if( tmp ) {
+			StringList tcp_collectors;
+
+			tcp_collectors.initializeFromString( tmp );
+			free( tmp );
+ 			if( _name && 
+				tcp_collectors.contains_anycase_withwildcard(_name) )
+			{	
+				use_tcp = true;
+				break;
+			}
+		}
+		use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", use_tcp );
+		if( !hasUDPCommandPort() ) {
+			use_tcp = true;
+		}
+		break;
+	}
+
 	if( tcp_collector_addr ) {
 		delete [] tcp_collector_addr;
 		tcp_collector_addr = NULL;
@@ -331,6 +331,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 				delete [] tcp_collector_addr;
 			}
 			tcp_collector_addr = strnewp( _addr );
+			parseTCPInfo(); // update use_tcp
 			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
 					 _port, _addr );
 		}

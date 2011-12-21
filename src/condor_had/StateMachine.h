@@ -27,9 +27,6 @@
 
 #include "condor_daemon_core.h"
 
-//#undef IS_REPLICATION_USED
-//#define IS_REPLICATION_USED
-
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define SEND_COMMAND_TIMEOUT (5) // 5 seconds
 

@@ -47,6 +47,8 @@
 #include "basename.h"
 #include "MyString.h"
 
+#include "internet_obsolete.h"
+#include "ipv6_hostname.h"
 
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
@@ -148,7 +150,6 @@ int
 pseudo_shell( char *command, int /*len*/ )
 {
 	int rval;
-	char *tmp;
 	int terrno;
 
 	dprintf( D_SYSCALLS, "\tcommand = \"%s\"\n", command );
@@ -157,8 +158,7 @@ pseudo_shell( char *command, int /*len*/ )
 		a big security hole, so by default, if this is not
 		defined by the condor admin, do NOT run the command. */
 
-	tmp = param("SHADOW_ALLOW_UNSAFE_REMOTE_EXEC");
-	if (tmp == NULL || (tmp[0] != 'T' && tmp[0] != 't')) {
+	if (param_boolean_crufty("SHADOW_ALLOW_UNSAFE_REMOTE_EXEC", false)) {
 		dprintf(D_SYSCALLS, 
 			"\tThe CONDOR_shell remote system call is currently disabled.\n");
 		dprintf(D_SYSCALLS, 
@@ -171,12 +171,9 @@ pseudo_shell( char *command, int /*len*/ )
 	rval = -1;
 	errno = ENOSYS;
 
-	if (tmp[0] == 'T' || tmp[0] == 't') {
-		rval = system(command);
-	}
+	rval = system(command);
 	
 	terrno = errno;
-	free(tmp);
 	errno = terrno;
 
 	return rval;
@@ -1102,7 +1099,10 @@ create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 void
 get_host_addr( unsigned int *ip_addr )
 {
-	*ip_addr = my_ip_addr();
+	// [TODO:IPV6]
+	condor_sockaddr myaddr = get_local_ipaddr();
+	sockaddr_in saddr = myaddr.to_sin();
+	*ip_addr = ntohl(saddr.sin_addr.s_addr);
 	display_ip_addr( *ip_addr );
 }
 
@@ -2119,14 +2119,11 @@ int
 pseudo_register_ckpt_server(const char *host)
 {
 	if (StarterChoosesCkptServer) {
-		char *use_ckpt_server = param( "USE_CKPT_SERVER" );
-		if (!use_ckpt_server ||
-			(use_ckpt_server[0] != 'F' && use_ckpt_server[0] != 'f')) {
+		if (param_boolean_crufty("USE_CKPT_SERVER", true)) {
 			if (CkptServerHost) free(CkptServerHost);
 			CkptServerHost = strdup(host);
 			UseCkptServer = TRUE;
 		}
-		if (use_ckpt_server) free(use_ckpt_server);
 	}
 
 	return 0;

@@ -34,6 +34,7 @@ Chirp C Client
 /* Sockets */
 #if defined(WIN32)
 	#include <winsock2.h>
+	#include <ws2tcpip.h>
 	#include <windows.h>
 	#include <io.h>
 	#include <fcntl.h>
@@ -987,31 +988,43 @@ void chirp_fatal_response()
 static SOCKET
 tcp_connect( const char *host, int port )
 {
-	struct hostent *h;
-	struct sockaddr_in address;
+	struct addrinfo* result = 0;
 	int success;
 	SOCKET fd;
+	union {
+		struct sockaddr_in6 v6;
+		struct sockaddr_in v4;
+		struct sockaddr_storage storage;
+	} sa;
 
 	if(!initialize_sockets())
 		return INVALID_SOCKET;
+		success = getaddrinfo(host, NULL, NULL, &result);
 
-	h = gethostbyname(host);
-	if(!h) return INVALID_SOCKET;
+	memcpy(&sa.storage, result->ai_addr, result->ai_addrlen );
+	switch(result->ai_family) {
+		case AF_INET: sa.v4.sin_port = htons(port); break;
+		case AF_INET6: sa.v6.sin6_port = htons(port); break;
+		default: return INVALID_SOCKET;
+	}
 
-	address.sin_port = htons((unsigned short)port);
-	address.sin_family = h->h_addrtype;
-	memcpy(&address.sin_addr.s_addr,h->h_addr_list[0],sizeof(address.sin_addr.s_addr));
+	if (success != 0)
+		return INVALID_SOCKET;
+
+	if (result == NULL)
+		return INVALID_SOCKET;
 
 #if defined(WIN32)
 	// Create the socket with no overlapped I/0 so we can later associate the socket
 	// with a valid file descripter using _open_osfhandle.
-	fd = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, 0);
+	fd = WSASocket(result->ai_family, SOCK_STREAM, 0, NULL, 0, 0);
 #else
-	fd = socket( AF_INET, SOCK_STREAM, 0 );
+	fd = socket( result->ai_family, SOCK_STREAM, 0 );
 #endif
 	if(fd == INVALID_SOCKET) return INVALID_SOCKET;
 
-	success = connect( fd, (struct sockaddr *) &address, sizeof(address) );
+	success = connect( fd, (struct sockaddr*)&sa.storage, result->ai_addrlen );
+	freeaddrinfo(result);
 	if(success == SOCKET_ERROR) {
 		closesocket(fd);
 		return INVALID_SOCKET;

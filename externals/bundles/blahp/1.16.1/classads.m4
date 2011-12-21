@@ -16,7 +16,7 @@ AC_DEFUN(AC_CLASSADS,
     AC_MSG_CHECKING([for CLASSAD installation])
 
     CLASSAD_CFLAGS=""
-    CLASSAD_LIBS="-lclassad -lpcre"
+    CLASSAD_LIBS="-lclassad -lpcre -Wl,--enable-new-dtags"
     CLASSAD_DL_LIBS="-lclassad_dl"
     if test -n "$with_classads_prefix" -a "$with_classads_prefix" != "/usr" ; then
             AC_MSG_RESULT([prefix: $with_classads_prefix])

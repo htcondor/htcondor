@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log_transaction.h"
 #include "log.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
@@ -1227,7 +1226,12 @@ QmgmtSetEffectiveOwner(char const *o)
 	}
 
 	char const *real_owner = Q_SOCK->getRealOwner();
-	if( o && real_owner && strcmp(o,real_owner)==0 ) {
+	if( o && real_owner && is_same_user(o,real_owner,COMPARE_DOMAIN_DEFAULT) ) {
+		if ( ! is_same_user(o,real_owner,COMPARE_DOMAIN_FULL)) {
+			dprintf(D_SECURITY, "SetEffectiveOwner security warning: "
+					"assuming \"%s\" is the same as active owner \"%s\"\n",
+					o, real_owner);
+		}
 		// change effective owner --> real owner
 		o = NULL;
 	}
@@ -1243,6 +1247,9 @@ QmgmtSetEffectiveOwner(char const *o)
 		if( !isQueueSuperUser(real_owner) ||
 			!SuperUserAllowedToSetOwnerTo( o ) )
 		{
+			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
+					"setting owner to %s when active owner is \"%s\"\n",
+					o, real_owner ? real_owner : "(null)" );
 			errno = EACCES;
 			return -1;
 		}
@@ -3888,6 +3895,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			free(new_value);
 		}
 	}
+	free(SpoolSpace);
 	return true;
 }
 

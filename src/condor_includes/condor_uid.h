@@ -121,6 +121,16 @@ const char* get_real_username(void);
 const char* get_condor_username(void);
 void display_priv_log(void);
 
+typedef enum {
+   COMPARE_DOMAIN_DEFAULT=0,  // use default flags options for username compare
+   COMPARE_IGNORE_DOMAIN,    // compare users only, ingnore domains
+   COMPARE_DOMAIN_PREFIX,    // compare users & domains, allow one domain to be a prefix of the other
+   COMPARE_DOMAIN_FULL,      // usernames and domains must be the same (domain is case-insensitive)
+   COMPARE_MASK = 0x0F,      // mask to strip compare type from options
+   ASSUME_UID_DOMAIN = 0x10, // if this bit is set, assume UID_DOMAIN when domain is unspecified.
+   } CompareUsersOpt;
+bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
+
 #if defined(__cplusplus)
 }
 #endif

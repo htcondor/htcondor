@@ -105,7 +105,7 @@ for ($i=0; $i < sizeof($info); $i++) {
     sort($names);
     $list = "<table><tr><th>Committer</th><th>Count</th></tr>\n";
     foreach ($names AS $name) {
-      $list .= "<tr><td>" . htmlspecialchars($name) . "</td><td style='text-align:center'>" . htmlspecialchars($authors[$name]["count"]) . "</td></tr>";
+      $list .= "<tr><td>" . htmlspecialchars($name) . "</td><td>" . htmlspecialchars($authors[$name]["count"]) . "</td></tr>";
     }
     $list .= "</table>";
 

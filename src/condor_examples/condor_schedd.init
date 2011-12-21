@@ -23,6 +23,10 @@ pidfile=/var/run/condor/$prog.pid
 
 
 start() {
+    pid_status $pidfile
+    if [ $? -ne 0 ]; then
+        rm -f $pidfile
+    fi
     daemon --pidfile $pidfile --check $prog $prog -pidfile $pidfile
     RETVAL=$?
     return $RETVAL

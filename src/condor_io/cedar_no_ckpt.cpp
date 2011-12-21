@@ -705,7 +705,7 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     sock->encode();
     
     //send size of data to send
-    stat = sock->code( (int &)size );
+    stat = sock->put( (int)size );
     
     
     //if successful, send the data

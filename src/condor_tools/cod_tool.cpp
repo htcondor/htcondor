@@ -64,9 +64,8 @@ int lease_time = -1;
 bool needs_id = true;
 VacateType vacate_type = VACATE_GRACEFUL;
 
-
 // protoypes of interest
-void usage( const char* );
+void usage( const char*, int iExitCode=1 );
 void version( void );
 void invalid( const char* opt );
 void ambiguous( const char* opt );
@@ -620,6 +619,7 @@ void
 parseArgv( int argc, char* argv[] )
 {
 	char** tmp = argv;
+	param_functions *p_funcs = NULL;
 
 	for( tmp++; *tmp; tmp++ ) {
 		if( (*tmp)[0] != '-' ) {
@@ -643,7 +643,7 @@ parseArgv( int argc, char* argv[] )
 			if( strncmp("-help", *tmp, strlen(*tmp)) ) {
 				invalid( *tmp );
 			} 
-			usage( my_name );
+			usage( my_name, 0);
 			break;
 
 		case 'd':
@@ -651,7 +651,8 @@ parseArgv( int argc, char* argv[] )
 				invalid( *tmp );
 			} 
 			Termlog = 1;
-			dprintf_config ("TOOL");
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 			break;
 
 		case 'a':
@@ -941,7 +942,7 @@ printFast( void )
 
 
 void
-usage( const char *str )
+usage( const char *str, int iExitCode )
 {
 	bool has_cmd_opt = true;
 	bool needsID = true;
@@ -1049,7 +1050,7 @@ usage( const char *str )
 	}
 
 	fprintf(stderr, "\n" );
-	exit( 1 );
+	exit( iExitCode );
 }
 
 

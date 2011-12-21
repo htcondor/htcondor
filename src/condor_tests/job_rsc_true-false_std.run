@@ -20,6 +20,7 @@
 
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_rsc_true-false_std.cmd';
 $testdesc =  'remote io true/false Test';
@@ -31,7 +32,7 @@ $filenm = "/tmp/job_rsc_true-false_std.$$";
 	open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
 	while(<CMD>)
 	{
-		CondorTest::fullchomp();
+		CondorUtils::fullchomp();
 		$line = $_;
 		if($line =~ /\s*arguments\s*=.*$/)
 		{

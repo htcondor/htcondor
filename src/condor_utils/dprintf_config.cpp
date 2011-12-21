@@ -24,11 +24,17 @@
 **	Set up the various dprintf variables based on the configuration file.
 **
 ************************************************************************/
+
+// This needs to precede all of our includes so that the off_t used in
+// dprintf_internal.h is 64 bits on 32-bit linuxes. Otherwise, we can't
+// deal with logs larger than 2GB.
 #define _FILE_OFFSET_BITS 64
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h" 
 #include "condor_sys_types.h"
+#include "dprintf_internal.h"
 
 #if HAVE_BACKTRACE
 #include "sig_install.h"
@@ -38,9 +44,7 @@ int		Termlog = 0;
 
 extern int		DebugFlags;
 extern FILE		*DebugFPs[D_NUMLEVELS+1];
-extern off_t		MaxLog[D_NUMLEVELS+1];
-extern int 			MaxLogNum[D_NUMLEVELS+1];
-extern char		*DebugFile[D_NUMLEVELS+1];
+extern std::vector<DebugFileInfo> *DebugLogs;
 extern char		*DebugLock;
 extern const char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
@@ -51,6 +55,9 @@ extern int		log_keep_open;
 
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
+extern bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
+
+param_functions *dprintf_param_funcs = NULL;
 
 #if HAVE_EXT_GCB
 void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
@@ -96,15 +103,33 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 void
-dprintf_config( const char *subsys )
+dprintf_config( const char *subsys, param_functions *p_funcs )
 {
 	char pname[ BUFSIZ ];
 	char *pval;
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;
-	FILE *debug_file_fp;
 	int log_open_default = TRUE;
+	std::vector<DebugFileInfo> *debugLogsOld = DebugLogs;
+	bool debug_zero = false;	//This indicates whether debug level zero has been initialized.
+	
+
+	DebugLogs = new std::vector<DebugFileInfo>();
+	if(!dprintf_param_funcs)
+		dprintf_param_funcs = new param_functions();
+
+	/*
+	 * The duplication of the param_function instance is to ensure no one else can change
+	 * the data structure out from under dprintf.  It is also to prevent transfer of ownership/
+	 * responsibility for the block of memory used to store the function pointers.
+	 */
+	if(p_funcs)
+	{
+		dprintf_param_funcs->set_param_func(p_funcs->get_param_func());
+		dprintf_param_funcs->set_param_bool_int_func(p_funcs->get_param_bool_int_func());
+		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
+	}
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -116,7 +141,7 @@ dprintf_config( const char *subsys )
 	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
-	pval = param("ALL_DEBUG");
+	pval = dprintf_param_funcs->param("ALL_DEBUG");
 	if( pval ) {
 		_condor_set_debug_flags( pval );
 		free( pval );
@@ -127,7 +152,7 @@ dprintf_config( const char *subsys )
 	**  anything set, we just leave it as D_ALWAYS.
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
-	pval = param(pname);
+	pval = dprintf_param_funcs->param(pname);
 	if( pval ) {
 		_condor_set_debug_flags( pval );
 		free( pval );
@@ -141,7 +166,7 @@ dprintf_config( const char *subsys )
 		 */
 	DebugShouldLockToAppend = 1;
 #else
-	DebugShouldLockToAppend = param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugShouldLockToAppend = dprintf_param_funcs->param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
 #endif
 
 	/*
@@ -150,7 +175,9 @@ dprintf_config( const char *subsys )
 	**	lock file (if it is specified).
 	*/
 	if( !( Termlog) ) {
+		std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
 		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+			std::string logPath;
 			want_truncate = 0;
 			if (debug_level == 0) {
 				/*
@@ -168,19 +195,16 @@ dprintf_config( const char *subsys )
 			// Hold a temporary copy of the old file pointer until
 			// *after* the param -- param can dprintf() in some cases
 			{
-				char	*tmp = DebugFile[debug_level];
-
 				// NEGOTIATOR_MATCH_LOG is necessary by default, but debug_level
 				// is not 0
+				char *logPathParam = NULL;
+				bool file_found = false;
 				if(debug_level == 0)
 				{
-					char	*tmp2 = param(pname);
+					logPathParam = param(pname);
 
 					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
-					if(!tmp2) {
-						// This char* will never be freed, but as long as
-						// defaults are defined in condor_c++_util/param_info.in
-						// we will never get here.
+					if(!logPathParam) {
 						char *str;
 						char *log = param("LOG");
 						char *lsubsys = param("SUBSYSTEM");
@@ -188,38 +212,64 @@ dprintf_config( const char *subsys )
 							EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
 						}
 						
-						str = (char*)malloc(strlen(log) + strlen(lsubsys) + 5);
-						sprintf(str, "%s%c%sLog", log, DIR_DELIM_CHAR, lsubsys);
-						
-						DebugFile[debug_level] = str;
+						sprintf(logPath, "%s%c%sLog", log, DIR_DELIM_CHAR, lsubsys);
 
 						free(log);
 						free(lsubsys);
 					}
 					else {
-						DebugFile[debug_level] = tmp2;
+						logPath.insert(0, logPathParam);
 					}
 				}
 				else {
 					// This is looking up configuration options that I can't
-					// find documentation for, so intead of coding in an
+					// find documentation for, so instead of coding in an
 					// incorrect default value, I'm gonna use 
 					// param_without_default.
 					// tristan 5/29/09
-					DebugFile[debug_level] = param_without_default(pname);
+					logPathParam = param_without_default(pname);
+					if(logPathParam)
+						logPath.insert(0, logPathParam);
 				}
-				if ( tmp ) {
-					free( tmp );
+
+				if(!logPath.empty())
+				{
+					if(!DebugLogs->empty())
+					{
+						for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+						{
+							if(it->logPath != logPath)
+								continue;
+							it->debugFlags |= debug_level;
+							file_found = true;
+							break;
+						}
+					}
+					if(!file_found)
+					{
+						DebugFileInfo logFileInfo;
+						logFileInfo.debugFlags = debug_level;
+						logFileInfo.logPath = logPath;
+						it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
+					}
+				}
+
+				if(logPathParam)
+				{
+					free(logPathParam);
+					logPathParam = NULL;
 				}
 			}
 
-			if( debug_level == 0 && DebugFile[0] == NULL ) {
+			debug_zero = true;
+
+			if( debug_level == 0 && !debug_zero ) {
 				EXCEPT("No '%s' parameter specified.", pname);
-			} else if ( DebugFile[debug_level] != NULL ) {
+			} else if ( !logPath.empty() ) {
 
 				if (debug_level == 0 && first_time) {
 					struct stat stat_buf;
-					if ( stat( DebugFile[debug_level], &stat_buf ) >= 0 ) {
+					if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
 						DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
 					} else {
 						DebugLastMod = -errno;
@@ -242,39 +292,27 @@ dprintf_config( const char *subsys )
 					DebugLock = param(pname);
 				}
 
-				if( first_time && want_truncate ) {
-					debug_file_fp = debug_lock(debug_level, "wN", 0);
-				} else {
-					debug_file_fp = debug_lock(debug_level, "aN", 0);
-				}
-
-				if( debug_file_fp == NULL && debug_level == 0 ) {
-                   #ifdef WIN32
+				// check to see if we can open the log file.
+				bool dont_panic = true;
+				bool fOk = debug_check_it(*it, (first_time && want_truncate), dont_panic);
+				if( ! fOk && debug_level == 0 ) {
+			       #ifdef WIN32
 					/*
 					** If we could not open the log file, we might want to keep running anyway.
 					** If we do, then set the log filename to NUL so we don't keep trying
 					** (and failing) to open the file.
 					*/
 					if (DebugContinueOnOpenFailure) {
-
+			
 						// change the debug file to point to the NUL device.
-						static const char strDevNull[] = "NUL";//"\\\\.\\Device\\Null";
-						char * psz = (char*)malloc(sizeof(strDevNull));
-						strcpy(psz, strDevNull);
-						if (DebugFile[debug_level]) 
-							free(DebugFile[debug_level]);
-						DebugFile[debug_level] = psz;
+						it->logPath.insert(0, NULL_FILE);
 
 					} else
-                   #endif
+			       #endif
 					{
-					    EXCEPT("Cannot open log file '%s'",
-						       DebugFile[debug_level]);
+					    EXCEPT("Cannot open log file '%s'", logPath.c_str());
 					}
 				}
-
-				if (debug_file_fp) (void)debug_unlock( debug_level );
-				debug_file_fp = NULL;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "MAX_%s_LOG", subsys);
@@ -291,10 +329,10 @@ dprintf_config( const char *subsys )
                     if (!r || (maxlog < 0)) {
                         EXCEPT("Invalid config: %s = %s", pname, pval);
                     }
-                    MaxLog[debug_level] = maxlog;
+                    it->maxLog = maxlog;
 					free(pval);
 				} else {
-					MaxLog[debug_level] = 1024*1024;
+					it->maxLog = 1024*1024;
 				}
 				
 				if (debug_level == 0) {
@@ -303,7 +341,14 @@ dprintf_config( const char *subsys )
 					(void)sprintf(pname, "MAX_NUM_%s_%s_LOG", subsys,
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
-                MaxLogNum[debug_level] = param_integer(pname, 1, 0);
+
+				pval = param(pname);
+				if (pval != NULL) {
+					it->maxLogNum = param_integer(pname, 1, 0);
+					free(pval);
+				} else {
+					it->maxLogNum = 1;
+				}
 			}
 		}
 	} else {
@@ -325,7 +370,7 @@ dprintf_config( const char *subsys )
 
 	if(!DebugLock) {
 		sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
-		log_keep_open = param_boolean_int(pname, log_open_default);
+		log_keep_open = dprintf_param_funcs->param_boolean_int(pname, log_open_default);
 	}
 
 	first_time = 0;
@@ -336,7 +381,7 @@ dprintf_config( const char *subsys )
 		  try to param() or call this function unless we're on a
 		  platform where we're using the GCB external
 		*/
-    if ( param_boolean_int("NET_REMAP_ENABLE", 0) ) {
+    if ( dprintf_param_funcs->param_boolean_int("NET_REMAP_ENABLE", 0) ) {
         Generic_set_log_va(_condor_gcb_dprintf_va);
     }
 #endif
@@ -345,11 +390,16 @@ dprintf_config( const char *subsys )
 		  If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 		  instead of the standard date format in all the log messages
 		*/
-	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	DebugUseTimestamps = dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
 
 #if HAVE_BACKTRACE
 	install_backtrace_handler();
 #endif
+
+	if(debugLogsOld)
+	{
+		delete debugLogsOld;
+	}
 
 	_condor_dprintf_saved_lines();
 }

@@ -18,9 +18,11 @@
 ##
 ##**************************************************************
 
-use CondorTest;
 use strict;
 use warnings;
+
+use CondorTest;
+use CondorUtils;
 
 my $cmd = "job_core_compressfiles_std.cmd";
 my $input = "job_core_compressfiles_std.data";
@@ -49,14 +51,14 @@ my $ExitSuccess = sub {
 	# load up inputs in order
 	while(<IN>)
 	{
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		push @input, $_; # add to beginning
 	}
 	close(IN);
 	while(<OUT>)
 	{
 		my $in = shift @input;
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		if( $in ne $_ )
 		{
 			die "Input and output vary! $in ne $_\n";

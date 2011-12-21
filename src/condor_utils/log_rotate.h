@@ -30,7 +30,7 @@ int doalphasort(const void *a, const void *b);
 
  
 /** set the base name for the log file, i.e. the basic daemon log filename w/ path*/
-void setBaseName(char *baseName);
+void setBaseName(const char *baseName);
 
 int rotateSingle(void);
 

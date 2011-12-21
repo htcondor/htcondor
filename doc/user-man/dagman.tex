@@ -615,7 +615,7 @@ for \Condor{dagman}.
 An additional restriction applies to the submit description file
 command \SubmitCmd{Log} specific to a Condor job within
 a DAG node.
-This command may not be defined in such a way that it uses macros.
+\emph{This command may not be defined in such a way that it uses macros.}
 Using a macro would violate the restriction that there be exactly
 one log file specified for the potentially multiple jobs 
 within a single cluster.
@@ -1196,13 +1196,15 @@ DAG
 \end{verbatim}
 \normalsize
 
-This will cause node C to be submitted before node B (normally, node B
-would be submitted first).
+This will cause node C to be submitted before node B.
+Without this priority setting for node C, node B would be submitted first.
 
-Priorities are propogated to children, to SUBDAGs, and to the Condor job itself,
-via the \Attr{JobPrio} attribute in the job's ClassAd. The priority is defined to
-be the maximum of the DAG PRIORITY directive for the job itself and the PRIORITYs
-of all its parents. Here is an example to clarify:
+Priorities are propagated to children, to SUBDAGs, 
+and to the Condor job itself,
+via the \Attr{JobPrio} attribute in the job's ClassAd. 
+The priority is defined to be the maximum of the DAG PRIORITY directive 
+for the job itself and the PRIORITYs of all its parents. 
+Here is an example to clarify:
 
 \footnotesize
 \begin{verbatim}
@@ -1221,18 +1223,28 @@ PRIORITY D 100
 \end{verbatim}
 \normalsize
 
-In this example, node B is a child of nodes A and C. \textit{a priori}, the
-priority of node B is 0, but gets assigned priority 60 because that is the
-maximum of the priorities of its parents. Node D is a child of node C only:
-since the declared priority of node D is at least as big as that of node C,
-node D is assigned a priority of 100; all nodes in the D subdag will have
-priority at least 100.  This priority is assigned by DAGman; there is not a way
-to change the priority in the condor submit file for a job, as DAGman will
-override any such \AdAttr{priority} directives in the submit file. This means
-that for DAGs with a large number of edges (representing dependencies), the
-priorities of child nodes far from the root nodes will tend to be homogeneous.
-The priorities of a tree, or DAGs with a relatively small number of
-dependencies, will tend to have varying priorities.
+In this example, node B is a child of nodes A and C. 
+Node B's priority is initially set to 0,
+but its priority becomes 60,
+because that is the maximum of its initial priority of 0,
+and the priorities of its parents
+A with priority 60 and C with priority 5.
+Node D has only parent node C.
+Since the priority of node D will become at least as big as that of 
+its parent node C,
+node D is assigned a priority of 100.
+And, all nodes in the D SUBDAG will have priority at least 100.
+This priority is assigned by DAGMan.
+There is no way to change the priority in the submit description file for a job,
+as DAGMan will override any \SubmitCmd{priority} command placed
+in a submit description file.
+The implication of this priority propagation is
+that for DAGs with a large number of edges (representing dependencies), 
+the priorities of child nodes far from the root nodes 
+will tend to be the same.
+The priorities of the leaf nodes of a tree-shaped DAG,
+or of DAGs with a relatively small number of dependencies,
+will \emph{not} tend to be the same.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}
@@ -2809,7 +2821,7 @@ This submit description file might appear as
   # file common.submit
   universe = vanilla
   executable = /path/to/executable
-  log = job$(runnumber).log
+  log = wholeDAG.log
   input = job$(runnumber).in
   output = job$(runnumber).out
   notification = Never
@@ -2817,9 +2829,13 @@ This submit description file might appear as
   queue
 \end{verbatim}
 The job with \Expr{runnumber="8"} expects to find its input file \File{job8.in} 
-in the single, common directory, and it logs job events in \File{job8.log}
-and sends its output to \File{job8.out}.
-The executable is invoked with
+in the single, common directory, and it 
+sends its output to \File{job8.out}.
+The single log for all job events of the entire DAG is \File{wholeDAG.log}.
+Using one file for the entire DAG meets the limitation that no macro
+substitution may be specified for the job log file, 
+and it is likely more efficient as well. 
+This node's executable is invoked with
 \begin{verbatim}
   /path/to/executable -8
 \end{verbatim}

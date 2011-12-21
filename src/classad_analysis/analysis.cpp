@@ -248,7 +248,6 @@ bool ClassAdAnalyzer::
 AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 {
 	ResourceGroup     rg;
-    classad::ClassAd  *converted_classad;
     classad::ClassAd  *explicit_classad;
     bool              success;
 
@@ -259,13 +258,7 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 		return true;
 	}
 
-    converted_classad = toNewClassAd( request );
-	if( converted_classad == NULL ) {
-		buffer += "Unable to process job ClassAd";
-		buffer += "\n";
-		return true;
-	}
-    explicit_classad  = AddExplicitTargets( converted_classad );
+	explicit_classad  = AddExplicitTargets( request );
 
     ensure_result_initialized(explicit_classad);
     
@@ -273,9 +266,7 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
     offers.Rewind();
     ClassAd *ad;
     while((ad = offers.Next())) {
-      classad::ClassAd *new_ad = toNewClassAd(ad);
-      result_add_machine(*new_ad);
-      delete new_ad;
+      result_add_machine(*ad);
 
       if (do_basic_analysis) {
 	BasicAnalyze(request, ad);
@@ -284,7 +275,6 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
 
 	success = AnalyzeJobReqToBuffer( explicit_classad, rg, buffer );
 
-    delete converted_classad;
     delete explicit_classad;
     return success;
 }
@@ -313,7 +303,6 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 						 string &buffer )
 {
 	ResourceGroup     rg;
-    classad::ClassAd  *converted_classad;
     classad::ClassAd  *explicit_classad;
     bool              success;
 
@@ -324,17 +313,10 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 		return true;
 	}
 
-    converted_classad = toNewClassAd( request );
-	if( converted_classad == NULL ) {
-		buffer += "Unable to process job ClassAd";
-		buffer += "\n";
-		return true;
-	}
-    explicit_classad  = AddExplicitTargets( converted_classad );
+	explicit_classad  = AddExplicitTargets( request );
     ensure_result_initialized(explicit_classad);
 	success = AnalyzeJobAttrsToBuffer( explicit_classad, rg, buffer );
 
-    delete converted_classad;
     delete explicit_classad;
     return success;
 }
@@ -938,14 +920,8 @@ MakeResourceGroup( ClassAdList &caList, ResourceGroup &rg )
         classad::ClassAd *converted_classad;
         classad::ClassAd *explicit_classad;
 
-        converted_classad = toNewClassAd(ad);
-		if( converted_classad == NULL ) {
-				// could not convert to new ClassAd (parse error)
-			return false;
-		}
-        explicit_classad  = AddExplicitTargets(converted_classad);
+		explicit_classad  = AddExplicitTargets(ad);
 		newList.Append(explicit_classad);
-        delete converted_classad;
 		ad = caList.Next( );
 	}
 	if( !rg.Init( newList ) ) {
@@ -1962,7 +1938,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	currentABV = NULL;
 	hrs = NULL;
 	currHR = NULL;
-	AnnotatedBoolVector *bestABV = NULL;
 	HyperRect *bestHR = NULL;
 	IndexSet hasContext;
 	IndexSet hasMachine;
@@ -1980,7 +1955,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			hasMachine.GetCardinality( currNumContexts );
 			if( currNumContexts > maxNumContexts ) {
 				maxNumContexts = currNumContexts;
-				bestABV = currentABV;
 				bestHR = currHR;
 			}
 		}

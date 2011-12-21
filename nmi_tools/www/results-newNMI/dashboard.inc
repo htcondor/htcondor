@@ -7,7 +7,7 @@ define("ONEOFFS_URL", "./one-offs.php");
 define("QUEUE_DEPTH_URL", "./nmi-status.php");
 
 define("BRANCH_URL", "./branch.php?branch=%s&user=%s");
-define("DETAIL_URL", "./run-details.php?runid=%s&type=%s&user=%s");
+define("DETAIL_URL", "./run-details.php?runid=%s");
 define("CROSS_DETAIL_URL", "./xtest-summary.php?runid=%s&type=%s&user=%s");
 
 define("GITSHA1","http://condor-git.cs.wisc.edu/?p=condor.git;a=commit;h=%s");
@@ -245,7 +245,7 @@ function get_results($dash, $info, $runid, $user, $run_result) {
       $detail_url = sprintf(CROSS_DETAIL_URL, $runid, $type, $user);
     }
     else {
-      $detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
+      $detail_url = sprintf(DETAIL_URL, $runid);
     }
     
     //

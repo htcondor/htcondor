@@ -299,7 +299,7 @@ sysapi_translate_arch( const char *machine, const char *)
 	}
 	else {
 			// Unknown, just use what uname gave:
-		sprintf( tmp, machine );
+		sprintf( tmp, "%s", machine );
 	}
 
 	tmparch = strdup( tmp );

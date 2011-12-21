@@ -173,6 +173,8 @@ class UniShadow : public BaseShadow
 
  private:
 	RemoteResource *remRes;
+
+	void requestJobRemoval();
 };
 
 #endif

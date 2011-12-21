@@ -54,7 +54,7 @@ void CompleteRecording ( long numberOfBytes );
 */
 void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
-int do_connect ( const char *host, u_short port );
+int do_connect ( const char *host, const char *service, u_short port );
 int udp_connect ( char *host, u_short port );
 void dprintf ( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 FILE *debug_lock(int debug_level, const char *mode, int force_lock);

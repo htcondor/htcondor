@@ -175,7 +175,7 @@ utilToSinful( char* address )
 	}
 	MyString sinfulString;
 
-    sinfulString.sprintf( "<%s:%d>", ipAddress, port );
+	sinfulString = generate_sinful(ipAddress, port);
     free( ipAddress );
     
     return strdup( sinfulString.Value( ) );

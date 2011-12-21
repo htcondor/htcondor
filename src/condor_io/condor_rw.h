@@ -28,6 +28,6 @@
 int condor_read(char const *peer_description,SOCKET fd, char *buf, int sz, int timeout, int flags=0);
 
 
-int condor_write(char const *peer_description,SOCKET fd, char *buf, int sz, int timeout, int flags=0);
+int condor_write(char const *peer_description,SOCKET fd, const char *buf, int sz, int timeout, int flags=0);
 
 #endif

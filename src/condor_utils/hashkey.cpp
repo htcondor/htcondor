@@ -24,6 +24,7 @@
 #include "HashTable.h"
 #include "hashkey.h"
 #include "condor_attributes.h"
+#include "internet.h"
 
 #ifndef WIN32
 #include <netinet/in.h>
@@ -163,10 +164,13 @@ getIpAddr( const char *ad_type,
 	}
 
 	// If no valid string, do our own thing..
-	if ( ( tmp.Length() == 0 ) || ( !parseIpPort( tmp, ip ) )  ) {
+	char* host;
+	if ( ( tmp.Length() == 0 ) || (host = getHostFromAddr(tmp.Value())) == NULL  ) {
 		dprintf (D_ALWAYS, "%sAd: Invalid IP address in classAd\n", ad_type );
 		return false;
 	}
+	ip = host;
+	free(host);
 
 	return true;
 }

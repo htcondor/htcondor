@@ -164,20 +164,11 @@ initial_bookeeping( int /* argc */, char *argv[] )
 void
 init_logging()
 {
-	int		is_local = TRUE;
 	char	*pval;
-	
-	pval = param( "STARTER_LOCAL_LOGGING" );
-	if( pval ) {
-		if( pval[0] == 'f' || pval[0] == 'F' ) {
-			is_local=FALSE;
-		}
-		free( pval );
-	}
 
-	if( is_local ) {
+	if( param_boolean_crufty( "STARTER_LOCAL_LOGGING", true ) ) {
 			// Use regular, local logging.
-		dprintf_config( get_mySubSystem()->getName() );// Log file on local machine 
+		dprintf_config( get_mySubSystem()->getName(), get_param_functions() );// Log file on local machine 
 	} else {
 			// Set up to do logging through the shadow
 		close( fileno(stderr) );
@@ -232,7 +223,7 @@ NewConnection( int id )
 	SyscallStream->end_of_message();
 
 		// Create the sinful string we want to connect back to.
-	sprintf( addr, "<%s:%d>", SyscallStream->peer_ip_str(), portno );
+	generate_sinful(addr, 128, SyscallStream->peer_ip_str(), portno );
 	dprintf( D_FULLDEBUG, "New Socket address: %s\n", addr );	
 	if( ! reli->connect(addr, 0) ) {
 		EXCEPT( "Can't connect to shadow at %s", addr );	
@@ -299,14 +290,8 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 		/* check to see if there is an entry in the passwd file for this uid */
 		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
-			char *want_soft = NULL;
-	
-			if ( (want_soft=param("SOFT_UID_DOMAIN")) == NULL || 
-				 (*want_soft != 'T' && *want_soft != 't') ) {
+			if ( param_boolean_crufty("SOFT_UID_DOMAIN", false) ) {
 			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
-			}
-			if ( want_soft ) {
-				free(want_soft);
 			}
 		}
 		(void)endpwent();

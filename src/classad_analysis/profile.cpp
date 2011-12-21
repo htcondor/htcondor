@@ -32,13 +32,13 @@ Profile::
 }
 
 bool Profile::
-AddCondition( Condition &c )
+AddCondition( Condition & )
 {
 	return true;
 }
 
 bool Profile::
-RemoveCondition( Condition &c )
+RemoveCondition( Condition & )
 {
 	return true;
 }

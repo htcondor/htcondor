@@ -100,7 +100,7 @@ $failure = sub
 		# value for post script.... Then run rescue dag.
 		while(<RESCUE>)
 		{
-			CondorTest::fullchomp($_);
+			CondorUtils::fullchomp($_);
 			$line = $_;
 			if( $line =~ /^#\s+(\d+)\s+of\s+(\d+)/ )
 			{

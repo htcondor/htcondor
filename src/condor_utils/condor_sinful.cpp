@@ -187,7 +187,24 @@ Sinful::Sinful(char const *sinful)
 
 		if( *sinful != '<' ) {
 			m_sinful = "<";
-			m_sinful += sinful;
+			// should be careful here
+			// if sinful is IPv6 address, it should be embraced by [ ]
+
+			if(*sinful == '[') { // IPv6
+				m_sinful += sinful;
+			} else {
+				// Double check it's not IPv6 lacking [brackets]
+				const char * first_colon = strchr(sinful, ':');
+				if(first_colon && strchr(first_colon+1, ':')) {
+					// Why not treat it as an IPv6 address? Because
+					// We can't tell if 12AB::CDEF:1000 means
+					// 12AB:0000:0000:0000:0000:0000:0000:CDEF port 1000 or
+					// 12AB:0000:0000:0000:0000:0000:CDEF:1000 unknown port
+					m_valid = false;
+					return;
+				}
+				m_sinful += sinful;
+			}
 			m_sinful += ">";
 		}
 		else {
@@ -344,7 +361,13 @@ Sinful::regenerateSinful()
 	// generate "<host:port?params>"
 
 	m_sinful = "<";
-	m_sinful += m_host;
+	if (m_host.find(':') != std::string::npos) {
+		m_sinful += "[";
+		m_sinful += m_host;
+		m_sinful += "]";
+	} else
+		m_sinful += m_host;
+
 	if( !m_port.empty() ) {
 		m_sinful += ":";
 		m_sinful += m_port;

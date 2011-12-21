@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 my $file_target = $ARGV[0];
 my $new_name = $ARGV[1];
@@ -49,7 +50,7 @@ foreach $file (readdir DH)
 	#print "$file opened OK!\n";
 	while(<FILE>)	
 	{		
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		$line = $_;
 		s/$file_target/$new_name/g;
 		print NEW "$_\n";

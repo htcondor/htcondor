@@ -943,8 +943,9 @@ x509_proxy_try_import( const char *proxy_file )
 
 	if ( rc != GSS_S_COMPLETE ) {
 		char *message;
-        globus_gss_assist_display_status_str(&message,
-											 "",
+		char empty_str[1]; empty_str[0] = '\0'; // This nonsense brought to you by the fact that globus doesn't declare things const.
+        	globus_gss_assist_display_status_str(&message,
+											 empty_str,
 											 rc,
 											 min_stat,
 											 0);

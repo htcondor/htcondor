@@ -723,7 +723,7 @@ Scheduler::timeout()
 
 	/* Reset our timer */
 	time_to_next_run = SchedDInterval.getTimeToNextRun();
-	daemonCore->Reset_Timer(timeoutid,time_to_next_run);
+	daemonCore->Reset_Timer(timeoutid,time_to_next_run,1);
 }
 
 void
@@ -1680,6 +1680,11 @@ int Scheduler::count_jobs()
 		for(k=0; k<N_Owners;k++) {
 		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
 		}
+
+        // In case we want to update this ad, we have to build the submitter
+        // name string that we will be assigning with before we free the owner name.
+        submitter_name.sprintf("%s@%s", OldOwners[i].Name, UidDomain);
+
 		// Now that we've finished using OldOwners[i].Name, we can
 		// free it.
 		if ( OldOwners[i].Name ) {
@@ -1693,9 +1698,8 @@ int Scheduler::count_jobs()
 		  // entry in the OldOwner table.
 		if (k<N_Owners) continue;
 
-      submitter_name.sprintf("%s@%s", OldOwners[i].Name, UidDomain);
-      pAd->Assign(ATTR_NAME, submitter_name.Value());
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", ATTR_NAME, OldOwners[i].Name, UidDomain);
+        pAd->Assign(ATTR_NAME, submitter_name.Value());
+	    dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -3178,6 +3182,17 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	if (ULog->initialize(owner.Value(), domain.Value(), logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value())) {
 		return ULog;
 	} else {
+			// If the user log is in the spool directory, try writing to
+			// it as user condor. The spool directory spends some of its
+			// time owned by condor.
+		char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
+		std::string SpoolDir;
+		sprintf( SpoolDir, "%s%c", tmp, DIR_DELIM_CHAR );
+		free( tmp );
+		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(), SpoolDir.length() ) &&
+			 ULog->initialize( logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
+			return ULog;
+		}
 		dprintf ( D_ALWAYS,
 				"WARNING: Invalid user log file specified: %s\n", logfilename.Value());
 		delete ULog;
@@ -5526,6 +5541,12 @@ Scheduler::negotiate(int command, Stream* s)
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
+	// SubmitterAds with different attributes can elicit a
+	// change of the command int for each submitter ad conversation, so
+	// we explicit print it out to help us debug.
+	dprintf(D_ALWAYS, "Using negotiation protocol: %s\n", 
+		getCommandString(command));
+
 		// reset this flag so the next time we bump into a limit
 		// we issue a log message
 	RecentlyWarnedMaxJobsRunning = false;
@@ -6128,13 +6149,14 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	// NOTE: match_ad could be deallocated when this function returns,
 	// so if we need to keep it around, we must make our own copy of it.
-
-	if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
-			// we've got big trouble, just give up.
-		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
-				 ATTR_OWNER, cluster, proc );
-		mark_job_stopped( job );
-		return;
+	if( GetAttributeStringNew(cluster, proc, ATTR_ACCOUNTING_GROUP, &owner) < 0 ) {
+		if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
+				// we've got big trouble, just give up.
+			dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
+					 ATTR_OWNER, cluster, proc );
+			mark_job_stopped( job );
+			return;
+		}
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_CLAIM_ID, &claim_id) < 0 ) {
 			//
@@ -7017,32 +7039,6 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	bool sh_reads_file = true;
 #else
 		// UNIX
-
-	bool nt_resource = false;
- 	char* match_opsys = NULL;
-
- 	if( mrec->my_match_ad ) {
- 		mrec->my_match_ad->LookupString( ATTR_OPSYS, &match_opsys );
-	}
-
-	if( match_opsys ) {
-		if( strncasecmp(match_opsys,"winnt",5) == MATCH ) {
-			nt_resource = true;
-		}
-		free( match_opsys );
-		match_opsys = NULL;
-	}
-	
-	if( nt_resource ) {
-		shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE );
-		if( ! shadow_obj ) {
-			dprintf( D_ALWAYS, "Trying to run a job on a Windows "
-					 "resource but you do not have a condor_shadow "
-					 "that will work, aborting.\n" );
-			noShadowForJob( srec, NO_SHADOW_WIN32 );
-			return;
-		}
-	}
 
 	if( ! shadow_obj ) {
 		switch( universe ) {
@@ -10685,13 +10681,7 @@ Scheduler::Init()
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	
-	tmp = param( "NEGOTIATE_ALL_JOBS_IN_CLUSTER" );
-	if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-		NegotiateAllJobsInCluster = false;
-	} else {
-		NegotiateAllJobsInCluster = true;
-	}
-	if( tmp ) free( tmp );
+	NegotiateAllJobsInCluster = param_boolean_crufty("NEGOTIATE_ALL_JOBS_IN_CLUSTER", false);
 
 	STARTD_CONTACT_TIMEOUT = param_integer("STARTD_CONTACT_TIMEOUT",45);
 
@@ -11068,57 +11058,57 @@ void
 Scheduler::Register()
 {
 	 // message handlers for schedd commands
-	 daemonCore->Register_Command( NEGOTIATE_WITH_SIGATTRS, 
+	 daemonCore->Register_CommandWithPayload( NEGOTIATE_WITH_SIGATTRS, 
 		 "NEGOTIATE_WITH_SIGATTRS", 
 		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
 		 this, NEGOTIATOR );
-	 daemonCore->Register_Command( NEGOTIATE, 
+	 daemonCore->Register_CommandWithPayload( NEGOTIATE, 
 		 "NEGOTIATE", 
 		 (CommandHandlercpp)&Scheduler::negotiate, "negotiate", 
 		 this, NEGOTIATOR );
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
 			"reschedule_negotiator", this, WRITE);
-	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
+	 daemonCore->Register_CommandWithPayload(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)&Scheduler::abort_job, 
 			"abort_job", this, WRITE);
-	 daemonCore->Register_Command(ACT_ON_JOBS, "ACT_ON_JOBS", 
+	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
 			"actOnJobs", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
+	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(TRANSFER_DATA, "TRANSFER_DATA", 
+	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(SPOOL_JOB_FILES_WITH_PERMS,
+	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(TRANSFER_DATA_WITH_PERMS,
+	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
+	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(DELEGATE_GSI_CRED_SCHEDD,
+	 daemonCore->Register_CommandWithPayload(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(REQUEST_SANDBOX_LOCATION,
+	 daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
 			"requestSandboxLocation", this, WRITE, D_COMMAND,
 			true /*force authentication*/);
-	 daemonCore->Register_Command(RECYCLE_SHADOW,
+	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
 			"RecycleShadow", this, DAEMON, D_COMMAND,
@@ -11131,23 +11121,23 @@ Scheduler::Register()
 		 // succeed, the startd must present the secret claim id,
 		 // so it is deemed safe to open these commands up to READ
 		 // access.
-	daemonCore->Register_Command(RELEASE_CLAIM, "RELEASE_CLAIM", 
+	daemonCore->Register_CommandWithPayload(RELEASE_CLAIM, "RELEASE_CLAIM", 
 			(CommandHandlercpp)&Scheduler::release_claim, 
 			"release_claim", this, READ);
-	daemonCore->Register_Command( ALIVE, "ALIVE", 
+	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
 			"receive_startd_alive", this, READ,
 			D_PROTOCOL ); 
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
-	daemonCore->Register_Command( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
+	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
 								  (CommandHandler)&attempt_access_handler,
 								  "attempt_access_handler", NULL, WRITE,
 								  D_FULLDEBUG );
 #ifdef WIN32
 	// Command handler for stashing credentials.
-	daemonCore->Register_Command( STORE_CRED, "STORE_CRED",
+	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
 								(CommandHandler)&store_cred_handler,
 								"cred_access_handler", NULL, WRITE,
 								D_FULLDEBUG );
@@ -11155,17 +11145,17 @@ Scheduler::Register()
 
     // command handler in support of condor_status -direct query of our ads
     //
-	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
                                 (CommandHandlercpp)&Scheduler::command_query_ads,
                                  "command_query_ads", this, READ);
-	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
                                 (CommandHandlercpp)&Scheduler::command_query_ads,
                                  "command_query_ads", this, READ);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
-	daemonCore->Register_Command( QMGMT_READ_CMD, "QMGMT_READ_CMD",
+	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
@@ -11174,7 +11164,7 @@ Scheduler::Register()
 	// security session than to possibly create an unauthenticated
 	// security session that has to be authenticated every time in
 	// the command handler.
-	daemonCore->Register_Command( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
+	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
 								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
@@ -11183,17 +11173,17 @@ Scheduler::Register()
 								  (CommandHandlercpp)&Scheduler::dumpState,
 								  "dumpState", this, READ  );
 
-	daemonCore->Register_Command( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
+	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
 								  (CommandHandler)&get_myproxy_password_handler,
 								  "get_myproxy_password", NULL, WRITE, D_FULLDEBUG  );
 
 
-	daemonCore->Register_Command( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
+	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
 								  "get_job_connect_info", this, WRITE,
 								  D_COMMAND, true /*force authentication*/);
 
-	daemonCore->Register_Command( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
+	daemonCore->Register_CommandWithPayload( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
 								  "clear_dirty_job_attrs_handler", this, WRITE );
 
@@ -11225,10 +11215,6 @@ Scheduler::RegisterTimers()
 	Timeslice start_jobs_timeslice;
 
 	// clear previous timers
-	if (timeoutid >= 0) {
-		daemonCore->Cancel_Timer(timeoutid);
-	}
-
 	if (startjobsid >= 0) {
 		daemonCore->GetTimerTimeslice(startjobsid,start_jobs_timeslice);
 		daemonCore->Cancel_Timer(startjobsid);
@@ -11253,8 +11239,10 @@ Scheduler::RegisterTimers()
 	}
 
 	 // timer handlers
-	timeoutid = daemonCore->Register_Timer(10,
-		(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
+	if (timeoutid < 0) {
+		timeoutid = daemonCore->Register_Timer(10, 10,
+			(TimerHandlercpp)&Scheduler::timeout,"timeout",this);
+	}
 	startjobsid = daemonCore->Register_Timer( start_jobs_timeslice,
 		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
@@ -12034,8 +12022,8 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 
 	s->decode();
 	s->timeout(1);	// its a short message so data should be ready for us
-	s->get_secret(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
-	if ( !s->end_of_message() ) {
+
+	if ( !s->get_secret(claim_id) || !s->end_of_message() ) {
 		if (claim_id) free(claim_id);
 		return FALSE;
 	}
@@ -12118,6 +12106,7 @@ Scheduler::sendAlives()
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
+			int renew_time;
 			if ( mrec->m_startd_sends_alives ) {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
@@ -12127,10 +12116,14 @@ Scheduler::sendAlives()
 				// to update the queue persistently all in one transaction, even
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
 				GetAttributeInt(mrec->cluster,mrec->proc,
-								ATTR_LAST_JOB_LEASE_RENEWAL,&now);
+								ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			} else {
+				// If we're sending the alives, then we need to set
+				// ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
 			}
 			SetAttributeInt( mrec->cluster, mrec->proc, 
-							 ATTR_LAST_JOB_LEASE_RENEWAL, now ); 
+							 ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
 	CommitTransaction();
@@ -12142,6 +12135,35 @@ Scheduler::sendAlives()
 
 			if( sendAlive( mrec ) ) {
 				numsent++;
+			}
+		}
+
+		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE ) {
+			int lease_duration = -1;
+			int last_lease_renewal = -1;
+			GetAttributeInt( mrec->cluster, mrec->proc,
+							 ATTR_JOB_LEASE_DURATION, &lease_duration );
+			GetAttributeInt( mrec->cluster, mrec->proc,
+							 ATTR_LAST_JOB_LEASE_RENEWAL, &last_lease_renewal );
+
+			// If the job has no lease attribute, the startd sets the
+			// claim lease to 6 times the alive_interval we sent when we
+			// requested the claim.
+			if ( lease_duration <= 0 ) {
+				lease_duration = 6 * alive_interval;
+			}
+
+			if ( last_lease_renewal + lease_duration < now ) {
+				// The claim lease has expired. Kill the match
+				// and the shadow, but make the job requeue and
+				// don't try to notify the startd.
+				shadow_rec *srec = mrec->shadowRec;
+				ASSERT( srec );
+				mrec->needs_release_claim = false;
+				DelMrec( mrec );
+				jobExitCode( srec->job_id, JOB_SHOULD_REQUEUE );
+				srec->exit_already_handled = true;
+				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}
 		}
 	}
@@ -14001,6 +14023,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// the add/delete_shadow_rec() functions update the job
 		// ads, so we need to do that here
 	delete_shadow_rec( srec );
+	SetMrecJobID(mrec,new_job_id);
 	srec = new shadow_rec;
 	srec->pid = shadow_pid;
 	srec->match = mrec;

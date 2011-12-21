@@ -17,62 +17,50 @@
 #
 
 # uses Suds - https://fedorahosted.org/suds/
-import logging
 from suds import *
 from suds.client import Client
-from sys import exit, argv, stdin
-import time
-from aviary.https import *
-import argparse
+from sys import exit
+from optparse import OptionParser
+from aviary.util import *
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
-key = '/etc/pki/tls/certs/client.key'
-cert = '/etc/pki/tls/certs/client.crt'
-client = Client(wsdl);
-
 cmds = ['holdJob', 'releaseJob', 'removeJob']
 
-parser = argparse.ArgumentParser(description='Control job state remotely via SOAP.')
-parser.add_argument('-q','--quiet', action="store_true",default=False, help='disable/enable SOAP logging')
-parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
-		    default="http://localhost:9090/services/job/",
-		    help='http or https URL prefix to be added to cmd')
-parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
-parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
-parser.add_argument('cmd', action="store", choices=(cmds))
-parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
-args =  parser.parse_args()
+parser = build_basic_parser('Control job state remotely via SOAP.','http://localhost:9090/services/job/')
+parser.add_option('--cmd', action="store", choices=(cmds), dest='cmd', help=str(cmds))
+parser.add_option('--cproc', action="store", dest='cproc', help="a cluster.proc id like '1.0' or '5.3'")
+(opts,args) =  parser.parse_args()
 
-if "https://" in args.url:
-	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
-else:
-	client = Client(wsdl)
+# the joy that is optparse...
+if opts.cmd is None:
+	print 'One of these commands must be supplied', cmds
+	parser.print_help()
+	exit(1)
 
-args.url += args.cmd
-client.set_options(location=args.url)
+if opts.cproc is None:
+	print 'You must provide a cluster.proc job id'
+	parser.print_help()
+	exit(1)
 
-# enable to see service schema
-if not args.quiet:
-	logging.basicConfig(level=logging.INFO)
-	logging.getLogger('suds.client').setLevel(logging.DEBUG)
-	print client
+client = create_suds_client(opts,wsdl,None)
+opts.url += opts.cmd
+client.set_options(location=opts.url)
 
 # set up our JobID
 jobId = client.factory.create('ns0:JobID')
-jobId.job = args.cproc
+jobId.job = opts.cproc
 
 try:
-	func = getattr(client.service, args.cmd, None)
+	func = getattr(client.service, opts.cmd, None)
 	if callable(func):
-		print 'invoking', args.url, 'for job', args.cproc
 		result = func(jobId,"test")
 except Exception, e:
-	print "unable to access scheduler at: ", args.url
+	print "unable to access scheduler at: ", opts.url
 	print e
 	exit(1)
 
 if result.code != "OK":
 	print result.code,":", result.text
 else:
-	print cmd, 'succeeded'
+	print opts.cmd, 'succeeded'

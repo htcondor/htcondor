@@ -2,13 +2,13 @@
 *
 * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
 * University of Wisconsin-Madison, WI.
-* 
+*
 * Licensed under the Apache License, Version 2.0 (the "License"); you
 * may not use this file except in compliance with the License.  You may
 * obtain a copy of the License at
-* 
+*
 *    http://www.apache.org/licenses/LICENSE-2.0
-* 
+*
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@
 
 #include "MyString.h"
 #include "condor_classad.h"
+#include "condor_sockaddr.h"
 
 /***************************************************************
  * NetworkAdapterBase class
@@ -55,8 +56,8 @@ public:
 		WOL_HW_SUPPORT,
 		WOL_HW_ENABLED
 	};
-			
-	/** @name Instantiation. 
+
+	/** @name Instantiation.
 	*/
 	//@{
 
@@ -64,7 +65,7 @@ public:
 	NetworkAdapterBase () throw ();
 
     /// Destructor
-	virtual ~NetworkAdapterBase () throw (); 
+	virtual ~NetworkAdapterBase () throw ();
 
 	//@}
 
@@ -79,7 +80,7 @@ public:
 	virtual bool initialize () = 0;
 
 	/** Returns the adapter's hardware address
-		@return a string representation of the adapter's hardware 
+		@return a string representation of the adapter's hardware
         address
 	*/
 	virtual const char* hardwareAddress () const = 0;
@@ -87,7 +88,7 @@ public:
     /** Returns the adapter's IP address as a string
 		@return the adapter's IP address
 	*/
-	virtual unsigned ipAddress () const = 0;
+	virtual condor_sockaddr ipAddress () const = 0;
 
     /** Returns the adapter's subnet mask
 		@return a string representation of the adapter's's subnet mask
@@ -98,9 +99,9 @@ public:
 		@return a string representation of the adapter's's subnet mask
 	*/
 	bool isPrimary () const;
-	
+
     /** Ensures that the adapter can wake the machine.
-		@return true if the adapter can wake the machine; otherwise, 
+		@return true if the adapter can wake the machine; otherwise,
 		false.
 	*/
 	bool isWakeSupported () const;
@@ -139,13 +140,13 @@ public:
 		@return true if this adapter is wakable as configured
 	*/
 	bool isWakeable () const;
-	
+
     /** Checks that the adapter actually exists
-        @returns true if the adapter exists on the machine; 
+        @returns true if the adapter exists on the machine;
         otherwise, false.
 	*/
 	virtual bool exists () const = 0;
-	
+
 	//@}
 
     /** Published the network adapter's's information into the given ad
@@ -158,16 +159,16 @@ public:
 	bool getInitStatus ();
 
 
-    /** We use this to create adapter objects so we don't need to deal 
+    /** We use this to create adapter objects so we don't need to deal
         with the differences between OSs at the invocation level.
-        @return if successful a valid NetworkAdapterBase*; otherwise 
+        @return if successful a valid NetworkAdapterBase*; otherwise
         NULL.
 	*/
-	static NetworkAdapterBase* createNetworkAdapter ( 
+	static NetworkAdapterBase* createNetworkAdapter (
 		const char *sinful, bool is_primary = false );
 
 protected:
-	
+
 	void wolResetSupportBits ();
 	unsigned wolEnableSupportBit ( WOL_BITS bit );
 	void wolResetEnableBits ();
@@ -178,7 +179,7 @@ protected:
 	MyString& getWolString ( unsigned bits, MyString &s ) const;
 	char* getWolString ( unsigned bits, char *buf, int bufsize ) const;
 
-	
+
   private:
 
 	unsigned	m_wol_support_bits;
@@ -188,14 +189,14 @@ protected:
 
 	bool doInitialize ();
 	bool setIsPrimary ( bool is_primary );
-    
-    /** @name Private Instantiation. 
+
+    /** @name Private Instantiation.
     That is, do not allow for a default constructor.
 	*/
 	//@{
 
 	//@}
-	
+
 };
 
 #endif // _NETWORK_ADAPTER_BASE_H_

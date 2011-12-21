@@ -34,6 +34,8 @@
 using namespace aviary::query;
 using namespace aviary::history;
 
+extern bool force_reset;
+
 #define IS_JOB(key) ((key) && '0' != (key)[0])
 
 JobServerJobLogConsumer::JobServerJobLogConsumer(): m_reader(NULL)
@@ -51,31 +53,11 @@ JobServerJobLogConsumer::Reset()
 
 	dprintf(D_FULLDEBUG, "JobServerJobLogConsumer::Reset() - deleting jobs and submissions\n");
 
-	for (JobCollectionType::iterator i = g_jobs.begin();
-	     g_jobs.end() != i; i++) {
-		// Skip clusters for now
-		if ('0' != (*i).second->getKey()[0]) {
-			delete (*i).second;
-			g_jobs.erase(i);
-		}
-	}
-
-	for (JobCollectionType::iterator i = g_jobs.begin();
-		  g_jobs.end() != i; i++) {
-		     delete (*i).second;
-		     g_jobs.erase(i);
-	}
-
-	for (SubmissionCollectionType::iterator i = g_submissions.begin();
-		       g_submissions.end() != i; i++) {
-			  delete (*i).second;
-			  g_submissions.erase(i);
-	}
-
 	// due to the shared use of g_jobs
 	// a JobLogReader->Reset() might cause
 	// us to reload our history
-	init_history_files();
+	force_reset = true;
+	process_history_files();
 
 }
 
@@ -154,7 +136,7 @@ JobServerJobLogConsumer::DestroyClassAd(const char *_key)
     if (g_jobs.end() == g_element) {
         dprintf(D_ALWAYS,
                 "error reading %s: no such job found for key '%s'\n",
-                m_reader->GetClassAdLogFileName(), _key);
+                _key);
         return false;
     }
 
@@ -191,8 +173,7 @@ JobServerJobLogConsumer::SetAttribute(const char *_key,
 
 	if (g_jobs.end() == g_element) {
 		dprintf(D_ALWAYS,
-				"error reading %s : no such job '%s' for '%s = %s'\n",
-				m_reader->GetClassAdLogFileName(),
+				"no such job '%s' for '%s = %s'\n",
 				_key, _name, _value);
 		return false;
 	}
@@ -215,8 +196,8 @@ JobServerJobLogConsumer::DeleteAttribute(const char *_key,
 
 	if (g_jobs.end() == g_element) {
 		dprintf(D_ALWAYS,
-				"error reading %s: no such job '%s' for 'delete %s'\n",
-                m_reader->GetClassAdLogFileName(), _key, _name);
+				"no such job '%s' for 'delete %s'\n",
+				_key, _name);
 		return false;
 	}
 

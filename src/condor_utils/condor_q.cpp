@@ -544,7 +544,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		free(attrs_str);
 
 		while( true ) {
-			ClassAd *ad = new ClassAd;
+			ad = new ClassAd;
 			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
 				delete ad;
 				break;

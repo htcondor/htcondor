@@ -128,7 +128,7 @@ void handle_echo(string &line, State &state, Parameters &parameters);
 void handle_print(string &line, State &state, Parameters &parameters);
 void handle_help(void);
 void print_version(void);
-void print_error_message(char *error, State &state);
+void print_error_message(const char *error, State &state);
 void print_error_message(string &error, State &state);
 void print_final_state(State &state);
 bool line_is_comment(string &line);
@@ -1408,7 +1408,7 @@ void print_version(void)
  *
  *********************************************************************/
 void print_error_message(
-    char  *error, 
+    const char  *error, 
     State &state)
 {
     string error_s = error;

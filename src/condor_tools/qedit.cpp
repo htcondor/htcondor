@@ -59,6 +59,7 @@ main(int argc, char *argv[])
 	bool UseConstraint = false;
 	MyString schedd_name;
 	MyString pool_name;
+	param_functions *p_funcs;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -75,7 +76,8 @@ main(int argc, char *argv[])
 	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
 		// output dprintf messages to stderror at TOOL_DEBUG level
 		Termlog = 1;
-		dprintf_config ("TOOL");
+		p_funcs = get_param_functions();
+		dprintf_config ("TOOL", p_funcs);
 		nextarg++;
 	}
 

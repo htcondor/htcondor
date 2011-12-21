@@ -82,9 +82,7 @@ namespace classad_analysis {
   }
 
   void result::add_explanation(matchmaking_failure_kind reason, ClassAd *a_machine) {
-    classad::ClassAd *new_machine_ad = toNewClassAd(a_machine);
-    my_explanation[reason].push_back(*new_machine_ad);
-    delete new_machine_ad;
+    my_explanation[reason].push_back(*a_machine);
   }
 
   void result::add_suggestion(suggestion sg) {

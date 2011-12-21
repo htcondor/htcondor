@@ -304,7 +304,6 @@ int main (int argc, char **argv)
 	ClassAd		*ad;
 	bool		first;
 	char		*scheddName=NULL;
-	char		daemonAdName[128];
 	char		scheddMachine[64];
 	MyString    scheddVersion;
 	char		*tmp;
@@ -645,6 +644,7 @@ int main (int argc, char **argv)
 		}
 
 #ifdef HAVE_EXT_POSTGRESQL
+		char		daemonAdName[128];
 			// get the address of the database
 		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
 			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
@@ -859,6 +859,7 @@ processCommandLineArguments (int argc, char *argv[])
 {
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
+	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
@@ -1244,7 +1245,8 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL" );
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		}
 		else
 		if (match_prefix(arg,"io")) {
@@ -1459,7 +1461,6 @@ bufferJobShort( ClassAd *ad ) {
 
 	char encoded_status;
 	int last_susp_time;
-	char *tmp = NULL;
 
 	float utime  = 0.0;
 	char owner[64];
@@ -1496,9 +1497,7 @@ bufferJobShort( ClassAd *ad ) {
 		status that can exist as a job status ad and is instead
 		inferred, so therefore the processing and display of
 		said suspension is also second class. */
-	tmp = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
-	if( tmp != NULL ) {
-		if ( strcasecmp(tmp, "true") == MATCH ) {	
+	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
 			if (!ad->EvalInteger(ATTR_LAST_SUSPENSION_TIME,NULL,last_susp_time))
 			{
 				last_susp_time = 0;
@@ -1511,9 +1510,6 @@ bufferJobShort( ClassAd *ad ) {
 			{
 				encoded_status = 'S';
 			}
-		}
-		free(tmp);
-		tmp = NULL;
 	}
 
 	sprintf( return_buff,
@@ -1573,7 +1569,6 @@ format_remote_host (char *, AttrList *ad)
 {
 	static char host_result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
-	char* tmp;
 	condor_sockaddr addr;
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
@@ -3016,7 +3011,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
-	unsigned int i;
 	MyString resource;
 	switch(universe) {
 			// Known valid

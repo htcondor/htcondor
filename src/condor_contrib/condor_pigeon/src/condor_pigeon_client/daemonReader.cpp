@@ -26,43 +26,47 @@
 #include "condor_config.h"
 
 
+char *getHostname(char *givenHost) {
+  if (givenHost == NULL) {
+  		const char *hostname = my_full_hostname();
+  		char *res = strnewp(hostname);
+  		return res;	
+  } else {
+  	return givenHost;
+  }
+}
+
 //function:getQpidPort- reads port # from the classAd
 char* getQpidPort(char *hName){
-  //int argc =0;
-  //char **argv = NULL;
   
   config();
   char* port;
-  MyString daemonHost = "qpid@";
-  char *hostname = my_full_hostname() ;
-  sprintf(hName, "%s", hostname);
-  daemonHost += hostname;
-  free(hostname);
+  MyString daemonHost = "pigeon@";
+
+  daemonHost += hName;
   Daemon dObj(DT_GENERIC, daemonHost.Value(), NULL);
   dObj.setSubsystem("PIGEON");
   bool flag = dObj.locate();
   if(!flag){
-    return "-1";
+  	fprintf(stderr, "Problem locating daemon object: %s \n", dObj.error());
+    return NULL;
   }
+  
   ClassAd *qpidAd = dObj.daemonAd();
 
   if(qpidAd){
     MyString inBuf="";
-    char* eStr ="";
-
     qpidAd->sPrint(inBuf);
-    char* mystr = (char*)inBuf.Value();
-    //printf("%s \n", mystr);
-    char* start =strstr(mystr,"PORT =");
+    char* start =strstr(inBuf.Value(),"PORT =");
     char* end =strstr(start,"\n");
     int len = end - start -9;
     port = (char*)malloc(sizeof(len+1));
 
     char *ports = strncpy(port,start+8,len);
-    int size = sizeof(ports);
     port[len]='\0';
-
+    ports = NULL;
   } else {
+  	fprintf(stderr, "Problem retrieving pigeon Ad \n");
   }
 
   return (port);
@@ -70,8 +74,20 @@ char* getQpidPort(char *hName){
 
 int main(int argc, char **argv){
   myDistro->Init(argc,argv);
-  char hostname[256];
+  char *hostname = NULL;
+  if (argc > 1) {
+  	hostname = argv[1];
+  }
+  hostname = getHostname(hostname);
   char* res = getQpidPort(hostname);
-  printf("%s\n%s\nDONE \n", hostname, res);
+  if (!res) {
+  	printf("%s\n%s\nDONE \n", hostname, "-1");
+  } else {
+  	printf("%s\n%s\nDONE \n", hostname, res);  	
+  	free(res);
+  }
+  if (argc <= 1)
+  	free(hostname);
+  
   return 0;
 }

@@ -347,6 +347,7 @@ CCBListener::ReadMsgFromCCB()
 	if( !m_sock ) {
 		return false;
 	}
+	m_sock->timeout(CCB_TIMEOUT);
 	ClassAd msg;
 	if( !msg.initFromStream( *m_sock ) || !m_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,

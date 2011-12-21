@@ -331,7 +331,7 @@ int BaseShadow::cdToIwd() {
 		hold_reason.sprintf("Cannot access initial working directory %s: %s",
 		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-		holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -362,6 +362,7 @@ BaseShadow::shutDown( int reason )
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
 		shadow_user_policy.checkAtExit();
+			// WARNING: 'this' may have been deleted by the time we get here!!!
 	}
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
@@ -401,7 +402,7 @@ BaseShadow::reconnectFailed( const char* reason )
 
 
 void
-BaseShadow::holdJobPre( const char* reason, int hold_reason_code, int hold_reason_subcode )
+BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
 	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
 			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
@@ -431,10 +432,10 @@ BaseShadow::holdJobPre( const char* reason, int hold_reason_code, int hold_reaso
 }
 
 void
-BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
-	
+	holdJob(reason,hold_reason_code,hold_reason_subcode);
+
 	// finally, exit and tell the schedd what to do
 	DC_Exit( JOB_SHOULD_HOLD );
 }
@@ -850,8 +851,8 @@ void BaseShadow::initUserLog()
 			hold_reason.sprintf(
 				"Failed to initialize user log to %s", logfilename.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-			// holdJob() should not return, but just in case it does EXCEPT
+			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJobAndExit() should not return, but just in case it does EXCEPT
 			EXCEPT("Failed to initialize user log to %s",logfilename.Value());
 		}
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
@@ -1140,7 +1141,7 @@ BaseShadow::log_except(const char *msg)
 	bool exception_already_logged = false;
 
 	if(!msg) msg = "";
-	sprintf(event.message, msg);
+	sprintf(event.message, "%s", msg);
 
 	if ( BaseShadow::myshadow_ptr ) {
 		BaseShadow *shadow = BaseShadow::myshadow_ptr;
@@ -1395,4 +1396,15 @@ BaseShadow::handleUpdateJobAd( int sig )
 	// to evaluate differently, so evaluate now.
 	shadow_user_policy.checkPeriodic();
 	return 0;
+}
+
+bool
+BaseShadow::jobWantsGracefulRemoval()
+{
+	bool job_wants_graceful_removal = false;
+	ClassAd *jobAd = getJobAd();
+	if( jobAd ) {
+		jobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
+	}
+	return job_wants_graceful_removal;
 }

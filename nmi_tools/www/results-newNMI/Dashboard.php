@@ -18,9 +18,8 @@ class Dashboard {
     print "<html>\n";
     print "<head>\n";
     print "<title>$title</title>\n";
-    print "<script type='text/javascript' src='jquery-1.6.2.js'></script>\n";
     print "<link rel='stylesheet' href='dashboard.css' type='text/css'>\n";
-    print "<link rel='stylesheet' href='condor.css' type='text/css'>\n";
+    flush();
   }
 
   function connect_to_db() {
@@ -62,6 +61,59 @@ class Dashboard {
     }
     
     return $platforms;
+  }
+
+
+  function get_platform_list_for_runid($runid) {
+    // Given a runid, get the set of platforms
+    $sql = "SELECT DISTINCT(platform) AS platform
+        FROM Task
+        WHERE runid = $runid";
+    
+    $results = $this->db_query($sql);
+    $platforms = Array();
+    foreach ($results as $row) {
+      $platforms[] = $row["platform"];
+    }
+  
+    return $platforms;
+  }
+
+  function get_test_runids_for_build($runid) {
+    $runid_sql = "SELECT DISTINCT Method_nmi.runid ".
+      "  FROM Method_nmi, Run ".
+      " WHERE Method_nmi.input_runid = $runid ".
+      "   AND Run.runid = Method_nmi.runid ".
+      "   AND (component_version = project_version or ( component_version = 'native')) ";
+
+    $results = $this->db_query($runid_sql);
+    $runids = Array();
+    foreach ($results as $row) {
+      $runids[] = $row["runid"];
+    }
+
+    if(!$runids) {
+      return Array();
+    }
+
+    $test_runids = implode(",", $runids);
+    $platform_sql = "
+      SELECT 
+         DISTINCT(platform),
+         runid
+      FROM
+         Task
+      WHERE
+         runid IN ($test_runids) AND
+         platform!='local'";
+
+    $results = $this->db_query($platform_sql);
+    $runids = Array();
+    foreach ($results as $row) {
+      $runids[$row["platform"]] = $row["runid"];
+    }
+
+    return $runids;
   }
 
 }

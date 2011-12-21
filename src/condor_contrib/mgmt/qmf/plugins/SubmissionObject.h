@@ -44,7 +44,7 @@ using namespace std;
 
 struct cmpprocid {
         bool operator()(PROC_ID a, PROC_ID b) const {
-                return a.proc < b.proc;
+		 return (a.cluster < b.cluster) || ((a.cluster == b.cluster) && (a.proc < b.proc));
         }
 };
 
@@ -67,6 +67,8 @@ public:
 	status_t ManagementMethod(uint32_t methodId,
 							  Args &args,
 							  string &text);
+
+	bool AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId);
 
     typedef set<PROC_ID, cmpprocid> ProcIDSet;
     ProcIDSet active_procs;

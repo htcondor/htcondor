@@ -72,7 +72,12 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 	switch( action ) {
 	case UNDEFINED_EVAL:
 	case HOLD_IN_QUEUE:
-		shadow->holdJob( reason.Value(), reason_code, reason_subcode );
+		if( is_periodic ) {
+			shadow->holdJob( reason.Value(), reason_code, reason_subcode );
+		}
+		else {
+			shadow->holdJobAndExit( reason.Value(), reason_code, reason_subcode );
+		}
 		break;
 
 	case REMOVE_FROM_QUEUE:

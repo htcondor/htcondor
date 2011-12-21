@@ -1168,7 +1168,6 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     krb5_data        request;
     int              message, rc = 1;
 	MyString         hostname;
-    struct hostent * hp;
     
 	hostname = get_hostname(mySock_->peer_addr());
 	char* hostname_char = strdup(hostname.Value());

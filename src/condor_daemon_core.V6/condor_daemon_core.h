@@ -92,6 +92,8 @@ static const int DC_STD_FD_NOPIPE = -1;
 
 
 int dc_main( int argc, char **argv );
+bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
+
 
 // External protos
 extern void (*dc_main_init)(int argc, char *argv[]);	// old main
@@ -1836,8 +1838,6 @@ class DaemonCore : public Service
 
 	int					_cookie_len, _cookie_len_old;
 	unsigned char		*_cookie_data, *_cookie_data_old;
-
-    struct in_addr      negotiator_sin_addr;    // used by Verify method
 
 #ifdef WIN32
     // the thread id of the thread running the main daemon core

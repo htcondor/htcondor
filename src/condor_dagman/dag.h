@@ -642,9 +642,6 @@ class Dag {
 	// Recursively lift all splices into each other and then me
 	OwnedMaterials* LiftSplices(SpliceLayer layer);
 
-	// recursively lift only the cild splices.
-	void LiftChildSplices(void);
-
 	// The dag will give back an array of all nodes and delete those nodes
 	// from its internal lists. This is used when a splice is being
 	// lifted into the containing dag.
