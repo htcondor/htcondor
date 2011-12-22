@@ -196,6 +196,8 @@ public:
 class CompareProcMaps {
 public:
 	bool operator()(const clusterProcMapper& a, const clusterProcMapper& b) const {
+		if (a.cluster < 0 || a.proc < 0) return true;
+		if (b.cluster < 0 || b.proc < 0) return false;
 		if (a.dagman_cluster_id < b.dagman_cluster_id) { return true; }
 		if (a.dagman_cluster_id > b.dagman_cluster_id) { return false; }
 		if (a.dagman_proc_id < b.dagman_proc_id) { return true; }
@@ -211,6 +213,8 @@ public:
 class CompareProcIDMaps {
 public:
 	bool operator()(const clusterIDProcIDMapper& a, const clusterIDProcIDMapper& b) const {
+		if (a.cluster < 0 || a.proc < 0) return true;
+		if (b.cluster < 0 || b.proc < 0) return false;
 		if (a.cluster < b.cluster ) { return true; }
 		if (a.cluster > b.cluster ) { return false; }
 		if (a.proc    < b.proc    ) { return true; }
@@ -1751,7 +1755,7 @@ format_owner (char *owner, AttrList *ad)
 		char *dag_node_name;
 
 		if ( ad->LookupString( ATTR_DAG_NODE_NAME, &dag_node_name ) ) {
-			snprintf( result_format, 15, " |-%-11.11s", dag_node_name );
+			snprintf( result_format, 15, "%-11.11s", dag_node_name );
 			free(dag_node_name);
 			return result_format;
 		} else {
@@ -1967,30 +1971,64 @@ void edit_string(clusterProcString *cps)
 	for( clusterProcString* ccps = cps->parent; ccps; ccps = ccps->parent ) {
 		++generations;
 	}
-	generations = ( generations > 1 ) ? ( generations - 1 ) : 0;
 	int state = 0;
-	for(const char* p = cps->string; *p; ++p){
-		if(state != 4 || *p != ' ' || generations <= 0) {
+	for(const char* p = cps->string; *p;){
+		switch(state) {
+		case 0:
+			if(!isspace(*p)){
+				state = 1;
+			} else {
+				s += *p;
+				++p;
+			}
+			break;
+		case 1:
+			if(isspace(*p)){
+				state = 2;
+			} else {
+				s += *p;
+				++p;
+			}
+			break;
+		case 2: if(isspace(*p)){
+				s+=*p;
+				++p;
+			} else {
+				for(int i=0;i<generations;++i){
+					s+=' ';
+				}
+				s +="|-";
+				state = 3;
+			}
+			break;
+		case 3:
+			if(isspace(*p)){
+				state = 4;
+			} else {
+				s += *p;
+				++p;	
+			}
+			break;
+		case 4:
+			int gen_i;
+			for(gen_i=0;gen_i<=generations+1;++gen_i){
+				if(isspace(*p)){
+					++p;
+				} else {
+					break;
+				}
+			}
+			if( gen_i < generations || !isspace(*p) ) {
+				std::string::iterator sp = s.end();
+				--sp;
+				*sp = ' ';
+			}
+			state = 5;
+			break;
+		case 5:
 			s += *p;
-		} else {
-			if( --generations <= 0 ) {
-				state = 5;
-			}
-		}
-		if( *p != ' ' && state == 0 ) {
-			state = 1;
-		}
-		if( *p == ' ' && state == 1 ) {
-			for(int i=0;i<generations;++i) {
-				s += ' ';
-			}
-			state = 2;
-		}
-		if( *p != ' ' && state == 2 ) {
-			state = 3;
-		}
-		if( *p == ' ' && state == 3 ) {
-			state = 4;
+			++p;
+			break;
 		}
 	}
 	char* cpss = cps->string;

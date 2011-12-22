@@ -924,6 +924,13 @@ extern const char * const ATTR_UTSNAME_RELEASE;
 extern const char * const ATTR_UTSNAME_VERSION;
 extern const char * const ATTR_UTSNAME_MACHINE;
 
+// Introduced for configurable sorting of accounting groups
+extern const char* const ATTR_GROUP_QUOTA;
+extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
+extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
+extern const char* const ATTR_SORT_EXPR;
+extern const char* const ATTR_SORT_EXPR_STRING;
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {

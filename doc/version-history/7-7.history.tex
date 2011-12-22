@@ -58,12 +58,12 @@ MOUNT\_UNDER\_SCRATCH parameter, which describes which directories to
 bind mount.
 \Ticket{2015}
 
-\item Added the \OptArg{-expand} option to condor\_config\_val.  If \OptArg{-dump}
-and \OptArg{-expand} are given to the command, all config file macros are
-expanded before they are printed out.
-\Ticket{2867}
+\item Added the new \Opt{-expand} option to \Condor{config\_val}.
+If both \Opt{-dump} and \Opt{-expand} options are specified,
+all configuration variables are expanded before they are printed out.
+\Ticket{2687}
 
-\item The \OptArg{-sort} option for \Condor{status} has been generalized to
+\item The \Opt{-sort} option for \Condor{status} has been generalized to
 accept expressions instead of just simple named attributes.
 \Ticket{2661}
 
@@ -116,6 +116,20 @@ cycle.  The hold time defaults to 20 seconds.  This is controlled by the
 \item Improved output of \Condor{q} \Opt{-dag} to show the dag structure as a tree,
 with children indented below their parents.
 \Ticket{1281}
+
+\item Fixed the output of \Condor{q} \Opt{-dag} so that children of a
+non-existent DAGman node would not be mistakenly shown as belonging to another
+DAGman. This can happen, for example, when a \Condor{dagman} process dies while
+its children are still running.
+\Ticket{2463}
+
+% Note: this is just kind of a stub so there's something in the version
+% history when I merge this branch to the master -- I need to fully
+% document this new feature ASAP.  wenger 2011-12-22
+\item Added the new FINAL node feature to \Condor{dagman} -- this allows
+the user to declare a FINAL node in the DAG, which is always run at the
+end of the workflow, whether it ended successfully or not.
+\Ticket{1482}
 
 \end{itemize}
 
@@ -209,8 +223,9 @@ in the 7.7 series.
 
 \begin{itemize}
 
-\item Condor version 7.7.4 not yet released.
-%\item Condor version 7.7.4 released on Month Date, 2011.
+\item Condor version 7.7.4 released on December 21, 2011.
+This release contains all features and bug fixes from Condor version 7.6.5 
+as are currently documented (section~\ref{sec:New-7-6-5}) in this manual. 
 
 \end{itemize}
 
@@ -546,7 +561,7 @@ as are currently documented (section~\ref{sec:New-7-6-4}) in this manual.
 linux.}
 A copy of these libraries is included with Condor, under
 \File{lib/condor/} in the tarball releases and under
-\File{/usr/lib/condor/} or \File{/yrs/lib64/condor/} in the native package
+\File{/usr/lib/condor/} or \File{/usr/lib64/condor/} in the native package
 releases.
 \Ticket{2389}
 \Ticket{2390}

@@ -973,3 +973,9 @@ extern const char * const ATTR_UTSNAME_NODENAME = "UtsnameNodename";
 extern const char * const ATTR_UTSNAME_RELEASE = "UtsnameRelease";
 extern const char * const ATTR_UTSNAME_VERSION = "UtsnameVersion";
 extern const char * const ATTR_UTSNAME_MACHINE = "UtsnameMachine";
+
+const char* const ATTR_GROUP_QUOTA = "GroupQuota";
+const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";
+const char* const ATTR_GROUP_RESOURCES_IN_USE = "GroupResourcesInUse";
+const char* const ATTR_SORT_EXPR = "SortExpr";
+const char* const ATTR_SORT_EXPR_STRING = "SortExprString";

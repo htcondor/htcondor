@@ -124,11 +124,18 @@ $success = sub {
 		close(OUT);
 	}
 	$diditpass = ($verifyA == 1) && ($verifyB == 1) && ($verifyC == 1);
-	CondorTest::debug("Output verified.\n",1);
+	if( $diditpass ) {
+		CondorTest::debug("Output verified.\n",1);
+	} else {
+		CondorTest::debug("Output verification failed:\n",1);	
+	}
 	$diditpass = $diditpass && ($claimIdA eq $claimIdB) && ($claimIdA eq $claimIdC);
 	if($diditpass) { 
 		CondorTest::debug("Verified that ClaimId-s are all equal\n",1);
 	} else {
+		CondorTest::debug("\$claimIdA: \"$claimIdA\"\n",1);
+		CondorTest::debug("\$claimIdB: \"$claimIdB\"\n",1);
+		CondorTest::debug("\$claimIdC: \"$claimIdC\"\n",1);
 		die "Verification of output failed\n";
 	}
 	open OUT,"<$logfile" || die "Could not open $logfile\n";

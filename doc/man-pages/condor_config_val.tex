@@ -33,9 +33,8 @@
 
 \SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-config}
 
-\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-dump}
-
-\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-expand}
+\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-dump} \oOpt{-expand}
+\oOpt{-verbose}
 
 \index{Condor commands!condor\_config\_val}
 \index{condor\_config\_val command}
@@ -110,13 +109,12 @@ The \Opt{-config} option displays the current configuration files in use.
 The \Opt{-dump} option displays a list of all of the defined macros
 in the configuration files found by \Condor{config\_val}, along with
 their values. If the \Opt{-verbose} option is supplied as well,
-then the specific configuration file which defined each macro,
+then the specific configuration file which defined each variable,
 along with the line number of its definition is also printed. 
 \Note The output of this argument is likely to change 
 in a future revision of Condor.
-
-If the \Opt{-expand} option is given in addition to the \Opt{-dump}
-option, then macros in the config files are expanded before
+If the \Opt{-expand} option is given in addition to the \Opt{-dump} option,
+then variable values in the configuration files are expanded before
 being printed out.
 
 \begin{Options}

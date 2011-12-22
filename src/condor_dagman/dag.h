@@ -160,7 +160,6 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
-  
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
@@ -310,13 +309,15 @@ class Dag {
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
 
-    /** @return the total number of nodes in the DAG
+    /** @param whether to include final node, if any, in the count
+		@return the total number of nodes in the DAG
      */
-    inline int NumNodes() const { return _jobs.Number(); }
+    int NumNodes( bool includeFinal ) const;
 
-    /** @return the number of nodes completed
+    /** @param whether to include final node, if any, in the count
+    	@return the number of nodes completed
      */
-    inline int NumNodesDone() const { return _numNodesDone; }
+    int NumNodesDone( bool includeFinal ) const;
 
     /** @return the number of nodes that failed in the DAG
      */
@@ -361,15 +362,15 @@ class Dag {
 	}
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_PRERUN (whether or not the script is actually
-	 *			running).
+	 *          Job::STATUS_PRERUN (whether or not their PRE
+	 *			script is actually running).
 	 */
 	inline int PreRunNodeCount() const
 		{ return _preRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
-	 *          Job::STATUS_POSTRUN (whether or not the script is actually
-	 *			running).
+	 *          Job::STATUS_POSTRUN (whether or not their POST
+	 *			script is actually running).
 	 */
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
@@ -386,29 +387,32 @@ class Dag {
 	    	(If no jobs are submitted and no scripts are running, but the
 		    dag is not complete, then at least one job failed, or a cycle
 			exists.)
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is finished
 		*/
-	inline bool FinishedRunning() const { return NumJobsSubmitted() == 0 &&
-				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
+	bool FinishedRunning( bool includeFinalNode ) const;
 
 		/** Determine whether the DAG is successfully completed.
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is successfully completed
 		*/
-	inline bool DoneSuccess() const { return NumNodesDone() == NumNodes(); }
+	bool DoneSuccess( bool includeFinalNode ) const;
 
 		/** Determine whether the DAG is finished, but failed (because
 			of a node job failure, etc.).
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but failed
 		*/
-	inline bool DoneFailed() const { return FinishedRunning() &&
-				NumNodesFailed() > 0; }
+	bool DoneFailed( bool includeFinalNode ) const;
 
 		/** Determine whether the DAG is finished because of a cycle in
-			the DAG.  (Note that this method sometimes incorrectly returns
-			true for errors other than cycles in the DAG.  wenger 2010-07-30.)
+			the DAG.
+    		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	inline bool DoneCycle() { return FinishedRunning() &&
+	inline bool DoneCycle( bool includeFinalNode) {
+				return FinishedRunning( includeFinalNode ) &&
+				!DoneSuccess( includeFinalNode ) &&
 				NumNodesFailed() == 0; }
 
 		/** Submit all ready jobs, provided they are not waiting on a
@@ -417,6 +421,13 @@ class Dag {
 			@return number of jobs successfully submitted
 		*/
     int SubmitReadyJobs(const Dagman &dm);
+
+		/** Start the DAG's final node if there is one.  Note that this
+			method will not re-start the final node if it has already
+			been started.
+			@return true iff the final node was actually started.
+		*/
+	bool StartFinalNode();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -441,14 +452,17 @@ class Dag {
         @param datafile The original DAG file
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
+		@param overwrite Whether to overwrite the highest-numbered
+			rescue DAG (because with a final node you can write the
+			rescue DAG twice)
 		@param parseFailed whether parsing the DAG(s) failed
 		@param isPartial whether the rescue DAG is only a partial
 			DAG file (needs to be parsed in combination with the original
 			DAG file)
     */
     void Rescue (const char * dagFile, bool multiDags,
-				int maxRescueDagNum, bool parseFailed = false,
-				bool isPartial = false) /* const */;
+				int maxRescueDagNum, bool overwrite,
+				bool parseFailed = false, bool isPartial = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
@@ -689,6 +703,29 @@ class Dag {
 	*/
 	bool IsHalted() { return _dagIsHalted; }
 
+	enum dag_status {
+		DAG_STATUS_OK = 0,
+		DAG_STATUS_ERROR = 1, // Error not enumerated below
+		DAG_STATUS_NODE_FAILED = 2, // Node(s) failed
+		DAG_STATUS_ABORT = 3, // Hit special DAG abort value
+		DAG_STATUS_RM = 4, // DAGMan job condor rm'ed
+		DAG_STATUS_CYCLE = 5, // A cycle in the DAG
+		DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
+	};
+
+	dag_status _dagStatus;
+
+	/** Determine whether this DAG has a final node.
+		@return true iff the DAG has a final node.
+	*/
+	inline bool HasFinalNode() const { return _final_job != NULL; }
+
+	/** Determine whether the final node (if any) of this DAG is
+		running (or has been run).
+		@return true iff the final node is running or has been run
+	*/
+	inline bool RunningFinalNode() { return _runningFinalNode; }
+
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -879,8 +916,16 @@ class Dag {
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
 
+		// True iff the final node is ready to be run, or is running
+		// (including PRE and POST scripts, if any.
+	bool _runningFinalNode;
+
     /// List of Job objects
     List<Job>     _jobs;
+
+		// Note: the final node is in the _jobs list; this pointer is just
+		// for convenience.
+	Job* _final_job;
 
 	HashTable<MyString, Job *>		_nodeNameHash;
 

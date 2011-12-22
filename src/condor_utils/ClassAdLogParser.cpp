@@ -24,14 +24,17 @@
 #include <assert.h> // for assert
 #include <errno.h> // for errno
 #include <syslog.h> // for syslog, LOG_ERR
+const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)"; // normally in classad_log.h/cpp
+#define ASSERT(x) assert(x)
 #else
 #include "condor_common.h"
 #include "condor_io.h"
+extern const char *EMPTY_CLASSAD_TYPE_NAME; // defined in classad_log.cpp
 #endif
 
 #include "ClassAdLogEntry.h"
 #include "ClassAdLogParser.h"
-#include "classad_log.h"
+#include "log.h"
 
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in

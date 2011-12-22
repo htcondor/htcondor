@@ -22,11 +22,17 @@
 
 #define _POSIX_SOURCE
 
+#ifdef _NO_CONDOR_
+#include <stdio.h> // for FILE*
+#include <stdlib.h> // for malloc, free, realloc
+#include <string.h> // for strdup
+#include <ctype.h> // for isspace
+#else
 #include "condor_common.h"
+#include "condor_debug.h"
+#endif
 
 #include "log.h"
-
-#include "condor_debug.h"
 
 class LogRecordHead: public LogRecord {
 	virtual char const *get_key() {return NULL;}
