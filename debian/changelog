@@ -3,8 +3,9 @@ condor (7.7.4-1) UNRELEASED; urgency=low
   * New upstream release. RPATH setup now officially supported.
   * Added emulator for SGE-style qsub calls (condor_qsub; incl. manpage).
   * Update DMCTP shim script to version 0.4.
+  * Added dependency to libdate-manip-perl for condor_gather_info.
 
- -- Michael Hanke <mih@debian.org>  Wed, 21 Dec 2011 20:19:21 +0100
+ -- Michael Hanke <mih@debian.org>  Thu, 22 Dec 2011 16:12:57 +0100
 
 condor (7.7.1+git837-g37b7fa3-1) UNRELEASED; urgency=low
 
