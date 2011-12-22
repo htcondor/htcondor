@@ -114,7 +114,7 @@ for ($i=0; $i < sizeof($info); $i++) {
   $full_log_url = sprintf(GITSHA1, $run["sha1"]);  
 
   echo "<tr>\n";
-  echo "  <td>" . $run["desc"] . "<br><font size='-1'>" . $run["sha1"] . "<br><a href='$full_log_url'>Commit info</a> $diffstr</font>\n";
+  echo "  <td class='left'>" . $run["desc"] . "<br><font size='-1'>" . $run["sha1"] . "<br><a href='$full_log_url'>Commit info</a> $diffstr</font>\n";
   echo "      <br><font size='-2'>" . $run["pin"] . "</font></td>\n";
   echo "  <td align='center'>" . $run["runid"] . "</td>\n";
   echo "  <td align='center'>" . $run["start"] . "</td>\n";

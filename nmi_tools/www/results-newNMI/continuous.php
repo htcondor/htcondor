@@ -11,7 +11,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$blacklist = Array("x86_64_fedora_13");
+$blacklist = Array("x86_64_fedora_13", "x86_64_fedora_14", "x86_64_rhap_6.1");
 ?>
 
 </head>
@@ -105,6 +105,9 @@ foreach ($results as $row) {
   // Keep track of every platform that we see, and if it is in the blacklist we
   // will skip it here.
   $platform = preg_replace("/nmi:/", "", $row["platform"]);
+  if(in_array($platform, $blacklist)) {
+    continue;
+  }
 
   $build_runid = $test_mapping[$row["runid"]];
   
