@@ -2,7 +2,6 @@
 lsb_compliance
 use_symlinks_for_install_clones
 #allow_rpath
-no_scimark
 disable_java_gt4X
 debian_dynamic_run
 no_java_for_now

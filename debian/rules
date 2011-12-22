@@ -117,6 +117,7 @@ override_dh_install:
 		-e 's,^[#]*\(CONDOR_DEVELOPERS_COLLECTOR\s*=\).*,\1 NONE,'  \
 		-e 's,^\(CRED_STORE_DIR\s*=\).*,\1 \$$(LOCAL_DIR)/lib/condor/cred_dir,' \
 		-e 's,^[#]*\(SSH_TO_JOB_SSHD_CONFIG_TEMPLATE\s*=\).*,\1 /etc/condor/condor_ssh_to_job_sshd_config_template,'  \
+		-e 's,^\(JAVA_BENCHMARK_TIME\s*=\).*,\1 0,' \
 		debian/condor/etc/condor/condor_config
 
 
