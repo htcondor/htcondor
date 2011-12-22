@@ -7081,7 +7081,7 @@ id=432
 
 [JAVA_BENCHMARK_TIME]
 aliases=
-default=2
+default=0
 version=0.0.0
 range=.*
 state=default
