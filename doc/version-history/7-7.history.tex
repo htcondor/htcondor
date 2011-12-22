@@ -177,6 +177,11 @@ and prevent the \Attr{x509UserProxyEmail} from being set properly for
 jobs forwarded via Condor-C.
 \Ticket{2655}
 
+\item Fixed a bug in \Condor{dagman} that caused a DAG to fail if node
+job user log files were actually symlinks.  This problem was introduced
+in the 7.7 series.
+\Ticket{2704}
+
 \end{itemize}
 
 \noindent Known Bugs:
