@@ -123,6 +123,14 @@ DAGman. This can happen, for example, when a \Condor{dagman} process dies while
 its children are still running.
 \Ticket{2463}
 
+% Note: this is just kind of a stub so there's something in the version
+% history when I merge this branch to the master -- I need to fully
+% document this new feature ASAP.  wenger 2011-12-22
+\item Added the new FINAL node feature to \Condor{dagman} -- this allows
+the user to declare a FINAL node in the DAG, which is always run at the
+end of the workflow, whether it ended successfully or not.
+\Ticket{1482}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

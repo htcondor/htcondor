@@ -102,6 +102,7 @@ if (-e $node_output_file) {
 if (-e $rescuedag) {
 	runcmd("rm -f $rescuedag");
 }
+#TEMPTEMP -- remove halt file
 
 $abnormal = sub 
 {
