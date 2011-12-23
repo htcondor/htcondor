@@ -21,6 +21,8 @@
 #ifndef __CLASSAD_UTIL_H__
 #define __CLASSAD_UTIL_H__
 
+#include <sstream>
+
 #include "classad/common.h"
 
 namespace classad {
@@ -65,6 +67,13 @@ bool is_leap_year(int year);
 
 int classad_isinf(double x);
 int classad_isnan(double x);
+
+template <typename T>
+bool classad_lexcast(const std::string& s, T& v) {
+    std::stringstream ss(s);
+    ss >> v;
+    return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
+}
 
 } // classad
 

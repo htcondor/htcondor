@@ -34,6 +34,9 @@ class ClassAd;
 class Value 
 {
 	public:
+        // should this be conditional on anything?
+        typedef int64_t IntType;
+
 			/// Value types
 		enum ValueType {
 												NULL_VALUE          = 0,
@@ -310,7 +313,7 @@ class Value
 
 		union {
 			bool			booleanValue;
-			int				integerValue;
+			IntType			integerValue;
 			double 			realValue;
 			ExprList        *listValue;
 			ClassAd			*classadValue;

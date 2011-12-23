@@ -394,6 +394,8 @@ tokenizeNumber (void)
 	if( numberType == INTEGER ) {
 		cut( );
 		long l;
+            // EJE: I need to duplicate semantics of strtol(buf, NULL, 0) for 
+            // templatized type
 		if ( _useOldClassAdSemantics ) {
 			// Old ClassAds don't support octal or hexidecimal
 			// representations for integers.
