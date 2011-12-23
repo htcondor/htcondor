@@ -152,6 +152,16 @@ but not big enough to hold the whole contents of the spool directory.
 specifies the amount of time in seconds that \Condor{schedd} will hold a claim
 idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
 
+\item \AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
+report the maximum observed memory usage.  Previously, they reported
+the most recently observed memory usage.  This change makes these
+attributes similar to \AdAttr{ImageSize}, which also reports the
+maximum observed value.  Previously, \AdAttr{ResidentSetSize} was
+usually reported as 0 in the job history for completed jobs, because
+when the job was finished, the final observation of memory usage
+was 0.
+\Ticket{2725}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
