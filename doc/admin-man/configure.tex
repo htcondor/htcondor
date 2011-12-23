@@ -6005,6 +6005,15 @@ These settings affect the \Condor{starter}.
   would set the value to \Expr{False} to disable Chirp remote file access 
   from execute machines. 
 
+\label{param:UsePSS} 
+\item[\Macro{USE\_PSS}]
+  A boolean value, that when \Expr{True} causes the \Condor{starter} to
+  measure the PSS (Proportional Set Size) of each Condor job.
+  The default value is \Expr{True}.
+  When running many short lived jobs, performance problems in 
+  the \Condor{procd} have been observed, and a setting of \Expr{False}
+  may relieve these problems.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
