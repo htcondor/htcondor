@@ -384,6 +384,7 @@ const char* EC2EBSVolumes = "ec2_ebs_volumes";
 const char* EC2AvailabilityZone= "ec2_availability_zone";
 const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
+const char* EC2TagNames = "ec2_tag_names";
 
 
 //
@@ -1510,17 +1511,6 @@ SetExecutable()
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
-	}
-
-		// For compatibility with the AWS Console, set the Name tag to
-		// be the executable, which is just a label for EC2 jobs
-	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
-		JobGridType != NULL &&
-		(strcasecmp( JobGridType, "ec2" ) == MATCH)) {
-		buffer.sprintf("%s = \"Name\"", ATTR_EC2_TAG_NAMES);
-		InsertJobExpr(buffer);
-		buffer.sprintf("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
-		InsertJobExpr(buffer);
 	}
 
 	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
@@ -5191,7 +5181,83 @@ SetGridParams()
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
-	
+
+		//
+		// Handle EC2 tags - don't require user to specify the list of tag names
+		//
+		// Collect all the EC2 tag names, then param for each
+		//
+		// EC2TagNames is needed because EC2 tags are case-sensitive
+		// and ClassAd attribute names are not. We build it for the
+		// user, but also let the user override entries in it with
+		// their own case preference. Ours will always be lower-cased.
+		//
+
+	StringList tagNames;
+	if ((tmp = condor_param(EC2TagNames, ATTR_EC2_TAG_NAMES))) {
+		tagNames.initializeFromString(tmp);
+		free(tmp); tmp = NULL;
+	}
+
+	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
+	for (;!hash_iter_done(it); hash_iter_next(it)) {
+		char *key = hash_iter_key(it);
+		char *name = NULL;
+		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
+			key[prefix_len]) {
+			name = &key[prefix_len];
+		} else if (!strncasecmp(key, "ec2_tag_", 8) &&
+				   key[8]) {
+			name = &key[8];
+		} else {
+			continue;
+		}
+
+		if (strncasecmp(name, "Names", 5) &&
+			!tagNames.contains_anycase(name)) {
+			tagNames.append(name);
+		}
+	}
+	hash_iter_delete(&it);
+
+	stringstream ss;
+	char *tagName;
+	tagNames.rewind();
+	while ((tagName = tagNames.next())) {
+			// XXX: Check that tagName does not contain an equal sign (=)
+		string tag;
+		string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
+		string tagCmd("ec2_tag_"); tagCmd.append(tagName);
+		char *value = NULL;
+		if ((value = condor_param(tagCmd.c_str(), tagAttr.c_str()))) {
+			buffer.sprintf("%s = \"%s\"", tagAttr.c_str(), value);
+			InsertJobExpr(buffer.Value());
+			free(value); value = NULL;
+		} else {
+				// XXX: Should never happen, we just searched for the names, error or something
+		}
+	}
+
+		// For compatibility with the AWS Console, set the Name tag to
+		// be the executable, which is just a label for EC2 jobs
+	tagNames.rewind();
+	if (!tagNames.contains_anycase("Name")) {
+		if (JobUniverse == CONDOR_UNIVERSE_GRID &&
+			JobGridType != NULL &&
+			(strcasecmp( JobGridType, "ec2" ) == MATCH)) {
+			char *ename = condor_param(Executable, ATTR_JOB_CMD); // !NULL by now
+			tagNames.append("Name");
+			buffer.sprintf("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
+			InsertJobExpr(buffer);
+			free(ename); ename = NULL;
+		}
+	}
+
+	buffer.sprintf("%s = \"%s\"",
+				   ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
+	InsertJobExpr(buffer.Value());
+
 
 	//
 	// Deltacloud grid-type submit attributes
