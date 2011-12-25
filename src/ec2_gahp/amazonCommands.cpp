@@ -1442,6 +1442,88 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
     return true;
 }
 
+
+// ---------------------------------------------------------------------------
+
+
+AmazonCreateTags::AmazonCreateTags() { }
+
+AmazonCreateTags::~AmazonCreateTags() { }
+
+// Expecting:
+//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value> ...
+// Expecting:EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <availability_zone> <vpc_subnet> <vpc_ip> <groupname> <groupname> ..
+// <groupname> are optional ones.
+// we support multiple groupnames
+bool AmazonCreateTags::ioCheck(char **argv, int argc)
+{
+	return verify_min_number_args(argc, 7) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]) &&
+		verify_string_name(argv[5]) &&
+		verify_string_name(argv[6]);
+}
+
+// Expecting:
+//   EC2_VM_CREATE_TAGS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <tag name>=<tag value> ...
+bool
+AmazonCreateTags::workerFunction(char **argv,
+								 int argc,
+								 std::string &result_string)
+{
+    assert(strcmp(argv[0], "EC2_VM_CREATE_TAGS") == 0);
+
+    // Uses the Query API function 'CreateTags', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/index.html?ApiReference-query-CreateTags.html
+
+    int requestID;
+    get_int(argv[1], &requestID);
+
+    if (!verify_min_number_args(argc, 7)) {
+        result_string = create_failure_result(requestID, "Wrong_Argument_Number");
+        dprintf(D_ALWAYS,
+				"Wrong number of arguments (%d should be >= %d) to %s\n",
+				argc, 7, argv[0]);
+        return false;
+    }
+
+    // Fill in required attributes & parameters.
+    AmazonCreateTags asRequest;
+    asRequest.serviceURL = argv[2];
+    asRequest.accessKeyFile = argv[3];
+    asRequest.secretKeyFile = argv[4];
+    asRequest.query_parameters["Action"] = "CreateTags";
+    asRequest.query_parameters["ResourceId.0"] = argv[5];
+
+	std::string tag;
+	for (int i = 6; i < argc; i++) {
+		std::stringstream ss;
+		ss << "Tag." << (i - 6);
+		tag = argv[i];
+		asRequest.query_parameters[ss.str().append(".Key")] =
+			tag.substr(0, tag.find('='));
+		asRequest.query_parameters[ss.str().append(".Value")] =
+			tag.substr(tag.find('=') + 1);
+	}
+	
+    // Send the request.
+    if (!asRequest.SendRequest()) {
+        result_string = create_failure_result(requestID,
+											  asRequest.errorMessage.c_str(),
+											  asRequest.errorCode.c_str());
+    } else {
+        result_string = create_success_result(requestID, NULL);
+    }
+
+    return true;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
 AmazonAttachVolume::AmazonAttachVolume() { }
 
 AmazonAttachVolume::~AmazonAttachVolume() { }
