@@ -7168,6 +7168,107 @@ int GahpClient::ec2_associate_address(std::string service_url,
 
 }
 
+
+int
+GahpClient::ec2_create_tags(std::string service_url,
+							std::string publickeyfile,
+							std::string privatekeyfile,
+							std::string instance_id, 
+							StringList &tags,
+							StringList &returnStatus,
+							char* &error_code)
+{
+    static const char* command = "EC2_VM_CREATE_TAGS";
+
+    int rc = 0;
+
+    // check if this command is supported
+    if  (!server->m_commands_supported->contains_anycase(command)) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    // check input arguments
+    if (service_url.empty() ||
+		publickeyfile.empty() ||
+		privatekeyfile.empty() ||
+		instance_id.empty()) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    // Generate request line
+    std::string reqline;
+
+    char *esc1 = strdup(escapeGahpString(service_url));
+    char *esc2 = strdup(escapeGahpString(publickeyfile));
+    char *esc3 = strdup(escapeGahpString(privatekeyfile));
+    char *esc4 = strdup(escapeGahpString(instance_id));
+    
+    int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
+    
+    free(esc1);
+    free(esc2);
+    free(esc3);
+    free(esc4);
+    ASSERT(x > 0);
+
+	const char *tag;
+	int count = 0;
+	tags.rewind();
+	if (tags.number() > 0) {
+		while ((tag = tags.next())) {
+			char *esc_tag = strdup(escapeGahpString(tag));
+			sprintf_cat(reqline, " %s", esc_tag);
+			count++;
+			free(esc_tag);
+		}
+	}
+	ASSERT(count == tags.number());
+    
+    const char *buf = reqline.c_str();
+        
+    // Check if this request is currently pending. If not, make it the pending request.
+    if (!is_pending(command, buf)) {
+        // Command is not pending, so go ahead and submit a new one if our command mode permits.
+        if (m_mode == results_only) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending(command, buf, deleg_proxy);
+    }
+    
+    // If we made it here, command is pending.
+
+    // Check first if command completed.
+    Gahp_Args* result = get_pending_result(command, buf);
+
+    if (result) {
+        // command completed and the return value looks like:
+        int return_code = atoi(result->argv[1]);
+        
+        if (return_code == 1) {
+            if (result->argc == 2) {
+                error_string = "";
+            } else if (result->argc == 4) {
+                error_code = strdup(result->argv[2]);
+                error_string = result->argv[3];
+            } else {
+                EXCEPT("Bad %s Result",command);
+            }
+        } else {    // return_code == 0
+            if (((result->argc-2) % 2) != 0) {
+                EXCEPT("Bad %s Result", command);
+            } else {
+                // get the status info
+                for (int i=2; i<result->argc; i++) {
+                    returnStatus.append(strdup(result->argv[i]));
+                }
+                returnStatus.rewind();
+            }
+        }       
+        delete result;
+    }
+    return rc;
+}
+
 int GahpClient::ec2_attach_volume(std::string service_url,
                               std::string publickeyfile,
                               std::string privatekeyfile,

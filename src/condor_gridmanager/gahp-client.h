@@ -687,6 +687,15 @@ class GahpClient : public Service {
                                   std::string elastic_ip,
                                   StringList & returnStatus,
                                   char* & error_code );
+
+		// Used to associate a tag with an resource, like a running instance
+        int ec2_create_tags(std::string service_url,
+							std::string publickeyfile,
+							std::string privatekeyfile,
+							std::string instance_id, 
+							StringList & tags,
+							StringList & returnStatus,
+							char* & error_code );
 		
         /**
          * Used to release an elastic ip from an instance
