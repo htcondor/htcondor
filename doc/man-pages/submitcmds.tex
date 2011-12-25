@@ -1669,6 +1669,29 @@ with the data from that \SubmitCmd{ec2\_user\_data} submit command
 occurring first.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_tag_names
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_tag\_names}
+\item[ec2\_tag\_names = $<$name0,name1,name...$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the case of tag names that will be associated with the
+running instance.
+This is only necessary if a tag name case matters.
+By default the list will be automatically generated.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_tag_*
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_tag\_$<$name$>$}
+\item[ec2\_tag\_$<$name$>$ = $<$value$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies a tag to be associated with the running instance.
+The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
+change the case.
+
+%%%%%%%%%%%%%%%%%%%
 %% globus_rematch
 %%%%%%%%%%%%%%%%%%%
 
