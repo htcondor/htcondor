@@ -1512,6 +1512,17 @@ SetExecutable()
 		exit( 1 );
 	}
 
+		// For compatibility with the AWS Console, set the Name tag to
+		// be the executable, which is just a label for EC2 jobs
+	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
+		JobGridType != NULL &&
+		(strcasecmp( JobGridType, "ec2" ) == MATCH)) {
+		buffer.sprintf("%s = \"Name\"", ATTR_EC2_TAG_NAMES);
+		InsertJobExpr(buffer);
+		buffer.sprintf("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
+		InsertJobExpr(buffer);
+	}
+
 	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
 	if ( macro_value ) {
 		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
