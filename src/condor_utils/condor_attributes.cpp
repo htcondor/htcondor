@@ -899,7 +899,7 @@ const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailabilityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
 const char * const ATTR_EC2_TAG_NAMES = "EC2TagNames";
-const char * const ATTR_EC2_TAG_PREFIX = "EC2TagKey";
+const char * const ATTR_EC2_TAG_PREFIX = "EC2Tag";
 
 //************* End of changes for EC2 Jobs *****************//
 
