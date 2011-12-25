@@ -31,6 +31,8 @@
 #include "gahp-client.h"
 #include "vm_univ_utils.h"
 
+using namespace std;
+
 void EC2JobInit();
 void EC2JobReconfig();
 BaseJob *EC2JobCreate( ClassAd *jobad );
@@ -72,37 +74,37 @@ public:
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 
-	std::string errorString;
-	std::string m_remoteJobId;
-	std::string remoteJobState;
+	string errorString;
+	string m_remoteJobId;
+	string remoteJobState;
 
 	EC2Resource *myResource;
 	GahpClient *gahp;
 
 private:
 	// create dynamic input parameters
-	std::string build_ami_id();
-	std::string build_client_token();
+	string build_ami_id();
+	string build_client_token();
 	StringList* build_groupnames();
 
-	std::string m_serviceUrl;
+	string m_serviceUrl;
 	
-	std::string m_public_key_file;
-	std::string m_private_key_file;
-	std::string m_user_data;
-	std::string m_user_data_file;
-	std::string m_instance_type;
-    std::string m_elastic_ip;
-	std::string m_availability_zone;
-	std::string m_ebs_volumes;
-	std::string m_vpc_subnet;
-	std::string m_vpc_ip;
-	std::string m_key_pair;
+	string m_public_key_file;
+	string m_private_key_file;
+	string m_user_data;
+	string m_user_data_file;
+	string m_instance_type;
+    string m_elastic_ip;
+	string m_availability_zone;
+	string m_ebs_volumes;
+	string m_vpc_subnet;
+	string m_vpc_ip;
+	string m_key_pair;
 	
 	int m_vm_check_times;
 	
-	std::string m_ami_id;
-	std::string m_client_token;
+	string m_ami_id;
+	string m_client_token;
 	StringList* m_group_names;
 	
 	// remove created temporary keypair file

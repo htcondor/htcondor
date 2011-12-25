@@ -32,6 +32,8 @@
 #include "gridmanager.h"
 #include "ec2job.h"
 #include "condor_config.h"
+
+using namespace std;
   
 #define GM_INIT							0
 #define GM_START_VM						1
@@ -94,7 +96,7 @@ void EC2JobReconfig()
 bool EC2JobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	std::string resource;
+	string resource;
 	
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
@@ -125,13 +127,13 @@ EC2Job::EC2Job( ClassAd *classad )
 	: BaseJob( classad )
 {
 dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
-	std::string error_string = "";
+	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
 	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
-	std::string value;
+	string value;
 	
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -735,8 +737,8 @@ void EC2Job::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_SUBMITTED; // GM_SUBMITTED knows how to handle this
 				} else {
-					std::string new_status;
-					std::string public_dns;
+					string new_status;
+					string public_dns;
 					StringList returnStatus;
 
 					// need to call ec2_vm_status(), ec2_vm_status()
@@ -976,7 +978,7 @@ void EC2Job::SetInstanceId( const char *instance_id )
 // SetRemoteJobId() is used to set the value of global variable "remoteJobID"
 void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
 {
-	std::string full_job_id;
+	string full_job_id;
 	if ( client_token && client_token[0] ) {
 		sprintf( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
@@ -991,9 +993,9 @@ void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
 
 // if ami_id is empty, client must have assigned upload file name value
 // otherwise the condor_submit will report an error.
-std::string EC2Job::build_ami_id()
+string EC2Job::build_ami_id()
 {
-	std::string ami_id;
+	string ami_id;
 	char* buffer = NULL;
 	
 	if ( jobAd->LookupString( ATTR_EC2_AMI_ID, &buffer ) ) {
@@ -1005,7 +1007,7 @@ std::string EC2Job::build_ami_id()
 
 // Client token is max 64 ASCII chars
 // http://docs.amazonwebservices.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html
-std::string EC2Job::build_client_token()
+string EC2Job::build_client_token()
 {
 	char uuid_str[37];
 	uuid_t uuid;
@@ -1015,7 +1017,7 @@ std::string EC2Job::build_client_token()
 	uuid_unparse(uuid, uuid_str);
 	uuid_str[36] = '\0';
 
-	return std::string(uuid_str);
+	return string(uuid_str);
 }
 
 StringList* EC2Job::build_groupnames()
