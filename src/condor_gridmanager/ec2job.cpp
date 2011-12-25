@@ -1081,6 +1081,57 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 	char *gahp_error_code = NULL;
 	int rc;
 
+	char *buffer = NULL;
+	if (jobAd->LookupString(ATTR_EC2_TAG_NAMES, &buffer)) {
+		StringList tags;
+		StringList tagNames(buffer);
+		char *tagName;
+		tagNames.rewind();
+		while ((tagName = tagNames.next())) {
+				// XXX: Check that tagName does not contain an equal sign (=)
+			string tag;
+			string tagAttr(ATTR_EC2_TAG_PREFIX);
+			tagAttr.append(tagName);
+			char *value = NULL;
+			if (!jobAd->LookupString(tagAttr.c_str(), &value)) {
+				dprintf(D_ALWAYS, "(%d.%d) Error: %s not defined, no value for tag, skipping\n",
+						procID.cluster, procID.proc,
+						tagAttr.c_str());
+				continue;
+			}
+			tag.append(tagName).append("=").append(value);
+			tags.append(tag.c_str());
+			dprintf(D_FULLDEBUG, "(%d.%d) Tag found: %s\n",
+					procID.cluster, procID.proc,
+					tag.c_str());
+			free(value);
+		}
+
+		rc = gahp->ec2_create_tags(m_serviceUrl.c_str(),
+								   m_public_key_file.c_str(),
+								   m_private_key_file.c_str(),
+								   m_remoteJobId.c_str(),
+								   tags,
+								   returnStatus,
+								   gahp_error_code );
+
+		switch (rc) {
+		case 0:
+			break;
+		case GAHPCLIENT_COMMAND_PENDING:
+			break;
+		case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
+			if ((condorState == REMOVED) || (condorState == HELD)) 
+				gmState = GM_DELETE;
+		default:
+			dprintf(D_ALWAYS,
+					"Failed ec2_create_tags returned %s continuing w/job\n",
+					gahp_error_code);
+			break;
+		}
+	}
+	if (buffer) { free(buffer); buffer = NULL; }
+
 	// associate the elastic ip with the now running instance.
 	if ( !m_elastic_ip.empty() )
 	{
