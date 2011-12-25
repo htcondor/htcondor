@@ -640,7 +640,11 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         vmStartRequest.query_parameters[ "PrivateIpAddress" ] = argv[12];
     }
 
-    for( int i = 13; i < argc; ++i ) {
+    if( strcasecmp( argv[13], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "ClientToken" ] = argv[13];
+    }
+
+    for( int i = 14; i < argc; ++i ) {
         std::ostringstream groupName;
         groupName << "SecurityGroup." << ( i - 13 + 1 );
         vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];

@@ -801,6 +801,7 @@ extern const char * const ATTR_VM_CKPT_IP;
 extern const char * const ATTR_EC2_ACCESS_KEY_ID;
 extern const char * const ATTR_EC2_SECRET_ACCESS_KEY;
 extern const char * const ATTR_EC2_AMI_ID;
+extern const char * const ATTR_EC2_KEY_PAIR;
 extern const char * const ATTR_EC2_KEY_PAIR_FILE;
 extern const char * const ATTR_EC2_SECURITY_GROUPS;
 extern const char * const ATTR_EC2_USER_DATA;

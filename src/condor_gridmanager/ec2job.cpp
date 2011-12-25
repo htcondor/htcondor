@@ -27,48 +27,36 @@
 #include "nullfile.h"
 #include "filename_tools.h"
 
+#include <uuid/uuid.h>
+
 #include "gridmanager.h"
 #include "ec2job.h"
 #include "condor_config.h"
   
 #define GM_INIT							0
-#define GM_UNSUBMITTED					1
-#define GM_START_VM						2
-#define GM_SAVE_INSTANCE_ID				3
-#define GM_SUBMITTED					4
-#define GM_DONE_SAVE					5
-#define GM_CANCEL						6
-#define GM_FAILED						7
-#define GM_DELETE						8
-#define GM_CLEAR_REQUEST				9
-#define GM_HOLD							10
-#define GM_PROBE_JOB					11
-#define GM_START						12
-#define GM_CREATE_KEYPAIR				13
-#define GM_DESTROY_KEYPAIR				14
-#define GM_DESTROY_KEYPAIR_SUBMIT		15
-#define GM_SAVE_KEYPAIR_NAME			16
-#define GM_CHECK_VM						17
+#define GM_START_VM						1
+#define GM_SAVE_INSTANCE_ID				2
+#define GM_SUBMITTED					3
+#define GM_DONE_SAVE					4
+#define GM_CANCEL						5
+#define GM_DELETE						6
+#define GM_CLEAR_REQUEST				7
+#define GM_HOLD							8
+#define GM_PROBE_JOB					9
+#define GM_SAVE_CLIENT_TOKEN			10
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
-	"GM_UNSUBMITTED",
 	"GM_START_VM",
 	"GM_SAVE_INSTANCE_ID",
 	"GM_SUBMITTED",
 	"GM_DONE_SAVE",
 	"GM_CANCEL",
-	"GM_FAILED",
 	"GM_DELETE",
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROBE_JOB",
-	"GM_START",
-	"GM_CREATE_KEYPAIR",
-	"GM_DESTROY_KEYPAIR",
-	"GM_DESTROY_KEYPAIR_SUBMIT",
-	"GM_SAVE_KEYPAIR_NAME",
-	"GM_CHECK_VM",
+	"GM_SAVE_CLIENT_TOKEN"
 };
 
 #define EC2_VM_STATE_RUNNING			"running"
@@ -111,7 +99,8 @@ bool EC2JobAdMatch( const ClassAd *job_ad )
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
 
-	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.c_str(), "ec2", 3 ) == 0) ) 
+	if ( (universe == CONDOR_UNIVERSE_GRID) &&
+		 (strncasecmp( resource.c_str(), "ec2", 3 ) == 0) ) 
 	{
 		return true;
 	}
@@ -136,7 +125,6 @@ EC2Job::EC2Job( ClassAd *classad )
 	: BaseJob( classad )
 {
 dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
-	char buff[16385]; // user data can be 16K, this is 16K+1
 	std::string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -144,9 +132,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	char *gahp_debug = NULL;
 	ArgList args;
 	std::string value;
-	char* buffer = NULL;
 	
-	remoteJobId = NULL;
 	remoteJobState = "";
 	gmState = GM_INIT;
 	lastProbeTime = 0;
@@ -155,116 +141,62 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	numSubmitAttempts = 0;
 	myResource = NULL;
 	gahp = NULL;
-	m_public_key_file = NULL;
-	m_private_key_file = NULL;
-	m_user_data = NULL;
-	m_user_data_file = NULL;
 	m_group_names = NULL;
-	m_instance_type = NULL;
-	m_availability_zone = NULL;
-	m_elastic_ip = NULL;
-	m_ebs_volumes = NULL;
-	m_vpc_subnet = NULL;
-	m_vpc_ip = NULL;
 	
 	// check the public_key_file
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, buff );
-	m_public_key_file = strdup(buff);
+	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
 	
-	if ( strlen(m_public_key_file) == 0 ) {
+	if ( m_public_key_file.empty() ) {
 		error_string = "Public key file not defined";
 		goto error_exit;
 	}
 
 	// check the private_key_file
-	buff[0] = '\0';
-	jobAd->LookupString( ATTR_EC2_SECRET_ACCESS_KEY, buff );
-	m_private_key_file = strdup(buff);
+	jobAd->LookupString( ATTR_EC2_SECRET_ACCESS_KEY, m_private_key_file );
 	
-	if ( strlen(m_private_key_file) == 0 ) {
+	if ( m_private_key_file.empty() ) {
 		error_string = "Private key file not defined";
 		goto error_exit;
 	}
 
     // lookup the elastic IP
-    buff[0] = '\0';
-    jobAd->LookupString( ATTR_EC2_ELASTIC_IP, buff );
-    m_elastic_ip = strdup(buff);
+    jobAd->LookupString( ATTR_EC2_ELASTIC_IP, m_elastic_ip );
 	
-	buff[0] = '\0';
-    jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, buff );
-	m_ebs_volumes = strdup(buff);
+    jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, m_ebs_volumes );
 	
 	// lookup the elastic IP
-    buff[0] = '\0';
-    jobAd->LookupString( ATTR_EC2_AVAILABILITY_ZONE, buff );
-    m_availability_zone = strdup(buff);
+    jobAd->LookupString( ATTR_EC2_AVAILABILITY_ZONE, m_availability_zone );
 	
-	buff[0] = '\0';
-    jobAd->LookupString( ATTR_EC2_VPC_SUBNET, buff );
-    m_vpc_subnet = strdup(buff);
+    jobAd->LookupString( ATTR_EC2_VPC_SUBNET, m_vpc_subnet );
 	
-	buff[0] = '\0';
-    jobAd->LookupString( ATTR_EC2_VPC_IP, buff );
-    m_vpc_ip = strdup(buff);
+    jobAd->LookupString( ATTR_EC2_VPC_IP, m_vpc_ip );
 	
-	
-		// XXX: Buffer Overflow if the user_data is > 16K? This code
-		// should be unprivileged.
-
-		// XXX: It is bad to assume the buff is initialized to 0s,
-		// always use memset? All this code should be changed to get
-		// at the attribute in a better way.
-
-	memset(buff, 0, 16385);
 	
 	// if user assigns both user_data and user_data_file, the two will
 	// be concatenated by the gahp
-	if ( jobAd->LookupString( ATTR_EC2_USER_DATA_FILE, buff ) ) {
-		m_user_data_file = strdup(buff);	
-	}
-	if ( jobAd->LookupString( ATTR_EC2_USER_DATA, buff ) ) {
-		m_user_data = strdup(buff);
-	}
+	jobAd->LookupString( ATTR_EC2_USER_DATA_FILE, m_user_data_file );
+
+	jobAd->LookupString( ATTR_EC2_USER_DATA, m_user_data );
 	
 	// get VM instance type
-	memset(buff, 0, 16385);
 	// if clients don't assign this value in condor submit file,
 	// we should set the default value to NULL and gahp_server
 	// will start VM in EC2 using m1.small mode.
-	if ( jobAd->LookupString( ATTR_EC2_INSTANCE_TYPE, buff ) ) {
-		m_instance_type = strdup(buff);	
-	}
+	jobAd->LookupString( ATTR_EC2_INSTANCE_TYPE, m_instance_type );
 	
 	m_vm_check_times = 0;
-	m_keypair_check_times = 0;
 
-	// for SSH keypair output file
-	// Notice:
-	// 	we can have two kinds of SSH keypair output file names or the place where the 
-	// output private file should be written to, 
-	// 	1. the name assigned by client in the condor submit file with attribute "EC2KeyPairFile"
-	// 	2. if there is no attribute "EC2KeyPairFile" in the condor submit file, we 
-	// 	   should discard this private file by writing to NULL_FILE
-	if ( jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, &buffer ) ) {
-		// clinet define the location where this SSH keypair file will be written to
-		m_key_pair_file = buffer;
-	} else {
-		// If client doesn't assign keypair output file name, we should discard it by 
-		// writing this private file to /dev/null
-		m_key_pair_file = NULL_FILE;
-	}
-	free (buffer);
+	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
-	if ( condorState != HELD && jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
+	if ( condorState != HELD &&
+		 jobAd->LookupString( ATTR_HOLD_REASON, NULL, 0 ) != 0 ) {
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
 	jobAd->LookupString( ATTR_GRID_RESOURCE, value );
-	if ( value.length() ) {
+	if ( !value.empty() ) {
 		const char *token;
 
 		Tokenize( value );
@@ -329,12 +261,17 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	myResource = EC2Resource::FindOrCreateResource( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file );
+	myResource =
+		EC2Resource::FindOrCreateResource( m_serviceUrl.c_str(),
+										   m_public_key_file.c_str(),
+										   m_private_key_file.c_str() );
 	myResource->RegisterJob( this );
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
-	if ( value.length() ) {
+	if ( !value.empty() ) {
 		const char *token;
+
+		dprintf(D_ALWAYS, "Recovering job from %s\n", value.c_str());
 
 		Tokenize( value );
 
@@ -349,16 +286,16 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 
 		token = GetNextToken( " ", false );
 		if ( token ) {
-			m_key_pair = token;
+			m_client_token = token;
 		}
 
 		token = GetNextToken( " ", false );
 		if ( token ) {
-			remoteJobId = strdup( token );
+			m_remoteJobId = token;
 		}
 	}
 
-	if ( !m_key_pair.empty() ) {
+	if ( !m_remoteJobId.empty() ) {
 		myResource->AlreadySubmitted( this );
 	}
 	
@@ -387,20 +324,8 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 EC2Job::~EC2Job()
 {
 	if ( myResource ) myResource->UnregisterJob( this );
-	free( remoteJobId );
-	
 	delete gahp;
-	free (m_public_key_file);
-	free (m_private_key_file);
-	free (m_user_data);
 	delete m_group_names;
-	free(m_user_data_file);
-	free(m_instance_type);
-    free(m_elastic_ip);
-	free(m_ebs_volumes);
-	free(m_availability_zone);
-	free(m_vpc_subnet);
-	free(m_vpc_ip);
 }
 
 
@@ -466,24 +391,20 @@ void EC2Job::doEvaluateState()
 				}
 
 				if ( gahp->Startup() == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n", procID.cluster, procID.proc );
+					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
+							 procID.cluster, procID.proc );
 					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 					gmState = GM_HOLD;
 					break;
 				}
-				
-				gmState = GM_START;
-				break;
-				
-			case GM_START:
 
 				errorString = "";
-				
-				if ( m_key_pair == "" ) {
-					gmState = GM_CLEAR_REQUEST;
-				} else if ( remoteJobId == NULL ) {
-					gmState = GM_CHECK_VM;
-				} else {
+
+				gmState = GM_CLEAR_REQUEST;
+				if (!m_client_token.empty()) {
+					gmState = GM_START_VM;
+				}
+				if (!m_remoteJobId.empty()) {
 					submitLogged = true;
 					if ( condorState == RUNNING || condorState == COMPLETED ) {
 						executeLogged = true;
@@ -492,56 +413,30 @@ void EC2Job::doEvaluateState()
 				}
 				
 				break;
-				
-			case GM_UNSUBMITTED:
 
-				if ( (condorState == REMOVED) || (condorState == HELD) ) {
-					gmState = GM_DELETE;
-				} else {
-					gmState = GM_SAVE_KEYPAIR_NAME;
-				}
-				
-				break;
-				
-			case GM_SAVE_KEYPAIR_NAME:
-				// Create a unique name for the ssh keypair for this job
-				// in EC2 and save it in GridJobId in the schedd. This
-				// will be our handle to the job until we get the instance
-				// id at the end of the submission process.
 
-				if ( (condorState == REMOVED) ||
-					 (condorState == HELD) ) {
-
-					gmState = GM_DELETE;
-				}
-
-				// Once RequestSubmit() is called at least once, you must
-				// CancelSubmit() once the submission process is complete
-				// or aborted.
-				if ( myResource->RequestSubmit( this ) == false ) {
-					break;
-				}
-
-				if ( m_key_pair == "" ) {
-					SetKeypairId( build_keypair().c_str() );
+			case GM_SAVE_CLIENT_TOKEN:
+				if (m_client_token.empty()) {
+					SetClientToken(build_client_token().c_str());
 				}
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
-						// The keypair name still needs to be saved to
-						//the schedd
 					requestScheddUpdate( this, true );
 					break;
 				}
-				gmState = GM_CREATE_KEYPAIR;
+				gmState = GM_START_VM;
 				break;
 
+
 			case GM_START_VM:
-				
+
+				// XXX: This is always false, why is numSubmitAttempts
+				// not incremented after ec2_vm_start? Same for
+				// dcloudjob.
 				if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 					gmState = GM_HOLD;
 					break;
 				}
-				
 							
 				// After a submit, wait at least submitInterval before trying another one.
 				if ( now >= lastSubmitAttempt + submitInterval ) {
@@ -554,9 +449,8 @@ void EC2Job::doEvaluateState()
 						// removed jobs.
 						if ( (condorState == REMOVED) ||
 							 (condorState == HELD) ) {
-
 							myResource->CancelSubmit( this );
-							gmState = GM_DESTROY_KEYPAIR;
+							gmState = GM_DELETE;
 						}
 						break;
 					}
@@ -564,35 +458,45 @@ void EC2Job::doEvaluateState()
 					// construct input parameters for ec2_vm_start()
 					char* instance_id = NULL;
 					
-					// For a given EC2 Job, in its life cycle, the attributes will not change 					
-					
+					// For a given EC2 Job, in its life cycle, the attributes will not change
 					
 					m_ami_id = build_ami_id();
-					if ( m_key_pair == "" ) {
-						m_key_pair = build_keypair();
+					if ( m_group_names == NULL ) {
+						m_group_names = build_groupnames();
 					}
-					if ( m_group_names == NULL )	m_group_names = build_groupnames();
 					
 					// ec2_vm_start() will check the input arguments
-					rc = gahp->ec2_vm_start( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
-												m_ami_id.c_str(), m_key_pair.c_str(), 
-												m_user_data, m_user_data_file, m_instance_type,
-												m_availability_zone,m_vpc_subnet,m_vpc_ip,
-												*m_group_names, instance_id, gahp_error_code);
+					rc = gahp->ec2_vm_start( m_serviceUrl.c_str(),
+											 m_public_key_file.c_str(),
+											 m_private_key_file.c_str(),
+											 m_ami_id.c_str(),
+											 m_key_pair.c_str(),
+											 m_user_data.c_str(),
+											 m_user_data_file.c_str(),
+											 m_instance_type.c_str(),
+											 m_availability_zone.c_str(),
+											 m_vpc_subnet.c_str(),
+											 m_vpc_ip.c_str(),
+											 m_client_token.c_str(),
+											 *m_group_names,
+											 instance_id,
+											 gahp_error_code);
 					
-					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
 
 					lastSubmitAttempt = time(NULL);
 
-					if ( rc != 0 && strcmp( gahp_error_code, "NEED_CHECK_VM_START" ) == 0 ) {
+					if ( rc != 0 &&
+						 strcmp( gahp_error_code, "NEED_CHECK_VM_START" ) == 0 ) {
 						// get an error code from gahp server said that we should check if 
 						// the VM has been started successfully in EC2
 						
 						// Maxmium retry times is 3, if exceeds this limitation, we fall through
 						if ( m_vm_check_times++ < maxRetryTimes ) {
-							gmState = GM_CHECK_VM;
+							gmState = GM_START_VM;
 						}
 						break;
 					}
@@ -610,7 +514,8 @@ void EC2Job::doEvaluateState()
 						// meet the resource limitation (maximum 20 instances)
 						// should retry this command later
 						myResource->CancelSubmit( this );
-						daemonCore->Reset_Timer( evaluateStateTid, submitInterval );
+						daemonCore->Reset_Timer( evaluateStateTid,
+												 submitInterval );
 					 } else {
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
@@ -621,7 +526,7 @@ void EC2Job::doEvaluateState()
 					
 				} else {
 					if ( (condorState == REMOVED) || (condorState == HELD) ) {
-						gmState = GM_DESTROY_KEYPAIR;
+						gmState = GM_CANCEL;
 						break;
 					}
 
@@ -633,76 +538,12 @@ void EC2Job::doEvaluateState()
 				}
 
 				break;
-				
-			
-			case GM_CHECK_VM:
-				
-				{
-					
-				// check if the VM has been started successfully
-				StringList returnStatus;
-							
-				rc = gahp->ec2_vm_vm_keypair_all(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file,
-												    returnStatus, gahp_error_code);
-
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-						break;
-				}
-
-				if (rc == 0) {
-
-					// now we should check, corresponding to a given SSH keypair, in EC2, is there
-					// existing any running VM instances? If these are some ones, we just return the
-					// first one we found.
-					bool is_running = false;
-					char* instance_id = NULL;
-					char* keypair_name = NULL;
-								
-					int size = returnStatus.number();
-					returnStatus.rewind();
-								
-					for (int i=0; i<size/2; i++) {
-									
-						instance_id = returnStatus.next();
-						keypair_name = returnStatus.next();
-
-						if (strcmp(m_key_pair.c_str(), keypair_name) == 0) {
-							is_running = true;
-							break;
-						}
-					}
-								
-					if ( is_running ) {
-
-						// there is a running VM instance corresponding to the given SSH keypair
-						gmState = GM_SAVE_INSTANCE_ID;
-						// save the instance ID which will be used when delete VM instance
-						SetInstanceId( instance_id );
-									
-					} else {
-						// we shoudl re-start the VM again with the corresponding SSH keypair
-						// TODO If we know we successfully created the
-						//   keypair during this instance, we can go
-						//   to GM_START_VM instead.
-						myResource->CancelSubmit( this );
-						gmState = GM_DESTROY_KEYPAIR_SUBMIT;
-					}
-				} else {
-					errorString = gahp->getErrorString();
-					dprintf(D_ALWAYS,"(%d.%d) VM check failed: %s: %s\n",
-							procID.cluster, procID.proc, gahp_error_code,
-							errorString.c_str() );
-					gmState = GM_HOLD;
-				}
-
-				}				
-				
-				break;			
 			
 			
 			case GM_SAVE_INSTANCE_ID:
 
-				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID,
+									 &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
 					// Wait for the instance id to be saved to the schedd
 					requestScheddUpdate( this, true );
@@ -752,10 +593,13 @@ void EC2Job::doEvaluateState()
 				
 			case GM_DONE_SAVE:
 
+					// XXX: Review this
+
 				if ( condorState != HELD && condorState != REMOVED ) {
 					JobTerminated();
 					if ( condorState == COMPLETED ) {
-						jobAd->GetDirtyFlag( ATTR_JOB_STATUS, &attr_exists, &attr_dirty );
+						jobAd->GetDirtyFlag( ATTR_JOB_STATUS,
+											 &attr_exists, &attr_dirty );
 						if ( attr_exists && attr_dirty ) {
 							requestScheddUpdate( this, true );
 							break;
@@ -765,14 +609,12 @@ void EC2Job::doEvaluateState()
 				
 				myResource->CancelSubmit( this );
 				if ( condorState == COMPLETED || condorState == REMOVED ) {
-					gmState = GM_DESTROY_KEYPAIR;
+					gmState = GM_DELETE;
 				} else {
 					// Clear the contact string here because it may not get
 					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-					if ( remoteJobId != NULL ) {
-						SetInstanceId( NULL );
-						SetKeypairId( NULL );
-					}
+					SetInstanceId( NULL );
+					SetClientToken( NULL );
 					gmState = GM_CLEAR_REQUEST;
 				}
 			
@@ -795,7 +637,7 @@ void EC2Job::doEvaluateState()
 				// forgetting about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( remoteJobId != NULL && condorState != REMOVED 
+				if ( !m_remoteJobId.empty() && condorState != REMOVED 
 					 && wantResubmit == 0 && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
@@ -820,10 +662,8 @@ void EC2Job::doEvaluateState()
 
 				errorString = "";
 				myResource->CancelSubmit( this );
-				if ( remoteJobId != NULL ) {
-					SetInstanceId( NULL );
-					SetKeypairId( NULL );
-				}
+				SetInstanceId( NULL );
+				SetClientToken( NULL );
 
 				JobIdle();
 
@@ -881,24 +721,37 @@ void EC2Job::doEvaluateState()
 				terminateLogged = false;
 				abortLogged = false;
 				evictLogged = false;
-				gmState = GM_UNSUBMITTED;
+				if ( (condorState == REMOVED) || (condorState == HELD) ) {
+					gmState = GM_DELETE;
+				} else {
+					gmState = GM_SAVE_CLIENT_TOKEN;
+				}
 
 				break;				
-				
+
+
 			case GM_PROBE_JOB:
 
 				if ( condorState == REMOVED || condorState == HELD ) {
-					gmState = GM_CANCEL;
+					gmState = GM_SUBMITTED; // GM_SUBMITTED knows how to handle this
 				} else {
 					std::string new_status;
 					std::string public_dns;
 					StringList returnStatus;
 
-					// need to call ec2_vm_status(), ec2_vm_status() will check input arguments
-					// The VM status we need is saved in the second string of the returned status StringList
-					rc = gahp->ec2_vm_status(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, returnStatus, gahp_error_code );
+					// need to call ec2_vm_status(), ec2_vm_status()
+					// will check input arguments
+					// The VM status we need is saved in the second
+					// string of the returned status StringList
+					rc = gahp->ec2_vm_status(m_serviceUrl.c_str(),
+											 m_public_key_file.c_str(),
+											 m_private_key_file.c_str(),
+											 m_remoteJobId.c_str(),
+											 returnStatus,
+											 gahp_error_code );
 					
-					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
 					
@@ -915,7 +768,7 @@ void EC2Job::doEvaluateState()
 						if ( returnStatus.number() == 0 ) {
 							// The instance has been purged, act like we
 							// got back 'terminated'
-							returnStatus.append( remoteJobId );
+							returnStatus.append( m_remoteJobId.c_str() );
 							returnStatus.append( EC2_VM_STATE_TERMINATED );
 						}
 
@@ -970,16 +823,42 @@ void EC2Job::doEvaluateState()
 				
 			case GM_CANCEL:
 
-				// need to call ec2_vm_stop(), it will only return STOP operation is success or failed
+				// need to call ec2_vm_stop(), it will only return
+				// STOP operation is success or failed
 				// ec2_vm_stop() will check the input arguments
-				rc = gahp->ec2_vm_stop(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, gahp_error_code);
+				rc = gahp->ec2_vm_stop(m_serviceUrl.c_str(),
+									   m_public_key_file.c_str(),
+									   m_private_key_file.c_str(),
+									   m_remoteJobId.c_str(),
+									   gahp_error_code);
 			
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				} 
 				
 				if ( rc == 0 ) {
-					gmState = GM_DESTROY_KEYPAIR;
+					if ( condorState == COMPLETED || condorState == REMOVED ) {
+						gmState = GM_DELETE;
+					} else {
+							// If the job was not Completed or Removed
+							// then it might run again, clear
+							// everything in preparation.
+							//
+							// This case is hit when a job is Held,
+							// when it is later released it should run
+							// again. If the GridJobId is not cleared,
+							// the second run attempt will find the
+							// first terminated instance and consider
+							// itself complete.
+
+							// Clear the contact string here because it may not get
+							// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
+						myResource->CancelSubmit( this );
+						SetInstanceId( NULL );
+						SetClientToken( NULL );
+						gmState = GM_CLEAR_REQUEST;
+					}
 				} else {
 					// What to do about a failed cancel?
 					errorString = gahp->getErrorString();
@@ -990,139 +869,7 @@ void EC2Job::doEvaluateState()
 				}
 				
 				break;
-				
 
-			case GM_CREATE_KEYPAIR:
-				{
-				// Once RequestSubmit() is called at least once, you must
-				// CancelSubmit() once the submission process is complete
-				// or aborted.
-				if ( myResource->RequestSubmit( this ) == false ) {
-					// If we haven't started the CREATE_KEYPAIR call yet,
-					// we can abort the submission here for held and
-					// removed jobs.
-					if ( (condorState == REMOVED) ||
-						 (condorState == HELD) ) {
-
-						gmState = GM_DELETE;
-					}
-					break;
-				}
-
-				// now create and register this keypair by using ec2_vm_create_keypair()
-				rc = gahp->ec2_vm_create_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
-													m_key_pair.c_str(), m_key_pair_file.c_str(), gahp_error_code);
-
-				if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				} else if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ) {
-					if ( (condorState == REMOVED) ||
-						 (condorState == HELD) ) {
-						gmState = GM_DELETE;
-					}
-					break;
-				}
-
-				if (rc == 0) {
-					if ( (condorState == REMOVED) ||
-						 (condorState == HELD) ) {
-
-						gmState = GM_DESTROY_KEYPAIR;
-					} else {
-						gmState = GM_START_VM;
-					}
-				} else {
-					if ( strcmp(gahp_error_code, "NEED_CHECK_SSHKEY" ) == 0 ) {
-						
-						// get an error code from gahp server said that we should check if 
-						// the SSH keypair has been registered successfully in EC2
-
-						// Maxmium retry times is 3, if exceeds this limitation, we will go to HOLD state
-						if ( m_keypair_check_times++ < maxRetryTimes ) {
-							gmState = GM_DESTROY_KEYPAIR_SUBMIT;
-							break;
-						}
-					}
-
-					errorString = gahp->getErrorString();
-					dprintf(D_ALWAYS,"(%d.%d) job create keypair failed: %s: %s\n",
-							procID.cluster, procID.proc, gahp_error_code,
-							errorString.c_str() );
-					gmState = GM_HOLD;
-					break;
-				}
-								
-				}				
-				
-				break;
-
-
-			case GM_DESTROY_KEYPAIR_SUBMIT:
-				{
-				// Something went wrong during the submit process and
-				// we need to destroy the keypair
-				rc = gahp->ec2_vm_destroy_keypair(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
-
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-
-				if (rc == 0) {
-					// remove temporary keypair local output file
-					if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
-						dprintf(D_ALWAYS,"(%d.%d) job destroy temporary keypair local file failed.\n", procID.cluster, procID.proc);
-					}
-					if ( condorState == REMOVED || condorState == HELD ) {
-						SetInstanceId( NULL );
-						SetKeypairId( NULL );
-						gmState = GM_DELETE;
-					} else {
-						gmState = GM_CREATE_KEYPAIR;
-					}
-					
-				} else {
-					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
-							 procID.cluster, procID.proc, gahp_error_code,
-							 errorString.c_str() );
-					gmState = GM_HOLD;
-				}
-									
-				}
-
-				break; 	
-				
-
-			case GM_DESTROY_KEYPAIR:
-				{
-				// Yes, now let's destroy the temporary keypair 
-				rc = gahp->ec2_vm_destroy_keypair(m_serviceUrl.c_str(),m_public_key_file, m_private_key_file, m_key_pair.c_str(), gahp_error_code);
-
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-
-				if (rc == 0) {
-					// remove temporary keypair local output file
-					if ( remove_keypair_file(m_key_pair_file.c_str()) ) {
-						gmState = GM_FAILED;
-					} else {
-						dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
-						gmState = GM_FAILED;
-					}
-					
-				} else {
-					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
-							 procID.cluster, procID.proc, gahp_error_code,
-							 errorString.c_str() );
-					gmState = GM_HOLD;
-				}
-									
-				}
-
-				break; 	
-				
 
 			case GM_HOLD:
 				// Put the job on hold in the schedd.
@@ -1135,11 +882,14 @@ void EC2Job::doEvaluateState()
 					char holdReason[1024];
 					holdReason[0] = '\0';
 					holdReason[sizeof(holdReason)-1] = '\0';
-					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) - 1 );
+					jobAd->LookupString( ATTR_HOLD_REASON,
+										 holdReason, sizeof(holdReason) - 1 );
 					if ( holdReason[0] == '\0' && errorString != "" ) {
-						strncpy( holdReason, errorString.c_str(), sizeof(holdReason) - 1 );
+						strncpy( holdReason, errorString.c_str(),
+								 sizeof(holdReason) - 1 );
 					} else if ( holdReason[0] == '\0' ) {
-						strncpy( holdReason, "Unspecified gridmanager error", sizeof(holdReason) - 1 );
+						strncpy( holdReason, "Unspecified gridmanager error",
+								 sizeof(holdReason) - 1 );
 					}
 
 					JobHeld( holdReason );
@@ -1147,21 +897,6 @@ void EC2Job::doEvaluateState()
 			
 				gmState = GM_DELETE;
 				
-				break;
-				
-				
-			case GM_FAILED:
-
-				myResource->CancelSubmit( this );
-				SetInstanceId( NULL );
-				SetKeypairId( NULL );
-
-				if ( (condorState == REMOVED) || (condorState == COMPLETED) ) {
-					gmState = GM_DELETE;
-				} else {
-					gmState = GM_CLEAR_REQUEST;
-				}
-
 				break;
 				
 				
@@ -1175,7 +910,8 @@ void EC2Job::doEvaluateState()
 				
 			
 			default:
-				EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster, procID.proc, gmState );
+				EXCEPT( "(%d.%d) Unknown gmState %d!",
+						procID.cluster, procID.proc, gmState );
 				break;
 		} // end of switch_case
 		
@@ -1187,7 +923,8 @@ void EC2Job::doEvaluateState()
 		if ( gmState != old_gm_state ) {
 			reevaluate_state = true;
 			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
-					procID.cluster, procID.proc, GMStateNames[old_gm_state], GMStateNames[gmState]);
+					procID.cluster, procID.proc,
+					GMStateNames[old_gm_state], GMStateNames[gmState]);
 			enteredCurrentGmState = time(NULL);
 		}
 		
@@ -1215,34 +952,33 @@ void EC2Job::SetRemoteVMName(const char * name)
 }
 
 
-void EC2Job::SetKeypairId( const char *keypair_id )
+void EC2Job::SetClientToken(const char *client_token)
 {
-	if ( keypair_id == NULL ) {
-		m_key_pair = "";
-	} else {
-		m_key_pair = keypair_id;
+	m_client_token.clear();
+	if ( client_token ) {
+		m_client_token = client_token;
 	}
-	SetRemoteJobId( m_key_pair.c_str(), remoteJobId );
+	SetRemoteJobId(m_client_token.empty() ? NULL : m_client_token.c_str(),
+				   m_remoteJobId.c_str());
 }
 
 void EC2Job::SetInstanceId( const char *instance_id )
 {
-	free( remoteJobId );
+	m_remoteJobId.clear();
 	if ( instance_id ) {
-		remoteJobId = strdup( instance_id );
-        jobAd->Assign( ATTR_EC2_INSTANCE_NAME, remoteJobId );
-	} else {
-		remoteJobId = NULL;
+		m_remoteJobId = instance_id;
+        jobAd->Assign( ATTR_EC2_INSTANCE_NAME, m_remoteJobId );
 	}
-	SetRemoteJobId( m_key_pair.c_str(), remoteJobId );
+	SetRemoteJobId( m_client_token.c_str(),
+					m_remoteJobId.empty() ? NULL : m_remoteJobId.c_str() );
 }
 
 // SetRemoteJobId() is used to set the value of global variable "remoteJobID"
-void EC2Job::SetRemoteJobId( const char *keypair_id, const char *instance_id )
+void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
 {
 	std::string full_job_id;
-	if ( keypair_id && keypair_id[0] ) {
-		sprintf( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), keypair_id );
+	if ( client_token && client_token[0] ) {
+		sprintf( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
 			sprintf_cat( full_job_id, " %s", instance_id );
 		}
@@ -1267,33 +1003,19 @@ std::string EC2Job::build_ami_id()
 	return ami_id;
 }
 
-
-std::string EC2Job::build_keypair()
+// Client token is max 64 ASCII chars
+// http://docs.amazonwebservices.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html
+std::string EC2Job::build_client_token()
 {
-	// Build a name for the ssh keypair that will be unique to this job.
-	// Our pattern is SSH_<collector name>_<GlobalJobId>
+	char uuid_str[37];
+	uuid_t uuid;
 
-	// get condor pool name
-	// In case there are multiple collectors, strip out the spaces
-	// If there's no collector, insert a dummy name
-	char* pool_name = param( "COLLECTOR_HOST" );
-	if ( pool_name ) {
-		StringList collectors( pool_name );
-		free( pool_name );
-		pool_name = collectors.print_to_string();
-	} else {
-		pool_name = strdup( "NoPool" );
-	}
+	uuid_generate(uuid);
 
-	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
-	std::string job_id;
-	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+	uuid_unparse(uuid, uuid_str);
+	uuid_str[36] = '\0';
 
-	std::string key_pair;
-	sprintf( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
-
-	free( pool_name );
-	return key_pair;
+	return std::string(uuid_str);
 }
 
 StringList* EC2Job::build_groupnames()
@@ -1347,7 +1069,8 @@ bool EC2Job::remove_keypair_file(const char* filename)
 void EC2Job::print_error_code( const char* error_code,
 								  const char* function_name )
 {
-	dprintf( D_ALWAYS, "Receiving error code = %s from function %s !", error_code, function_name );	
+	dprintf( D_ALWAYS, "Receiving error code = %s from function %s !",
+			 error_code, function_name );	
 }
 
 void EC2Job::associate_n_attach(StringList & returnStatus)
@@ -1357,9 +1080,15 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 	int rc;
 
 	// associate the elastic ip with the now running instance.
-	if ( strlen(m_elastic_ip) )
+	if ( !m_elastic_ip.empty() )
 	{
-		rc = gahp->ec2_associate_address(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, m_elastic_ip, returnStatus, gahp_error_code );
+		rc = gahp->ec2_associate_address(m_serviceUrl.c_str(),
+										 m_public_key_file.c_str(),
+										 m_private_key_file.c_str(),
+										 m_remoteJobId.c_str(),
+										 m_elastic_ip.c_str(),
+										 returnStatus,
+										 gahp_error_code );
 
 		switch (rc)
 		{
@@ -1371,15 +1100,17 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 				if ( (condorState == REMOVED) || (condorState == HELD) ) 
 					gmState = GM_DELETE;
 			default:
-				dprintf(D_ALWAYS, "Failed ec2_associate_address returned %s continuing w/job\n", gahp_error_code);
+				dprintf(D_ALWAYS,
+						"Failed ec2_associate_address returned %s continuing w/job\n",
+						gahp_error_code);
 				break;
 		}
 	}
 
-	if (strlen(m_ebs_volumes))
+	if (!m_ebs_volumes.empty())
 	{
 		bool bcontinue=true;
-		StringList vols(m_ebs_volumes, ",");
+		StringList vols(m_ebs_volumes.c_str(), ",");
 		// Need to loop through here parsing the volumes which we will send to the gahp
 		vols.rewind();
 		
@@ -1393,7 +1124,14 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 			char * volume_id = ebs_volume_params.next();
 			char * device_id = ebs_volume_params.next();
 
-			rc = gahp->ec2_attach_volume(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, volume_id, remoteJobId, device_id, returnStatus, gahp_error_code );
+			rc = gahp->ec2_attach_volume(m_serviceUrl.c_str(),
+										 m_public_key_file.c_str(),
+										 m_private_key_file.c_str(),
+										 volume_id,
+										 m_remoteJobId.c_str(),
+										 device_id,
+										 returnStatus,
+										 gahp_error_code );
 
 			switch (rc)
 			{
@@ -1406,10 +1144,11 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 						gmState = GM_DELETE;
 				default:
 					bcontinue=false;
-					dprintf(D_ALWAYS, "Failed ec2_attach_volume returned %s continuing w/job\n", gahp_error_code);
+					dprintf(D_ALWAYS,
+							"Failed ec2_attach_volume returned %s continuing w/job\n",
+							gahp_error_code);
 					break;
 			}
 		}
 	}
-
 }
