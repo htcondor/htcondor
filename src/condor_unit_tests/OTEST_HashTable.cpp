@@ -179,7 +179,7 @@ static bool test_walk_failed() {
 static bool test_iterate_first() {
 	emit_test("Test iterate() and make sure its first Index/Value are correct");
 	table->startIterations();
-	int value;
+	int value = 0;
 	emit_output_expected_header();
 	emit_param("Value", "%d OR %d OR %d", 37, 197, 42);
 	emit_retval("%s", tfstr(1));
@@ -212,7 +212,7 @@ static bool test_get_current_key() {
 static bool test_iterate_other() {
 	emit_test("Test iterate() and make sure its remaining Index/Values are correct");
 	int index;
-	int value;
+	int value = 0;
 	emit_output_expected_header();
 	emit_param("Value", "%d OR %d OR %d", 37, 197, 42);
 	emit_retval("%s", tfstr(1));
