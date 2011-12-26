@@ -125,7 +125,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 	ClassAd *update_ad = NULL;
 	std::string job_id;
 	ClassAdXMLParser xml_parser;
-	UnicoreJob *job;
+	UnicoreJob *job = NULL;
 
 	dprintf( D_FULLDEBUG, "UnicoreGahpCallbackHandler: got job callback: %s\n",
 			 update_ad_string );
