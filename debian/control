@@ -3,7 +3,7 @@ Section: science
 Priority: extra
 Maintainer: NeuroDebian team <team@neuro.debian.net>
 Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
-Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev, libcurl4-openssl-dev, zlib1g-dev, libglobus-gss-assist-dev, libglobus-gram-protocol-dev, libglobus-gram-client-dev, libglobus-gass-server-ez-dev, libglobus-ftp-client-dev, latex2html, transfig, libpcre3-dev, libboost-thread-dev, libboost-program-options-dev, libboost-system-dev, libboost-regex-dev, libboost-filesystem-dev, libexpat1-dev, libxml2-dev, libvirt-dev, zlib1g-dev, gcj-jdk | java-compiler, libcgroup-dev (>= 0.37~), uuid-dev, chrpath, libldap2-dev | libldap-dev
+Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev, libcurl4-openssl-dev, zlib1g-dev, libglobus-gss-assist-dev, libglobus-gram-protocol-dev, libglobus-gram-client-dev, libglobus-gass-server-ez-dev, libglobus-ftp-client-dev, latex2html, transfig, libpcre3-dev, libboost-thread-dev, libboost-program-options-dev, libboost-system-dev, libboost-regex-dev, libboost-filesystem-dev, libexpat1-dev, libxml2-dev, libvirt-dev, zlib1g-dev, gcj-jdk | java-compiler, libcgroup-dev (>= 0.37~), uuid-dev, chrpath, libldap2-dev | libldap-dev, help2man
 Standards-Version: 3.9.2
 
 
