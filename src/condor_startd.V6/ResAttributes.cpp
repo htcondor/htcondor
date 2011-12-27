@@ -402,6 +402,34 @@ MachAttributes::compute( amask_t how_much )
 			free(m_ckptpltfrm);
 		}
 		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
+
+		const char * allowed_root_dirs = param("NAMED_CHROOT");
+		if (allowed_root_dirs) {
+			MyString result;
+			bool prev = false;
+			StringList chroot_list(allowed_root_dirs);
+			chroot_list.rewind();
+			const char * next_chroot;
+			std::string requested_chroot;
+			while ( (next_chroot=chroot_list.next()) ) {
+				MyString chroot_spec(next_chroot);
+				chroot_spec.Tokenize();
+				const char * chroot_name = chroot_spec.GetNextToken("=", false);
+				if (chroot_name == NULL) {
+					dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+				}
+				if (prev) {
+					result += ", ";
+				}
+				prev = true;
+				result += chroot_name;
+			}
+			if (prev) {
+				dprintf(D_FULLDEBUG, "Named chroots: %s\n", result.Value() );
+				m_named_chroot = result.Value();
+			}
+		}
+
     }
 
 
@@ -674,6 +702,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	cp->Assign( ATTR_UTSNAME_RELEASE, m_utsname_release );
 	cp->Assign( ATTR_UTSNAME_VERSION, m_utsname_version );
 	cp->Assign( ATTR_UTSNAME_MACHINE, m_utsname_machine );
+
+	// Advertise chroot information
+	cp->Assign( "NamedChroot", m_named_chroot );
 
 }
 
