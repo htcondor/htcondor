@@ -51,13 +51,15 @@ Note that it is up to the administrator to provide a full environment
 for the job to run in.
 \Ticket{2698}
 
-\item On Linux systems which support bind type of filesystem mount (generally,
-RHEL 5 systems and newer), the administrator can configure the condor\_startd 
-to provide per-job filesystem mounts.  One use might be to provide each job
-it's own view of /tmp and /var/tmp, which are private to that Condor job,
-and cleared when the job exits.  This is implemented with the
-MOUNT\_UNDER\_SCRATCH parameter, which describes which directories to
-bind mount.
+\item On Linux platforms which support a bind type of file system mount 
+(which are generally RHEL 5 systems and more recent platforms), 
+the administrator can configure the \Condor{startd} 
+to provide per-job file system mounts.  
+One use might be to provide each job its own view of \File{/tmp} 
+and \File{/var/tmp}, which are private to that Condor job,
+and cleared when the job exits.  
+This is implemented with the new \Macro{MOUNT\_UNDER\_SCRATCH} 
+configuration variable, which describes which directories to bind mount.
 \Ticket{2015}
 
 \item Added the new \Opt{-expand} option to \Condor{config\_val}.
