@@ -10876,6 +10876,18 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
 
 \begin{description}
 
+\label{param:DefragName}
+\item[\Macro{DEFRAG\_NAME}]
+  Used to give an alternative value to the \Attr{Name} attribute
+  in the \Condor{defrag}'s ClassAd.
+  This esoteric configuration macro might be used in the situation
+  where there are two \Condor{defrag} daemons running on one machine,
+  and each reports to the same \Condor{collector}.
+  Different names will distinguish the two daemons.
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for defaults and composition of valid Condor daemon names.
+
 \label{param:DefragDrainingMachinesPerHour}
 \item[\Macro{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR}] A floating point
   number that specifies how many machines should be drained per hour.
@@ -10887,6 +10899,9 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   controlled by \Macro{DEFRAG\_INTERVAL}.  The lowest rate of draining
   that is supported is one machine per day or one machine per
   \Macro{DEFRAG\_INTERVAL}, whichever is lower.
+  A fractional number of machines contributing to the value of 
+  \MacroNI{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR} is rounded to the nearest
+  whole number of machines on a per day basis.
 
 \label{param:DefragRequirements}
 \item[\Macro{DEFRAG\_REQUIREMENTS}] An expression that specifies which
