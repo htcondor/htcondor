@@ -46,6 +46,7 @@ MachAttributes::MachAttributes()
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
+	m_named_chroot = NULL;
 
 	m_clock_day = -1;
 	m_clock_min = -1;
@@ -126,6 +127,7 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
+	if( m_named_chroot ) free( m_named_chroot );
 
 	if( m_utsname_sysname ) free( m_utsname_sysname );
 	if( m_utsname_nodename ) free( m_utsname_nodename );
@@ -426,7 +428,8 @@ MachAttributes::compute( amask_t how_much )
 			}
 			if (prev) {
 				dprintf(D_FULLDEBUG, "Named chroots: %s\n", result.Value() );
-				m_named_chroot = result.Value();
+				if (m_named_chroot) free(m_named_chroot);
+				m_named_chroot = strdup( result.Value() );
 			}
 		}
 
@@ -704,8 +707,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	cp->Assign( ATTR_UTSNAME_MACHINE, m_utsname_machine );
 
 	// Advertise chroot information
-	cp->Assign( "NamedChroot", m_named_chroot );
-
+	if ( m_named_chroot ) {
+		cp->Assign( "NamedChroot", m_named_chroot );
+	}
 }
 
 void
