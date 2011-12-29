@@ -8624,10 +8624,11 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanHoldClaimTime}
 \item[\Macro{DAGMAN\_HOLD\_CLAIM\_TIME}]
-  An integer defining the number of seconds \Condor{dagman} will hold onto a
-  claim after a job is finished, using the \Attr{KeepClaimIdle} attribute.  The
-  default value is 20. Setting this value to 0 causes \Condor{dagman} not to set
-  the attribute.
+  An integer defining the number of seconds that \Condor{dagman} will cause a
+  hold on a claim after a job is finished, 
+  using the job ClassAd attribute \Attr{KeepClaimIdle}.
+  The default value is 20. 
+  A value of 0 causes \Condor{dagman} not to set the job ClassAd attribute.
 
 \end{description}
 

@@ -111,10 +111,13 @@ the job is placed on hold because of a failure, and not by user request.
 Previously, email would be sent only if the job was terminated via signal.
 \Ticket{1976}
 
-\item By default, if a node has child nodes, then \Condor{dagman} uses the
-KeepClaimIdle attribute, introduced in Condor version 7.7.1, to hold onto a
-claim.  This is a slight optimization, as it avoids waiting for a negotiation
-cycle.  The hold time defaults to 20 seconds.  This is controlled by the
+\item The default settings for \Condor{dagman} have changed.
+Now, if a node has children, then \Condor{dagman} uses the
+\Attr{KeepClaimIdle} attribute, 
+introduced in Condor version 7.7.1, to hold onto a claim.
+This is a slight optimization, 
+as it avoids waiting for a negotiation cycle.
+The amount of time is controlled by the
 \Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
 \Ticket{2673}
 
