@@ -132,7 +132,7 @@ struct LineRecLT {
                if (a.GroupId != b.GroupId) {
                   if ( ! a.GroupId) return false;
                   if ( ! b.GroupId) return true;
-                  if (a.SortKey != b.SortKey) {
+                  if (a.SortKey < b.SortKey || a.SortKey > b.SortKey) {
                      return a.SortKey < b.SortKey;
                   return a.GroupId < b.GroupId;
                   }
@@ -212,7 +212,6 @@ main(int argc, char* argv[])
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
   for (int i=1; i<argc; i++) {
-    const char * parg = argv[i];
     if (IsArg(argv[i],"setprio")) {
       if (i+2>=argc) usage(argv[0]);
       SetPrio=i;
@@ -851,6 +850,9 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     DetailFlag &= ~DetailQuotas;
 
 // ad->fPrint(stdout);
+  if (fNeedGroupIdFixup) {
+     // TJ: do something about this....
+  }
 
   return;
 }
@@ -858,7 +860,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
 static char * PadToWidth(char * pszDest, int cch, int chFill)
 {
    int    cchExist = strlen(pszDest);
-   char * psz = pszDest + cchExist;
+   //char * psz = pszDest + cchExist;
    int cchRemain = cch - cchExist;
    if (cchRemain > 0)
       memset(pszDest, chFill, cch - cchExist);
@@ -922,7 +924,7 @@ static char * FormatUsage(char * pszDest, int cchDest, int dtOne, int dtTwo)
          strcat(pszDest, " ");
       strcat(pszDest, format_date_year(dtTwo));
    }
-   if (strlen(pszDest) > cchDest) { EXCEPT("buffer overflow!"); }
+   if (strlen(pszDest) > (size_t)cchDest) { EXCEPT("buffer overflow!"); }
    return pszDest;
 }
 
@@ -935,7 +937,7 @@ static char * FormatFloat(char * pszDest, int width, int decimal, float value)
    int cch = strlen(sz);
    if (cch > width)
       {
-      sprintf(fmt+1,".%dg", width-6, width-6);
+      sprintf(fmt+1,".%dg", width-6);
       sprintf(sz, fmt, value);
       cch = strlen(sz);
       }
@@ -958,17 +960,17 @@ static const struct {
    int margin;
    const char * pHead;
    } aCols[] = {
-   DetailEffQuota,   9,-5, "Effective\0Quota",
-   DetailCfgQuota,   9, 1, "Config\0Quota",
-   DetailTreeQuota,  9, 1, "Subtree\0Quota",
-   DetailSortKey,   9,  1, "Group\0Sort Key",
-   DetailPriority,  12, 1, "Effective\0Priority",
-   DetailRealPrio,   8, 1, "Real\0Priority",
-   DetailFactor,     9, 1, "Priority\0Factor",
-   DetailResUsed,    6, 1, "Res\0In Use",
-   DetailWtResUsed, 12, 1, "Total Usage\0(wghted-hrs)",
-   DetailUseTime1,  16, 1, "Usage\0Start Time",
-   DetailUseTime2,  16, 1, "Last\0Usage Time",
+   { DetailEffQuota,   9,-5, "Effective\0Quota" },
+   { DetailCfgQuota,   9, 1, "Config\0Quota" },
+   { DetailTreeQuota,  9, 1, "Subtree\0Quota" },
+   { DetailSortKey,   9,  1, "Group\0Sort Key" },
+   { DetailPriority,  12, 1, "Effective\0Priority" },
+   { DetailRealPrio,   8, 1, "Real\0Priority" },
+   { DetailFactor,     9, 1, "Priority\0Factor" },
+   { DetailResUsed,    6, 1, "Res\0In Use" },
+   { DetailWtResUsed, 12, 1, "Total Usage\0(wghted-hrs)" },
+   { DetailUseTime1,  16, 1, "Usage\0Start Time" },
+   { DetailUseTime2,  16, 1, "Last\0Usage Time" },
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
@@ -985,7 +987,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    Totals.AccUsage=0;
 
    int cols_max_width = 0;
-   for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+   for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
       cols_max_width += aCols[ii].width + 1;
 
    char UserCountStr[30];
@@ -1001,7 +1003,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    // print first row of headings
    CopyAndPadToWidth(Line,HierFlag ? "Group" : NULL,max_name+1,' ');
    int ix = max_name;
-   for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+   for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
       {
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
@@ -1019,7 +1021,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    // print second row of headings
    CopyAndPadToWidth(Line,HierFlag ? "  User Name" : "User Name",max_name+1,' ');
    ix = max_name;
-   for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+   for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
       {
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
@@ -1037,7 +1039,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    // print ---- under headings
    CopyAndPadToWidth(Line,NULL,max_name+1,'-');
    ix = max_name;
-   for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+   for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
       {
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
@@ -1172,7 +1174,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    // print ---- under data
    CopyAndPadToWidth(Line,NULL,max_name+1,'-');
    ix = max_name;
-   for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+   for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
       {
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
@@ -1192,34 +1194,34 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    sprintf(UserCountStr, UserCountFmt, UserCount);
    CopyAndPadToWidth(Line,UserCountStr,max_name+1,' ');
    ix = max_name;
-      for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+   for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
+      {
+      if (!(aCols[ii].DetailFlag & DetailFlag))
+         continue;
+
+      Line[ix++] = ' ';
+      if (aCols[ii].margin > 1)
          {
-         if (!(aCols[ii].DetailFlag & DetailFlag))
-            continue;
-
-         Line[ix++] = ' ';
-         if (aCols[ii].margin > 1)
-            {
-            PadToWidth(Line+ix, aCols[ii].margin, ' ');
-            ix += aCols[ii].margin-1;
-            }
-
-         switch (aCols[ii].DetailFlag)
-            {
-            case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, Totals.wtRes);
-               break;
-            case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
-               break;
-            case DetailUseTime1:  FormatUsage(Line+ix, aCols[ii].width+1, Totals.BeginUsage, -1);
-               break;
-            case DetailUseTime2:  FormatUsage(Line+ix, aCols[ii].width+1, MinLastUsageTime, -1);
-               break;
-            default:  
-               CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, ' ');
-            }
-         ix += aCols[ii].width;
+         PadToWidth(Line+ix, aCols[ii].margin, ' ');
+         ix += aCols[ii].margin-1;
          }
-      printf("%s\n", Line);
+
+      switch (aCols[ii].DetailFlag)
+         {
+         case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, Totals.wtRes);
+            break;
+         case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
+            break;
+         case DetailUseTime1:  FormatUsage(Line+ix, aCols[ii].width+1, Totals.BeginUsage, -1);
+            break;
+         case DetailUseTime2:  FormatUsage(Line+ix, aCols[ii].width+1, MinLastUsageTime, -1);
+            break;
+         default:  
+            CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, ' ');
+         }
+      ix += aCols[ii].width;
+      }
+   printf("%s\n", Line);
 }
 
 
