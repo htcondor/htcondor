@@ -1091,7 +1091,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       ix = max_name;
 
       // columnar data into line
-      for (int ii = 0; ii < COUNTOF(aCols); ++ii)
+      for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
          {
          if (!(aCols[ii].DetailFlag & DetailFlag))
             continue;
