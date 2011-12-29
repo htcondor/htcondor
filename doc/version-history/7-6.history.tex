@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a memory leak affecting the \Condor{schedd} when the
+  configuration setting
+  \MacroNI{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
+  file command \SubmitCmd{job\_ad\_information\_attrs} were used.
 
 \end{itemize}
 
