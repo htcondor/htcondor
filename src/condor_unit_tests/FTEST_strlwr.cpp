@@ -57,7 +57,7 @@ static bool test_normal_case() {
 	emit_output_expected_header();
 	emit_retval("upper");
 	emit_output_actual_header();
-	emit_retval("%s", input);
+	emit_retval("%s", up);
 	if(strcmp(input, "upper") != 0) {
 		FAIL;
 	}
