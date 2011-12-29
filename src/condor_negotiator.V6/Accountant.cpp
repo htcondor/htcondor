@@ -1201,6 +1201,17 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     sprintf(tmp, "PriorityFactor%d", gnum);
     ad->Assign(tmp.c_str(), PriorityFactor);
     
+    if (cgrp) {
+        sprintf(tmp, "EffectiveQuota%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->quota);
+        sprintf(tmp, "ConfigQuota%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->config_quota);
+        sprintf(tmp, "SubtreeQuota%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->subtree_quota);
+        sprintf(tmp, "GroupSortKey%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->sort_key);
+    }
+
     int ResourcesUsed = 0;
     if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
     sprintf(tmp, "ResourcesUsed%d", gnum);
