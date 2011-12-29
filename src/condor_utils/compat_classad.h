@@ -109,6 +109,9 @@ class EvalResult
 		/// assignment operator
 	EvalResult & operator=(const EvalResult & rhs);
 
+		// free storage and reset to undefined value
+	void clear();
+
 	void fPrintResult(FILE *); // for debugging
 
 		/// convert to LX_STRING
