@@ -437,18 +437,17 @@ static bool test_auto_resize_timing() {
 	emit_test("How long does it take to add five million entries into the table?");
 	table_two = new HashTable<int, short int>(10, intHash);
 	int i;
-	int insert_result;
 	struct timeval time;
 	gettimeofday(&time, NULL);
 	double starttime = time.tv_sec + (time.tv_usec / 1000000.0);
 	for(i = 0; i <= 5000000; i++) {
-		insert_result = table_two->insert(i, i%30000);
+		table_two->insert(i, i%30000);
 	}
 	gettimeofday(&time, NULL);
 	double midtime = time.tv_sec + (time.tv_usec / 1000000.0);
 	short int value;
 	for(i = 0; i <= 5000000; i++) {
-		insert_result = table_two->lookup(i, value);
+		table_two->lookup(i, value);
 	}
 	gettimeofday(&time, NULL);
 	double endtime = time.tv_sec + (time.tv_usec / 1000000.0);
