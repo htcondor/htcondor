@@ -11,7 +11,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$blacklist = Array("x86_64_fedora_13", "x86_64_fedora_14", "x86_64_rhap_6.1");
+$blacklist = Array();
 ?>
 
 </head>
@@ -189,7 +189,7 @@ foreach (array_keys($seen_platforms) as $platform) {
   print "  <th colspan=2><font size='-3'>$display" . $queues[$platform]["html-queue"] . "</font></th>\n";
   print "  <th></th>\n";
 }
-print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
+print "  <th><font size='-3'># Bad<br>Tasks</font></th>\n";
 print "</tr>\n";
 
 // Determine the heights of the days-of-the-week that display on the left
@@ -292,15 +292,13 @@ foreach ($runs as $run) {
   }
 
   // Print the summary
-  $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
-  $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
-  $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
-  print "<td class='$td_class'>$txt</td>\n";
-
-  $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
-  $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
-  $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
-  print "<td class='$td_class'>$txt</td>\n";
+  $num = $summary["build"]["pending"] + $summary["build"]["failed"] + $summary["test"]["pending"] + $summary["test"]["failed"];
+  if($num == 0) {
+    print "<td class='passed $td_class'>$num</td>";
+  }
+  else {
+    print "<td class='$td_class'>$num</td>";
+  }
 
   print "</tr>\n";
 }
