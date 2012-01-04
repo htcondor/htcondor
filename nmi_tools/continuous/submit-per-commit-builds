@@ -26,7 +26,7 @@ x86_64_winnt_6.1
 chdir("/home/condorauto/per-commit");
 system("git --git-dir=$GIT_DIR fetch");
 
-my @output = `git --git-dir=$GIT_DIR rev-list --ancestry-path --pretty=oneline $TAG..HEAD`;
+my @output = `git --git-dir=$GIT_DIR rev-list --ancestry-path $TAG..HEAD`;
 
 my $ret = $? >> 8;
 if($ret != 0) {
