@@ -270,7 +270,7 @@ class Value
 			@param i The integer value of the value if the value is a number.
 			@return true iff the value is a number
 		*/
-		bool IsNumber (int &i) const;
+		bool IsNumber (IntType &i) const;
 		/** Checks if the value is numerical. If the value is an integer, it 
 				is promoted to a real.
 			@param r The real value of the value if the value is a number.

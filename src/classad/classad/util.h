@@ -75,6 +75,29 @@ bool classad_lexcast(const std::string& s, T& v) {
     return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
 }
 
+
+template <typename IntType>
+bool classad_lexcast_int(const std::string& s, IntType& v) {
+    std::stringstream ss(s);
+
+    // I cannot believe I have to do this
+    std::string::const_iterator j = s.begin();
+    if ((j != s.end()) && ((*j=='+') || (*j=='-'))) ++j;
+    if ((j != s.end()) && (*j=='0')) {
+        ++j;
+        if (j != s.end()) {
+            if ((*j=='x') || (*j=='X')) {
+                ss >> std::hex;
+            } else {
+                ss >> std::oct;
+            }
+        }
+    }
+
+    ss >> v;
+    return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
+}
+
 } // classad
 
 #endif//__CLASSAD_UTIL_H__

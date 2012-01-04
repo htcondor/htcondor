@@ -869,7 +869,19 @@ bool ClassAd::
 EvaluateAttrNumber( const string &attr, int &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+    Value::IntType vi=0;
+	bool r = ( EvaluateAttr( attr, val ) && val.IsNumber( vi ) );
+    if (
+}
+
+bool ClassAd::
+EvaluateAttrNumber( const string& attr, int64_t& i )  const
+{
+	Value val;
+    Value::IntType vi=0;
+	bool r = ( EvaluateAttr( attr, val ) && val.IsNumber( vi ) );
+    i = vi;
+    return r;
 }
 
 bool ClassAd::
