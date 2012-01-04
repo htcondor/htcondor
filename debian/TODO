@@ -7,3 +7,5 @@
 * Allow for configurable UID/GID
 * Security: ALLOW_ADVERTISE_SCHEDD
 * Incompatible with GSOAP 2.8.*
+* Since 7.7.4 no longer builds on Ubuntus (seems to be missing header in
+  EC2-related code)
