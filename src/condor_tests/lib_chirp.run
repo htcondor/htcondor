@@ -1,0 +1,107 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorUtils;
+use strict;
+use warnings;
+
+# Set up some handy global variables
+
+my $libexecdir = `condor_config_val LIBEXEC`;
+chomp($libexecdir);
+my $condor_chirp = "$libexecdir/condor_chirp";
+
+# Chirp is installed in bin on Windows
+if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
+    print "Running on Windows...\n";
+    $/ = "\r\n"; # What chomp removes
+    $libexecdir = `condor_config_val BIN`;
+    chomp($libexecdir);
+    $condor_chirp = "$libexecdir/condor_chirp.exe";
+}
+
+# verify that condor_chirp is executable, and where we expect it
+
+! -d "$libexecdir" && die("ERROR: Can't find libexecdir from condor_config_val: \"$libexecdir\"\n");
+! -x "$condor_chirp" && die("ERROR: The condor_chirp executable isn't in \"$condor_chirp\"\n");
+
+# Make a template to use for submission
+
+my $submitTemplate = "
+
+universe                 = vanilla
+executable               = $condor_chirp
+arguments                = put lib_chirp_input lib_chirp_output
++WantIOProxy             = true
+output                   = lib_chirp.out
+log                      = lib_chirp.log
+error                    = lib_chirp.err
+notification             = never
+queue
+
+";
+
+my $input_file_contents = "
+This is the input file
+There are many like it
+But this one is mine.
+";
+
+# Make an arbitrary input file
+print "Making a lib_chirp_input file to transfer to the job and chirp put back...\n";
+open LIB_CHIRP_INPUT, ">lib_chirp_input" || die("ERROR: Can't create lib_chirp_input: $!\n");
+print LIB_CHIRP_INPUT  $input_file_contents || die("ERROR: Can't write to the input file: $!\n");
+close LIB_CHIRP_INPUT;
+print "Succeeded making the input file\n";
+
+print "Making a Condor submit file to run chirp ...\n";
+open CONDOR_SUBMIT, ">lib_chirp.cmd" || die("ERROR: Can't create lib_chirp.cmd: $!\n");
+print CONDOR_SUBMIT  $submitTemplate || die("ERROR: Can't create lib_chirp.cmd: $!\n");;
+close CONDOR_SUBMIT;
+print "Succeeded making the submit file\n";
+
+# Now submit the job and await the results...
+runcmd("condor_submit lib_chirp.cmd");
+runcmd("condor_wait -wait 1200 lib_chirp.log");
+
+# And check to see that the test did what we expected
+-f "lib_chirp_output" || die("ERROR: lib_chirp_output never got chirp put back\n");
+
+print "lib_chirp_output did make it back\n";
+open LIB_CHIRP_OUTPUT, "<lib_chirp_output" || die("ERROR: Can't open lib_chirp_output\n");
+my $output_validation = join("", <LIB_CHIRP_OUTPUT>); # Slurp
+
+# Are they the same?
+print "Output file is\n============";
+print $output_validation;
+print "===================\n";
+if ($output_validation ne $input_file_contents) {
+        # Badness
+        die("ERROR: Sucessfully chirp'ed back the input file, but the contents aren't the same\n");
+}
+
+
+print "Success\n";
+unlink("lib_chirp.cmd");
+unlink("lib_chirp.log");
+unlink("lib_chirp_input");
+unlink("lib_chirp_output");
+exit(0);
+
