@@ -581,6 +581,18 @@ Set by Collector:
       <arg name="Reason" dir="I" type="sstr"/>
     </method>
 
+	<method name="SuspendJob">
+      <arg name="Id" dir="I" type="sstr"
+	   desc="Job's Id, the string ClusterId.ProcId"/>
+      <arg name="Reason" dir="I" type="sstr"/>
+    </method>
+
+	<method name="ContinueJob">
+      <arg name="Id" dir="I" type="sstr"
+	   desc="Job's Id, the string ClusterId.ProcId"/>
+      <arg name="Reason" dir="I" type="sstr"/>
+    </method>
+
   </class>
 
   <class name="Submitter">
@@ -816,6 +828,7 @@ Set by Collector:
     <statistic name="Removed" type="count32"/>
     <statistic name="Completed" type="count32"/>
     <statistic name="Held" type="count32"/>
+    <statistic name="Suspended" type="count32"/>
     
     <!-- summary info -->
     <method name="GetJobSummaries">
