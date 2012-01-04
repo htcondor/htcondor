@@ -292,7 +292,7 @@ int chirp_fetch(int argc, char **argv) {
 int chirp_put(int argc, char **argv) {
 
 	int fileOffset = 2;
-	char *mode = "cwt";
+	char *mode = "cwb";
 	unsigned perm = 0777;
 
 	bool more = true;
@@ -321,7 +321,7 @@ int chirp_put(int argc, char **argv) {
 	}
 	
 	// Use putfile
-	if(strcmp(mode, "cwt") == 0 && strcmp(argv[fileOffset], "-") != 0) {
+	if(strcmp(mode, "cwb") == 0 && strcmp(argv[fileOffset], "-") != 0) {
 		return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], perm);
 	}
 	// Use open, write
