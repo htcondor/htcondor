@@ -27,8 +27,8 @@
 #else
 #include <netdb.h>
 #include <sys/socket.h>
-#endif
 #include <unistd.h>
+#endif
 #include "read_user_log.h"
 
 struct hostent *NameEnt;
