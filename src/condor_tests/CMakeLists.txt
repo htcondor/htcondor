@@ -343,6 +343,7 @@ if (BUILD_TESTS)
 
 	#dprint("TODO: Need to fix lib_eventlog_rotation-defaults test")
 	#condor_pl_test(lib_eventlog_rotation-defaults "Event Log Rotation: Default settings" "core;quick;full")
+	condor_pl_test(lib_chirp "Exercise the chirp I/O tool" "lib;quick;full")
 	condor_pl_test(lib_chirpio_van "Exercise the chirp I/O library using the C client library" "lib;quick;full")
 	condor_pl_test(lib_eventlog_rotation-no_rotations_1 "Event Log Rotation: no rotations/1" "core;quick;full")
 	condor_pl_test(lib_eventlog_rotation-no_rotations_2 "Event Log Rotation: no rotations/2" "core;quick;full")
