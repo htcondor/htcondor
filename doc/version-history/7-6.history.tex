@@ -62,6 +62,10 @@ it to always return a status of -1073740777 for chirp commands that succeeded.
 the put and get chirp commands to always fail.
 \Ticket{2743}
 
+\item Fixed a bug in the checkpoint server that could cause it to abort and
+crash during a file rename operation on RHEL6 and above.
+\Ticket{2738}
+
 \end{itemize}
 
 \noindent Known Bugs:
