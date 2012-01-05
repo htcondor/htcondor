@@ -1047,64 +1047,6 @@ int REMOTE_CONDOR_get_sec_session_info(
 	return rval;
 }
 
-#ifdef WIN32
-
-int REMOTE_CONDOR_pread( int fd, void *data, size_t length, size_t offset )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_pwrite( int fd , void* buf ,size_t len, size_t offset )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_sread( int fd, void *data, size_t length, size_t offset,
-	size_t stride_length, size_t stride_skip )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_swrite( int fd , void* buf ,size_t len, size_t offset,
-	size_t stride_length, size_t stride_skip )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_rmall( char *path )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_getfile( char *path, char **buffer )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_putfile( char *path, int mode, int length )
-{
-	return -1;
-}
-
-int REMOTE_CONDOR_getlongdir( char *path, char *&buffer )
-{
-	return -1;
-}
-int REMOTE_CONDOR_getdir( char *path, char *&buffer )
-{
-	return -1;
-}
-int REMOTE_CONDOR_whoami( int length, void *buffer)
-{
-	return -1;
-}
-int REMOTE_CONDOR_whoareyou( char *host, int length, void *buffer )
-{
-	return -1;
-}
-
-
-#else // ! WIN32
 
 int
 REMOTE_CONDOR_pread(int fd , void* buf , size_t len, size_t offset)
@@ -1538,7 +1480,6 @@ REMOTE_CONDOR_whoareyou(char *host, int length, void *buffer)
 	ON_ERROR_RETURN( result );
 	return rval;
 }
-#endif // ! WIN32
 
 int
 REMOTE_CONDOR_fstat(int fd, char* buffer)

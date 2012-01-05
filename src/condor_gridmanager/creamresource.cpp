@@ -685,7 +685,7 @@ CreamResource::BatchStatusResult CreamResource::StartBatchStatus()
 		const GahpClient::CreamJobStatus & status = it->second;
 
 		std::string full_job_id = CreamJob::getFullJobId(ResourceName(), status.job_id.c_str());
-		BaseJob * bjob;
+		BaseJob * bjob = NULL;
 		int rc2 = BaseJob::JobsByRemoteId.lookup( 
 			HashKey( full_job_id.c_str()), bjob);
 		if(rc2 != 0) {

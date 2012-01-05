@@ -4694,15 +4694,18 @@ availability statistics in the \Condor{startd}.
 \begin{description}
 \label{param:MountUnderScratch}
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-On Linux systems which provide "bind" mounts and per-process tree
-mount tables, such as Red Hat Enterprise Linux 5, the administrator
-can optionally configure Condor to provide new filesystem bind mounts
-for each job.  This is useful, for example, to give each jobs it's own
-/tmp or /var/tmp filesystem mapping, independent of any other job.
-This is controlled with the MOUNT\_UNDER\_SCRATCH parameter.  If set,
-this is a comma separated list of directories to provide new mounts for.
-If it is set to /tmp, Condor will make a directory under the execute
-side sandbox called tmp, and bind mount that directory to /tmp.
+On Linux systems which provide bind mounts and per-process tree mount tables,
+such as Red Hat Enterprise Linux 5, the administrator
+can optionally configure Condor to provide new file system bind mounts
+for each job.  This is useful, for example, to give each jobs its own
+\File{/tmp} or \File{/var/tmp} file system mapping, 
+independent of any other job.
+If set,
+this variable specifies a comma separated list of directories 
+to provide new mounts for.
+If it is set to \File{/tmp}, 
+Condor will make a directory under the execute-side sandbox called \File{tmp},
+and bind mount that directory to \File{/tmp}.
 
 \end{description}
 
@@ -5440,6 +5443,9 @@ SYSTEM_PERIODIC_REMOVE = \
   The following are set by default:
 \begin{verbatim}
         SCHEDD_ROUND_ATTR_ImageSize = 25%
+        SCHEDD_ROUND_ATTR_ResidentSetSize = 25%
+        SCHEDD_ROUND_ATTR_ProportionalSetSizeKb = 25%
+        SCHEDD_ROUND_ATTR_ImageSize = 25%
         SCHEDD_ROUND_ATTR_ExecutableSize = 25%
         SCHEDD_ROUND_ATTR_DiskUsage = 25%
         SCHEDD_ROUND_ATTR_NumCkpts = 4
@@ -6004,6 +6010,15 @@ These settings affect the \Condor{starter}.
   A boolean value that defaults to \Expr{True}. An administrator
   would set the value to \Expr{False} to disable Chirp remote file access 
   from execute machines. 
+
+\label{param:UsePSS} 
+\item[\Macro{USE\_PSS}]
+  A boolean value, that when \Expr{True} causes the \Condor{starter} to
+  measure the PSS (Proportional Set Size) of each Condor job.
+  The default value is \Expr{True}.
+  When running many short lived jobs, performance problems in 
+  the \Condor{procd} have been observed, and a setting of \Expr{False}
+  may relieve these problems.
 
 \end{description}
 
@@ -8609,10 +8624,11 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanHoldClaimTime}
 \item[\Macro{DAGMAN\_HOLD\_CLAIM\_TIME}]
-  An integer defining the number of seconds \Condor{dagman} will hold onto a
-  claim after a job is finished, using the \Attr{KeepClaimIdle} attribute.  The
-  default value is 20. Setting this value to 0 causes \Condor{dagman} not to set
-  the attribute.
+  An integer defining the number of seconds that \Condor{dagman} will cause a
+  hold on a claim after a job is finished, 
+  using the job ClassAd attribute \Attr{KeepClaimIdle}.
+  The default value is 20. 
+  A value of 0 causes \Condor{dagman} not to set the job ClassAd attribute.
 
 \end{description}
 
@@ -10861,102 +10877,126 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
 
 \begin{description}
 
+\label{param:DefragName}
+\item[\Macro{DEFRAG\_NAME}]
+  Used to give an alternative value to the \Attr{Name} attribute
+  in the \Condor{defrag}'s ClassAd.
+  This esoteric configuration macro might be used in the situation
+  where there are two \Condor{defrag} daemons running on one machine,
+  and each reports to the same \Condor{collector}.
+  Different names will distinguish the two daemons.
+  See the description of \MacroNI{MASTER\_NAME} in
+  section~\ref{param:MasterName} on page~\pageref{param:MasterName}
+  for defaults and composition of valid Condor daemon names.
+
 \label{param:DefragDrainingMachinesPerHour}
 \item[\Macro{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR}] A floating point
-number that specifies how many machines should be drained per hour.
-The default is 0, so no draining will happen unless this setting is
-changed.  Each \Condor{startd} is considered to be one machine.  The
-actual number of machines drained per hour may be less than this if
-draining is halted by one of the other defragmentation policy
-controls.  The granularity in timing of draining initiation is
-controlled by \Macro{DEFRAG\_INTERVAL}.  The lowest rate of draining
-that is supported is one machine per day or one machine per
-\Macro{DEFRAG\_INTERVAL}, whichever is lower.
+  number that specifies how many machines should be drained per hour.
+  The default is 0, so no draining will happen unless this setting is changed.
+  Each \Condor{startd} is considered to be one machine.  
+  The actual number of machines drained per hour may be less than this if
+  draining is halted by one of the other defragmentation policy controls.
+  The granularity in timing of draining initiation is
+  controlled by \Macro{DEFRAG\_INTERVAL}.  The lowest rate of draining
+  that is supported is one machine per day or one machine per
+  \Macro{DEFRAG\_INTERVAL}, whichever is lower.
+  A fractional number of machines contributing to the value of 
+  \MacroNI{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR} is rounded to the nearest
+  whole number of machines on a per day basis.
 
 \label{param:DefragRequirements}
 \item[\Macro{DEFRAG\_REQUIREMENTS}] An expression that specifies which
-machines to drain.  The default is \Expr{PartitionableSlot \&\&
-  Offline=!=True}.  A machine (i.e. \Condor{startd}) is matched if
-\emph{any} of its slots match this expression.  Machines are
-automatically excluded if they are already draining or if they match
-\Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
+  machines to drain.  The default is 
+\begin{verbatim}
+  PartitionableSlot && Offline=!=True  
+\end{verbatim}
+  A machine, meaning a \Condor{startd},
+  is matched if \emph{any} of its slots match this expression. 
+  Machines are automatically excluded if they are already draining,
+  or if they match \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
 
-\label{param:DefragRequirements}
+\label{param:DefragRank}
 \item[\Macro{DEFRAG\_RANK}] An expression that specifies which machines
-are more desireable to drain.  It should evaluate to a number for each
-candidate machine to be drained.  If the number of machines to be
-drained is less than the number of candidates, the machines with
-higher rank will be chosen.  The rank of a machine
-(i.e. \Condor{startd}) is the rank of its highest ranked slot.
-The default rank is \Expr{-ExpectedMachineGracefulDrainingBadput}.
+  are more desirable to drain.  
+  The expression should evaluate to a number for each
+  candidate machine to be drained.  If the number of machines to be
+  drained is less than the number of candidates, 
+  the machines with higher rank will be chosen.  
+  The rank of a machine, meaning a \Condor{startd},
+  is the rank of its highest ranked slot.
+  The default rank is \Expr{-ExpectedMachineGracefulDrainingBadput}.
 
 \label{param:DefragWholeMachineExpr}
 \item[\Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}] An expression that
-specifies which machines are already operating as whole machines.  The
-default is \Expr{Cpus == TotalCpus \&\& Offline=!=True}.  A machine is
-matched if \emph{any} slot on the machine matches this expression.
-Each \Condor{startd} is considered to be one machine.  Whole machines
-are excluded when selecting machines to drain.  They are also counted
-against \Macro{DEFRAG\_MAX\_WHOLE\_MACHINES}.
+  specifies which machines are already operating as whole machines.  
+  The default is 
+\begin{verbatim}
+  Cpus == TotalCpus && Offline=!=True
+\end{verbatim}
+  A machine is
+  matched if \emph{any} slot on the machine matches this expression.
+  Each \Condor{startd} is considered to be one machine.  Whole machines
+  are excluded when selecting machines to drain.  They are also counted
+  against \Macro{DEFRAG\_MAX\_WHOLE\_MACHINES}.
 
 \label{param:DefragMaxWholeMachines}
 \item[\Macro{DEFRAG\_MAX\_WHOLE\_MACHINES}] An integer that specifies
-the maximum number of whole machines.  When the number of whole
-machines is greater than or equal to this, no new machines will be
-selected for draining.  Each \Condor{startd} is counted as one
-machine.  The special value -1 indicates that there is no limit.  The
-default is -1.
+  the maximum number of whole machines.  When the number of whole
+  machines is greater than or equal to this, 
+  no new machines will be selected for draining.  
+  Each \Condor{startd} is counted as one machine.  
+  The special value -1 indicates that there is no limit.
+  The default is -1.
 
 \label{param:DefragMaxConcurrentDraining}
 \item[\Macro{DEFRAG\_MAX\_CONCURRENT\_DRAINING}] An integer that
-specifies the maximum number of draining machines.  When the number of
-machines that are draining is greater than or equal to this, no new
-machines will be selected for draining.  Each draining \Condor{startd}
-is counted as one machine.  The special value -1 indicates that there
-is no limit.  The default is -1.
+  specifies the maximum number of draining machines.  
+  When the number of machines that are draining is greater than 
+  or equal to this, no new machines will be selected for draining.
+  Each draining \Condor{startd} is counted as one machine.  
+  The special value -1 indicates that there is no limit.  
+  The default is -1.
 
 \label{param:DefragInterval}
 \item[\Macro{DEFRAG\_INTERVAL}] An integer that specifies the number
-of seconds between evaluations of the defragmentation policy.  In each
-cycle, the state of the pool is observed and machines are drained, if
-specified by the policy.  The default is 600 seconds.  Very small
-intervals could create excessive load on the \Condor{collector}.
+  of seconds between evaluations of the defragmentation policy.  
+  In each cycle, the state of the pool is observed and machines are drained, 
+  if specified by the policy.  
+  The default is 600 seconds.  
+  Very small intervals could create excessive load on the \Condor{collector}.
 
 \label{param:DefragSchedule}
 \item[\Macro{DEFRAG\_SCHEDULE}] A setting that specifies the draining
-schedule to use when draining machines.  Possible values are graceful,
-quick, and fast.  The default is graceful.
+  schedule to use when draining machines.  
+  Possible values are \Expr{graceful}, \Expr{quick}, and \Expr{fast}.
+  The default is \Expr{graceful}.
 
 \begin{description}
+  \item[graceful] Initiate a graceful eviction of the job.  This means
+  all promises that have been made to the job are honored, including
+  \MacroNI{MaxJobRetirementTime}.  The eviction of jobs is coordinated
+  to reduce idle time.  This means that if one slot has a job with a long
+  retirement time and the other slots have jobs with shorter retirement times,
+  the effective retirement time for all of the jobs is the longer one.
 
-\item[graceful] Initiate a graceful eviction of the job.  This means
-all promises that have been made to the job are honored, including
-\MacroNI{MaxJobRetirementTime}.  The eviction of jobs is coordinated
-to reduce idle time.  This means if one slot has a job with a long
-retirement time and the other slots have jobs with shorter retirement
-times, the effective retirement time for all of the jobs is the longer
-one.
+  \item[quick] \MacroNI{MaxJobRetirementTime} is not honored.  Eviction
+  of jobs is immediately initiated.  Jobs are given time to shut down
+  and produce a checkpoint according to the usual policy,
+  as given by \MacroNI{MachineMaxVacateTime}.
 
-\item[quick] \MacroNI{MaxJobRetirementTime} is not honored.  Eviction
-of jobs is immediately initiated.  Jobs are given time to shut down
-and checkpoint according to the usual policy
-(i.e. \MacroNI{MachineMaxVacateTime}).
-
-\item[fast] Jobs are immediately hard-killed with no chance to
-gracefully shut down or checkpoint.
-
+  \item[fast] Jobs are immediately hard-killed, with no chance to
+  gracefully shut down or produce a checkpoint.
 \end{description}
 
 \label{param:DefragStateFile}
 \item[\Macro{DEFRAG\_STATE\_FILE}] The path to a file used to record
-information used by \Condor{defrag} when it is restarted.  This should
-only need to be modified if you wish to run multiple instances of
-\Condor{defrag} on the same machine.  The default is
-\verb|$(LOCK)/defrag_state|.
+  information used by \Condor{defrag} when it is restarted.  
+  This should only need to be modified if there will be multiple instances of
+  the \Condor{defrag} daemon running on the same machine.  
+  The default is \File{\$(LOCK)/defrag\_state}.
 
 \label{param:DefragLog}
-\item[\Macro{DEFRAG\_LOG}]
-Path to the \Condor{defrag} daemon's log file.  The default log
-location is \File{\$(LOG)/DefragLog}.
+\item[\Macro{DEFRAG\_LOG}] The path to the \Condor{defrag} daemon's log file.
+  The default log location is \File{\$(LOG)/DefragLog}.
 
 \end{description}

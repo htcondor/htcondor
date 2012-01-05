@@ -30,14 +30,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item On Linux system, the starter can now optionally measure the
-PSS (Proportional Set Size) of each Condor job, if the config file
-option USE\_PSS is set to true.  Previously, it was unconditionally
-on, which can cause performance problems in the procd when running
+\item On Linux platforms, the \Condor{starter} can now optionally measure the
+PSS (Proportional Set Size) of each Condor job,
+if the configuration variable \Macro{USE\_PSS} is \Expr{True}.
+Previously, this measurement was unconditionally on,
+which can cause performance problems in the \Condor{procd} when running
 many short lived jobs.
+\Ticket{2710}
 
 \item On Linux systems, the \Condor{starter} now has an ability to run a 
-job under a cheroot directory.  
+job under a chroot directory.  
 If the configuration variable \Macro{NAMED\_CHROOT} is set to a list
 of directories on an execute machine, 
 the job has attribute \Attr{RequestedChroot} defined,
@@ -49,13 +51,15 @@ Note that it is up to the administrator to provide a full environment
 for the job to run in.
 \Ticket{2698}
 
-\item On Linux systems which support bind type of filesystem mount (generally,
-RHEL 5 systems and newer), the administrator can configure the condor\_startd 
-to provide per-job filesystem mounts.  One use might be to provide each job
-it's own view of /tmp and /var/tmp, which are private to that Condor job,
-and cleared when the job exits.  This is implemented with the
-MOUNT\_UNDER\_SCRATCH parameter, which describes which directories to
-bind mount.
+\item On Linux platforms which support a bind type of file system mount 
+(which are generally RHEL 5 systems and more recent platforms), 
+the administrator can configure the \Condor{startd} 
+to provide per-job file system mounts.  
+One use might be to provide each job its own view of \File{/tmp} 
+and \File{/var/tmp}, which are private to that Condor job,
+and cleared when the job exits.  
+This is implemented with the new \Macro{MOUNT\_UNDER\_SCRATCH} 
+configuration variable, which describes which directories to bind mount.
 \Ticket{2015}
 
 \item Added the new \Opt{-expand} option to \Condor{config\_val}.
@@ -101,15 +105,19 @@ additionally logs whether the match was subsequently rejected for
 other reasons, such as insufficient priority, rank, or fair share
 allocation.
 
-\item Condor will now send email if submit notification is set to error and
-the job is placed on hold because of a failure and not by user request.
+\item Condor will now send email,
+if the submit command \Expr{notification = Error} is set and
+the job is placed on hold because of a failure, and not by user request.
 Previously, email would be sent only if the job was terminated via signal.
 \Ticket{1976}
 
-\item By default, if a node has child nodes, then \Condor{dagman} uses the
-KeepClaimIdle attribute, introduced in Condor version 7.7.1, to hold onto a
-claim.  This is a slight optimization, as it avoids waiting for a negotiation
-cycle.  The hold time defaults to 20 seconds.  This is controlled by the
+\item The default settings for \Condor{dagman} have changed.
+Now, if a node has children, then \Condor{dagman} uses the
+\Attr{KeepClaimIdle} attribute, 
+introduced in Condor version 7.7.1, to hold onto a claim.
+This is a slight optimization, 
+as it avoids waiting for a negotiation cycle.
+The amount of time is controlled by the
 \Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
 \Ticket{2673}
 
@@ -123,13 +131,18 @@ DAGman. This can happen, for example, when a \Condor{dagman} process dies while
 its children are still running.
 \Ticket{2463}
 
-% Note: this is just kind of a stub so there's something in the version
-% history when I merge this branch to the master -- I need to fully
-% document this new feature ASAP.  wenger 2011-12-22
 \item Added the new FINAL node feature to \Condor{dagman} -- this allows
 the user to declare a FINAL node in the DAG, which is always run at the
 end of the workflow, whether it ended successfully or not.
+See section~\ref{sec:DAGFinalNode} for details
 \Ticket{1482}
+
+\item Improved the ouput of \Condor{userprio} to better support hierarchical
+groups. The first column of the output no longer truncates long user or group names.
+User names are shown indented under group names when hierarchical groups are in use.
+New columns were added to show group quota information.
+A new \Opt{-most} option was added to show the most useful fields since \Opt{-all}
+now produces a very wide display.
 
 \end{itemize}
 
@@ -149,6 +162,20 @@ but not big enough to hold the whole contents of the spool directory.
 \item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
 specifies the amount of time in seconds that \Condor{schedd} will hold a claim
 idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
+
+\item \AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
+report the maximum observed memory usage.  Previously, they reported
+the most recently observed memory usage.  This change makes these
+attributes similar to \AdAttr{ImageSize}, which also reports the
+maximum observed value.  Previously, \AdAttr{ResidentSetSize} was
+usually reported as 0 in the job history for completed jobs, because
+when the job was finished, the final observation of memory usage
+was 0.
+\Ticket{2725}
+
+\item \AdAttr{ResidentSetSize} is now rounded by default using the new
+default configuration setting
+\Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
 
 \end{itemize}
 
@@ -195,6 +222,10 @@ jobs forwarded via Condor-C.
 job user log files were actually symlinks.  This problem was introduced
 in the 7.7 series.
 \Ticket{2704}
+
+\item Fixed a bug where Condor did not count completed scheduler universe
+jobs in reported statistics.
+\Ticket{2731}
 
 \end{itemize}
 

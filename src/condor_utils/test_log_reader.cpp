@@ -468,7 +468,6 @@ ReadEvents(Options &opts, int &totalEvents)
 	bool					missedLast = false;
 	int						prevCluster=999;
 	int						prevProc=999;
-	int						prevSubproc=999;
 	ReadUserLog::FileStatus	prevFstatus = (ReadUserLog::FileStatus) 999;
 
 	while ( !done && !global_done ) {
@@ -534,7 +533,6 @@ ReadEvents(Options &opts, int &totalEvents)
 			}
 			prevCluster = event->cluster;
 			prevProc = event->proc;
-			prevSubproc = event->subproc;
 
 			if ( missedLast ) {
 				ReadUserLogStateAccess		paccess( state );

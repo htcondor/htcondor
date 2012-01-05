@@ -49,7 +49,31 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a memory leak affecting the \Condor{schedd} when the
+  configuration setting
+  \MacroNI{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
+  file command \SubmitCmd{job\_ad\_information\_attrs} were used.
+  \Ticket{2730}
+
+\item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
+it to always return a status of -1073740777 for chirp commands that succeeded.
+\Ticket{2739}
+
+\item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
+the put and get chirp commands to always fail.
+\Ticket{2743}
+
+\item Fixed a bug in the checkpoint server that could cause it to abort and
+crash during a file rename operation on RHEL6 and above.
+\Ticket{2738}
+
+\item Fix a bug introduced in 7.6.5 that can cause the \Condor{schedd} to
+exit with the following error:
+\begin{verbatim}
+ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
+/home/condor/execute/dir_10444/userdir/src/condor_daemon_core.V6/daemon_core.cpp
+\end{verbatim}
+\Ticket{2736}
 
 \end{itemize}
 
@@ -78,8 +102,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.6.5 not yet released.
-%\item Condor version 7.6.5 released on Month Date, 2011.
+\item Condor version 7.6.5 released on December 28, 2011.
 
 \item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to the
 behavior it exhibited before Hierarchical Group Quotas were introduced

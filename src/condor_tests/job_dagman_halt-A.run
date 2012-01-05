@@ -28,6 +28,7 @@ $testname = "job_dagman_halt-A";
 $dagman_args = "-verbose -maxpre 1";
 
 $node_output_file = "job_dagman_halt-A.nodes.out";
+$halt_file = "job_dagman_halt-A.dag.halt";
 
 my $killedchosen = 0;
 
@@ -39,8 +40,7 @@ my $killedchosen = 0;
 			"  NodeW1 found halt file",
 			"Node NodeW2 succeeded",
 			"Node NodeW2 Post script",
-			"  NodeW1 removed halt file",
-			"Node NodeW1 succeeded",
+			"  NodeW1 removing halt file",
 			"Node NodeW3 starting",
 			"Node NodeW3 succeeded",
 			"Node NodeX starting",
@@ -49,8 +49,7 @@ my $killedchosen = 0;
 			"  NodeY1 halting DAG",
 			"  NodeX found halt file",
 			"Node NodeY1 succeeded",
-			"  NodeX removed halt file",
-			"Node NodeX succeeded",
+			"  NodeX removing halt file",
 			"Node NodeY2 Pre script",
 			#"Node NodeY3 Pre script",
 			"Node NodeY2 starting",
@@ -102,7 +101,9 @@ if (-e $node_output_file) {
 if (-e $rescuedag) {
 	runcmd("rm -f $rescuedag");
 }
-#TEMPTEMP -- remove halt file
+if (-e $haltfile) {
+	runcmd("rm -f $haltfile");
+}
 
 $abnormal = sub 
 {

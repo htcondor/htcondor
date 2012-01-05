@@ -9,8 +9,8 @@ JOB E_B1 job_dagman_final-E-nodeB1.cmd
 # This job will condor_rm the DAG.
 JOB E_B2 job_dagman_final-E-nodeB2.cmd
 
-# Condor job and POST script will succeed for this node, overriding the
-# failure of the rest of the DAG.
+# Condor job will succeed for this node, overriding the failure of the
+# rest of the DAG.
 FINAL E_C job_dagman_final-E-nodeC.cmd
 
 PARENT E_A CHILD E_B1 E_B2

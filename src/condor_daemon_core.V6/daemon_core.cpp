@@ -10665,6 +10665,7 @@ bool DaemonCore::ProcessExitedButNotReaped(pid_t pid)
 #ifndef WIN32
 	WaitpidEntry wait_entry;
 	wait_entry.child_pid = pid;
+	wait_entry.exit_status = 0; // ignored in WaitpidEntry::operator==, avoid uninit warning
 
 	if(WaitpidQueue.IsMember(wait_entry)) {
 		return true;

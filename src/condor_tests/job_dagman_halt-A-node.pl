@@ -28,9 +28,12 @@ if ($ARGV[1] eq "-sleep") {
 		sleep(1);
 	}
 	system("echo '  $ARGV[0] found halt file' >> $outfile");
-	sleep(40); # Time for next node to start...
+	sleep(40); # Time for next node to start if halt doesn't work...
+	system("echo '  $ARGV[0] removing halt file' >> $outfile");
 	system("rm -f $halt_file");
-	system("echo '  $ARGV[0] removed halt file' >> $outfile");
+	# Avoid writing anything after removing the halt file, to make
+	# the test more deterministic.
+	exit(0);
 
 } else {
 	sleep(10);

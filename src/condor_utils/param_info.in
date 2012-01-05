@@ -10121,6 +10121,22 @@ url=
 tags=schedd
 id=602
 
+[SCHEDD_ROUND_ATTR_ResidentSetSize]
+aliases=
+default=25%
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=schedd
+id=602
+
 [ENABLE_VERSIONED_OPSYS]
 aliases=
 default=true

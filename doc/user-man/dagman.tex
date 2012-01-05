@@ -383,9 +383,10 @@ Both the job associated with the node and
 any \Arg{POST} script will not be executed,
 and the node will be marked as successful.
 
-Six variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
-\Env{\$MAX\_RETRIES}, \Env{\$RETURN}, and \Env{\$PRE\_SCRIPT\_RETURN}) can be
-used within the DAG input file as arguments passed to a PRE or POST script.
+Eight variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
+\Env{\$MAX\_RETRIES}, \Env{\$RETURN}, \Env{\$PRE\_SCRIPT\_RETURN},
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the
+DAG input file as arguments passed to a PRE or POST script.
 
 \index{DAGMan!JOB@\verb^$JOB^ value}
 The variable \Env{\$JOB} evaluates to the (case sensitive) string
@@ -454,6 +455,9 @@ of the PRE script;
 the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
+
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} are documented in
+section ~\ref{sec:DAGFinalNode} below.
 
 As an example, consider the diamond-shaped DAG example.
 Suppose the PRE script expands a compressed file 
@@ -1411,31 +1415,39 @@ Configuration variables relating to DAGMan may be found
 in section~\ref{sec:DAGMan-Config-File-Entries}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:MultipleDAGs}Optimization of Submission time}
+\subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Condor{dagman} works by watching log files for events, like submission,
-termination, going on hold, and so forth.  When a new job is ready to be
-run, it is submitted to \Condor{schedd}, which needs to acquire a computing
-resource, which in turn requires the \Condor{schedd} to contact the central
-manager and get a claim on a machine.  This claim cycle can take many minutes.
+\Condor{dagman} works by watching log files for events, such as submission,
+termination, and going on hold.
+When a new job is ready to be run, it is submitted to the \Condor{schedd}, 
+which needs to acquire a computing resource. 
+Acquisition requires the \Condor{schedd} to contact the central
+manager and get a claim on a machine,
+and this claim cycle can take many minutes.
 
-One can avoid the negotiation cycle with the central manager by setting the
-\Macro{DAGMAN\_HOLD\_CLAIM\_IDLE} configuration variable.  When set, the schedd
-with hold a claim idle, so that the \Condor{startd} will delay in shifting from
-Claimed to Preempting state (see Figure~\ref{fig:machine-states}). Thus, if
-another job is presented that is suitable for the claimed resource, then the
-\Condor{schedd} will submit the job directly to the \Condor{startd}, avoiding
-the overhead of a negotiation cycle.  This results in a speed up of job
-completion.  The use of this configuration variable is envisaged to be most
-suitable for ``linear'' or ``shish-kabob'' DAGs in pools with long negotiation
-times.
+Configuration variable
+\Macro{DAGMAN\_HOLD\_CLAIM\_TIME} 
+avoids the wait for a negotiation cycle.
+When set to a non zero value, 
+the \Condor{schedd} keeps a claim idle,
+such that the \Condor{startd} delays in shifting from
+the Claimed to the Preempting state (see Figure~\ref{fig:machine-states}).
+Thus, if another job appears that is suitable for the claimed resource,
+then the \Condor{schedd} will submit the job directly to the \Condor{startd}, 
+avoiding the wait and overhead of a negotiation cycle.
+This results in a speed up of job completion,
+especially for linear DAGs in pools that have lengthy negotiation cycle times.
 
-By default, \Macro{DAGMAN\_HOLD\_CLAIM\_IDLE} is $20$, meaning that the claim
-will be held idle for 20 seconds, during which time a new job can be submitted
-directly to the \Condor{startd} for which the claim is held. Setting it to 0
-will mean that claims are not held idle for the running DAGman. If a node has
-no children, the \Macro{DAGMAN\_HOLD\_CLAIM\_IDLE} will be ignored and set to 0; then the KeepClaimIdle attribute will be undefined in the JobAd of the node. 
+By default, \MacroNI{DAGMAN\_HOLD\_CLAIM\_TIME} is 20, 
+causing a claim to remain idle for 20 seconds, 
+during which time a new job can be submitted
+directly to the already-claimed \Condor{startd}. 
+A value of 0 means that claims are not held idle for a running DAG.
+If a DAG node has no children,
+the value of \MacroNI{DAGMAN\_HOLD\_CLAIM\_TIME} will be ignored;
+the \Attr{KeepClaimIdle} attribute will not be defined in the Job ClassAd 
+of the node job. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
@@ -2113,6 +2125,126 @@ and 10 for the \Expr{A+catX} category in splice.
 Note that non-global category names are
 prefixed with their splice name(s), so to refer to a non-global category 
 at a higher level, the splice name must be included.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGFinalNode}FINAL node}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAG FINAL node}
+\index{DAGMan input file!FINAL key word}
+
+The \Arg{FINAL} key word specifies a job to be run at the end of
+the DAG.  The syntax used for each \Arg{FINAL} entry is
+
+\Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
+\oOptArg{DIR}{directory} \oOpt{NOOP}
+
+A FINAL node is a special node that is always run at the end of the DAG,
+even if previous nodes in the DAG have failed.  Final nodes can be used
+for tasks such as cleaning up intermediate files and checking the output
+of previous nodes.  (There is one case where a final node is not run --
+if \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{True}, and
+a cycle is detected at startup time, the final node is not run.  However,
+if \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
+a cycle is detected during the course of the run, the final node
+will still be run.)
+
+One of the most important considerations with a final node is that the
+success or failure of the final node overrides all previous status
+in determining the success or failure of the DAG.  For example, if 
+some nodes of a DAG fail, but the final node succeeds, the DAG will
+be considered successful.  So if you have a final node, it's important
+that you're careful about whether it succeeds or fails -- you'll
+probably want to use the \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}
+macros described below in your final node.
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[FINAL node-related macros]
+\end{description}
+
+Two special macros have been introduced for use by final nodes (they
+can also be used by "regular" nodes):  \Env{\$DAG\_STATUS} and
+\Env{\$FAILED\_COUNT}.
+
+\index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
+\Env{\$DAG\_STATUS} is the status of the DAG,
+according to the following values:
+\begin{itemize}
+\item 0: OK
+\item 1: error (an error condition not enumerated below)
+\item 2: node failed (one or more nodes in the DAG have failed)
+\item 3: aborted (the DAG has been aborted by an ABORT-DAG-ON specification)
+\item 4: removed (the DAG has been \Condor{rm}'ed)
+\item 5: cycle (a cycle has been found in the DAG)
+\item 6: halted (the DAG has been halted (see section ~\ref{sec:DagSuspend}))
+\end{itemize}
+
+\index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
+\Env{\$FAILED\_COUNT} is simply the number of nodes that have failed in the
+DAG.
+
+The \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} macros can be used both
+as PRE and POST script arguments, and in node job submit files.
+For example:
+
+\begin{verbatim}
+    (In the DAG file)
+    ...
+    FINAL final_node final_node.sub
+    SCRIPT PRE final_node final_pre.pl $DAG_STATUS $FAILED_COUNT
+    ...
+
+    (In final_node.sub)
+    ...
+    arguments = "$(DAG_STATUS) $(FAILED_COUNT)"
+    ...
+\end{verbatim}
+
+If you have a final node in your DAG, it will \emph{always} be run at
+the end of the workflow (except in the "cycle detected at startup" case
+documented above).  If you don't want the final node to do anything in
+certain cases, use the \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}
+macros to take appropriate actions.  In the example shown below, the PRE
+script aborts fails if the DAG has been condor\_rm'ed, which causes the
+final node to be considered failed without actually submitting the
+Condor job of the node.
+
+\begin{verbatim}
+    (In the DAG file)
+    ...
+    FINAL final_node final_node.sub
+    SCRIPT PRE final_node final_pre.pl $DAG_STATUS
+    ...
+
+    (In final_pre.pl)
+    #! /usr/bin/env perl
+    ...
+    if ($ARGV[0] eq 4) {
+        exit(1);
+    }
+    ...
+\end{verbatim}
+
+
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[FINAL node limitations]
+\end{description}
+
+The following options that can be used with "regular" nodes are not
+allowed for FINAL nodes:
+\begin{itemize}
+\item DONE
+\item PARENT, CHILD
+\item RETRY
+\item ABORT-DAG-ON
+\item PRIORITY
+\item CATEGORY
+\end{itemize}
+
+Note: this feature was introduced in version 7.7.5.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

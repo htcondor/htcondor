@@ -2,34 +2,35 @@
 \begin{description}
 
 \index{ClassAd Defrag attribute!AvgDrainingBadput}
-\item[\AdAttr{AvgDrainingBadput}:] Fraction of time cpus
-in the pool have spent on jobs that were killed during draining of the
-machine.  This is calculated in each polling interval by looking
-at \AdAttr{TotalMachineDrainingBadput}.  Therefore, it does not treat
-checkpointed evictions differently from non-checkpointed ones.  When
-\Condor{startd} restarts, its counters start over from 0, so the
-average is only over the time since the daemons have been alive.
+\item[\AdAttr{AvgDrainingBadput}:] Fraction of time CPUs
+  in the pool have spent on jobs that were killed during draining of the
+  machine.  This is calculated in each polling interval by looking
+  at \AdAttr{TotalMachineDrainingBadput}.  
+  Therefore, it treats evictions of jobs that do and do not produce
+  checkpoints the same.
+  When the \Condor{startd} restarts, its counters start over from 0, so the
+  average is only over the time since the daemons have been alive.
 
 \index{ClassAd Defrag attribute!AvgDrainingUnclaimedTime}
-\item[\AdAttr{AvgDrainingUnclaimedTime}:] Fraction of time cpus
-in the pool have spent unclaimed by a user during
-draining of the machine.  This is calculated in each polling interval
-by looking at \AdAttr{TotalMachineDrainingUnclaimedTime}.  When
-\Condor{startd} restarts, its counters start over from 0, so the
-average is only over the time since the daemons have been alive.
+\item[\AdAttr{AvgDrainingUnclaimedTime}:] Fraction of time CPUs
+  in the pool have spent unclaimed by a user during
+  draining of the machine.  This is calculated in each polling interval
+  by looking at \AdAttr{TotalMachineDrainingUnclaimedTime}.  
+  When the \Condor{startd} restarts, its counters start over from 0, so the
+  average is only over the time since the daemons have been alive.
 
 \index{ClassAd Defrag attribute!DaemonStartTime}
-\item[\AdAttr{DaemonStartTime}:] The time that this daemon was
-  started, represented as the number of second elapsed since
-    the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+\item[\AdAttr{DaemonStartTime}:] The time that this daemon was started, 
+  represented as the number of seconds elapsed since
+  the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
 \index{ClassAd Defrag attribute!DrainFailures}
 \item[\AdAttr{DrainFailures}:] Total count of failed attempts
-to initiate draining during the lifetime of this \Condor{defrag} daemon.
+  to initiate draining during the lifetime of this \Condor{defrag} daemon.
 
 \index{ClassAd Defrag attribute!DrainSuccesses}
 \item[\AdAttr{DrainSuccesses}:] Total count of successful attempts
-to initiate draining during the lifetime of this \Condor{defrag} daemon.
+  to initiate draining during the lifetime of this \Condor{defrag} daemon.
 
 \index{ClassAd Defrag attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified 
@@ -37,7 +38,7 @@ to initiate draining during the lifetime of this \Condor{defrag} daemon.
 
 \index{ClassAd Defrag attribute!MachinesDraining}
 \item[\AdAttr{MachinesDraining}:] Number of machines that were observed
-to be draining in the last polling interval.
+  to be draining in the last polling interval.
 
 \index{ClassAd Defrag attribute!MachinesDrainingPeak}
 \item[\AdAttr{MachinesDrainingPeak}:] Largest number of machines that were
@@ -69,7 +70,7 @@ ever observed to be draining.
 
 \index{ClassAd Defrag attribute!MonitorSelfTime}
 \item[\AdAttr{MonitorSelfTime}:] The  time, represented as the number of
-  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  seconds elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
   at which this daemon last checked and set the attributes with names that
   begin with the string \Attr{MonitorSelf}.
   
@@ -78,28 +79,27 @@ ever observed to be draining.
 
 \index{ClassAd Defrag attribute!MyCurrentTime}
 \item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 
-  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  seconds elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
   at which the \Condor{defrag} daemon last sent a ClassAd update to the
   \Condor{collector}.
 
 \index{ClassAd Defrag attribute!Name}
 \item[\AdAttr{Name}:] The name of this daemon; typically the same value as
   the \AdAttr{Machine} attribute, but could be customized by the site
-  administrator via \Macro{DEFRAG\_NAME}.
+  administrator via the configuration variable \Macro{DEFRAG\_NAME}.
 
 \index{ClassAd Defrag attribute!RecentDrainFailures}
 \item[\AdAttr{RecentDrainFailures}:] Count of failed attempts
-to initiate draining during the past \AdAttr{RecentStatsLifetime}
-seconds.
+  to initiate draining during the past \AdAttr{RecentStatsLifetime} seconds.
 
 \index{ClassAd Defrag attribute!RecentDrainSuccesses}
 \item[\AdAttr{RecentDrainSuccesses}:] Count of successful attempts
-to initiate draining during the past \AdAttr{RecentStatsLifetime}
-seconds.
+  to initiate draining during the past \AdAttr{RecentStatsLifetime} seconds.
 
 \index{ClassAd Defrag attribute!RecentStatsLifetime}
-\item[\AdAttr{RecentStatsLifetime}:] Seconds of time over which
-recent activity statistics are kept.
+\item[\AdAttr{RecentStatsLifetime}:] A Statistics attribute defining 
+  the time in seconds over which statistics values have been collected 
+  for attributes with names that begin with \Expr{Recent}. 
 
 \index{ClassAd Defrag attribute!UpdateSequenceNumber}
 \item[\AdAttr{UpdateSequenceNumber}:] An integer, starting at zero,
@@ -109,11 +109,11 @@ recent activity statistics are kept.
 
 \index{ClassAd Defrag attribute!WholeMachines}
 \item[\AdAttr{WholeMachines}:] Number of machines that were observed
-to be defragmented in the last polling interval.
+  to be defragmented in the last polling interval.
 
 \index{ClassAd Defrag attribute!WholeMachinesPeak}
 \item[\AdAttr{WholeMachinesPeak}:] Largest number of machines that were
-ever observed to be simultaneously defragmented.
+  ever observed to be simultaneously defragmented.
 
 \end{description}
 

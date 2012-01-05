@@ -61,6 +61,12 @@ EvalResult::~EvalResult()
 	}
 }
 
+void EvalResult::clear()
+{
+	this->~EvalResult();
+	type = LX_UNDEFINED;
+}
+
 void
 EvalResult::deepcopy(const EvalResult & rhs)
 {

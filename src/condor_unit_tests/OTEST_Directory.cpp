@@ -1112,6 +1112,16 @@ static bool test_get_access_time_valid() {
 	Directory dir(original_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
+	{
+		/* Now read the file just to make sure the atime is non zero */
+		FILE* f = safe_fopen_wrapper_follow(next, "r");
+		char buf[2];
+		int read = fread(buf, 1, 1, f); /* just read one byte */
+		if (read < 1) {
+			emit_param("%s is zero bytes\n", next);
+		}
+		fclose(f);
+	}
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
 	emit_retval("%d", atime);

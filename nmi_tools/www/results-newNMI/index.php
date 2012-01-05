@@ -5,10 +5,8 @@
 
 include "Dashboard.php";
 $dash = new Dashboard();
-$dash->print_header("Condor Build and Test Dashboard");
+$dash->print_header("Condor Build and Test Dashboard", 1);
 ?>
-
-<script type='text/javascript' src='jquery-1.6.2.min.js'></script>
 
 <script type="text/javascript">
 
