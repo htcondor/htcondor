@@ -11560,7 +11560,14 @@ Scheduler::sendAlives()
 			}
 		}
 
-		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE ) {
+		// If we have a shadow and are using the new alive protocol,
+		// check whether the lease has expired. If it has, kill the match
+		// and the shadow.
+		// TODO Kill the match if the lease is expired when there is no
+		//   shadow. This is low priority, since we'll notice the lease
+		//   expiration when we try to start another job.
+		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE &&
+			 mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
 			int lease_duration = -1;
 			int last_lease_renewal = -1;
 			GetAttributeInt( mrec->cluster, mrec->proc,
