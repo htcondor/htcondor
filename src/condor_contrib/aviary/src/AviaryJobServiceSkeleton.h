@@ -39,6 +39,14 @@
      #include <AviaryJob_SetJobAttribute.h>
     
      #include <AviaryJob_SetJobAttributeResponse.h>
+    
+     #include <AviaryJob_ContinueJob.h>
+    
+     #include <AviaryJob_ContinueJobResponse.h>
+    
+     #include <AviaryJob_SuspendJob.h>
+    
+     #include <AviaryJob_SuspendJobResponse.h>
 
 typedef std::vector<AviaryCommon::ResourceConstraint*> ResourceConstraintVectorType;
     
@@ -177,6 +185,50 @@ class AviaryJobServiceSkeleton
 
      
 
+
+
+
+		 
+
+
+        /**
+         * Auto generated method declaration
+         * for "continueJob|http://grid.redhat.com/aviary-job/" operation.
+         * 
+         * @param _continueJob of the AviaryJob::ContinueJob
+         *
+         * @return AviaryJob::ContinueJobResponse*
+         */
+        
+
+         virtual 
+        AviaryJob::ContinueJobResponse* continueJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ContinueJob* _continueJob);
+
+
+     
+     
+
+
+
+
+		 
+
+
+        /**
+         * Auto generated method declaration
+         * for "suspendJob|http://grid.redhat.com/aviary-job/" operation.
+         * 
+         * @param _suspendJob of the AviaryJob::SuspendJob
+         *
+         * @return AviaryJob::SuspendJobResponse*
+         */
+        
+
+         virtual 
+        AviaryJob::SuspendJobResponse* suspendJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SuspendJob* _suspendJob);
+
+
+     
 
 
 };

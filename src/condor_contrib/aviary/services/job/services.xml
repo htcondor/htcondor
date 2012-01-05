@@ -23,4 +23,12 @@
 <messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
 <parameter name="wsamapping">job#setattr</parameter>
 </operation>
+<operation name="suspendJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#suspend</parameter>
+</operation>
+<operation name="continueJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#continue</parameter>
+</operation>
 </service>
