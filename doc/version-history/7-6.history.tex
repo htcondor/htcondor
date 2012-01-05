@@ -75,6 +75,11 @@ ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
 \end{verbatim}
 \Ticket{2736}
 
+\item Fix sample Linux startup script \File{condor.boot.rpm} to no longer
+assume that the contents of \File{/var/run} will persist across a reboot
+or that environment variable \Macro{USER} is set.
+\Ticket{2133}
+
 \end{itemize}
 
 \noindent Known Bugs:
