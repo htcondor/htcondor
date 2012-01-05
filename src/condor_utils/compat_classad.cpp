@@ -16,6 +16,8 @@
  * limitations under the License.
  *
  ***************************************************************/
+#include <limits>
+
 #include "condor_common.h"
 #include "compat_classad.h"
 
@@ -975,24 +977,49 @@ LookupString( const char *name, std::string &value ) const
 } 
 
 int ClassAd::
-LookupInteger( const char *name, int &value ) const 
-{
-	bool    boolVal;
-	int     haveInteger;
-	string  sName(name);
-	int		tmp_val;
-
-	if( EvaluateAttrInt(sName, tmp_val ) ) {
-		value = tmp_val;
-		haveInteger = TRUE;
-	} else if( EvaluateAttrBool(sName, boolVal ) ) {
-		value = boolVal ? 1 : 0;
-		haveInteger = TRUE;
-	} else {
-		haveInteger = FALSE;
-	}
-	return haveInteger;
+LookupInteger(const char *name, int& value) const {
+    typedef int target_t;
+    long long v = 0;
+    if (!LookupInteger(name, v)) return 0;
+    if (v < std::numeric_limits<target_t>::min()) return 0;
+    if (v > std::numeric_limits<target_t>::max()) return 0;
+    value = target_t(v);
+    return 1;
 }
+
+int ClassAd::
+LookupInteger(const char *name, long& value) const {
+    typedef long target_t;
+    long long v = 0;
+    if (!LookupInteger(name, v)) return 0;
+    if (v < std::numeric_limits<target_t>::min()) return 0;
+    if (v > std::numeric_limits<target_t>::max()) return 0;
+    value = target_t(v);
+    return 1;
+}
+
+int ClassAd::
+LookupInteger(const char *name, long long& value) const {
+    typedef long long target_t;
+	int rc = 0;
+    classad::Value::IntType	v = 0;
+	bool bv = false;
+
+	if (EvaluateAttrInt(name, v)) {
+		rc = 1;
+	} else if (EvaluateAttrBool(name, bv)) {
+		v = bv ? 1 : 0;
+		rc = 1;
+	}
+
+    if (v < std::numeric_limits<target_t>::min()) rc = 0;
+    if (v > std::numeric_limits<target_t>::max()) rc = 0;
+
+    if (rc) value = target_t(v);
+
+	return rc;
+}
+
 
 int ClassAd::
 LookupFloat( const char *name, float &value ) const
@@ -1167,34 +1194,52 @@ EvalString(const char *name, classad::ClassAd *target, std::string & value)
 }
 
 int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, int &value)
-{
+EvalInteger (const char *name, classad::ClassAd *target, int& value) {
+    typedef int target_t;
+    long long v = 0;
+    if (!EvalInteger(name, target, v)) return 0;
+    if (v < std::numeric_limits<target_t>::min()) return 0;
+    if (v > std::numeric_limits<target_t>::max()) return 0;
+    value = target_t(v);
+    return 1;
+}
+
+int ClassAd::
+EvalInteger (const char *name, classad::ClassAd *target, long& value) {
+    typedef long target_t;
+    long long v = 0;
+    if (!EvalInteger(name, target, v)) return 0;
+    if (v < std::numeric_limits<target_t>::min()) return 0;
+    if (v > std::numeric_limits<target_t>::max()) return 0;
+    value = target_t(v);
+    return 1;
+}
+
+int ClassAd::
+EvalInteger (const char *name, classad::ClassAd *target, long long& value) {
+    typedef long long target_t;
+    classad::Value::IntType v = 0;
 	int rc = 0;
-	int tmp_val;
 
-	if( target == this || target == NULL ) {
+	if (target == this || target == NULL) {
 		getTheMyRef( this );
-		if( EvaluateAttrInt( name, tmp_val ) ) { 
-			value = tmp_val;
-			rc = 1;
-		}
+		if (EvaluateAttrInt(name, v)) rc = 1;
 		releaseTheMyRef( this );
-		return rc;
-	}
+	} else {
+    	getTheMatchAd( this, target );
+    	if (this->Lookup(name)) {
+    		if (this->EvaluateAttrInt(name, v)) rc = 1;
+    	} else if (target->Lookup(name)) {
+    		if (target->EvaluateAttrInt(name, v)) rc = 1;
+    	}
+        releaseTheMatchAd();
+    }
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
-	}
-	releaseTheMatchAd();
+    if (v < std::numeric_limits<target_t>::min()) rc = 0;
+    if (v > std::numeric_limits<target_t>::max()) rc = 0;
+
+    if (rc) value = target_t(v);
+
 	return rc;
 }
 

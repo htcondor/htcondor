@@ -265,6 +265,8 @@ class ClassAd : public classad::ClassAd
 		 */
 
 	int LookupInteger(const char *name, int &value) const;
+	int LookupInteger(const char *name, long &value) const;
+	int LookupInteger(const char *name, long long &value) const;
 		/** Lookup (don't evaluate) an attribute that is a float.
 		 *  @param name The attribute
 		 *  @param value The integer
@@ -332,6 +334,8 @@ class ClassAd : public classad::ClassAd
 		 *  but is not an integer
 		 */
 	int EvalInteger (const char *name, classad::ClassAd *target, int &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, long &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, long long &value);
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute

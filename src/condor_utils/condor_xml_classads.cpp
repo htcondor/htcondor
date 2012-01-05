@@ -673,7 +673,7 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		((classad::Literal *)expression)->GetValue(v);
 		print_expr = false;
 		if ( v.IsIntegerValue( int_number ) ) {
-			number_string.sprintf("%d", int_number);
+			number_string.sprintf("%lld", int_number);
 			add_tag(buffer, tag_Integer, true);
 			buffer += number_string;
 			add_tag(buffer, tag_Integer, false);
