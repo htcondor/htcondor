@@ -34,8 +34,11 @@ class ClassAd;
 class Value 
 {
 	public:
-        // should this be conditional on anything?
-        typedef int64_t IntType;
+        // 'long long' is guaranteed by definition to have >= 64 bits, and is
+        // a language-defined type as of C99:
+        typedef long long IntType;
+        // to do: should we abstract the rest of the value implementation types?
+        // to do: explore possible benefits of using precision-specific types, e.g. int64_t
 
 			/// Value types
 		enum ValueType {
@@ -99,7 +102,7 @@ class Value
 		/** Sets an integer value; previous value discarded.
 			@param i The integer value.
 		*/
-		void SetIntegerValue(int i);
+		void SetIntegerValue(IntType i);
 
 		/** Sets the undefined value; previous value discarded.
 		*/
@@ -173,7 +176,7 @@ class Value
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
-		inline bool IsIntegerValue(int &i) const; 	
+		inline bool IsIntegerValue(IntType &i) const;
 		/** Checks if the value is integral.
 			@return true iff the value is an integer.
 		*/
@@ -343,7 +346,7 @@ IsBooleanValue() const
 }
 
 inline bool Value::
-IsIntegerValue (int &i) const
+IsIntegerValue (IntType &i) const
 {
     i = integerValue;
     return (valueType == INTEGER_VALUE);

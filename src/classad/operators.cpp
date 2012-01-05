@@ -290,7 +290,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		} else if (vt1 == Value::LIST_VALUE && vt2 == Value::INTEGER_VALUE) {
-			int            index;
+            Value::IntType index;
 			const ExprList *elist = NULL;
 
 			val1.IsListValue( elist );		
@@ -877,7 +877,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	int		i1, i2;
+    Value::IntType i1, i2;
 	double	t1;
 	double 	r1;
     bool    b1;
@@ -1053,7 +1053,7 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	int	i1, i2;
+    Value::IntType i1, i2;
 	int signMask = ~INT_MAX;	// now at the position of the sign bit
 	int val;
 
@@ -1255,7 +1255,7 @@ asecs2.secs = 0;
 
 	if( op == MULTIPLICATION_OP || op == DIVISION_OP ) {
 		if( vt1==Value::RELATIVE_TIME_VALUE && vt2==Value::INTEGER_VALUE ) {
-			int     num;
+            Value::IntType num;
             double  msecs;
 			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsIntegerValue( num );
@@ -1284,7 +1284,7 @@ asecs2.secs = 0;
 
 		if( vt1==Value::INTEGER_VALUE && vt2==Value::RELATIVE_TIME_VALUE && 
 				op==MULTIPLICATION_OP ) {
-			int num;
+            Value::IntType num;
 			v1.IsIntegerValue( num );
 			v2.IsRelativeTimeValue( rsecs1 );
 			result.SetRelativeTimeValue( num * rsecs1 );
@@ -1444,7 +1444,7 @@ compareBools( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	int 	i1, i2; 
+    Value::IntType i1, i2; 
 	bool	compResult;
 
 	v1.IsIntegerValue (i1); 
@@ -1501,7 +1501,7 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 Value::ValueType Operation::
 coerceToNumber (Value &v1, Value &v2)
 {
-	int	 	i;
+    Value::IntType i;
 	double 	r;
     bool    b;
 

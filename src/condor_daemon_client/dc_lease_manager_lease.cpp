@@ -181,7 +181,7 @@ DCLeaseManagerLease::copyUpdates( const DCLeaseManagerLease &lease )
 	// Otherwise, if there is an old ad, update it
 	else if ( this->m_lease_ad ) {
 		this->m_lease_ad->InsertAttr( "LeaseDuration",
-									  this->m_lease_duration );
+									  (classad::Value::IntType)this->m_lease_duration );
 		this->m_lease_ad->InsertAttr( "ReleaseWhenDone",
 									  this->m_release_lease_when_done );
 	}

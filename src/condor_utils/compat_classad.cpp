@@ -113,7 +113,7 @@ void EvalResult::fPrintResult(FILE *fi)
     {
 	case LX_INTEGER :
 
-	     fprintf(fi, "%d", this->i);
+	     fprintf(fi, "%lld", this->i);
 	     break;
 
 	case LX_FLOAT :
@@ -171,7 +171,7 @@ void EvalResult::toString(bool force)
 			break;
 		case LX_INTEGER: {
 			MyString buf;
-			buf.sprintf("%d",i);
+			buf.sprintf("%lld",i);
 			s = strnewp(buf.Value());
 			type = LX_STRING;
 			break;
@@ -1198,7 +1198,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+    classad::Value::IntType intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1266,7 +1266,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+    classad::Value::IntType intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {

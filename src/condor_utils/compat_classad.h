@@ -97,6 +97,8 @@ class EvalResult
 {
     public :
 
+    typedef classad::Value::IntType IntType;
+
     EvalResult();
   	~EvalResult();
 
@@ -113,7 +115,7 @@ class EvalResult
 
    	union
     	{
-   	    int i;
+   	    IntType i;
    	    float f;
    	    char* s;
         };
@@ -183,16 +185,22 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,char const *value);
 
 	int Assign(char const *name,int value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned int value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,long value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,long long value)
+	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,unsigned long long value)
+	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }

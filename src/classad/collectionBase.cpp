@@ -1586,7 +1586,7 @@ LogState( FILE *fp )
 			}
 			ClassAdParser local_parser;
 			ClassAd *cla=local_parser.ParseClassAd(cla_s,true);
-			if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )) {
+			if (!cla->InsertAttr("OpType", (Value::IntType)ClassAdCollOp_AddClassAd )) {
 				CondorErrMsg += "; failed to log state";
 				return( false );
 			}
@@ -1602,7 +1602,7 @@ LogState( FILE *fp )
 		ClassAd	                logRec;
 		ClassAd                 *ad;
 		
-		if ( !logRec.InsertAttr( "OpType", ClassAdCollOp_AddClassAd ) ) {
+		if ( !logRec.InsertAttr( "OpType", (Value::IntType)ClassAdCollOp_AddClassAd ) ) {
 			CondorErrMsg += "; failed to log state";
 			return( false );
 		}
@@ -1653,8 +1653,7 @@ LogViews( FILE *fp, View *view, bool subView )
 		ClassAd	*ad = view->GetViewInfo( );
 
 		// insert operation type and view info
-		if (!ad || !ad->InsertAttr( "OpType", subView ?
-				ClassAdCollOp_CreateSubView:ClassAdCollOp_CreatePartition)) {
+		if (!ad || !ad->InsertAttr( "OpType", (Value::IntType)(subView ? ClassAdCollOp_CreateSubView:ClassAdCollOp_CreatePartition))) {
 			if (ad) delete ad;
 			CondorErrMsg += "; failed to log views";
 			return( false );
@@ -1793,7 +1792,7 @@ WriteCheckPoint(){
 		   itr++; 
 	  };
 	  
-	  cla.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_CheckPoint );
+	  cla.InsertAttr( ATTR_OP_TYPE, (Value::IntType)ClassAdCollOp_CheckPoint );
 	  cla.InsertAttr( "Time",arr_s);   
 	  
 	  if (!WriteLogEntry(log_fp,&cla,true)){
