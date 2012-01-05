@@ -66,6 +66,14 @@ the put and get chirp commands to always fail.
 crash during a file rename operation on RHEL6 and above.
 \Ticket{2738}
 
+\item Fix a bug introduced in 7.6.5 that can cause the \Condor{schedd} to
+exit with the following error:
+\begin{verbatim}
+ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
+/home/condor/execute/dir_10444/userdir/src/condor_daemon_core.V6/daemon_core.cpp
+\end{verbatim}
+\Ticket{2736}
+
 \end{itemize}
 
 \noindent Known Bugs:
