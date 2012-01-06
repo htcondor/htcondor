@@ -144,13 +144,13 @@ int cclassad_insert_string( struct cclassad *c, const char *attr, const char *va
 int cclassad_insert_int( struct cclassad *c, const char *attr, int value )
 {
 	string strattr(attr);
-	return c->ad->InsertAttr(strattr,(Value::IntType)value);
+	return c->ad->InsertAttr(strattr,(IntType)value);
 }
 
 int cclassad_insert_long_long( struct cclassad *c, const char *attr, long long value )
 {
 	string strattr(attr);
-	return c->ad->InsertAttr(strattr,(Value::IntType)value);
+	return c->ad->InsertAttr(strattr,(IntType)value);
 }
 
 int cclassad_insert_double( struct cclassad *c, const char *attr, double value )
@@ -162,7 +162,7 @@ int cclassad_insert_double( struct cclassad *c, const char *attr, double value )
 int cclassad_insert_bool( struct cclassad *c, const char *attr, int value )
 {
 	string strattr(attr);
-	return c->ad->InsertAttr(strattr,(Value::IntType)value);
+	return c->ad->InsertAttr(strattr,(IntType)value);
 }
 
 
@@ -208,7 +208,7 @@ int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result 
     typedef int target_t;
 	string exprstring(expr);
 	Value value;
-    Value::IntType vi;
+    IntType vi;
 
     if (!(c->ad->EvaluateExpr(exprstring,value) && value.IsIntegerValue(vi))) return 0;
     if (vi < std::numeric_limits<target_t>::min()) return 0;
@@ -222,7 +222,7 @@ int cclassad_evaluate_to_long_long( struct cclassad *c, const char *expr, long l
     typedef long long target_t;
 	string exprstring(expr);
 	Value value;
-    Value::IntType vi;
+    IntType vi;
 
     if (!(c->ad->EvaluateExpr(exprstring,value) && value.IsIntegerValue(vi))) return 0;
     if (vi < std::numeric_limits<target_t>::min()) return 0;

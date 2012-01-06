@@ -240,7 +240,7 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs ) const
 
 // --- begin integer attribute insertion ----
 bool ClassAd::
-InsertAttr( const string &name, Value::IntType value, Value::NumberFactor f )
+InsertAttr( const string &name, IntType value, Value::NumberFactor f )
 {
 	Value val;
 	val.SetIntegerValue( value );
@@ -249,7 +249,7 @@ InsertAttr( const string &name, Value::IntType value, Value::NumberFactor f )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, Value::IntType value, 
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, IntType value, 
 	Value::NumberFactor f )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
@@ -857,7 +857,7 @@ bool ClassAd::
 EvaluateAttrInt(const string& attr, int& i)  const {
     typedef int target_t;
     Value val;
-    Value::IntType vi=0;
+    IntType vi=0;
     if (!(EvaluateAttr(attr, val) && val.IsIntegerValue(vi))) return false;
     if (vi < std::numeric_limits<target_t>::min()) return false;
     if (vi > std::numeric_limits<target_t>::max()) return false;
@@ -869,7 +869,7 @@ bool ClassAd::
 EvaluateAttrInt(const string& attr, long long& i) const {
     typedef long long target_t;
     Value val;
-    Value::IntType vi=0;
+    IntType vi=0;
     if (!(EvaluateAttr(attr, val) && val.IsIntegerValue(vi))) return false;
     if (vi < std::numeric_limits<target_t>::min()) return false;
     if (vi > std::numeric_limits<target_t>::max()) return false;
@@ -888,7 +888,7 @@ bool ClassAd::
 EvaluateAttrNumber(const string &attr, int& i) const {
     typedef int target_t;
     Value val;
-    Value::IntType vi=0;
+    IntType vi=0;
     if (!(EvaluateAttr(attr, val) && val.IsNumber(vi))) return false;
     if (vi < std::numeric_limits<target_t>::min()) return false;
     if (vi > std::numeric_limits<target_t>::max()) return false;
@@ -900,7 +900,7 @@ bool ClassAd::
 EvaluateAttrNumber(const string& attr, long long& i) const {
     typedef long long target_t;
 	Value val;
-    Value::IntType vi=0;
+    IntType vi=0;
     if (!(EvaluateAttr(attr, val) && val.IsNumber(vi))) return false;
     if (vi < std::numeric_limits<target_t>::min()) return false;
     if (vi > std::numeric_limits<target_t>::max()) return false;

@@ -83,23 +83,23 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 
 
 	// Stuff to reset
-	ad->InsertAttr(ATTR_JOB_STATUS, (classad::Value::IntType)1); // Idle
+	ad->InsertAttr(ATTR_JOB_STATUS, (ClassAd::IntType)1); // Idle
 	ad->InsertAttr(ATTR_JOB_REMOTE_USER_CPU, 0.0);
 	ad->InsertAttr(ATTR_JOB_REMOTE_SYS_CPU, 0.0);
-	ad->InsertAttr(ATTR_JOB_EXIT_STATUS, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_COMPLETION_DATE, (classad::Value::IntType)0);
+	ad->InsertAttr(ATTR_JOB_EXIT_STATUS, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_COMPLETION_DATE, (ClassAd::IntType)0);
 	ad->InsertAttr(ATTR_JOB_LOCAL_SYS_CPU, 0.0);
 	ad->InsertAttr(ATTR_JOB_LOCAL_USER_CPU, 0.0);
-	ad->InsertAttr(ATTR_NUM_CKPTS, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_NUM_RESTARTS, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_NUM_SYSTEM_HOLDS, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_JOB_COMMITTED_TIME, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_COMMITTED_SLOT_TIME, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_CUMULATIVE_SLOT_TIME, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_TOTAL_SUSPENSIONS, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_LAST_SUSPENSION_TIME, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_CUMULATIVE_SUSPENSION_TIME, (classad::Value::IntType)0);
-	ad->InsertAttr(ATTR_COMMITTED_SUSPENSION_TIME, (classad::Value::IntType)0);
+	ad->InsertAttr(ATTR_NUM_CKPTS, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_NUM_RESTARTS, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_NUM_SYSTEM_HOLDS, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_JOB_COMMITTED_TIME, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_COMMITTED_SLOT_TIME, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_CUMULATIVE_SLOT_TIME, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_TOTAL_SUSPENSIONS, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_LAST_SUSPENSION_TIME, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_CUMULATIVE_SUSPENSION_TIME, (ClassAd::IntType)0);
+	ad->InsertAttr(ATTR_COMMITTED_SUSPENSION_TIME, (ClassAd::IntType)0);
 	ad->InsertAttr(ATTR_ON_EXIT_BY_SIGNAL, false);
 
 
@@ -117,7 +117,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		EXCEPT("Unable to copy old universe");
 	}
 
-	ad->InsertAttr(ATTR_JOB_UNIVERSE, (classad::Value::IntType)target_universe);
+	ad->InsertAttr(ATTR_JOB_UNIVERSE, (ClassAd::IntType)target_universe);
 	ad->Insert(remoteattr.Value(), olduniv);
 		// olduniv is now controlled by ClassAd
 
@@ -219,8 +219,8 @@ static bool set_job_status_simple(classad::ClassAd const &orig,classad::ClassAd 
 			return false;
 		}
 	}
-	update.InsertAttr(ATTR_JOB_STATUS, (classad::Value::IntType)new_status);
-	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (classad::Value::IntType)time(0));
+	update.InsertAttr(ATTR_JOB_STATUS, (ClassAd::IntType)new_status);
+	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (ClassAd::IntType)time(0));
 	if( hold_copied_from_target ) {
 		update.InsertAttr( ATTR_HOLD_COPIED_FROM_TARGET_JOB, false );
 	}
@@ -245,14 +245,14 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 			return;
 		}
 	}
-	update.InsertAttr(ATTR_JOB_STATUS, (classad::Value::IntType)HELD);
-	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (classad::Value::IntType)time(0));
+	update.InsertAttr(ATTR_JOB_STATUS, (ClassAd::IntType)HELD);
+	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (ClassAd::IntType)time(0));
 	if( ! hold_reason) {
 		hold_reason = "Unknown reason";
 	}
 	update.InsertAttr(ATTR_HOLD_REASON, hold_reason);
-	update.InsertAttr(ATTR_HOLD_REASON_CODE, (classad::Value::IntType)hold_code);
-	update.InsertAttr(ATTR_HOLD_REASON_SUBCODE, (classad::Value::IntType)hold_subcode);
+	update.InsertAttr(ATTR_HOLD_REASON_CODE, (ClassAd::IntType)hold_code);
+	update.InsertAttr(ATTR_HOLD_REASON_SUBCODE, (ClassAd::IntType)hold_subcode);
 	update.InsertAttr(ATTR_HOLD_COPIED_FROM_TARGET_JOB, true);
 
 	classad::ExprTree * origexpr = update.Lookup(ATTR_RELEASE_REASON);
@@ -267,7 +267,7 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 		numholds = 0;
 	}
 	numholds++;
-	update.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, (classad::Value::IntType)numholds);
+	update.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, (ClassAd::IntType)numholds);
 }
 
 bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgrid, classad::ClassAd & update, char* custom_attrs)
@@ -354,7 +354,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 			// Do not pass back "removed" status to the orig job.
 			break;
 		default:
-			update.InsertAttr(ATTR_JOB_STATUS, (classad::Value::IntType)newgridstatus);
+			update.InsertAttr(ATTR_JOB_STATUS, (ClassAd::IntType)newgridstatus);
 			break;
 		}
 	}

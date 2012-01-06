@@ -105,7 +105,7 @@ class Lexer
 					tt = t;
 				}
 
-				void SetIntValue( Value::IntType i, Value::NumberFactor f) {
+				void SetIntValue( IntType i, Value::NumberFactor f) {
 					intValue = i;
 					factor = f;
 				}
@@ -135,7 +135,7 @@ class Lexer
 					return tt;
 				}
 
-				void GetIntValue( Value::IntType& i, Value::NumberFactor& f) {
+				void GetIntValue( IntType& i, Value::NumberFactor& f) {
 					i = intValue;
 					f = factor;
 				}
@@ -175,7 +175,7 @@ class Lexer
 			private:
 				TokenType 			tt;
 				Value::NumberFactor factor;
-                Value::IntType 		intValue;
+                IntType 		intValue;
 				double 				realValue;
 				bool 				boolValue;
 				std::string			strValue;

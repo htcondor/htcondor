@@ -115,8 +115,8 @@ DCLeaseManager::getLeases( const char *requestor_name,
 
 	classad::ClassAd	ad;
 	ad.InsertAttr( "Name", requestor_name );
-	ad.InsertAttr( "RequestCount", (classad::Value::IntType)number_requested );
-	ad.InsertAttr( "LeaseDuration", (classad::Value::IntType)duration );
+	ad.InsertAttr( "RequestCount", (ClassAd::IntType)number_requested );
+	ad.InsertAttr( "LeaseDuration", (ClassAd::IntType)duration );
 	if ( requirements ) {
 		classad::ClassAdParser	parser;
 		classad::ExprTree	*expr = parser.ParseExpression( requirements );

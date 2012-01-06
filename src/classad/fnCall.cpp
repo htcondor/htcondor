@@ -1666,7 +1666,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 {
 	Value 	arg0, arg1, arg2;
 	string	buf;
-    Value::IntType offset, len=0, alen;
+    IntType offset, len=0, alen;
 
 		// two or three arguments
 	if( argList.size() < 2 || argList.size() > 3 ) {
@@ -1716,13 +1716,13 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	// to make sure that if length is specified as 0 explicitly
 	// then, len is set to 0
 	if (argList.size( ) == 3) {
-        Value::IntType templen;
+        IntType templen;
         arg2.IsIntegerValue( templen );
         if (templen == 0) len = 0;
 	}
 
-    if (offset > Value::IntType(std::numeric_limits<std::string::size_type>::max())) return false;
-    if (len > Value::IntType(std::numeric_limits<std::string::size_type>::max())) return false;
+    if (offset > IntType(std::numeric_limits<std::string::size_type>::max())) return false;
+    if (len > IntType(std::numeric_limits<std::string::size_type>::max())) return false;
 
 		// allocate storage for the string
 	string str;
@@ -1907,7 +1907,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::INTEGER_VALUE:
 			{
-                Value::IntType ival;
+                IntType ival;
 				arg.IsIntegerValue( ival );
 				result.SetBooleanValue( ival != 0 );
 				return( true );
@@ -1977,7 +1977,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 			result.SetErrorValue( );
 			return( false );
 		}
-        Value::IntType ivalue2 = 0;
+        IntType ivalue2 = 0;
 		double rvalue2 = 0;
 		time_t rsecs = 0;
 		if(relative) {// 2nd argument is N/A for reltime
@@ -2017,7 +2017,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::INTEGER_VALUE:
 			{
-                Value::IntType ivalue;
+                IntType ivalue;
 				arg.IsIntegerValue( ivalue );
 				if( relative ) {
 					result.SetRelativeTimeValue( (time_t) ivalue );
@@ -2156,7 +2156,7 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;
-    Value::IntType     int_max;
+    IntType     int_max;
     double  double_max;
     int     random_int;
     double  random_double;
@@ -2210,7 +2210,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		}
 		break;
 	case Value::INTEGER_VALUE: {
-		Value::IntType intval;
+		IntType intval;
 		if( !arg1.IsIntegerValue(intval) ) {
 			result.SetErrorValue();
 			return( false );
@@ -2311,7 +2311,7 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg,intarg;
-    Value::IntType tot_secs;
+    IntType tot_secs;
 
 		// takes exactly one argument
 	if( argList.size() != 1 ) {
@@ -2819,7 +2819,7 @@ static bool
 doSplitTime(const Value &time, ClassAd * &splitClassAd)
 {
     bool             did_conversion;
-    Value::IntType   integer;
+    IntType   integer;
     double           real;
     abstime_t        asecs;
     double           rsecs;
@@ -2859,14 +2859,14 @@ absTimeToClassAd(const abstime_t &asecs, ClassAd * &splitClassAd)
     getGMTime( &clock, &tms );
 
     splitClassAd->InsertAttr("Type", "AbsoluteTime");
-    splitClassAd->InsertAttr("Year", (Value::IntType)tms.tm_year + 1900);
-    splitClassAd->InsertAttr("Month", (Value::IntType)tms.tm_mon + 1);
-    splitClassAd->InsertAttr("Day", (Value::IntType)tms.tm_mday);
-    splitClassAd->InsertAttr("Hours", (Value::IntType)tms.tm_hour);
-    splitClassAd->InsertAttr("Minutes", (Value::IntType)tms.tm_min);
-    splitClassAd->InsertAttr("Seconds", (Value::IntType)tms.tm_sec);
+    splitClassAd->InsertAttr("Year", (IntType)tms.tm_year + 1900);
+    splitClassAd->InsertAttr("Month", (IntType)tms.tm_mon + 1);
+    splitClassAd->InsertAttr("Day", (IntType)tms.tm_mday);
+    splitClassAd->InsertAttr("Hours", (IntType)tms.tm_hour);
+    splitClassAd->InsertAttr("Minutes", (IntType)tms.tm_min);
+    splitClassAd->InsertAttr("Seconds", (IntType)tms.tm_sec);
     // Note that we convert the timezone from seconds to minutes.
-    splitClassAd->InsertAttr("Offset", (Value::IntType)asecs.offset);
+    splitClassAd->InsertAttr("Offset", (IntType)asecs.offset);
     
     return;
 }
@@ -2906,10 +2906,10 @@ relTimeToClassAd(double rsecs, ClassAd * &splitClassAd)
     
     splitClassAd = new ClassAd;
     splitClassAd->InsertAttr("Type", "RelativeTime");
-    splitClassAd->InsertAttr("Days", (Value::IntType)days);
-    splitClassAd->InsertAttr("Hours", (Value::IntType)hrs);
-    splitClassAd->InsertAttr("Minutes", (Value::IntType)mins);
-    splitClassAd->InsertAttr("Seconds", (Value::IntType)secs);
+    splitClassAd->InsertAttr("Days", (IntType)days);
+    splitClassAd->InsertAttr("Hours", (IntType)hrs);
+    splitClassAd->InsertAttr("Minutes", (IntType)mins);
+    splitClassAd->InsertAttr("Seconds", (IntType)secs);
     
     return;
 }

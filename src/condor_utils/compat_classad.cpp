@@ -1002,7 +1002,7 @@ int ClassAd::
 LookupInteger(const char *name, long long& value) const {
     typedef long long target_t;
 	int rc = 0;
-    classad::Value::IntType	v = 0;
+    IntType	v = 0;
 	bool bv = false;
 
 	if (EvaluateAttrInt(name, v)) {
@@ -1218,7 +1218,7 @@ EvalInteger (const char *name, classad::ClassAd *target, long& value) {
 int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, long long& value) {
     typedef long long target_t;
-    classad::Value::IntType v = 0;
+    IntType v = 0;
 	int rc = 0;
 
 	if (target == this || target == NULL) {
@@ -1249,7 +1249,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-    classad::Value::IntType intVal;
+    IntType intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1317,7 +1317,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-    classad::Value::IntType intVal;
+    IntType intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {

@@ -1026,7 +1026,7 @@ parsePrimaryExpression(ExprTree *&tree)
 		case Lexer::LEX_INTEGER_VALUE:
 			{
 				Value 	val;
-                Value::IntType i;
+                IntType i;
 				Value::NumberFactor f;
 
 				tv.GetIntValue( i, f );

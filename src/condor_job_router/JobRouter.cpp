@@ -522,13 +522,13 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 	{
 		if (REMOVED == status)
 		{
-			ad.InsertAttr(ATTR_JOB_STATUS_ON_RELEASE, (classad::Value::IntType)REMOVED);
+			ad.InsertAttr(ATTR_JOB_STATUS_ON_RELEASE, (ClassAd::IntType)REMOVED);
 		}
-		ad.InsertAttr(ATTR_JOB_STATUS, (classad::Value::IntType)HELD);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (classad::Value::IntType)time(NULL));
+		ad.InsertAttr(ATTR_JOB_STATUS, (ClassAd::IntType)HELD);
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (ClassAd::IntType)time(NULL));
 		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);
-		ad.InsertAttr(ATTR_HOLD_REASON_CODE, (classad::Value::IntType)hold_code);
-		ad.InsertAttr(ATTR_HOLD_REASON_SUBCODE, (classad::Value::IntType)sub_code);
+		ad.InsertAttr(ATTR_HOLD_REASON_CODE, (ClassAd::IntType)hold_code);
+		ad.InsertAttr(ATTR_HOLD_REASON_SUBCODE, (ClassAd::IntType)sub_code);
 		if (true == ad.EvaluateAttrString(ATTR_RELEASE_REASON, release_reason))
 		{
 			ad.InsertAttr(ATTR_LAST_RELEASE_REASON, release_reason.c_str());
@@ -536,7 +536,7 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		ad.InsertAttr(ATTR_RELEASE_REASON, "Undefined");
 		ad.EvaluateAttrInt(ATTR_NUM_SYSTEM_HOLDS, num_holds);
 		num_holds++;
-		ad.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, (classad::Value::IntType)num_holds);
+		ad.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, (ClassAd::IntType)num_holds);
 
 		WriteHoldEventToUserLog(ad);
 
@@ -574,8 +574,8 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 	}
 	if (REMOVED != status)
 	{
-		ad.InsertAttr(ATTR_JOB_STATUS, (classad::Value::IntType)REMOVED);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (classad::Value::IntType)time(NULL));
+		ad.InsertAttr(ATTR_JOB_STATUS, (ClassAd::IntType)REMOVED);
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (ClassAd::IntType)time(NULL));
 		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
 		if(false == push_dirty_attributes(ad,NULL,NULL))
 		{
@@ -1755,7 +1755,7 @@ JobRouter::RerouteJob(RoutedJob *job) {
 
 void
 JobRouter::SetJobIdle(RoutedJob *job) {
-	job->src_ad.InsertAttr(ATTR_JOB_STATUS,(classad::Value::IntType)IDLE);
+	job->src_ad.InsertAttr(ATTR_JOB_STATUS,(ClassAd::IntType)IDLE);
 	if(false == PushUpdatedAttributes(job->src_ad)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to set src job status back to idle\n",job->JobDesc().c_str());
 	}

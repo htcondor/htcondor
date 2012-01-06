@@ -269,7 +269,7 @@ GetViewInfo( )
 		return( NULL );
 	}
 		// insert number of members
-	newAd->InsertAttr( "NumMembers", (Value::IntType)viewMembers.size( ) );
+	newAd->InsertAttr( "NumMembers", (IntType)viewMembers.size( ) );
 
 	
 		// insert names of subordinate views
@@ -756,7 +756,7 @@ DeletePartitionedView( ClassAdCollection *coll, const ViewName &vName )
 					return( false );
 				}
 				if( !ad->InsertAttr( ATTR_REQUIREMENTS, true )	||
-						!ad->InsertAttr( ATTR_RANK, (Value::IntType)0 )				||
+						!ad->InsertAttr( ATTR_RANK, (IntType)0 )				||
 						!ad->Insert(ATTR_PARTITION_EXPRS,
 							ExprList::MakeExprList( vec ) )	||
 						!view->SetViewInfo( coll, ad ) ) {

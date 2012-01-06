@@ -114,7 +114,7 @@ _CreateSubView( const ViewName &viewName, const ViewName &parentViewName,
 	if( !( rec = parser.ParseClassAd( buffer ) ) ) {
 		return( NULL );
 	}
-	rec->InsertAttr( "OpType", (Value::IntType)ClassAdCollOp_CreateSubView );
+	rec->InsertAttr( "OpType", (IntType)ClassAdCollOp_CreateSubView );
 	return( rec );
 }
 
@@ -150,7 +150,7 @@ _CreatePartition( const ViewName &viewName, const ViewName &parentViewName,
 	if( !( rec = parser.ParseClassAd( buffer ) ) ) {
 		return( NULL );
 	}
-	rec->InsertAttr( "OpType", (Value::IntType)ClassAdCollOp_CreatePartition );
+	rec->InsertAttr( "OpType", (IntType)ClassAdCollOp_CreatePartition );
 	rec->InsertAttr( "Representative", rep );
 	return( rec );
 }
@@ -165,7 +165,7 @@ _DeleteView( const ViewName &viewName )
         CondorErrMsg = "";
         return( (ClassAd*) NULL );
     }
-    if( !rec->InsertAttr( "OpType", (Value::IntType)ClassAdCollOp_DeleteView )   ||
+    if( !rec->InsertAttr( "OpType", (IntType)ClassAdCollOp_DeleteView )   ||
             !rec->InsertAttr( "ViewName", viewName ) ) {
         CondorErrMsg += "; failed to make delete view record";
         delete rec;
@@ -203,7 +203,7 @@ _SetViewInfo( const ViewName &viewName, const string &constraint,
     if( !( rec = parser.ParseClassAd( buffer ) ) ) {
         return( (ClassAd*) NULL );
     }
-	rec->InsertAttr( "OpType", (Value::IntType)ClassAdCollOp_SetViewInfo );
+	rec->InsertAttr( "OpType", (IntType)ClassAdCollOp_SetViewInfo );
 	return( rec );
 }
 
@@ -219,7 +219,7 @@ _AddClassAd( const string &xactionName, const string &key,ClassAd *ad )
     }
     if( ( !xactionName.empty( ) && 
 				!rec->InsertAttr( ATTR_XACTION_NAME, xactionName ) )||
-            !rec->InsertAttr( "OpType", (Value::IntType)ClassAdCollOp_AddClassAd )  ||
+            !rec->InsertAttr( "OpType", (IntType)ClassAdCollOp_AddClassAd )  ||
             !rec->InsertAttr( "Key", key ) 							||
             !rec->Insert( "Ad", ad ) ) {
         CondorErrMsg += "; failed to make add classad " + key + " record";
@@ -240,7 +240,7 @@ _UpdateClassAd( const string &xactionName, const string &key, ClassAd *ad )
     }
     if( ( !xactionName.empty( ) && 
 			!rec->InsertAttr( ATTR_XACTION_NAME, xactionName ) )	||
-            !rec->InsertAttr( "OpType",(Value::IntType)ClassAdCollOp_UpdateClassAd )||
+            !rec->InsertAttr( "OpType",(IntType)ClassAdCollOp_UpdateClassAd )||
             !rec->InsertAttr( "Key", key )                 			||
             !rec->Insert( "Ad", ad ) ) {
         CondorErrMsg += "; failed to make update classad " + key + " record";
@@ -261,7 +261,7 @@ _ModifyClassAd( const string &xactionName, const string &key, ClassAd *ad )
     }
     if( ( !xactionName.empty( ) && 
 			!rec->InsertAttr( ATTR_XACTION_NAME, xactionName ) )	||
-            !rec->InsertAttr( "OpType",(Value::IntType)ClassAdCollOp_ModifyClassAd )||
+            !rec->InsertAttr( "OpType",(IntType)ClassAdCollOp_ModifyClassAd )||
             !rec->InsertAttr( "Key", key )                 			||
             !rec->Insert( "Ad", ad ) ) {
         CondorErrMsg += "; failed to make modify classad " + key + " record";
@@ -283,7 +283,7 @@ _RemoveClassAd( const string &xactionName, const string &key )
     }
     if( ( !xactionName.empty( ) && 
 			!rec->InsertAttr( ATTR_XACTION_NAME, xactionName ) ) 	||
-            !rec->InsertAttr( "OpType",(Value::IntType)ClassAdCollOp_RemoveClassAd )||
+            !rec->InsertAttr( "OpType",(IntType)ClassAdCollOp_RemoveClassAd )||
             !rec->InsertAttr( "Key", key ) ) {
         CondorErrMsg += "; failed to make delete classad " + key + " record";
         delete rec;

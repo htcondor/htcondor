@@ -92,12 +92,13 @@ typedef enum
   NOT_KEYWORD
 } LexemeType;
 
+
 // This class is lifted directly from old ClassAds for EvalExprTree()
 class EvalResult
 {
     public :
 
-    typedef classad::Value::IntType IntType;
+    typedef classad::ClassAd::IntType IntType;
 
     EvalResult();
   	~EvalResult();
@@ -133,6 +134,8 @@ class EvalResult
 class ClassAd : public classad::ClassAd
 {
  public:
+    typedef classad::ClassAd::IntType IntType;
+
 	ClassAd();
 
 	ClassAd( const ClassAd &ad );
@@ -188,22 +191,22 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,char const *value);
 
 	int Assign(char const *name,int value)
-	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned int value)
-	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,long value)
-	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long value)
-	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,long long value)
-	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long long value)
-	{ return InsertAttr( name, (classad::Value::IntType)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }

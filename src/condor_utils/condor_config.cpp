@@ -1607,22 +1607,13 @@ param_with_default_abort(const char *name, int abort)
 	return val;
 }
 
-/*
-** Return the integer value associated with the named paramter.
-** This version returns true if a the parameter was found, or false
-** otherwise.
-** If the value is not defined or not a valid integer, then
-** return the default_value argument .  The min_value and max_value
-** arguments are optional and default to MININT and MAXINT.
-** These range checks are disabled if check_ranges is false.
-*/
 
 bool
-param_integer( const char *name, int &value,
-			   bool use_default, int default_value,
-			   bool check_ranges, int min_value, int max_value,
-			   ClassAd *me, ClassAd *target,
-			   bool use_param_table )
+param_integer_implementation(const char *name, ClassAd::IntType& value,
+                             bool use_default, int default_value,
+                             bool check_ranges, int min_value, int max_value,
+                             ClassAd *me, ClassAd *target,
+                             bool use_param_table)
 {
 	if(use_param_table) {
 		int tbl_default_valid;
@@ -1725,11 +1716,29 @@ param_integer( const char *name, int &value,
 
 /*
 ** Return the integer value associated with the named paramter.
+** This version returns true if a the parameter was found, or false
+** otherwise.
+** If the value is not defined or not a valid integer, then
+** return the default_value argument .  The min_value and max_value
+** arguments are optional and default to MININT and MAXINT.
+** These range checks are disabled if check_ranges is false.
+*/
+
+bool
+param_integer(const char *name, int &value,
+              bool use_default, int default_value,
+              bool check_ranges, int min_value, int max_value,
+              ClassAd *me, ClassAd *target,
+              bool use_param_table)
+{
+}
+
+/*
+** Return the integer value associated with the named paramter.
 ** If the value is not defined or not a valid integer, then
 ** return the default_value argument.  The min_value and max_value
 ** arguments are optional and default to MININT and MAXINT.
 */
-
 int
 param_integer( const char *name, int default_value,
 			   int min_value, int max_value, bool use_param_table )

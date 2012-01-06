@@ -389,7 +389,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 	const char	        *start;
 	const char          *end;
 	char                *end_tmp;
-    Value::IntType      ivalue;
+    IntType      ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
@@ -528,7 +528,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
                     break;
                 }
                 if (could_convert) {
-                    integerValue.SetIntegerValue((Value::IntType) (ivalue*Value::ScaleFactor[nf]));
+                    integerValue.SetIntegerValue((IntType) (ivalue*Value::ScaleFactor[nf]));
                 }
             }
             break;
@@ -546,7 +546,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::REAL_VALUE:
             value.IsRealValue(rvalue);
-            integerValue.SetIntegerValue((Value::IntType)rvalue);
+            integerValue.SetIntegerValue((IntType)rvalue);
             could_convert = true;
             break;
 
@@ -558,7 +558,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::RELATIVE_TIME_VALUE:
 			value.IsRelativeTimeValue(rtvalue);
-			integerValue.SetIntegerValue((Value::IntType)rtvalue);
+			integerValue.SetIntegerValue((IntType)rtvalue);
 			could_convert = true;
             break;
 

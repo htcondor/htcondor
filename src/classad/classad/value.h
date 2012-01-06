@@ -34,12 +34,6 @@ class ClassAd;
 class Value 
 {
 	public:
-        // 'long long' is guaranteed by definition to have >= 64 bits, and is
-        // a language-defined type as of C99:
-        typedef long long IntType;
-        // to do: should we abstract the rest of the value implementation types?
-        // to do: explore possible benefits of using precision-specific types, e.g. int64_t
-
 			/// Value types
 		enum ValueType {
 												NULL_VALUE          = 0,

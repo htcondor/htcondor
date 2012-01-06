@@ -33,7 +33,7 @@ convert_ad_to_adStruct(struct soap *s,
   int attr_index = 0;
   int num_attrs = 0;
   bool skip_attr = false;
-  classad::Value::IntType tmpint;
+  ClassAd::IntType tmpint;
   float tmpfloat;
   bool tmpbool;
   char *tmpstr;

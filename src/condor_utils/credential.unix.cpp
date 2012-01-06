@@ -64,9 +64,9 @@ Credential::GetMetadata() {
 	classad::ClassAd * class_ad = new classad::ClassAd();
 	ASSERT (!name.IsEmpty());
 	class_ad->InsertAttr (CREDATTR_NAME, name.Value());
-	class_ad->InsertAttr (CREDATTR_TYPE, (classad::Value::IntType)type);
+	class_ad->InsertAttr (CREDATTR_TYPE, (classad::ClassAd::IntType)type);
 	class_ad->InsertAttr (CREDATTR_OWNER, owner.Value());
-	class_ad->InsertAttr (CREDATTR_DATA_SIZE, (classad::Value::IntType)m_data_size);
+	class_ad->InsertAttr (CREDATTR_DATA_SIZE, (classad::ClassAd::IntType)m_data_size);
 
 	return class_ad;
 }

@@ -661,7 +661,7 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 			
 	MyString  number_string;
 	char      *expr_string;
-    classad::Value::IntType int_number;
+    ClassAd::IntType int_number;
 	double    double_number;
 	std::string string_value;
 	MyString  fixed_string;

@@ -67,6 +67,9 @@ class ClassAd : public ExprTree
      */
 
   	public:
+        // (re)defining here is useful for referencing external to the classad libs:
+        typedef ::classad::IntType IntType;
+
 		/**@name Constructors/Destructor */
 		//@{
 		/// Default constructor 
@@ -113,7 +116,7 @@ class ClassAd : public ExprTree
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
 e		*/
-		bool InsertAttr( const std::string &attrName, Value::IntType value, 
+		bool InsertAttr( const std::string &attrName, IntType value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
@@ -128,7 +131,7 @@ e		*/
 			@see Value::NumberFactor
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				Value::IntType value, Value::NumberFactor f=Value::NO_FACTOR );
+				IntType value, Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
