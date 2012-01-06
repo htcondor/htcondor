@@ -1094,6 +1094,7 @@ SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
+CKPT_SERVER			= $(SBIN)/condor_ckpt_server
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster

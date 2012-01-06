@@ -1173,7 +1173,8 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	int vrNum = 0;
 	ExtArray<classad::Operation::OpKind> ops ( numConds );
 	ExtArray<Condition*> conds ( numConds );
-	ExtArray<bool> tooComplex ( numConds ); 
+//	ExtArray<bool> tooComplex ( numConds ); 
+	std::vector<bool> tooComplex( numConds, false);
 //	classad::Operation::OpKind op1, op2;
 	classad::Value val;
 	p->Rewind( );
