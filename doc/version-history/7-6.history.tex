@@ -313,6 +313,12 @@ if it does not hear from the \Condor{startd} for longer than the job
 lease duration.
 \Ticket{2706}
 
+\item Fixed some bugs in the renewing of CREAM job leases. Before, the
+\Condor{gridmanager} could fail to renew the leases or attempt to set
+lease expirations in the past.
+\Ticket{2351}
+\Ticket{2455}
+
 \end{itemize}
 
 \noindent Known Bugs:
