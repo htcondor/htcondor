@@ -34,7 +34,7 @@ CondorTest::StartCondorWithParams(
 # This is a personal condor pool with a checkpoint server
 my $poolWithCkptServer = CondorTest::StartCondorWithParams(
     condor_name => "PoolWithCkptServer",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR, CKPT_SRVR",
+    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR, CKPT_SERVER",
     append_condor_config => $append_condor_config
 );
 
