@@ -3,6 +3,12 @@ use strict;
 use warnings;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
+BEGIN {
+	if ($^O =~ /MSWin32/) {
+		require Thread; Thread->import();
+		require Thread::Queue; Thread::Queue->import();
+	}
+}
 
 package CondorUtils;
 
@@ -10,7 +16,7 @@ our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL verbose_system Which TRUE FALSE);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -74,6 +80,26 @@ sub SIGNAL {
 		}
 
 		return( 0 );
+	}
+}
+
+# create a Queue, and a reader thread to read from $fh and write into the queue
+# returns the Queue
+sub async_reader {
+	my $fh = shift;
+	if ($^O =~ /MSWin32/) {
+		my $Q  = new Thread::Queue;
+
+		Thread->new(
+			sub {
+				$Q->enqueue($_) while <$fh>;
+				$Q->enqueue(undef);
+			}	
+		)->detach;
+
+		return $Q;
+	} else {
+		return undef;
 	}
 }
 
@@ -167,6 +193,35 @@ sub runcmd {
 
 		my $bulkout = "";
 		my $bulkerror = "";
+
+ 		# ActiveState perl on Windows doesn't support select for files/pipes, but threaded IO works great
+		if ($^O =~ /MSWin32/) {
+			my $outQ = async_reader(\*OUT);
+			my $errQ = async_reader(\*ERR);
+
+			my $oe = 0; # set to 1 when OUT is EOF
+			my $ee = 0; # set to 1 when ERR ie EOF
+
+			while (1) {
+				my $wait = 1;
+
+				while ( ! $oe && $outQ->pending) {
+					my $line = $outQ->dequeue or $oe = 1;
+					if ($line) { $bulkout .= $line; }
+					$wait = 0;
+				}
+				while ( ! $ee && $errQ->pending) {
+					my $line = $errQ->dequeue or $ee = 1;
+					if ($line) { $bulkerror .= $line; }
+					$wait = 0;
+				}
+
+				if ($oe && $ee) { last; }
+				if ($wait) { sleep(.1); }
+			}
+
+		} else {  # use select for Linux and Cygwin perl
+
 		my $tmpout = "";
 		my $tmperr = "";
 		my $rin = '';
@@ -220,7 +275,8 @@ sub runcmd {
 			} else {
 				print "Select error in runcmd:$!\n";
 			}
-		}
+		} # end while
+		} # use select for Linux and cygwin perl
 
 		#print "$bulkout\n";
 		#print "\n++++++++++++++++++++++++++\n";
