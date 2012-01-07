@@ -96,7 +96,7 @@ param_info_hash_dump_value(const param_info_t* param_value, void* /*unused*/ ) {
 			printf("%f", reinterpret_cast<const param_info_PARAM_TYPE_DOUBLE*>(param_value)->dbl_val);
 			break;
 		case PARAM_TYPE_INT:
-			printf("%d", reinterpret_cast<const param_info_PARAM_TYPE_INT*>(param_value)->int_val);
+			printf("%lld", reinterpret_cast<const param_info_PARAM_TYPE_INT*>(param_value)->int_val);
 			break;
 		case PARAM_TYPE_BOOL:
 			printf("%s", reinterpret_cast<const param_info_PARAM_TYPE_BOOL*>(param_value)->int_val == 0 ? "false" : "true");

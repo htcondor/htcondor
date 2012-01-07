@@ -85,10 +85,10 @@ param_default_string(const char* param)
 	return ret;
 }
 
-int
+param_info_t::int_t
 param_default_integer(const char* param, int* valid) {
 	const param_info_t* p;
-	int ret = 0;
+    param_info_t::int_t ret = 0;
 
 	param_info_init();
 
@@ -133,7 +133,7 @@ param_default_double(const char* param, int* valid) {
 }
 
 int
-param_range_integer(const char* param, int* min, int* max) {
+param_range_integer(const char* param, param_info_t::int_t* min, param_info_t::int_t* max) {
 
 	const param_info_t* p;
 

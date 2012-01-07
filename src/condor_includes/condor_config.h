@@ -104,6 +104,10 @@ class ParamValue {
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
+    long long param_long_long(const char* name, long long default_value = 0,
+                              long long min_value = LONG_LONG_MIN, long long max_value = LONG_LONG_MAX, bool use_param_table = true);
+    off_t param_off_t(const char *name, off_t default_value = 0,
+                      off_t min_value = OFF_T_MIN, off_t max_value = OFF_T_MAX, bool use_param_table = true);
 	// Alternate param_integer():
 	bool param_integer( const char *name, int &value,
 						bool use_default, int default_value,

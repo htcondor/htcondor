@@ -170,6 +170,12 @@
 #include <math.h>
 #include <utime.h>
 
+
+// bounds for off_t
+#define OFF_T_MAX (~(off_t(1)<<(8*sizeof(off_t)-1)))
+#define OFF_T_MIN (-OFF_T_MAX-1)
+
+
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it
    anymore, but we might hit a platform that has a different select,
