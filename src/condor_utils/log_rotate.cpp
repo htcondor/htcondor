@@ -207,7 +207,7 @@ int isLogFilename( char *filename) {
 	if (baseDirName[dirLen-1] != DIR_DELIM_CHAR)
 		++dirLen;
     int fLen = strlen(logBaseName);
-    if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen - 1) == 0 ) {
+    if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen) == 0 ) {
     	if (  (strlen(filename) > unsigned(fLen-dirLen)) && 
 			  (filename[fLen-dirLen] == '.')  ) {
 			if (  (isTimestampString(filename+(fLen-dirLen+1)) == 1) ||
