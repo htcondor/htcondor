@@ -75,6 +75,11 @@ ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
 \end{verbatim}
 \Ticket{2736}
 
+\item Fix sample Linux startup script \File{condor.boot.rpm} to no longer
+assume that the contents of \File{/var/run} will persist across a reboot
+or that environment variable \Macro{USER} is set.
+\Ticket{2133}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -307,6 +312,12 @@ as well as for other invocations.
 if it does not hear from the \Condor{startd} for longer than the job
 lease duration.
 \Ticket{2706}
+
+\item Fixed some bugs in the renewing of CREAM job leases. Before, the
+\Condor{gridmanager} could fail to renew the leases or attempt to set
+lease expirations in the past.
+\Ticket{2351}
+\Ticket{2455}
 
 \end{itemize}
 
