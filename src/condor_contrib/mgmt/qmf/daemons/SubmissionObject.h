@@ -66,6 +66,8 @@ public:
 	const JobSet & GetRemoved();
 	const JobSet & GetCompleted();
 	const JobSet & GetHeld();
+	const JobSet & GetTransferringOutput();
+	const JobSet & GetSuspended();
 
 	ManagementObject *GetManagementObject(void) const;
 
@@ -88,6 +90,8 @@ private:
 	JobSet m_removed;
 	JobSet m_completed;
 	JobSet m_held;
+	JobSet m_transferring_output;
+	JobSet m_suspended;
 
 	bool ownerSet;
 

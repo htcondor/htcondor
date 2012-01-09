@@ -828,6 +828,7 @@ Set by Collector:
     <statistic name="Removed" type="count32"/>
     <statistic name="Completed" type="count32"/>
     <statistic name="Held" type="count32"/>
+    <statistic name="TransferringOutput" type="count32"/>
     <statistic name="Suspended" type="count32"/>
     
     <!-- summary info -->
