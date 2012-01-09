@@ -56,12 +56,13 @@ enum {
    DetailRealPrio  = 0x0800,
    DetailSortKey   = 0x1000,
    DetailUseDeltaT = 0x2000,
+   DetailOrder     = 0x4000,
    DetailPrios     = DetailPriority | DetailFactor | DetailRealPrio,
    DetailUsage     = DetailResUsed | DetailWtResUsed,
    DetailQuota2    = DetailEffQuota | DetailCfgQuota,
    DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota,
    DetailMost      = DetailCfgQuota | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT,
-   DetailAll       = DetailMost | DetailQuotas | DetailPrios | DetailUsage | DetailUseTime1 | DetailUseTime2 | DetailUseDeltaT,
+   DetailAll       = DetailMost | DetailQuotas | DetailPrios | DetailUseTime1 | DetailUseTime2,
    DetailDefault   = DetailMost // show this if none of the flags controlling details is set.
 };
 
@@ -83,6 +84,7 @@ struct LineRec {
   float SortKey;
   int   index;
   int   GroupId;
+  float DisplayOrder;  // used to flexibly control sort order in Hier sort mode.
 };
 
 //-----------------------------------------------------------------
@@ -91,8 +93,8 @@ static int CalcTime(int,int,int);
 static void usage(char* name);
 static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag);
 static int CountElem(AttrList* ad);
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup, bool HierFlag, int & max_name);
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool HierFlag);
+static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup);
+static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag);
 static void PrintResList(AttrList* ad);
 
 //-----------------------------------------------------------------
@@ -109,6 +111,16 @@ bool HideNoneGroupIfPossible = true;// don't show the <none> group if it is the 
 bool HideGroups = false;            // set to true when it doesn't make sense to show groups (i.e. just displaying prio)
 time_t MinLastUsageTime;
 
+enum {
+   SortByColumn1 = 0,  // sort by prio or by useage depending on which is in column 1 
+   SortGroupsFirstByIndex,
+   SortHierByGroupId,
+   SortHierBySortKey,
+   SortHierStrictlyBySortKey, // by sort key, none is not forced last
+   SortHierByDisplayOrder,
+   SortGroupsByName,
+   SortGroupsFirstByName,
+};
 
 struct LineRecLT {
     int detail_flag;
@@ -119,7 +131,7 @@ struct LineRecLT {
 
     bool operator()(const LineRec& a, const LineRec& b) const {
         if (group_order) {
-            if (group_order == 2) {
+            if (group_order == SortHierByGroupId) {  // sort by the order groups were returned from negotiator
                if (a.GroupId != b.GroupId) {
                   // force the <none> group (groupId == 0) to end up last)
                   if ( ! a.GroupId) return false;
@@ -128,26 +140,57 @@ struct LineRecLT {
                }
                if (a.IsAcctGroup != b.IsAcctGroup)
                   return a.IsAcctGroup > b.IsAcctGroup;
-            } else if (group_order == 3) {
+
+            } else if (group_order == SortHierBySortKey) {  // sort groups by the group sort_key value
                // force the <none> group (groupId == 0) to end up last)
                if (a.GroupId != b.GroupId) {
                   if ( ! a.GroupId) return false;
                   if ( ! b.GroupId) return true;
                   if (a.SortKey < b.SortKey || a.SortKey > b.SortKey) {
                      return a.SortKey < b.SortKey;
-                  return a.GroupId < b.GroupId;
                   }
+                  return a.GroupId < b.GroupId;
                }
                if (a.IsAcctGroup != b.IsAcctGroup)
                   return a.IsAcctGroup > b.IsAcctGroup;
-            } else if (group_order == 4) {
+
+            } else if (group_order == SortHierStrictlyBySortKey) {  // sort groups by the group sort_key value
+               if (a.GroupId != b.GroupId) {
+                  if (a.SortKey < b.SortKey || a.SortKey > b.SortKey) {
+                     return a.SortKey < b.SortKey;
+                  }
+                  return a.GroupId < b.GroupId;
+               }
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+
+            } else if (group_order == SortHierByDisplayOrder) {  // sort groups by the DisplayOrder value
+               if (a.GroupId != b.GroupId) {
+                  if (a.DisplayOrder < b.DisplayOrder || a.DisplayOrder > b.DisplayOrder) {
+                     return a.DisplayOrder < b.DisplayOrder;
+                  }
+                  return a.GroupId < b.GroupId;
+               }
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+
+            } else if (group_order == SortGroupsByName) { // sort by group name
                const MyString * pa = a.IsAcctGroup ? &a.Name : &a.AcctGroup;
                const MyString * pb = b.IsAcctGroup ? &b.Name : &b.AcctGroup;
-               //if (a.IsAcctGroup || b.IsAcctGroup)
-               //   return &a < &b;
                if (*pa != *pb)
                   return *pa < *pb;
-            } else {
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+
+            } else if (group_order == SortGroupsFirstByName) { // sort by group name
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+               if (a.IsAcctGroup) {
+                  if ( ! a.GroupId) return false;
+                  if ( ! b.GroupId) return true;
+                  return a.Name < b.Name;
+               }
+            } else { //SortGroupsFirstByIndex
                // Acct groups come out of the acct classad ordered before the 
                // individual submitters, and in breadth-first order of hierarchy.
                // This preserves that ordering:
@@ -157,11 +200,13 @@ struct LineRecLT {
             }
         }
 
-        // Order submitters by accumulated usage or priority depending on CL flags
+        // Order submitters by accumulated usage or priority or name depending on CL flags
         if (detail_flag & DetailPriority) {
             return a.Priority < b.Priority;
-        } else {
+        } else if (detail_flag & DetailUsage) {
             return a.AccUsage < b.AccUsage;
+        } else {
+            return a.Name < b.Name;
         }
 
         return false;
@@ -284,7 +329,16 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"most",2)) {
       DetailFlag |= DetailMost;
+#ifdef DEBUG
+      DetailFlag |= DetailGroup;
+#endif
       DashAll = true;
+    }
+    else if (IsArg(argv[i],"groupid")) {
+      DetailFlag |= DetailGroup;
+    }
+    else if (IsArg(argv[i],"order")) {
+      DetailFlag |= DetailOrder;
     }
     else if (IsArg(argv[i],"activefrom")) {
       if (argc-i<=3) usage(argv[0]);
@@ -631,7 +685,12 @@ main(int argc, char* argv[])
     delete sock;
 
     // if no details specified, show priorities
-    if ( ! DetailFlag) DetailFlag = DetailDefault;
+    if ( ! DetailFlag) {
+       DetailFlag = DetailDefault;
+#ifdef DEBUG
+       DetailFlag |= DetailGroup;
+#endif
+    }
     // if showing only prio, don't bother showing groups 
     if ( ! (DetailFlag & ~DetailPrios) && GroupPrioIsMeaningless) {
        if ( ! DashHier ) HierFlag = false;
@@ -655,15 +714,11 @@ static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
 	  return;
   }
   LineRec* LR=new LineRec[NumElem];
-  int max_name = 0;
-  CollectInfo(NumElem,ad,LR,GroupRollup,HierFlag,max_name);
+  CollectInfo(NumElem,ad,LR,GroupRollup);
 
-  int order = HierFlag ? 2 : (GroupOrder ? 1 : 0);
-  std::sort(LR, LR+NumElem, LineRecLT(DetailFlag, order));
-
-  // if Group details are not available, then not show heirarchical
-  if (!(DetailAvailFlag & DetailGroup)) HierFlag = false;
-  // if all visible data is in the none group, then show flat
+  // if Group details are not available, then do not show flat
+  if ( ! (DetailAvailFlag & DetailGroup)) HierFlag = false;
+  // if all visible users are in the none group, then show flat
   else if (HideNoneGroupIfPossible) {
      bool need_heir = false;
      for (int j = 0; j < NumElem; ++j) {
@@ -678,7 +733,17 @@ static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
      if ( ! need_heir) HierFlag = false;
   }
 
-  PrintInfo(ad,LR,NumElem,max_name,HierFlag);
+  int order = SortByColumn1; // sort by prio or by useage depending on which is in column 1
+  if (HierFlag) {
+     order = SortHierByGroupId;
+     if (DetailFlag & (DetailPriority | DetailUsage))
+        order = SortHierByDisplayOrder;
+  } else if (GroupOrder) {
+     order = SortGroupsFirstByIndex;
+  }
+  std::sort(LR, LR+NumElem, LineRecLT(DetailFlag, order));
+
+  PrintInfo(ad,LR,NumElem,HierFlag);
   delete[] LR;
 } 
 
@@ -698,7 +763,7 @@ static int CountElem(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup, bool HierFlag, int & max_name)
+static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42];
   char  attrLastUsage[32];
@@ -714,13 +779,12 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
   float effective_quota = 0, config_quota = 0, subtree_quota = 0;
   bool fNeedGroupIdFixup = false;
 
-  max_name = 0;
-
   for( int i=1; i<=numElem; i++) {
     LR[i-1].Priority=0;
     LR[i-1].index = i;
     LR[i-1].GroupId=0;
     LR[i-1].SortKey = 0;
+    LR[i-1].DisplayOrder = 0;
     LR[i-1].HasDetail = 0;
     LR[i-1].LastUsage=MinLastUsageTime;
     sprintf( attrName , "Name%d", i );
@@ -763,7 +827,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
         IsAcctGroup = false;
     }
     if (IsAcctGroup) {
-        LR[i-1].GroupId = i;
+        LR[i-1].GroupId = -i;
         if (!strcmp(name,"<none>") || !strcmp(name,"."))
            LR[i-1].GroupId = 0;
 
@@ -784,28 +848,19 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
         LR[i-1].SortKey = sort_key;
 
         if (GroupPrioIsMeaningless) {
-           LR[i-1].HasDetail &= ~DetailPrios;
+           LR[i-1].HasDetail &= ~DetailPriority;
         }
 
     } else {
-       // we know that hierarchical groups are always sent first, so if this is not a group
-       // then it must be in a group that we have already seen. so search back
-       // through the list so far to lookup the group id from the group.
-       // the exception is the 'none' group which may not be sent first.
+       // if this is not a group, then it's in a group, if it's in the none
+       // group we can set it's group id now, but if not we need to stuff 
+       // in a bogus value and set a flag to turn on groupid fixup later.
        if (AcctGroup == "<none>" || AcctGroup == ".")
           LR[i-1].GroupId = 0;
        else {
-          LR[i-1].GroupId = -1;
-          for (int jj = 0; jj < i-1; ++jj) {
-             if (AcctGroup == LR[jj].Name) {
-                LR[i-1].GroupId = LR[jj].GroupId;
-                break;
-             }
-          }
-          // the assumption that groups are sent first was broken, need to do brute force
-          // fixup of group id's once we have fully filled out the LR array
-          if (LR[i-1].GroupId < 0)
-             fNeedGroupIdFixup = true;
+          // set to large negative number so we know we have to fix it
+          LR[i-1].GroupId = -numElem*2;
+          fNeedGroupIdFixup = true;
        }
     }
 
@@ -813,16 +868,6 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
        LR[i-1].HasDetail |= DetailGroup;
 
 	if (LastUsage==0) LastUsage=-1;
-
-    if (LastUsage >= MinLastUsageTime) {
-        int name_length = strlen(name);
-        if (HierFlag && ! IsAcctGroup) {
-           name_length += 2;
-           if (LR[i-1].GroupId != 0)
-              name_length -= strlen(AcctGroup.Value());
-        }
-        if (name_length > max_name) max_name = name_length;
-    }
 
     DetailAvailFlag |= LR[i-1].HasDetail;
 
@@ -855,17 +900,59 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
 
 // ad->fPrint(stdout);
 
-  // if some records had forward references to group records, so we were unable
-  // to assign group IDs before the whole LR array was filled in
   if (fNeedGroupIdFixup) {
+
+     // sort the records so that groups are first and in lex order with <none> last
+     // we do this so that we can assign group id's in a reasonable way.
+     std::sort(LR, LR+numElem, LineRecLT(DetailFlag, SortGroupsFirstByName));
+
+     // assign group ids sequentially except for the <none> group which we
+     // will leave as GroupId == 0. 
+     int cGroups = 0;
+     int ixNone = 0;
      for (int i = 0; i < numElem; ++i) {
-        if (LR[i].GroupId >= 0) continue;
+        if ( ! LR[i].IsAcctGroup)
+           break;
+
+        ++cGroups;
+        if (LR[i].GroupId < 0)
+           LR[i].GroupId = cGroups;
+        else
+           ixNone = i;
+
+        if (DetailFlag & DetailPriority) {
+           // if sort key not supplied, use group priority as an approximation
+           if (DetailAvailFlag & DetailSortKey)
+              LR[i].DisplayOrder = LR[i].SortKey;
+           else
+              LR[i].DisplayOrder = LR[i].GroupId ? LR[i].Priority : FLT_MAX;
+        } else if (DetailFlag & DetailUsage) {
+           LR[i].DisplayOrder = LR[i].AccUsage / 3600.0;
+        } else {
+           LR[i].DisplayOrder = LR[i].GroupId ? (float)LR[i].GroupId : FLT_MAX;
+        }
+        LR[i].HasDetail |= DetailOrder;
+        DetailAvailFlag |= DetailOrder;
+     }
+
+     // now fix up the user records to that they have the correct GroupId
+     // for the group that they fit in. remember that only the first cGroups
+     // entries of the LR array are groups, and entries with GroupId >= 0
+     // are already correct.
+     for (int i = cGroups; i < numElem; ++i) {
+        if (LR[i].GroupId >= 0) {
+           LR[i].DisplayOrder = LR[ixNone].DisplayOrder;
+           LR[i].HasDetail |= (LR[ixNone].HasDetail & DetailOrder);
+           continue;
+        }
 
         // we already searched for a group name match before, now that
         // the LR array is complete, we can search after.
-        for (int jj = i+1; jj < numElem; ++jj) {
+        for (int jj = 0; jj < cGroups; ++jj) {
            if (LR[i].AcctGroup == LR[jj].Name) {
               LR[i].GroupId = LR[jj].GroupId;
+              LR[i].DisplayOrder = LR[jj].DisplayOrder;
+              LR[i].HasDetail |= (LR[jj].HasDetail & DetailOrder);
               break;
            }
         }
@@ -960,6 +1047,8 @@ static const struct {
    int width;
    const char * pHead;
    } aCols[] = {
+   { DetailGroup,      5, "Group\0Id" },
+   { DetailOrder,      9, "Group\0Order" },
    { DetailEffQuota,   9, "Effective\0Quota" },
    { DetailCfgQuota,   9, "Config\0Quota" },
    { DetailTreeQuota,  9, "Subtree\0Quota" },
@@ -975,8 +1064,24 @@ static const struct {
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool HierFlag)
-{ //
+static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
+{
+
+   // figure out the width of the longest name column.
+   //
+   int max_name = 0;
+   for (int j = 0; j < NumElem; ++j) {
+      if (LR[j].LastUsage >= MinLastUsageTime) {
+         int name_length = LR[j].Name.Length();
+         if (HierFlag && ! LR[j].IsAcctGroup) {
+            name_length += 2;
+            if (LR[j].GroupId != 0)
+               name_length -= LR[j].AcctGroup.Length();
+         }
+         if (name_length > max_name) max_name = name_length;
+      }
+   }
+
    int tmLast = 0;
    ad->LookupInteger( ATTR_LAST_UPDATE, tmLast );
    printf("Last Priority Update: %s\n",format_date(tmLast));
@@ -1046,7 +1151,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       // We want to avoid counting totals twice for acct group records
       bool is_group = LR[j].IsAcctGroup;
 
-      if (LR[j].LastUsage<MinLastUsageTime) 
+      if (LR[j].LastUsage < MinLastUsageTime) 
          continue;
 
       if ( ! is_group) {
@@ -1092,12 +1197,20 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
             {
             if (is_group && (aCols[ii].DetailFlag & (DetailQuotas | DetailSortKey)))
                item = item_NA;
+#ifdef DEBUG
+            else if ( ! is_group && (aCols[ii].DetailFlag & DetailSortKey) != 0)
+               ;
+#endif
             else
                item = 0; // just print spaces...
             }
 
          switch (item)
             {
+            case DetailGroup:     FormatFloat(Line+ix, aCols[ii].width, 0, LR[j].GroupId * 1.0);
+               break;
+            case DetailOrder:     FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].DisplayOrder);
+               break;
             case DetailEffQuota:  FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].EffectiveQuota);
                break;
             case DetailCfgQuota:  FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].ConfigQuota);
@@ -1225,16 +1338,16 @@ static void usage(char* name) {
      "\tor one or more of\n"
      "\t\t-allusers\t\tDisplay data for all users\n"
      "\t\t-activefrom <month> <day> <year> Display data for users active since this date\n"
-     "\t\t-prio[rity]\t\tDisplay user priority fields\n"
+     "\t\t-priority\t\tDisplay user priority fields\n"
      "\t\t-usage\t\t\tDisplay user/group usage fields\n"
      "\t\t-quota\t\t\tDisplay group quota fields\n"
      "\t\t-most\t\t\tDisplay most useful prio and usage fields\n"
      "\t\t-all\t\t\tDisplay all fields\n"
      "\t\t-flat\t\t\tDo not display users under their groups\n"
-     "\t\t-h[ierarchical]\t\tDisplay users under their groups\n"
+     "\t\t-hierarchical\t\tDisplay users under their groups\n"
      "\t\t-grouporder\t\tDisplay groups first, then users\n"
      "\t\t-grouprollup\t\tGroup value are the sum of user values\n"
-     "\t\t-l[ong]\t\t\tVerbose output (entire classads)\n"
+     "\t\t-long\t\t\tVerbose output (entire classads)\n"
 //     "\t\t-ads <file>\t\tFile of priority ads to display\n"
      , name );
   exit(1);
