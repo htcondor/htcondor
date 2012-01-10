@@ -81,7 +81,6 @@ static bool test_get_create_time_close(void);
 static bool test_get_file_size_before(void);
 static bool test_get_file_size_empty_dir(void);
 static bool test_get_file_size_empty_file(void);
-static bool test_get_file_size_dir(void);
 static bool test_get_file_size_valid(void);
 static bool test_get_file_size_same(void);
 static bool test_get_mode_before(void);
@@ -222,7 +221,6 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_get_file_size_before);
 	driver.register_function(test_get_file_size_empty_dir);
 	driver.register_function(test_get_file_size_empty_file);
-	driver.register_function(test_get_file_size_dir);
 	driver.register_function(test_get_file_size_valid);
 	driver.register_function(test_get_file_size_same);
 	driver.register_function(test_get_mode_before);
@@ -1356,23 +1354,6 @@ static bool test_get_file_size_empty_file() {
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
 	if(ret_val != 0) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_file_size_dir() {
-	emit_test("Test that GetFileSize() doesn't return 0 for a non-empty "
-		"directory.");
-	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	emit_param("Current File", "empty_dir");
-	Directory dir(tmp_dir.Value());
-	dir.Find_Named_Entry("empty_dir");
-	filesize_t ret_val = dir.GetFileSize();
-	emit_output_actual_header();
-	emit_retval(FILESIZE_T_FORMAT, ret_val);
-	if(ret_val == 0) {
 		FAIL;
 	}
 	PASS;
