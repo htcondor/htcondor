@@ -47,13 +47,17 @@
         
             isValidRunning  = false;
         
+            isValidSuspended  = false;
+        
+            isValidTransferring_output  = false;
+        
                 property_Jobs  = NULL;
               
             isValidJobs  = false;
         
         }
 
-       AviaryCommon::SubmissionSummary::SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
+       AviaryCommon::SubmissionSummary::SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
         {
              
                property_Id  = NULL;
@@ -76,6 +80,10 @@
             
             isValidRunning  = true;
             
+            isValidSuspended  = true;
+            
+            isValidTransferring_output  = true;
+            
                property_Jobs  = NULL;
              
             isValidJobs  = true;
@@ -95,6 +103,10 @@
                     property_Removed = arg_Removed;
             
                     property_Running = arg_Running;
+            
+                    property_Suspended = arg_Suspended;
+            
+                    property_Transferring_output = arg_Transferring_output;
             
                     property_Jobs = arg_Jobs;
             
@@ -801,6 +813,172 @@
                      element_qname = NULL;
                   }
                  
+
+                     
+                     /*
+                      * building suspended element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "suspended", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("suspended", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("suspended", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setSuspended(atoi(text_value));
+                                      }
+                                      
+                                      else
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element suspended");
+                                          status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for suspended ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element suspended missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building transferring_output element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "transferring_output", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("transferring_output", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("transferring_output", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setTransferring_output(atoi(text_value));
+                                      }
+                                      
+                                      else
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element transferring_output");
+                                          status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for transferring_output ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element transferring_output missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
                        { 
                     /*
                      * building Jobs array
@@ -978,6 +1156,10 @@
                     axis2_char_t text_value_8[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_9[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                    axis2_char_t text_value_10[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                    axis2_char_t text_value_11[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1461,6 +1643,120 @@
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                            axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidSuspended)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property suspended");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("suspended"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("suspended")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing suspended element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%ssuspended>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%ssuspended>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                               sprintf (text_value_9, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Suspended);
+                             
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidTransferring_output)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property transferring_output");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("transferring_output"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("transferring_output")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing transferring_output element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%stransferring_output>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%stransferring_output>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                               sprintf (text_value_10, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Transferring_output);
+                             
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_10, axutil_strlen(text_value_10));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -2282,10 +2578,176 @@
            
 
             /**
-             * Getter for jobs by  Property Number 9
+             * Getter for suspended by  Property Number 9
+             */
+            int WSF_CALL
+            AviaryCommon::SubmissionSummary::getProperty9()
+            {
+                return getSuspended();
+            }
+
+            /**
+             * getter for suspended.
+             */
+            int WSF_CALL
+            AviaryCommon::SubmissionSummary::getSuspended()
+             {
+                return property_Suspended;
+             }
+
+            /**
+             * setter for suspended
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionSummary::setSuspended(
+                    const int  arg_Suspended)
+             {
+                
+
+                if(isValidSuspended &&
+                        arg_Suspended == property_Suspended)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetSuspended();
+
+                
+                        property_Suspended = arg_Suspended;
+                        isValidSuspended = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for suspended
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::resetSuspended()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidSuspended = false; 
+               return true;
+           }
+
+           /**
+            * Check whether suspended is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::isSuspendedNil()
+           {
+               return !isValidSuspended;
+           }
+
+           /**
+            * Set suspended to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::setSuspendedNil()
+           {
+               return resetSuspended();
+           }
+
+           
+
+            /**
+             * Getter for transferring_output by  Property Number 10
+             */
+            int WSF_CALL
+            AviaryCommon::SubmissionSummary::getProperty10()
+            {
+                return getTransferring_output();
+            }
+
+            /**
+             * getter for transferring_output.
+             */
+            int WSF_CALL
+            AviaryCommon::SubmissionSummary::getTransferring_output()
+             {
+                return property_Transferring_output;
+             }
+
+            /**
+             * setter for transferring_output
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionSummary::setTransferring_output(
+                    const int  arg_Transferring_output)
+             {
+                
+
+                if(isValidTransferring_output &&
+                        arg_Transferring_output == property_Transferring_output)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetTransferring_output();
+
+                
+                        property_Transferring_output = arg_Transferring_output;
+                        isValidTransferring_output = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for transferring_output
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::resetTransferring_output()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidTransferring_output = false; 
+               return true;
+           }
+
+           /**
+            * Check whether transferring_output is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::isTransferring_outputNil()
+           {
+               return !isValidTransferring_output;
+           }
+
+           /**
+            * Set transferring_output to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::setTransferring_outputNil()
+           {
+               return resetTransferring_output();
+           }
+
+           
+
+            /**
+             * Getter for jobs by  Property Number 11
              */
             std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-            AviaryCommon::SubmissionSummary::getProperty9()
+            AviaryCommon::SubmissionSummary::getProperty11()
             {
                 return getJobs();
             }
