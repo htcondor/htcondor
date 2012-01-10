@@ -291,7 +291,12 @@ static bool test_to_lower(void);
 static bool test_size_positive(void);
 static bool test_size_zero(void);
 static bool test_size_undefined(void);
-static bool test_lookup_integer_precision_check(void);
+static bool test_lookup_int_precision_check(void);
+static bool test_lookup_long_precision_check(void);
+static bool test_lookup_long_long_precision_check(void);
+static bool test_eval_int_precision_int(void);
+static bool test_eval_int_precision_long(void);
+static bool test_eval_int_precision_long_long(void);
 
 bool OTEST_Old_Classads(void) {
 	emit_object("Old_Classads");
@@ -559,7 +564,12 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_size_positive);
 	driver.register_function(test_size_zero);
 	driver.register_function(test_size_undefined);
-    driver.register_function(test_lookup_integer_precision_check);
+    driver.register_function(test_lookup_int_precision_check);
+    driver.register_function(test_lookup_long_precision_check);
+    driver.register_function(test_lookup_long_long_precision_check);
+    driver.register_function(test_eval_int_precision_int);
+    driver.register_function(test_eval_int_precision_long);
+    driver.register_function(test_eval_int_precision_long_long);
 
 	return driver.do_all_functions();
 }
@@ -803,15 +813,15 @@ static bool test_lookup_integer_last() {
 	PASS;
 }
 
-static bool test_lookup_integer_precision_check() {
-    fprintf(stderr, "here %s:%d\n", __FILE__, __LINE__);
+static bool test_lookup_int_precision_check() {
 	emit_test("Test LookupInteger() precision check with type int.");
-	const char* classad_string = "\tA = 10000000000\n";
+	const char* classad_string = "\tA = 200000000000000000\n";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "A";
 	int val = 0;
-    int retexp = (sizeof(int) <= 4) ? 0 : 1;
+    int retexp = (sizeof(val) < 8) ? 0 : 1;
+    int expect = (retexp) ? 200000000000000000 : 0;
     int retval = classad.LookupInteger(attribute_name, val);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -819,10 +829,62 @@ static bool test_lookup_integer_precision_check() {
 	emit_param("INT", "");
 	emit_output_expected_header();
 	emit_retval("%d", retexp);
+    if (retexp) emit_param("INT", "%d", expect);
 	emit_output_actual_header();
-	emit_param("INT", "%d", val);
 	emit_retval("%d", retval);
+    if (retexp) emit_param("INT", "%d", val);
 	if (retval != retexp) { FAIL; }
+    if (retexp && (val != expect)) { FAIL; }
+	PASS;
+}
+
+static bool test_lookup_long_precision_check() {
+	emit_test("Test LookupInteger() precision check with type long.");
+	const char* classad_string = "\tA = 200000000000000000\n";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	const char* attribute_name = "A";
+	long val = 0;
+    int retexp = (sizeof(val) < 8) ? 0 : 1;
+    long expect = (retexp) ? 200000000000000000 : 0;
+    int retval = classad.LookupInteger(attribute_name, val);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("%d", retexp);
+    if (retexp) emit_param("INT", "%ld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retval);
+    if (retexp) emit_param("INT", "%ld", val);
+	if (retval != retexp) { FAIL; }
+    if (retexp && (val != expect)) { FAIL; }
+	PASS;
+}
+
+static bool test_lookup_long_long_precision_check() {
+	emit_test("Test LookupInteger() precision check with type long long.");
+	const char* classad_string = "\tA = 200000000000000000\n";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	const char* attribute_name = "A";
+	long long val = 0;
+    int retexp = (sizeof(val) < 8) ? 0 : 1;
+    long long expect = (retexp) ? 200000000000000000 : 0;
+    int retval = classad.LookupInteger(attribute_name, val);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("%d", retexp);
+    if (retexp) emit_param("INT", "%lld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retval);
+    if (retexp) emit_param("INT", "%lld", val);
+	if (retval != retexp) { FAIL; }
+    if (retexp && (val != expect)) { FAIL; }
 	PASS;
 }
 
@@ -2964,6 +3026,83 @@ static bool test_int_error() {
 	}
 	PASS;
 }
+
+
+static bool test_eval_int_precision_int() {
+	emit_test("Test EvalInteger() precision with type int.");
+	const char* classad_string = "\tA = 3000000000 * 3000000000\n";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	const char* attribute_name = "A";
+	int val = 0;
+    int retexp = (sizeof(val) < 8) ? 0 : 1;
+    int expect = (retexp) ? 9000000000000000000 : 0;
+    int retval = classad.EvalInteger(attribute_name, NULL, val);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("%d", retexp);
+    if (retexp) emit_param("INT", "%d", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retval);
+    if (retexp) emit_param("INT", "%d", val);
+	if (retval != retexp) { FAIL; }
+    if (retexp && (val != expect)) { FAIL; }
+	PASS;
+}
+
+static bool test_eval_int_precision_long() {
+	emit_test("Test EvalInteger() precision with type long.");
+	const char* classad_string = "\tA = 3000000000 * 3000000000\n";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	const char* attribute_name = "A";
+	long val = 0;
+    int retexp = (sizeof(val) < 8) ? 0 : 1;
+    long expect = (retexp) ? 9000000000000000000 : 0;
+    int retval = classad.EvalInteger(attribute_name, NULL, val);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("%d", retexp);
+    if (retexp) emit_param("INT", "%ld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retval);
+    if (retexp) emit_param("INT", "%ld", val);
+	if (retval != retexp) { FAIL; }
+    if (retexp && (val != expect)) { FAIL; }
+	PASS;
+}
+
+static bool test_eval_int_precision_long_long() {
+	emit_test("Test EvalInteger() precision with type long long.");
+	const char* classad_string = "\tA = 3000000000 * 3000000000\n";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	const char* attribute_name = "A";
+	long long val = 0;
+    int retexp = (sizeof(val) < 8) ? 0 : 1;
+    long long expect = (retexp) ? 9000000000000000000 : 0;
+    int retval = classad.EvalInteger(attribute_name, NULL, val);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("%d", retexp);
+    if (retexp) emit_param("INT", "%lld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retval);
+    if (retexp) emit_param("INT", "%lld", val);
+	if (retval != retexp) { FAIL; }
+    if (retexp && (val != expect)) { FAIL; }
+	PASS;
+}
+
 
 static bool test_real_invalid() {
 	emit_test("Test that EvalFloat() returns 0 for an attribute that uses "
