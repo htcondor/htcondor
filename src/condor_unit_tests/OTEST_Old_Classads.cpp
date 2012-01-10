@@ -291,7 +291,7 @@ static bool test_to_lower(void);
 static bool test_size_positive(void);
 static bool test_size_zero(void);
 static bool test_size_undefined(void);
-
+static bool test_lookup_integer_precision_check(void);
 
 bool OTEST_Old_Classads(void) {
 	emit_object("Old_Classads");
@@ -559,6 +559,7 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_size_positive);
 	driver.register_function(test_size_zero);
 	driver.register_function(test_size_undefined);
+    driver.register_function(test_lookup_integer_precision_check);
 
 	return driver.do_all_functions();
 }
@@ -799,6 +800,29 @@ static bool test_lookup_integer_last() {
 	if(actual != expect) {
 		FAIL;
 	}
+	PASS;
+}
+
+static bool test_lookup_integer_precision_check() {
+    fprintf(stderr, "here %s:%d\n", __FILE__, __LINE__);
+	emit_test("Test LookupInteger() precision check with type int.");
+	const char* classad_string = "\tA = 10000000000\n";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	const char* attribute_name = "A";
+	int val = 0;
+    int retexp = (sizeof(int) <= 4) ? 0 : 1;
+    int retval = classad.LookupInteger(attribute_name, val);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", attribute_name);
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("%d", retexp);
+	emit_output_actual_header();
+	emit_param("INT", "%d", val);
+	emit_retval("%d", retval);
+	if (retval != retexp) { FAIL; }
 	PASS;
 }
 

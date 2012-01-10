@@ -19,6 +19,7 @@
 
 
 // Includes 
+#include <limits>
 #include "classad/common.h"
 #include "classad/lexer.h"
 #include "classad/util.h"
@@ -274,7 +275,7 @@ tokenizeNumber (void)
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
 	Value::NumberFactor f;
-	int		integer=0;
+	IntType	integer=0;
 	double	real=0;
 	int 	och;
 
@@ -392,23 +393,24 @@ tokenizeNumber (void)
 	}
 
 	if( numberType == INTEGER ) {
-		cut( );
-		long l;
-            // EJE: I need to duplicate semantics of strtol(buf, NULL, 0) for 
-            // templatized type
-		if ( _useOldClassAdSemantics ) {
-			// Old ClassAds don't support octal or hexidecimal
-			// representations for integers.
-			l = strtol( lexBuffer.c_str(), NULL, 10 );
-		} else {
-			l = strtol( lexBuffer.c_str(), NULL, 0 );
-		}
-		if ( l > INT_MAX ) {
-			l = INT_MAX;
-		} else if ( l < INT_MIN ) {
-			l = INT_MIN;
-		}
-		integer = (int) l;
+        cut();
+        bool succ = false;
+        if (_useOldClassAdSemantics) {
+            // Old ClassAds don't support octal or hexidecimal
+            // representations for integers.
+            succ = classad_lexcast(lexBuffer, integer);
+        } else {
+            // this version supports oct and hex representations
+            succ = classad_lexcast(lexBuffer, integer, true);
+        }
+        if (!succ) {
+            // in this context, the only reason for a lexcast failure should be
+            // a value that exceeds precision of IntType.
+            // I'm assuming two additional things here: (a) any lexeme is non-empty,
+            // or it wouldn't exist, and (b) that IntType is signed, so I can correctly
+            // assess whether we had underflow or overflow
+            integer = (lexBuffer[0] == '-') ? std::numeric_limits<IntType>::min() : std::numeric_limits<IntType>::max();
+        }
 	} else if( numberType == REAL ) {
 		cut( );
 		real = strtod( lexBuffer.c_str(), NULL );
