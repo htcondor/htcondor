@@ -1110,11 +1110,24 @@ AttrList* Accountant::ReportState() {
         ad->Insert(tmp.Value());
 
         bool isGroup=false;
-        string cgrp = GetAssignedGroup(CustomerName, isGroup)->name;
-        tmp.sprintf("AccountingGroup%d = \"%s\"",OwnerNum,cgrp.c_str());
-        ad->Insert(tmp.Value());
+        GroupEntry* cgrp = GetAssignedGroup(CustomerName, isGroup);
         tmp.sprintf("IsAccountingGroup%d = %s",OwnerNum,(isGroup)?"TRUE":"FALSE");
         ad->Insert(tmp.Value());
+
+        if (cgrp) {
+            tmp.sprintf("AccountingGroup%d",OwnerNum);
+            ad->Assign(tmp.Value(), cgrp->name);
+            if (isGroup) {
+               tmp.sprintf("EffectiveQuota%d", OwnerNum);
+               ad->Assign(tmp.Value(), cgrp->quota);
+               tmp.sprintf("ConfigQuota%d", OwnerNum);
+               ad->Assign(tmp.Value(), cgrp->config_quota);
+               tmp.sprintf("SubtreeQuota%d", OwnerNum);
+               ad->Assign(tmp.Value(), cgrp->subtree_quota);
+               tmp.sprintf("GroupSortKey%d", OwnerNum);
+               ad->Assign(tmp.Value(), cgrp->sort_key);
+            }
+        }
 
         OwnerNum++;
     }
