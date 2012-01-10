@@ -1665,8 +1665,6 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	Value &result )
 {
 	Value 	arg0, arg1, arg2;
-	string	buf;
-    IntType offset, len=0, alen;
 
 		// two or three arguments
 	if( argList.size() < 2 || argList.size() > 3 ) {
@@ -1689,7 +1687,10 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 		return( true );
 	}
 
-		// arg0 must be string, arg1 must be int, arg2 (if given) must be int
+	// arg0 must be string, arg1 must be int, arg2 (if given) must be int
+	string	buf;
+    IntType offset = 0;
+    IntType len = 0;
 	if( !arg0.IsStringValue( buf ) || !arg1.IsIntegerValue( offset )||
 		(argList.size( ) > 2 && !arg2.IsIntegerValue( len ) ) ) {
 		result.SetErrorValue( );
@@ -1698,7 +1699,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 
 		// perl-like substr; negative offsets and lengths count from the end
 		// of the string
-	alen = buf.size( );
+    IntType alen = buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
 	} else if( offset >= alen ) {
@@ -1721,16 +1722,21 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
         if (templen == 0) len = 0;
 	}
 
-    if (offset > IntType(std::numeric_limits<std::string::size_type>::max())) return false;
-    if (len > IntType(std::numeric_limits<std::string::size_type>::max())) return false;
+    // this test goes haywire (and isn't necessary) if size_type has same precision as IntType:
+    if (sizeof(std::string::size_type) < sizeof(IntType)) {
+        const IntType mx = IntType(std::numeric_limits<std::string::size_type>::max());
+        if ((offset > mx) || (len > mx)) {
+            result.SetErrorValue();
+            return false;
+        }
+    }
 
-		// allocate storage for the string
-	string str;
-
-	str.assign( buf, offset, len );
-	result.SetStringValue( str );
-	return( true );
+    string str;
+    str.assign(buf, offset, len);
+    result.SetStringValue(str);
+    return true;
 }
+
 
 bool FunctionCall::
 compareString( const char*name, const ArgumentList &argList, EvalState &state, 
@@ -1793,7 +1799,7 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 		// takes exactly one argument
 	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
-		return( true );
+		return( false );
 	}
 	if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );

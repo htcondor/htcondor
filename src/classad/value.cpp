@@ -484,15 +484,14 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 
 bool convertValueToIntegerValue(const Value value, Value &integerValue)
 {
-    bool                could_convert;
+    bool                could_convert = false;
 	string	            buf;
-    char                *end;
-	int		            ivalue;
+	IntType             ivalue = 0;
+	bool	            bvalue = false;
+	double	            rvalue = 0;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
-	bool	            bvalue;
-	double	            rvalue;
-	Value::NumberFactor nf;
+	Value::NumberFactor nf = Value::NO_FACTOR;
 
 	switch(value.GetType()) {
 		case Value::UNDEFINED_VALUE:
@@ -508,28 +507,33 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
             break;
 
 		case Value::STRING_VALUE:
-			value.IsStringValue( buf );
-            if (!classad_lexcast(buf, ivalue)) {
-				integerValue.SetErrorValue( );
+                //could_convert = true;
+			value.IsStringValue(buf);
+            if (buf.empty()) {
+				integerValue.SetErrorValue();
                 could_convert = false;
-			} else {
-                could_convert = true;
-                switch( toupper( *end ) ) {
+                break;
+            }
+            nf = Value::NO_FACTOR;
+            switch (toupper(*(buf.end()-1))) {
                 case 'B':  nf = Value::B_FACTOR; break;
                 case 'K':  nf = Value::K_FACTOR; break;
                 case 'M':  nf = Value::M_FACTOR; break;
                 case 'G':  nf = Value::G_FACTOR; break;
                 case 'T':  nf = Value::T_FACTOR; break;
-                case '\0': nf = Value::NO_FACTOR; break;
-                default:  
-                    nf = Value::NO_FACTOR; // avoid uninitialized warning
-                    integerValue.SetErrorValue( );
-                    could_convert = false;
-                    break;
-                }
-                if (could_convert) {
-                    integerValue.SetIntegerValue((IntType) (ivalue*Value::ScaleFactor[nf]));
-                }
+                default: break;
+            }
+                //if (!could_convert) break;
+            if (nf != Value::NO_FACTOR) buf.erase(buf.end()-1);
+            if (classad_lexcast(buf, ivalue)) {
+                could_convert = true;
+                integerValue.SetIntegerValue((IntType)(ivalue*Value::ScaleFactor[nf]));
+            } else if (classad_lexcast(buf, rvalue)) {
+                could_convert = true;
+                integerValue.SetIntegerValue((IntType)(rvalue*Value::ScaleFactor[nf]));
+			} else {
+				integerValue.SetErrorValue();
+                could_convert = false;
             }
             break;
 
