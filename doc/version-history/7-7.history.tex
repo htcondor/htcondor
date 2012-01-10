@@ -91,10 +91,6 @@ under the HOST(S) column for grid type ec2 jobs.
 \item Condor can now submit jobs to Grid Engine via the new sge grid-type.
 \Ticket{1984}
 
-\item A new feature in DAGMan implements a second way to suspend a running DAG.
-See section ~\ref{sec:DagSuspend} for details.
-\Ticket{2213}
-
 \item Improved logging in more cases when Condor daemons run out of memory.
 \Ticket{2559}
 
@@ -111,6 +107,10 @@ the job is placed on hold because of a failure, and not by user request.
 Previously, email would be sent only if the job was terminated via signal.
 \Ticket{1976}
 
+\item A new feature in DAGMan implements a second way to suspend a running DAG.
+See section ~\ref{sec:DagSuspend} for details.
+\Ticket{2213}
+
 \item The default settings for \Condor{dagman} have changed.
 Now, if a node has children, then \Condor{dagman} uses the
 \Attr{KeepClaimIdle} attribute, 
@@ -121,15 +121,10 @@ The amount of time is controlled by the
 \Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
 \Ticket{2673}
 
-\item Improved output of \Condor{q} \Opt{-dag} to show the dag structure as a tree,
+\item Improved the output of \Condor{q} \Opt{-dag},
+to show the DAG structure as a tree,
 with children indented below their parents.
 \Ticket{1281}
-
-\item Fixed the output of \Condor{q} \Opt{-dag} so that children of a
-non-existent DAGman node would not be mistakenly shown as belonging to another
-DAGman. This can happen, for example, when a \Condor{dagman} process dies while
-its children are still running.
-\Ticket{2463}
 
 \item Added the new FINAL node feature to \Condor{dagman} -- this allows
 the user to declare a FINAL node in the DAG, which is always run at the
@@ -162,7 +157,7 @@ but not big enough to hold the whole contents of the spool directory.
 
 \item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
 specifies the amount of time in seconds that \Condor{schedd} will hold a claim
-idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
+idle for a DAGMan job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
 
 \item \AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
 report the maximum observed memory usage.  Previously, they reported
@@ -174,9 +169,11 @@ when the job was finished, the final observation of memory usage
 was 0.
 \Ticket{2725}
 
-\item \AdAttr{ResidentSetSize} is now rounded by default using the new
-default configuration setting
+\item The job ClassAd attribute \Attr{ResidentSetSize} is now rounded 
+by default,
+using the new default configuration setting
 \Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
+\Ticket{2729}
 
 \end{itemize}
 
@@ -218,6 +215,13 @@ and the \Condor{starter}.  This problem was introduced in 7.7.2.
 and prevent the \Attr{x509UserProxyEmail} from being set properly for
 jobs forwarded via Condor-C.
 \Ticket{2655}
+
+\item Fixed the output of \Condor{q} \Opt{-dag},
+such that children of a non-existent DAG node would not be mistakenly 
+shown as belonging to another instance of \Condor{dagman}.
+This can happen, for example, when a \Condor{dagman} process dies while
+its children are still running.
+\Ticket{2463}
 
 \item Fixed a bug in \Condor{dagman} that caused a DAG to fail if node
 job user log files were actually symlinks.  This problem was introduced

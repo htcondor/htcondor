@@ -104,6 +104,12 @@ SubmissionObject::updateStatus(const PROC_ID &id,
 		case HELD:
 			mgmtObject->dec_Held();
 			break;
+		case TRANSFERRING_OUTPUT:
+			mgmtObject->dec_TransferringOutput();;
+			break;
+		case SUSPENDED:
+			mgmtObject->dec_Suspended();
+			break;
 		default:
 			dprintf(D_ALWAYS, "error: Unknown %s of %d on %d.%d\n",
 					ATTR_LAST_JOB_STATUS, value, id.cluster, id.proc);
@@ -131,6 +137,14 @@ SubmissionObject::updateStatus(const PROC_ID &id,
 			break;
 		case HELD:
 			mgmtObject->inc_Held();
+            active_procs.insert(id);
+			break;
+		case TRANSFERRING_OUTPUT:
+			mgmtObject->inc_TransferringOutput();
+            active_procs.insert(id);
+			break;
+		case SUSPENDED:
+			mgmtObject->inc_Suspended();
             active_procs.insert(id);
 			break;
 		default:

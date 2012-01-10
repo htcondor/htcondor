@@ -84,6 +84,12 @@ SubmissionObject::increment ( const Job *job )
         case HELD:
             m_held.insert ( job );
             break;
+        case TRANSFERRING_OUTPUT:
+            m_transferring_output.insert ( job );
+            break;
+        case SUSPENDED:
+            m_suspended.insert ( job );
+            break;
         default:
             dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
                       ATTR_JOB_STATUS, status, job->getKey() );
@@ -114,6 +120,12 @@ SubmissionObject::decrement ( const Job *job )
             break;
         case HELD:
             m_held.erase ( job );
+            break;
+        case TRANSFERRING_OUTPUT:
+            m_transferring_output.erase ( job );
+            break;
+        case SUSPENDED:
+            m_suspended.erase ( job );
             break;
         default:
             dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
@@ -151,6 +163,18 @@ const SubmissionObject::JobSet &
 SubmissionObject::getHeld()
 {
     return m_held;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::getTransferringOutput()
+{
+    return m_transferring_output;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::getSuspended()
+{
+    return m_suspended;
 }
 
 void
@@ -214,6 +238,20 @@ SubmissionObject::getJobSummaries ( JobSummaryPairCollection &jobs)
     //5) Held
     for ( SubmissionObject::JobSet::const_iterator i = getHeld().begin();
             getHeld().end() != i; i++ )
+    {
+		jobs.push_back(makeJobPair(*i));
+    }
+
+    //6) Transferring Output
+    for ( SubmissionObject::JobSet::const_iterator i = getTransferringOutput().begin();
+            getTransferringOutput().end() != i; i++ )
+    {
+		jobs.push_back(makeJobPair(*i));
+    }
+
+    //7) Suspended
+    for ( SubmissionObject::JobSet::const_iterator i = getSuspended().begin();
+            getSuspended().end() != i; i++ )
     {
 		jobs.push_back(makeJobPair(*i));
     }

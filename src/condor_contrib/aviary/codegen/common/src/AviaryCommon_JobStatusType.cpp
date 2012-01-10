@@ -278,6 +278,12 @@
                  if (axutil_strcmp(property_JobStatusType.c_str(), "HELD") == 0)
                     return JobStatusType_HELD;
              
+                 if (axutil_strcmp(property_JobStatusType.c_str(), "TRANSFERRING_OUTPUT") == 0)
+                    return JobStatusType_TRANSFERRING_OUTPUT;
+             
+                 if (axutil_strcmp(property_JobStatusType.c_str(), "SUSPENDED") == 0)
+                    return JobStatusType_SUSPENDED;
+             
              
                  /* Error: none of the strings matched; invalid enum value */
                  return (ADBJobStatusTypeEnum)-1;
@@ -300,23 +306,31 @@
                    {
                      
                        case JobStatusType_IDLE :
-                            property_JobStatusType = ("IDLE");
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "IDLE");
                           break;
                      
                        case JobStatusType_RUNNING :
-                            property_JobStatusType = ("RUNNING");
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "RUNNING");
                           break;
                      
                        case JobStatusType_REMOVED :
-                            property_JobStatusType = ("REMOVED");
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "REMOVED");
                           break;
                      
                        case JobStatusType_COMPLETED :
-                            property_JobStatusType = ("COMPLETED");
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COMPLETED");
                           break;
                      
                        case JobStatusType_HELD :
-                            property_JobStatusType = ("HELD");
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "HELD");
+                          break;
+                     
+                       case JobStatusType_TRANSFERRING_OUTPUT :
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "TRANSFERRING_OUTPUT");
+                          break;
+                     
+                       case JobStatusType_SUSPENDED :
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "SUSPENDED");
                           break;
                      
                      

@@ -46,6 +46,18 @@
 	<wsdl:message name="RemoveJobResponse">
 		<wsdl:part name="parameters" element="job:RemoveJobResponse"/>
 	</wsdl:message>
+	<wsdl:message name="SuspendJobRequest">
+		<wsdl:part name="parameters" element="job:SuspendJob"/>
+	</wsdl:message>
+	<wsdl:message name="SuspendJobResponse">
+		<wsdl:part name="parameters" element="job:SuspendJobResponse"/>
+	</wsdl:message>
+	<wsdl:message name="ContinueJobRequest">
+		<wsdl:part name="parameters" element="job:ContinueJob"/>
+	</wsdl:message>
+	<wsdl:message name="ContinueJobResponse">
+		<wsdl:part name="parameters" element="job:ContinueJobResponse"/>
+	</wsdl:message>
 	<wsdl:message name="SetJobAttributeRequest">
 		<wsdl:part name="parameters" element="job:SetJobAttribute"/>
 	</wsdl:message>
@@ -68,6 +80,14 @@
 		<wsdl:operation name="removeJob">
 			<wsdl:input message="tns:RemoveJobRequest"/>
 			<wsdl:output message="tns:RemoveJobResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="suspendJob">
+			<wsdl:input message="tns:SuspendJobRequest"/>
+			<wsdl:output message="tns:SuspendJobResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="continueJob">
+			<wsdl:input message="tns:ContinueJobRequest"/>
+			<wsdl:output message="tns:ContinueJobResponse"/>
 		</wsdl:operation>
 		<wsdl:operation name="setJobAttribute">
 			<wsdl:input message="tns:SetJobAttributeRequest"/>
@@ -105,6 +125,24 @@
 		</wsdl:operation>
 		<wsdl:operation name="removeJob">
 			<soap:operation soapAction="http://grid.redhat.com/aviary-job/remove"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="suspendJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/suspend"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="continueJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/continue"/>
 			<wsdl:input>
 				<soap:body use="literal"/>
 			</wsdl:input>
