@@ -31,6 +31,16 @@
 
 using namespace std;
 
+// The compat-classad layer's version of stringlistsum() and friends munges
+// int and float types together and resolves afterward.  As part of the move
+// to support 64-bit integer precision, I'm going to use long double here, because
+// double only supports 51 bits of integer precision.  MSVC apparently maps long double
+// to just 'double' under the hood, so I guess Windows builds will support 51 bits
+// of integer precision instead of 64.  One more reason Bill Gates is damned.
+// Improving on this will require redesigning the current stringlistxxx() handling 
+// system, not sure it's worth it, but it is an option.
+typedef long double FloatType;
+
 // gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
 #if !defined(FLT_MIN) && defined(__FLT_MIN__)
   #define FLT_MIN  __FLT_MIN__
@@ -330,25 +340,21 @@ bool stringListSize_func( const char * /*name*/,
 	return true;
 }
 
-static
-double sum_func( double item, double accumulator )
+FloatType sum_func(FloatType item, FloatType accumulator)
 {
 	return item + accumulator;
 }
 
-static
-double min_func( double item, double accumulator )
+FloatType min_func(FloatType item, FloatType accumulator)
 {
 	return item < accumulator ? item : accumulator;
 }
 
-static
-double max_func( double item, double accumulator )
+FloatType max_func(FloatType item, FloatType accumulator)
 {
 	return item > accumulator ? item : accumulator;
 }
 
-static
 bool stringListSummarize_func( const char *name,
 							   const classad::ArgumentList &arg_list,
 							   classad::EvalState &state, classad::Value &result )
@@ -357,8 +363,8 @@ bool stringListSummarize_func( const char *name,
 	std::string list_str;
 	std::string delim_str = ", ";
 	bool is_avg = false;
-	double (* func)( double, double ) = NULL;
-	double accumulator;
+	FloatType (*func)(FloatType, FloatType) = NULL;
+	FloatType accumulator;
 	bool is_real = false;
 	bool empty_allowed = false;
 
@@ -414,15 +420,15 @@ bool stringListSummarize_func( const char *name,
 	}
 
 	sl.rewind();
-	const char *entry;
-	while ( (entry = sl.next()) ) {
-		double temp;
-		int r = sscanf(entry, "%lf", &temp);
+	while (const char* entry = sl.next()) {
+		FloatType temp;
+        int n;
+		int r = sscanf(entry, "%Lf%n", &temp, &n);
 		if (r != 1) {
 			result.SetErrorValue();
 			return true;
 		}
-		if (strspn(entry, "+-0123456789") != strlen(entry)) {
+		if (strspn(entry, "+-0123456789") != (unsigned)n) {
 			is_real = true;
 		}
 		accumulator = func( temp, accumulator );
@@ -433,9 +439,9 @@ bool stringListSummarize_func( const char *name,
 	}
 
 	if ( is_real ) {
-		result.SetRealValue( accumulator );
+		result.SetRealValue(accumulator);
 	} else {
-		result.SetIntegerValue( (int)accumulator );
+		result.SetIntegerValue((classad::IntType)accumulator);
 	}
 
 	return true;

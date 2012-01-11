@@ -894,6 +894,8 @@ sumAvg(const char *name, const ArgumentList &argList,
 				Operation::Operate(Operation::ADDITION_OP, result, 
 								   listElementValue, result);
 			}
+            IntType t=0;
+            result.IsIntegerValue(t);
 		}
 	}
 

@@ -73,7 +73,7 @@ void ExprTree::debug_format_value(Value &value) const {
 				break;
 			case Value::INTEGER_VALUE:
 				if(value.IsIntegerValue(intValue)) {
-					char buf[12];
+					char buf[50];
 					sprintf(buf, "%lld", intValue);
 					result += buf;
 					result += "\n";

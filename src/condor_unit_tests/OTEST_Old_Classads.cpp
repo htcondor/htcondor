@@ -297,6 +297,8 @@ static bool test_lookup_long_long_precision_check(void);
 static bool test_eval_int_precision_int(void);
 static bool test_eval_int_precision_long(void);
 static bool test_eval_int_precision_long_long(void);
+static bool test_string_list_sum_long_long();
+static bool test_string_list_max_long_long();
 
 bool OTEST_Old_Classads(void) {
 	emit_object("Old_Classads");
@@ -570,6 +572,8 @@ bool OTEST_Old_Classads(void) {
     driver.register_function(test_eval_int_precision_int);
     driver.register_function(test_eval_int_precision_long);
     driver.register_function(test_eval_int_precision_long_long);
+    driver.register_function(test_string_list_sum_long_long);
+    driver.register_function(test_string_list_max_long_long);
 
 	return driver.do_all_functions();
 }
@@ -3862,6 +3866,57 @@ static bool test_string_list_sum_default() {
 	}
 	PASS;
 }
+
+static bool test_string_list_sum_long_long() {
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+		"for an attribute using stringlistsum() on a StringList with long long values.");
+	const char* classad_string = "\tA1=stringlistsum(\"200000000000,1\")";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	long long actual = -1, expect = 200000000001;
+	int retVal = classad.EvalInteger("A1", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%lld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%lld", actual);
+	if ((retVal != 1) || (actual != expect)) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_string_list_max_long_long() {
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+		"for an attribute using stringlistmax() on a StringList with long long values.");
+	const char* classad_string = "\tA1=stringlistmax(\"200000000000,1\")";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	long long actual = -1, expect = 200000000000;
+	int retVal = classad.EvalInteger("A1", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%lld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%lld", actual);
+	if ((retVal != 1) || (actual != expect)) {
+		FAIL;
+	}
+	PASS;
+}
+
 
 static bool test_string_list_sum_empty() {
 	emit_test("Test that EvalFloat() returns 1 and sets the correct actual "
