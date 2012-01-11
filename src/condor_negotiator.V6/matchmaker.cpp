@@ -1731,6 +1731,11 @@ void Matchmaker::hgq_construct_tree() {
         EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
+    // Set the root group's autoregroup state to match the effective global value for autoregroup
+    // we do this for the benefit of the accountant, it also can be use to remove some special cases
+    // in the negotiator loops.
+    hgq_root_group->autoregroup = autoregroup;
+
     // With the tree structure in place, we can make a list of groups in breadth-first order
     // For more convenient iteration over the structure
     hgq_groups.clear();

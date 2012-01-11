@@ -1210,6 +1210,8 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
         ad->Assign(tmp.c_str(), cgrp->subtree_quota);
         sprintf(tmp, "GroupSortKey%d", gnum);
         ad->Assign(tmp.c_str(), cgrp->sort_key);
+        sprintf(tmp, "GroupAutoRegroup%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->autoregroup);
     }
 
     int ResourcesUsed = 0;
