@@ -1126,6 +1126,8 @@ AttrList* Accountant::ReportState() {
                ad->Assign(tmp.Value(), cgrp->subtree_quota);
                tmp.sprintf("GroupSortKey%d", OwnerNum);
                ad->Assign(tmp.Value(), cgrp->sort_key);
+               sprintf(tmp, "GroupAutoRegroup%d", OwnerNum);
+               ad->Assign(tmp.Value(), cgrp->autoregroup);
             }
         }
 
