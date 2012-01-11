@@ -400,10 +400,10 @@ bool stringListSummarize_func( const char *name,
 		is_avg = true;
 	} else if ( strcasecmp( name, "stringlistmin" ) == 0 ) {
 		func = min_func;
-		accumulator = FLT_MAX;
+		accumulator = std::numeric_limits<FloatType>::max();
 	} else if ( strcasecmp( name, "stringlistmax" ) == 0 ) {
 		func = max_func;
-		accumulator = FLT_MIN;
+		accumulator = std::numeric_limits<FloatType>::min();
 	} else {
 		result.SetErrorValue();
 		return false;
