@@ -793,11 +793,9 @@ char * SafeSock::serialize() const
 char * SafeSock::serialize(char *buf)
 {
 	char * sinful_string = NULL;
-	char usernamebuf[128];
 	char *ptmp, *ptr = NULL;
     
 	ASSERT(buf);
-    memset(usernamebuf, 0, 128);
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
