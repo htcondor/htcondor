@@ -207,7 +207,7 @@ class Value
             @param size This is filled in with the size of the string
 			@return true iff the value is string.
 		*/
-        inline bool IsStringValue( int &size ) const;
+        inline bool IsStringValue( IntType &size ) const;
 		/** Checks if the value is a string.
 			@return true iff the value is string.
 		*/
@@ -438,7 +438,7 @@ IsStringValue( std::string &s ) const
 }
 
 inline bool Value::
-IsStringValue( int &size ) const
+IsStringValue( IntType &size ) const
 {
     if (valueType == STRING_VALUE) {
         size = strValue.size();

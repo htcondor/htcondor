@@ -801,7 +801,7 @@ size(const char *, const ArgumentList &argList,
 	Value             arg;
 	const ExprList    *listToSize;
     ClassAd           *classadToSize;
-	int			      length;
+	IntType           length;
 
 	// we accept only one argument
 	if (argList.size() != 1) {
@@ -2143,12 +2143,12 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
             double rvalue;
             realValue.IsRealValue(rvalue);
             if (strcasecmp("floor", name) == 0) {
-                result.SetIntegerValue((int) floor(rvalue));
+                result.SetIntegerValue((IntType) floor(rvalue));
             } else if (   strcasecmp("ceil", name)    == 0 
                        || strcasecmp("ceiling", name) == 0) {
-                result.SetIntegerValue((int) ceil(rvalue));
+                result.SetIntegerValue((IntType) ceil(rvalue));
             } else if( strcasecmp("round", name) == 0) {
-                result.SetIntegerValue((int) rint(rvalue));
+                result.SetIntegerValue((IntType) rint(rvalue));
             } else {
                 result.SetErrorValue( );
             }
@@ -2164,7 +2164,7 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 	Value	arg;
     IntType     int_max;
     double  double_max;
-    int     random_int;
+    IntType     random_int;
     double  random_double;
 
     // takes exactly one argument

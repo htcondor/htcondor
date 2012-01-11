@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include <limits>
 #include "classad/common.h"
 #include "classad/operators.h"
 #include "classad/sink.h"
@@ -1054,7 +1055,7 @@ int Operation::
 doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 {
     IntType i1, i2;
-	int signMask = ~INT_MAX;	// now at the position of the sign bit
+	int signMask = ~(std::numeric_limits<IntType>::max());	// now at the position of the sign bit
 	int val;
 
 	// bitwise operations are defined only on integers
