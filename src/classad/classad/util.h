@@ -90,18 +90,8 @@ bool classad_lexcast(const std::string& s, T& v, bool detect_integer_base=false)
     }
 
     ss >> v;
-    bool fail = ss.fail();
-    bool eof = ss.eof();
 
-    if (!eof) {
-        // eof() is returning false even if all chars were consumed, looks like
-        // due to incorrectly processing an internal null char terminator.
-        // I cannot believe I have to do this either.
-        char c = ss.peek();
-        eof = ss.fail() || (0==c);
-    }
-
-    return eof && !fail;
+    return ss.eof() && !ss.fail();
 }
 
 } // classad

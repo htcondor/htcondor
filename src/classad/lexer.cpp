@@ -122,7 +122,7 @@ mark (void)
 void  Lexer::
 cut (void)
 {
-	lexBuffer[lexBufferCount] = '\0';
+    lexBuffer[lexBufferCount] = '\0';
 	accumulating = false;
 	return;
 }
@@ -394,16 +394,11 @@ tokenizeNumber (void)
 
 	if( numberType == INTEGER ) {
         cut();
-        bool succ = false;
-        if (_useOldClassAdSemantics) {
-            // Old ClassAds don't support octal or hexidecimal
-            // representations for integers.
-            succ = classad_lexcast(lexBuffer, integer);
-        } else {
-            // this version supports oct and hex representations
-            succ = classad_lexcast(lexBuffer, integer, true);
-        }
-        if (!succ) {
+        // lexBuffer may have char(0) in it, which causes havoc:
+        string buf(lexBuffer.c_str());
+        // Old ClassAds don't support octal or hexidecimal
+        // representations for integers.
+        if (!classad_lexcast(buf, integer, !_useOldClassAdSemantics)) {
             // in this context, the only reason for a lexcast failure should be
             // a value that exceeds precision of IntType.
             // I'm assuming two additional things here: (a) any lexeme is non-empty,
