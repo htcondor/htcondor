@@ -301,6 +301,7 @@ static bool test_string_list_sum_long_long();
 static bool test_string_list_max_long_long();
 static bool test_floor_positive_float_long_long();
 static bool test_ceiling_positive_float_long_long();
+static bool test_int_negative_long_long();
 
 bool OTEST_Old_Classads(void) {
 	emit_object("Old_Classads");
@@ -578,6 +579,7 @@ bool OTEST_Old_Classads(void) {
     driver.register_function(test_string_list_max_long_long);
     driver.register_function(test_floor_positive_float_long_long);
     driver.register_function(test_ceiling_positive_float_long_long);
+    driver.register_function(test_int_negative_long_long);
 
 	return driver.do_all_functions();
 }
@@ -3012,6 +3014,31 @@ static bool test_int_int_positive() {
 	PASS;
 }
 
+static bool test_int_negative_long_long() {
+	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
+		"of an attribute with a unary negative integer actual, with long long precision.");
+    const char* classad_string = "\tB=-int(4000000000000)";
+	compat_classad::ClassAd classad;
+	classad.initFromString(classad_string, NULL);
+	long long actual = -1, expect =-4000000000000 ;
+	int retVal = classad.EvalInteger("B", NULL, actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_param("INT", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Value", "%lld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INT Value", "%lld", actual);
+	if(retVal == 0 || actual != expect) {
+		FAIL;
+	}
+	PASS;
+}
+
 static bool test_int_error() {
 	emit_test("Test EvalBool() on an attribute in a classad that uses "
 		"isError() of another attribute that uses int() incorrectly.");
@@ -5265,8 +5292,7 @@ static bool test_random_integer() {
 
 static bool test_floor_positive_float_long_long() {
 	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
-		"for an attribute using floor() on a positive float without "
-		"quotes around the number.");
+		"for an attribute using floor() on a positive float with 64 bit precision");
 	const char* classad_string = "\tA1=floor(100000000000.1)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
@@ -5291,8 +5317,7 @@ static bool test_floor_positive_float_long_long() {
 
 static bool test_ceiling_positive_float_long_long() {
 	emit_test("Test that EvalInteger() returns 1 and sets the correct actual "
-		"for an attribute using floor() on a positive float without "
-		"quotes around the number.");
+		"for an attribute using ceiling() on a positive float with 64 bit precision");
 	const char* classad_string = "\tA1=ceiling(100000000000.1)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
