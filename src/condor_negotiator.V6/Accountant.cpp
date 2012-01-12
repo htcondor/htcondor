@@ -1210,8 +1210,11 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
         ad->Assign(tmp.c_str(), cgrp->subtree_quota);
         sprintf(tmp, "GroupSortKey%d", gnum);
         ad->Assign(tmp.c_str(), cgrp->sort_key);
-        sprintf(tmp, "GroupAutoRegroup%d", gnum);
-        ad->Assign(tmp.c_str(), cgrp->autoregroup);
+        sprintf(tmp, "SurplusPolicy%d", gnum);
+        const char * policy = "no";
+        if (cgrp->autoregroup) policy = "regroup";
+        else if (cgrp->accept_surplus) policy = "byquota";
+        ad->Assign(tmp.c_str(), policy);
     }
 
     int ResourcesUsed = 0;
