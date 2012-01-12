@@ -83,6 +83,7 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	# in new batlab, instead of cleaning up, just don't allow it.
 	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
 		system("nmi_tools\\glue\\build\\munge.bat $pub_dir move");
+		$ENV{PATH} ="$ENV{PATH};c:/cygwin/bin;$pub_dir/msconfig";
 	} else {
 		system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup");
 		system("mv *.zip $pub_dir");
