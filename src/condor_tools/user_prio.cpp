@@ -68,6 +68,7 @@ enum {
 };
 
 enum {
+   SurplusUnset = -1, // 
    SurplusNone = 0,
    SurplusRegroup, // autoregroup
    SurplusByQuota, // accept_surplus
@@ -114,7 +115,7 @@ int DashQuota = false; // set when -quota is specified on the command line.
 int DashSortKey = false; // set when -sortkey is specified on the command line.
 int DetailFlag=0;        // what fields to display
 int DetailAvailFlag=0;   // what fields the negotiator returned data for.
-bool AutoRegroupEnabled=false;
+int GlobalSurplusPolicy = SurplusUnset;
 bool GroupOrder = false;
 bool GroupPrioIsMeaningless = true; // don't show priority for groups since it doesn't mean anything
 bool HideNoneGroupIfPossible = true;// don't show the <none> group if it is the only group.
@@ -774,7 +775,7 @@ static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
   int order = SortByColumn1; // sort by prio or by useage depending on which is in column 1
   bool none_last = false;
   if (HierFlag) {
-     none_last = AutoRegroupEnabled;
+     none_last = (GlobalSurplusPolicy == SurplusRegroup);
      order = SortHierByGroupId;
      if (DetailFlag & (DetailPriority | DetailUsage))
         order = SortHierByDisplayOrder;
@@ -824,7 +825,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     LR[i-1].index = i;
     LR[i-1].GroupId=0;
     LR[i-1].SortKey = 0;
-    LR[i-1].Surplus = SurplusUnknown;
+    LR[i-1].Surplus = SurplusUnset;
     LR[i-1].DisplayOrder = 0;
     LR[i-1].HasDetail = 0;
     LR[i-1].LastUsage=MinLastUsageTime;
@@ -839,7 +840,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     attrAcctGroup.sprintf("AccountingGroup%d", i);
     attrIsAcctGroup.sprintf("IsAccountingGroup%d", i);
 
-    if( !ad->LookupString	( attrName, name ) 		|| 
+    if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
 			continue;
 
@@ -884,15 +885,16 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
         if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
         LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
         if (regroup)
-           AutoRegroupEnabled = true;
+           GlobalSurplusPolicy = SurplusRegroup;
 
         sprintf( attr, "SurplusPolicy%d", i );
-        if (ad->LookupString(attr, policy)) {
+        if (ad->LookupString(attr, policy, COUNTOF(policy) )) {
            LR[i-1].HasDetail |= DetailSurplus;
            if (MATCH == strcasecmp(policy, "regroup")) {
-              AutoRegroupEnabled = true;
+              GlobalSurplusPolicy = SurplusRegroup;
               LR[i-1].Surplus = SurplusRegroup;
            } else if (MATCH == strcasecmp(policy, "byquota")) {
+              GlobalSurplusPolicy = SurplusByQuota;
               LR[i-1].Surplus = SurplusByQuota;
            } else if (MATCH == strcasecmp(policy, "no")) {
               LR[i-1].Surplus = SurplusNone;
@@ -1113,6 +1115,7 @@ static const char * SurplusName(int surplus)
 {
    switch (surplus)
    {
+      case SurplusUnset:   return "";        break;
       case SurplusNone:    return "no";      break;
       case SurplusRegroup: return "Regroup"; break;
       case SurplusByQuota: return "ByQuota"; break;
@@ -1387,9 +1390,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
       switch (aCols[ii].DetailFlag)
          {
          case DetailSurplus:
-            CopyAndPadToWidth(Line+ix, 
-               (DetailAvailFlag & DetailSurplus) ? (AutoRegroupEnabled ? "Regroup" : "no") : "n/d",
-               aCols[ii].width+1, ' ');
+            CopyAndPadToWidth(Line+ix, SurplusName(GlobalSurplusPolicy), aCols[ii].width+1, ' ');
             break;
          case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, Totals.wtRes);
             break;
@@ -1471,7 +1472,7 @@ static void PrintResList(AttrList* ad)
     sprintf( attrName , "Name%d", i );
     sprintf( attrStartTime , "StartTime%d", i );
 
-    if( !ad->LookupString   ( attrName, name ) ||
+    if( !ad->LookupString   ( attrName, name, COUNTOF(name) ) ||
 		!ad->LookupInteger  ( attrStartTime, StartTime))
             break;
 
