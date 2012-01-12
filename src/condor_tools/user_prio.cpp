@@ -1109,7 +1109,7 @@ static char * FormatFloat(char * pszDest, int width, int decimal, float value)
    return pszDest;
 }
 
-static char * SurplusName(int surplus)
+static const char * SurplusName(int surplus)
 {
    switch (surplus)
    {
