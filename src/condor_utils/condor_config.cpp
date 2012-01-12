@@ -1748,6 +1748,26 @@ int param_integer_c( const char *name, int default_value,
 }
 
 
+long
+param_long(const char *name, long default_value,
+           long min_value, long max_value, bool use_param_table)
+{
+    typedef long target_t;
+    ClassAd::IntType v;
+
+	param_integer_internal(name, v, true, default_value,
+                           true, min_value, max_value, NULL, NULL, use_param_table);
+
+    if ((v < std::numeric_limits<target_t>::min()) || 
+        (v > std::numeric_limits<target_t>::max())) {
+        EXCEPT("Configured value for %s (%lld) out of range for %d-byte integer", 
+               name, v, int(sizeof(target_t)));
+    }
+
+	return target_t(v);
+}
+
+
 long long
 param_long_long(const char *name, long long default_value,
                 long long min_value, long long max_value, bool use_param_table)
