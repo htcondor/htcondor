@@ -90,9 +90,11 @@ if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
 if "~%CMAKE_BIN_DIR:~-1%"=="~\" set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
 
 :: set path to WIX binaries
-if NOT "~%WIX%"=="~" set WIX_PATH=%WIX%
+if "~%WIX%"=="~" goto no_wix
+set WIX_PATH=%WIX%
 if "~%WIX_PATH:~-1%"=="~\" set WIX_PATH=%WIX_PATH:~0,-1%
 if NOT "~%WIX_PATH%"=="~" set WIX_PATH=%WIX_PATH%\bin
+:no_wix
 
 :: set path to MSCONFIG binaries
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
