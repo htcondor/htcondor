@@ -2960,7 +2960,7 @@ static bool test_remove_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", REMOVE_FROM_QUEUE);
-	param_insert("SYSTEM_PERIODIC_REMOVE", "true");
+	config_insert("SYSTEM_PERIODIC_REMOVE", "true");
 	//param_info_insert("SYSTEM_PERIODIC_REMOVE", NULL, "true", NULL, ".*", 
 	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	UserPolicy policy;
@@ -3071,7 +3071,7 @@ static bool test_release_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", RELEASE_FROM_HOLD);
-	param_insert("SYSTEM_PERIODIC_RELEASE", "true");
+	config_insert("SYSTEM_PERIODIC_RELEASE", "true");
 	//param_info_insert("SYSTEM_PERIODIC_RELEASE", NULL, "true", NULL, ".*", 
 	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	UserPolicy policy;
@@ -3182,7 +3182,7 @@ static bool test_hold_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", HOLD_IN_QUEUE);
-	param_insert("SYSTEM_PERIODIC_HOLD", "true");
+	config_insert("SYSTEM_PERIODIC_HOLD", "true");
 	//param_info_insert("SYSTEM_PERIODIC_HOLD", NULL, "true", NULL, ".*", 
 	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	UserPolicy policy;
