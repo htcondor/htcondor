@@ -384,10 +384,62 @@ AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext* /*outCtx*/ ,A
 		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
 	}
 	else {
-		// in this case, error may hve been the result of the pool/schedd check
+		// in this case, error may have been the result of the pool/schedd check
 		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
 	}
 
 	setAttrResponse->setSetJobAttributeResponse(controlJobResponse);
     return setAttrResponse;
+}
+
+AviaryJob::SuspendJobResponse*
+AviaryJobServiceSkeleton::suspendJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::SuspendJob* _suspendJob)
+{
+	AviaryJob::SuspendJobResponse* suspendJobResponse = new SuspendJobResponse;
+	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
+    string error;
+
+	AviaryCommon::JobID* jobId = _suspendJob->getSuspendJob()->getId();
+	string reason = _suspendJob->getSuspendJob()->getReason();
+	string cluster_proc = jobId->getJob();
+	ControlJobResponse* controlJobResponse = NULL;
+
+	checkForSchedulerID(jobId, error);
+	if (!schedulerObj->suspend(cluster_proc,reason,error)) {
+		dprintf(D_FULLDEBUG, "SchedulerObject Suspend failed: %s\n", error.c_str());
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+	}
+	else {
+		// in this case, error may have been the result of the pool/schedd check
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
+	}
+
+	suspendJobResponse->setSuspendJobResponse(controlJobResponse);
+    return suspendJobResponse;
+}
+
+AviaryJob::ContinueJobResponse*
+AviaryJobServiceSkeleton::continueJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::ContinueJob* _continueJob)
+{
+	AviaryJob::ContinueJobResponse* continueJobResponse = new ContinueJobResponse;
+	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
+    string error;
+
+	AviaryCommon::JobID* jobId = _continueJob->getContinueJob()->getId();
+	string reason = _continueJob->getContinueJob()->getReason();
+	string cluster_proc = jobId->getJob();
+	ControlJobResponse* controlJobResponse = NULL;
+
+	checkForSchedulerID(jobId, error);
+	if (!schedulerObj->_continue(cluster_proc,reason,error)) {
+		dprintf(D_FULLDEBUG, "SchedulerObject Continue failed: %s\n", error.c_str());
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+	}
+	else {
+		// in this case, error may have been the result of the pool/schedd check
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
+	}
+
+	continueJobResponse->setContinueJobResponse(controlJobResponse);
+    return continueJobResponse;
 }

@@ -104,7 +104,12 @@
             AviaryJob::SetJobAttributeResponse* ret_val5;
             AviaryJob::SetJobAttribute* input_val5;
             
-       
+			AviaryJob::ContinueJobResponse* ret_val6;
+            AviaryJob::ContinueJob* input_val6;
+            
+            AviaryJob::SuspendJobResponse* ret_val7;
+            AviaryJob::SuspendJob* input_val7;
+            
           msg_ctx = msgCtx->getAxis2MessageContext();
           operation_ctx = axis2_msg_ctx_get_op_ctx(msg_ctx, Environment::getEnv());
           operation = axis2_op_ctx_get_op(operation_ctx, Environment::getEnv());
@@ -323,9 +328,93 @@
                     
 
                 }
+
+
+                if ( axutil_strcmp(op_name, "continueJob") == 0 )
+                {
+
+                    
+                    input_val6 =
+                        
+                        new AviaryJob::ContinueJob();
+                        if( AXIS2_FAILURE ==  input_val6->deserialize(&content_node, NULL, false))
+                        {
+                                        
+                            AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::ContinueJob_deserialize: "
+                                        "This should be due to an invalid XML");
+                            return NULL;      
+                        }
+                        
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val6 =  skel->continueJob(msgCtx ,input_val6);
+                    
+                        if ( NULL == ret_val6 )
+                        {
+                            
+                                delete input_val6;
+                            
+                            return NULL; 
+                        }
+                        ret_node = 
+                                            ret_val6->serialize(NULL, NULL, AXIS2_TRUE, NULL, NULL);
+                                            delete ret_val6;
+                                        
+                                            delete input_val6;
+                                        
+
+                        return new OMElement(NULL,ret_node);
+                    
+
+                    /* since this has no output params it just returns NULL */                    
+                    
+
+                }
+
+
+                if ( axutil_strcmp(op_name, "suspendJob") == 0 )
+                {
+
+                    
+                    input_val7 =
+                        
+                        new AviaryJob::SuspendJob();
+                        if( AXIS2_FAILURE ==  input_val7->deserialize(&content_node, NULL, false))
+                        {
+                                        
+                            AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::SuspendJob_deserialize: "
+                                        "This should be due to an invalid XML");
+                            return NULL;      
+                        }
+                        
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val7 =  skel->suspendJob(msgCtx ,input_val7);
+                    
+                        if ( NULL == ret_val7 )
+                        {
+                            
+                                delete input_val7;
+                            
+                            return NULL; 
+                        }
+                        ret_node = 
+                                            ret_val7->serialize(NULL, NULL, AXIS2_TRUE, NULL, NULL);
+                                            delete ret_val7;
+                                        
+                                            delete input_val7;
+                                        
+
+                        return new OMElement(NULL,ret_node);
+                    
+
+                    /* since this has no output params it just returns NULL */                    
+                    
+
+                }
              
              }
-            
+             
           AXIS2_LOG_ERROR(Environment::getEnv()->log, AXIS2_LOG_SI, "AviaryJobService service ERROR: invalid OM parameters in request\n");
           return NULL;
     }

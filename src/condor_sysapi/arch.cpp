@@ -248,7 +248,6 @@ init_arch(void)
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
 
 	// Changes for Linux attrs
- 	dprintf(D_ALWAYS, "uname_opsys is %s \n", uname_opsys);
 	// OpSys =       "LINUX" ==> "LINUX"
 	// OpSysAndVer = "LINUX" ==> "RedHat5"
 	// OpSysVer =        206 ==> "501"
@@ -265,7 +264,6 @@ init_arch(void)
                 opsys_version = sysapi_translate_opsys_version( opsys_name, opsys_name, opsys_name );
                 opsys_versioned = sysapi_distro_versioned( opsys, opsys_major_version );
 
-                dprintf(D_ALWAYS, "Values for Linux opsys are: \n %s \n %s \n %d \n %d \n %s \n %s \n", opsys, opsys_distro, opsys_major_version, opsys_version, opsys_versioned, opsys_name);
      	} else
         {
                 opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );

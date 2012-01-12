@@ -256,13 +256,13 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			return -1;
 		}
 		fseek( fp, _SysapiProcCpuinfo.offset, SEEK_SET );
-		dprintf( D_FULLDEBUG,
+		dprintf( D_LOAD,
 				 "Reading from %s, offset %ld\n",
 				 _SysapiProcCpuinfo.file, _SysapiProcCpuinfo.offset );
 	}
 	else {
 		fp = safe_fopen_wrapper_follow( "/proc/cpuinfo", "r", 0644 );
-		dprintf( D_FULLDEBUG, "Reading from /proc/cpuinfo\n" );
+		dprintf( D_LOAD, "Reading from /proc/cpuinfo\n" );
 	}
 	if( !fp ) {
 		free( array );
@@ -453,7 +453,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 {
 	int			pnum;					/* Current processor # */
 
-	dprintf( D_FULLDEBUG,
+	dprintf( D_LOAD,
 			 "Analyzing %d processors using IDs...\n",
 			 cpuinfo->num_processors );
 		
@@ -464,7 +464,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 
 		/* Current processor record */
 		Processor		*proc = &cpuinfo->processors[pnum];
-		dprintf( D_FULLDEBUG,
+		dprintf( D_LOAD,
 				 "Looking at processor #%d (PID:%d, CID:%d):\n",
 				 pnum, proc->physical_id, proc->core_id );
 
@@ -498,7 +498,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 						( proc->physical_id != tproc->physical_id )  ) ||
 					  ( ( proc->core_id >= 0 ) &&
 						( proc->core_id != tproc->core_id ) )  ) {
-					dprintf( D_FULLDEBUG,
+					dprintf( D_LOAD,
 							 "Comparing P#%-3d and P#%-3d: "
 							 "pid:%d!=%d or  cid:%d!=%d (match=No)\n",
 							 pnum, tpnum,
@@ -517,7 +517,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 					cpuinfo->num_cpus++;
 				}
 
-				dprintf( D_FULLDEBUG,
+				dprintf( D_LOAD,
 						 "Comparing P#%-3d and P#%-3d: "
 						 "pid:%d==%d and cid:%d==%d (match=%d)\n",
 						 pnum, tpnum,
@@ -525,12 +525,12 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 						 proc->core_id, tproc->core_id, match_count );
 			}
 		}
-		dprintf( D_FULLDEBUG, "ncpus = %d\n", cpuinfo->num_cpus );
+		dprintf( D_LOAD, "ncpus = %d\n", cpuinfo->num_cpus );
 
 		/* Now, walk through the list of matches, store match count */
 		for( tproc = proc; tproc != NULL;  tproc = tproc->next_match ) {
 			tproc->match_count = match_count;
-			dprintf( D_FULLDEBUG, "P%d: match->%d\n",
+			dprintf( D_LOAD, "P%d: match->%d\n",
 					 tproc->processor, match_count );
 		}
 	}
@@ -599,7 +599,7 @@ linux_count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 	/* Otherwise, let's go through and try to analyze what we have.
 	 */
-	dprintf( D_FULLDEBUG, "Found: Physical-IDs:%s; Core-IDs:%s\n",
+	dprintf( D_LOAD, "Found: Physical-IDs:%s; Core-IDs:%s\n",
 			 cpuinfo->have_physical_id ? "True":"False",
 			 cpuinfo->have_core_id ? "True":"False" );
 

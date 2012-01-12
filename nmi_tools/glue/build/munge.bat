@@ -5,7 +5,14 @@ dir /b/s *.zip
 dir /b/s *.msi
 dir /b/s *.tar.gz
 dir /b/od *
-which tar
-for %%I in (tar.exe) do echo %%~f$PATH:I
+for %%I in (tar.exe mv.exe cp.exe) do echo %%I at %%~f$PATH:I
 
 if "~%2"=="~cleanup" cacls "%~dp1*" /T /C /E /G SYSTEM:F 
+setlocal
+set PUBLIC=%~f1;
+shift
+if NOT "~%2"=="~move" goto :EOF
+move msconfig "%PUBLIC%"
+move release_dir "%PUBLIC%"
+move *.msi "%PUBLIC%"
+move *.zip "%PUBLIC%"

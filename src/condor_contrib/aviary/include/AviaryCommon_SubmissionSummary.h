@@ -72,6 +72,14 @@ namespace AviaryCommon
 
                 
                 bool isValidRunning;
+            int property_Suspended;
+
+                
+                bool isValidSuspended;
+            int property_Transferring_output;
+
+                
+                bool isValidTransferring_output;
             std::vector<AviaryCommon::JobSummary*>* property_Jobs;
 
                 
@@ -114,6 +122,14 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
+        setSuspendedNil();
+            
+
+        bool WSF_CALL
+        setTransferring_outputNil();
+            
+
+        bool WSF_CALL
         setJobsNil();
             
 
@@ -148,10 +164,12 @@ namespace AviaryCommon
          * @param Idle int
          * @param Removed int
          * @param Running int
+         * @param Suspended int
+         * @param Transferring_output int
          * @param Jobs std::vector<AviaryCommon::JobSummary*>*
          * @return newly created SubmissionSummary object
          */
-        SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
+        SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
         
         
         /********************************** Class get set methods **************************************/
@@ -351,6 +369,54 @@ namespace AviaryCommon
         
 
         /**
+         * Getter for suspended. 
+         * @return int*
+         */
+        WSF_EXTERN int WSF_CALL
+        getSuspended();
+
+        /**
+         * Setter for suspended.
+         * @param arg_Suspended int*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setSuspended(const int  arg_Suspended);
+
+        /**
+         * Re setter for suspended
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetSuspended();
+        
+        
+
+        /**
+         * Getter for transferring_output. 
+         * @return int*
+         */
+        WSF_EXTERN int WSF_CALL
+        getTransferring_output();
+
+        /**
+         * Setter for transferring_output.
+         * @param arg_Transferring_output int*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setTransferring_output(const int  arg_Transferring_output);
+
+        /**
+         * Re setter for transferring_output
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetTransferring_output();
+        
+        
+
+        /**
          * Getter for jobs. Deprecated for array types, Use getJobsAt instead
          * @return Array of AviaryCommon::JobSummary*s.
          */
@@ -530,6 +596,26 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isRunningNil();
+
+
+        
+
+        /**
+         * Check whether suspended is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isSuspendedNil();
+
+
+        
+
+        /**
+         * Check whether transferring_output is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isTransferring_outputNil();
 
 
         
@@ -715,12 +801,34 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for jobs by property number (9)
+         * Getter for suspended by property number (9)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty9();
+
+    
+        
+
+        /**
+         * Getter for transferring_output by property number (10)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty10();
+
+    
+        
+
+        /**
+         * Getter for jobs by property number (11)
          * @return Array of AviaryCommon::JobSummarys.
          */
 
         std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-        getProperty9();
+        getProperty11();
 
     
 

@@ -52,15 +52,26 @@ enum {
    DetailUseTime2  = 0x0080, // usage end time
    DetailEffQuota  = 0x0100,
    DetailCfgQuota  = 0x0200,
-   DetailTreeQuota = 0x0400,
-   DetailRealPrio  = 0x0800,
-   DetailSortKey   = 0x1000,
+   DetailSurplus   = 0x0400,
+   DetailTreeQuota = 0x0800,
+   DetailRealPrio  = 0x1000,
+   DetailSortKey   = 0x2000,
+   DetailUseDeltaT = 0x4000,
+   DetailOrder     = 0x8000,
    DetailPrios     = DetailPriority | DetailFactor | DetailRealPrio,
    DetailUsage     = DetailResUsed | DetailWtResUsed,
    DetailQuota2    = DetailEffQuota | DetailCfgQuota,
-   DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota,
-   DetailMost      = DetailCfgQuota| DetailPrios | DetailUsage | DetailUseTime2,
-   DetailAll       = DetailMost | DetailQuotas | DetailPrios | DetailUsage | DetailUseTime1 | DetailUseTime2,
+   DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota | DetailSurplus,
+   DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT,
+   DetailAll       = DetailMost | DetailQuotas | DetailPrios | DetailUseTime1 | DetailUseTime2,
+   DetailDefault   = DetailMost // show this if none of the flags controlling details is set.
+};
+
+enum {
+   SurplusNone = 0,
+   SurplusRegroup, // autoregroup
+   SurplusByQuota, // accept_surplus
+   SurplusUnknown,
 };
 
 struct LineRec {
@@ -79,8 +90,10 @@ struct LineRec {
   float ConfigQuota;
   float SubtreeQuota;
   float SortKey;
+  int   Surplus;       // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
   int   index;
   int   GroupId;
+  float DisplayOrder;  // used to flexibly control sort order in Hier sort mode.
 };
 
 //-----------------------------------------------------------------
@@ -89,9 +102,8 @@ static int CalcTime(int,int,int);
 static void usage(char* name);
 static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag);
 static int CountElem(AttrList* ad);
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup, bool HierFlag, int & max_name);
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool HierFlag);
-//static void PrintInfo2(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool HierFlag);
+static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup);
+static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag);
 static void PrintResList(AttrList* ad);
 
 //-----------------------------------------------------------------
@@ -102,51 +114,106 @@ int DashQuota = false; // set when -quota is specified on the command line.
 int DashSortKey = false; // set when -sortkey is specified on the command line.
 int DetailFlag=0;        // what fields to display
 int DetailAvailFlag=0;   // what fields the negotiator returned data for.
+bool AutoRegroupEnabled=false;
 bool GroupOrder = false;
 bool GroupPrioIsMeaningless = true; // don't show priority for groups since it doesn't mean anything
 bool HideNoneGroupIfPossible = true;// don't show the <none> group if it is the only group.
+bool UsersHaveQuotas = false;       // set to true if we got quota info back for user items.
 bool HideGroups = false;            // set to true when it doesn't make sense to show groups (i.e. just displaying prio)
+bool HideUsers  = false;            // set to true when it doesn't make sense to show users (i.e. just showing quotas)
 time_t MinLastUsageTime;
 
+enum {
+   SortByColumn1 = 0,  // sort by prio or by useage depending on which is in column 1 
+   SortGroupsFirstByIndex,
+   SortHierByGroupId,
+   SortHierBySortKey,
+   SortHierStrictlyBySortKey, // by sort key, none is not forced last
+   SortHierByDisplayOrder,
+   SortGroupsByName,
+   SortGroupsFirstByName,
+};
 
 struct LineRecLT {
     int detail_flag;
     int group_order;
+    bool none_last;
 
-    LineRecLT() : detail_flag(0), group_order(false) {}
-    LineRecLT(int df, int go) : detail_flag(df), group_order(go) {}
+    LineRecLT() : detail_flag(0), group_order(false), none_last(true) {}
+    LineRecLT(int df, int go, bool nl) : detail_flag(df), group_order(go), none_last(nl) {}
 
     bool operator()(const LineRec& a, const LineRec& b) const {
         if (group_order) {
-            if (group_order == 2) {
+            if (group_order == SortHierByGroupId) {  // sort by the order groups were returned from negotiator
                if (a.GroupId != b.GroupId) {
                   // force the <none> group (groupId == 0) to end up last)
-                  if ( ! a.GroupId) return false;
-                  if ( ! b.GroupId) return true;
+                  if (none_last) {
+                     if ( ! a.GroupId) return false;
+                     if ( ! b.GroupId) return true;
+                  }
                   return a.GroupId < b.GroupId;
                }
                if (a.IsAcctGroup != b.IsAcctGroup)
                   return a.IsAcctGroup > b.IsAcctGroup;
-            } else if (group_order == 3) {
+
+            } else if (group_order == SortHierBySortKey) {  // sort groups by the group sort_key value
                // force the <none> group (groupId == 0) to end up last)
                if (a.GroupId != b.GroupId) {
-                  if ( ! a.GroupId) return false;
-                  if ( ! b.GroupId) return true;
+                  if (none_last) {
+                     if ( ! a.GroupId) return false;
+                     if ( ! b.GroupId) return true;
+                  }
                   if (a.SortKey < b.SortKey || a.SortKey > b.SortKey) {
                      return a.SortKey < b.SortKey;
-                  return a.GroupId < b.GroupId;
                   }
+                  return a.GroupId < b.GroupId;
                }
                if (a.IsAcctGroup != b.IsAcctGroup)
                   return a.IsAcctGroup > b.IsAcctGroup;
-            } else if (group_order == 4) {
+
+            } else if (group_order == SortHierStrictlyBySortKey) {  // sort groups by the group sort_key value
+               if (a.GroupId != b.GroupId) {
+                  if (a.SortKey < b.SortKey || a.SortKey > b.SortKey) {
+                     return a.SortKey < b.SortKey;
+                  }
+                  return a.GroupId < b.GroupId;
+               }
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+
+            } else if (group_order == SortHierByDisplayOrder) {  // sort groups by the DisplayOrder value
+               if (a.GroupId != b.GroupId) {
+                  if (none_last) {
+                     if ( ! a.GroupId) return false;
+                     if ( ! b.GroupId) return true;
+                  }
+                  if (a.DisplayOrder < b.DisplayOrder || a.DisplayOrder > b.DisplayOrder) {
+                     return a.DisplayOrder < b.DisplayOrder;
+                  }
+                  return a.GroupId < b.GroupId;
+               }
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+
+            } else if (group_order == SortGroupsByName) { // sort by group name
                const MyString * pa = a.IsAcctGroup ? &a.Name : &a.AcctGroup;
                const MyString * pb = b.IsAcctGroup ? &b.Name : &b.AcctGroup;
-               //if (a.IsAcctGroup || b.IsAcctGroup)
-               //   return &a < &b;
                if (*pa != *pb)
                   return *pa < *pb;
-            } else {
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+
+            } else if (group_order == SortGroupsFirstByName) { // sort by group name
+               if (a.IsAcctGroup != b.IsAcctGroup)
+                  return a.IsAcctGroup > b.IsAcctGroup;
+               if (a.IsAcctGroup) {
+                  if (none_last) {
+                     if ( ! a.GroupId) return false;
+                     if ( ! b.GroupId) return true;
+                  }
+                  return a.Name < b.Name;
+               }
+            } else { //SortGroupsFirstByIndex
                // Acct groups come out of the acct classad ordered before the 
                // individual submitters, and in breadth-first order of hierarchy.
                // This preserves that ordering:
@@ -156,11 +223,13 @@ struct LineRecLT {
             }
         }
 
-        // Order submitters by accumulated usage or priority depending on CL flags
+        // Order submitters by accumulated usage or priority or name depending on CL flags
         if (detail_flag & DetailPriority) {
             return a.Priority < b.Priority;
-        } else {
+        } else if (detail_flag & DetailUsage) {
             return a.AccUsage < b.AccUsage;
+        } else {
+            return a.Name < b.Name;
         }
 
         return false;
@@ -269,8 +338,12 @@ main(int argc, char* argv[])
       HierFlag = false;
       DashHier = true;
     }
-    else if (IsArg(argv[i],"quota",1)) {
+    else if (IsArg(argv[i],"quotas",1)) {
       DetailFlag |= DetailQuotas;
+      DashQuota = true;
+    }
+    else if (IsArg(argv[i],"surplus")) {
+      DetailFlag |= DetailSurplus;
       DashQuota = true;
     }
     else if (IsArg(argv[i],"sortkey",2)) {
@@ -283,7 +356,16 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"most",2)) {
       DetailFlag |= DetailMost;
+#ifdef DEBUG
+      DetailFlag |= DetailGroup;
+#endif
       DashAll = true;
+    }
+    else if (IsArg(argv[i],"groupid")) {
+      DetailFlag |= DetailGroup;
+    }
+    else if (IsArg(argv[i],"order")) {
+      DetailFlag |= DetailOrder;
     }
     else if (IsArg(argv[i],"activefrom")) {
       if (argc-i<=3) usage(argv[0]);
@@ -630,7 +712,12 @@ main(int argc, char* argv[])
     delete sock;
 
     // if no details specified, show priorities
-    if ( ! DetailFlag) DetailFlag |= DetailPriority;
+    if ( ! DetailFlag) {
+       DetailFlag = DetailDefault;
+#ifdef DEBUG
+       DetailFlag |= DetailGroup;
+#endif
+    }
     // if showing only prio, don't bother showing groups 
     if ( ! (DetailFlag & ~DetailPrios) && GroupPrioIsMeaningless) {
        if ( ! DashHier ) HierFlag = false;
@@ -654,30 +741,49 @@ static void ProcessInfo(AttrList* ad,bool GroupRollup,bool HierFlag)
 	  return;
   }
   LineRec* LR=new LineRec[NumElem];
-  int max_name = 0;
-  CollectInfo(NumElem,ad,LR,GroupRollup,HierFlag,max_name);
+  CollectInfo(NumElem,ad,LR,GroupRollup);
 
-  int order = HierFlag ? 2 : (GroupOrder ? 1 : 0);
-  std::sort(LR, LR+NumElem, LineRecLT(DetailFlag, order));
-
-  // if Group details are not available, then not show heirarchical
-  if (!(DetailAvailFlag & DetailGroup)) HierFlag = false;
-  // if all visible data is in the none group, then show flat
-  else if (HideNoneGroupIfPossible) {
-     bool need_heir = false;
-     for (int j = 0; j < NumElem; ++j) {
-        if (LR[j].LastUsage<MinLastUsageTime) 
-           continue;
-        if (LR[j].GroupId > 0) {
-           need_heir = true;
-           HideNoneGroupIfPossible = false;
-           break;
-        }
+  // check to see if all of the visible users are in the none group.
+  bool all_users_in_none_group = true;
+  for (int j = 0; j < NumElem; ++j) {
+     if (LR[j].LastUsage<MinLastUsageTime) 
+        continue;
+     if (LR[j].GroupId > 0) {
+        all_users_in_none_group = false;
+        HideNoneGroupIfPossible = false;
+        break;
      }
-     if ( ! need_heir) HierFlag = false;
   }
 
-  PrintInfo(ad,LR,NumElem,max_name,HierFlag);
+  // if Group details are not available, or if all visible users 
+  // are in the none group. then do not show Hierarchical
+  if ( ! (DetailAvailFlag & DetailGroup) || (HideNoneGroupIfPossible && all_users_in_none_group)) {
+     HierFlag = false;
+  }
+
+  // if not showing groups, don't show quota fields unless explicitly requested
+  if (HideGroups || all_users_in_none_group) {
+     if ( ! DashQuota && ! UsersHaveQuotas) DetailFlag &= ~DetailQuotas;
+  }
+
+  // don't show users if we are only showing group-only columns
+  if ((DetailFlag & DetailQuotas) != 0 && (DetailFlag & ~DetailQuotas) == 0 && !UsersHaveQuotas) {
+     HideUsers = true;
+  }
+
+  int order = SortByColumn1; // sort by prio or by useage depending on which is in column 1
+  bool none_last = false;
+  if (HierFlag) {
+     none_last = AutoRegroupEnabled;
+     order = SortHierByGroupId;
+     if (DetailFlag & (DetailPriority | DetailUsage))
+        order = SortHierByDisplayOrder;
+  } else if (GroupOrder) {
+     order = SortGroupsFirstByIndex;
+  }
+  std::sort(LR, LR+NumElem, LineRecLT(DetailFlag, order, none_last));
+
+  PrintInfo(ad,LR,NumElem,HierFlag);
   delete[] LR;
 } 
 
@@ -697,13 +803,13 @@ static int CountElem(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup, bool HierFlag, int & max_name)
+static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42];
   char  attrLastUsage[32];
   MyString attrAcctGroup;
   MyString attrIsAcctGroup;
-  char  name[128];
+  char  name[128], policy[32];
   float priority, Factor, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
@@ -713,13 +819,13 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
   float effective_quota = 0, config_quota = 0, subtree_quota = 0;
   bool fNeedGroupIdFixup = false;
 
-  max_name = 0;
-
   for( int i=1; i<=numElem; i++) {
     LR[i-1].Priority=0;
     LR[i-1].index = i;
     LR[i-1].GroupId=0;
     LR[i-1].SortKey = 0;
+    LR[i-1].Surplus = SurplusUnknown;
+    LR[i-1].DisplayOrder = 0;
     LR[i-1].HasDetail = 0;
     LR[i-1].LastUsage=MinLastUsageTime;
     sprintf( attrName , "Name%d", i );
@@ -746,7 +852,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
        }
 	if( ad->LookupFloat( attrAccUsage, AccUsage ) ) LR[i-1].HasDetail |= DetailUsage;
 	if( ad->LookupInteger( attrBeginUsage, BeginUsage ) ) LR[i-1].HasDetail |= DetailUseTime1;
-	if( ad->LookupInteger( attrLastUsage, LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2;
+	if( ad->LookupInteger( attrLastUsage, LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2 | DetailUseDeltaT;
 	if( ad->LookupInteger( attrResUsed, resUsed ) ) LR[i-1].HasDetail |= DetailUsage;
 
 	if( !ad->LookupFloat( attrWtResUsed, wtResUsed ) ) {
@@ -761,20 +867,38 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     if (!ad->LookupBool(attrIsAcctGroup.Value(), IsAcctGroup)) {
         IsAcctGroup = false;
     }
+
+    char attr[32];
+    sprintf( attr, "EffectiveQuota%d", i );
+    if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
+    sprintf( attr, "ConfigQuota%d", i );
+    if (ad->LookupFloat(attr, config_quota)) LR[i-1].HasDetail |= DetailCfgQuota;
+
     if (IsAcctGroup) {
-        LR[i-1].GroupId = i;
+        LR[i-1].GroupId = -i;
         if (!strcmp(name,"<none>") || !strcmp(name,"."))
            LR[i-1].GroupId = 0;
 
-        char attr[32];
-        sprintf( attr, "EffectiveQuota%d", i );
-        if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
-        sprintf( attr, "ConfigQuota%d", i );
-        if (ad->LookupFloat(attr, config_quota)) LR[i-1].HasDetail |= DetailCfgQuota;
-        sprintf( attr, "SubtreeQuota%d", i );
-        if (ad->LookupFloat(attr, subtree_quota)) LR[i-1].HasDetail |= DetailTreeQuota;
-        if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
-           LR[i-1].HasDetail &= ~DetailPrios;
+        sprintf( attr, "GroupAutoRegroup%d", i );
+        bool regroup = false;
+        if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
+        LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
+        if (regroup)
+           AutoRegroupEnabled = true;
+
+        sprintf( attr, "SurplusPolicy%d", i );
+        if (ad->LookupString(attr, policy)) {
+           LR[i-1].HasDetail |= DetailSurplus;
+           if (MATCH == strcasecmp(policy, "regroup")) {
+              AutoRegroupEnabled = true;
+              LR[i-1].Surplus = SurplusRegroup;
+           } else if (MATCH == strcasecmp(policy, "byquota")) {
+              LR[i-1].Surplus = SurplusByQuota;
+           } else if (MATCH == strcasecmp(policy, "no")) {
+              LR[i-1].Surplus = SurplusNone;
+              } else {
+              LR[i-1].Surplus = SurplusUnknown;
+           }
         }
 
         float sort_key = LR[i-1].SortKey;
@@ -782,44 +906,35 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
         if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
         LR[i-1].SortKey = sort_key;
 
-        if (GroupPrioIsMeaningless) {
+        sprintf( attr, "SubtreeQuota%d", i );
+        if (ad->LookupFloat(attr, subtree_quota)) LR[i-1].HasDetail |= DetailTreeQuota;
+        if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
            LR[i-1].HasDetail &= ~DetailPrios;
         }
 
+        if (GroupPrioIsMeaningless) {
+           LR[i-1].HasDetail &= ~DetailPriority;
+        }
+
     } else {
-       // we know that hierarchical groups are always sent first, so if this is not a group
-       // then it must be in a group that we have already seen. so search back
-       // through the list so far to lookup the group id from the group.
-       // the exception is the 'none' group which may not be sent first.
+       // if this is not a group, then it's in a group, if it's in the none
+       // group we can set it's group id now, but if not we need to stuff 
+       // in a bogus value and set a flag to turn on groupid fixup later.
        if (AcctGroup == "<none>" || AcctGroup == ".")
           LR[i-1].GroupId = 0;
        else {
-          LR[i-1].GroupId = -1;
-          for (int jj = 0; jj < i-1; ++jj) {
-             if (AcctGroup == LR[jj].Name) {
-                LR[i-1].GroupId = LR[jj].GroupId;
-                break;
-             }
-          }
-          if (LR[i-1].GroupId < 0)
-             fNeedGroupIdFixup = true;
+          // set to large negative number so we know we have to fix it
+          LR[i-1].GroupId = -numElem*2;
+          fNeedGroupIdFixup = true;
        }
+       if (LR[i-1].HasDetail & (DetailEffQuota | DetailCfgQuota))
+          UsersHaveQuotas = true;
     }
 
     if (LR[i-1].GroupId != 0)
        LR[i-1].HasDetail |= DetailGroup;
 
 	if (LastUsage==0) LastUsage=-1;
-
-    if (LastUsage >= MinLastUsageTime) {
-        int name_length = strlen(name);
-        if (HierFlag && ! IsAcctGroup) {
-           name_length += 2;
-           if (LR[i-1].GroupId != 0)
-              name_length -= strlen(AcctGroup.Value());
-        }
-        if (name_length > max_name) max_name = name_length;
-    }
 
     DetailAvailFlag |= LR[i-1].HasDetail;
 
@@ -838,6 +953,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     LR[i-1].SubtreeQuota = subtree_quota;
   }
  
+  // don't print colums if the negotiator didn't send us any data for them.
   if ( ! (DetailAvailFlag & DetailUsage))
     DetailFlag &= ~DetailUsage;
   if ( ! (DetailAvailFlag & DetailFactor))
@@ -845,27 +961,72 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
   if ( ! (DetailAvailFlag & DetailUseTime1))
     DetailFlag &= ~DetailUseTime1;
   if ( ! (DetailAvailFlag & DetailUseTime2))
-    DetailFlag &= ~DetailUseTime2;
-  if (DashAll && ! DashQuota && !(DetailAvailFlag & DetailQuotas))
+    DetailFlag &= ~(DetailUseTime2 | DetailUseDeltaT);
+  if ( ! DashQuota && !(DetailAvailFlag & DetailQuotas))
     DetailFlag &= ~DetailQuotas;
 
 // ad->fPrint(stdout);
+
   if (fNeedGroupIdFixup) {
-     // TJ: do something about this....
+
+     // sort the records so that groups are first and in lex order with <none> last
+     // we do this so that we can assign group id's in a reasonable way.
+     std::sort(LR, LR+numElem, LineRecLT(DetailFlag, SortGroupsFirstByName, true));
+
+     // assign group ids sequentially except for the <none> group which we
+     // will leave as GroupId == 0. 
+     int cGroups = 0;
+     int ixNone = 0;
+     for (int i = 0; i < numElem; ++i) {
+        if ( ! LR[i].IsAcctGroup)
+           break;
+
+        ++cGroups;
+        if (LR[i].GroupId < 0)
+           LR[i].GroupId = cGroups;
+        else
+           ixNone = i;
+
+        if (DetailFlag & DetailPriority) {
+           // if sort key not supplied, use group priority as an approximation
+           if (DetailAvailFlag & DetailSortKey)
+              LR[i].DisplayOrder = LR[i].SortKey;
+           else
+              LR[i].DisplayOrder = LR[i].GroupId ? LR[i].Priority : FLT_MAX;
+        } else if (DetailFlag & DetailUsage) {
+           LR[i].DisplayOrder = LR[i].AccUsage / 3600.0;
+        } else {
+           LR[i].DisplayOrder = LR[i].GroupId ? (float)LR[i].GroupId : FLT_MAX;
+        }
+        LR[i].HasDetail |= DetailOrder;
+        DetailAvailFlag |= DetailOrder;
+     }
+
+     // now fix up the user records to that they have the correct GroupId
+     // for the group that they fit in. remember that only the first cGroups
+     // entries of the LR array are groups, and entries with GroupId >= 0
+     // are already correct.
+     for (int i = cGroups; i < numElem; ++i) {
+        if (LR[i].GroupId >= 0) {
+           LR[i].DisplayOrder = LR[ixNone].DisplayOrder;
+           LR[i].HasDetail |= (LR[ixNone].HasDetail & DetailOrder);
+           continue;
+        }
+
+        // we already searched for a group name match before, now that
+        // the LR array is complete, we can search after.
+        for (int jj = 0; jj < cGroups; ++jj) {
+           if (LR[i].AcctGroup == LR[jj].Name) {
+              LR[i].GroupId = LR[jj].GroupId;
+              LR[i].DisplayOrder = LR[jj].DisplayOrder;
+              LR[i].HasDetail |= (LR[jj].HasDetail & DetailOrder);
+              break;
+           }
+        }
+     }
   }
 
   return;
-}
-
-static char * PadToWidth(char * pszDest, int cch, int chFill)
-{
-   int    cchExist = strlen(pszDest);
-   //char * psz = pszDest + cchExist;
-   int cchRemain = cch - cchExist;
-   if (cchRemain > 0)
-      memset(pszDest, chFill, cch - cchExist);
-   pszDest[cch-1] = 0;
-   return pszDest;
 }
 
 // copy a string into a destination buffer, and fill the remainder of the buffer
@@ -912,19 +1073,22 @@ static char * CopyAndPadToWidth(char * pszDest, const char * pszSrc, int cch, in
    return pszDest;
 }
 
-static char * FormatUsage(char * pszDest, int cchDest, int dtOne, int dtTwo)
+static char * FormatDateTime(char * pszDest, int cchDest, int dtOne, const char * pszTimeZero)
 {
-   pszDest[0] = 0;
-   if (dtOne > 0)
-      strcpy(pszDest, format_date_year(dtOne));
+   if (pszTimeZero && dtOne <= 0)
+      CopyAndPadToWidth(pszDest, pszTimeZero, cchDest, ' ', PAD_LEFT);
    else
-      sprintf(pszDest, "%16s", "");
-   if (dtTwo > 0) {
-      if (pszDest[0])
-         strcat(pszDest, " ");
-      strcat(pszDest, format_date_year(dtTwo));
+      CopyAndPadToWidth(pszDest, format_date_year (dtOne), cchDest, ' ', PAD_LEFT);
+   return pszDest;
+}
+
+static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const char * pszDeltaZero)
+{
+   if (pszDeltaZero && tmDelta <= 0) {
+      CopyAndPadToWidth(pszDest, pszDeltaZero, cchDest, ' ', PAD_LEFT);
+   } else {
+      CopyAndPadToWidth(pszDest, format_time_nosecs (tmDelta), cchDest, ' ', PAD_LEFT);
    }
-   if (strlen(pszDest) > (size_t)cchDest) { EXCEPT("buffer overflow!"); }
    return pszDest;
 }
 
@@ -942,40 +1106,61 @@ static char * FormatFloat(char * pszDest, int width, int decimal, float value)
       cch = strlen(sz);
       }
    CopyAndPadToWidth(pszDest, sz, width+1, ' ', PAD_LEFT);
-   //if (cch < width)
-   //   PadToWidth(pszDest, width - cch+1, ' ');
-   //strcpy(pszDest+width-cch,sz);
-
-   /* force text to 000000.00 for testing.
-   CopyAndPadToWidth(pszDest, NULL, width+1, '0');
-   if (decimal > 0)
-      pszDest[width-decimal-1] = '.';
-   */
    return pszDest;
+}
+
+static const char * SurplusName(int surplus)
+{
+   switch (surplus)
+   {
+      case SurplusNone:    return "no";      break;
+      case SurplusRegroup: return "Regroup"; break;
+      case SurplusByQuota: return "ByQuota"; break;
+   }
+   return "n/a";
 }
 
 static const struct {
    int DetailFlag;
    int width;
-   int margin;
    const char * pHead;
    } aCols[] = {
-   { DetailEffQuota,   9,-5, "Effective\0Quota" },
-   { DetailCfgQuota,   9, 1, "Config\0Quota" },
-   { DetailTreeQuota,  9, 1, "Subtree\0Quota" },
-   { DetailSortKey,   9,  1, "Group\0Sort Key" },
-   { DetailPriority,  12, 1, "Effective\0Priority" },
-   { DetailRealPrio,   8, 1, "Real\0Priority" },
-   { DetailFactor,     9, 1, "Priority\0Factor" },
-   { DetailResUsed,    6, 1, "Res\0In Use" },
-   { DetailWtResUsed, 12, 1, "Total Usage\0(wghted-hrs)" },
-   { DetailUseTime1,  16, 1, "Usage\0Start Time" },
-   { DetailUseTime2,  16, 1, "Last\0Usage Time" },
+   { DetailGroup,      5, "Group\0Id" },
+   { DetailOrder,      9, "Group\0Order" },
+   { DetailSortKey,    9, "Group\0Sort Key" },
+   { DetailEffQuota,   9, "Effective\0Quota" },
+   { DetailCfgQuota,   9, "Config\0Quota" },
+   { DetailSurplus,    7, "Use\0Surplus" },
+   { DetailTreeQuota,  9, "Subtree\0Quota" },
+   { DetailPriority,  12, "Effective\0Priority" },
+   { DetailRealPrio,   8, "Real\0Priority" },
+   { DetailFactor,     9, "Priority\0Factor" },
+   { DetailResUsed,    6, "Res\0In Use" },
+   { DetailWtResUsed, 12, "Total Usage\0(wghted-hrs)" },
+   { DetailUseTime1,  16, "Usage\0Start Time" },
+   { DetailUseTime2,  16, "Last\0Usage Time" },
+   { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool HierFlag)
-{ //
+static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
+{
+
+   // figure out the width of the longest name column.
+   //
+   int max_name = 10;
+   for (int j = 0; j < NumElem; ++j) {
+      if (LR[j].LastUsage >= MinLastUsageTime) {
+         int name_length = LR[j].Name.Length();
+         if (HierFlag && ! LR[j].IsAcctGroup) {
+            name_length += 2;
+            if (LR[j].GroupId != 0)
+               name_length -= LR[j].AcctGroup.Length();
+         }
+         if (name_length > max_name) max_name = name_length;
+      }
+   }
+
    int tmLast = 0;
    ad->LookupInteger( ATTR_LAST_UPDATE, tmLast );
    printf("Last Priority Update: %s\n",format_date(tmLast));
@@ -1008,29 +1193,21 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
       Line[ix++] = ' ';
-      if (aCols[ii].margin > 1)
-         {
-         PadToWidth(Line+ix, aCols[ii].margin, ' ');
-         ix += aCols[ii].margin-1;
-         }
       CopyAndPadToWidth(Line+ix, aCols[ii].pHead, aCols[ii].width+1, ' ', PAD_CENTER);
       ix += aCols[ii].width;
       }
    printf("%s\n", Line);
 
    // print second row of headings
-   CopyAndPadToWidth(Line,HierFlag ? "  User Name" : "User Name",max_name+1,' ');
+   const char * pszNameTitle2 = HierFlag ? "  User Name" : "User Name";
+   if (HideUsers) pszNameTitle2 = HierFlag ? "Name" : "Group Name";
+   CopyAndPadToWidth(Line,pszNameTitle2,max_name+1,' ');
    ix = max_name;
    for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
       {
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
       Line[ix++] = ' ';
-      if (aCols[ii].margin > 1)
-         {
-         PadToWidth(Line+ix, aCols[ii].margin, ' ');
-         ix += aCols[ii].margin-1;
-         }
       CopyAndPadToWidth(Line+ix, aCols[ii].pHead+strlen(aCols[ii].pHead)+1, aCols[ii].width+1, ' ', PAD_CENTER);
       ix += aCols[ii].width;
       }
@@ -1044,11 +1221,6 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
       Line[ix++] = ' ';
-      if (aCols[ii].margin > 1)
-         {
-         PadToWidth(Line+ix, aCols[ii].margin, ' ');
-         ix += aCols[ii].margin-1;
-         }
       CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, '-');
       ix += aCols[ii].width;
       }
@@ -1060,12 +1232,14 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       // We want to avoid counting totals twice for acct group records
       bool is_group = LR[j].IsAcctGroup;
 
-      if (LR[j].LastUsage<MinLastUsageTime) 
+      if (LR[j].LastUsage < MinLastUsageTime) 
          continue;
 
-      if ( ! is_group) 
+      if ( ! is_group) {
          ++UserCount;
-      else {
+         if (HideUsers)
+            continue;
+      } else {
          if (HideGroups || 
              ( ! HierFlag && HideNoneGroupIfPossible && ! LR[j].GroupId))
             continue;
@@ -1090,33 +1264,42 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       }
       ix = max_name;
 
-      // columnar data into line
+      // append columnar data into Line
       for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
          {
          if (!(aCols[ii].DetailFlag & DetailFlag))
             continue;
 
          Line[ix++] = ' ';
-         if (aCols[ii].margin > 1)
-            {
-            PadToWidth(Line+ix, aCols[ii].margin, ' ');
-            ix += aCols[ii].margin-1;
-            }
 
-         const int item_NA  = 999999998;  // print <no data>
+         const int item_NA  = 999999997;  // print n/a (not available)
+         const int item_ND  = 999999998;  // print n/d (no data)
          const int item_Max = 999999999;  // print <max>
 
          int item = aCols[ii].DetailFlag;
          if ( ! (LR[j].HasDetail & aCols[ii].DetailFlag))
             {
             if (is_group && (aCols[ii].DetailFlag & (DetailQuotas | DetailSortKey)))
-               item = item_NA;
+               item = item_ND;
+#ifdef DEBUG
+            else if ( ! is_group && (aCols[ii].DetailFlag & DetailSortKey) != 0)
+               ;
+#endif
             else
                item = 0; // just print spaces...
             }
 
          switch (item)
             {
+            case DetailGroup:     FormatFloat(Line+ix, aCols[ii].width, 0, LR[j].GroupId * 1.0);
+               break;
+            case DetailOrder:     FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].DisplayOrder);
+               break;
+            case DetailSurplus:
+               CopyAndPadToWidth(Line+ix, 
+                  LR[j].GroupId ? SurplusName(LR[j].Surplus): "yes",
+                  aCols[ii].width+1, ' ');
+               break;
             case DetailEffQuota:  FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].EffectiveQuota);
                break;
             case DetailCfgQuota:  FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].ConfigQuota);
@@ -1143,12 +1326,17 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
                break;
             case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].AccUsage/3600.0);
                break;
-            case DetailUseTime1:  FormatUsage(Line+ix, aCols[ii].width+1, LR[j].BeginUsage, -1);
+            case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, LR[j].BeginUsage, "");
                break;
-            case DetailUseTime2:  FormatUsage(Line+ix, aCols[ii].width+1, LR[j].LastUsage, -1);
+            case DetailUseTime2:  FormatDateTime(Line+ix, aCols[ii].width+1, LR[j].LastUsage, "");
+               break;
+            case DetailUseDeltaT: FormatDeltaTime(Line+ix, aCols[ii].width+1, tmLast - LR[j].LastUsage, "<now>");
                break;
             case item_NA:
-               CopyAndPadToWidth(Line+ix, "<no-data>", aCols[ii].width+1, ' ', PAD_LEFT);
+               CopyAndPadToWidth(Line+ix, "n/a", aCols[ii].width+1, ' ', PAD_LEFT);
+               break;
+            case item_ND:
+               CopyAndPadToWidth(Line+ix, "n/d", aCols[ii].width+1, ' ', PAD_LEFT);
                break;
             case item_Max:
                CopyAndPadToWidth(Line+ix, "<max>", aCols[ii].width+1, ' ');
@@ -1179,11 +1367,6 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
       if (!(aCols[ii].DetailFlag & DetailFlag))
          continue;
       Line[ix++] = ' ';
-      if (aCols[ii].margin > 1)
-         {
-         PadToWidth(Line+ix, aCols[ii].margin, ' ');
-         ix += aCols[ii].margin-1;
-         }
       CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, '-');
       ix += aCols[ii].width;
       }
@@ -1200,21 +1383,27 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
          continue;
 
       Line[ix++] = ' ';
-      if (aCols[ii].margin > 1)
-         {
-         PadToWidth(Line+ix, aCols[ii].margin, ' ');
-         ix += aCols[ii].margin-1;
-         }
 
       switch (aCols[ii].DetailFlag)
          {
+         case DetailSurplus:
+            CopyAndPadToWidth(Line+ix, 
+               (DetailAvailFlag & DetailSurplus) ? (AutoRegroupEnabled ? "Regroup" : "no") : "n/d",
+               aCols[ii].width+1, ' ');
+            break;
          case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, Totals.wtRes);
             break;
          case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, Totals.AccUsage/3600.0);
             break;
-         case DetailUseTime1:  FormatUsage(Line+ix, aCols[ii].width+1, Totals.BeginUsage, -1);
+         case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, Totals.BeginUsage, "");
             break;
-         case DetailUseTime2:  FormatUsage(Line+ix, aCols[ii].width+1, MinLastUsageTime, -1);
+         case DetailUseTime2:  FormatDateTime(Line+ix, aCols[ii].width+1, MinLastUsageTime, "");
+            break;
+         case DetailUseDeltaT:
+            if (MinLastUsageTime <= 0)
+               CopyAndPadToWidth(Line+ix, "", aCols[ii].width+1, ' ', PAD_LEFT);
+            else
+               FormatDeltaTime(Line+ix, aCols[ii].width+1, tmLast - MinLastUsageTime, "<now>");
             break;
          default:  
             CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, ' ');
@@ -1224,223 +1413,6 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool
    printf("%s\n", Line);
 }
 
-
-//-----------------------------------------------------------------
-#if 0
-static void PrintInfoOld(AttrList* ad, LineRec* LR, int NumElem, int max_name, bool HierFlag)
-{
-  char UsageTimeStr[17*2+2];
-  char * pUsageTimeStr = UsageTimeStr;
-  int T = 0;
-  ad->LookupInteger( ATTR_LAST_UPDATE, T );
-  printf("Last Priority Update: %s\n",format_date(T));
-
-  LineRec Totals;
-  Totals.Res=0;
-  Totals.wtRes=0.0;
-  Totals.BeginUsage=0;
-  Totals.AccUsage=0;
-  
-  // Usage mode is different from other modes, so make a flag for it.
-  bool fUsage = (DetailFlag & (DetailUsage | DetailPriority)) == DetailUsage;
-  //printf ("DetailFlag = %x, %x fUsage = %d\n", DetailFlag, (DetailFlag & (DetailUsage | DetailPriority)), fUsage);
-
-  const int qw = (DetailFlag & DetailCfgQuota) ? 15 + 13 + 13 : 15 + 13;
-  int quota_width = (DetailFlag & DetailQuotas) ? qw : 0;
-
-  // set reasonable bounds on the width of the name/label field 
-  if (max_name > 99) max_name = 99;
-  if (max_name < 20) max_name = 20;
-  char * Label  = (char*)malloc(max_name+1+quota_width+1);
-
-  const char* Fmt1="\n";  // Data line format
-  const char* Fmt2="\n";  // Title and separator line format
-  const char* Fmt3="\n";  // Totals line format
-  const char* FmtT="Number of users shown: %d";  // Totals line format
-  if (fUsage) { // usage only 
-    Fmt1=" %6.0f %12.2f %s\n"; 
-    Fmt2=" %6s %12s %s\n"; 
-    Fmt3=" %6.0f %12.2f %s\n"; 
-    FmtT="Number of users: %d";
-  } else if (DetailFlag & ~(DetailPrios | DetailQuotas)) { // all
-    Fmt1=" %14.2f %8.2f %12.2f %6.0f %12.2f %s\n"; 
-    Fmt2=" %14s %8s %12s %6s %12s %s\n"; 
-    Fmt3=" %14s %8s %12s %6.0f %12.2f %s\n"; 
-    FmtT="Number of users: %d";
-  } else if (DetailFlag & DetailPrios) { // prios only
-    Fmt1=" %14.2f\n";
-    Fmt2=" %14s\n";
-    Fmt3=" %14s\n";
-  }
-
-  const int uo = (DetailFlag & DetailUseTime1) ? 0 : 17;
-
-  // print first line of header
-  printf("%s",CopyAndPadToWidth(Label,HierFlag ? "Group" : NULL,max_name+1,' '));
-  if (quota_width) {
-     if (DetailFlag & DetailCfgQuota)
-        printf(" %14s %12s %12s", "Effective", "Config", "Subtree");
-     else
-        printf(" %14s %12s", "Effective", "Subtree");
-  }
-  if (fUsage) {
-    printf(Fmt2," Res  ","Total Usage","      Usage            Last      "+uo,"");
-  } else {
-    printf(Fmt2,"Effective","  Real  ","  Priority  "," Res  ","Total Usage","      Usage            Last      "+uo,"");
-  }
-
-  // print second line of header
-  printf("%s",CopyAndPadToWidth(Label,HierFlag ? "  User Name" : "User Name",max_name+1,' '));
-  if (quota_width) {
-     if (DetailFlag & DetailCfgQuota)
-        printf(" %14s %12s %12s", "Quota  ", "Quota ", "Quota ");
-     else
-        printf(" %14s %12s",  "Quota  ", "Quota ");
-  }
-  if (fUsage) {
-    printf(Fmt2,"In Use","(wghted-hrs)","   Start Time       Usage Time   "+uo,"");
-  } else {
-    printf(Fmt2,"Priority ","Priority","   Factor   ","In Use","(wghted-hrs)","   Start Time       Usage Time   "+uo,"");
-  }
-
-  // print last line of header (dashes)
-  CopyAndPadToWidth(Label,NULL,max_name+1+quota_width,'-');
-  if (quota_width) Label[max_name+5] = ' '; // let Effective Quota cheat into User Name field
-  printf("%s",Label);
-  if (fUsage) {
-    printf(Fmt2,"------","-----------","---------------- ----------------"+uo,"");
-  } else {
-    printf(Fmt2,"---------","--------","------------","------","-----------","---------------- ----------------"+uo,"");
-  }
-
-  int UserCount=0;
-  for (int i=0; i<NumElem; i++) {
-    // We want to avoid counting totals twice for acct group records
-    bool is_group = LR[i].IsAcctGroup;
-
-	if (LR[i].LastUsage<MinLastUsageTime) continue;
-    memset(UsageTimeStr, 0, sizeof(UsageTimeStr));
-    FormatUsage(UsageTimeStr,COUNTOF(UsageTimeStr), LR[i].BeginUsage, LR[i].LastUsage);
-    pUsageTimeStr = UsageTimeStr + uo;
-
-    if (!is_group) UserCount++;
-
-    float Priority = LR[i].Priority;
-    float PrioFactor = LR[i].Factor;
-    float RealPriority = (LR[i].Factor>0) ? (LR[i].Priority/LR[i].Factor) : 0;
-    // HACK!!! priorities are coming back as MAX_FLOAT values, which explode when 
-    // printed in %f format, so for now bound the values to fit.
-    if (Priority > 9999999999.99) {
-       Priority = 9999999999.99f;
-       RealPriority = (LR[i].Factor>0) ? (Priority/LR[i].Factor) : 0;
-       if (is_group)
-          RealPriority = 99999.99f;
-    }
-    if (PrioFactor > 99999999.99) PrioFactor = 99999999.99f;
-
-    // these assist in debugging.
-    //printf("%d ", LR[i].index);
-    //printf("%d %3d ", LR[i].IsAcctGroup, LR[i].GroupId);
-    //printf("%s ", LR[i].AcctGroup);
-
-    // print group/user name and also group quota info
-    // we print the quota with the name field so that the effective quota can grow to the left
-    // into the name field. 
-    if ( ! HierFlag || is_group) {
-       CopyAndPadToWidth(Label,LR[i].Name.Value(),max_name+1+quota_width,' ');
-       if (quota_width) {
-          char QuotaStr[40];
-          int cch = 0;
-          if (DetailFlag & DetailCfgQuota) {
-             cch = sprintf(QuotaStr,"%.2f %12.2f %12.2f",LR[i].EffectiveQuota, LR[i].ConfigQuota, LR[i].SubtreeQuota);
-             if ( ! (LR[i].HasDetail & DetailQuotas)) {
-                if (is_group)
-                   cch = sprintf(QuotaStr,"%5s %12s %12s", "N/A","N/A","N/A");
-                else
-                   cch = sprintf(QuotaStr,"%5s %12s %12s", "","","");
-             }
-          } else {
-             cch = sprintf(QuotaStr,"%.2f %12.2f",LR[i].EffectiveQuota, LR[i].SubtreeQuota);
-             if ( ! (LR[i].HasDetail & DetailQuotas)) {
-                if (is_group)
-                   cch = sprintf(QuotaStr,"%5s %12s", "N/A","N/A");
-                else
-                   cch = sprintf(QuotaStr,"%5s %12s", "","");
-             }
-          }
-          strcpy(Label + max_name + quota_width - cch, QuotaStr);
-       }
-    } else {
-       Label[0] = Label[1] = ' ';
-       const char * pszName = LR[i].Name.Value();
-       if (LR[i].GroupId > 0) 
-          pszName +=  strlen(LR[i].AcctGroup.Value())+1;
-       CopyAndPadToWidth(Label+2,pszName,max_name+1-2+quota_width,' ');
-    }
-    printf("%s",Label);
-
-    // print user usage/prio or both
-    if (fUsage) {
-      printf(Fmt1,LR[i].wtRes,LR[i].AccUsage/3600.0, pUsageTimeStr, "");
-    } else  if (DetailFlag & ~(DetailPrios | DetailQuotas)) {
-      if ( ! (LR[i].HasDetail & DetailPriority)) {
-        char NoPrioStr[40];
-        CopyAndPadToWidth(NoPrioStr,NULL,38,' ');
-        printf("%s",NoPrioStr);
-        printf(" %5.0f %12.2f %s\n",LR[i].wtRes,LR[i].AccUsage/3600.0, pUsageTimeStr, "");
-      } else {
-        printf(Fmt1,Priority, 
-                    RealPriority, 
-                    PrioFactor,
-                    LR[i].wtRes,LR[i].AccUsage/3600.0,
-                    pUsageTimeStr, "");
-       }
-    } else if (DetailFlag & DetailPrios) {
-      if ( ! (LR[i].HasDetail & DetailPriority)) {
-        printf("\n");
-      } else {
-        printf(Fmt1,Priority, 
-                    RealPriority, 
-                    PrioFactor);
-       }
-    } else {
-       printf("\n");
-    }
-
-    if (!is_group) {
-      Totals.wtRes+=LR[i].wtRes;
-      Totals.AccUsage+=LR[i].AccUsage;
-      if (LR[i].BeginUsage<Totals.BeginUsage || Totals.BeginUsage==0) Totals.BeginUsage=LR[i].BeginUsage;
-    }
-  }
-
-
-  // print dashes along the bottom of the data
-  CopyAndPadToWidth(Label,NULL,max_name+1+quota_width,'-');
-  if (quota_width) Label[max_name+5] = ' '; // let Effective Quota cheat into User Name field
-  printf("%s",Label);
-  if (fUsage) {
-    printf(Fmt2,"------","-----------","---------------- ----------------"+uo,"");
-  } else {
-    printf(Fmt2,"---------","--------","------------","------","-----------","---------------- ----------------"+uo,"");
-  }
-
-  // print summary/footer
-  // 
-  char UserCountStr[30];
-  sprintf(UserCountStr,FmtT,UserCount);
-  printf("%s",CopyAndPadToWidth(Label,UserCountStr,max_name+1+quota_width,' '));
-  FormatUsage (UsageTimeStr,COUNTOF(UsageTimeStr), Totals.BeginUsage, MinLastUsageTime);
-  if (fUsage) {
-    printf(Fmt3,Totals.wtRes,Totals.AccUsage/3600.0,pUsageTimeStr,"");
-  } else {
-    printf(Fmt3,"","","",Totals.wtRes,Totals.AccUsage/3600.0,pUsageTimeStr,"");
-  }
-
-  free(Label);
-  return;
-}
-#endif
 
 //-----------------------------------------------------------------
 
@@ -1463,16 +1435,16 @@ static void usage(char* name) {
      "\tor one or more of\n"
      "\t\t-allusers\t\tDisplay data for all users\n"
      "\t\t-activefrom <month> <day> <year> Display data for users active since this date\n"
-     "\t\t-prio[rity]\t\tDisplay user priority fields\n"
+     "\t\t-priority\t\tDisplay user priority fields\n"
      "\t\t-usage\t\t\tDisplay user/group usage fields\n"
-     "\t\t-quota\t\t\tDisplay group quota fields\n"
+     "\t\t-quotas\t\t\tDisplay group quota fields\n"
      "\t\t-most\t\t\tDisplay most useful prio and usage fields\n"
      "\t\t-all\t\t\tDisplay all fields\n"
      "\t\t-flat\t\t\tDo not display users under their groups\n"
-     "\t\t-h[ierarchical]\t\tDisplay users under their groups\n"
+     "\t\t-hierarchical\t\tDisplay users under their groups\n"
      "\t\t-grouporder\t\tDisplay groups first, then users\n"
      "\t\t-grouprollup\t\tGroup value are the sum of user values\n"
-     "\t\t-l[ong]\t\t\tVerbose output (entire classads)\n"
+     "\t\t-long\t\t\tVerbose output (entire classads)\n"
 //     "\t\t-ads <file>\t\tFile of priority ads to display\n"
      , name );
   exit(1);

@@ -122,6 +122,8 @@
 			<xs:enumeration value="REMOVED"/>
 			<xs:enumeration value="COMPLETED"/>
 			<xs:enumeration value="HELD"/>
+			<xs:enumeration value="TRANSFERRING_OUTPUT"/>
+			<xs:enumeration value="SUSPENDED"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<!-- reuse through extension not available for the following related types -->
@@ -157,6 +159,8 @@
 			<xs:element name="idle" type="xs:int"/>
 			<xs:element name="removed" type="xs:int"/>
 			<xs:element name="running" type="xs:int"/>
+			<xs:element name="suspended" type="xs:int"/>
+			<xs:element name="transferring_output" type="xs:int"/>
 			<xs:element name="jobs" type="tns:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
 	</xs:complexType>

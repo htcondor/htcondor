@@ -792,13 +792,10 @@ char * SafeSock::serialize() const
 
 char * SafeSock::serialize(char *buf)
 {
-	char sinful_string[28];
-	char usernamebuf[128];
+	char * sinful_string = NULL;
 	char *ptmp, *ptr = NULL;
     
 	ASSERT(buf);
-    memset(sinful_string, 0, 28);
-    memset(usernamebuf, 0, 128);
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
@@ -814,14 +811,20 @@ char * SafeSock::serialize(char *buf)
     // Now, see if we are 6.3 or 6.2
     if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // We are 6.3
+		sinful_string = new char [1 + ptr - ptmp];
         memcpy(sinful_string, ptmp, ptr - ptmp);
+		sinful_string[ptr - ptmp] = 0;
         ptmp = ++ptr;
     }
     else if(ptmp) {
+		size_t sinful_len = strlen(ptmp);
+		sinful_string = new char [1 + sinful_len];
         sscanf(ptmp,"%s",sinful_string);
+		sinful_string[sinful_len] = 0;
     }
 
 	_who.from_sinful(sinful_string);
+	delete sinful_string;
 
 	return NULL;
 }

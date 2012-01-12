@@ -1,25 +1,27 @@
 
 
-        #ifndef AviaryCommon_JOBSTATUSTYPE_H
-        #define AviaryCommon_JOBSTATUSTYPE_H
+        #ifndef AviaryJob_CONTINUEJOB_H
+        #define AviaryJob_CONTINUEJOB_H
 
        /**
-        * JobStatusType.h
+        * ContinueJob.h
         *
         * This file was auto-generated from WSDL
         * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
         */
 
        /**
-        *  JobStatusType class
+        *  ContinueJob class
         */
 
-        namespace AviaryCommon{
-            class JobStatusType;
+        namespace AviaryJob{
+            class ContinueJob;
         }
         
 
         
+       #include "AviaryJob_ControlJob.h"
+          
         #include <axutil_qname.h>
         
 
@@ -28,38 +30,27 @@
         #include <ServiceClient.h>
         #include <ADBDefines.h>
 
-namespace AviaryCommon
+namespace AviaryJob
 {
-        
-        /* Enumeration for this type */
-        typedef enum {
-            JobStatusType_IDLE,
-            JobStatusType_RUNNING,
-            JobStatusType_REMOVED,
-            JobStatusType_COMPLETED,
-            JobStatusType_HELD,
-            JobStatusType_TRANSFERRING_OUTPUT,
-            JobStatusType_SUSPENDED
-        } ADBJobStatusTypeEnum;
         
         
 
-        class JobStatusType {
+        class ContinueJob {
 
         private:
              
                 axutil_qname_t* qname;
-            std::string property_JobStatusType;
+            AviaryJob::ControlJob* property_ContinueJob;
 
                 
-                bool isValidJobStatusType;
+                bool isValidContinueJob;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setJobStatusTypeNil();
+        setContinueJobNil();
             
 
 
@@ -69,26 +60,26 @@ namespace AviaryCommon
         public:
 
         /**
-         * Constructor for class JobStatusType
+         * Constructor for class ContinueJob
          */
 
-        JobStatusType();
+        ContinueJob();
 
         /**
-         * Destructor JobStatusType
+         * Destructor ContinueJob
          */
-        ~JobStatusType();
+        ~ContinueJob();
 
 
        
 
         /**
-         * Constructor for creating JobStatusType
+         * Constructor for creating ContinueJob
          * @param 
-         * @param JobStatusType std::string
-         * @return newly created JobStatusType object
+         * @param ContinueJob AviaryJob::ControlJob*
+         * @return newly created ContinueJob object
          */
-        JobStatusType(std::string arg_JobStatusType);
+        ContinueJob(AviaryJob::ControlJob* arg_ContinueJob);
         
         
         /********************************** Class get set methods **************************************/
@@ -96,48 +87,27 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for JobStatusType. 
-         * @return std::string*
+         * Getter for ContinueJob. 
+         * @return AviaryJob::ControlJob*
          */
-        WSF_EXTERN std::string WSF_CALL
-        getJobStatusType();
+        WSF_EXTERN AviaryJob::ControlJob* WSF_CALL
+        getContinueJob();
 
         /**
-         * Setter for JobStatusType.
-         * @param arg_JobStatusType std::string*
+         * Setter for ContinueJob.
+         * @param arg_ContinueJob AviaryJob::ControlJob*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setJobStatusType(const std::string  arg_JobStatusType);
+        setContinueJob(AviaryJob::ControlJob*  arg_ContinueJob);
 
         /**
-         * Re setter for JobStatusType
+         * Re setter for ContinueJob
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetJobStatusType();
+        resetContinueJob();
         
-            
-            /************************** Getters and Setters For Enumerations ********************************/
-            /********************* Enumeration Specific Operations: get_enum, set_enum **********************/
-            
-            /**
-            * Enum getter for JobStatusType.
-            * @return ADBJobStatusTypeEnum; -1 on failure
-            */
-            ADBJobStatusTypeEnum WSF_CALL
-            getJobStatusTypeEnum();
-            
-            /**
-            * Enum setter for JobStatusType.
-            * @param arg_JobStatusType ADBJobStatusTypeEnum
-            * @return AXIS2_SUCCESS on success, else AXIS2_FAILURE
-            */
-            bool WSF_CALL
-            setJobStatusTypeEnum(
-            const ADBJobStatusTypeEnum arg_JobStatusType);
-            
-          
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -150,11 +120,11 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether JobStatusType is Nill
+         * Check whether ContinueJob is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isJobStatusTypeNil();
+        isContinueJobNil();
 
 
         
@@ -162,15 +132,6 @@ namespace AviaryCommon
         /**************************** Serialize and De serialize functions ***************************/
         /*********** These functions are for use only inside the generated code *********************/
 
-        
-        /**
-         * Deserialize the content from a string to an ADB object
-         * @param node_value to deserialize
-         * @param parent_element The parent element if it is an element, NULL otherwise
-         * @return true on success, false otherwise
-         */
-       bool WSF_CALL
-       deserializeFromString(const axis2_char_t *node_value, axiom_node_t *parent);
         
         /**
          * Deserialize the ADB object to an XML
@@ -196,29 +157,21 @@ namespace AviaryCommon
 
 
         
-        /**
-         * Serialize ADB object to a string
-         * @param namespaces hash which contains a mapping of namespace uris to prefixes
-         * @return serialized string
-         */
-         char* WSF_CALL
-         serializeToString(axutil_hash_t *namespaces);
-        
 
         /**
          * Serialize the ADB object to an xml
-         * @param JobStatusType_om_node node to serialize from
-         * @param JobStatusType_om_element parent element to serialize from
+         * @param ContinueJob_om_node node to serialize from
+         * @param ContinueJob_om_element parent element to serialize from
          * @param tag_closed Whether the parent tag is closed or not
          * @param namespaces hash of namespace uris to prefixes
          * @param next_ns_index an int which contains the next namespace index
          * @return axiom_node_t on success,NULL otherwise.
          */
         axiom_node_t* WSF_CALL
-        serialize(axiom_node_t* JobStatusType_om_node, axiom_element_t *JobStatusType_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
+        serialize(axiom_node_t* ContinueJob_om_node, axiom_element_t *ContinueJob_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
 
         /**
-         * Check whether the JobStatusType is a particle class (E.g. group, inner sequence)
+         * Check whether the ContinueJob is a particle class (E.g. group, inner sequence)
          * @return true if this is a particle class, false otherwise.
          */
         bool WSF_CALL
@@ -233,11 +186,11 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for JobStatusType by property number (1)
-         * @return std::string
+         * Getter for ContinueJob by property number (1)
+         * @return AviaryJob::ControlJob
          */
 
-        std::string WSF_CALL
+        AviaryJob::ControlJob* WSF_CALL
         getProperty1();
 
     
@@ -245,6 +198,6 @@ namespace AviaryCommon
 };
 
 }        
- #endif /* JOBSTATUSTYPE_H */
+ #endif /* CONTINUEJOB_H */
     
 

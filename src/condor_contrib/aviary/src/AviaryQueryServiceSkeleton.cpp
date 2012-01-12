@@ -247,6 +247,8 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			summary->setIdle(submission->getIdle().size());
 			summary->setRemoved(submission->getRemoved().size());
 			summary->setRunning(submission->getRunning().size());
+			summary->setSuspended(submission->getSuspended().size());
+			summary->setTransferring_output(submission->getTransferringOutput().size());
 			Status* ss = new Status;
 			ss->setCode(new StatusCodeType("OK"));
 			summary->setStatus(ss);

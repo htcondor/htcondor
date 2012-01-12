@@ -176,11 +176,8 @@ do_REMOTE_syscall()
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
 		MyString err_msg;
-		err_msg = "Can no longer talk to condor_starter <";
-		err_msg += syscall_sock->peer_ip_str();
-		err_msg += ':';
-		err_msg += syscall_sock->peer_port();
-		err_msg += '>';
+		err_msg = "Can no longer talk to condor_starter ";
+		err_msg += syscall_sock->get_sinful_peer();
 
             // the socket is closed, there's no way to recover
             // from this.  so, we have to cancel the socket

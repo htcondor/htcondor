@@ -16,6 +16,61 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-7}Version 7.6.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.7 not yet released.
+%\item Condor version 7.6.7 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-6-6}Version 7.6.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -50,17 +105,19 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a memory leak affecting the \Condor{schedd} when the
-  configuration setting
-  \MacroNI{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
-  file command \SubmitCmd{job\_ad\_information\_attrs} were used.
-  \Ticket{2730}
+configuration variable
+\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
+description file command \SubmitCmd{job\_ad\_information\_attrs} were used.
+\Ticket{2730}
 
 \item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
-it to always return a status of -1073740777 for chirp commands that succeeded.
+it to always return a status of -1073740777 for \Condor{chirp}
+ commands that succeeded.
 \Ticket{2739}
 
 \item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
-the put and get chirp commands to always fail.
+the \Opt{put}, \Opt{whoami}, \Opt{getdir}, and \Opt{fetch} 
+\Condor{chirp} commands to always fail.
 \Ticket{2743}
 
 \item Fixed a bug in the checkpoint server that could cause it to abort and
@@ -74,6 +131,11 @@ ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
 /home/condor/execute/dir_10444/userdir/src/condor_daemon_core.V6/daemon_core.cpp
 \end{verbatim}
 \Ticket{2736}
+
+\item Fix sample Linux startup script \File{condor.boot.rpm} to no longer
+assume that the contents of \File{/var/run} will persist across a reboot
+or that environment variable \Macro{USER} is set.
+\Ticket{2133}
 
 \end{itemize}
 
@@ -307,6 +369,12 @@ as well as for other invocations.
 if it does not hear from the \Condor{startd} for longer than the job
 lease duration.
 \Ticket{2706}
+
+\item Fixed some bugs in the renewing of CREAM job leases. Before, the
+\Condor{gridmanager} could fail to renew the leases or attempt to set
+lease expirations in the past.
+\Ticket{2351}
+\Ticket{2455}
 
 \end{itemize}
 

@@ -30,6 +30,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor now has experimental support for IPv6.  This functionality is disabled by default.  This support has a variety of limitations, including lack of support for security, DNS, and mixed IPv4/IPv6 networks.  
+For information on enabling IPv6 support in the 7.7 series of Condor, see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
+\Ticket{9}
+
 \item On Linux platforms, the \Condor{starter} can now optionally measure the
 PSS (Proportional Set Size) of each Condor job,
 if the configuration variable \Macro{USE\_PSS} is \Expr{True}.
@@ -91,10 +95,6 @@ under the HOST(S) column for grid type ec2 jobs.
 \item Condor can now submit jobs to Grid Engine via the new sge grid-type.
 \Ticket{1984}
 
-\item Added the new "halt file" feature as a second way to suspend
-a running DAG.  See section ~\ref{sec:DagSuspend} for details.
-\Ticket{2213}
-
 \item Improved logging in more cases when Condor daemons run out of memory.
 \Ticket{2559}
 
@@ -111,6 +111,10 @@ the job is placed on hold because of a failure, and not by user request.
 Previously, email would be sent only if the job was terminated via signal.
 \Ticket{1976}
 
+\item A new feature in DAGMan implements a second way to suspend a running DAG.
+See section ~\ref{sec:DagSuspend} for details.
+\Ticket{2213}
+
 \item The default settings for \Condor{dagman} have changed.
 Now, if a node has children, then \Condor{dagman} uses the
 \Attr{KeepClaimIdle} attribute, 
@@ -121,15 +125,10 @@ The amount of time is controlled by the
 \Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
 \Ticket{2673}
 
-\item Improved output of \Condor{q} \Opt{-dag} to show the dag structure as a tree,
+\item Improved the output of \Condor{q} \Opt{-dag},
+to show the DAG structure as a tree,
 with children indented below their parents.
 \Ticket{1281}
-
-\item Fixed the output of \Condor{q} \Opt{-dag} so that children of a
-non-existent DAGman node would not be mistakenly shown as belonging to another
-DAGman. This can happen, for example, when a \Condor{dagman} process dies while
-its children are still running.
-\Ticket{2463}
 
 \item Added the new FINAL node feature to \Condor{dagman} -- this allows
 the user to declare a FINAL node in the DAG, which is always run at the
@@ -143,6 +142,7 @@ User names are shown indented under group names when hierarchical groups are in 
 New columns were added to show group quota information.
 A new \Opt{-most} option was added to show the most useful fields since \Opt{-all}
 now produces a very wide display.
+\Ticket{2680}
 
 \end{itemize}
 
@@ -161,7 +161,7 @@ but not big enough to hold the whole contents of the spool directory.
 
 \item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
 specifies the amount of time in seconds that \Condor{schedd} will hold a claim
-idle for a DAGman job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
+idle for a DAGMan job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
 
 \item \AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
 report the maximum observed memory usage.  Previously, they reported
@@ -173,9 +173,11 @@ when the job was finished, the final observation of memory usage
 was 0.
 \Ticket{2725}
 
-\item \AdAttr{ResidentSetSize} is now rounded by default using the new
-default configuration setting
+\item The job ClassAd attribute \Attr{ResidentSetSize} is now rounded 
+by default,
+using the new default configuration setting
 \Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
+\Ticket{2729}
 
 \end{itemize}
 
@@ -217,6 +219,13 @@ and the \Condor{starter}.  This problem was introduced in 7.7.2.
 and prevent the \Attr{x509UserProxyEmail} from being set properly for
 jobs forwarded via Condor-C.
 \Ticket{2655}
+
+\item Fixed the output of \Condor{q} \Opt{-dag},
+such that children of a non-existent DAG node would not be mistakenly 
+shown as belonging to another instance of \Condor{dagman}.
+This can happen, for example, when a \Condor{dagman} process dies while
+its children are still running.
+\Ticket{2463}
 
 \item Fixed a bug in \Condor{dagman} that caused a DAG to fail if node
 job user log files were actually symlinks.  This problem was introduced
@@ -265,15 +274,11 @@ as are currently documented (section~\ref{sec:New-7-6-5}) in this manual.
 
 \begin{itemize}
 
-\item Condor version 7.7.4 has all of the features and fixes of 7.7.3,
-with one major addition.  This is the ability to run in a pure IPv6 network,
-which is disabled by default.  To \emph{enable} IPv6 code, 
-set the configuration variable
-\begin{verbatim}
-  ENABLE_IPV6 = True
-\end{verbatim}
-Note that running in a mixed IPv6 and IPv4 environment has not been tested,
-and is not supported.
+\item Condor version 7.7.4 has all of the features and fixes of 7.7.3, it 
+includes work toward running on a pure IPv6 network.  This is disabled by
+default.  There is an severe bug where enabling IPv6 in a multi-computer pool
+may cause the \Condor{starter} to crash.  For 
+more information on enabling IPv6 support in the 7.7 series of Condor, see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
 \Ticket{9}
 
 \end{itemize}
@@ -298,7 +303,7 @@ and is not supported.
 
 \begin{itemize}
 
-\item None.
+\item When IPv6 is enabled and you have multiple computers in your pool, the \Condor{starter} may crash.
 
 \end{itemize}
 

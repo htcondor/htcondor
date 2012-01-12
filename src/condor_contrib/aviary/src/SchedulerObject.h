@@ -73,6 +73,8 @@ public:
 	bool hold(string id, string &reason, string &text);
 	bool release(string id, string &reason, string &text);
 	bool remove(string id, string &reason, string &text);
+	bool suspend(string id, string &reason, string &text);
+	bool _continue(string id, string &reason, string &text);
 
     static SchedulerObject* getInstance();
 

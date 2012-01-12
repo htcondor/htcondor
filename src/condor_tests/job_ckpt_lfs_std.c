@@ -163,12 +163,19 @@ void write_a_file(char *file, off_t chunk_size, off_t num_chunks)
 
 	calculated_pos = 0;
 	for (i = 0; i < num_chunks; i++) {
-		fill_chunk(chunk, chunk_size);
-		if (full_write(fd, chunk, chunk_size) != chunk_size) {
-			printf("ERROR: Failed to write file: %d(%s)\n", 
-				errno, strerror(errno));
-			exit_failure();
+
+		/* Only write every 1024th chunk */
+		if ((i % 1024) == 0)  {
+			fill_chunk(chunk, chunk_size);
+			if (full_write(fd, chunk, chunk_size) != chunk_size) {
+				printf("ERROR: Failed to write file: %d(%s)\n", 
+					errno, strerror(errno));
+				exit_failure();
+			}
+		} else {
+			lseek(fd, chunk_size, SEEK_CUR);
 		}
+
 		calculated_pos += chunk_size;
 		actual_pos = lseek(fd, (off_t)0, SEEK_CUR);
 
@@ -228,12 +235,16 @@ void check_a_file(char *file, off_t chunk_size, off_t num_chunks)
 
 	calculated_pos = 0;
 	for (i = 0; i < num_chunks; i++) {
-		if (full_read(fd, chunk, chunk_size) != chunk_size) {
-			printf("ERROR: Failed to read file: %d(%s)\n",
-				errno, strerror(errno));
-			exit_failure();
+		if ((i % 1024) == 0) {
+			if (full_read(fd, chunk, chunk_size) != chunk_size) {
+				printf("ERROR: Failed to read file: %d(%s)\n",
+					errno, strerror(errno));
+				exit_failure();
+			}
+			check_chunk(chunk, chunk_size);
+		} else {
+			lseek(fd, chunk_size, SEEK_CUR);
 		}
-		check_chunk(chunk, chunk_size);
 
 		calculated_pos += chunk_size;
 		actual_pos = lseek(fd, (off_t)0, SEEK_CUR);
