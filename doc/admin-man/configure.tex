@@ -1840,14 +1840,16 @@ but across all users and user's jobs.
 
 \label{param:EventLogJobAdInformationAttrs}
 \item[\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS}]
-  A comma-separated list of job ClassAd attributes,
-  whose evaluated values form a new event, the JobAdInformationEvent.
+  A comma separated list of job ClassAd attributes,
+  whose evaluated values form a new event, the \Expr{JobAdInformationEvent},
+  given Event Number 028.
   This new event is placed in the event log in addition to each logged event.
-  If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
-  This configuration setting is the same as the job ad attribute
+  If \MacroNI{EVENT\_LOG} is not defined, this configuration variable
+  has no effect.
+  This configuration variable is the same as the job ClassAd attribute
   \AdAttr{JobAdInformationAttrs} (see
-  page~\pageref{JobAdInformationAttrs-job-attribute}) but it applies to
-  the system event log rather than the user log.
+  page~\pageref{JobAdInformationAttrs-job-attribute}),
+  but it applies to the system Event Log rather than the user job log.
 
 \end{description}
 

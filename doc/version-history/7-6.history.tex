@@ -105,17 +105,19 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a memory leak affecting the \Condor{schedd} when the
-  configuration setting
-  \MacroNI{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
-  file command \SubmitCmd{job\_ad\_information\_attrs} were used.
-  \Ticket{2730}
+configuration variable
+\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
+description file command \SubmitCmd{job\_ad\_information\_attrs} were used.
+\Ticket{2730}
 
 \item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
-it to always return a status of -1073740777 for chirp commands that succeeded.
+it to always return a status of -1073740777 for \Condor{chirp}
+ commands that succeeded.
 \Ticket{2739}
 
 \item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
-the put and get chirp commands to always fail.
+the \Opt{put}, \Opt{whoami}, \Opt{getdir}, and \Opt{fetch} 
+\Condor{chirp} commands to always fail.
 \Ticket{2743}
 
 \item Fixed a bug in the checkpoint server that could cause it to abort and
