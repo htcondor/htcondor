@@ -1126,8 +1126,11 @@ AttrList* Accountant::ReportState() {
                ad->Assign(tmp.Value(), cgrp->subtree_quota);
                tmp.sprintf("GroupSortKey%d", OwnerNum);
                ad->Assign(tmp.Value(), cgrp->sort_key);
-               sprintf(tmp, "GroupAutoRegroup%d", OwnerNum);
-               ad->Assign(tmp.Value(), cgrp->autoregroup);
+               tmp.sprintf("SurplusPolicy%d", OwnerNum);
+               const char * policy = "no";
+               if (cgrp->autoregroup) policy = "regroup";
+               else if (cgrp->accept_surplus) policy = "byquota";
+               ad->Assign(tmp.Value(), policy);
             }
         }
 
