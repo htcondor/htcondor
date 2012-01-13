@@ -353,8 +353,8 @@ EOT
 	qsub_cmd="$shell"
 else
 	cat << EOT >> $submit_file
-executable = $qsub_cmd
-arguments = $qsub_args
+executable = $shell
+arguments = $qsub_cmd $qsub_args
 EOT
 fi
 
