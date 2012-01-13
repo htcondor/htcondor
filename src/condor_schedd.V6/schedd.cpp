@@ -12479,6 +12479,13 @@ holdJob( int cluster, int proc, const char* reason,
 		}
 	}
 
+	if (result) {
+		PROC_ID id;
+		id.cluster = cluster;
+		id.proc = proc;
+		scheduler.enqueueActOnJobMyself(id,JA_HOLD_JOBS,true);
+	}
+
 	return result;
 }
 
