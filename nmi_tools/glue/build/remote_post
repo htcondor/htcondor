@@ -81,15 +81,16 @@ if( ! -d $pub_dir ) {
 if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	# munge cleanup is needed only if cygwin is messing with ACLs.
 	# in new batlab, instead of cleaning up, just don't allow it.
+	print "COMPUTERNAME=$ENV{COMPUTERNAME}\n";
 	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
 		system("nmi_tools\\glue\\build\\munge.bat $pub_dir move");
 		$ENV{PATH} ="$ENV{PATH};c:/cygwin/bin;$pub_dir/msconfig";
 	} else {
-		system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup");
-		system("mv *.zip $pub_dir");
-		system("mv *.msi $pub_dir");
-		system("mv release_dir $pub_dir");
-		system("mv msconfig $pub_dir");
+		system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup move");
+		#system("mv *.zip $pub_dir");
+		#system("mv *.msi $pub_dir");
+		#system("mv release_dir $pub_dir");
+		#system("mv msconfig $pub_dir");
 	}
 }
 else {
