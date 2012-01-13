@@ -2651,7 +2651,7 @@ SetTransferFiles()
 	// Starting with Condor 7.7.2, we only do this remapping if we're
 	// spooling files to the schedd. The shadow/starter will do any
 	// required renaming in the non-spooling case.
-	CondorVersionInfo cvi(MySchedd->version());
+	CondorVersionInfo cvi((MySchedd) ? MySchedd->version() : NULL);
 	if ( (!cvi.built_since_version(7, 7, 2) && should_transfer != STF_NO &&
 		  JobUniverse != CONDOR_UNIVERSE_GRID &&
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
