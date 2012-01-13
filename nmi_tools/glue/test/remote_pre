@@ -188,6 +188,8 @@ else {
 	if (!($perlver =~ /cygwin/i)) {
 		if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
 			print "attempting to run tests using ActiveState perl\n";
+			$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
+			print "PATH=$ENV{PATH}\n";
 		} else {
 			print "adding cygwin to the front of the path\n";
 			$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
