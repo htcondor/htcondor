@@ -12423,7 +12423,10 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	dprintf( D_ALWAYS, "Job %d.%d put on hold: %s\n", cluster, proc,
 			 reason );
 
-	abort_job_myself( tmp_id, JA_HOLD_JOBS, true, notify_shadow );
+	// replacing this with the call to enqueueActOnJobMyself
+	// in holdJob AFTER the transaction; otherwise the job status
+	// doesn't get properly updated for some reason
+	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true, notify_shadow );
 
 		// finally, email anyone our caller wants us to email.
 	if( email_user || email_admin ) {
@@ -12479,6 +12482,8 @@ holdJob( int cluster, int proc, const char* reason,
 		}
 	}
 
+	// need this now to take the place of abort_job_myself
+	// within holdJobRaw to ensure correct job status change
 	if (result) {
 		PROC_ID id;
 		id.cluster = cluster;
