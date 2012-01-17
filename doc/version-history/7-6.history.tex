@@ -66,20 +66,21 @@ the \Opt{put}, \Opt{whoami}, \Opt{getdir}, and \Opt{fetch}
 \Ticket{2743}
 
 \item Fixed a bug in the checkpoint server that could cause it to abort and
-crash during a file rename operation on RHEL6 and above.
+crash during a file rename operation on RHEL6 and newer versions.
 \Ticket{2738}
 
-\item Fix a bug introduced in 7.6.5 that can cause the \Condor{schedd} to
-exit with the following error:
+\item Fix a bug introduced in Condor version 7.6.5,
+that could cause the \Condor{schedd} to exit with the following error:
 \begin{verbatim}
 ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
 /home/condor/execute/dir_10444/userdir/src/condor_daemon_core.V6/daemon_core.cpp
 \end{verbatim}
 \Ticket{2736}
 
-\item Fix sample Linux startup script \File{condor.boot.rpm} to no longer
-assume that the contents of \File{/var/run} will persist across a reboot
-or that environment variable \Macro{USER} is set.
+\item Fixed the example Linux startup script \File{condor.boot.rpm}
+to no longer assume that the contents of file \File{/var/run} will 
+persist across a reboot,
+or that environment variable \Env{USER} is set.
 \Ticket{2133}
 
 \end{itemize}
