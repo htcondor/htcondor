@@ -12427,6 +12427,10 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	// in holdJob AFTER the transaction; otherwise the job status
 	// doesn't get properly updated for some reason
 	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true, notify_shadow );
+        if(!notify_shadow)	
+	{
+		dprintf( D_ALWAYS, "notify_shadow set to false but will still notify- this should not be optional");
+	}
 
 		// finally, email anyone our caller wants us to email.
 	if( email_user || email_admin ) {
