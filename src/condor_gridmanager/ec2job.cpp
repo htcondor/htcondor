@@ -468,18 +468,18 @@ void EC2Job::doEvaluateState()
 					}
 					
 					// ec2_vm_start() will check the input arguments
-					rc = gahp->ec2_vm_start( m_serviceUrl.c_str(),
-											 m_public_key_file.c_str(),
-											 m_private_key_file.c_str(),
-											 m_ami_id.c_str(),
-											 m_key_pair.c_str(),
-											 m_user_data.c_str(),
-											 m_user_data_file.c_str(),
-											 m_instance_type.c_str(),
-											 m_availability_zone.c_str(),
-											 m_vpc_subnet.c_str(),
-											 m_vpc_ip.c_str(),
-											 m_client_token.c_str(),
+					rc = gahp->ec2_vm_start( m_serviceUrl,
+											 m_public_key_file,
+											 m_private_key_file,
+											 m_ami_id,
+											 m_key_pair,
+											 m_user_data,
+											 m_user_data_file,
+											 m_instance_type,
+											 m_availability_zone,
+											 m_vpc_subnet,
+											 m_vpc_ip,
+											 m_client_token,
 											 *m_group_names,
 											 instance_id,
 											 gahp_error_code);
@@ -745,10 +745,10 @@ void EC2Job::doEvaluateState()
 					// will check input arguments
 					// The VM status we need is saved in the second
 					// string of the returned status StringList
-					rc = gahp->ec2_vm_status(m_serviceUrl.c_str(),
-											 m_public_key_file.c_str(),
-											 m_private_key_file.c_str(),
-											 m_remoteJobId.c_str(),
+					rc = gahp->ec2_vm_status(m_serviceUrl,
+											 m_public_key_file,
+											 m_private_key_file,
+											 m_remoteJobId,
 											 returnStatus,
 											 gahp_error_code );
 					
@@ -828,10 +828,10 @@ void EC2Job::doEvaluateState()
 				// need to call ec2_vm_stop(), it will only return
 				// STOP operation is success or failed
 				// ec2_vm_stop() will check the input arguments
-				rc = gahp->ec2_vm_stop(m_serviceUrl.c_str(),
-									   m_public_key_file.c_str(),
-									   m_private_key_file.c_str(),
-									   m_remoteJobId.c_str(),
+				rc = gahp->ec2_vm_stop(m_serviceUrl,
+									   m_public_key_file,
+									   m_private_key_file,
+									   m_remoteJobId,
 									   gahp_error_code);
 			
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1135,11 +1135,11 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 	// associate the elastic ip with the now running instance.
 	if ( !m_elastic_ip.empty() )
 	{
-		rc = gahp->ec2_associate_address(m_serviceUrl.c_str(),
-										 m_public_key_file.c_str(),
-										 m_private_key_file.c_str(),
-										 m_remoteJobId.c_str(),
-										 m_elastic_ip.c_str(),
+		rc = gahp->ec2_associate_address(m_serviceUrl,
+										 m_public_key_file,
+										 m_private_key_file,
+										 m_remoteJobId,
+										 m_elastic_ip,
 										 returnStatus,
 										 gahp_error_code );
 
@@ -1177,11 +1177,11 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 			char * volume_id = ebs_volume_params.next();
 			char * device_id = ebs_volume_params.next();
 
-			rc = gahp->ec2_attach_volume(m_serviceUrl.c_str(),
-										 m_public_key_file.c_str(),
-										 m_private_key_file.c_str(),
+			rc = gahp->ec2_attach_volume(m_serviceUrl,
+										 m_public_key_file,
+										 m_private_key_file,
 										 volume_id,
-										 m_remoteJobId.c_str(),
+										 m_remoteJobId,
 										 device_id,
 										 returnStatus,
 										 gahp_error_code );
