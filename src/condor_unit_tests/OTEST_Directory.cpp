@@ -68,7 +68,6 @@ static bool test_find_named_entry_remove(void);
 static bool test_find_named_entry_not_exist(void);
 static bool test_get_access_time_before(void);
 static bool test_get_access_time_empty(void);
-static bool test_get_access_time_valid(void);
 static bool test_get_access_time_close(void);
 static bool test_get_modify_time_before(void);
 static bool test_get_modify_time_empty(void);
@@ -208,7 +207,6 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_find_named_entry_not_exist);
 	driver.register_function(test_get_access_time_before);
 	driver.register_function(test_get_access_time_empty);
-	driver.register_function(test_get_access_time_valid);
 	driver.register_function(test_get_access_time_close);
 	driver.register_function(test_get_modify_time_before);
 	driver.register_function(test_get_modify_time_empty);
@@ -1097,33 +1095,6 @@ static bool test_get_access_time_empty() {
 	emit_output_actual_header();
 	emit_retval("%d", atime);
 	if(atime != 0) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_access_time_valid() {
-	emit_test("Test that GetAccessTime() doesn't return 0 after calling Next() "
-		"in a non-empty directory.");
-	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
-	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
-	{
-		/* Now read the file just to make sure the atime is non zero */
-		FILE* f = safe_fopen_wrapper_follow(next, "r");
-		char buf[2];
-		int read = fread(buf, 1, 1, f); /* just read one byte */
-		if (read < 1) {
-			emit_param("%s is zero bytes\n", next);
-		}
-		fclose(f);
-	}
-	time_t atime = dir.GetAccessTime();
-	emit_output_actual_header();
-	emit_retval("%d", atime);
-	if(atime == 0) {
 		FAIL;
 	}
 	PASS;
