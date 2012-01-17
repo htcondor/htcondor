@@ -1,3 +1,16 @@
+condor (7.7.4-2) UNRELEASED; urgency=low
+
+  * Forcing runtime dependency on libcgroup1 (>= 0.37~), as otherwise Condor's
+    procd refuses to start.
+  * Fix problem in the Debconf setup that caused the initially provided
+    settings to be overwritten during installation on a clean system (without
+    and existing Condor installation).
+  * Modify condor_qsub to always execute submitted scripts via the configured
+    shell and not directly (expecting them to be executable). The seems to be
+    the behavior of SGE's qsub.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 17 Jan 2012 14:01:27 +0100
+
 condor (7.7.4-1) UNRELEASED; urgency=low
 
   * New upstream release. RPATH setup now officially supported.
