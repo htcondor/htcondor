@@ -9,7 +9,7 @@ Standards-Version: 3.9.2
 
 Package: condor
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, ${python:Depends}, ${perl:Depends}, debconf (>= 0.5) | debconf-2.0, adduser, libdate-manip-perl
+Depends: ${misc:Depends}, ${shlibs:Depends}, ${python:Depends}, ${perl:Depends}, debconf (>= 0.5) | debconf-2.0, adduser, libdate-manip-perl, libcgroup1 (>=0.37~)
 Recommends: dmtcp
 Description: workload management system
  Like other full-featured batch systems, Condor provides a job queueing
