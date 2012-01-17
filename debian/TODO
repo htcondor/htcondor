@@ -1,6 +1,4 @@
 * Do license checks
-* debconf config doesn't work on first run when doing an install from scratch
-  (cannot confirm anymore)
 * debconf templates should mention format things: comma-separated list, ...
 * debconf: think about switching away from combinatorial setup to a few
   hand-polished config scenarios
