@@ -191,8 +191,10 @@ using the new default configuration setting
 
 \begin{itemize}
 
-\item \Condor{submit} would allow ec2\_secret\_access\_key and
-  ec2\_access\_key\_id to be directories.
+\item Fixed a bug in which \Condor{submit} allowed the specification of
+\SubmitCmd{ec2\_secret\_access\_key} and \SubmitCmd{ec2\_access\_key\_id}
+to be directories instead of files.
+\Condor{submit} now generates an error in these cases.
 \Ticket{2619}
 
 \item Communication errors were not always correctly handled when
