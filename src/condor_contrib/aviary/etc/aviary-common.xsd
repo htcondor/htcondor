@@ -195,10 +195,17 @@
 	</xs:simpleType>
 	<xs:complexType name="ResourceID">
 		<xs:sequence>
-			<xs:element name="subsystem_type" type="tns:ResourceType"/>
-			<xs:element name="pool" type="xs:string"/>
-			<xs:element name="name" type="xs:string"/>
+			<xs:element name="resource" type="tns:ResourceType"/>
+			<xs:element name="pool" type="xs:string" minOccurs="0"/>
+			<xs:element name="name" type="xs:string" minOccurs="0"/>
 			<xs:element name="custom_name" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ResourceLocation">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="status" type="tns:Status"/>
 		</xs:sequence>
 	</xs:complexType>
 </xs:schema>
