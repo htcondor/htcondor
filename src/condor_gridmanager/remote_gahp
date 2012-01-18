@@ -22,10 +22,10 @@
 REMOTE_HOSTNAME=""
 REMOTE_USER=`whoami`
 # Needs '~' because resolved on remote site
-REMOTE_SCRIPT="~/.bosco/batch_gahp"
+REMOTE_GLITE="~/bosco/libexec/glite"
 # Needs $HOME, else [ -f ... ] fails
-PASSPHRASE_LOCATION="$HOME/.bosco/.pass"
-PRIVATE_KEY_LOCATION="$HOME/.ssh/id_rsa"
+PASSPHRASE_LOCATION="$HOME/bosco/etc/.pass"
+PRIVATE_KEY_LOCATION="$HOME/bosco/etc/id_rsa"
 
 
 # List of remote hosts to connect to
@@ -92,7 +92,7 @@ for host in "${REMOTE_HOSTS[@]}" ; do
 	# check if this is a host we care about
 	if [ "$REMOTE_HOSTNAME" == ${parts[0]} ] ; then
 		#REMOTE_HOSTNAME=${parts[0]}
-		REMOTE_SCRIPT=${parts[1]}
+		REMOTE_GLITE=${parts[1]}
 		PASSPHRASE_LOCATION=${parts[2]}
 		PRIVATE_KEY_LOCATION=${parts[3]}
 		break
@@ -114,7 +114,7 @@ for i; do
 			shift 2;;
 		--rgahp-nopass  ) PASSPHRASE_LOCATION=""
 			shift ;;
-		--rgahp-script ) REMOTE_SCRIPT="$2"
+		--rgahp-glite ) REMOTE_GLITE="$2"
 			shift 2;;
 		--  ) shift; break ;;
 	esac
@@ -214,8 +214,8 @@ fi
 shift
 
 # use BatchMode so we fail if a password is requested
-echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME $REMOTE_SCRIPT \"$@\""
-ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME $REMOTE_SCRIPT "$@"
+#echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
+ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
 
 SSH_STATUS=$?
 
