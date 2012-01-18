@@ -30,6 +30,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The meaning of the VirtualMemory attribute of the startd 
+has been changed for Linux.  Previously, it was the amount of
+paging space configured for the system.  So, if a machine with a lot
+of memory had no paging space, the VirtualMemory attribute would report
+zero.  Now, the VirtualMemory attribute on Linux is the sum of paging
+space and physical memory, which more accurately represents the virtual
+memory size of the machine.
+
 \item Condor now has experimental support for IPv6.  
 This functionality is disabled by default.  
 This support has a variety of limitations, 
