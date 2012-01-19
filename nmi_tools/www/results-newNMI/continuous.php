@@ -410,7 +410,6 @@ function make_cell($run, $platform, $run_type, $td_class) {
     $color = "pending";
   }
   elseif($run["platforms"][$platform][$run_type]["result"] == -1006) {
-    print "Here";
     $color = "interrupted";
   }
   elseif($run["platforms"][$platform][$run_type]["result"] != 0) {
