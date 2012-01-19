@@ -193,6 +193,10 @@ using the new default configuration setting
 \Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
 \Ticket{2729}
 
+\item The configuration macro \MacroNI{PROCD\_LOG} now defaults to
+ \File{\$(LOG)/ProcLog}.  Previously, there was no default value,
+ so the \Condor{procd} did not log by default.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
