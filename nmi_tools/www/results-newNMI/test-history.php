@@ -141,9 +141,6 @@ foreach ($platforms AS $platform) {
   if(preg_match("/^x86_64_/", $display)) {
     $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
   }
-  elseif(preg_match("/ia64_/", $display)) {
-    $display = preg_replace("/ia64_/", "x86<br>", $display);
-  }
   else {
     $display = preg_replace("/x86_/", "x86<br>", $display);
   }
