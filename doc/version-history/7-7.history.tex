@@ -205,11 +205,6 @@ which more accurately represents the virtual memory size of the machine.
 
 \begin{itemize}
 
-\item Fixed a rare bug where the Condor CGahp process could get
-into an infinite loop on startup if more than one was running from
-different users whose name only differed in the last character.
-\Ticket{2749}
-
 \item Fixed a bug in which \Condor{submit} allowed the specification of
 \SubmitCmd{ec2\_secret\_access\_key} and \SubmitCmd{ec2\_access\_key\_id}
 to be directories instead of files.
@@ -263,6 +258,12 @@ in the 7.7 series.
 introduced in Condor version 7.7.2.
 Condor did not count completed scheduler universe jobs in reported statistics.
 \Ticket{2731}
+
+\item Fixed a rare bug in which the \Condor{c-gahp} process could get
+into an infinite loop on start up,
+if more than one \Condor{c-gahp} was running under different users,
+and the names of the users only differed in their last character.
+\Ticket{2749}
 
 \end{itemize}
 
