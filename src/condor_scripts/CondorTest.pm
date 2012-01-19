@@ -71,7 +71,10 @@ my $isnightly = IsThisNightly($BaseDir);
 my $coredir = "$BaseDir/Cores";
 if(!(-d $coredir)) {
 	debug("Creating collection directory for cores\n",2);
-	runcmd("mkdir -p $coredir");
+#	runcmd("mkdir -p $coredir");
+#	the above command doesn't work on windows (-p isn't valid for windows' mkdir which always has -p behavior)
+#	but since cwd is $BaseDir we can just use perl's mkdir
+        mkdir 'Cores' || die "ERROR: could not create $coredir\n";
 }
 
 # set up for reading in core/ERROR exemptions

@@ -40,6 +40,7 @@ $|=1;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $logsize = "50000000"; # size for logs of personal Condor
+my $no_cygwin = 0; # don't force a switch to cygwin perl before running batch test.
 
 # Hard-coded filename, defined in test_platform_pre
 my $tarball_file = "CONDOR-TARBALL-NAME";
@@ -179,18 +180,31 @@ else {
     unlink(<*.zip>);
 
     my $Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
+   
+    if ($^O =~ /MSWin32/) {
+	my $which_master = `\@for \%I in (condor_master.exe) do \@echo(%~\$PATH:I`;
+        print "which condor_master is $which_master\n";
+        if ($which_master = /^[a-z]:\\condor\\bin\\/i) {
+	    print "removing base condor from the path and trying again\n";
+            my $tpath = $ENV{PATH};
+            $tpath =~ s/^[a-z]:\\condor\\bin[\\]?;//ig;
+            $ENV{PATH} = $tpath;
+            $which_master = `\@for \%I in (condor_master.exe) do \@echo(%~\$PATH:I`;
+            print "which condor_master is now $which_master\n";
+        }
+    } else {
+    	TestGlue::which("condor_master.exe");
+    }
     
-    TestGlue::which("condor_master.exe");
-    
-	# must use cygwin perl on Windows for batch_test.pl
+	# must use cygwin perl on Windows for batch_test.pl in old batlab
 	my $perlver = `perl -version`;
 	print $perlver;
 	if (!($perlver =~ /cygwin/i)) {
-		#if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
-		#	print "attempting to run tests using ActiveState perl\n";
-		#	$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
-		#	print "PATH=$ENV{PATH}\n";
-		#} else {
+		if ($no_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) {
+			print "attempting to run tests using ActiveState perl\n";
+			$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
+			print "PATH=$ENV{PATH}\n";
+		} else {
 			print "adding cygwin to the front of the path\n";
 			$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
 			print "PATH=$ENV{PATH}\n";
@@ -202,7 +216,7 @@ else {
 			if (!($perlver =~ /cygwin/i)) {
 				die "cygwin perl not found!\n";
 			}
-		#}
+		}
 	} else {
 	   print "cygwin perl is the first perl\n";
 	}

@@ -129,9 +129,14 @@ my $want_core_dumps = 1;
 my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
-	my $tmp = `cygpath -m $testpersonalcondorlocation`;
-	CondorUtils::fullchomp($tmp);
-	$wintestpersonalcondorlocation = $tmp;
+	if ($^O =~ /MSWin32/) {
+		$wintestpersonalcondorlocation = $testpersonalcondorlocation;
+		$wintestpersonalcondorlocation =~ s/\//\\/g;
+	} else {
+		my $tmp = `cygpath -m $testpersonalcondorlocation`;
+		CondorUtils::fullchomp($tmp);
+		$wintestpersonalcondorlocation = $tmp;
+	}
 }
 
 my $targetconfig = $testpersonalcondorlocation . "/condor_config";
@@ -335,8 +340,12 @@ if(!($wantcurrentdaemons)) {
 	}
 
 	if($iswindows == 1) {
-		my $tmp = `cygpath -m $targetconfig`;
-		CondorUtils::fullchomp($tmp);
+		my $tmp = $targetconfig;
+		if ($^O =~ /MSWin32/) {
+		} else {
+			$tmp = `cygpath -m $targetconfig`;
+			CondorUtils::fullchomp($tmp);
+		}
 		$ENV{CONDOR_CONFIG} = $tmp;
 		$res = CondorPersonal::IsRunningYet($tmp);
 	} else {
@@ -357,7 +366,11 @@ if(!($wantcurrentdaemons)) {
 
 		if($iswindows == 1) {
 			my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
-			$mcmd =~ s/\\/\//g;
+			if ($^O =~ /MSWin32/) { 
+                            $mcmd = "start \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
+                        } else { 
+                            $mcmd =~ s|\\|/|g; 
+                        }
 			debug( "Starting master like this:\n",2);
 			debug( "\"$mcmd\"\n",2);
 			CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
@@ -804,40 +817,61 @@ sub WhereIsInstallDir
 	if($iswindows == 1) {
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
-		my $crunched = `cygpath -m $top`;
-		CondorUtils::fullchomp($crunched);
-		debug( "cygpath changed it to: \"$crunched\"\n",2);
-		my $ppwwdd = `pwd`;
-		debug( "pwd says: $ppwwdd\n",2);
+		if ($^O =~ /MSWin32/) {
+			my $ppwwdd = `cd`;
+                        debug( "cd says: $ppwwdd\n",2);
+		} else {
+			my $crunched = `cygpath -m $top`;
+			CondorUtils::fullchomp($crunched);
+			debug( "cygpath changed it to: \"$crunched\"\n",2);
+			my $ppwwdd = `pwd`;
+			debug( "pwd says: $ppwwdd\n",2);
+		}
 	}
 
-	my $tmp = CondorTest::Which("condor_master");
-	if ( ! ($tmp =~ /^\// ) ) {
+	my $tmp = "";
+	if($^O =~ /MSWin32/) {
+	    $tmp = `\@for \%I in (condor_master.exe) do \@echo(%~dp\$PATH:I`;
+	    if ( ! ($tmp =~ /^.:/) ) {
+                print STDERR "condor_master.exe is not in the \$PATH\ntmp=$tmp\n";
+                exit(1);
+	    }
+	    CondorUtils::fullchomp($tmp);
+	    $tmp =~ s/\\bin[\\]?$//;
+            debug( "Install Directory \"$tmp\"\n", 2);
+	    $wininstalldir = $tmp;
+	    $wininstalldir =~ s/\\$//; # remove trailing backslash (if any)
+            $installdir = $tmp;
+	    $installdir =~ s/\\/\//g; # convert backslashes to forward slashes.
+	    print "Testing this Install Directory: \"$wininstalldir\"\n";
+        } else {
+	    $tmp = CondorTest::Which("condor_master");
+	    if ( ! ($tmp =~ /^\// ) ) {
 		print STDERR "Unable to find a condor_master in your \$PATH!\n";
 		exit(1);
-	}
-	CondorUtils::fullchomp($tmp);
-	debug( "Install Directory \"$tmp\"\n",2);
-	if($iswindows == 0) {
-	    $tmp =~ s|//|/|g;
-		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
-		    ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
-			$installdir = $1;
-			print "Testing This Install Directory: \"$installdir\"\n";
-		}
-		else {
-		    die "'$tmp' didn't match path RE\n";
-		}
-	} else {
+	    }
+	    CondorUtils::fullchomp($tmp);
+	    debug( "Install Directory \"$tmp\"\n",2);
+            if($iswindows == 0) {
+  	        $tmp =~ s|//|/|g;
+		    if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
+		        ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
+			    $installdir = $1;
+			    print "Testing This Install Directory: \"$installdir\"\n";
+		    } else {
+		        die "'$tmp' didn't match path RE\n";
+		    }
+  	    } else {  # this is cygwin only
 		if($tmp =~ /^(.*)\/bin\/condor_master\s*$/) {
 			$installdir = $1;
 			$tmp = `cygpath -m $1`;
-    		CondorUtils::fullchomp($tmp);
+	    		CondorUtils::fullchomp($tmp);
 			$wininstalldir = $tmp;
 			$wininstalldir =~ s/\\/\//;
 			print "Testing This Install Directory: \"$wininstalldir\"\n";
 		}
-	}
+	    }
+	}  
 }
 
 sub CreateLocal
@@ -886,6 +920,7 @@ sub CreateConfig
 
 		# create config file with todd's awk script
 		my $configcmd = "gawk -f $awkscript $genericconfig";
+		if ($^O =~ /MSWin32/) {  $configcmd =~ s/\//\\/g; }
 		debug("awk cmd is $configcmd\n",2);
 
 		open( OLDFIG, " $configcmd 2>&1 |")
@@ -955,6 +990,7 @@ sub CreateLocalConfig
 	if($iswindows == 1) {
 		# create config file with todd's awk script
 		my $configcmd = "gawk -f $awkscript $genericlocalconfig";
+		if ($^O =~ /MSWin32/) {  $configcmd =~ s/\//\\/g; }
 		debug("gawk cmd is $configcmd\n",2);
 
 		open( ORIG, " $configcmd 2>&1 |")
@@ -1046,13 +1082,18 @@ sub CreateLocalConfig
 	my $javabinary = "";
 	if($iswindows == 1) {
 
-		$javabinary = "java.exe";
+	    $javabinary = "java.exe";
+	    if ($^O =~ /MSWin32/) {
+		$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
+		CondorUtils::fullchomp($jvm);
+	    } else {
 		my $whichtest = `which $javabinary`;
-	    CondorUtils::fullchomp($whichtest);
+		CondorUtils::fullchomp($whichtest);
 		$whichtest =~ s/Program Files/progra~1/g;
 		$jvm = `cygpath -m $whichtest`;
 		CondorUtils::fullchomp($jvm);
-		CondorTest::debug("which java said<<$jvm>>\n",2);
+	    }
+	    CondorTest::debug("which java said<<$jvm>>\n",2);
 
 	    $java_libdir = "$wininstalldir/lib";
 
@@ -1085,7 +1126,7 @@ sub CreateLocalConfig
 	}
     # if nothing is found, explain that, otherwise see if they just want to
     # accept what I found.
-	debug ("Setting JAVA=$jvm",2);
+	debug ("Setting JAVA=$jvm\n",2);
     # Now that we have an executable JVM, see if it is a Sun jvm because that
     # JVM it supports the -Xmx argument then, which is used to specify the
     # maximum size to which the heap can grow.

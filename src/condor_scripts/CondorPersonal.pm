@@ -1294,7 +1294,9 @@ sub IsRunningYet
 	# was set. So we will check for bypasses to normal 
 	# operation and rewrite the daemon list
 
-	debug("In IsRunningYet\n",$debuglevel);
+        my $old_debuglevel = $debuglevel;
+        $debuglevel = $DEBUGLEVEL;
+	debug("In IsRunningYet DAEMON_LIST=$daemonlist\n",$debuglevel);
 	$daemonlist =~ s/\s*//g;
 	my @daemons = split /,/, $daemonlist;
 	$daemonlist = "";
@@ -1571,6 +1573,7 @@ sub IsRunningYet
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
 	CollectDaemonPids();
 	debug("Leaving IsRunningYet\n",$debuglevel);
+	$debuglevel = $old_debuglevel;
 
 	return(1);
 }
