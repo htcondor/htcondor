@@ -913,7 +913,7 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 	ReadConsoleW(hStdin, wbuffer, maxlength, (DWORD*)&cch, NULL);
 	SetConsoleMode(hStdin, oldMode);
 	//Zero terminate the input.
-	cch = min(cch, maxlength-1);
+	cch = MIN(cch, maxlength-1);
 	wbuffer[cch] = '\0';
 
 	--cch;
