@@ -179,9 +179,6 @@ foreach (array_keys($seen_platforms) as $platform) {
   if(preg_match("/^x86_64_/", $platform)) {
     $display = preg_replace("/x86_64_/", "x86_64<br>", $platform);
   }
-  elseif(preg_match("/ia64_/", $platform)) {
-    $display = preg_replace("/ia64_/", "x86<br>", $platform);
-  }
   else {
     $display = preg_replace("/x86_/", "x86<br>", $platform);
   }
@@ -411,6 +408,9 @@ function make_cell($run, $platform, $run_type, $td_class) {
   $color = "passed";
   if($run["platforms"][$platform][$run_type]["result"] == NULL) {
     $color = "pending";
+  }
+  elseif($run["platforms"][$platform][$run_type]["result"] == -1006) {
+    $color = "interrupted";
   }
   elseif($run["platforms"][$platform][$run_type]["result"] != 0) {
     $color = "failed";

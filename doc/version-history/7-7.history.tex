@@ -30,8 +30,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor now has experimental support for IPv6.  This functionality is disabled by default.  This support has a variety of limitations, including lack of support for security, DNS, and mixed IPv4/IPv6 networks.  
-For information on enabling IPv6 support in the 7.7 series of Condor, see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
+\item Condor now has experimental support for IPv6.  
+This functionality is disabled by default.  
+This support has a variety of limitations, 
+including a lack of support for security, DNS, and mixed IPv4/IPv6 networks.  
+For information on enabling IPv6 support in the 7.7 series of Condor, 
+see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
 \Ticket{9}
 
 \item On Linux platforms, the \Condor{starter} can now optionally measure the
@@ -163,11 +167,13 @@ but not big enough to hold the whole contents of the spool directory.
 specifies the amount of time in seconds that \Condor{schedd} will hold a claim
 idle for a DAGMan job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
 
-\item \AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
-report the maximum observed memory usage.  Previously, they reported
-the most recently observed memory usage.  This change makes these
-attributes similar to \AdAttr{ImageSize}, which also reports the
-maximum observed value.  Previously, \AdAttr{ResidentSetSize} was
+\item The job ClassAd attributes
+\AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
+report the maximum observed memory usage.  
+Previously, they reported the most recently observed memory usage.  
+This change makes these attributes similar to \AdAttr{ImageSize}, 
+which also reports the maximum observed value.  
+Previously, \AdAttr{ResidentSetSize} was
 usually reported as 0 in the job history for completed jobs, because
 when the job was finished, the final observation of memory usage
 was 0.
@@ -179,14 +185,30 @@ using the new default configuration setting
 \Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
 \Ticket{2729}
 
+\item The configuration macro \MacroNI{PROCD\_LOG} now defaults to
+ \File{\$(LOG)/ProcLog}.  Previously, there was no default value,
+ so the \Condor{procd} did not log by default.
+
+\item The meaning of the \Attr{VirtualMemory} attribute of the \Condor{startd} 
+has been changed for Linux platforms.
+Previously, it was the amount of paging space configured for the system.
+So, if a machine with a lot of memory had no paging space, 
+the \Attr{VirtualMemory} attribute would report zero.
+Now, the \Attr{VirtualMemory} attribute on Linux platforms 
+is the sum of paging space and physical memory, 
+which more accurately represents the virtual memory size of the machine.
+\Ticket{2763}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item \Condor{submit} would allow ec2\_secret\_access\_key and
-  ec2\_access\_key\_id to be directories.
+\item Fixed a bug in which \Condor{submit} allowed the specification of
+\SubmitCmd{ec2\_secret\_access\_key} and \SubmitCmd{ec2\_access\_key\_id}
+to be directories instead of files.
+\Condor{submit} now generates an error in these cases.
 \Ticket{2619}
 
 \item Communication errors were not always correctly handled when
@@ -232,9 +254,16 @@ job user log files were actually symlinks.  This problem was introduced
 in the 7.7 series.
 \Ticket{2704}
 
-\item Fixed a bug where Condor did not count completed scheduler universe
-jobs in reported statistics.
+\item Fixed a bug in the collection of Statistics attributes,
+introduced in Condor version 7.7.2.
+Condor did not count completed scheduler universe jobs in reported statistics.
 \Ticket{2731}
+
+\item Fixed a rare bug in which the \Condor{c-gahp} process could get
+into an infinite loop on start up,
+if more than one \Condor{c-gahp} was running under different users,
+and the names of the users only differed in their last character.
+\Ticket{2749}
 
 \end{itemize}
 

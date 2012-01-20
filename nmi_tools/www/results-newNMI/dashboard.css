@@ -4,6 +4,9 @@ a:link { color: #1C3F75; }
 .passed {
    background-color: #55ff55;
 }
+.interrupted {
+   background-color: #FFA000;
+}
 .failed {
    background-color: #ff5555;
 }
