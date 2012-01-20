@@ -21,6 +21,8 @@
 #ifndef __CLASSAD_UTIL_H__
 #define __CLASSAD_UTIL_H__
 
+#include <sstream>
+
 #include "classad/common.h"
 
 namespace classad {
@@ -65,6 +67,32 @@ bool is_leap_year(int year);
 
 int classad_isinf(double x);
 int classad_isnan(double x);
+
+template <typename T>
+bool classad_lexcast(const std::string& s, T& v, bool detect_integer_base=false) {
+    std::stringstream ss(s);
+
+    if (detect_integer_base) {
+        // Don't enable this with non-integer types for param 'v'
+        // I cannot believe I have to do this
+        std::string::const_iterator j = s.begin();
+        if ((j != s.end()) && ((*j=='+') || (*j=='-'))) ++j;
+        if ((j != s.end()) && (*j=='0')) {
+            ++j;
+            if (j != s.end()) {
+                if ((*j=='x') || (*j=='X')) {
+                    ss >> std::hex;
+                } else {
+                    ss >> std::oct;
+                }
+            }
+        }
+    }
+
+    ss >> v;
+
+    return ss.eof() && !ss.fail();
+}
 
 } // classad
 

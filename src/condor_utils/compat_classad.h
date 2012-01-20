@@ -92,10 +92,13 @@ typedef enum
   NOT_KEYWORD
 } LexemeType;
 
+
 // This class is lifted directly from old ClassAds for EvalExprTree()
 class EvalResult
 {
     public :
+
+    typedef classad::ClassAd::IntType IntType;
 
     EvalResult();
   	~EvalResult();
@@ -116,7 +119,7 @@ class EvalResult
 
    	union
     	{
-   	    int i;
+   	    IntType i;
    	    float f;
    	    char* s;
         };
@@ -131,6 +134,8 @@ class EvalResult
 class ClassAd : public classad::ClassAd
 {
  public:
+    typedef classad::ClassAd::IntType IntType;
+
 	ClassAd();
 
 	ClassAd( const ClassAd &ad );
@@ -186,16 +191,22 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,char const *value);
 
 	int Assign(char const *name,int value)
-	{ return InsertAttr( name, value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned int value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,long value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,long long value)
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
+
+	int Assign(char const *name,unsigned long long value)
+	{ return InsertAttr( name, (IntType)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }
@@ -257,6 +268,8 @@ class ClassAd : public classad::ClassAd
 		 */
 
 	int LookupInteger(const char *name, int &value) const;
+	int LookupInteger(const char *name, long &value) const;
+	int LookupInteger(const char *name, long long &value) const;
 		/** Lookup (don't evaluate) an attribute that is a float.
 		 *  @param name The attribute
 		 *  @param value The integer
@@ -324,6 +337,8 @@ class ClassAd : public classad::ClassAd
 		 *  but is not an integer
 		 */
 	int EvalInteger (const char *name, classad::ClassAd *target, int &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, long &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, long long &value);
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute

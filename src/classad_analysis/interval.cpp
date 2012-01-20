@@ -478,7 +478,7 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 bool
 IncrementValue( classad::Value &val )
 {
-	int i;
+    classad::IntType i;
 	double d, c;
 	time_t t;
 	classad::abstime_t a;
@@ -513,7 +513,7 @@ IncrementValue( classad::Value &val )
 bool
 DecrementValue( classad::Value &val )
 {
-	int i;
+    classad::IntType i;
 	double d, c;
 	time_t t;
 	classad::abstime_t a;

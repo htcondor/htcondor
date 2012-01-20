@@ -412,7 +412,7 @@ static void test_classad(const Parameters &, Results &results)
     TEST("F looks correct", (i == 3));
 
     /* ----- Test basic insert and delete ----- */
-    success = basic->InsertAttr("new", 4);
+    success = basic->InsertAttr("new", (ClassAd::IntType)4);
     TEST("InsertAttr claims to have worked", (success == true));
     have_attribute = basic->EvaluateAttrInt("new", i);
     TEST("Have new attribute", (have_attribute == true));
@@ -514,7 +514,7 @@ static void test_classad(const Parameters &, Results &results)
     TEST("chain attribute a is 3", (i == 3));
 
     // Now we modify classad2 (parent) to contain "a".
-    success = classad2.InsertAttr("a",7);
+    success = classad2.InsertAttr("a",(ClassAd::IntType)7);
     TEST("insert a into parent",(success == true));
     have_attribute = classad1.EvaluateAttrInt("a", i);
     TEST("chain has attribute a from self (overriding parent)", (have_attribute == true));
@@ -529,12 +529,12 @@ static void test_classad(const Parameters &, Results &results)
     TEST("copy of chain has attribute b",(have_attribute == true));
     TEST("copy of chain has attribute b==4",(i==4));
 
-    success = classad3.InsertAttr("c", 6);
+    success = classad3.InsertAttr("c", (ClassAd::IntType)6);
     TEST("insert into copy of chain succeeded",(success==true));
     classad3.CopyFromChain(classad1);
     have_attribute = classad3.EvaluateAttrInt("c",i);
     TEST("copy of chain is clean",(have_attribute==false));
-    classad3.InsertAttr("c", 6);
+    classad3.InsertAttr("c", (ClassAd::IntType)6);
     success = classad3.UpdateFromChain(classad1);
     TEST("update from chain succeeded",(success == true));
     have_attribute = classad3.EvaluateAttrInt("c",i);
@@ -714,7 +714,7 @@ static void test_value(const Parameters &, Results &results)
     TEST("GetType gives REAL_VALUE", (v.GetType() == Value::REAL_VALUE));
     TEST("Real is a number", v.IsNumber());
 
-    int i = 0;
+    ClassAd::IntType i = 0;
     v.SetIntegerValue(1);
     is_expected_type = v.IsIntegerValue(i);
     TEST("Value is integer", is_expected_type);

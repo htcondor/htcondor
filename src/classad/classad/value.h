@@ -96,7 +96,7 @@ class Value
 		/** Sets an integer value; previous value discarded.
 			@param i The integer value.
 		*/
-		void SetIntegerValue(int i);
+		void SetIntegerValue(IntType i);
 
 		/** Sets the undefined value; previous value discarded.
 		*/
@@ -170,7 +170,7 @@ class Value
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
-		inline bool IsIntegerValue(int &i) const; 	
+		inline bool IsIntegerValue(IntType &i) const;
 		/** Checks if the value is integral.
 			@return true iff the value is an integer.
 		*/
@@ -207,7 +207,7 @@ class Value
             @param size This is filled in with the size of the string
 			@return true iff the value is string.
 		*/
-        inline bool IsStringValue( int &size ) const;
+        inline bool IsStringValue( IntType &size ) const;
 		/** Checks if the value is a string.
 			@return true iff the value is string.
 		*/
@@ -267,7 +267,7 @@ class Value
 			@param i The integer value of the value if the value is a number.
 			@return true iff the value is a number
 		*/
-		bool IsNumber (int &i) const;
+		bool IsNumber (IntType &i) const;
 		/** Checks if the value is numerical. If the value is an integer, it 
 				is promoted to a real.
 			@param r The real value of the value if the value is a number.
@@ -310,7 +310,7 @@ class Value
 
 		union {
 			bool			booleanValue;
-			int				integerValue;
+			IntType			integerValue;
 			double 			realValue;
 			ExprList        *listValue;
 			ClassAd			*classadValue;
@@ -340,7 +340,7 @@ IsBooleanValue() const
 }
 
 inline bool Value::
-IsIntegerValue (int &i) const
+IsIntegerValue (IntType &i) const
 {
     i = integerValue;
     return (valueType == INTEGER_VALUE);
@@ -438,7 +438,7 @@ IsStringValue( std::string &s ) const
 }
 
 inline bool Value::
-IsStringValue( int &size ) const
+IsStringValue( IntType &size ) const
 {
     if (valueType == STRING_VALUE) {
         size = strValue.size();
