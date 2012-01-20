@@ -2133,99 +2133,107 @@ at a higher level, the splice name must be included.
 \index{DAGMan!DAG FINAL node}
 \index{DAGMan input file!FINAL key word}
 
+A FINAL node is a special node that is always run at the end of the DAG,
+even if previous nodes in the DAG have failed.  Final nodes can be used
+for tasks such as cleaning up intermediate files and checking the output
+of previous nodes.
+
 The \Arg{FINAL} key word specifies a job to be run at the end of
 the DAG.  The syntax used for each \Arg{FINAL} entry is
 
 \Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP}
 
-A FINAL node is a special node that is always run at the end of the DAG,
-even if previous nodes in the DAG have failed.  Final nodes can be used
-for tasks such as cleaning up intermediate files and checking the output
-of previous nodes.  (There is one case where a final node is not run --
-if \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{True}, and
-a cycle is detected at startup time, the final node is not run.  However,
-if \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
-a cycle is detected during the course of the run, the final node
-will still be run.)
+The FINAL node is identified by \Arg{JobName}, and the Condor job
+is described by the contents of the Condor submit description file
+given by \Arg{SubmitDescriptionFileName}.
 
-One of the most important considerations with a final node is that the
-success or failure of the final node overrides all previous status
-in determining the success or failure of the DAG.  For example, if 
-some nodes of a DAG fail, but the final node succeeds, the DAG will
-be considered successful.  So if you have a final node, it's important
-that you're careful about whether it succeeds or fails -- you'll
-probably want to use the \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}
-macros described below in your final node.
+The key words \Arg{DIR} and \Arg{NOOP} are not case sensitive.
+Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
+in the order shown above.
+See section~\ref{dagman:JOB} for the descriptions of these two keywords.
+
+The only case in which a FINAL node is not run
+is if the configuration variable \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} 
+is set to \Expr{True},
+and a cycle is detected at start up time.
+If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
+a cycle is detected during the course of the run, 
+the FINAL node will be run.
+
+One of the most important considerations with a FINAL node is that the
+success or failure of the FINAL node overrides all previous status
+in determining the success or failure of the DAG.
+For example, if some nodes of a DAG fail,
+but the FINAL node succeeds, the DAG will be considered successful.
+Therefore, it is important
+to be careful about setting the exit status of the FINAL node.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
 \item[FINAL node-related macros]
 \end{description}
 
-Two special macros have been introduced for use by final nodes (they
-can also be used by "regular" nodes):  \Env{\$DAG\_STATUS} and
-\Env{\$FAILED\_COUNT}.
+Two special macros have been introduced for use by FINAL nodes:
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}.
+These macros may also be used by other nodes.
 
 \index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
 \Env{\$DAG\_STATUS} is the status of the DAG,
-according to the following values:
+defined with the following values:
 \begin{itemize}
 \item 0: OK
-\item 1: error (an error condition not enumerated below)
-\item 2: node failed (one or more nodes in the DAG have failed)
-\item 3: aborted (the DAG has been aborted by an ABORT-DAG-ON specification)
-\item 4: removed (the DAG has been \Condor{rm}'ed)
-\item 5: cycle (a cycle has been found in the DAG)
-\item 6: halted (the DAG has been halted (see section ~\ref{sec:DagSuspend}))
+\item 1: error; an error condition different than those listed here
+\item 2: one or more nodes in the DAG have failed
+\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
+\item 4: removed; the DAG has been removed by \Condor{rm}
+\item 5: cycle; a cycle was found in the DAG
+\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
 \end{itemize}
 
 \index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
-\Env{\$FAILED\_COUNT} is simply the number of nodes that have failed in the
+\Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
 DAG.
 
 The \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} macros can be used both
-as PRE and POST script arguments, and in node job submit files.
-For example:
-
+as PRE and POST script arguments, and in node job submit description files.
+As an example of this, here are the partial contents of the DAG input file,
 \begin{verbatim}
-    (In the DAG file)
-    ...
     FINAL final_node final_node.sub
     SCRIPT PRE final_node final_pre.pl $DAG_STATUS $FAILED_COUNT
-    ...
-
-    (In final_node.sub)
-    ...
-    arguments = "$(DAG_STATUS) $(FAILED_COUNT)"
-    ...
 \end{verbatim}
 
-If you have a final node in your DAG, it will \emph{always} be run at
-the end of the workflow (except in the "cycle detected at startup" case
-documented above).  If you don't want the final node to do anything in
-certain cases, use the \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}
-macros to take appropriate actions.  In the example shown below, the PRE
-script aborts fails if the DAG has been condor\_rm'ed, which causes the
-final node to be considered failed without actually submitting the
-Condor job of the node.
-
+and here are the partial contents of the submit description file, 
+\File{final\_node.sub}
 \begin{verbatim}
-    (In the DAG file)
-    ...
+    arguments = "$(DAG_STATUS) $(FAILED_COUNT)"
+\end{verbatim}
+
+If there is a FINAL node specified for a DAG, 
+it will be run at the end of the workflow.
+If this FINAL node must not do anything in certain cases, 
+use the \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}
+macros to take appropriate actions.  
+Here is an example of that behavior.
+It uses a PRE script that aborts if the DAG has been removed with \Condor{rm},
+which, in turn,
+causes the FINAL node to be considered failed without actually submitting the
+Condor job specified for the node.
+Partial contents of the DAG input file:
+\begin{verbatim}
     FINAL final_node final_node.sub
     SCRIPT PRE final_node final_pre.pl $DAG_STATUS
-    ...
+\end{verbatim}
 
-    (In final_pre.pl)
+and partial contents of the Perl PRE script, \File{final\_pre.pl}:
+\begin{verbatim}
     #! /usr/bin/env perl
-    ...
+    
     if ($ARGV[0] eq 4) {
         exit(1);
     }
-    ...
+   
 \end{verbatim}
-
 
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
@@ -2233,19 +2241,16 @@ Condor job of the node.
 \item[FINAL node limitations]
 \end{description}
 
-The following options that can be used with "regular" nodes are not
-allowed for FINAL nodes:
+There are restrictions on usage of a FINAL node.
+There is no DONE option for the Condor job.
+And, other nodes may \emph{not} reference the FINAL node in specifications of 
 \begin{itemize}
-\item DONE
 \item PARENT, CHILD
 \item RETRY
 \item ABORT-DAG-ON
 \item PRIORITY
 \item CATEGORY
 \end{itemize}
-
-Note: this feature was introduced in version 7.7.5.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}Job Recovery:  The Rescue DAG}
