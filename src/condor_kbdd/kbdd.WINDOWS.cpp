@@ -19,6 +19,8 @@
 
 
 #include <windows.h>
+#undef min
+#undef max
 
 // Shared DATA
 // put in here data that is needed globally

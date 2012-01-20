@@ -17,6 +17,9 @@
  ***************************************************************/
 #undef UNICODE
 #include <windows.h>
+#undef min
+#undef max
+
 #include "tokenize.h"
 
 template <class T> __inline bool CharIsSpace(T ch) {

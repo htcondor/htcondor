@@ -32,6 +32,8 @@
 #define _WINSOCKAPI_  //rcg 9/23/03
 #   include "windows.h"
 #endif
+#undef min
+#undef max
 
 #include "gssapi.h"
 

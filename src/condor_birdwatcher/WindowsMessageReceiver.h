@@ -21,6 +21,9 @@
 
 #include <map>
 #include <windows.h>
+#undef min
+#undef max
+
 class WindowsMessageReceiver;
 
 class WindowsMessageReceiverOwner

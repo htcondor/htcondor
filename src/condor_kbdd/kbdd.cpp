@@ -34,6 +34,9 @@
 #ifdef WIN32
 #include <windows.h>
 #else
+#undef min
+#undef max
+
 #include <utmp.h>
 #include <sys/file.h>
 #include <netinet/in.h>

@@ -96,6 +96,8 @@
 #pragma warning( disable : 4786 )
 
 #endif // WIN32
+#undef min
+#undef max
 
 
 #include "classad/debug.h"

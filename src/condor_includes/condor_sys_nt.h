@@ -66,7 +66,8 @@
 
 #include <winsock2.h>
 #include <windows.h>
-
+#undef min
+#undef max
 
 #include <io.h>
 #include <fcntl.h>

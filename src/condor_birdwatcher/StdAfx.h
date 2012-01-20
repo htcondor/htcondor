@@ -35,6 +35,9 @@
 // Windows Header Files:
 #include <windows.h>
 #include <shellapi.h>
+#undef min
+#undef max
+
 // C RunTime Header Files
 #include <stdlib.h>
 #include <malloc.h>

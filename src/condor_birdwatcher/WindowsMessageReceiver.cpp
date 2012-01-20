@@ -20,6 +20,8 @@
 #include "stdafx.h"
 #include "WindowsMessageReceiver.h"
 #include <windows.h>
+#undef min
+#undef max
 
 #pragma warning(disable:4786)
 #include "birdwatcher.h"

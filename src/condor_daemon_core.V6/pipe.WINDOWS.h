@@ -32,6 +32,8 @@
 //                          being set
 
 #include <windows.h>
+#undef min
+#undef max
 
 class PipeEnd {
 

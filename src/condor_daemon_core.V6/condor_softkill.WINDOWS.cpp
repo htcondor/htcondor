@@ -22,6 +22,9 @@
 #define _UNICODE
 
 #include <windows.h>
+#undef min
+#undef max
+
 #include <psapi.h>
 #include <stdio.h>
 

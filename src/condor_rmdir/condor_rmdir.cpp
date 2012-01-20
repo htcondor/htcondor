@@ -19,6 +19,9 @@
 
 #define UNICODE
 #include <windows.h>
+#undef min
+#undef max
+
 #include <shlwapi.h>
 #include "common.h"
 
