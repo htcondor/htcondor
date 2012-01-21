@@ -1,6 +1,6 @@
 diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C
 --- org.glite.ce.blahp/src/classad_binary_op_unwind.C	2010-03-17 08:19:34.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C	2012-01-20 16:17:36.457114000 -0600
++++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.C	2010-05-26 16:21:48.000000000 -0500
 @@ -39,10 +39,10 @@
  
  #include <strings.h> // strcasecmp
@@ -14,15 +14,6 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.
  namespace classad {
  #endif
  
-@@ -120,7 +120,7 @@
-       //state.SetScopes( ad );
- 
-       value->Evaluate(state,v);
--      int intres;
-+      IntType intres;
-       std::string strres;
- 
-       if (v.IsIntegerValue( intres ))
 @@ -221,6 +221,6 @@
    return;
  }
@@ -33,7 +24,7 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.
  #endif
 diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h
 --- org.glite.ce.blahp/src/classad_binary_op_unwind.h	2010-03-17 08:19:34.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h	2012-01-20 16:16:13.223577000 -0600
++++ org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h	2010-05-26 16:21:48.000000000 -0500
 @@ -33,12 +33,12 @@
  #
  */
@@ -60,7 +51,7 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.
  
 diff -u -r org.glite.ce.blahp/src/classad_c_helper.C org.glite.ce.blahp.patched/src/classad_c_helper.C
 --- org.glite.ce.blahp/src/classad_c_helper.C	2010-03-17 08:19:34.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/classad_c_helper.C	2012-01-20 16:21:08.147393000 -0600
++++ org.glite.ce.blahp.patched/src/classad_c_helper.C	2010-05-26 16:21:48.000000000 -0500
 @@ -38,10 +38,10 @@
  */
  
@@ -73,41 +64,4 @@ diff -u -r org.glite.ce.blahp/src/classad_c_helper.C org.glite.ce.blahp.patched/
 +#if 1
  using namespace classad;
  #endif
- 
-@@ -204,11 +204,16 @@
-     ClassAd *ad = (ClassAd *)cad;
- 
-     Value v;
-+    IntType i;
-     ad->EvaluateAttr(attribute_name, v);
- 
--    if (v.IsIntegerValue( *result ))
-+    if (v.IsIntegerValue(i))
-      {
--      return C_CLASSAD_NO_ERROR;
-+	if (i<=INT_MAX)
-+	{
-+		*result = (int) i;
-+      		return C_CLASSAD_NO_ERROR;
-+	}
-      }
-     
-     return C_CLASSAD_VALUE_NOT_FOUND;
-@@ -294,6 +299,8 @@
-                              int value)
-    {
-     ClassAd *ad;
-+    IntType i = value;
-+
-     if ((*cad) == NULL) 
-      {
-       ad = new ClassAd;
-@@ -301,7 +308,7 @@
-      }
-     else ad = (ClassAd *)(*cad);
- 
--    if (ad->InsertAttr (name, value)) return C_CLASSAD_NO_ERROR; 
-+    if (ad->InsertAttr (name, i)) return C_CLASSAD_NO_ERROR; 
-     else                              return C_CLASSAD_INSERT_FAILED;
-    }
  

@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#include <limits>
 
 #include "classad/common.h"
 #include "classad/cclassad.h"
@@ -144,13 +143,7 @@ int cclassad_insert_string( struct cclassad *c, const char *attr, const char *va
 int cclassad_insert_int( struct cclassad *c, const char *attr, int value )
 {
 	string strattr(attr);
-	return c->ad->InsertAttr(strattr,(IntType)value);
-}
-
-int cclassad_insert_long_long( struct cclassad *c, const char *attr, long long value )
-{
-	string strattr(attr);
-	return c->ad->InsertAttr(strattr,(IntType)value);
+	return c->ad->InsertAttr(strattr,value);
 }
 
 int cclassad_insert_double( struct cclassad *c, const char *attr, double value )
@@ -162,7 +155,7 @@ int cclassad_insert_double( struct cclassad *c, const char *attr, double value )
 int cclassad_insert_bool( struct cclassad *c, const char *attr, int value )
 {
 	string strattr(attr);
-	return c->ad->InsertAttr(strattr,(IntType)value);
+	return c->ad->InsertAttr(strattr,value);
 }
 
 
@@ -205,30 +198,15 @@ int cclassad_evaluate_to_string( struct cclassad *c, const char *expr, char **re
 
 int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result )
 {
-    typedef int target_t;
 	string exprstring(expr);
 	Value value;
-    IntType vi;
 
-    if (!(c->ad->EvaluateExpr(exprstring,value) && value.IsIntegerValue(vi))) return 0;
-    if (vi < std::numeric_limits<target_t>::min()) return 0;
-    if (vi > std::numeric_limits<target_t>::max()) return 0;
-    *result = target_t(vi);
-	return 1;
-}
-
-int cclassad_evaluate_to_long_long( struct cclassad *c, const char *expr, long long* result )
-{
-    typedef long long target_t;
-	string exprstring(expr);
-	Value value;
-    IntType vi;
-
-    if (!(c->ad->EvaluateExpr(exprstring,value) && value.IsIntegerValue(vi))) return 0;
-    if (vi < std::numeric_limits<target_t>::min()) return 0;
-    if (vi > std::numeric_limits<target_t>::max()) return 0;
-    *result = target_t(vi);
-	return 1;
+	if(c->ad->EvaluateExpr(exprstring,value)) {
+		if(value.IsIntegerValue(*result)) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int cclassad_evaluate_to_double( struct cclassad *c, const char *expr, double *result )

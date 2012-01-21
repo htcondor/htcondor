@@ -539,8 +539,7 @@ HRESULT FNEXPORT HaryList_InsertList (
         ixInsert = cItems;
 
     DASSERT(ixInsert <= cItems);
-    //ixInsert = MIN(ixInsert, cItems);
-    ixInsert = (ixInsert < cItems) ? ixInsert : cItems;
+    ixInsert = min(ixInsert, cItems);
 
     // create space for the new item if needed.
     //

@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#include <limits>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -801,7 +800,7 @@ size(const char *, const ArgumentList &argList,
 	Value             arg;
 	const ExprList    *listToSize;
     ClassAd           *classadToSize;
-	IntType           length;
+	int			      length;
 
 	// we accept only one argument
 	if (argList.size() != 1) {
@@ -894,8 +893,6 @@ sumAvg(const char *name, const ArgumentList &argList,
 				Operation::Operate(Operation::ADDITION_OP, result, 
 								   listElementValue, result);
 			}
-            IntType t=0;
-            result.IsIntegerValue(t);
 		}
 	}
 
@@ -1667,6 +1664,8 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	Value &result )
 {
 	Value 	arg0, arg1, arg2;
+	string	buf;
+	int		offset, len=0, alen;
 
 		// two or three arguments
 	if( argList.size() < 2 || argList.size() > 3 ) {
@@ -1689,10 +1688,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 		return( true );
 	}
 
-	// arg0 must be string, arg1 must be int, arg2 (if given) must be int
-	string	buf;
-    IntType offset = 0;
-    IntType len = 0;
+		// arg0 must be string, arg1 must be int, arg2 (if given) must be int
 	if( !arg0.IsStringValue( buf ) || !arg1.IsIntegerValue( offset )||
 		(argList.size( ) > 2 && !arg2.IsIntegerValue( len ) ) ) {
 		result.SetErrorValue( );
@@ -1701,7 +1697,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 
 		// perl-like substr; negative offsets and lengths count from the end
 		// of the string
-    IntType alen = buf.size( );
+	alen = buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
 	} else if( offset >= alen ) {
@@ -1718,27 +1714,20 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 
 	// to make sure that if length is specified as 0 explicitly
 	// then, len is set to 0
-	if (argList.size( ) == 3) {
-        IntType templen;
-        arg2.IsIntegerValue( templen );
-        if (templen == 0) len = 0;
+	if(argList.size( ) == 3) {
+	  int templen;
+	  arg2.IsIntegerValue( templen );
+	  if(templen == 0)
+	    len = 0;
 	}
 
-    // this test goes haywire (and isn't necessary) if size_type has same precision as IntType:
-    if (sizeof(std::string::size_type) < sizeof(IntType)) {
-        const IntType mx = IntType(std::numeric_limits<std::string::size_type>::max());
-        if ((offset > mx) || (len > mx)) {
-            result.SetErrorValue();
-            return false;
-        }
-    }
+		// allocate storage for the string
+	string str;
 
-    string str;
-    str.assign(buf, offset, len);
-    result.SetStringValue(str);
-    return true;
+	str.assign( buf, offset, len );
+	result.SetStringValue( str );
+	return( true );
 }
-
 
 bool FunctionCall::
 compareString( const char*name, const ArgumentList &argList, EvalState &state, 
@@ -1801,7 +1790,7 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 		// takes exactly one argument
 	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
-		return( false );
+		return( true );
 	}
 	if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );
@@ -1915,7 +1904,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::INTEGER_VALUE:
 			{
-                IntType ival;
+				int ival;
 				arg.IsIntegerValue( ival );
 				result.SetBooleanValue( ival != 0 );
 				return( true );
@@ -1985,7 +1974,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 			result.SetErrorValue( );
 			return( false );
 		}
-        IntType ivalue2 = 0;
+		int ivalue2 = 0;
 		double rvalue2 = 0;
 		time_t rsecs = 0;
 		if(relative) {// 2nd argument is N/A for reltime
@@ -2025,7 +2014,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::INTEGER_VALUE:
 			{
-                IntType ivalue;
+				int ivalue;
 				arg.IsIntegerValue( ivalue );
 				if( relative ) {
 					result.SetRelativeTimeValue( (time_t) ivalue );
@@ -2145,12 +2134,12 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
             double rvalue;
             realValue.IsRealValue(rvalue);
             if (strcasecmp("floor", name) == 0) {
-                result.SetIntegerValue((IntType) floor(rvalue));
+                result.SetIntegerValue((int) floor(rvalue));
             } else if (   strcasecmp("ceil", name)    == 0 
                        || strcasecmp("ceiling", name) == 0) {
-                result.SetIntegerValue((IntType) ceil(rvalue));
+                result.SetIntegerValue((int) ceil(rvalue));
             } else if( strcasecmp("round", name) == 0) {
-                result.SetIntegerValue((IntType) rint(rvalue));
+                result.SetIntegerValue((int) rint(rvalue));
             } else {
                 result.SetErrorValue( );
             }
@@ -2164,9 +2153,9 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;
-    IntType     int_max;
+    int     int_max;
     double  double_max;
-    IntType     random_int;
+    int     random_int;
     double  random_double;
 
     // takes exactly one argument
@@ -2218,7 +2207,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		}
 		break;
 	case Value::INTEGER_VALUE: {
-		IntType intval;
+		int intval;
 		if( !arg1.IsIntegerValue(intval) ) {
 			result.SetErrorValue();
 			return( false );
@@ -2319,7 +2308,7 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg,intarg;
-    IntType tot_secs;
+	int tot_secs;
 
 		// takes exactly one argument
 	if( argList.size() != 1 ) {
@@ -2827,7 +2816,7 @@ static bool
 doSplitTime(const Value &time, ClassAd * &splitClassAd)
 {
     bool             did_conversion;
-    IntType   integer;
+    int              integer;
     double           real;
     abstime_t        asecs;
     double           rsecs;
@@ -2867,14 +2856,14 @@ absTimeToClassAd(const abstime_t &asecs, ClassAd * &splitClassAd)
     getGMTime( &clock, &tms );
 
     splitClassAd->InsertAttr("Type", "AbsoluteTime");
-    splitClassAd->InsertAttr("Year", (IntType)tms.tm_year + 1900);
-    splitClassAd->InsertAttr("Month", (IntType)tms.tm_mon + 1);
-    splitClassAd->InsertAttr("Day", (IntType)tms.tm_mday);
-    splitClassAd->InsertAttr("Hours", (IntType)tms.tm_hour);
-    splitClassAd->InsertAttr("Minutes", (IntType)tms.tm_min);
-    splitClassAd->InsertAttr("Seconds", (IntType)tms.tm_sec);
+    splitClassAd->InsertAttr("Year", tms.tm_year + 1900);
+    splitClassAd->InsertAttr("Month", tms.tm_mon + 1);
+    splitClassAd->InsertAttr("Day", tms.tm_mday);
+    splitClassAd->InsertAttr("Hours", tms.tm_hour);
+    splitClassAd->InsertAttr("Minutes", tms.tm_min);
+    splitClassAd->InsertAttr("Seconds", tms.tm_sec);
     // Note that we convert the timezone from seconds to minutes.
-    splitClassAd->InsertAttr("Offset", (IntType)asecs.offset);
+    splitClassAd->InsertAttr("Offset", asecs.offset);
     
     return;
 }
@@ -2914,10 +2903,10 @@ relTimeToClassAd(double rsecs, ClassAd * &splitClassAd)
     
     splitClassAd = new ClassAd;
     splitClassAd->InsertAttr("Type", "RelativeTime");
-    splitClassAd->InsertAttr("Days", (IntType)days);
-    splitClassAd->InsertAttr("Hours", (IntType)hrs);
-    splitClassAd->InsertAttr("Minutes", (IntType)mins);
-    splitClassAd->InsertAttr("Seconds", (IntType)secs);
+    splitClassAd->InsertAttr("Days", days);
+    splitClassAd->InsertAttr("Hours", hrs);
+    splitClassAd->InsertAttr("Minutes", mins);
+    splitClassAd->InsertAttr("Seconds", secs);
     
     return;
 }

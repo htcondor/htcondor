@@ -38,9 +38,6 @@
 
 #include <iostream>
 #include <windows.h>
-#undef min
-#undef max
-
 #include <stdio.h>
 #include <stdlib.h>
 

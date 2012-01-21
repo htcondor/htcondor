@@ -149,9 +149,9 @@ Unparse(
 			break;
 		}
 		case Value::INTEGER_VALUE: {
-			IntType i;
+			int	i;
 			val.IsIntegerValue(i);
-			sprintf(tempBuf, "%lld", i);
+			sprintf(tempBuf, "%d", i);
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_Start);
 			buffer += tempBuf;
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_End);

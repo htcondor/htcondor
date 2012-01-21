@@ -53,7 +53,6 @@
 
 */
 
-#include <limits>
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
@@ -1608,18 +1607,30 @@ param_with_default_abort(const char *name, int abort)
 	return val;
 }
 
+/*
+** Return the integer value associated with the named paramter.
+** This version returns true if a the parameter was found, or false
+** otherwise.
+** If the value is not defined or not a valid integer, then
+** return the default_value argument .  The min_value and max_value
+** arguments are optional and default to MININT and MAXINT.
+** These range checks are disabled if check_ranges is false.
+*/
 
 bool
-param_integer_internal(const char* name, ClassAd::IntType& value,
-                       bool use_default, ClassAd::IntType default_value,
-                       bool check_ranges, ClassAd::IntType min_value, ClassAd::IntType max_value,
-                       ClassAd* me, ClassAd* target,
-                       bool use_param_table)
+param_integer( const char *name, int &value,
+			   bool use_default, int default_value,
+			   bool check_ranges, int min_value, int max_value,
+			   ClassAd *me, ClassAd *target,
+			   bool use_param_table )
 {
-	if (use_param_table) {
+	if(use_param_table) {
 		int tbl_default_valid;
-        ClassAd::IntType tbl_default_value = param_default_integer( name, &tbl_default_valid );
-		bool tbl_check_ranges = (param_range_integer(name, &min_value, &max_value)==-1) ? false : true;
+		int tbl_default_value = 
+			param_default_integer( name, &tbl_default_valid );
+		bool tbl_check_ranges = 
+			(param_range_integer(name, &min_value, &max_value)==-1) 
+				? false : true;
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
@@ -1632,48 +1643,80 @@ param_integer_internal(const char* name, ClassAd::IntType& value,
 			check_ranges = true;
 		}
 	}
+	
+	int result;
+	long long_result;
+	char *string;
+	char *endptr = NULL;
 
-	ASSERT(name);
-	char* string = param(name);
-	if (!string) {
-		dprintf(D_CONFIG, "%s is undefined, using default value of %lld\n", name, default_value);
-		if (use_default) value = default_value;
+	ASSERT( name );
+	string = param( name );
+	if( ! string ) {
+		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
+				 name, default_value );
+		if ( use_default ) {
+			value = default_value;
+		}
 		return false;
 	}
 
-    ClassAd rhs;
-    if (me) rhs = *me;
+	long_result = strtol(string,&endptr,10);
+	result = long_result;
 
-    if (!rhs.AssignExpr(name, string)) {
-        EXCEPT("Invalid expression for %s (%s) "
-               "in condor configuration.  Please set it to "
-               "an integer expression in the range %lld to %lld "
-               "(default %lld).",
-               name, string, min_value, max_value, default_value);
-    }
+	ASSERT(endptr);
+	if( endptr != string ) {
+		while( isspace(*endptr) ) {
+			endptr++;
+		}
+	}
+	bool valid = (endptr != string && *endptr == '\0');
 
-    ClassAd::IntType result;
-	if (!rhs.EvalInteger(name, target, result)) {
-        EXCEPT("Failed to evaluate as integer for %s (%s) "
-               "in condor configuration.  Please set it to "
-               "an integer expression in the range %lld to %lld "
-               "(default %lld).",
-               name, string, min_value, max_value, default_value);
-    }
+	if( !valid ) {
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		if( me ) {
+			rhs = *me;
+		}
+		if( !rhs.AssignExpr( name, string ) ) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
 
-	if (check_ranges && (result < min_value)) {
-		EXCEPT("%s in the condor configuration is too low (%s)."
-               "  Please set it to an integer in the range %lld to %lld"
-               " (default %lld).",
-               name, string, min_value, max_value, default_value);
-	} else if (check_ranges && (result > max_value)) {
-		EXCEPT("%s in the condor configuration is too high (%s)."
-               "  Please set it to an integer in the range %lld to %lld"
-               " (default %lld).",
-               name, string, min_value, max_value, default_value);
+		if( !rhs.EvalInteger(name,target,result) ) {
+			EXCEPT("Invalid result (not an integer) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+		long_result = result;
 	}
 
-	free(string);
+	if( (long)result != long_result ) {
+		EXCEPT( "%s in the condor configuration is out of bounds for"
+				" an integer (%s)."
+				"  Please set it to an integer in the range %d to %d"
+				" (default %d).",
+				name, string, min_value, max_value, default_value );
+	}
+	else if ( check_ranges  &&  ( result < min_value )  ) {
+		EXCEPT( "%s in the condor configuration is too low (%s)."
+				"  Please set it to an integer in the range %d to %d"
+				" (default %d).",
+				name, string, min_value, max_value, default_value );
+	}
+	else if ( check_ranges  && ( result > max_value )  ) {
+		EXCEPT( "%s in the condor configuration is too high (%s)."
+				"  Please set it to an integer in the range %d to %d"
+				" (default %d).",
+				name, string, min_value, max_value, default_value );
+	}
+	free( string );
 
 	value = result;
 	return true;
@@ -1682,131 +1725,27 @@ param_integer_internal(const char* name, ClassAd::IntType& value,
 
 /*
 ** Return the integer value associated with the named paramter.
-** This version returns true if a the parameter was found, or false
-** otherwise.
-** If the value is not defined or not a valid integer, then
-** return the default_value argument .  The min_value and max_value
-** arguments are optional and default to MININT and MAXINT.
-** These range checks are disabled if check_ranges is false.
-*/
-bool
-param_integer(const char* name, int& value,
-              bool use_default, int default_value,
-              bool check_ranges, int min_value, int max_value,
-              ClassAd* me, ClassAd* target,
-              bool use_param_table)
-{
-    typedef int target_t;
-    ClassAd::IntType v;
-    if (!param_integer_internal(name, v, use_default, default_value,
-                                check_ranges, min_value, max_value,
-                                me, target,
-                                use_param_table)) {
-        return false;
-    }
-
-    if ((v < std::numeric_limits<target_t>::min()) || 
-        (v > std::numeric_limits<target_t>::max())) {
-        EXCEPT("Configured value for %s (%lld) out of range for %d-byte integer", 
-               name, v, int(sizeof(target_t)));
-    }
-
-    value = target_t(v);
-    return true;
-}
-
-/*
-** Return the integer value associated with the named paramter.
 ** If the value is not defined or not a valid integer, then
 ** return the default_value argument.  The min_value and max_value
 ** arguments are optional and default to MININT and MAXINT.
 */
+
 int
-param_integer(const char *name, int default_value,
-              int min_value, int max_value, bool use_param_table)
+param_integer( const char *name, int default_value,
+			   int min_value, int max_value, bool use_param_table )
 {
-    typedef int target_t;
-    ClassAd::IntType v;
+	int result;
 
-	param_integer_internal(name, v, true, default_value,
-                           true, min_value, max_value, NULL, NULL, use_param_table);
-
-    if ((v < std::numeric_limits<target_t>::min()) || 
-        (v > std::numeric_limits<target_t>::max())) {
-        EXCEPT("Configured value for %s (%lld) out of range for %d-byte integer", 
-               name, v, int(sizeof(target_t)));
-    }
-
-	return target_t(v);
+	param_integer( name, result, true, default_value,
+				   true, min_value, max_value, NULL, NULL, use_param_table );
+	return result;
 }
-
 
 int param_integer_c( const char *name, int default_value,
 					   int min_value, int max_value, bool use_param_table )
 {
 	return param_integer( name, default_value, min_value, max_value, use_param_table );
 }
-
-
-long
-param_long(const char *name, long default_value,
-           long min_value, long max_value, bool use_param_table)
-{
-    typedef long target_t;
-    ClassAd::IntType v;
-
-	param_integer_internal(name, v, true, default_value,
-                           true, min_value, max_value, NULL, NULL, use_param_table);
-
-    if ((v < std::numeric_limits<target_t>::min()) || 
-        (v > std::numeric_limits<target_t>::max())) {
-        EXCEPT("Configured value for %s (%lld) out of range for %d-byte integer", 
-               name, v, int(sizeof(target_t)));
-    }
-
-	return target_t(v);
-}
-
-
-long long
-param_long_long(const char *name, long long default_value,
-                long long min_value, long long max_value, bool use_param_table)
-{
-    typedef long long target_t;
-    ClassAd::IntType v;
-
-	param_integer_internal(name, v, true, default_value,
-                           true, min_value, max_value, NULL, NULL, use_param_table);
-
-    if ((v < std::numeric_limits<target_t>::min()) || 
-        (v > std::numeric_limits<target_t>::max())) {
-        EXCEPT("Configured value for %s (%lld) out of range for %d-byte integer", 
-               name, v, int(sizeof(target_t)));
-    }
-
-	return target_t(v);
-}
-
-
-off_t
-param_off_t(const char *name, off_t default_value,
-            off_t min_value, off_t max_value, bool use_param_table)
-{
-    typedef off_t target_t;
-    ClassAd::IntType v;
-
-	param_integer_internal(name, v, true, default_value,
-                           true, min_value, max_value, NULL, NULL, use_param_table);
-
-    if ((v < std::numeric_limits<target_t>::min()) || 
-        (v > std::numeric_limits<target_t>::max())) {
-        EXCEPT("Configured value for %s (%lld) out of range for %d-byte integer", 
-               name, v, int(sizeof(target_t)));
-    }
-
-	return target_t(v);
-}
-
 
 // require that the attribute I'm looking for is defined in the config file.
 char* param_or_except(const char *attr)

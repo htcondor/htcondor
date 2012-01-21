@@ -16,8 +16,6 @@
  * limitations under the License.
  *
  ***************************************************************/
-#include <limits>
-
 #include "condor_common.h"
 #include "compat_classad.h"
 
@@ -30,16 +28,6 @@
 #include "Regex.h"
 
 using namespace std;
-
-// The compat-classad layer's version of stringlistsum() and friends munges
-// int and float types together and resolves afterward.  As part of the move
-// to support 64-bit integer precision, I'm going to use long double here, because
-// double only supports 51 bits of integer precision.  MSVC apparently maps long double
-// to just 'double' under the hood, so I guess Windows builds will support 51 bits
-// of integer precision instead of 64.  One more reason Bill Gates is damned.
-// Improving on this will require redesigning the current stringlistxxx() handling 
-// system, not sure it's worth it, but it is an option.
-typedef long double FloatType;
 
 // gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
 #if !defined(FLT_MIN) && defined(__FLT_MIN__)
@@ -131,7 +119,7 @@ void EvalResult::fPrintResult(FILE *fi)
     {
 	case LX_INTEGER :
 
-	     fprintf(fi, "%lld", this->i);
+	     fprintf(fi, "%d", this->i);
 	     break;
 
 	case LX_FLOAT :
@@ -189,7 +177,7 @@ void EvalResult::toString(bool force)
 			break;
 		case LX_INTEGER: {
 			MyString buf;
-			buf.sprintf("%lld",i);
+			buf.sprintf("%d",i);
 			s = strnewp(buf.Value());
 			type = LX_STRING;
 			break;
@@ -340,21 +328,25 @@ bool stringListSize_func( const char * /*name*/,
 	return true;
 }
 
-FloatType sum_func(FloatType item, FloatType accumulator)
+static
+double sum_func( double item, double accumulator )
 {
 	return item + accumulator;
 }
 
-FloatType min_func(FloatType item, FloatType accumulator)
+static
+double min_func( double item, double accumulator )
 {
 	return item < accumulator ? item : accumulator;
 }
 
-FloatType max_func(FloatType item, FloatType accumulator)
+static
+double max_func( double item, double accumulator )
 {
 	return item > accumulator ? item : accumulator;
 }
 
+static
 bool stringListSummarize_func( const char *name,
 							   const classad::ArgumentList &arg_list,
 							   classad::EvalState &state, classad::Value &result )
@@ -363,8 +355,8 @@ bool stringListSummarize_func( const char *name,
 	std::string list_str;
 	std::string delim_str = ", ";
 	bool is_avg = false;
-	FloatType (*func)(FloatType, FloatType) = NULL;
-	FloatType accumulator;
+	double (* func)( double, double ) = NULL;
+	double accumulator;
 	bool is_real = false;
 	bool empty_allowed = false;
 
@@ -400,10 +392,10 @@ bool stringListSummarize_func( const char *name,
 		is_avg = true;
 	} else if ( strcasecmp( name, "stringlistmin" ) == 0 ) {
 		func = min_func;
-		accumulator = std::numeric_limits<FloatType>::max();
+		accumulator = FLT_MAX;
 	} else if ( strcasecmp( name, "stringlistmax" ) == 0 ) {
 		func = max_func;
-		accumulator = std::numeric_limits<FloatType>::min();
+		accumulator = FLT_MIN;
 	} else {
 		result.SetErrorValue();
 		return false;
@@ -420,15 +412,15 @@ bool stringListSummarize_func( const char *name,
 	}
 
 	sl.rewind();
-	while (const char* entry = sl.next()) {
-		FloatType temp;
-        int n;
-		int r = sscanf(entry, "%Lf%n", &temp, &n);
+	const char *entry;
+	while ( (entry = sl.next()) ) {
+		double temp;
+		int r = sscanf(entry, "%lf", &temp);
 		if (r != 1) {
 			result.SetErrorValue();
 			return true;
 		}
-		if (strspn(entry, "+-0123456789") != (unsigned)n) {
+		if (strspn(entry, "+-0123456789") != strlen(entry)) {
 			is_real = true;
 		}
 		accumulator = func( temp, accumulator );
@@ -439,9 +431,9 @@ bool stringListSummarize_func( const char *name,
 	}
 
 	if ( is_real ) {
-		result.SetRealValue(accumulator);
+		result.SetRealValue( accumulator );
 	} else {
-		result.SetIntegerValue((classad::IntType)accumulator);
+		result.SetIntegerValue( (int)accumulator );
 	}
 
 	return true;
@@ -983,49 +975,24 @@ LookupString( const char *name, std::string &value ) const
 } 
 
 int ClassAd::
-LookupInteger(const char *name, int& value) const {
-    typedef int target_t;
-    long long v = 0;
-    if (!LookupInteger(name, v)) return 0;
-    if (v < std::numeric_limits<target_t>::min()) return 0;
-    if (v > std::numeric_limits<target_t>::max()) return 0;
-    value = target_t(v);
-    return 1;
-}
+LookupInteger( const char *name, int &value ) const 
+{
+	bool    boolVal;
+	int     haveInteger;
+	string  sName(name);
+	int		tmp_val;
 
-int ClassAd::
-LookupInteger(const char *name, long& value) const {
-    typedef long target_t;
-    long long v = 0;
-    if (!LookupInteger(name, v)) return 0;
-    if (v < std::numeric_limits<target_t>::min()) return 0;
-    if (v > std::numeric_limits<target_t>::max()) return 0;
-    value = target_t(v);
-    return 1;
-}
-
-int ClassAd::
-LookupInteger(const char *name, long long& value) const {
-    typedef long long target_t;
-	int rc = 0;
-    IntType	v = 0;
-	bool bv = false;
-
-	if (EvaluateAttrInt(name, v)) {
-		rc = 1;
-	} else if (EvaluateAttrBool(name, bv)) {
-		v = bv ? 1 : 0;
-		rc = 1;
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
+		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
 	}
-
-    if (v < std::numeric_limits<target_t>::min()) rc = 0;
-    if (v > std::numeric_limits<target_t>::max()) rc = 0;
-
-    if (rc) value = target_t(v);
-
-	return rc;
+	return haveInteger;
 }
-
 
 int ClassAd::
 LookupFloat( const char *name, float &value ) const
@@ -1200,52 +1167,34 @@ EvalString(const char *name, classad::ClassAd *target, std::string & value)
 }
 
 int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, int& value) {
-    typedef int target_t;
-    long long v = 0;
-    if (!EvalInteger(name, target, v)) return 0;
-    if (v < std::numeric_limits<target_t>::min()) return 0;
-    if (v > std::numeric_limits<target_t>::max()) return 0;
-    value = target_t(v);
-    return 1;
-}
-
-int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, long& value) {
-    typedef long target_t;
-    long long v = 0;
-    if (!EvalInteger(name, target, v)) return 0;
-    if (v < std::numeric_limits<target_t>::min()) return 0;
-    if (v > std::numeric_limits<target_t>::max()) return 0;
-    value = target_t(v);
-    return 1;
-}
-
-int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, long long& value) {
-    typedef long long target_t;
-    IntType v = 0;
+EvalInteger (const char *name, classad::ClassAd *target, int &value)
+{
 	int rc = 0;
+	int tmp_val;
 
-	if (target == this || target == NULL) {
+	if( target == this || target == NULL ) {
 		getTheMyRef( this );
-		if (EvaluateAttrInt(name, v)) rc = 1;
+		if( EvaluateAttrInt( name, tmp_val ) ) { 
+			value = tmp_val;
+			rc = 1;
+		}
 		releaseTheMyRef( this );
-	} else {
-    	getTheMatchAd( this, target );
-    	if (this->Lookup(name)) {
-    		if (this->EvaluateAttrInt(name, v)) rc = 1;
-    	} else if (target->Lookup(name)) {
-    		if (target->EvaluateAttrInt(name, v)) rc = 1;
-    	}
-        releaseTheMatchAd();
-    }
+		return rc;
+	}
 
-    if (v < std::numeric_limits<target_t>::min()) rc = 0;
-    if (v > std::numeric_limits<target_t>::max()) rc = 0;
-
-    if (rc) value = target_t(v);
-
+	getTheMatchAd( this, target );
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttrInt( name, tmp_val ) ) {
+			value = tmp_val;
+			rc = 1;
+		}
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttrInt( name, tmp_val ) ) {
+			value = tmp_val;
+			rc = 1;
+		}
+	}
+	releaseTheMatchAd();
 	return rc;
 }
 
@@ -1255,7 +1204,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-    IntType intVal;
+	int intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1323,7 +1272,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-    IntType intVal;
+	int intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {

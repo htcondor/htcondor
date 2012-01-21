@@ -185,7 +185,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 
         // write out a "OpenTransaction" record
     if(!rec.InsertAttr(ATTR_OP_TYPE,
-			(IntType)ClassAdCollectionInterface::ClassAdCollOp_OpenTransaction)||
+			ClassAdCollectionInterface::ClassAdCollOp_OpenTransaction)||
             !rec.InsertAttr( "XactionName", xactionName ) 				||
 			( local && !rec.InsertAttr( "LocalTransaction", true ) ) ) {
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
@@ -216,7 +216,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
     
         // write out a "CommitTransaction" record and flush the sink
     if(!rec.InsertAttr(ATTR_OP_TYPE,
-			(IntType)ClassAdCollectionInterface::ClassAdCollOp_CommitTransaction)){
+			ClassAdCollectionInterface::ClassAdCollOp_CommitTransaction)){
 		CondorErrMsg += "; FATAL ERROR: failed to log transaction";
         return( false );
     }
@@ -271,10 +271,10 @@ LogCommit( FILE *fp, ClassAdUnParser *unp )
 	string	buf;
 
     if(!rec.InsertAttr(ATTR_OP_TYPE,
-			(IntType)ClassAdCollectionInterface::ClassAdCollOp_CommitTransaction)
+			ClassAdCollectionInterface::ClassAdCollOp_CommitTransaction)
 			|| !rec.InsertAttr( "XactionName", xactionName ) 	
 			|| !rec.InsertAttr( "ServerAddr", addr )	
-			|| !rec.InsertAttr( "ServerPort", (IntType)port )	) {
+			|| !rec.InsertAttr( "ServerPort", port )	) {
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
 	}
@@ -302,7 +302,7 @@ LogAckCommit( FILE *fp, ClassAdUnParser *unp )
 	string	buf;
 
     if(!rec.InsertAttr(ATTR_OP_TYPE,
-			(IntType)ClassAdCollectionInterface::ClassAdCollOp_AckCommitTransaction )||
+			ClassAdCollectionInterface::ClassAdCollOp_AckCommitTransaction )||
             !rec.InsertAttr( "XactionName", xactionName) ) {
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );
@@ -331,7 +331,7 @@ LogAbort( FILE *fp, ClassAdUnParser *unp )
 	string	buf;
 
     if(!rec.InsertAttr(ATTR_OP_TYPE,
-			(IntType)ClassAdCollectionInterface::ClassAdCollOp_AbortTransaction)
+			ClassAdCollectionInterface::ClassAdCollOp_AbortTransaction)
 			|| !rec.InsertAttr( "XactionName", xactionName.c_str( ) ) ) {
 		CondorErrMsg += "FATAL ERROR: failed to log transaction";
 		return( false );

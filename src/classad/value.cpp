@@ -102,7 +102,7 @@ Clear()
 
 
 bool Value::
-IsNumber (IntType &i) const
+IsNumber (int &i) const
 {
 	switch (valueType) {
 		case INTEGER_VALUE:
@@ -110,7 +110,7 @@ IsNumber (IntType &i) const
 			return true;
 
 		case REAL_VALUE:
-			i = (IntType) realValue;	// truncation	
+			i = (int) realValue;	// truncation	
 			return true;
 
 		default:
@@ -223,7 +223,7 @@ SetBooleanValue( bool b )
 }
 
 void Value::
-SetIntegerValue (IntType i)
+SetIntegerValue (int i)
 {
     valueType=INTEGER_VALUE;
     integerValue = i;
@@ -389,7 +389,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 	const char	        *start;
 	const char          *end;
 	char                *end_tmp;
-    IntType      ivalue;
+	int		            ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
@@ -484,14 +484,15 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 
 bool convertValueToIntegerValue(const Value value, Value &integerValue)
 {
-    bool                could_convert = false;
+    bool                could_convert;
 	string	            buf;
-	IntType             ivalue = 0;
-	bool	            bvalue = false;
-	double	            rvalue = 0;
+    char                *end;
+	int		            ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
-	Value::NumberFactor nf = Value::NO_FACTOR;
+	bool	            bvalue;
+	double	            rvalue;
+	Value::NumberFactor nf;
 
 	switch(value.GetType()) {
 		case Value::UNDEFINED_VALUE:
@@ -507,33 +508,30 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
             break;
 
 		case Value::STRING_VALUE:
-                //could_convert = true;
-			value.IsStringValue(buf);
-            if (buf.empty()) {
-				integerValue.SetErrorValue();
+			value.IsStringValue( buf );
+			ivalue = (int) strtod( buf.c_str( ), (char**) &end);
+			if( end == buf && ivalue == 0 ) {
+				// strtol() returned an error
+				integerValue.SetErrorValue( );
                 could_convert = false;
-                break;
-            }
-            nf = Value::NO_FACTOR;
-            switch (toupper(*(buf.end()-1))) {
+			} else {
+                could_convert = true;
+                switch( toupper( *end ) ) {
                 case 'B':  nf = Value::B_FACTOR; break;
                 case 'K':  nf = Value::K_FACTOR; break;
                 case 'M':  nf = Value::M_FACTOR; break;
                 case 'G':  nf = Value::G_FACTOR; break;
                 case 'T':  nf = Value::T_FACTOR; break;
-                default: break;
-            }
-                //if (!could_convert) break;
-            if (nf != Value::NO_FACTOR) buf.erase(buf.end()-1);
-            if (classad_lexcast(buf, ivalue)) {
-                could_convert = true;
-                integerValue.SetIntegerValue((IntType)(ivalue*Value::ScaleFactor[nf]));
-            } else if (classad_lexcast(buf, rvalue)) {
-                could_convert = true;
-                integerValue.SetIntegerValue((IntType)(rvalue*Value::ScaleFactor[nf]));
-			} else {
-				integerValue.SetErrorValue();
-                could_convert = false;
+                case '\0': nf = Value::NO_FACTOR; break;
+                default:  
+                    nf = Value::NO_FACTOR; // avoid uninitialized warning
+                    integerValue.SetErrorValue( );
+                    could_convert = false;
+                    break;
+                }
+                if (could_convert) {
+                    integerValue.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
+                }
             }
             break;
 
@@ -550,7 +548,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::REAL_VALUE:
             value.IsRealValue(rvalue);
-            integerValue.SetIntegerValue((IntType)rvalue);
+            integerValue.SetIntegerValue((int) rvalue);
             could_convert = true;
             break;
 
@@ -562,7 +560,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::RELATIVE_TIME_VALUE:
 			value.IsRelativeTimeValue(rtvalue);
-			integerValue.SetIntegerValue((IntType)rtvalue);
+			integerValue.SetIntegerValue((int) rtvalue);
 			could_convert = true;
             break;
 

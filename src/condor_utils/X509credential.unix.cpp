@@ -77,7 +77,7 @@ X509Credential::GetMetadata() {
 						 myproxy_user.Value());
 
 	class_ad->InsertAttr (CREDATTR_EXPIRATION_TIME,
-                          (classad::ClassAd::IntType)expiration_time);
+						 expiration_time);
 	return class_ad;
 }
 

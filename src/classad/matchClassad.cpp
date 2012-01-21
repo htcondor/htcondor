@@ -346,7 +346,7 @@ EvalMatchExpr(ExprTree *match_expr)
 		if( val.IsBooleanValue( result ) ) {
 			return result;
 		}
-        IntType int_result = 0;
+		int int_result = 0;
 		if( val.IsIntegerValue( int_result ) ) {
 			return int_result != 0;
 		}

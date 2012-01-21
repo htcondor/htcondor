@@ -96,8 +96,6 @@
 #pragma warning( disable : 4786 )
 
 #endif // WIN32
-#undef min
-#undef max
 
 
 #include "classad/debug.h"
@@ -109,14 +107,6 @@
 #include <string.h>
 
 namespace classad {
-
-// Defines the type used by the classad libs internally to store/represent integers.
-// 'long long' is guaranteed by definition to have >= 64 bits, and is
-// a language-defined type as of C99:
-// to do: should we abstract the rest of the value implementation types?
-// to do: explore possible benefits of using precision-specific types, e.g. int64_t
-typedef long long IntType;
-
 
 extern const char * const ATTR_AD;
 extern const char * const ATTR_CONTEXT;

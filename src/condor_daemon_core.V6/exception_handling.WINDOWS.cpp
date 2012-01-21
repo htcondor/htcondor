@@ -240,7 +240,7 @@ BOOL ExceptionHandler::GetLogicalAddress(
             i++, pSection++ )    {
         DWORD sectionStart = pSection->VirtualAddress;
         DWORD sectionEnd = sectionStart
-                    + MAX(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
+                    + max(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
         // Is the address in this section???
         if ( (rva >= sectionStart) && (rva <= sectionEnd) ) {
             // Yes, address is in the section.  Calculate section and offset,

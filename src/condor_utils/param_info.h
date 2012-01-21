@@ -69,15 +69,15 @@ struct param_info_str_ranged_t_s {
 };
 
 struct param_info_int_t_s {
-    param_info_t hdr;
-    long long int_val;
+   param_info_t hdr;
+   int int_val;
 };
 
 struct param_info_int_ranged_t_s {
-    param_info_t hdr;
-    long long int_val;
-    long long int_min;
-    long long int_max;
+   param_info_t hdr;
+   int int_val;
+   int int_min;
+   int int_max;
 };
 
 struct param_info_dbl_t_s {
@@ -104,7 +104,7 @@ BEGIN_C_DECLS
 
 	void param_info_init(void);
 
-	long long param_default_integer(const char* param, int* valid);
+	int param_default_integer(const char* param, int* valid);
 	int param_default_boolean(const char* param, int* valid);
 	double param_default_double(const char* param, int* valid);
 	//returns pointer to internal object (or null), do not free
@@ -113,7 +113,7 @@ BEGIN_C_DECLS
 	// Returns -1 if param is not of the specified type.
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum
 	// possible values.
-	int param_range_integer(const char* param, long long* min, long long* max);
+	int param_range_integer(const char* param, int* min, int* max);
 	int param_range_double(const char* param, double* min, double* max);
 	
 	// Iterate the list of parameter information.

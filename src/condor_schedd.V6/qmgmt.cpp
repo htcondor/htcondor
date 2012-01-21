@@ -2331,7 +2331,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				scheduler.WriteAttrChangeToUserLog(key, raw_attribute.Value(), attr_value, old_val);
 			}
 
-			classad::IntType ivalue;
+			int ivalue;
 			double fvalue;
 
 			if ( attr_type == LX_INTEGER ) {

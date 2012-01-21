@@ -65,7 +65,7 @@ if (NOT WINDOWS)
 
   if (LINUX OR DARWIN)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 3 )
+	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 2 )
 	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()

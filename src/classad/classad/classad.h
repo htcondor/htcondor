@@ -67,9 +67,6 @@ class ClassAd : public ExprTree
      */
 
   	public:
-        // (re)defining here is useful for referencing external to the classad libs:
-        typedef ::classad::IntType IntType;
-
 		/**@name Constructors/Destructor */
 		//@{
 		/// Default constructor 
@@ -116,7 +113,7 @@ class ClassAd : public ExprTree
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
 e		*/
-		bool InsertAttr( const std::string &attrName, IntType value, 
+		bool InsertAttr( const std::string &attrName,int value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
@@ -131,7 +128,7 @@ e		*/
 			@see Value::NumberFactor
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				IntType value, Value::NumberFactor f=Value::NO_FACTOR );
+				int value, Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
@@ -354,8 +351,7 @@ e		*/
 			@param intValue The value of the attribute.
 			@return true if attrName evaluated to an integer, false otherwise.
 		*/
-		bool EvaluateAttrInt(const std::string& attr, int& intValue) const;
-		bool EvaluateAttrInt(const std::string& attr, long long& intValue) const;
+		bool EvaluateAttrInt( const std::string &attr, int& intValue ) const;
 
 		/** Evaluates an attribute to a real.
 			@param attr The name of the attribute.
@@ -371,7 +367,6 @@ e		*/
 			@return true if attrName evaluated to an number, false otherwise.
 		*/
 		bool EvaluateAttrNumber( const std::string &attr, int& intValue ) const;
-		bool EvaluateAttrNumber( const std::string &attr, long long& intValue ) const;
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.

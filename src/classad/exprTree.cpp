@@ -45,7 +45,7 @@ void ExprTree::debug_print(const char *message) const {
 
 void ExprTree::debug_format_value(Value &value) const {
 		bool boolValue = false;
-        IntType intValue = 0;
+		int intValue = 0;
 		double doubleValue = 0;
 		string stringValue = "";
 
@@ -73,8 +73,8 @@ void ExprTree::debug_format_value(Value &value) const {
 				break;
 			case Value::INTEGER_VALUE:
 				if(value.IsIntegerValue(intValue)) {
-					char buf[50];
-					sprintf(buf, "%lld", intValue);
+					char buf[12];
+					sprintf(buf, "%d", intValue);
 					result += buf;
 					result += "\n";
 				}

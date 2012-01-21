@@ -661,7 +661,7 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 			
 	MyString  number_string;
 	char      *expr_string;
-    ClassAd::IntType int_number;
+	int       int_number;
 	double    double_number;
 	std::string string_value;
 	MyString  fixed_string;
@@ -673,7 +673,7 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		((classad::Literal *)expression)->GetValue(v);
 		print_expr = false;
 		if ( v.IsIntegerValue( int_number ) ) {
-			number_string.sprintf("%lld", int_number);
+			number_string.sprintf("%d", int_number);
 			add_tag(buffer, tag_Integer, true);
 			buffer += number_string;
 			add_tag(buffer, tag_Integer, false);

@@ -20,9 +20,6 @@
 #define UNICODE
 #include <windows.h>
 #include <windowsx.h>
-#undef min
-#undef max
-
 #include "common.h"
 
 #define HARYLIST_INCLUDE_CODE 1
