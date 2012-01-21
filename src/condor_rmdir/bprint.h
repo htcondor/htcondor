@@ -129,7 +129,8 @@ int __cdecl bprint_cch(BPRINT_BUFFER & bp, LPCTSTR pszNew, int cchNew)
 int __cdecl bprint_PadRight(BPRINT_BUFFER & bp, LPCTSTR pszNew, int cch, TCHAR ch)
 {
    int cchNew = lstrlen(pszNew);
-   int cchTot = MAX(cchNew, cch);
+   //int cchTot = MAX(cchNew, cch);
+   int cchTot = (cchNew > cch) ? cchNew : cch;
 
    LPTSTR psz = bp.psz + bp.cch;
    if (bp.cch + cchTot > bp.cchMax)
