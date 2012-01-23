@@ -22,22 +22,22 @@
 			<xsd:import schemaLocation="aviary-locator.xsd" namespace="http://locator.aviary.grid.redhat.com"/>
 		</xsd:schema>
 	</wsdl:types>
-	<wsdl:message name="LookupRequest">
-		<wsdl:part name="parameters" element="loc:Lookup"/>
+	<wsdl:message name="LocateRequest">
+		<wsdl:part name="parameters" element="loc:Locate"/>
 	</wsdl:message>
-	<wsdl:message name="LookupResponse">
-		<wsdl:part name="parameters" element="loc:LookupResponse"/>
+	<wsdl:message name="LocateResponse">
+		<wsdl:part name="parameters" element="loc:LocateResponse"/>
 	</wsdl:message>
 	<wsdl:portType name="AviaryLocator">
-		<wsdl:operation name="lookup">
-			<wsdl:input message="tns:LookupRequest"/>
-			<wsdl:output message="tns:LookupResponse"/>
+		<wsdl:operation name="locate">
+			<wsdl:input message="tns:LocateRequest"/>
+			<wsdl:output message="tns:LocateResponse"/>
 		</wsdl:operation>
 	</wsdl:portType>
 	<wsdl:binding name="AviaryLocatorSOAPBinding" type="tns:AviaryLocator">
 		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
-		<wsdl:operation name="lookup">
-			<soap:operation soapAction="http://grid.redhat.com/aviary-locator/lookup"/>
+		<wsdl:operation name="locate">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-locator/locate"/>
 			<wsdl:input>
 				<soap:body use="literal"/>
 			</wsdl:input>
