@@ -7,7 +7,7 @@
         * ResourceType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
         */
 
        /**
@@ -33,13 +33,15 @@ namespace AviaryCommon
         
         /* Enumeration for this type */
         typedef enum {
+            ResourceType_ANY,
             ResourceType_COLLECTOR,
             ResourceType_EXECUTOR,
             ResourceType_EVENT_SERVER,
             ResourceType_JOB_SERVER,
-            ResourceType_LOW_LATENCY,
+            ResourceType_AMQP_SCHEDULER,
             ResourceType_MASTER,
             ResourceType_NEGOTIATOR,
+            ResourceType_QUERY_SERVER,
             ResourceType_SCHEDULER,
             ResourceType_CUSTOM
         } ADBResourceTypeEnum;
