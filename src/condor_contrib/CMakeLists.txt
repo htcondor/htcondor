@@ -20,6 +20,9 @@
 # add the contrib subtree for build & test only
 
 if (WANT_CONTRIB)
+  string(REGEX REPLACE "-Werror" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  #dprint( "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+
   if (HAVE_EXT_POSTGRESQL)
     option(WANT_QUILL "Support for quill" ON)
   endif()
