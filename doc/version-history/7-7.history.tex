@@ -23,6 +23,10 @@ The details of each version are described below.
 \item Condor version 7.7.5 not yet released.
 %\item Condor version 7.7.5 released on Month Date, 2011.
 
+\item Support for the gt4 grid-type (i.e. Web Services GRAM) in the grid
+universe has been removed.
+\Ticket{2782}
+
 \end{itemize}
 
 
@@ -202,6 +206,21 @@ Now, the \Attr{VirtualMemory} attribute on Linux platforms
 is the sum of paging space and physical memory, 
 which more accurately represents the virtual memory size of the machine.
 \Ticket{2763}
+
+\item The submit file attribute \SubmitCmd{globus\_xml} is no longer
+recognized. The following configuration parameters are no longer
+recognized:
+\begin{itemize}
+  \item \Macro{GRIDFTP\_SERVER}
+  \item \Macro{GRIDFTP\_SERVER\_WRAPPER}
+  \item \Macro{GRIDFTP\_URL\_BASE}
+  \item \Macro{GT4\_GAHP}
+  \item \Macro{GT4\_LOCATION}
+  \item \Macro{GT42\_GAHP}
+  \item \Macro{GT42\_LOCATION}
+  \item \Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}
+\end{itemize}
+\Ticket{2782}
 
 \end{itemize}
 
