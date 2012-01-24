@@ -247,7 +247,6 @@ const char	*X509UserProxy	= "x509userproxy";
 const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
-const char	*GlobusXML = "globus_xml";
 const char	*NordugridRSL = "nordugrid_rsl";
 const char	*RendezvousDir	= "rendezvousdir";
 const char	*KeystoreFile = "keystore_file";
@@ -1272,7 +1271,6 @@ SetRemoteAttrs()
 
 	ExprItem tostringize[] = {
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
-		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
 		{ GridResource, 0, ATTR_GRID_RESOURCE },
 	};
@@ -4949,12 +4947,6 @@ SetGridParams()
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
-		free( tmp );
-		InsertJobExpr ( buffer );
-	}
-
-	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}

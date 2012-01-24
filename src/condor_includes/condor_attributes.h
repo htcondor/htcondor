@@ -172,7 +172,6 @@ extern const char * const  ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
 extern const char * const  ATTR_JOB_MUST_EXPAND;
 extern const char * const  ATTR_GLOBUS_RSL;
 extern const char * const  ATTR_GLOBUS_STATUS;
-extern const char * const  ATTR_GLOBUS_XML;
 extern const char * const  ATTR_X509_USER_PROXY;
 extern const char * const  ATTR_X509_USER_PROXY_EXPIRATION;
 extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;

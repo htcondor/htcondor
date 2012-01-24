@@ -233,7 +233,6 @@ const char * const ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavai
 const char * const ATTR_JOB_MUST_EXPAND			 = "MustExpand";
 const char * const ATTR_GLOBUS_RSL				 = "GlobusRSL";
 const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
-const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
 const char * const ATTR_X509_USER_PROXY_EMAIL	 = "x509UserProxyEmail";
