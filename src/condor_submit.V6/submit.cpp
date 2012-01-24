@@ -1780,7 +1780,7 @@ SetUniverse()
 		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
-			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    gt2, gt5, infn, blah, pbs, lsf, nqs, naregi, condor,
 			//    unicore, cream, deltacloud, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1789,7 +1789,6 @@ SetUniverse()
 			//   Condor 6.7.12.
 			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
-				(strcasecmp (JobGridType, "gt4") == MATCH) ||
 				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||
@@ -1812,7 +1811,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
-				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
+				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
 						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
@@ -4905,7 +4904,6 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ||
 		 strcasecmp (JobGridType, "gt5") == MATCH ||
 		 strcasecmp (JobGridType, "nordugrid") == MATCH ) {
 
@@ -4930,8 +4928,7 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt5") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ) {
+		 strcasecmp (JobGridType, "gt5") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
@@ -5308,7 +5305,6 @@ SetGSICredentials()
 	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (strcasecmp (JobGridType, "gt2") == MATCH ||
-		  strcasecmp (JobGridType, "gt4") == MATCH ||
 		  strcasecmp (JobGridType, "gt5") == MATCH ||
 		  strcasecmp (JobGridType, "cream") == MATCH ||
 		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
@@ -5317,7 +5313,7 @@ SetGSICredentials()
 		if ( proxy_file == NULL ) {
 
 			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, gt4, nordugrid or cream jobs\n");
+			fprintf( stderr, "x509 user proxy is required for gt2, nordugrid or cream jobs\n");
 			exit (1);
 		}
 	}

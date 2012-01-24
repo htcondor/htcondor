@@ -24,45 +24,6 @@ if (WITH_GLOBUS)
 
 	if (NOT PROPER)
 
-		###################################################
-		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4")
-		ExternalProject_Add(gt4
-					#-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GT4_VER}-java.tar.gz ${CMD_TERM}
-					DOWNLOAD_DIR ${GT4_STAGE}/dl
-					URL http://parrot.cs.wisc.edu/externals/${GT4_VER}-java.tar.gz
-					#--Configure step ----------
-					CONFIGURE_COMMAND echo "Nothing to do"
-					#--Build Step ----------
-					BUILD_COMMAND echo "Nothing to do"
-					BUILD_IN_SOURCE 1
-					#--install Step ----------
-					INSTALL_DIR ${GT4_INSTALL_LOC}/lib
-					INSTALL_COMMAND mkdir -p ${GT4_INSTALL_LOC}/lib/gt4 && cp -r gt4-java/* ${GT4_INSTALL_LOC}/lib/gt4 )
-		
-		install ( DIRECTORY ${GT4_INSTALL_LOC}/lib/gt4 DESTINATION ${C_LIB} )
-		condor_post_external( gt4 OFF OFF )
-		###################################################
-		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42")
-
-		ExternalProject_Add(gt42
-							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GT42_VER}-java.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${GT42_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${GT42_VER}-java.tar.gz
-							#--Configure step ----------
-							CONFIGURE_COMMAND echo "Nothing to do"
-							#--Build Step ----------
-							BUILD_COMMAND echo "Nothing to do"
-							BUILD_IN_SOURCE 1
-							#--install Step ----------
-							INSTALL_DIR ${GT42_INSTALL_LOC}/lib
-							INSTALL_COMMAND mkdir -p ${GT42_INSTALL_LOC}/lib/gt42 && cp -r gt42-java/* ${GT42_INSTALL_LOC}/lib/gt42 )
-
-		install ( DIRECTORY ${GT42_INSTALL_LOC}/lib/gt42 DESTINATION ${C_LIB} )
-		condor_post_external( gt42 OFF OFF )
-		###################################################
-
 		if(${SYS_ARCH} MATCHES "IA64|X86_64")
 			set( GLOBUS_FLAVOR gcc64dbg )
 		elseif(AIX)
@@ -71,7 +32,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1-p6 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p7 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -112,9 +73,6 @@ if (WITH_GLOBUS)
 						OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
 						OPENSSL_LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export OPENSSL_LDFLAGS  )
 
-			set (MODIFY_LIBTOOL true)
-			set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
-
 			if(LINUX)
 				set (GLOBUS_FLAGS ${GLOBUS_FLAGS} && OPENSSL_LIBS='-lssl -lcrypto -ldl' && export OPENSSL_LIBS)
 			elseif(DARWIN)
@@ -124,18 +82,14 @@ if (WITH_GLOBUS)
 							LT_MULTI_MODULE=1 && export LT_MULTI_MODULE)
 			endif()
 
-			set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
+			set (GLOBUS_DEPENDS ${OPENSSL_REF})
 		else()
-			set (GLOBUS_DEPENDS ${GT4_REF} ${GT42_REF})
+			set (GLOBUS_DEPENDS "")
 
 			if (LINUX)
 				set (GLOBUS_FLAGS LDFLAGS='-Wl,--enable-new-dtags' && export LDFLAGS)
-				set (MODIFY_LIBTOOL sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' ${GLOBUS_INSTALL_LOC}/sbin/libtool-*)
-				set (MAKE_GRIDFTP LD_RUN_PATH='${EXTERNALS_RPATH}' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
 			else()
 				set (GLOBUS_FLAGS true)
-				set (MODIFY_LIBTOOL true)
-				set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
 			endif()
 		endif()
 
@@ -157,11 +111,7 @@ if (WITH_GLOBUS)
 							BUILD_COMMAND cd gt5.0.1-all-source-installer &&
 								${GLOBUS_FLAGS} &&
 								./configure --prefix=${GLOBUS_INSTALL_LOC} --with-flavor=${GLOBUS_FLAVOR} &&
-								make gpt gssapi_error globus-resource-management-sdk &&
-								${MODIFY_LIBTOOL} &&
-								GLOBUS_LOCATION=${GLOBUS_INSTALL_LOC} && export GLOBUS_LOCATION &&
-								make globus_gridftp_server &&
-								${MAKE_GRIDFTP}
+								make gpt gssapi_error globus-resource-management-sdk
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
@@ -220,15 +170,6 @@ if (WITH_GLOBUS)
 
 			condor_post_external( globus "include/${GLOBUS_FLAVOR}" OFF )
 
-			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server" DESTINATION ${C_LIBEXEC} )
-			if ( CONDOR_STRIP_PACKAGES )
-				if ( DARWIN )
-					install( CODE "execute_process(COMMAND strip -x \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
-				else()
-					install( CODE "execute_process(COMMAND strip \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
-				endif()
-			endif()
-
 			if ( LINUX )
 				# Install the Globus libraries manually.
 				# In order to use an install(FILES) command,
@@ -261,7 +202,6 @@ if (WITH_GLOBUS)
 					COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
 
 				# Fix up the share library dependencies
-				install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
 				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.dylib*
 					 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
 				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libltdl*.dylib*

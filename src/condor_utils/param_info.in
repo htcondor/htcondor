@@ -4132,54 +4132,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,unicore_gahp_wrapper
 id=227
 
-[GRIDFTP_URL_BASE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Url Base
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=228
-
-[GRIDFTP_SERVER]
-aliases=
-default=$(LIBEXEC)/globus-gridftp-server
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Server
-usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=229
-
-[GRIDFTP_SERVER_WRAPPER]
-aliases=
-default=$(LIBEXEC)/gridftp_wrapper.sh
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Server Wrapper
-usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=230
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT]
 aliases=
 default=3
@@ -4211,22 +4163,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,basejob
 id=234
-
-[GRIDMANAGER_MAX_WS_DESTROYS_PER_RESOURCE]
-aliases=
-default=5
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Ws Destroys Per Resource
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gt4resource
-id=235
 
 [ENABLE_GRID_MONITOR]
 aliases=
