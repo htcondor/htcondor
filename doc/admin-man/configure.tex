@@ -7392,13 +7392,6 @@ These macros affect the \Condor{gridmanager}.
   or if some globus-job-managers take a few extra seconds to exit.
   The value 0 means there is no limit. The default value is 10.
 
-\label{param:GridmanagerMaxWsDestroysPerResource}
-\item[\Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}]
-  For grid jobs of type \SubmitCmd{gt4}, limits the number of destroy
-  commands that the \Condor{gridmanager} will issue at a time to each
-  WS GRAM server. Too many destroy commands can have severe effects on
-  the server. The default value is 5.
-
 \label{param:Gahp}
 \item[\Macro{GAHP}]
   The full path to the binary of the GAHP server.
@@ -7474,13 +7467,6 @@ These macros affect the \Condor{gridmanager}.
   Beware that identifying a \Expr{gt2} server as \Expr{gt5} can result in
   overloading the server, if a large number of jobs are submitted.
 
-\label{param:GridftpUrlBase} 
-\item[\Macro{GRIDFTP\_URL\_BASE}]
-  Specifies an existing \Prog{GridFTP} server on the local system to be used for
-  file transfers for gt4 grid universe jobs. The value is given as the base
-  of a URL, such as \Expr{gsiftp://mycomp.foo.edu:2118}. The default is for
-  Condor to launch temporary \Prog{GridFTP} servers as needed for file transfer.
-
 \label{param:CGAHPLog}
 \item[\Macro{C\_GAHP\_LOG}]
   The complete path and file name of the Condor GAHP server's log.
@@ -7531,13 +7517,6 @@ These macros affect the \Condor{gridmanager}.
   The complete path and file name of the GT2 GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/gahp\_server}.
-
-\label{param:GT4GAHP}
-\item[\Macro{GT4\_GAHP}]
-  The complete path and file name of the
-  wrapper script that invokes the GT4 GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/gt4\_gahp}.
 
 \label{param:PBSGAHP}
 \item[\Macro{PBS\_GAHP}]
