@@ -202,7 +202,6 @@ pseudo_get_user_info(ClassAd *&ad)
 	return 0;
 }
 
-
 int
 pseudo_job_exit(int status, int reason, ClassAd* ad)
 {

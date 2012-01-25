@@ -155,6 +155,7 @@ FileTransfer::FileTransfer()
 	last_download_time = 0;
 	ActiveTransferTid = -1;
 	TransferStart = 0;
+	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = 0;
 	ClientCallback = 0;
 	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
@@ -1594,6 +1595,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
 
+	downloadStartTime = (int)time(NULL);
+
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
 	// the changed files later on.  why do we need this fsync, you ask?  	
@@ -2127,6 +2130,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
+	downloadEndTime = (int)time(NULL);
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
@@ -2497,7 +2501,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-
+	uploadStartTime = (int)time(NULL);
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
@@ -2985,6 +2989,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_line_number);
 	} 
 
+	uploadEndTime = (int)time(NULL);
 	upload_success = true;
 	return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
