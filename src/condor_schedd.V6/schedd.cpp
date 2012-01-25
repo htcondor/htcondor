@@ -9223,8 +9223,19 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
 	int job_start_date = 0;
 	int job_running_time = 0;
-	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &job_start_date))
+	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
+
+	int job_start_exec_date = 0, job_start_xfer_out_date = 0;
+	int job_pre_exec_time = 0, job_post_exec_time = 0;
+	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date))
+		job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
+	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date))
+		job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
+
+	stats.JobsAccumPreExecuteTime += job_pre_exec_time;
+	stats.JobsAccumPostExecuteTime += job_post_exec_time;
+	stats.JobsAccumExecuteTime += MAX(0, job_running_time - (job_pre_exec_time + job_post_exec_time));
 
 		// We get the name of the daemon that had a problem for 
 		// nice log messages...
