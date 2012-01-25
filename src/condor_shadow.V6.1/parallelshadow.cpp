@@ -325,6 +325,19 @@ ParallelShadow::getResources( void )
             host = NULL;
             claim_id = NULL;
 
+				/* Double check that the number of matches for this proc
+				   is the same as in the job ad.  This prevents races
+				   where a claim can be vacated after the schedd forks this
+					shadow 
+				*/
+			
+
+			int jobAdNumInProc = 0;
+			if (!job_ad->LookupInteger(ATTR_MAX_HOSTS, jobAdNumInProc)) {
+				dprintf(D_ALWAYS, "ERROR: no attribute MaxHosts in parallel job\n");	
+				return false;
+			};
+			ASSERT( jobAdNumInProc == numInProc);
         } // end of for loop for this proc
 
     } // end of for loop on all procs...
