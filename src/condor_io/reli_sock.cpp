@@ -910,7 +910,7 @@ ReliSock::serialize(char *buf)
     }
 
 	_who.from_sinful(sinful_string);
-	delete sinful_string;
+	delete [] sinful_string;
     
     return NULL;
 }
