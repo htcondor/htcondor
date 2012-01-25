@@ -64,9 +64,9 @@ if ( WITH_BLAHP )
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://pages.cs.wisc.edu/~jfrey/blahp-1.16.3.3.tar.gz ${CMD_TERM}
+						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.3.3.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
-						URL http://pages.cs.wisc.edu/~jfrey/blahp-1.16.3.3.tar.gz
+						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.3.3.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
