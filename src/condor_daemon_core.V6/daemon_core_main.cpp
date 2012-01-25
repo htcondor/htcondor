@@ -2036,6 +2036,25 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
+#ifdef WIN32
+	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
+	if (wait_for_win32_debugger) {
+		UINT ms = GetTickCount() - 10;
+		BOOL is_debugger = IsDebuggerPresent();
+		while ( ! is_debugger) {
+			if (GetTickCount() > ms) {
+				dprintf(D_ALWAYS,
+						"%s is %d, waiting for debugger to attach to pid %d.\n", 
+						debug_wait_param.Value(), wait_for_win32_debugger, GetCurrentProcessId());
+				ms = GetTickCount() + (1000 * 60 * 1); // repeat message every 1 minute
+			}
+			sleep(10);
+			is_debugger = IsDebuggerPresent();
+		}
+	}
+#endif
+
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
 		// pid. 
