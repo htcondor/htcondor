@@ -210,7 +210,7 @@ public:
 	char const *startd_fqu() {return m_startd_fqu.Value();}
 	bool have_leftovers() { return m_have_leftovers; }
 	char const *leftover_claim_id() { return m_leftover_claim_id.Value(); }
-	ClassAd * const leftover_startd_ad() 
+	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 
 private:
