@@ -916,6 +916,23 @@ our %submit_info = (
 		},
 	},
 
+	'x86_sl_5.7' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+
 
 	##########################################################################
 	# Platform RHEL 4 on X86_64
