@@ -4652,29 +4652,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
 
-	// BIOTECH
-	char *biotech = param("BIOTECH");
-	if (biotech) {
-		free(biotech);
-		ad = GetNextJob(1);
-		while (ad != NULL) {
-			if ( Runnable(ad) ) {
-					// keep the order of arguments to IsAMatch() in sync
-					// with Scheduler::OptimizeMachineAdForMatchmaking()
-				if ( IsAMatch( my_match_ad, ad ) )
-				{
-					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
-					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
-					if( !scheduler.AlreadyMatched(&jobid) ) {
-						break;
-					}
-				}
-			}
-			ad = GetNextJob(0);
-		}
-		return;
-	}
-
 	MyString owner = user;
 	int at_sign_pos;
 	int i;
