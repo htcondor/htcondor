@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -114,6 +114,10 @@ class ScheddNegotiate: public DCMsg {
 		// and false if "I can't get no ..."
 	bool getSatisfaction();
 
+		// Convert a patitionable slot into a dynamic slot. Hopefully this
+		// method does this the same way the startd does. 
+	static bool fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad);
+
 		///////////// virtual functions for scheduler to define  //////////////
 
 		// Returns false if job does not exist.  Otherwise, job_ad is
@@ -166,8 +170,6 @@ class ScheddNegotiate: public DCMsg {
 	void setAutoClusterRejected(int auto_cluster_id);
 
 	bool sendJobInfo(Sock *sock);
-
-	bool fixupPartitionableSlot(PROC_ID job_id, ClassAd *job_ad, ClassAd *match_ad, char const *slot_name);
 
 		/////////////// DCMsg hooks ///////////////
 

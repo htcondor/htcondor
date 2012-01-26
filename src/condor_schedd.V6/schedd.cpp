@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -5400,6 +5400,28 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		return;
 	}
 
+		// If the slot we are about to claim is partitionable, edit it
+		// so it will look like the resulting dynamic slot. We want to avoid 
+		// re-using a claim to a partitionable slot
+		// for jobs that do not fit the dynamically created slot. In the
+		// past we did this fixup during the negotiation cycle, but now that
+		// we can get matches directly back from the startd, we need to do it
+		// here as well.
+	if ( (jobAd && mrec && mrec->my_match_ad) && 
+		!ScheddNegotiate::fixupPartitionableSlot(jobAd,mrec->my_match_ad) )
+	{
+			// The job classad does not have required attributes (such as 
+			// requested memory) to enable the startd to create a dynamic slot.
+			// Since this claim request is simply going to fail, lets throw
+			// this match away now (seems like we could do something better?) - 
+			// while it is not ideal to throw away the match in this instance,
+			// it is consistent with what we current do during negotiation.
+		DelMrec ( mrec );
+		return;
+	}
+
+		// Setup to claim the slot asynchronously
+
 	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );
 
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
@@ -5488,6 +5510,44 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			delete match->auth_hole_id;
 			match->auth_hole_id = NULL;
 		}
+	}
+
+	// If the startd returned any "leftover" partitionable slot resources,
+	// we want to create a match record for it (so we can subsequently find
+	// a job to run on it). 
+	// For now, only do this for non-dedicated scheduler resources until
+	// such date that the dedicated scheduler is more saavy about 
+	// paritionable slots.
+	if ( msg->have_leftovers() && !match->is_dedicated ) {			
+			// Pass NULLs to constructor since we aren't actually going to
+			// negotiate - we just want to invoke 
+			// MainScheddNegotiate::scheduler_handleMatch(), which
+			// probably could/should be changed to be declared as a static method.
+			// Actually, must pass in owner so FindRunnableJob will find a job.
+		MainScheddNegotiate sn(0,NULL, match->user, NULL);
+
+
+			// Setting cluster.proc to -1.-1 should result in the schedd
+			// invoking FindRunnableJob to select an appropriate matching job.
+		PROC_ID jobid;
+		jobid.cluster = -1; jobid.proc = -1;
+
+			// Need to pass handleMatch a slot name; grab from leftover slot ad
+		std::string slot_name_buf;
+		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
+		char const *slot_name = slot_name_buf.c_str();
+
+			// dprintf a message saying we got a new match, but be certain
+			// to only output the public claim id (keep the capability private)
+		ClaimIdParser idp( msg->leftover_claim_id() );
+		dprintf( D_FULLDEBUG,
+				"Received match from startd, leftover slot ad %s claim %s\n",
+				slot_name, idp.publicClaimId()  );
+
+			// Tell the schedd about the leftover resources it can go claim.
+			// Note this claiming will happen asynchronously.
+		sn.scheduler_handleMatch(jobid,msg->leftover_claim_id(),
+			*(msg->leftover_startd_ad()),slot_name);
 	}
 
 	if( match->is_dedicated ) {
