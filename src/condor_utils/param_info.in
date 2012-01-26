@@ -10329,3 +10329,20 @@ usage=
 url=
 tags=negotiator
 id=666
+
+[CLAIM_PARTITIONABLE_LEFTOVERS]
+aliases=
+default=true
+version=7.7.5
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Claim Parititionable Leftovers
+usage=
+url=
+tags=schedd,startd,claim
+id=603
+

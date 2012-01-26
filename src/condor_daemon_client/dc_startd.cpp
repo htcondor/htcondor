@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -89,7 +89,8 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad,
 	m_description = the_description;
 	m_scheduler_addr = scheduler_addr;
 	m_alive_interval = alive_interval;
-	m_reply = 0;
+	m_reply = NOT_OK;
+	m_have_leftovers = false;
 }
 
 void
@@ -104,6 +105,13 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_startd_fqu = sock->getFullyQualifiedUser();
 	m_startd_ip_addr = sock->peer_ip_str();
 
+		// Insert an attribute in the request ad to inform the
+		// startd that this schedd is capable of understanding 
+		// the newer protocol where the claim response may send
+		// over any leftover resources from a partitionable slot.
+	m_job_ad.Assign("_condor_SEND_LEFTOVERS",
+		param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true));
+
 	if( !sock->put_secret( m_claim_id.Value() ) ||
 	    !m_job_ad.put( *sock ) ||
 	    !sock->put( m_scheduler_addr.Value() ) ||
@@ -116,7 +124,6 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		return false;
 	}
 		// end_of_message() is done by caller
-
 	return true;
 }
 
@@ -143,14 +150,38 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		return false;
 	}
 
+	/* 
+		Reply of 0 (OK) means claim accepted.
+		Reply of 1 (NOT_OK) means claim rejected.
+		Reply of 3 means claim accepted by a partitionable slot,
+	      and the "leftovers" slot ad and claim id will be sent next.
+	*/
+
 	if( m_reply == OK ) {
 			// no need to log success, because DCMsg::reportSuccess() will
 	} else if( m_reply == NOT_OK ) {
 		dprintf( failureDebugLevel(), "Request was NOT accepted for claim %s\n", description() );
+	} else if( m_reply == 3 ) {
+	 	if( !sock->get(m_leftover_claim_id) ||
+			!m_leftover_startd_ad.initFromStream( *sock )  ) 
+		{
+			// failed to read leftover partitionable slot info
+			dprintf( failureDebugLevel(),
+				 "Failed to read paritionable slot leftover from startd - claim %s.\n",
+				 description() );
+			// treat this failure same as NOT_OK, since this startd is screwed
+			m_reply = NOT_OK;
+		} else {
+			// successfully read leftover partitionable slot info
+			m_have_leftovers = true;
+			// change reply to OK cuz claim was a success
+			m_reply = OK;
+		}
 	} else {
 		dprintf( failureDebugLevel(), "Unknown reply from startd when requesting claim %s\n",description());
 	}
-		// end_of_message() is done by caller
+		
+	// end_of_message() is done by caller
 
 	return true;
 }
