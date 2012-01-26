@@ -60,7 +60,7 @@ int matches(char *arg, char *thing)
 
 int main(int argc, char *argv[], char *envp[])
 {
-	unsigned long long vdso_idx;
+	int vdso_idx;
 	int i;
 	int pers_change = 1; /* assume yes */
 	char **new_args;
