@@ -248,6 +248,7 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 	if (!ver) {
 		if ( !(ver = (char *)malloc(100)) ) {
 			// out of memory
+			fclose(fp);
 			return NULL;
 		}
 		must_free = true;

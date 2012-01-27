@@ -125,6 +125,7 @@ sysapi_load_avg_raw(void)
 		case 3:
     		if (fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg) != 3) {
 				dprintf(D_ALWAYS, "Failed to fscanf 3 floats from /proc/loadavg\n");
+				fclose(proc);
 				return -1;
 			}
 			break;

@@ -296,6 +296,7 @@ sysapi_get_distro_info(void)
 			char tmp_str[200] = {0};
 			char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
 			if (ret == 0) {
+				fclose(my_fp);
 				return NULL;
 			}
 			fclose(my_fp);
