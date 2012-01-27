@@ -63,12 +63,12 @@ sub setup_test_environment {
 
         # We need to add Perl to the path (this works only in old-batlab)
         #$end_path .= ";C:\\prereq\\ActivePerl-5.10.1\\bin";
-        
-	my $need_cygwin = 1; # set to 0 to working no removing cygwin dependancies from tests.
-	if ( not is_new_batlab() ) { $need_cygwin = 1; }
-	if ( $need_cygwin ) {
-	    if ( ! ($ENV{PATH} =~ /cygwin/i) ) {
-		$front_path .= ";C:\\cygwin\\bin";
+
+        my $force_cygwin = 1; # set to 0 to work on removing cygwin dependancies from tests.
+        if ( not is_new_batlab() ) { $force_cygwin = 1; }
+        if ( $force_cygwin ) {
+            if ( ! ($ENV{PATH} =~ /cygwin/i) ) {
+                $front_path .= ";C:\\cygwin\\bin";
             }
         }
 
@@ -131,7 +131,7 @@ sub which {
     my ($exe) = @_;
 
     if( is_windows() ) {
-        return system('for /F %I in ("' . $exe . '") do echo %~$PATH:I');
+        return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
     }
     else {
         return system("which $exe");
