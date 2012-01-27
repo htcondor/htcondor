@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 my $testname = "job_partitionable_basic_van";
@@ -50,7 +51,12 @@ sub timed_callback {
     # and there should be no other slots
     if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
         $test_passed = 1;
-    }
+    } else {
+		print "Haven't seen expected condor_status output (yet).  What I saw was...\n";
+		print $stat;
+		print "condor_status shows\n";
+		runcmd("condor_status");
+	}
 }
 
 
