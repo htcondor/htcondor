@@ -5,7 +5,7 @@ dir /b/s *.zip
 dir /b/s *.msi
 dir /b/s *.tar.gz
 dir /b/od *
-for %%I in (tar.exe mv.exe cp.exe) do echo %%I at %%~f$PATH:I
+for %%I in (tar.exe mv.exe cp.exe bsdtar.exe) do echo %%I at %%~f$PATH:I
 
 setlocal
 set PUBLIC=%~f1

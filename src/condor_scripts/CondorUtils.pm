@@ -483,13 +483,16 @@ sub Which {
 
     return "" if(!$exe);
 
+    if( is_windows_native_perl() ) {
+        return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
+    }
     foreach my $path (split /:/, $ENV{PATH}) {
         chomp $path;
         if(-x "$path/$exe") {
             return "$path/$exe";
         }
     }
-    
+
     return "";
 }
 
@@ -509,6 +512,20 @@ sub fullchomp {
 sub is_windows {
     if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
         return 1;
+    }
+    return 0;
+}
+
+sub is_cygwin_perl {
+    if ($^O =~ /cygwin/) {
+        return 1;
+    }
+    return 0;
+}
+
+sub is_windows_native_perl {
+    if ($^O =~ /MSWin32/) {
+         return 1;
     }
     return 0;
 }
