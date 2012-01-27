@@ -1124,8 +1124,8 @@ UserProc::send_sig_no_privsep( int sig )
 
 
 
-inline void
-display_bool( int debug_flags, char *name, int value )
+void
+display_bool( int debug_flags, const char *name, int value )
 {
 	dprintf( debug_flags, "%s = %s\n", name, value ? "TRUE" : "FALSE" );
 }
