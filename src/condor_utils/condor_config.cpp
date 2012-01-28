@@ -2355,7 +2355,6 @@ set_persistent_config(char *admin, char *config)
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
 				 "set_persistent_config()\n", tmp_filename.Value(),
 				 fd, strerror(errno), errno );
-		close(fd);
 		ABORT;
 	}
 	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
