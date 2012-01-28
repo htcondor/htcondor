@@ -1412,6 +1412,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
       ix += aCols[ii].width;
       }
    printf("%s\n", Line);
+   free(Line);
 }
 
 
