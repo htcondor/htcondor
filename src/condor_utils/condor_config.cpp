@@ -2308,6 +2308,7 @@ set_persistent_config(char *admin, char *config)
 		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
+			close(fd);
 			ABORT;
 		}
 		if (close(fd) < 0) {
