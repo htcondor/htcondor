@@ -670,7 +670,7 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	struct cgroup_stat stats;
 	void **handle;
 	u_int64_t tmp = 0, image = 0;
-	bool found_rss;
+	bool found_rss = false;
 
 	// Update memory
 	handle = (void **)malloc(sizeof(void*));
