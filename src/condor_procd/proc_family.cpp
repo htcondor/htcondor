@@ -549,8 +549,7 @@ ProcFamily::count_tasks_cgroup()
 }
 
 bool
-inline
-_check_stat_uint64(const struct cgroup_stat stats, const char* name, u_int64_t* result){
+_check_stat_uint64(const struct cgroup_stat &stats, const char* name, u_int64_t* result){
 	u_int64_t tmp;
 	if (0 == strcmp(name, stats.name)) {
 		errno = 0;
