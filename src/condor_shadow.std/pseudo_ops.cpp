@@ -785,6 +785,7 @@ pseudo_get_file_stream(
 	case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
 		if (CkptFile || ICkptFile) set_priv(priv);
+		close(file_fd);
 		return -1;
 	case 0:	/* the child */
 			// reset this so dprintf has the right pid in the header
