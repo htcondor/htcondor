@@ -1444,6 +1444,7 @@ FindConflicts( Profile *p, ResourceGroup &rg )
 	bvList.Rewind( );
 	while( bvList.Next( currBV ) ) {
 		if( currBV == NULL ) {
+			delete currIS;
 			return false;
 		}
 		currIS = new IndexSet( );
@@ -1457,6 +1458,9 @@ FindConflicts( Profile *p, ResourceGroup &rg )
 		currIS->GetCardinality( card );
 		if( card > 1 ) {
 			p->explain.conflicts->Append( currIS );
+		} else {
+			delete currIS;
+			currIS = NULL;
 		}
 	}
 
@@ -2359,6 +2363,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 					else {
 						vr->Init( i, undef );
 					}
+					delete i;
 					return true;
 				}
 			case classad::Operation::EQUAL_OP:
