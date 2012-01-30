@@ -205,6 +205,7 @@ public:
    T*  pbuf;   // allocated buffer for the ring.
 
    T& operator[](int ix) { 
+#pragma SUPPRESS_WIN32_WARNING(6011) // dereferencing null pointer.
       if ( ! pbuf || ! cMax) return pbuf[0]; // yes, we do want to segfault if pbuf==NULL
       return pbuf[(ixHead+ix+cMax) % cMax];
    }

@@ -34,6 +34,15 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
+#ifdef WIN32
+#define SUPPRESS_WIN32_WARNING(nn) warning(suppress:nn)
+#define DISABLE_WIN32_WARNING(nn)  warning(disable:nn)
+#else
+#define SUPPRESS_WIN32_WARNING(nn) /* a no-op on Unix */
+#define DISABLE_WIN32_WARNING(nn)  /* a no-op on Unix */
+#endif
+
+
 /* If this platform doesn't give us __FUNCTION__ create a default.
  */
 #ifndef __FUNCTION__
