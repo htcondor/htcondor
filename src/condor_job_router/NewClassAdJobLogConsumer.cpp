@@ -82,6 +82,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 						"error processing %s: failed to add '%s' to "
 						"ClassAd collection.\n",
 						m_reader->GetClassAdLogFileName(), cluster_key);
+				delete ad;
 				return true; // XXX: why is this ok?
 			}
 		}

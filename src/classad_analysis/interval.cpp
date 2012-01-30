@@ -2134,10 +2134,14 @@ BuildHyperRects( ExtArray< ValueRange * > &vrs, int dimensions,
 		}
 		else {
 			if( !currVR->multiIndexed ) {
+				delete oldHRs;
+				delete tempHRs;
 				return false;
 			}
 			if( numContexts != currVR->numIndeces ) {
 					// IndexSets are not compatible
+				delete oldHRs;
+				delete tempHRs;
 				return false;
 			}
 			if( i == 0 ) {
@@ -2204,6 +2208,7 @@ BuildHyperRects( ExtArray< ValueRange * > &vrs, int dimensions,
 		( *hrs )[i] = oldHRs->Next( );
 	}
 	hrLists.Append( hrs );
+	delete oldHRs;
 	return true;
 }
 
