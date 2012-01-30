@@ -664,10 +664,15 @@ endif()
 
 if(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")      # use full paths names in errors and warnings
+	if(MSVC_ANALYZE)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /analyze") # turn on code analysis (level 6 warnings)
+	endif(MSVC_ANALYZE)
+
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251")  #
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275")  #
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273")  # inconsistent dll linkage
+
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 
