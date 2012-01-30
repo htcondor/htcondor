@@ -20,6 +20,7 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
+
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
 //     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
@@ -205,8 +206,14 @@ public:
    T*  pbuf;   // allocated buffer for the ring.
 
    T& operator[](int ix) { 
-#pragma SUPPRESS_WIN32_WARNING(6011) // dereferencing null pointer.
-      if ( ! pbuf || ! cMax) return pbuf[0]; // yes, we do want to segfault if pbuf==NULL
+//#pragma SUPPRESS_WIN32_WARNING(6011) // dereferencing null pointer.
+      // yes, we do want to segfault if pbuf==NULL
+      if ( ! pbuf || ! cMax) {
+         if (pbuf)
+            return pbuf[0];
+         else
+            return *((T*)0);
+      }
       return pbuf[(ixHead+ix+cMax) % cMax];
    }
 
