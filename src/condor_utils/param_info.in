@@ -4100,6 +4100,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,proxymanager
 id=224
 
+[GRIDMANAGER_PROXY_REFRESH_TIME]
+aliases=
+default=21600
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gridmanager Proxy Refresh Time
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,proxymanager
+id=224
+
 [CONDOR_GAHP]
 aliases=
 default=$(SBIN)/condor_c-gahp

@@ -102,7 +102,7 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     my $prefast = `cl -?`;
     if ($prefast =~ /analyze/) { $prefast = 1; } else { $prefast = 0; }
     print "PREFAST = $prefast\n";
-    $defines{analyze} = "-DANALYZE:BOOL=$prefast";
+    $defines{analyze} = "-DMSVC_ANALYZE:BOOL=$prefast";
 }
 
 ######################################################################

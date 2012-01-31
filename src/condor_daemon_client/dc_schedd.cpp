@@ -1568,6 +1568,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	if( ! str ) {
 		return false;
 	}
+	buf[0] = 0; // in case result is bogus..
 
 	result = getResult( job_id );
 

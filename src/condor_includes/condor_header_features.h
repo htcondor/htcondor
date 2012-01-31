@@ -34,13 +34,21 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
-#ifdef WIN32
-#define SUPPRESS_WIN32_WARNING(nn) warning(suppress:nn)
-#define DISABLE_WIN32_WARNING(nn)  warning(disable:nn)
+#ifdef _MSC_VER
+#define MSC_PRAGMA1(type)       __pragma(type)
+#define MSC_PRAGMA2(type,nn)    __pragma(type(nn))
+#define MSC_PRAGMA3(type,op,nn) __pragma(type(op:nn))
 #else
-#define SUPPRESS_WIN32_WARNING(nn) /* a no-op on Unix */
-#define DISABLE_WIN32_WARNING(nn)  /* a no-op on Unix */
+#define MSC_PRAGMA1(type)
+#define MSC_PRAGMA2(type,nn)
+#define MSC_PRAGMA3(type,op,nn)
 #endif
+
+#define MSC_SUPPRESS_WARNING_FOREVER(nn) MSC_PRAGMA3(warning,suppress,nn) // warning is bogus, we want to do this
+#define MSC_SUPPRESS_WARNING_FIXME(nn) MSC_PRAGMA3(warning,suppress,nn) // warning is valid, but too hard to fix.
+#define MSC_SUPPRESS_WARNING(nn) MSC_PRAGMA3(warning,suppress,nn)
+#define MSC_DISABLE_WARNING(nn)  MSC_PRAGMA3(warning,disable,nn)
+#define MSC_RESTORE_WARNING(nn)  MSC_PRAGMA3(warning,default,nn)
 
 
 /* If this platform doesn't give us __FUNCTION__ create a default.
