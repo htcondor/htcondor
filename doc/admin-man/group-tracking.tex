@@ -61,44 +61,65 @@ be used regardless of the \Macro{USE\_PROCD} setting.  Changes to
 a full restart of Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:CGroupTracking}Cgroup Based Process Tracking} 
+\subsection{\label{sec:CGroupTracking}Cgroup-Based Process Tracking} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{cgroup based process tracking}
 
-A new feature in Linux kernels version 2.6.24 and newer allows Condor to
+A new feature in Linux kernels version 2.6.24 and more recent kernels
+allows Condor to
 more accurately and safely manage jobs composed of sets of processes.
 This Linux feature is called Control Groups, or cgroups for short, and 
-is available starting with the RHEL 6 and Debian 6, and related distributions.  
+it is available starting with RHEL 6, Debian 6, and related distributions.  
 Documentation about Linux kernel support for cgroups can be found in
-the Documentation directory in the kernel source code distribution. Another
-good reference is \URL{http://docs.redhat.com/docs/en-US/Red\_Hat\_Enterprise\_Linux/6/html/Resource\_Management\_Guide/index.html}
-Even if cgroup support is built into the kernel, many distributions don't
-install the cgroup tools by default.  In other to use cgroups, the tools
-must be installed also.  On RPM based systems, these can be installed
-with the command
+the Documentation directory in the kernel source code distribution.
+Another good reference is 
+\URL{http://docs.redhat.com/docs/en-US/Red\_Hat\_Enterprise\_Linux/6/html/Resource\_Management\_Guide/index.html}
+Even if cgroup support is built into the kernel, 
+many distributions do not install the cgroup tools by default.
+In order to use cgroups, 
+the tools must be installed.  
+On RPM-based systems, these can be installed with the command
 
-yum install libcgroup\\\*
+\begin{verbatim}
+yum install libcgroup\*
+\end{verbatim}
 
-Starting in Condor 7.7.0, the Condor starter can optionally use cgroups
-to accurately track of all processes started by a job, even when 
-quickly-exiting parent processes spawn many child processes.  As with 
-the gid based tracking above, this is only implemented when a procd is running.
-The Condor team recommends enabling this feature on Linux platforms which support it.
-When cgroup tracking is enabled, Condor is able to report a much more accurate
+Starting with Condor version 7.7.0, 
+the \Condor{starter} daemon can optionally use cgroups
+to accurately track all the processes started by a job, 
+even when quickly-exiting parent processes spawn many child processes.
+As with the GID-based tracking, 
+this is only implemented when a \Condor{procd} daemon is running.
+The Condor team recommends enabling this feature on Linux platforms 
+that support it.
+When cgroup tracking is enabled, 
+Condor is able to report a much more accurate
 measurement of the physical memory used by a set of processes.
 
-Kernel cgroups are named in a virtual filesystem hierarchy. Condor will put each
-running job on the execute node in a separate cgroup, named job\_clusterid\_procid.
-These directories will be under a base directory name by the Condor configuration 
-parameter \Macro{BASE\_CGROUP}.  This parameter has no default, if it is not set, cgroup
-tracking will not be used.  Unless you need to integrate Condor jobs with other
-cgroup based tracking, a good choice might be /condor. 
+Kernel cgroups are named in a virtual file system hierarchy. 
+Condor will put each
+running job on the execute node in a separate cgroup, 
+named using the job's attributes by \Expr{job\_<ClusterId>\_<ProcId>},
+where \Expr{<ClusterId>} is replaced by 
+the job ClassAd attribute \Attr{ClusterId},
+and \Expr{<ProcId>} is replaced by 
+the job ClassAd attribute \Attr{ProcId}.
+These directories will be under a base directory named 
+by the Condor configuration variable \Macro{BASE\_CGROUP}.  
+This variable has no default value, so if the variable is not set,
+cgroup tracking will not be used.  
+Unless there is a need for integration of Condor jobs with other
+cgroup-based tracking, 
+a good choice for \MacroNI{BASE\_CGROUP} location might be \File{/condor}. 
 
-Condor itself will not mount the virtual cgroup filesystems.  This can either be
-done by hand at each system reboot, by the cgconfig service, which reads a file
-called /etc/cgconfig.conf, or automatically by the systemd service, on systems
-which use systemd instead of init.
+Condor itself will not mount the virtual cgroup file systems.  
+This can either be done by hand at each system reboot, 
+by the \Prog{cgconfig} service 
+which reads a file called \File{/etc/cgconfig.conf}, 
+or automatically by the \Prog{systemd} service 
+on systems which use \Prog{systemd} instead of \Prog{init}.
 
-An example cgconfig.conf follows:
+Here is an example of the contents of file \File{cgconfig.conf}:
 
 \begin{verbatim}
 mount {
@@ -116,11 +137,17 @@ group condor {
 }
 \end{verbatim}
 
-If the mount command shows that no cgroup filesystems are mounted, then either the
-by hand method or the cgconfig service will need to mount the four controllers which
-Condor needs:  cpuacct, memory, freezer and blkio.  
+If the mount command shows that no cgroup file systems are mounted, 
+then either the by hand method or the \Prog{cgconfig} service 
+will need to mount the four controllers which Condor needs:
+cpuacct, memory, freezer and blkio.  
 
-Once cgroup based tracking is configured, usage should be invisible to the user and administrator.  The ProcLog
-will mention that it is using this method, but no user visible changes should occur,
+Once cgroup-based tracking is configured, 
+usage should be invisible to the user and administrator.  
+The \Condor{procd} log, as defined by configuration variable
+\MacroNI{PROCD\_LOG}, 
+will mention that it is using this method, 
+but no user visible changes should occur,
 other than the impossibility of a quickly-forking process escaping from the
-control of the starter, and the more accurate reporting of memory usage.
+control of the \Condor{starter},
+and the more accurate reporting of memory usage.
