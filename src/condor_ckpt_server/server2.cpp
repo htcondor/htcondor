@@ -421,7 +421,7 @@ void Server::SetUpPeers()
 void Server::Execute()
 {
 	fd_set         req_sds;
-	int            num_sds_ready;
+	int            num_sds_ready = 0;
 	time_t         current_time;
 	time_t         last_reclaim_time;
 	time_t		   last_clean_time;
