@@ -66,7 +66,7 @@ int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 	the checkpointing directory. */
 int ValidateNoPathComponents(char *path);
 
-/* Attempt a write.  If the write fails, exit with CHILDTERM_CANNOT_WRITE.
+/* Attempt a write.  If the write fails, exit with READWRITE_ERROR.
 This code might in the future retry, especially on EAGAIN or EINTR, but
 no gaurantees are made.  Really, you should call write() and check your
 return, retrying if necessary.  However, in light of the anticipiated
@@ -78,17 +78,17 @@ static ssize_t write_or_die(int fd, const void * buf, size_t count) {
 	if(ret < 0) {
 		dprintf(D_ALWAYS, "Error: error trying to write %d bytes to FD %d. %d: %s\n",
 			(int)count, (int)fd, (int)errno, strerror(errno));
-		exit(CHILDTERM_CANNOT_WRITE);
+		exit(READWRITE_ERROR);
 	}
 	if(((size_t)ret) != count) {
 		dprintf(D_ALWAYS, "Error: only wrote %d bytes out of %d to FD %d. %d: %s\n",
 			(int)ret, (int)count, (int)fd, (int)errno, strerror(errno));
-		exit(CHILDTERM_CANNOT_WRITE);
+		exit(READWRITE_ERROR);
 	}
 	return ret;
 }
 
-/* Attempt a read.  If the read fails, exit with CHILDTERM_READ_ERROR.
+/* Attempt a read.  If the read fails, exit with READWRITE_ERROR.
 This code might in the future retry, especially on EAGAIN or EINTR, but
 no gaurantees are made.  Really, you should call read() and check your
 return, retrying if necessary.  However, in light of the anticipiated
@@ -100,12 +100,12 @@ static ssize_t read_or_die(int fd, void * buf, size_t count) {
 	if(ret < 0) {
 		dprintf(D_ALWAYS, "Error: error trying to read %d bytes to FD %d. %d: %s\n",
 			(int)count, (int)fd, (int)errno, strerror(errno));
-		exit(CHILDTERM_CANNOT_WRITE);
+		exit(READWRITE_ERROR);
 	}
 	if(((size_t)ret) != count) {
 		dprintf(D_ALWAYS, "Error: only read %d bytes out of %d to FD %d. %d: %s\n",
 			(int)ret, (int)count, (int)fd, (int)errno, strerror(errno));
-		exit(CHILDTERM_READ_ERROR);
+		exit(READWRITE_ERROR);
 	}
 	return ret;
 }
