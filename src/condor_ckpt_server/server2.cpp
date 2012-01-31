@@ -66,6 +66,50 @@ int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 	the checkpointing directory. */
 int ValidateNoPathComponents(char *path);
 
+/* Attempt a write.  If the write fails, exit with CHILDTERM_CANNOT_WRITE.
+This code might in the future retry, especially on EAGAIN or EINTR, but
+no gaurantees are made.  Really, you should call write() and check your
+return, retrying if necessary.  However, in light of the anticipiated
+short remaining life on the checkpoint server, this is an acceptable
+solution for existing code.  DO NOT USE FOR NETWORK CONNECTIONS.
+*/
+static ssize_t write_or_die(int fd, const void * buf, size_t count) {
+	ssize_t ret = write(fd, buf, count);
+	if(ret < 0) {
+		dprintf(D_ALWAYS, "Error: error trying to write %d bytes to FD %d. %d: %s\n",
+			(int)count, (int)fd, (int)errno, strerror(errno));
+		exit(CHILDTERM_CANNOT_WRITE);
+	}
+	if(((size_t)ret) != count) {
+		dprintf(D_ALWAYS, "Error: only wrote %d bytes out of %d to FD %d. %d: %s\n",
+			(int)ret, (int)count, (int)fd, (int)errno, strerror(errno));
+		exit(CHILDTERM_CANNOT_WRITE);
+	}
+	return ret;
+}
+
+/* Attempt a read.  If the read fails, exit with CHILDTERM_READ_ERROR.
+This code might in the future retry, especially on EAGAIN or EINTR, but
+no gaurantees are made.  Really, you should call read() and check your
+return, retrying if necessary.  However, in light of the anticipiated
+short remaining life on the checkpoint server, this is an acceptable
+solution for existing code.  DO NOT USE FOR NETWORK CONNECTIONS.
+*/
+static ssize_t read_or_die(int fd, void * buf, size_t count) {
+	ssize_t ret = read(fd, buf, count);
+	if(ret < 0) {
+		dprintf(D_ALWAYS, "Error: error trying to read %d bytes to FD %d. %d: %s\n",
+			(int)count, (int)fd, (int)errno, strerror(errno));
+		exit(CHILDTERM_CANNOT_WRITE);
+	}
+	if(((size_t)ret) != count) {
+		dprintf(D_ALWAYS, "Error: only read %d bytes out of %d to FD %d. %d: %s\n",
+			(int)ret, (int)count, (int)fd, (int)errno, strerror(errno));
+		exit(CHILDTERM_READ_ERROR);
+	}
+	return ret;
+}
+
 
 Server::Server()
 {
@@ -1100,7 +1144,8 @@ void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
 void Server::Replicate()
 {
 	int 				child_pid, bytes_recvd=0, bytes_read;
-	int					bytes_sent=0, bytes_written, bytes_left;
+	size_t				bytes_sent=0, bytes_left;
+	ssize_t				bytes_written;
 	char        		log_msg[256], buf[10240];
 	char				pathname[MAX_PATHNAME_LENGTH];
 	int 				server_sd, ret_code, fd;
@@ -1635,9 +1680,9 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
 	peer_info_fd = safe_open_wrapper_follow(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
-		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
+		write_or_die(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
-		write(peer_info_fd, (char *)&bytes_recvd, sizeof(bytes_recvd));
+		write_or_die(peer_info_fd, (char *)&bytes_recvd, sizeof(bytes_recvd));
 		close(peer_info_fd);
 	}
 
@@ -1931,9 +1976,9 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
 	peer_info_fd = safe_open_wrapper_follow(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
-		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
+		write_or_die(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
-		write(peer_info_fd, (char *)&bytes_sent, sizeof(bytes_sent));
+		write_or_die(peer_info_fd, (char *)&bytes_sent, sizeof(bytes_sent));
 		close(peer_info_fd);
 	}
 
@@ -2133,8 +2178,8 @@ void Server::ChildComplete()
 		sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", child_pid);
 		peer_info_fd = safe_open_wrapper_follow(peer_info_filename, O_RDONLY);
 		if (peer_info_fd >= 0) {
-			read(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
-			read(peer_info_fd, (char *)&xfer_size, sizeof(xfer_size));
+			read_or_die(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
+			read_or_die(peer_info_fd, (char *)&xfer_size, sizeof(xfer_size));
 			close(peer_info_fd);
 			unlink(peer_info_filename);
 		}
