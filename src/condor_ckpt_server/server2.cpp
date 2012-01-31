@@ -1382,7 +1382,6 @@ void Server::ProcessStoreReq(int            req_id,
 							struct in_addr shadow_IP,
 							store_req_pkt  store_req)
 {
-	int                ret_code;
 	store_reply_pkt    store_reply;
 	int                data_conn_sd;
 	condor_sockaddr    server_sa;
@@ -1526,7 +1525,7 @@ void Server::ProcessStoreReq(int            req_id,
 		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
 				err_code);
 		Log(0, log_msg);
-		exit(ret_code);
+		exit(BIND_ERROR);
 	}
 
 	if (I_listen(data_conn_sd, 1) != CKPT_OK) {
