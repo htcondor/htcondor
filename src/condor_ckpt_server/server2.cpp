@@ -734,7 +734,7 @@ void Server::ProcessServiceReq(int             req_id,
 	service_reply_pkt  service_reply;
 	char               log_msg[256];
 	condor_sockaddr    server_sa;
-	int                data_conn_sd;
+	int                data_conn_sd = -1;
 	struct stat        chkpt_file_status;
 	char               pathname[MAX_PATHNAME_LENGTH];
 	int                num_files;
@@ -1073,7 +1073,7 @@ void Server::ProcessServiceReq(int             req_id,
 			} else {
 				child_pid = fork();
 				if (child_pid < 0) {
-					close(data_conn_sd);
+					if(data_conn_sd != -1) { close(data_conn_sd); }
 					Log("Unable to honor status service request:");
 					Log("Cannot fork child processes");	  
 				} else if (child_pid != 0)  {
@@ -1096,7 +1096,7 @@ void Server::ProcessServiceReq(int             req_id,
 						bit witdh that requested this reply, I could easily
 						pass the FDContext here instead which will tell me
 						what to send to the client. */
-					SendStatus(data_conn_sd);
+					if(data_conn_sd != -1) { SendStatus(data_conn_sd); }
 					exit(CHILDTERM_SUCCESS);
 				}
 			}
