@@ -7301,6 +7301,13 @@ These macros affect the \Condor{gridmanager}.
   between checks for an updated X509 proxy credential. The default
   is 10 minutes (600 seconds).
 
+\label{param:GridmanagerProxyRefreshTime}
+\item[\Macro{GRIDMANAGER\_PROXY\_REFRESH\_TIME}]
+  For GRAM jobs, the \Condor{gridmanager} will not forward a refreshed
+  proxy until the lifetime left for the proxy on the remote machine
+  falls below this value.
+  The value is in seconds and the default is 21600 (6 hours).
+
 \label{param:GridmanagerMinimumProxyTime}
 \item[\Macro{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}]
   The minimum number of

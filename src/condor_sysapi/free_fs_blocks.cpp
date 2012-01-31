@@ -45,7 +45,7 @@ sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
 	unsigned int t_hi, t_lo, temp;
-	const unsigned int lowest_ten_mask = 0x00000cff;
+	const unsigned int lowest_ten_mask = 0x000003ff;
 	
 	t_hi = t_lo = temp = 0;
 	sysapi_internal_reconfig();
