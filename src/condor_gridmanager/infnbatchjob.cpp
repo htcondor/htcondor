@@ -201,14 +201,22 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	strupr( batchType );
 
-	sprintf( buff, "%s_GAHP", batchType );
-	gahp_path = param(buff.c_str());
-	if ( gahp_path == NULL ) {
-		gahp_path = param( "BATCH_GAHP" );
+	if ( gahp_args.Count() > 0 ) {
+		gahp_path = param( "REMOTE_GAHP" );
 		if ( gahp_path == NULL ) {
-			sprintf( error_string, "Neither %s nor %s defined", buff.c_str(),
-					 "BATCH_GAHP" );
+			sprintf( error_string, "REMOTE_GAHP not defined" );
 			goto error_exit;
+		}
+	} else {
+		sprintf( buff, "%s_GAHP", batchType );
+		gahp_path = param(buff.c_str());
+		if ( gahp_path == NULL ) {
+			gahp_path = param( "BATCH_GAHP" );
+			if ( gahp_path == NULL ) {
+				sprintf( error_string, "Neither %s nor %s defined", buff.c_str(),
+						 "BATCH_GAHP" );
+				goto error_exit;
+			}
 		}
 	}
 

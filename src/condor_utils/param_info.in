@@ -4052,6 +4052,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,infnbatchjob
 id=220
 
+[REMOTE_GAHP]
+aliases=
+default=$(SBIN)/remote_gahp
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Batch Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
+id=220
+
 [NORDUGRID_GAHP]
 aliases=
 default=$(SBIN)/nordugrid_gahp

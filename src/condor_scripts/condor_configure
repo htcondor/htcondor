@@ -1210,10 +1210,6 @@ sub install( $ )
     # Don't assume the CONDOR_HOST will be defined (e.g. Condor-G)
     #$local_config{CONDOR_HOST}=$host;
 
-	if ($opt_bosco) {
-		$local_config{BATCH_GAHP}="\$(SBIN)/remote_gahp";
-	}
-
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)".rand();
