@@ -2253,14 +2253,14 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path,
 		return;
 	}
 
-	if (realpath(path, real_path) < 0) {
+	if (realpath(path, real_path) == 0) {
 		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
 			"not resolve %s into a real path: %d(%s). Ignoring.\n",
 			path, errno, strerror(errno));
 		return;
 	}
 
-	if (realpath(ckpt_server_dir, real_ckpt_server_dir) < 0) {
+	if (realpath(ckpt_server_dir, real_ckpt_server_dir) == 0) {
 		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
 			"not resolve %s into a real path: %d(%s). Strange..ignoring "
 			"remove request for file under this directory.\n",
