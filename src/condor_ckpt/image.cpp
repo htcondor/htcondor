@@ -1152,6 +1152,7 @@ Image::Write( const char *ckpt_file )
 
 		// Write out the checkpoint
 	if( Write(file_d) < 0 ) {
+		close(file_d);
 		SetSyscalls(scm);
 		return -1;
 	}

@@ -141,7 +141,7 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 	int size = strlen(path);
 	while (m_fd <= 0 && retry > 0 ){
 		m_fd = safe_open_wrapper_follow(path, O_CREAT | O_RDWR, file_mode);
-		if (m_fd > 0)
+		if (m_fd >= 0)
 			return m_fd;
 		if (errno == 2) {
 			if (retry < retry_value) {
