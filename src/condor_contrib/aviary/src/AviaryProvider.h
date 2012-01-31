@@ -19,7 +19,14 @@
 #ifndef _AVIARY_PROVIDER_H
 #define _AVIARY_PROVIDER_H
 
+// condor includes
+#include "condor_common.h"
+#include "condor_config.h"
+
+// c++ includes
 #include <string>
+
+#include "EndpointPublisher.h"
 
 // borrow what DC does
 #if !defined(WIN32)
@@ -38,14 +45,18 @@ namespace transport {
     class AviaryProvider {
     public:
         virtual SOCKET getListenerSocket() = 0;
-        virtual bool processRequest(std::string& _error) = 0;     
+        virtual bool processRequest(std::string& _error) = 0;
+		void setPublisher(aviary::locator::EndpointPublisher* ep) {m_ep = ep;}
+	protected:
+		aviary::locator::EndpointPublisher* m_ep;
     };
     
     // factory pattern to figure out what provider to, er, provide
     // based on condor config only
     class AviaryProviderFactory {
     public:
-        static AviaryProvider* create(const std::string& log_file);
+        static AviaryProvider* create(const std::string& log_file, const std::string& service_name, 
+									  const std::string& service_type, const std::string& uri_suffix);
 
     private:
         AviaryProviderFactory();

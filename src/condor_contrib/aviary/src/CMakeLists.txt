@@ -24,12 +24,14 @@ endif ()
 ############################
 # file target references.
 ############################
-file( GLOB SOAP_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryProviderFactory.cpp Axis2SoapProvider.cpp)
+file( GLOB SOAP_SRCS ${CMAKE_CURRENT_SOURCE_DIR} EndpointPublisher.cpp AviaryProviderFactory.cpp Axis2SoapProvider.cpp)
 file( GLOB COMMON_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/common/src/*.cpp )
 file( GLOB JOB_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/job/src/*.cpp )
 file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
 file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
 file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
+file( GLOB LOCATOR_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/locator/src/*.cpp )
+file( GLOB LOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryLocatorService*.cpp )
 
 if (WITH_OPENSSL)
     file( GLOB SSL_SRCS ${CMAKE_CURRENT_SOURCE_DIR} axis2_ssl_*.c Axis2SslProvider.cpp)
@@ -43,6 +45,9 @@ file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							SubmissionObject.cpp JobServerJobLogConsumer.cpp
 							Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp
 							Codec.cpp JobServerObject.cpp AviaryUtils.cpp )
+
+file( GLOB LOCATOR_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp LocatorObject.cpp
+			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
 
 ############################
 # schedd plugin
@@ -66,6 +71,19 @@ target_link_libraries (aviary_query_axis ${WSO2_FOUND})
 
 condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND}" OFF )
+
+############################
+# locator plugin
+############################
+src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
+
+add_library (aviary_locator_axis SHARED ${COMMON_GEN_SRCS} ${LOCATOR_GEN_SRCS} ${LOCATOR_SRCS} Codec.cpp AviaryUtils.cpp LocatorObject.cpp )
+# remove unresolved deps by copying in -lwso2_wsf objects
+target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
+
+condor_plugin( AviaryLocatorPlugin-plugin "${COLLECTOR_REF};${LOCATOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
+# remove unresolved deps by copying in -laxis2_engine objects
+target_link_libraries(AviaryLocatorPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
 
 ############################
 # install targets && configure our axis2.xml for platform
@@ -96,3 +114,9 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-job.wsdl
 		DESTINATION ${C_SERVICES}/job )
 
+install (TARGETS aviary_locator_axis DESTINATION ${C_SERVICES}/job)
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/locator/services.xml DESTINATION ${C_SERVICES}/locator )
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
+				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.xsd
+				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.wsdl
+		DESTINATION ${C_SERVICES}/locator )
