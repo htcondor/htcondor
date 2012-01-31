@@ -737,7 +737,7 @@ void Server::ProcessServiceReq(int             req_id,
 	int                data_conn_sd = -1;
 	struct stat        chkpt_file_status;
 	char               pathname[MAX_PATHNAME_LENGTH];
-	int                num_files;
+	int                num_files = 0;
 	int                child_pid;
 	int                ret_code;
 
