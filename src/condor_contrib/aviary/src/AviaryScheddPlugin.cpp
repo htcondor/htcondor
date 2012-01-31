@@ -52,7 +52,7 @@ AviaryScheddPlugin::earlyInitialize()
 
     string log_name;
     sprintf(log_name,"aviary_job.log");
-    provider = AviaryProviderFactory::create(log_name);
+    provider = AviaryProviderFactory::create(log_name,Name,"SCHEDULER","services/job");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
@@ -246,8 +246,8 @@ AviaryScheddPlugin::processDirtyJobs()
 
 bool
 AviaryScheddPlugin::processJob(const char *key,
-							 const char *name,
-							 int value)
+							 const char *,
+							 int )
 {
 	PROC_ID id;
 	ClassAd *jobAd;
@@ -317,6 +317,8 @@ AviaryScheddPlugin::processJob(const char *key,
 					 ATTR_JOB_SUBMISSION,
 					 tmp.Value());
 	}
+
+	return true;
 }
 
 void

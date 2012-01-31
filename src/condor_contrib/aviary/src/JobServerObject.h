@@ -24,10 +24,6 @@
 // local includes
 #include "Codec.h"
 
-struct a;
-struct a;
-struct a;
-struct a;
 using namespace std;
 using namespace compat_classad;
 using namespace aviary::codec;

@@ -1,0 +1,10 @@
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.0  Built on : Mar 02, 2011 (11:53:41 EST) -->
+<service name="AviaryLocator">
+<parameter name="ServiceClass" locked="xsd:false">aviary_locator_axis</parameter>
+<description>AviaryLocatorServiceService</description>
+<operation name="locate" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">locator#locate</parameter>
+</operation>
+</service>
