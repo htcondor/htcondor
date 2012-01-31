@@ -106,10 +106,10 @@ pidenvid_format_to_envid( char *dest, unsigned size,
 	}
 
 	/* Here is the representation which will end up in an environment 
-		somewhere */
+		somewhere. time_t doesn't always match %lu, so coerce it*/
 	sprintf(dest, "%s%d=%d%s%lu%s%u", 
 			PIDENVID_PREFIX, forker_pid, 
-			forked_pid, PIDENVID_SEP, t, PIDENVID_SEP, mii);
+			forked_pid, PIDENVID_SEP, (long)t, PIDENVID_SEP, mii);
 
 	return PIDENVID_OK;
 }
@@ -119,12 +119,13 @@ int pidenvid_format_from_envid(char *src, pid_t *forker_pid,
 		pid_t *forked_pid, time_t *t, unsigned int *mii)
 {
 	int rval;
+	long tmpt = (long)(*t); // because time_t doesn't always match %lu
 
 	/* rip out the values I care about and into the arguments */
 	rval = sscanf(src, 
 		PIDENVID_PREFIX "%d=%d" PIDENVID_SEP "%lu" PIDENVID_SEP "%u", 
-		forker_pid, forked_pid, t, mii);
-
+		forker_pid, forked_pid, &tmpt, mii);
+	*t = tmpt;
 	/* There are 4 things I'm taking out of the string, make sure I get them */
 	if (rval == 4) {
 		return PIDENVID_OK;

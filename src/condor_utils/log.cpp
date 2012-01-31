@@ -55,6 +55,9 @@ LogRecord::readword(FILE *fp, char * &str)
 	char	*buf = (char *)malloc(bufsize);
 	int ch;
 
+	if ( ! buf)
+		return -1;
+
 	// ignore leading whitespace but don't pass newline
 	do {
 		ch = fgetc( fp );
@@ -68,7 +71,12 @@ LogRecord::readword(FILE *fp, char * &str)
 	// read until whitespace
 	for (i = 1; !isspace(buf[i-1]); i++) {
 		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
+			void * vbuf = realloc(buf, bufsize*2);
+			if ( ! vbuf) {
+				free(buf);
+				return -1;
+			}
+			buf = (char *)vbuf;
 			bufsize *= 2;
 		} 
 		ch = fgetc( fp );
@@ -99,6 +107,9 @@ LogRecord::readline(FILE *fp, char * &str)
 	char	*buf = (char *)malloc(bufsize);
 	int ch;
 
+	if ( ! buf)
+		return -1;
+
 	// ignore one leading whitespace character but don't pass newline
 	ch = fgetc( fp );
 	if( ch == EOF || ch == '\0' ) {
@@ -110,7 +121,12 @@ LogRecord::readline(FILE *fp, char * &str)
 	// read until newline
 	for (i = 1; buf[i-1]!='\n'; i++) {
 		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
+			void * vbuf = realloc(buf, bufsize*2);
+			if ( ! vbuf) {
+				free(buf);
+				return -1;
+			}
+			buf = (char *)vbuf;
 			bufsize *= 2;
 		} 
 		ch = fgetc( fp );

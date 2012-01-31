@@ -665,6 +665,7 @@ LogHistoricalSequenceNumber::Play(void *  /*data_structure*/)
 	return 1;
 }
 
+
 int
 LogHistoricalSequenceNumber::ReadBody(FILE *fp)
 {
@@ -672,6 +673,7 @@ LogHistoricalSequenceNumber::ReadBody(FILE *fp)
 	char *buf = NULL;
 	rval = readword(fp, buf);
 	if (rval < 0) return rval;
+	MSC_SUPPRESS_WARNING_FIXME(6031)// return value of scanf ignored.
 	sscanf(buf,"%lu",&historical_sequence_number);
 	free(buf);
 
@@ -682,6 +684,7 @@ LogHistoricalSequenceNumber::ReadBody(FILE *fp)
 
 	rval1 = readword(fp, buf);
 	if (rval1 < 0) return rval1;
+	MSC_SUPPRESS_WARNING_FIXME(6031)// return value of scanf ignored.
 	sscanf(buf,"%lu",&timestamp);
 	free(buf);
 	return rval + rval1;
@@ -691,8 +694,9 @@ int
 LogHistoricalSequenceNumber::WriteBody(FILE *fp)
 {
 	char buf[100];
-	snprintf(buf,100,"%lu CreationTimestamp %lu",
+	snprintf(buf,COUNTOF(buf),"%lu CreationTimestamp %lu",
 		historical_sequence_number,timestamp);
+	buf[COUNTOF(buf)-1] = 0; // snprintf not guranteed to null terminate.
 	int len = strlen(buf);
 	return (fwrite(buf, 1, len, fp) < (unsigned)len) ? -1: len;
 }
