@@ -163,6 +163,7 @@ StarterHookMgr::tryHookPrepareJob()
 				err_msg.Value());
 		Starter->jic->notifyStarterError(err_msg.Value(), true,
 						 CONDOR_HOLD_CODE_HookPrepareJobFailure, 0);
+		delete hook_client;
 		return -1;
 	}
 
