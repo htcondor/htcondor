@@ -1765,10 +1765,12 @@ activate_claim( Resource* rip, Stream* stream )
 	stream->encode();
 	if( !stream->put( OK ) ) {
 		rip->dprintf( D_ALWAYS, "Can't send OK to shadow.\n" );
+		delete tmp_starter;
 		ABORT;
 	}
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't send eom to shadow.\n" );
+		delete tmp_starter;
 		ABORT;
 	}
 
@@ -1802,10 +1804,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 		stream->encode();
 		if (!stream->code(stRec)) {
+			delete tmp_starter;
 			ABORT;
 		}
 
 		if (!stream->end_of_message()) {
+			delete tmp_starter;
 			ABORT;
 		}
 
@@ -1820,11 +1824,13 @@ activate_claim( Resource* rip, Stream* stream )
 			if( fd_1 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
 				if( fd_1 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
+					delete tmp_starter;
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_1, errno );
+					delete tmp_starter;
 					ABORT;
 				}
 			}
@@ -1838,11 +1844,13 @@ activate_claim( Resource* rip, Stream* stream )
 			if( fd_2 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
 				if( fd_2 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
+					delete tmp_starter;
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_2, errno );
+					delete tmp_starter;
 					ABORT;
 				}
 			}
