@@ -1699,7 +1699,6 @@ void Server::ProcessRestoreReq(int             req_id,
 {
 	struct stat        chkpt_file_status;
 	condor_sockaddr    server_sa;
-	int                ret_code;
 	restore_reply_pkt  restore_reply;
 	int                data_conn_sd;
 	int                child_pid;
@@ -1865,7 +1864,7 @@ void Server::ProcessRestoreReq(int             req_id,
       if ((err_code=I_bind(data_conn_sd, server_sa,FALSE)) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
 		  Log(0, log_msg);
-		  exit(ret_code);
+		  exit(BIND_ERROR);
 	  }
       if (I_listen(data_conn_sd, 1) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_listen() fails to listen");
