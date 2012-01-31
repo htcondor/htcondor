@@ -49,7 +49,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a rare bug in the parallel universe, where if a claim was removed
+as the shadow was starting up, all ranks of the job would never completely 
+start.
+\Ticket{2786}
+
+\item Fixed a bug that caused disk capacity to be under-reported in Windows
+for drives with 1TB or more of free space.
+\Ticket{2798}
 
 \end{itemize}
 
