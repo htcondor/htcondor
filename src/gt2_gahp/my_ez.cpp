@@ -665,6 +665,7 @@ globus_l_gass_server_ez_register_accept_callback(
             if(amt == -1)
             {
                 globus_free(buf);
+                close(rc);
                 goto deny;
             }
             globus_gass_transfer_authorize(request,
