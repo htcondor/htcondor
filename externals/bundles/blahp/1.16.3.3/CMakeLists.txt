@@ -59,7 +59,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.3.3 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.3.3-p1 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -75,6 +75,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&
