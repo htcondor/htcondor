@@ -74,7 +74,13 @@ eval set -- "$TEMP"
 tmp_found=1
 for i; do
 	if [ $tmp_found -eq 0 ] ; then 
-		REMOTE_HOSTNAME="$i"
+		REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
+		echo "$i" | grep -q '@'
+		if [ $? -eq 0 ] ; then
+		    REMOTE_USER=`echo "$i" | sed 's/@.*//'`
+		fi
+		echo "Setting hostname to $REMOTE_HOSTNAME"
+		echo "Setting user to $REMOTE_USER"
 		break
 	fi
 	if [ "$i" = "--" ]; then tmp_found=0; fi
