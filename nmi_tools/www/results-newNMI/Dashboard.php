@@ -8,6 +8,7 @@ class Dashboard {
 
   var $nmi;
   var $db;
+  var $nmi_results;
 
   function Dashboard() {
     $this->nmi = new NMI();
@@ -180,6 +181,14 @@ class Dashboard {
     }
 
     return $runids;
+  }
+
+  function get_nmi_result_text($result) {
+    if(!array_key_exists($result, $this->nmi_results)) {
+      $this->nmi_results[$result] = $this->nmi->get_result_text($result);
+    }
+
+    return $this->nmi_results[$result];
   }
 
 }

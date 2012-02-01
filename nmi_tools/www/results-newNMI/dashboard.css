@@ -154,3 +154,7 @@ span.link a:hover span {
     clear:both;
     background: #ffffff;
 }
+
+div.TaskStatus {
+    display: inline;
+}
