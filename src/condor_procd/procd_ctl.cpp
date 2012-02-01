@@ -426,6 +426,9 @@ get_usage(ProcFamilyClient& pfc, int argc, char* argv[])
 	printf("CPU Percentage (%%): %f\n", pfu.percent_cpu);
 	printf("Maximum Image Size (KB): %lu\n", pfu.max_image_size);
 	printf("Total Image Size(KB): %lu\n", pfu.total_image_size);
+	if (pfu.total_proportional_set_size_available) {
+		printf("Proportional Set Size (KB): %lu\n", pfu.total_proportional_set_size);
+	}
 	if (pfu.block_read_bytes >= 0)
 		printf("Bytes read from block devices (KB): %lu\n", pfu.block_read_bytes/1024);
 	if (pfu.block_write_bytes >= 0)
