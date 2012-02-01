@@ -47,8 +47,8 @@ struct popen_entry *popen_entry_head = NULL;
 
 static void add_child(FILE* fp, child_handle_t ch)
 {
-	MSC_SUPPRESS_WARNING_FIXME(6011) // Dereferencing a null pointer, malloc can return NULL.
 	struct popen_entry *pe = (struct popen_entry *)malloc(sizeof(struct popen_entry));
+	MSC_SUPPRESS_WARNING_FIXME(6011) // Dereferencing a null pointer, malloc can return NULL.
 	pe->fp = fp;
 	pe->ch = ch;
 	pe->next = popen_entry_head;
