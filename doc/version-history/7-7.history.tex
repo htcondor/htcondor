@@ -222,6 +222,16 @@ recognized:
 \end{itemize}
 \Ticket{2782}
 
+\item The new configuration variable
+\Macro{GRIDMANAGER\_PROXY\_REFRESH\_TIME} controls when the
+\Condor{gridmanager} forwards a refreshed proxy to the remote GRAM server.
+The lifetime remaining on the proxy on the remote server (in seconds) must
+fall below this value before the \Condor{gridmanager} will forward a
+refreshed proxy. 
+The default value is 21600 seconds (6 hours).
+Previously, this value was not configurable.
+\Ticket{2792}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -302,7 +312,11 @@ and the names of the users only differed in their last character.
 
 \begin{itemize}
 
-\item None.
+\item Condor's ability to use cgroup-based process tracking,
+available since Condor version 7.7.0,
+has now been documented in section~\ref{sec:CGroupTracking}.
+\Ticket{1831}
+\Ticket{2120}
 
 \end{itemize}
 

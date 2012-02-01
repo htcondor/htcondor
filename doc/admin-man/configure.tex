@@ -7184,7 +7184,8 @@ Configuration File Macros}
   regarding privilege separation). This means that the \Condor{procd}
   does not include the normal Condor logging subsystem, and thus 
   multiple debug levels are not supported.
-  \MacroNI{PROCD\_LOG} defaults to \File{\$(LOG)/ProcLog}.
+  There is no default value for this variable, 
+  so if not defined, there will be no log for the \Condor{procd}.
   Note that enabling \Dflag{PROCFAMILY} in the debug level for any
   other daemon will cause it to log all interactions with the
   \Condor{procd}.
@@ -7240,6 +7241,15 @@ Configuration File Macros}
   use by the \Condor{procd} in tracking processes associated with a job.
   See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
   a detailed description.
+
+\label{param:BaseCgroup}
+\item[\Macro{BASE\_CGROUP}]
+  The path to the directory used as the virtual file system for the
+  implementation of Linux kernel cgroups.
+  This variable has no default value,
+  and if not defined, cgroup tracking will not be used.
+  See section~\ref{sec:CGroupTracking} on page~\pageref{sec:CGroupTracking} for 
+  a description of cgroup-based process tracking.
 
 \end{description}
 
@@ -7300,6 +7310,13 @@ These macros affect the \Condor{gridmanager}.
   The number of seconds
   between checks for an updated X509 proxy credential. The default
   is 10 minutes (600 seconds).
+
+\label{param:GridmanagerProxyRefreshTime}
+\item[\Macro{GRIDMANAGER\_PROXY\_REFRESH\_TIME}]
+  For GRAM jobs, the \Condor{gridmanager} will not forward a refreshed
+  proxy until the lifetime left for the proxy on the remote machine
+  falls below this value.
+  The value is in seconds and the default is 21600 (6 hours).
 
 \label{param:GridmanagerMinimumProxyTime}
 \item[\Macro{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}]
