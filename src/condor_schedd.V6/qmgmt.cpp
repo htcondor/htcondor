@@ -2585,6 +2585,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	if (write (fd, encoded_value, len) != len) {
 		set_priv(old_priv);
 		free(encoded_value);
+		close(fd);
 		return -1;
 	}
 	close (fd);
@@ -2668,6 +2669,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	char buff[MYPROXY_MAX_PASSWORD_BUFLEN];
 	int bytes = read (fd, buff, sizeof(buff));
 	if( bytes < 0 ) {
+		close(fd);
 		return -1;
 	}
 	buff [bytes] = '\0';
