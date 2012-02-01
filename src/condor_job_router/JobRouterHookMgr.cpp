@@ -374,7 +374,6 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE, 
 			"ERROR in JobRouterHookMgr::hookJobExit: "
 			"failed to create exit client\n");
-		delete exit_client;
 		return -1;
 	}
 
@@ -384,6 +383,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", hook_job_exit);
+		delete exit_client;
 		return -1;
 
 	}
@@ -449,7 +449,6 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE, 
 			"ERROR in JobRouterHookMgr::hookJobCleanup: "
 			"failed to create status update client\n");
-		delete cleanup_client;
 		return -1;
 	}
 
@@ -459,6 +458,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::JobCleanup: "
 				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", hook_cleanup);
+		delete cleanup_client;
 		return -1;
 
 	}
