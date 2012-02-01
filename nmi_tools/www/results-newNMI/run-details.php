@@ -363,9 +363,16 @@ foreach ($test_tasks as $task_name => $results) {
       $totals[$class] += 1;
       $link = sprintf(TASK_URL, $platform, urlencode($task_name), $test_runids[$platform]);
 
-      $contents = "<div class='status'>" . $results[$platform]["result"] . "</div>";
+      if($results[$platform]["result"] == 0) {
+	$pretty_resultval = "&nbsp;";
+      }
+      else {
+	$pretty_resultval = $dash->get_nmi_result_text($results[$platform]["result"]);
+      }
+
+      $contents = "<div class='status'>$pretty_resultval</div>";
       $contents .= "<div class='time'>" . sec_to_min($results[$platform]["length"]) . "</div>";
-      $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
+      $output .= "  <td class=\"$class\"><a href='$link' style='text-decoration:none'>$contents</a></td>\n";
     }
     else {
       $output .= "<td>&nbsp;</td>\n";

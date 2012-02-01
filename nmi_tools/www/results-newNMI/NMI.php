@@ -1,6 +1,7 @@
 <?php
 
 define("NMI_CONFIG_PATH", "/usr/local/nmi/etc/nmi.conf");
+define("NMI_TASK_RESULT_URL", "http://submit-1.batlab.org/nmi/Metronome/API?function=taskResultToHTML&result=%s");
 
 class NMI {
   var $config;  // Array containing configuration information from file
@@ -43,6 +44,10 @@ class NMI {
     return $this->db;
   }
 
+  function get_result_text($result) {
+    $url = sprintf(NMI_TASK_RESULT_URL, $result);
+    return file_get_contents($url);
+  }
 
   private function __parse_config_file($file) {
     $contents = preg_split("/\n/", file_get_contents(NMI_CONFIG_PATH, false));

@@ -15,29 +15,28 @@
 ## limitations under the License.
 ##**************************************************************
 
+use strict;
+use warnings;
+
 use CondorTest;
+use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $port = 10000+int(rand()*10000);
-my $view_port = 10000+int(rand()*10000);
-
 my $append_condor_config = '
-  COLLECTOR_HOST = $(IP_ADDRESS):' . $port . '
-  COLLECTOR_ARGS = -p ' . $port . '
+  COLLECTOR_HOST = $(IP_ADDRESS):0
   VIEW_COLLECTOR = $(COLLECTOR)
-  VIEW_COLLECTOR_ARGS = -p ' . $view_port . ' -local-name VIEW_COLLECTOR
+  VIEW_COLLECTOR_ARGS = -local-name VIEW_COLLECTOR
   VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
+  VIEW_COLLECTOR.COLLECTOR_ADDRESS_FILE = $(SPOOL)/.VIEWcollector_address
 
   DAEMON_LIST = MASTER,COLLECTOR,VIEW_COLLECTOR,NEGOTIATOR,SCHEDD,STARTD
   DC_DAEMON_LIST = + VIEW_COLLECTOR
 
-  CONDOR_VIEW_HOST = $(IP_ADDRESS):' . $view_port . '
   CONDOR_VIEW_CLASSAD_TYPES = Negotiator
 
-  # So CODNOR_VIEW_CLASSAD_TYPES can be changed with a reconfig
-  ALLOW_CONFIG = *
-  SETTABLE_ATTRS_CONFIG = CONDOR_VIEW_CLASSAD_TYPES
+  ALLOW_CONFIG = $(FULL_HOSTNAME)
+  SETTABLE_ATTRS_CONFIG = CONDOR_VIEW_CLASSAD_TYPES, CONDOR_VIEW_HOST
   ENABLE_RUNTIME_CONFIG = TRUE
 
   # Just on the off chance the default security settings dont cover this
@@ -55,15 +54,52 @@ CondorLog::RunCheck(
     daemon => "COLLECTOR",
     match_regexp => "Inserting new hashent for 'Negotiator'"
 );
+
+# Figure out what port the view collector started with
+my $spool_dir = `condor_config_val SPOOL`;
+CondorUtils::fullchomp($spool_dir);
+my $view_addr_file = "$spool_dir/.VIEWcollector_address";
+open(IN, '<', $view_addr_file) or die("Cannot open $view_addr_file for reading: $!");
+my $first_line = <IN>;
+close(IN);
+
+print "The first line of the View Collector address file ($view_addr_file):\n";
+print "\t$first_line";
+
+my $view_port;
+if($first_line =~ /<[\d.]+:(\d+)>/) {
+    $view_port = $1;
+}
+else {
+    print "Cannot figure out what port the view collector is running on.\n";
+    print "The first line of the view address file is:\n";
+    print $first_line;
+    exit 1;
+}
+
+# Note: you must run condor_reconfig after rset'ing a variable
+system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST:\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
+
+# Validate that we set this properly
+my $cmd = "condor_config_val -collector CONDOR_VIEW_HOST";
+print "Running `$cmd`:\n";
+print "\t" . `$cmd`;
+
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Forwarding ad: type=Negotiator command=UPDATE_NEGOTIATOR_AD"
+    match_regexp => "Will forward ads on to View Server"
 );
+
+# After setting up the collector to forward ads, we need to reconfig the 
+# negotiator to get it to re-send its ad to the collector (and hence, on
+# to the View collector)
+system("condor_reconfig -negotiator");
 
 # The Negotiator got forwarded to the View Collector
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "Inserting new hashent for 'Negotiator'"
+    match_regexp => "Inserting new hashent for 'Negotiator'",
+    num_retries => 10,
 );
 
 CondorTest::runCondorTool("condor_off -fast -negotiator");
@@ -73,14 +109,14 @@ my $backoff = 2;
 my $runlimit = 8;
 my $loopcount = 0;
 my $done = "no";
-TRY: while( $done eq "no") {
+while( $done eq "no") {
     $loopcount += 1;
     chomp(my @cmd = `condor_status -negotiator -format \"%s\\n\" Name`);
 
     if (!@cmd) {
 	$done = "yes";
 	print "ok\n";
-	last TRY;
+	last;
     }
     if ($loopcount == $runlimit) { 
 	print "bad\n";
@@ -112,14 +148,14 @@ CondorTest::runCondorTool("condor_reconfig -startd");
 print "Waiting for Startd to show up in view collector - ";
 $loopcount = 0;
 $done = "no";
-TRY: while( $done eq "no") {
+while( $done eq "no") {
     $loopcount += 1;
     chomp(my @cmd = `condor_status -pool \"<127.0.0.1:$view_port>\" -startd -format \"%s\\n\" Name`);
 
     if (@cmd) {
 	$done = "yes";
 	print "ok\n";
-	last TRY;
+	last;
     }
     if ($loopcount == $runlimit) { 
 	print "bad\n";
