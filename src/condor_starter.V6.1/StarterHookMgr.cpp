@@ -256,6 +256,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);
+		delete hook_client;
 		return -1;
 	}
 
