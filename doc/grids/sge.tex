@@ -5,7 +5,6 @@
 \index{SGE (Sun Grid Engine)}
 \index{grid computing!submitting jobs to SGE}
 
-
 The popular Grid Engine batch system (formerly known as Sun Grid Engine and
 abbreviated SGE) is available in two varieties:
 Oracle Grid Engine
@@ -14,9 +13,9 @@ and Univa Grid Engine
 (\URL{http://www.univa.com/?gclid=CLXg6-OEy6wCFWICQAodl0lm9Q}).
 
 Condor jobs are submitted to a local SGE system
-using the \SubmitCmd{grid} universe and the
-\SubmitCmd{grid\_resource} command by placing the following
-into the submit description file.
+using the \SubmitCmd{grid} universe and adding the
+\SubmitCmd{grid\_resource} command by placing
+into the submit description file:
 \begin{verbatim}
 grid_resource = sge
 \end{verbatim}
@@ -24,15 +23,15 @@ grid_resource = sge
 The sge grid type requires two variables to be set in the Condor
 configuration file.
 \Macro{SGE\_GAHP} is the path to the SGE GAHP server binary that is to be
-used to submit PBS jobs.
-\Macro{GLITE\_LOCATION} is the path to the directory containing the GAHP's
-configuration file and auxillary binaries.
-In the Condor distribution, these files are located in 
-\File{\MacroUNI{LIB}/glite}.
-The SGE GAHP's configuration file is in
+used to submit SGE jobs.
+\Macro{GLITE\_LOCATION} specifies the path to the directory containing the 
+SGE GAHP's configuration file and auxiliary binaries.
+In the Condor distribution, this configuration and the auxiliary binaries
+are located in the directory \File{\MacroUNI{LIB}/glite/}.
+The SGE GAHP's configuration file will be at
 \File{\MacroUNI{GLITE\_LOCATION}/etc/batch\_gahp.config}.
-The SGE GAHP's auxillary binaries
-are to be in the directory \File{\MacroUNI{GLITE\_LOCATION}/bin}.
+The SGE GAHP's auxiliary binaries
+are in the directory \File{\MacroUNI{GLITE\_LOCATION}/bin/}.
 The Condor configuration file appears
 
 \footnotesize
@@ -42,7 +41,3 @@ SGE_GAHP       = $(GLITE_LOCATION)/bin/batch_gahp
 \end{verbatim}
 \normalsize
 
-%The SGE GAHP's configuration file contains two variables that must be
-%modified to tell it where to find PBS on the local system.
-%\MacroNI{pbs\_binpath} is the directory that contains the PBS binaries.
-%\MacroNI{pbs\_spoolpath} is the PBS spool directory.
