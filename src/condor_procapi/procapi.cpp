@@ -465,7 +465,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 
 #if HAVE_PSS
 int
-ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status ) 
+ProcAPI::getPSSInfo( pid_t pid, procInfo& procRaw, int &status ) 
 {
 	char path[64];
 	FILE *fp;
@@ -726,13 +726,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// close the file
 	fclose( fp );
-
-#if HAVE_PSS
-	getPSSInfo(pid,procRaw,status);
-	if( status != PROCAPI_OK ) {
-		return PROCAPI_FAILURE;
-	}
-#endif
 
 		// only one value for times
 	procRaw.user_time_2 = 0;
