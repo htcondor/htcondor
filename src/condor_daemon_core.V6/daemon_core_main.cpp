@@ -976,6 +976,7 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 
 		if( strchr(ext,DIR_DELIM_CHAR) ) {
 			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			free(pname);
 			return FALSE;
 		}
 	}
@@ -1081,9 +1082,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		fullPath += "/";
 		fullPath += filename;
 		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
-		if (fd > 0) {
+		if (fd >= 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
+			close(fd);
 		}
 	}
 
