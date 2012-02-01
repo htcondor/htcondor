@@ -132,12 +132,12 @@ class HashTable {
 template <class Index, class Value>
 HashTable<Index,Value>::HashTable( int /* tableSz */,
 								   unsigned int (*hashF)( const Index &index ),
-								   duplicateKeyBehavior_t behavior ) {
+								   duplicateKeyBehavior_t behavior ) : currentItem(0) {
 	initialize(hashF, behavior);
 }
 
 template <class Index, class Value>
-HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index )) {
+HashTable<Index,Value>::HashTable( unsigned int (*hashF)( const Index &index )) : currentItem(0) {
 	initialize(hashF, rejectDuplicateKeys);
 }
 

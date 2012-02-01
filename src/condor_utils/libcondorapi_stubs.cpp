@@ -278,7 +278,7 @@ bool Stream::deadline_expired(){not_impl();return false;}
 
 
 /* stubs for generic query object */
-GenericQuery::GenericQuery(void) { integerThreshold = stringThreshold = floatThreshold = 0;}
+GenericQuery::GenericQuery(void) { floatConstraints = 0; floatKeywordList = 0; integerConstraints = 0; integerKeywordList = 0; stringConstraints = 0; stringKeywordList = 0 ; integerThreshold = stringThreshold = floatThreshold = 0;}
 GenericQuery::~GenericQuery(void) {}
 
 /* stubs for query object. */

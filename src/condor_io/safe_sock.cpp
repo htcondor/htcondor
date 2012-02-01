@@ -132,13 +132,13 @@ void SafeSock::init()
 
 
 SafeSock::SafeSock() 				/* virgin safesock	*/
-	: Sock()
+	: Sock(), _fqu(0)
 {
 	init();
 }
 
 SafeSock::SafeSock(const SafeSock & orig) 
-	: Sock(orig)
+	: Sock(orig), _fqu(0)
 {
 	init();
 	// now copy all cedar state info via the serialize() method

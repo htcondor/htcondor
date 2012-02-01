@@ -51,6 +51,7 @@ OfflineCollectorPlugin::OfflineCollectorPlugin () throw ()
 {
 	_ads = NULL;
 	_persistent_store = NULL;
+	AbsentReq = 0;
 }
 
 OfflineCollectorPlugin::~OfflineCollectorPlugin ()
