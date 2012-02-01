@@ -804,7 +804,12 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 		usage->total_image_size += member->m_proc_info->imgsize;
 		usage->total_resident_set_size += member->m_proc_info->rssize;
 #if HAVE_PSS
-		if( member->m_proc_info->pssize_available ) {
+
+		// PSS is special: it's expensive to calculate for every process,
+		// so we calculate it on demand
+		int status; // Is ignored
+		int rc = ProcAPI::getPSSInfo(member->m_proc_info->pid, *(member->m_proc_info), status);
+		if( (rc == PROCAPI_SUCCESS) && (member->m_proc_info->pssize_available) ) {
 			usage->total_proportional_set_size_available = true;
 			usage->total_proportional_set_size += member->m_proc_info->pssize;
 		}
