@@ -24,8 +24,8 @@ REMOTE_USER=`whoami`
 # Needs '~' because resolved on remote site
 REMOTE_GLITE="~/bosco/libexec/glite"
 # Needs $HOME, else [ -f ... ] fails
-PASSPHRASE_LOCATION="$HOME/bosco/etc/.pass"
-PRIVATE_KEY_LOCATION="$HOME/bosco/etc/id_rsa"
+PASSPHRASE_LOCATION="$HOME/.bosco/.pass"
+PRIVATE_KEY_LOCATION="$HOME/.ssh/bosco_key.rsa"
 
 
 # List of remote hosts to connect to
@@ -128,7 +128,7 @@ done
 # if a passphrase is required, start up a ssh-agent and do ssh-add
 if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# start the ssh-agent
-	eval `ssh-agent -s`
+	eval `ssh-agent -s` 1>&2
 
 	# get the passphrase
         PASSPHRASE=""
@@ -190,7 +190,7 @@ if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	
 
 	# call the expect script to ssh-add identity
-	$SSH_ADD_SCRIPT
+	$SSH_ADD_SCRIPT 1>&2
 	ADD_STATUS=$?
 
 	# remove temporary script
@@ -202,7 +202,7 @@ if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 		if [ $ADD_STATUS == 1 ] ; then
 			ADD_STATUS=-1
 		fi
-		eval `ssh-agent -sk`
+		eval `ssh-agent -sk` 1>&2
 		exit $ADD_STATUS
 	fi
 fi
@@ -220,6 +220,6 @@ ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c "'GLITE_LOCATI
 SSH_STATUS=$?
 
 # kill the ssh-agent if it exists
-eval `ssh-agent -sk`
+eval `ssh-agent -sk` 1>&2
 
 exit $SSH_STATUS
