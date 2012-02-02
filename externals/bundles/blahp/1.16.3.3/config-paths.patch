@@ -1,6 +1,7 @@
---- org.glite.ce.blahp/config/blah.config.template	2012-01-25 14:01:00.000000000 -0600
-+++ org.glite.ce.blahp.patched/config/blah.config.template	2012-02-01 15:10:41.000000000 -0600
-@@ -15,10 +15,10 @@
+diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp.patched/config/blah.config.template
+--- org.glite.ce.blahp/config/blah.config.template	2012-02-02 10:58:36.000000000 -0600
++++ org.glite.ce.blahp.patched/config/blah.config.template	2012-02-02 10:59:15.000000000 -0600
+@@ -15,17 +15,17 @@
  blah_delegate_renewed_proxies=no
  
  #Path where PBS executables are located 
@@ -13,6 +14,14 @@
  
  #If it is set to yes blah does not check the jobid in the logfiles
  pbs_nochecksubmission=
+ 
+ #If it is set to yes blah does NOT use log files to get job status, 
+ #but uses only standard LRMS query (qstat)  
+-pbs_nologaccess=
++pbs_nologaccess=yes
+ 
+ #If it is set to no blah scripts for PBS will not try to read 
+ #locally from the logs if BLParser is not present
 @@ -61,7 +61,7 @@
  ####
  
