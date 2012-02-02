@@ -66,10 +66,10 @@ LogRecord::readword(FILE *fp, char * &str)
 			return( -1 );
 		}
 		buf[0] = ch;
-	} while (isspace(buf[0]) && buf[0]!='\n' );
+	} while (isspace((unsigned char)buf[0]) && buf[0]!='\n' );
 
 	// read until whitespace
-	for (i = 1; !isspace(buf[i-1]); i++) {
+	for (i = 1; !isspace((unsigned char)buf[i-1]); i++) {
 		if (i == bufsize) {
 			void * vbuf = realloc(buf, bufsize*2);
 			if ( ! vbuf) {
