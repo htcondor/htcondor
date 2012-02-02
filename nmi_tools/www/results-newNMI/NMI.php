@@ -1,7 +1,7 @@
 <?php
 
 define("NMI_CONFIG_PATH", "/usr/local/nmi/etc/nmi.conf");
-define("NMI_TASK_RESULT_URL", "http://submit-1.batlab.org/nmi/Metronome/API?function=taskResultToHTML&result=%s");
+define("NMI_TASK_RESULT_URL", "http://submit-2.batlab.org/nmi/Metronome/API?function=taskResultToHTML&result=%s");
 
 class NMI {
   var $config;  // Array containing configuration information from file
@@ -45,6 +45,12 @@ class NMI {
   }
 
   function get_result_text($result) {
+    # Exit codes greater than 0 are user defined.  
+    if($result > 0) {
+      return $result;
+    }
+
+    # Look up exit codes less than 0
     $url = sprintf(NMI_TASK_RESULT_URL, $result);
     return file_get_contents($url);
   }
