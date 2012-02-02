@@ -147,7 +147,7 @@ void
 ClassAdLogParser::setJobQueueName(const char* jqn)
 {
 	int cch = strlen(jqn);
-	ASSERT (cch < COUNTOF(job_queue_name));
+	ASSERT (cch < (int)COUNTOF(job_queue_name));
 	strcpy(job_queue_name, jqn);
 }
 
