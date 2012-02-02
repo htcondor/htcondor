@@ -665,7 +665,9 @@ endif()
 if(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /analyze") # turn on code analysis (level 6 warnings)
+		# turn on code analysis. 
+		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /analyze /wd6211") # turn on code analysis (level 6 warnings)
 	endif(MSVC_ANALYZE)
 
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251")  #
