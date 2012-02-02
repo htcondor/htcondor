@@ -1,0 +1,150 @@
+#!/bin/sh
+# bosco_add_host: Used to install ssh keys and blahp on remote hosts.
+
+# 
+# Arguments:
+# $1 - fqdn hostname of remote host to install ssh keys
+#
+
+usage()
+{
+    echo "Usage: $0 user@fqdn.example.com"
+}
+
+if [ $# -ne 1 ]; then
+    usage
+    exit 1
+fi
+
+# Remote host to connect
+remote_host=$1
+
+# Bosco key location
+bosco_key=$HOME/.ssh/bosco_key.rsa
+
+# Bosco password location
+PASSPHRASE_LOCATION=$HOME/.bosco/.pass
+
+
+# If the key doesn't exist, create it
+if [ ! -e $bosco_key ]; then
+    # Read in password for bosco key
+    stty -echo
+    read -p "Enter password for bosco ssh key: " PASSPHRASE; echo
+    stty echo
+
+    # Output the password to a specially crafted file
+    mkdir -p $HOME/.bosco
+    echo $PASSPHRASE > $PASSPHRASE_LOCATION
+    chmod go-rwx $PASSPHRASE_LOCATION
+    
+    ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
+fi
+
+
+# Transfer the public key to the remote host
+# ssh-copy-id is available on el5 from openssh-clients
+echo "Enter password to copy ssh keys to $remote_host:"
+ssh-copy-id -i $bosco_key $remote_host > /dev/null
+
+
+# Copy blahp
+PASSPHRASE=""
+if [ -f $PASSPHRASE_LOCATION ]; then
+    PASSPHRASE=`cat $PASSPHRASE_LOCATION`
+fi
+
+# Start the ssh-agent
+eval `ssh-agent -s` > /dev/null
+
+# Create an ssh-agent session to handle the transfers
+# Copied from remote_gahp
+# create a temp file for the expect script
+SSH_ADD_SCRIPT=`mktemp`
+chmod 700 $SSH_ADD_SCRIPT
+
+# Create the expect script
+echo "#!/usr/bin/expect -f
+    # get arguments
+    set num_args [llength \$argv]
+    set private_key_loc [lindex \$argv 0]
+
+    # spawn ssh-add process
+    spawn ssh-add $bosco_key
+
+    set spawn_pid [exp_pid]
+
+    # set timeout for expected input
+    set timeout 5
+
+    expect {
+        # no passphrase required
+        \"*Identity added*\" {
+            exit 0
+        }
+        # sends passphrase
+        \"*passphrase*\" {
+            send -- \"$PASSPHRASE\r\"
+        }
+        # no ssh-agent running
+        \"*authentication agent*\" {
+            exit -1
+        }
+        # incorrect private key location
+        timeout {
+            exit -2
+        }
+    }
+
+    expect {
+        # all done
+        eof {
+            exit 0
+        }
+        # incorrect passphrase
+        \"*passphrase*\" {
+            exit -3
+        }
+        # timeout
+        timeout {
+            exit -4
+        }
+    }" > $SSH_ADD_SCRIPT
+
+
+# call the expect script to ssh-add identity
+$SSH_ADD_SCRIPT > /dev/null
+ADD_STATUS=$?
+
+# remove temporary script
+rm $SSH_ADD_SCRIPT
+
+# check if ssh-add failed
+if [ $ADD_STATUS != 0 ] ; then
+    # ssh-add script not found
+    if [ $ADD_STATUS == 1 ] ; then
+        ADD_STATUS=-1
+    fi
+    eval `ssh-agent -sk`
+    exit $ADD_STATUS
+fi
+
+
+# First, find the blahp
+glite_location=`condor_config_val GLITE_LOCATION`
+release_dir=`condor_config_val RELEASE_DIR`
+
+echo "Installing BOSCO on $remote_host..."
+
+# Make the necessary remote directories
+ssh $remote_host "mkdir -p bosco"
+
+# Copy over blahp
+rsync -aq  $glite_location $remote_host:bosco/libexec/
+rsync -aq  $release_dir/lib/libclassad.so* $remote_host:bosco/lib/
+rsync -aq  $release_dir/lib/condor $remote_host:bosco/lib/
+
+echo "Installation complete"
+
+# Shut down ssh-agent
+eval `ssh-agent -sk` > /dev/null
