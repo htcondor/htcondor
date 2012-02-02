@@ -1144,8 +1144,8 @@ void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
 void Server::Replicate()
 {
 	int 				child_pid, bytes_recvd=0, bytes_read;
-	size_t				bytes_sent=0, bytes_left;
-	ssize_t				bytes_written;
+	size_t				bytes_sent=0;
+	ssize_t				bytes_left, bytes_written;
 	char        		log_msg[256], buf[10240];
 	char				pathname[MAX_PATHNAME_LENGTH];
 	int 				server_sd, ret_code, fd;
