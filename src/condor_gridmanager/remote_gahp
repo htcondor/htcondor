@@ -219,7 +219,7 @@ shift
 
 # use BatchMode so we fail if a password is requested
 #echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
-ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -i -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
 
 SSH_STATUS=$?
 
