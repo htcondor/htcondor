@@ -2648,7 +2648,6 @@ OpToString( string &buffer, classad::Operation::OpKind op )
 HyperRect::
 HyperRect( )
 {
-	ivals = NULL;
 	initialized = false;
 }
 

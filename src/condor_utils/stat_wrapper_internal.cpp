@@ -71,7 +71,7 @@ StatWrapperIntPath::StatWrapperIntPath(
 
 // Copy constructor
 StatWrapperIntPath::StatWrapperIntPath( const StatWrapperIntPath &other )
-		: StatWrapperIntBase( other ), m_fn( other.GetFn()), m_path(0) 
+		: StatWrapperIntBase( other ), m_fn( other.GetFn() )
 {
 	SetPath( other.GetPath() );
 }

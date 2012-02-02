@@ -55,7 +55,7 @@ static NAME_VALUE SigNameArray[] = {
 NameTable SigNames( SigNameArray );
 
 
-EventHandler::EventHandler( void (*f)(int), sigset_t m ) : o_action()
+EventHandler::EventHandler( void (*f)(int), sigset_t m )
 {
 	func = f;
 	mask = m;
