@@ -423,6 +423,7 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 		configured_network_interface_ips.count(ip) != 0;
 }
 
+
 void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
 {
 	*new_expr_string = NULL;
