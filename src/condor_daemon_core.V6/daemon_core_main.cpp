@@ -363,6 +363,7 @@ kill_daemon_ad_file()
 		return;
 	}
 
+	MSC_SUPPRESS_WARNING_FOREVER(6031) // return value of unlink ignored.
 	unlink(ad_file);
 
 	free(ad_file);
@@ -1422,6 +1423,7 @@ dc_reconfig()
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
 			char segfault;	
+			MSC_SUPPRESS_WARNING_FOREVER(6011) // warning about NULL pointer deref.
 			segfault = *ptmp; // should blow up here
 			if (segfault) {} // Line to avoid compiler warnings.
 			ptmp[0] = 'a';

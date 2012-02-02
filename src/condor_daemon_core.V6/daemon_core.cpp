@@ -1736,6 +1736,9 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 #endif
 }
 
+// disable warning about memory leaks due to exception. all memory freed on exit anyway
+MSC_DISABLE_WARNING(6211)
+
 int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 			     bool can_register_read,
 			     bool can_register_write,
@@ -3545,6 +3548,7 @@ void DaemonCore::Driver()
 						// handle.  Note that if Cancel_Pipe() was called by the
 						// handler above, pipeEnd will be NULL, so we stop
 						// watching
+						MSC_SUPPRESS_WARNING(6011) // can't sure sure that save_pentry is not NULL
 						if ( saved_pentry->pipeEnd ) {
 							WatchPid(saved_pentry);
 						}
@@ -3981,10 +3985,12 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
+		MSC_SUPPRESS_WARNING(6011) // can't sure sure that sock is not NULL
 		user = sock->getFullyQualifiedUser();
 		if( !user ) {
 			user = "";
 		}
+		MSC_SUPPRESS_WARNING(6011) // can't sure sure that stream is not NULL
 		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
 				comTable[index].handler_descrip,
 				inServiceCommandSocket_flag,
@@ -7398,6 +7404,7 @@ void CreateProcessForkit::exec() {
 }
 #endif
 
+MSC_DISABLE_WARNING(6262) // function uses 62916 bytes of stack
 int DaemonCore::Create_Process(
 			const char    *executable,
 			ArgList const &args,
@@ -7785,22 +7792,22 @@ int DaemonCore::Create_Process(
 	if ( std ) {
 		int valid = FALSE;
 		HANDLE *std_handles[3] = {&si.hStdInput, &si.hStdOutput, &si.hStdError};
-		for (int i = 0; i < 3; i++) {
-			if ( std[i] > -1 ) {
-				if (std[i] >= PIPE_INDEX_OFFSET) {
+		for (int ii = 0; ii < 3; ii++) {
+			if ( std[ii] > -1 ) {
+				if (std[ii] >= PIPE_INDEX_OFFSET) {
 					// we are handing down a DaemonCore pipe
-					int index = std[i] - PIPE_INDEX_OFFSET;
-					*std_handles[i] = (*pipeHandleTable)[index]->get_handle();
-					SetHandleInformation(*std_handles[i], HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+					int index = std[ii] - PIPE_INDEX_OFFSET;
+					*std_handles[ii] = (*pipeHandleTable)[index]->get_handle();
+					SetHandleInformation(*std_handles[ii], HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
 					valid = TRUE;
 				}
 				else {
 					// we are handing down a C library FD
-					SetFDInheritFlag(std[i],TRUE);	// set handle inheritable
-					long longTemp = _get_osfhandle(std[i]);
+					SetFDInheritFlag(std[ii],TRUE);	// set handle inheritable
+					long longTemp = _get_osfhandle(std[ii]);
 					if (longTemp != -1 ) {
 						valid = TRUE;
-						*std_handles[i] = (HANDLE)longTemp;
+						*std_handles[ii] = (HANDLE)longTemp;
 					}
 				}
 			}
@@ -7886,14 +7893,14 @@ int DaemonCore::Create_Process(
 			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER",
 			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
 			"\0" };		// must end list with NULL string
-		int i = 0;
-		while ( default_vars[i][0] ) {
+		int ixvar = 0;
+		while ( default_vars[ixvar][0] ) {
 			MyString envbuf;
-			GetEnv(default_vars[i],envbuf);
+			GetEnv(default_vars[ixvar],envbuf);
 			if (envbuf.Length()) {
-				job_environ.SetEnv(default_vars[i],envbuf.Value());
+				job_environ.SetEnv(default_vars[ixvar],envbuf.Value());
 			}
-			i++;
+			ixvar++;
 		}
 
 			// now, add in the inherit buf
@@ -8282,15 +8289,15 @@ int DaemonCore::Create_Process(
 	//
 	if (family_info != NULL) {
 		ASSERT(m_proc_family != NULL);
-		bool ok = Register_Family(newpid,
+		bool okrf = Register_Family(newpid,
 		                          getpid(),
 		                          family_info->max_snapshot_interval,
 		                          NULL,
 		                          family_info->login,
 		                          NULL,
-					  family_info->cgroup,
+		                          family_info->cgroup,
 		                          family_info->glexec_proxy);
-		if (!ok) {
+		if (!okrf) {
 			EXCEPT("error registering process family with procd");
 		}
 		if (ResumeThread(piProcess.hThread) == (DWORD)-1) {
@@ -8833,6 +8840,7 @@ int DaemonCore::Create_Process(
 	errno = return_errno;
 	return newpid;
 }
+MSC_RESTORE_WARNING(6262) // warn when function uses > 16k stack
 
 #ifdef WIN32
 /* Create_Thread support */
@@ -8944,13 +8952,14 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	(void)InfoCommandSinfulString();
 
 #ifdef WIN32
-	unsigned tid;
-	HANDLE hThread;
+	unsigned tid = 0;
+	HANDLE hThread = NULL;
 	priv_state priv;
 	// need to copy the sock because our caller is going to delete/close it
 	Stream *s = sock ? sock->CloneStream() : (Stream *)NULL;
 
 	thread_info *tinfo = (thread_info *)malloc(sizeof(thread_info));
+	ASSERT( tinfo );
 	tinfo->start_func = start_func;
 	tinfo->arg = arg;
 	tinfo->sock = s;
@@ -9905,7 +9914,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	entry->pidentries[0] = pidentry;
 	pidentry->watcherEvent = entry->event;
 	entry->nEntries = 1;
-	unsigned threadId;
+	unsigned threadId = 0;
 	entry->hThread = (HANDLE) _beginthreadex(NULL, 1024,
 		(CRT_THREAD_HANDLER)pidWatcherThread,
 		entry, 0, &threadId );
@@ -11343,6 +11352,7 @@ DaemonCore::PidEntry::~PidEntry() {
 }
 
 
+MSC_DISABLE_WARNING(6262) // function uses 65572 bytes of stack
 int
 DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     char buf[DC_PIPE_BUF_SIZE + 1];
@@ -11405,7 +11415,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	}
 	return TRUE;
 }
-
+MSC_RESTORE_WARNING(6262) // warn when function uses > 16k stack
 
 int
 DaemonCore::PidEntry::pipeFullWrite(int fd)
