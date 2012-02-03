@@ -79,6 +79,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		char	buf[1024];
 		memset( buf, 0, sizeof(buf) );
 		strncpy( buf, generic->info, sizeof(buf)-1 );
+		buf[1023] = 0;
 		int size = strlen( buf );
 		while( isspace(buf[size-1]) )
 			buf[--size] = '\0';
@@ -281,6 +282,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  getMaxRotation(),
 			  getCreatorName().Value()
 			  );
+	event.info[COUNTOF(event.info)-1] = 0;
 	::dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
 	int		len = strlen( event.info );
 	while( len < 256 ) {

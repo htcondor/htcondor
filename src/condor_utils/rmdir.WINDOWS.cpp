@@ -612,6 +612,7 @@ int RemoveFileDACLs(LPCWSTR pszPath, BOOL fDiagnostic, BPRINT_BUFFER *pbp)
    SECURITY_DESCRIPTOR si;
    ZeroMemory(&si, sizeof(si));
    InitializeSecurityDescriptor(&si, SECURITY_DESCRIPTOR_REVISION);
+   #pragma warning(suppress: 6248) // warning Setting a SECURITY_DESCRIPTOR's DACL to NULL will result in an unprotected object (which is the point...)
    SetSecurityDescriptorDacl (&si,  TRUE, NULL, FALSE);
 
    if ( ! SetFileSecurityW(pszPath, DACL_SECURITY_INFORMATION, &si))

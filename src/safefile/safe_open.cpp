@@ -24,6 +24,7 @@
 #include <unistd.h>
 #else
 #include <io.h>
+#pragma warning(disable: 4101) // unreferenced local variable
 #endif
 #include <errno.h>
 #include <stdio.h>

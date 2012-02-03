@@ -193,7 +193,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		return false;
 	}
 
-	int bufferSize = sizeof(protocol_info) + sizeof(int);
+	int bufferSize = (sizeof(int) + sizeof(protocol_info));
 	char *buffer = new char[bufferSize];
 	ASSERT( buffer );
 	int cmd = SHARED_PORT_PASS_SOCK;

@@ -278,12 +278,14 @@ extern "C" int RequestStore(const char*     owner,
 	req.time_consumed = htonl(0);
 	req.key = htonl(key);
 	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);
+	req.owner[MAX_NAME_LENGTH-1] = 0;
 	if (schedd) {
 		int space_left = MAX_NAME_LENGTH-strlen(req.owner)-1;
 		if (space_left) {
 			strcat(req.owner, "@");
 			space_left--;
-			strncat(req.owner, schedd, space_left);
+			strncat(req.owner, schedd, MAX_NAME_LENGTH-1);
+			req.owner[MAX_NAME_LENGTH-1] = 0;
 		}
 	}
 	StripPrefix(filename, req.filename);
@@ -345,12 +347,14 @@ extern "C" int RequestRestore(const char*     owner,
 	req.priority = htonl(0);
 	req.key = htonl(key);
 	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);
+	req.owner[MAX_NAME_LENGTH-1] = 0;
 	if (schedd) {
 		int space_left = MAX_NAME_LENGTH-strlen(req.owner)-1;
 		if (space_left) {
 			strcat(req.owner, "@");
 			space_left--;
-			strncat(req.owner, schedd, space_left);
+			strncat(req.owner, schedd, MAX_NAME_LENGTH-1);
+			req.owner[MAX_NAME_LENGTH-1] = 0;
 		}
 	}
 	StripPrefix(filename, req.filename);
@@ -419,7 +423,7 @@ extern "C" int RequestService(const char*     owner,
 			if (space_left) {
 				strcat(req.owner_name, "@");
 				space_left--;
-				strncat(req.owner_name, schedd, space_left);
+				strncat(req.owner_name, schedd, MAX_NAME_LENGTH-1);
 			}
 		}
 	}

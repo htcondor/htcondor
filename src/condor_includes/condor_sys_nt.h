@@ -243,6 +243,16 @@ END_C_DECLS
 
 #endif
 
+// defeat warnings about isspace, isdigit, etc
+inline int is_space(char ch) { return isspace( (int)( (unsigned char)(ch) ) ); }
+inline int is_digit(char ch) { return isdigit( (int)( (unsigned char)(ch) ) ); }
+inline int is_alnum(char ch) { return isalnum( (int)( (unsigned char)(ch) ) ); }
+inline int is_alpha(char ch) { return isalpha( (int)( (unsigned char)(ch) ) ); }
+
+#define isspace is_space
+#define isdigit is_digit
+#define isalnum is_alnum
+#define isalpha is_alpha
 
 /* Define the PRIx64 macros */
 

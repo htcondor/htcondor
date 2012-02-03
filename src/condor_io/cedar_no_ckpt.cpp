@@ -121,6 +121,7 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 	return result;
 }
 
+MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 int
 ReliSock::get_file( filesize_t *size, int fd,
 					bool flush_buffers, bool append )
@@ -253,6 +254,7 @@ ReliSock::get_file( filesize_t *size, int fd,
 	errno = saved_errno;
 	return retval;
 }
+MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int
 ReliSock::put_empty_file( filesize_t *size )
@@ -307,6 +309,7 @@ ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset)
 	return result;
 }
 
+MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 int
 ReliSock::put_file( filesize_t *size, int fd, filesize_t offset )
 {
@@ -444,6 +447,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset )
 	*size = filesize;
 	return 0;
 }
+MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int
 ReliSock::get_file_with_permissions( filesize_t *size, 

@@ -2144,6 +2144,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
                        - sizeof ( DWORD ) ) );
 
         acl = (PACL) new BYTE[size];
+		ASSERT( acl );
 
         initialized = InitializeAcl (
             acl, 
