@@ -1022,6 +1022,8 @@ Init2( Interval *i1, Interval *i2, bool undef )
 			i_new = new Interval;
 			Copy( i1, i_new );		
 			iList.Append( i_new );
+		} else {
+			delete i_new;
 		}			
 		initialized = true;
 		iList.Rewind( );
