@@ -1505,7 +1505,6 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		}
 
 		download_info *info = (download_info *)malloc(sizeof(download_info));
-		ASSERT ( info );
 		info->myobj = this;
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::DownloadThread,
@@ -2359,7 +2358,6 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		}
 
 		upload_info *info = (upload_info *)malloc(sizeof(upload_info));
-		ASSERT( info );
 		info->myobj = this;
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::UploadThread,
@@ -3684,7 +3682,6 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// extract the protocol/method
 	char* method = (char*) malloc(1 + (colon-URL));
-	ASSERT( method );
 	strncpy(method, URL, (colon-URL));
 	method[(colon-URL)] = '\0';
 

@@ -326,7 +326,6 @@ MyString::operator+=( int i )
 	const int bufLen = 64;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%d", i );
-	tmp[bufLen-1] = 0;
     int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
@@ -340,7 +339,6 @@ MyString::operator+=( unsigned int ui )
 	const int bufLen = 64;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%u", ui );
-	tmp[bufLen-1] = 0;
 	int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
@@ -354,7 +352,6 @@ MyString::operator+=( long l )
 	const int bufLen = 64;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%ld", l );
-	tmp[bufLen-1] = 0;
 	int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );
@@ -368,7 +365,6 @@ MyString::operator+=( double d )
 	const int bufLen = 128;
 	char tmp[bufLen];
 	::snprintf( tmp, bufLen, "%f", d );
-	tmp[bufLen-1] = 0;
     int s_len = strlen( tmp );
 	ASSERT(s_len < bufLen);
 	append_str( tmp, s_len );

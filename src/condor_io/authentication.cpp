@@ -532,7 +532,6 @@ void Authentication::split_canonical_name(MyString can_name, MyString& user, MyS
  
 	// local storage so we can modify it.
 	strncpy (local_user, can_name.Value(), 255);
-	local_user[255] = 0;
 
     // split it into user@domain
     char* tmp = strchr(local_user, '@');

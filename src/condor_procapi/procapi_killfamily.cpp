@@ -134,7 +134,7 @@ ProcAPI::makeFamily( pid_t dadpid, PidEnvID *penvid, pid_t *allpids,
 						   "out.\n", allpids[j], parentpids[j]);	
 
 				} else { 
-					MSC_SUPPRESS_WARNING_FIXME(6386) // buffer overrun. TJ think's it not a real one though..
+				
 					fampids[famsize] = allpids[j];
 					parentpids[j] = 0;
 					allpids[j] = 0;

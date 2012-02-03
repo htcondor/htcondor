@@ -161,7 +161,6 @@ FILEXML::createInstanceXML() {
 
 		if (tmp) {
 			outfilename = (char *)malloc(strlen(tmp) + 12);
-			ASSERT(outfilename);
 			sprintf(outfilename, "%s/Events.xml", tmp);
 			free(tmp);
 		}

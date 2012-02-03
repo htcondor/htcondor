@@ -78,7 +78,6 @@ char **findHistoryFiles(const char *paramName, int *numHistoryFiles)
 
         // Make space for the filenames
         historyFiles = (char **) malloc(sizeof(char*) * (*numHistoryFiles));
-        ASSERT( historyFiles );
 
         // Walk through again to fill in the names
         // Note that we won't get the current history file

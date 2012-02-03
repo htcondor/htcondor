@@ -274,7 +274,6 @@ SafeSock::peek_end_of_message()
 	return false;
 }
 
-MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
 SafeSock::my_ip_str()
 {
@@ -321,7 +320,6 @@ SafeSock::my_ip_str()
 	strcpy(_my_ip_buf, addr.to_ip_string().Value());
 	return _my_ip_buf;
 }
-MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int SafeSock::connect(
 	char const	*host,

@@ -903,7 +903,6 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
 			}
 			int user_len = tmp - client;
 			user = (char*) malloc( user_len + 1 );
-			ASSERT( user );
 			strncpy ( user, client, user_len );
 			user[user_len] = '\0';
 			dprintf ( D_SECURITY, "KERBEROS: picked user: %s\n", user );
@@ -1125,7 +1124,6 @@ int Condor_Auth_Kerberos :: init_server_info()
 		}
 
 		name = (char *) malloc(size + 1);
-		ASSERT( name );
 		memset(name, 0, size + 1);
 		strncpy(name, serverPrincipal, size);
 

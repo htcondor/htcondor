@@ -519,7 +519,6 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			value_s = "";
 			condition->ToString( cond_s );
 			strncpy( cond, cond_s.c_str( ), 1023 );
-			cond[1023] = 0;
 
 			sprintf( info, "%i", condition->explain.numberOfMatches );
 
@@ -541,7 +540,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			}
 			}
 
-			if( strlen( cond ) < 46 ) {
+   			if( strlen( cond ) < 46 ) {
 				sprintf( formatted, "%-4i%-34s%-20s%s\n", i, cond, info,
 						 suggest );
 			} else {
@@ -2094,7 +2093,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 		return false;
 	}
 
-	classad::Operation::OpKind op = (classad::Operation::OpKind)0;
+	classad::Operation::OpKind op;
 	classad::Value val;
 	bool undef = false;
 	bool twoVals = false;

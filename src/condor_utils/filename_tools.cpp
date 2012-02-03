@@ -34,7 +34,6 @@ void filename_url_parse_malloc( char const *input, char **method, char **server,
 	p = strchr(input,':');
 	if(p) {
 		*method = (char *)malloc(p-input+1);
-		ASSERT ( *method );
 		strncpy(*method,input,p-input);
 		(*method)[p-input] = '\0';
 		p++;

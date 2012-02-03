@@ -54,7 +54,6 @@ param_info_hash_insert(param_info_hash_t param_info, const param_info_t* p) {
 			b = b->next;
 		}
 		b->next = (bucket_t *)malloc(sizeof(bucket_t));
-		ASSERT ( b->next );
 		b = b->next;
 		b->param = p;
 		b->next = NULL;

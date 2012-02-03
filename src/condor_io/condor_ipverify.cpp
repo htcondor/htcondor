@@ -252,7 +252,6 @@ char * IpVerify :: merge(char * pNewList, char * pOldList)
     if (pOldList) {
         if (pNewList) {
             pList = (char *)malloc(strlen(pOldList) + strlen(pNewList) + 2);
-            ASSERT( pList );
             sprintf(pList, "%s,%s", pNewList, pOldList);
         }
         else {

@@ -1696,8 +1696,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
     if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
-        ASSERT( offsets );
-    }
+	}    
         // at this point we're all set to march through the data block to find
         // the instance with the pid we want.  
 
@@ -1784,7 +1783,6 @@ ProcAPI::buildProcInfoList()
 	PPERF_OBJECT_TYPE pThisObject = firstObject(pDataBlock);
     if( !offsets ) {
         grabOffsets( pThisObject );
-        ASSERT( offsets );
 	}
 	PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
 
@@ -2817,7 +2815,6 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     PPERF_COUNTER_DEFINITION pThisCounter;
   
     offsets = (struct Offset*) malloc ( sizeof ( struct Offset ));
-	ASSERT( offsets );
 
     pThisCounter = firstCounter(pThisObject);
 //    printcounter ( stdout, pThisCounter );
@@ -2986,10 +2983,11 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
     // if buffer not big enough, reallocate and try again.
     
     if ( lError == ERROR_MORE_DATA ) {
-      void * pvNew = realloc ( pDataBlock, _msize (pDataBlock ) + EXTEND_SIZE );
-      if ( ! pvNew) 
+      pDataBlock = (PPERF_DATA_BLOCK) realloc ( pDataBlock, 
+                                                _msize (pDataBlock ) + 
+                                                EXTEND_SIZE );
+      if ( !pDataBlock)
         return lError;
-      pDataBlock = (PPERF_DATA_BLOCK) pvNew;
       ++cReallocs;
     }
     else
