@@ -129,7 +129,7 @@ void SystrayManager::setIcon(BirdIconVector::size_type iCpuId, HICON hToSet)
 	
 	icon.nid.hIcon = hToSet;
 	icon.nid.hWnd = wmr.getHWnd();
-	wcscpy_s((wchar_t *)icon.nid.szTip, _countof(icon.nid.szTip), icon.strTooltip);
+	WideCharToMultiByte(CP_ACP, 0, icon.strTooltip, -1, icon.nid.szTip, _countof(icon.nid.szTip), NULL, NULL);
 	//strcpy(icon.nid.szTip, icon.strTooltip.c_str());
 	icon.nid.uCallbackMessage = CONDOR_SYSTRAY_INTERNAL_EVENTS;
 	icon.nid.uFlags = NIF_MESSAGE | NIF_ICON;
