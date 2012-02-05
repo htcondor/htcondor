@@ -789,8 +789,10 @@ int chirp_chmod(int argc, char **argv) {
 	CONNECT_STARTER(client);
 
 	unsigned mode;
-	if (1 != sscanf(argv[3], "%o", &mode))
+	if (1 != sscanf(argv[3], "%o", &mode)) {
+		free(client);
 		return EINVAL;
+	}
 	int status = chirp_client_chmod(client, argv[2], mode);
 	DISCONNECT_AND_RETURN(client, status);
 }
