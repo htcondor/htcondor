@@ -2392,6 +2392,7 @@ ValueTable( )
 	numRows = 0;
 	table = NULL;
 	bounds = NULL;
+	inequality = false;
 }
 
 ValueTable::
