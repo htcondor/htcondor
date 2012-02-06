@@ -25,7 +25,7 @@ override_dh_auto_configure:
 		-DBUILDID:STRING="Debian-$(debver)"\
 		-DFORCE_PRE_RELEASE:STRING="Debian-$(debver)"\
 		-DCMAKE_INSTALL_RPATH:STRING="/usr/lib/condor" \
-		-DHAVE_EXT_GSOAP:BOOL=OFF \
+		-DHAVE_EXT_GSOAP:BOOL=ON \
 		-DHAVE_EXT_CURL:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_BOOST:BOOL=ON \

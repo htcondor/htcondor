@@ -12,7 +12,7 @@ Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev,
  libboost-system-dev, libboost-regex-dev, libboost-filesystem-dev,
  libexpat1-dev, libxml2-dev, libvirt-dev, zlib1g-dev, gcj-jdk | java-compiler,
  libcgroup-dev (>= 0.37~), uuid-dev, chrpath, libldap2-dev | libldap-dev,
- help2man
+ help2man, gsoap (>= 2.7.17-1~)
 Standards-Version: 3.9.2
 
 
