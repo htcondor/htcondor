@@ -128,9 +128,9 @@ my $append_condor_config = '
 # This was a hack to allow the test pool and harness pool to
 # coexist peacefully on my sandbox.  I dont think they are needed
 # in a "real" testing environment:
-COLLECTOR_ARGS = -p 42424
-COLLECTOR_HOST = $(CONDOR_HOST):0
-COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+#COLLECTOR_ARGS = -p 42424
+#COLLECTOR_HOST = $(CONDOR_HOST):0
+#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
 NEGOTIATOR_DEBUG = D_FULLDEBUG
 
