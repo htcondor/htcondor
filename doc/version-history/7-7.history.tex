@@ -146,7 +146,7 @@ whether the DAG ended successfully or not.
 See section~\ref{sec:DAGFinalNode} for details.
 \Ticket{1482}
 
-\item Improved the ouput of \Condor{userprio} to better support hierarchical
+\item Improved the output of \Condor{userprio} to better support hierarchical
 groups. 
 The first column of the output no longer truncates long user or group names.
 User names are shown indented under group names,
@@ -247,7 +247,7 @@ to be directories instead of files.
 
 \item Communication errors were not always correctly handled when
 fetching results of a query when using the \Opt{-stream} option to
-\Condor{q}.  This problem was introduced in 7.7.0.
+\Condor{q}.  This problem was introduced in Condor version 7.7.0.
 \Ticket{2601}
 
 \item Fixed Condor's CronTab (Crondor, section~\ref{sec:CronTab})
@@ -284,8 +284,8 @@ its children are still running.
 \Ticket{2463}
 
 \item Fixed a bug in \Condor{dagman} that caused a DAG to fail if node
-job user log files were actually symlinks.  This problem was introduced
-in the 7.7 series.
+job user log files were actually symbolic links.  
+This problem was introduced in the Condor 7.7 development series.
 \Ticket{2704}
 
 \item Fixed a bug in the collection of Statistics attributes,
