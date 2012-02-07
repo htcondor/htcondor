@@ -903,6 +903,12 @@ ValueRange::
 ValueRange( )
 {
 	initialized = false;
+	multiIndexed = false;
+	numIndeces = 0;
+	undefined = false;
+	anyOtherString = false;
+	type = classad::Value::BOOLEAN_VALUE;
+	
 }
 
 ValueRange::
@@ -2652,6 +2658,7 @@ HyperRect::
 HyperRect( )
 {
 	initialized = false;
+	ivals = 0;
 }
 
 HyperRect::
