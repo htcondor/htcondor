@@ -979,7 +979,10 @@ WriteUserLog::doRotation( const char *path, FILE *&fp,
 			if ( 0 == s.GetRc() ) {
 				MyString old2( path );
 				old2.sprintf_cat(".%d", i );
-				rename( old1.Value(), old2.Value() );
+				if (rename( old1.Value(), old2.Value() )) {
+					dprintf(D_FULLDEBUG, "WriteUserLog failed to rotate old log from '%s' to '%s' errno=%d\n",
+							old1.Value(), old2.Value(), errno);
+				}
 				num_rotations++;
 			}
 		}

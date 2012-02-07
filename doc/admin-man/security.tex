@@ -177,7 +177,7 @@ a \DCPerm{READ} or both a
 \item[\DCPerm{ADMINISTRATOR}] \label{sec-level-administrator} This
    access level has additional Condor
    administrator rights to the pool.  It includes the ability to
-   change user priorities (with the command \Condor{userprio -set}),
+   change user priorities with the command \Condor{userprio},
    as well as the ability to turn Condor on and off
    (as with the commands \Condor{on} and \Condor{off}).
    The \DCPerm{ADMINISTRATOR} level of access implies both
@@ -313,12 +313,12 @@ The command that initiates a new negotiation
 
 \item[\DCPerm{READ}]
 The command that can retrieve the current state
-  of user priorities in the pool (sent by the \Condor{userprio} command).
+  of user priorities in the pool, sent by the \Condor{userprio} command.
 
 \item[\DCPerm{ADMINISTRATOR}]
 The command that can set the current
-  values of user priorities (sent as a result of the \Code{userprio -set}
-  command).
+  values of user priorities, sent as a result of the \Condor{userprio}
+  command.
 \end{description}
 
 COLLECTOR:
@@ -2338,7 +2338,7 @@ Condor can be registered with:
 \item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} Machines
    with \DCPerm{ADMINISTRATOR} access are granted additional Condor
    administrator rights to the pool.  This includes the ability to
-   change user priorities (with the command \Code{userprio -set}),
+   change user priorities with the command \Condor{userprio},
    and the ability to turn Condor on and off
    (with the command \Code{\Condor{off} \Sinful{machine}}).
    It is recommended that few machines be granted administrator access in a pool;

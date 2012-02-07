@@ -4,6 +4,9 @@ a:link { color: #1C3F75; }
 .passed {
    background-color: #55ff55;
 }
+.interrupted {
+   background-color: #FFA000;
+}
 .failed {
    background-color: #ff5555;
 }
@@ -150,4 +153,8 @@ span.link a:hover span {
 #footer {
     clear:both;
     background: #ffffff;
+}
+
+div.TaskStatus {
+    display: inline;
 }

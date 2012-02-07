@@ -68,7 +68,6 @@ static bool test_find_named_entry_remove(void);
 static bool test_find_named_entry_not_exist(void);
 static bool test_get_access_time_before(void);
 static bool test_get_access_time_empty(void);
-static bool test_get_access_time_valid(void);
 static bool test_get_access_time_close(void);
 static bool test_get_modify_time_before(void);
 static bool test_get_modify_time_empty(void);
@@ -81,7 +80,6 @@ static bool test_get_create_time_close(void);
 static bool test_get_file_size_before(void);
 static bool test_get_file_size_empty_dir(void);
 static bool test_get_file_size_empty_file(void);
-static bool test_get_file_size_dir(void);
 static bool test_get_file_size_valid(void);
 static bool test_get_file_size_same(void);
 static bool test_get_mode_before(void);
@@ -209,7 +207,6 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_find_named_entry_not_exist);
 	driver.register_function(test_get_access_time_before);
 	driver.register_function(test_get_access_time_empty);
-	driver.register_function(test_get_access_time_valid);
 	driver.register_function(test_get_access_time_close);
 	driver.register_function(test_get_modify_time_before);
 	driver.register_function(test_get_modify_time_empty);
@@ -222,7 +219,6 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_get_file_size_before);
 	driver.register_function(test_get_file_size_empty_dir);
 	driver.register_function(test_get_file_size_empty_file);
-	driver.register_function(test_get_file_size_dir);
 	driver.register_function(test_get_file_size_valid);
 	driver.register_function(test_get_file_size_same);
 	driver.register_function(test_get_mode_before);
@@ -417,6 +413,7 @@ static void setup() {
 	cut_assert_z( fclose(file_1) );
 }
 
+MSC_DISABLE_WARNING(6031) // return value ignored.
 static void cleanup() {
 	// Remove the created files/directories/symlinks
 	cut_assert_z( chdir(tmp.Value()) );
@@ -470,6 +467,7 @@ static void cleanup() {
 	
 	cut_assert_z( rmdir(tmp.Value()) );
 }
+MSC_RESTORE_WARNING(6031) // return value ignored.
 
 static bool test_path_constructor_null() {
 	emit_test("Test the Directory constructor when passed a NULL directory "
@@ -1104,23 +1102,6 @@ static bool test_get_access_time_empty() {
 	PASS;
 }
 
-static bool test_get_access_time_valid() {
-	emit_test("Test that GetAccessTime() doesn't return 0 after calling Next() "
-		"in a non-empty directory.");
-	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
-	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
-	time_t atime = dir.GetAccessTime();
-	emit_output_actual_header();
-	emit_retval("%d", atime);
-	if(atime == 0) {
-		FAIL;
-	}
-	PASS;
-}
-
 static bool test_get_access_time_close() {
 	emit_test("Test that GetAccessTime() returns the same time as stat() for a "
 		"file that was just created.");
@@ -1346,23 +1327,6 @@ static bool test_get_file_size_empty_file() {
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
 	if(ret_val != 0) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_file_size_dir() {
-	emit_test("Test that GetFileSize() doesn't return 0 for a non-empty "
-		"directory.");
-	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	emit_param("Current File", "empty_dir");
-	Directory dir(tmp_dir.Value());
-	dir.Find_Named_Entry("empty_dir");
-	filesize_t ret_val = dir.GetFileSize();
-	emit_output_actual_header();
-	emit_retval(FILESIZE_T_FORMAT, ret_val);
-	if(ret_val == 0) {
 		FAIL;
 	}
 	PASS;

@@ -125,6 +125,7 @@ sysapi_load_avg_raw(void)
 		case 3:
     		if (fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg) != 3) {
 				dprintf(D_ALWAYS, "Failed to fscanf 3 floats from /proc/loadavg\n");
+				fclose(proc);
 				return -1;
 			}
 			break;
@@ -329,6 +330,7 @@ sample_load(void *thr_data)
 		return 2;
 	}
 	hCounterCpuLoad = (HCOUNTER *) malloc(sizeof(HCOUNTER)*ncpus);
+	ASSERT( hCounterCpuLoad );
 	for (i=0; i < ncpus; i++) {
 		sprintf(counterpath, "\\Processor(%d)\\%% Processor Time", i);
 		pdhStatus = PdhAddCounter(hQuery, counterpath, 0, 

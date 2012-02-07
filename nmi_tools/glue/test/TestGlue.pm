@@ -56,21 +56,32 @@ sub setup_test_environment {
         set_env("BASE_DIR", $base_dir);
 
         # Create the Windows PATH
-        my $path = "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin;";
+        my $front_path = "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin";
 
         # We installed some tools (unzip, tar) in C:\tools on our Windows NMI machines
-        $path .= "C:\\tools;";
+        my $end_path = "C:\\tools";
 
-        # We need to add Perl to the path
-        #$path .= "C:\\prereq\\ActivePerl-5.10.1\\bin;";
+        # We need to add Perl to the path (this works only in old-batlab)
+        #$end_path .= ";C:\\prereq\\ActivePerl-5.10.1\\bin";
+
+        my $force_cygwin = 1; # set to 0 to work on removing cygwin dependancies from tests.
+        if ( not is_new_batlab() ) { $force_cygwin = 1; }
+        if ( $force_cygwin ) {
+            if ( ! ($ENV{PATH} =~ /cygwin/i) ) {
+                $front_path .= ";C:\\cygwin\\bin";
+            }
+        }
+
+        # If we are not using cygwin perl, we need to have the msconfig tools in the path.
+        if ( is_windows_native_perl() ) { $end_path = "$base_dir\\msconfig;$end_path"; }
 
         # Windows requires the SystemRoot directory to the PATH.  This is generally C:\Windows.
         # Also, add the system32 subdirectory in this folder
         #my $system_paths = "$ENV{SystemRoot};" . File::Spec->catdir($ENV{SystemRoot}, "system32");
-        #$path .= "$ENV{SystemRoot};";
-        #$path .= File::Spec->catdir($ENV{SystemRoot}, "system32") . ";";
+        #$front_path .= ";$ENV{SystemRoot}";
+        #$front_path .= ";" . File::Spec->catdir($ENV{SystemRoot}, "system32");
 
-        set_env("PATH", "$ENV{PATH};$path");
+        set_env("PATH", "$front_path;$ENV{PATH};$end_path");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
@@ -120,7 +131,7 @@ sub which {
     my ($exe) = @_;
 
     if( is_windows() ) {
-        return system('for /F %I in ("' . $exe . '") do echo %~$PATH:I');
+        return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
     }
     else {
         return system("which $exe");
@@ -130,6 +141,27 @@ sub which {
 sub is_windows {
     if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
         return 1;
+    }
+    return 0;
+}
+
+sub is_new_batlab {
+    if ( $ENV{COMPUTERNAME} =~ /^EXEC\-/ ) {
+        return 1;
+    }
+    return 0;
+}
+
+sub is_cygwin_perl {
+    if ($^O =~ /cygwin/i) {
+        return 1;
+    }
+    return 0;
+}
+
+sub is_windows_native_perl {
+    if ($^O =~ /MSWin32/) {
+         return 1;
     }
     return 0;
 }

@@ -247,7 +247,6 @@ const char	*X509UserProxy	= "x509userproxy";
 const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
-const char	*GlobusXML = "globus_xml";
 const char	*NordugridRSL = "nordugrid_rsl";
 const char	*RendezvousDir	= "rendezvousdir";
 const char	*KeystoreFile = "keystore_file";
@@ -1274,7 +1273,6 @@ SetRemoteAttrs()
 
 	ExprItem tostringize[] = {
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
-		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
 		{ GridResource, 0, ATTR_GRID_RESOURCE },
 	};
@@ -1782,7 +1780,7 @@ SetUniverse()
 		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
-			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    gt2, gt5, infn, blah, pbs, lsf, nqs, naregi, condor,
 			//    unicore, cream, deltacloud, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1791,7 +1789,6 @@ SetUniverse()
 			//   Condor 6.7.12.
 			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
-				(strcasecmp (JobGridType, "gt4") == MATCH) ||
 				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||
@@ -1814,7 +1811,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
-				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
+				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
 						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
@@ -2653,7 +2650,7 @@ SetTransferFiles()
 	// Starting with Condor 7.7.2, we only do this remapping if we're
 	// spooling files to the schedd. The shadow/starter will do any
 	// required renaming in the non-spooling case.
-	CondorVersionInfo cvi(MySchedd->version());
+	CondorVersionInfo cvi((MySchedd) ? MySchedd->version() : NULL);
 	if ( (!cvi.built_since_version(7, 7, 2) && should_transfer != STF_NO &&
 		  JobUniverse != CONDOR_UNIVERSE_GRID &&
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
@@ -4907,7 +4904,6 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ||
 		 strcasecmp (JobGridType, "gt5") == MATCH ||
 		 strcasecmp (JobGridType, "nordugrid") == MATCH ) {
 
@@ -4932,8 +4928,7 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt5") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ) {
+		 strcasecmp (JobGridType, "gt5") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
@@ -4954,12 +4949,6 @@ SetGridParams()
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
-		free( tmp );
-		InsertJobExpr ( buffer );
-	}
-
-	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
@@ -5393,7 +5382,6 @@ SetGSICredentials()
 	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (strcasecmp (JobGridType, "gt2") == MATCH ||
-		  strcasecmp (JobGridType, "gt4") == MATCH ||
 		  strcasecmp (JobGridType, "gt5") == MATCH ||
 		  strcasecmp (JobGridType, "cream") == MATCH ||
 		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
@@ -5402,7 +5390,7 @@ SetGSICredentials()
 		if ( proxy_file == NULL ) {
 
 			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, gt4, nordugrid or cream jobs\n");
+			fprintf( stderr, "x509 user proxy is required for gt2, nordugrid or cream jobs\n");
 			exit (1);
 		}
 	}

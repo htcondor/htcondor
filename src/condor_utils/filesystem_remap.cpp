@@ -168,6 +168,7 @@ std::string FilesystemRemap::RemapDir(std::string target) {
 
 #define ADVANCE_TOKEN(token, str) { \
 	if ((token = str.GetNextToken(" ", false)) == NULL) { \
+		fclose(fd); \
 		dprintf(D_ALWAYS, "Invalid line in mountinfo file: %s\n", str.Value()); \
 		return; \
 	} \

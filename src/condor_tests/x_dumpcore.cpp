@@ -34,7 +34,7 @@ int main( int , char ** /*argv*/ )
 #ifndef WIN32
 	dumpnow = 7 / dumpnow;
 #endif
-	*null = '\0';
+	*null = space[100]; // just to use space
 
 	return 0;
 }

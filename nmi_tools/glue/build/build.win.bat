@@ -89,14 +89,18 @@ if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
 if "~%CMAKE_BIN_DIR:~-1%"=="~\" set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
 
 :: set path to WIX binaries
+if "~%WIX%"=="~" goto no_wix
 set WIX_PATH=%WIX%
 if "~%WIX_PATH:~-1%"=="~\" set WIX_PATH=%WIX_PATH:~0,-1%
 if NOT "~%WIX_PATH%"=="~" set WIX_PATH=%WIX_PATH%\bin
+:no_wix
 
 :: set path to MSCONFIG binaries
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
 
-set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%;%ZIP_PATH%;%WIX_PATH%
+set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%
+if NOT "~%ZIP_PATH%"=="~" set PATH=%PATH%;%ZIP_PATH%
+if NOT "~%WIX_PATH%"=="~" set PATH=%PATH%;%WIX_PATH%
 @echo PATH=%PATH%
 
 set INCLUDE=%BUILD_ROOT%\src\condor_utils

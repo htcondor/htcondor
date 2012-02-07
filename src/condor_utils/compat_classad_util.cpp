@@ -215,6 +215,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	} else {
 		compat_classad::getTheMyRef( source );
 	}
+	result->clear(); // avoid leaking memory
 	if ( source->EvaluateExpr( expr, val ) ) {
 		switch ( val.GetType() ) {
 		case classad::Value::ERROR_VALUE:

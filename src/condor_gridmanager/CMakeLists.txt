@@ -35,9 +35,6 @@ if(NOT WIN_EXEC_NODE_ONLY)
 
 	if (NOT WINDOWS)
         if (HAVE_EXT_GLOBUS)
-            condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
-            condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
-
             add_custom_command(
                 OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
                 DEPENDS grid_monitor_wrapper grid_manager_monitor_agent
@@ -69,7 +66,5 @@ if(NOT WIN_EXEC_NODE_ONLY)
         endif()
 
 	endif()
-
-	install (FILES gridftp_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 endif(NOT WIN_EXEC_NODE_ONLY)

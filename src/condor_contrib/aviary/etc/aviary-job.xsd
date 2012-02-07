@@ -59,6 +59,10 @@
 	<xs:element name="ReleaseJobResponse" type="job:ControlJobResponse"/>
 	<xs:element name="RemoveJob" type="job:ControlJob"/>
 	<xs:element name="RemoveJobResponse" type="job:ControlJobResponse"/>
+	<xs:element name="SuspendJob" type="job:ControlJob"/>
+	<xs:element name="SuspendJobResponse" type="job:ControlJobResponse"/>
+	<xs:element name="ContinueJob" type="job:ControlJob"/>
+	<xs:element name="ContinueJobResponse" type="job:ControlJobResponse"/>
 	<xs:element name="SetJobAttribute">
 		<xs:complexType>
 			<xs:sequence>

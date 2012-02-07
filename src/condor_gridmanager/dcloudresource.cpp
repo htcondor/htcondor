@@ -197,7 +197,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 
 		MyString hashname;
 		hashname.sprintf( "%s#%s", ResourceName(), instance_id );
-		DCloudJob *job;
+		DCloudJob *job = NULL;
 
 		// TODO We can get rid of the hashtable.
 		rc = DCloudJob::JobsByInstanceId.lookup(

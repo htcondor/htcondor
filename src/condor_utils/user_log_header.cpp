@@ -79,6 +79,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 		char	buf[1024];
 		memset( buf, 0, sizeof(buf) );
 		strncpy( buf, generic->info, sizeof(buf)-1 );
+		buf[COUNTOF(buf)-1] = 0; // make sure it's null terminated.
 		int size = strlen( buf );
 		while( isspace(buf[size-1]) )
 			buf[--size] = '\0';

@@ -179,7 +179,7 @@ static bool test_walk_failed() {
 static bool test_iterate_first() {
 	emit_test("Test iterate() and make sure its first Index/Value are correct");
 	table->startIterations();
-	int value;
+	int value = 0;
 	emit_output_expected_header();
 	emit_param("Value", "%d OR %d OR %d", 37, 197, 42);
 	emit_retval("%s", tfstr(1));
@@ -212,7 +212,7 @@ static bool test_get_current_key() {
 static bool test_iterate_other() {
 	emit_test("Test iterate() and make sure its remaining Index/Values are correct");
 	int index;
-	int value;
+	int value = 0;
 	emit_output_expected_header();
 	emit_param("Value", "%d OR %d OR %d", 37, 197, 42);
 	emit_retval("%s", tfstr(1));
@@ -437,18 +437,17 @@ static bool test_auto_resize_timing() {
 	emit_test("How long does it take to add five million entries into the table?");
 	table_two = new HashTable<int, short int>(10, intHash);
 	int i;
-	int insert_result;
 	struct timeval time;
 	gettimeofday(&time, NULL);
 	double starttime = time.tv_sec + (time.tv_usec / 1000000.0);
 	for(i = 0; i <= 5000000; i++) {
-		insert_result = table_two->insert(i, i%30000);
+		table_two->insert(i, i%30000);
 	}
 	gettimeofday(&time, NULL);
 	double midtime = time.tv_sec + (time.tv_usec / 1000000.0);
 	short int value;
 	for(i = 0; i <= 5000000; i++) {
-		insert_result = table_two->lookup(i, value);
+		table_two->lookup(i, value);
 	}
 	gettimeofday(&time, NULL);
 	double endtime = time.tv_sec + (time.tv_usec / 1000000.0);

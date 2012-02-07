@@ -155,6 +155,7 @@ FileTransfer::FileTransfer()
 	last_download_time = 0;
 	ActiveTransferTid = -1;
 	TransferStart = 0;
+	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = 0;
 	ClientCallback = 0;
 	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
@@ -1504,6 +1505,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		}
 
 		download_info *info = (download_info *)malloc(sizeof(download_info));
+		ASSERT ( info );
 		info->myobj = this;
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::DownloadThread,
@@ -1593,6 +1595,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
+
+	downloadStartTime = (int)time(NULL);
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -2127,6 +2131,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	}
 
+	downloadEndTime = (int)time(NULL);
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
@@ -2354,6 +2359,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		}
 
 		upload_info *info = (upload_info *)malloc(sizeof(upload_info));
+		ASSERT( info );
 		info->myobj = this;
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::UploadThread,
@@ -2497,7 +2503,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-
+	uploadStartTime = (int)time(NULL);
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
@@ -2985,6 +2991,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_line_number);
 	} 
 
+	uploadEndTime = (int)time(NULL);
 	upload_success = true;
 	return ExitDoUpload(total_bytes,s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
@@ -3677,6 +3684,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// extract the protocol/method
 	char* method = (char*) malloc(1 + (colon-URL));
+	ASSERT( method );
 	strncpy(method, URL, (colon-URL));
 	method[(colon-URL)] = '\0';
 

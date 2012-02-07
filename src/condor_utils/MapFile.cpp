@@ -228,6 +228,7 @@ MapFile::ParseUsermapFile(const MyString filename)
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
 						line, filename.Value());
 				
+				fclose(file);
 				return line;
 		}
 	

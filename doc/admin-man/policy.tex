@@ -439,8 +439,8 @@ The cause of each transition is described below.
   Condor job.
 
 \item[N] The machine switches from the Owner to the Drained state
-  whenever draining of the machine is initiated (e.g. by \Condor{drain}
-  or \Condor{defrag}).
+  whenever draining of the machine is initiated,
+  for example by \Condor{drain} or by the \Condor{defrag} daemon.
 
 \end{description}
 
@@ -469,8 +469,8 @@ The cause of each transition is described below.
   expression evaluates to TRUE.
 
 \item[P] The transition from Unclaimed to Drained happens
-  if draining of the machine is initiated (e.g. by \Condor{drain}
-  or \Condor{defrag}).
+  if draining of the machine is initiated,
+  for example by \Condor{drain} or by the \Condor{defrag} daemon.
 
 \end{description}
 
@@ -574,7 +574,7 @@ The cause of each transition is described below.
 \item[O] The transition from Drained to Owner state happens when
   draining is finalized or is canceled.  When a draining request is
   made, the request either asks for the machine to stay in a Drained
-  state until canceled or it asks for draining to be automatically
+  state until canceled, or it asks for draining to be automatically
   finalized once all slots have finished draining.
 
 \end{description}
@@ -1389,8 +1389,9 @@ Matched/Idle (transition \Bold{32}).
 \index{machine state!Drained}
 \index{drained state}
 
-The Drained state is used when the machine is being drained (e.g. by
-\Condor{drain} or \Condor{defrag}) and the slot has finished running
+The Drained state is used when the machine is being drained,
+for example by \Condor{drain} or by the \Condor{defrag} daemon,
+and the slot has finished running
 jobs and is no longer willing to run new jobs.
 
 Slots initially enter the Drained/Retiring state.  Once all slots have

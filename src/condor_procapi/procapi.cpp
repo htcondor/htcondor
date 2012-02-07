@@ -465,7 +465,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 
 #if HAVE_PSS
 int
-ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status ) 
+ProcAPI::getPSSInfo( pid_t pid, procInfo& procRaw, int &status ) 
 {
 	char path[64];
 	FILE *fp;
@@ -726,13 +726,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// close the file
 	fclose( fp );
-
-#if HAVE_PSS
-	getPSSInfo(pid,procRaw,status);
-	if( status != PROCAPI_OK ) {
-		return PROCAPI_FAILURE;
-	}
-#endif
 
 		// only one value for times
 	procRaw.user_time_2 = 0;
@@ -1703,7 +1696,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
     if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
-	}    
+        ASSERT( offsets );
+    }
         // at this point we're all set to march through the data block to find
         // the instance with the pid we want.  
 
@@ -1790,6 +1784,7 @@ ProcAPI::buildProcInfoList()
 	PPERF_OBJECT_TYPE pThisObject = firstObject(pDataBlock);
     if( !offsets ) {
         grabOffsets( pThisObject );
+        ASSERT( offsets );
 	}
 	PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
 
@@ -2822,6 +2817,7 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     PPERF_COUNTER_DEFINITION pThisCounter;
   
     offsets = (struct Offset*) malloc ( sizeof ( struct Offset ));
+	ASSERT( offsets );
 
     pThisCounter = firstCounter(pThisObject);
 //    printcounter ( stdout, pThisCounter );
@@ -2990,11 +2986,10 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
     // if buffer not big enough, reallocate and try again.
     
     if ( lError == ERROR_MORE_DATA ) {
-      pDataBlock = (PPERF_DATA_BLOCK) realloc ( pDataBlock, 
-                                                _msize (pDataBlock ) + 
-                                                EXTEND_SIZE );
-      if ( !pDataBlock)
+      void * pvNew = realloc ( pDataBlock, _msize (pDataBlock ) + EXTEND_SIZE );
+      if ( ! pvNew) 
         return lError;
+      pDataBlock = (PPERF_DATA_BLOCK) pvNew;
       ++cReallocs;
     }
     else

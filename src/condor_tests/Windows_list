@@ -146,3 +146,5 @@ job_dagman_basic
 #job_dagman_xmlcomlog
 #job_dagman_xmluncomlog
 lib_shared_port_van
+lib_chirp
+condor_view_classad_types

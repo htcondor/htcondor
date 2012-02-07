@@ -78,14 +78,12 @@ Job NodeD job_dagman_halt-A-node.cmd
 Vars NodeD nodename="$(JOB)"
 Vars NodeD args="$(JOB)"
 
-Parent NodeW1 Child NodeX
 Parent NodeW2 Child NodeW3
 Parent NodeW3 Child NodeX NodeY1
-Parent NodeX Child NodeA
 #Parent NodeY1 Child NodeY2 NodeY3
 Parent NodeY1 Child NodeY2
 #Parent NodeY2 NodeY3 Child NodeA
 Parent NodeY2 Child NodeA
 Parent NodeA Child NodeB NodeC1
 Parent NodeC1 Child NodeC2
-Parent NodeB NodeC2 Child NodeD
+Parent NodeC2 Child NodeD

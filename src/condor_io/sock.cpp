@@ -1571,16 +1571,17 @@ char * Sock::serializeCryptoInfo(char * buf)
     if ( encoded_len > 0 ) {
         len = encoded_len/2;
         kserial = (unsigned char *) malloc(len);
+        ASSERT ( kserial )
 
         // skip the *
         ptmp = strchr(ptmp, '*');
-		ASSERT( ptmp );
+        ASSERT( ptmp );
         ptmp++;
 
         // Reading protocol
         sscanf(ptmp, "%d*", &protocol);
         ptmp = strchr(ptmp, '*');
-		ASSERT( ptmp );
+        ASSERT( ptmp );
         ptmp++;
 
         // read the encryption mode
@@ -1631,10 +1632,11 @@ char * Sock::serializeMdInfo(char * buf)
     if ( encoded_len > 0 ) {
         len = encoded_len/2;
         kmd = (unsigned char *) malloc(len);
+        ASSERT( kmd );
 
         // skip the *
         ptmp = strchr(ptmp, '*');
-		ASSERT( ptmp );
+        ASSERT( ptmp );
         ptmp++;
 
         // Now, convert from Hex back to binary
@@ -1742,6 +1744,7 @@ char * Sock::serialize(char *buf)
 	ASSERT(verstring);
 	memset(verstring,0,verstring_len+1);
 	strncpy(verstring,buf,verstring_len);
+	verstring[verstring_len] = 0;
 	if( verstring_len ) {
 			// daemoncore does not like spaces in our serialized string
 		char *s;

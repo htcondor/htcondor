@@ -356,6 +356,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 				"fread failed with errno %d (%s)\n", 
 				errno, strerror(errno) );
 		fclose(pFile);
+		delete [] psBuf;
 		return "";
 	}
 	

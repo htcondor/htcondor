@@ -23,6 +23,7 @@
 #ifndef WIN32
 #include <unistd.h>
 #else
+#pragma warning(disable:4101) // unreferenced local variable
 #include <io.h>
 #endif
 #include <errno.h>

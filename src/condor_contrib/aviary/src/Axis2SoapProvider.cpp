@@ -16,13 +16,13 @@
  *
  ***************************************************************/
 
+#include "Axis2SoapProvider.h"
+
 #include <axutil_error_default.h>
 #include <axutil_log_default.h>
 #include <axutil_thread_pool.h>
 #include <axiom_xml_reader.h>
 #include <axutil_file_handler.h>
-
-#include "Axis2SoapProvider.h"
 
 using namespace aviary::soap;
 
@@ -44,6 +44,8 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
     m_allocator = axutil_allocator_init(NULL);
     m_env = axutil_env_create(m_allocator);
 
+	m_ep = NULL;
+
 }
 
 Axis2SoapProvider::~Axis2SoapProvider()
@@ -63,6 +65,13 @@ Axis2SoapProvider::~Axis2SoapProvider()
     // don't free m_allocator
 
     axiom_xml_reader_cleanup();
+
+	// the factory gave us ownership for this
+	if (m_ep) {
+		m_ep->invalidate();
+		delete m_ep;
+		m_ep = NULL;
+	}
 
 }
 
@@ -117,7 +126,7 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 
         m_init = true;
     }
-
+    
     return m_init;
 
 }

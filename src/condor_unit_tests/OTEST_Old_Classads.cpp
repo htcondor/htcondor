@@ -968,10 +968,11 @@ static bool test_lookup_string_long() {
 		"problem with that, this test may fail.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
-	char *attribute_name, *expectString, *expression;
+	char *expression = (char *) malloc(50000);
+	if ( ! expression) { FAIL; }
+	char *attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	expression = (char *) malloc(50000);
 	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
 	compat_classad::ClassAd classad;
 	classad.Insert(expression);
@@ -1355,12 +1356,14 @@ static bool test_expr_tree_to_string_big() {
 		"classad.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
+	char* expect = (char *) malloc(25000 + 2 + 1);
+	if ( ! expect) { FAIL; }
 	char* attribute_name, *expectString, *expression;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
 	expression = (char *) malloc(50000);
+	if ( ! expression) { FAIL; }
 	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
-	char* expect = (char *) malloc(25000 + 2 + 1);
 	sprintf(expect, "\"%s\"", expectString);
 	compat_classad::ClassAd classad;
 	classad.Insert(expression);

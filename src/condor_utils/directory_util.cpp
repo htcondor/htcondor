@@ -141,7 +141,7 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 	int size = strlen(path);
 	while (m_fd <= 0 && retry > 0 ){
 		m_fd = safe_open_wrapper_follow(path, O_CREAT | O_RDWR, file_mode);
-		if (m_fd > 0)
+		if (m_fd >= 0)
 			return m_fd;
 		if (errno == 2) {
 			if (retry < retry_value) {
@@ -154,8 +154,8 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 			while (pos < size){
 				if (path[pos] == DIR_DELIM_CHAR && pos > 0){
 					char *dir = new char[pos+1];
-					dir[pos] = '\0';
 					strncpy(dir, path, pos);
+					dir[pos] = '\0';
 					dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Creating directory %s \n", dir);
 					int err = mkdir(dir, directory_mode);
 					if (err != 0) {
@@ -199,8 +199,8 @@ rec_clean_up(char *path, int depth, int pos )
 		pos = strlen(path);
 	} else {
 		char *dirpath = new char[pos+1];
-		dirpath[pos] = '\0';
 		strncpy(dirpath, path, pos);
+		dirpath[pos] = '\0';
 		deleted = rmdir(dirpath);
 		if (deleted != 0) {
 			dprintf(D_FULLDEBUG, "directory_util::rec_clean_up: directory %s cannot be deleted -- it may not \

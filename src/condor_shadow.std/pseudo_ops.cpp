@@ -714,7 +714,7 @@ pseudo_get_file_stream(
 	int		retry_wait;
 	bool	CkptFile = is_ckpt_file(file);
 	bool	ICkptFile = is_ickpt_file(file);
-	priv_state	priv;
+	priv_state	priv = PRIV_UNKNOWN;
 	struct in_addr taddr;
 	MyString buf;
 
@@ -785,6 +785,7 @@ pseudo_get_file_stream(
 	case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
 		if (CkptFile || ICkptFile) set_priv(priv);
+		close(file_fd);
 		return -1;
 	case 0:	/* the child */
 			// reset this so dprintf has the right pid in the header
@@ -845,7 +846,7 @@ pseudo_put_file_stream(
 	bool	CkptFile = is_ckpt_file(file);
 	bool	ICkptFile = is_ickpt_file(file);
 	int		retry_wait = 5;
-	priv_state	priv;
+	priv_state	priv = PRIV_UNKNOWN;
 	mode_t	omask;
 	struct in_addr taddr;
 	MyString buf;
@@ -953,6 +954,7 @@ pseudo_put_file_stream(
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
 		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
+		close(file_fd);
 		return -1;
 	  case 0:	/* the child */
 			// reset this so dprintf has the right pid in the header

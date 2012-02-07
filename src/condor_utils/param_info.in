@@ -4100,6 +4100,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,proxymanager
 id=224
 
+[GRIDMANAGER_PROXY_REFRESH_TIME]
+aliases=
+default=21600
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gridmanager Proxy Refresh Time
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,proxymanager
+id=224
+
 [CONDOR_GAHP]
 aliases=
 default=$(SBIN)/condor_c-gahp
@@ -4132,54 +4148,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,unicore_gahp_wrapper
 id=227
 
-[GRIDFTP_URL_BASE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Url Base
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=228
-
-[GRIDFTP_SERVER]
-aliases=
-default=$(LIBEXEC)/globus-gridftp-server
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Server
-usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=229
-
-[GRIDFTP_SERVER_WRAPPER]
-aliases=
-default=$(LIBEXEC)/gridftp_wrapper.sh
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Server Wrapper
-usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=230
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT]
 aliases=
 default=3
@@ -4211,22 +4179,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,basejob
 id=234
-
-[GRIDMANAGER_MAX_WS_DESTROYS_PER_RESOURCE]
-aliases=
-default=5
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Ws Destroys Per Resource
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gt4resource
-id=235
 
 [ENABLE_GRID_MONITOR]
 aliases=
@@ -10121,6 +10073,22 @@ url=
 tags=schedd
 id=602
 
+[SCHEDD_ROUND_ATTR_ResidentSetSize]
+aliases=
+default=25%
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=schedd
+id=602
+
 [ENABLE_VERSIONED_OPSYS]
 aliases=
 default=true
@@ -10377,3 +10345,20 @@ usage=
 url=
 tags=negotiator
 id=666
+
+[CLAIM_PARTITIONABLE_LEFTOVERS]
+aliases=
+default=true
+version=7.7.5
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Claim Parititionable Leftovers
+usage=
+url=
+tags=schedd,startd,claim
+id=603
+

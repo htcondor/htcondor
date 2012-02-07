@@ -451,6 +451,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	if ( _condor_dprintf_critsec == NULL ) {
 		_condor_dprintf_critsec = 
 			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
+		ASSERT( _condor_dprintf_critsec );
 		InitializeCriticalSection(_condor_dprintf_critsec);
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
@@ -1506,6 +1507,7 @@ _condor_save_dprintf_line( int flags, const char* fmt, va_list args )
 
 		/* finally, make a new node in our list and save the line */
 	new_node = (struct saved_dprintf *)malloc( sizeof(struct saved_dprintf) );
+	ASSERT( new_node != NULL );
 	if( saved_list == NULL ) {
 		saved_list = new_node;
 	} else {
@@ -1564,7 +1566,7 @@ static int
 lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 {
 	int result = -1;
-	char * filename = NULL;
+	//char * filename = NULL;
 	int filename_len;
 	char *ptr = NULL;
 	char mutex_name[MAX_PATH];

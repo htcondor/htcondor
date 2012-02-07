@@ -2308,6 +2308,7 @@ set_persistent_config(char *admin, char *config)
 		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
+			close(fd);
 			ABORT;
 		}
 		if (close(fd) < 0) {
@@ -2361,6 +2362,7 @@ set_persistent_config(char *admin, char *config)
 	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
 		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 				 "set_persistent_config()\n", strerror(errno), errno );
+		close(fd);
 		ABORT;
 	}
 	PersistAdminList.rewind();
@@ -2370,6 +2372,7 @@ set_persistent_config(char *admin, char *config)
 			if (write(fd, ", ", 2) != 2) {
 				dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 						 "set_persistent_config()\n", strerror(errno), errno );
+				close(fd);
 				ABORT;
 			}
 		} else {
@@ -2378,12 +2381,14 @@ set_persistent_config(char *admin, char *config)
 		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
+			close(fd);
 			ABORT;
 		}
 	}
 	if (write(fd, "\n", 1) != 1) {
 		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 				 "set_persistent_config()\n", strerror(errno), errno );
+		close(fd);
 		ABORT;
 	}
 	if (close(fd) < 0) {

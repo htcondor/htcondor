@@ -77,7 +77,7 @@ NameTable JobClasses( JobClassNames );
 class UserProc;
 
 UserProc *get_job_info();
-inline void display_bool( int debug_flags, char *name, int value );
+void display_bool( int debug_flags, const char *name, int value );
 void *bsd_rusage( clock_t user_time, clock_t sys_time );
 void *bsd_status( int, PROC_STATE, int, int );
 

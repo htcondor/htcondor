@@ -1040,6 +1040,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 
+	if( update_ad->LookupInteger(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, int_value) ) {
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, int_value);
+	} else {
+		int_value = this->filetrans.GetDownloadTimestamps();
+		if (int_value) {
+			jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, int_value);
+		}
+	}
+
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, float_value);
@@ -1058,11 +1067,17 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
-	    jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
+		int rss = 0;
+		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
+			jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
+		}
 	}
 
 	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int_value) ) {
-	    jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int_value);
+		int pss = 0;
+		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < int_value ) {
+			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int_value);
+		}
 	}
 
 	if( update_ad->LookupInteger(ATTR_BLOCK_READ_KBYTES, int_value) ) {
@@ -1481,6 +1496,17 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
 
+#if 0 // tj: this seems to record only transfer output time, turn it off for now.
+	FileTransfer::FileTransferInfo fi = filetrans.GetInfo();
+	if (fi.duration) {
+		float cumulativeDuration = 0.0;
+		if ( ! jobAd->LookupFloat(ATTR_CUMULATIVE_TRANSFER_TIME, cumulativeDuration)) { 
+			cumulativeDuration = 0.0; 
+		}
+		jobAd->Assign(ATTR_CUMULATIVE_TRANSFER_TIME, cumulativeDuration + fi.duration );
+	}
+#endif
+
 	if( exit_value == -1 ) {
 			/* 
 			   Backwards compatibility code...  If we don't have a
@@ -1569,6 +1595,10 @@ RemoteResource::beginExecution( void )
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
+
+	// add the execution start time into the job ad. 
+	int now = (int)time(NULL);
+	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE , now);
 
 	startCheckingProxy();
 	

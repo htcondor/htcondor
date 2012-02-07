@@ -363,6 +363,7 @@ kill_daemon_ad_file()
 		return;
 	}
 
+	MSC_SUPPRESS_WARNING_FOREVER(6031) // return value of unlink ignored.
 	unlink(ad_file);
 
 	free(ad_file);
@@ -976,6 +977,7 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 
 		if( strchr(ext,DIR_DELIM_CHAR) ) {
 			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			free(pname);
 			return FALSE;
 		}
 	}
@@ -1081,9 +1083,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		fullPath += "/";
 		fullPath += filename;
 		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
-		if (fd > 0) {
+		if (fd >= 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
+			close(fd);
 		}
 	}
 
@@ -1420,6 +1423,7 @@ dc_reconfig()
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
 			char segfault;	
+			MSC_SUPPRESS_WARNING_FOREVER(6011) // warning about NULL pointer deref.
 			segfault = *ptmp; // should blow up here
 			if (segfault) {} // Line to avoid compiler warnings.
 			ptmp[0] = 'a';
@@ -2035,6 +2039,25 @@ int dc_main( int argc, char** argv )
 			sleep(1);
 		}
 	}
+
+#ifdef WIN32
+	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
+	if (wait_for_win32_debugger) {
+		UINT ms = GetTickCount() - 10;
+		BOOL is_debugger = IsDebuggerPresent();
+		while ( ! is_debugger) {
+			if (GetTickCount() > ms) {
+				dprintf(D_ALWAYS,
+						"%s is %d, waiting for debugger to attach to pid %d.\n", 
+						debug_wait_param.Value(), wait_for_win32_debugger, GetCurrentProcessId());
+				ms = GetTickCount() + (1000 * 60 * 1); // repeat message every 1 minute
+			}
+			sleep(10);
+			is_debugger = IsDebuggerPresent();
+		}
+	}
+#endif
 
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1102,6 +1102,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
+	Claim* leftover_claim = NULL; 
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -1257,6 +1258,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 			// And the partitionable parent needs a new claim
 		rip->r_cur = new Claim( rip );
+			// Stash this claim as the "leftover_claim", which 
+			// we will send back directly to the schedd iff it supports
+			// receiving partitionable slot leftover info as part of the
+			// new-style extended claiming protocol. 
+		bool scheddWantsLeftovers = false;
+			// presence of this attr in request ad tells us in a 
+			// backwards/forwards compatible way if the schedd understands
+			// the claim protocol enhancement to accept leftovers
+		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
+		if ( scheddWantsLeftovers && 
+			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
+		{
+			leftover_claim = rip->r_cur;
+			ASSERT(leftover_claim);
+		}
 
 			// Recompute the partitionable slot's resources
 		rip->change_state( unclaimed_state );
@@ -1433,7 +1449,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip );
+	accept_request_claim( rip, leftover_claim );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1472,7 +1488,7 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip )
+accept_request_claim( Resource* rip, Claim* leftover_claim )
 {
 	int interval = -1;
 	char *client_addr = NULL;
@@ -1486,11 +1502,41 @@ accept_request_claim( Resource* rip )
 	ASSERT( stream );
 	Sock* sock = (Sock*)stream;
 
+	/* 
+		Reply of 0 (OK) means claim accepted.
+		Reply of 1 (NOT_OK) means claim rejected.
+		Reply of 3 means claim accepted by a partitionable slot,
+	      and the "leftovers" slot ad and claim id will be sent next.
+	*/
+	int cmd = OK;
+	if ( leftover_claim && leftover_claim->id() && 
+		 leftover_claim->rip()->r_classad ) 
+	{
+		// schedd wants leftovers, send reply code 3
+		cmd = 3;
+	}
 	stream->encode();
-	if( !stream->put( OK ) ) {
-		rip->dprintf( D_ALWAYS, "Can't to send cmd to schedd.\n" );
+	if( !stream->put( cmd ) ) {
+		rip->dprintf( D_ALWAYS, 
+			"Can't to send cmd %d to schedd as claim request reply.\n", cmd );
 		abort_accept_claim( rip, stream );
 		return false;
+	}
+	if ( cmd == 3 ) 
+	{
+		// schedd just claimed a dynamic slot, and it wants
+		// us to send back to the classad and the new claim id for
+		// leftovers in the parent partitionable slot.
+		dprintf(D_FULLDEBUG,"Will send partitionable slot leftovers to schedd\n");
+		MyString claimId(leftover_claim->id());
+		if ( !stream->put(claimId) ||
+			 !leftover_claim->rip()->r_classad->put(*stream) )
+		{
+			rip->dprintf( D_ALWAYS, 
+				"Can't send partitionable slot leftovers to schedd.\n" );
+			abort_accept_claim( rip, stream );
+			return false;
+		}
 	}
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
@@ -1719,10 +1765,12 @@ activate_claim( Resource* rip, Stream* stream )
 	stream->encode();
 	if( !stream->put( OK ) ) {
 		rip->dprintf( D_ALWAYS, "Can't send OK to shadow.\n" );
+		delete tmp_starter;
 		ABORT;
 	}
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't send eom to shadow.\n" );
+		delete tmp_starter;
 		ABORT;
 	}
 
@@ -1756,10 +1804,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 		stream->encode();
 		if (!stream->code(stRec)) {
+			delete tmp_starter;
 			ABORT;
 		}
 
 		if (!stream->end_of_message()) {
+			delete tmp_starter;
 			ABORT;
 		}
 
@@ -1774,11 +1824,13 @@ activate_claim( Resource* rip, Stream* stream )
 			if( fd_1 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
 				if( fd_1 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
+					delete tmp_starter;
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_1, errno );
+					delete tmp_starter;
 					ABORT;
 				}
 			}
@@ -1792,11 +1844,13 @@ activate_claim( Resource* rip, Stream* stream )
 			if( fd_2 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
 				if( fd_2 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
+					delete tmp_starter;
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_2, errno );
+					delete tmp_starter;
 					ABORT;
 				}
 			}

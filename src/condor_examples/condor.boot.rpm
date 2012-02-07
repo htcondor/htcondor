@@ -21,8 +21,8 @@
 # LSB init part (Used by Debian package)
 ### BEGIN INIT INFO
 # Provides:          condor
-# Required-Start:    $network $local_fs
-# Required-Stop:     $local_fs $network
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $remote_fs $local_fs $network
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Manage condor daemons
@@ -146,6 +146,10 @@ fi
 # Default value to max shutdown wait
 if [ "$MAX_STOP_WAIT" = "" ] ; then
   MAX_STOP_WAIT=300
+fi
+
+if [ "$USER" = "" ] ; then
+  USER=`whoami`
 fi
 
 # A key goal of this script is portability.  As a result,
@@ -390,6 +394,12 @@ set_condor_run() {
   if [ "$CONDOR_RUN" = "" ]; then
     CONDOR_RUN=`get_condor_config_val LOG yes`
   fi
+  if [ ! -d "$CONDOR_RUN" ] ; then
+    mkdir "$CONDOR_RUN"
+    if [ "$USER" = "root" -a "$CONDOR_USER" != "" ] ; then
+      chown "$CONDOR_USER" "$CONDOR_RUN"
+    fi
+  fi
   verify_readable_directory "$CONDOR_RUN"
   return 0
 }
@@ -586,12 +596,6 @@ start() {
       cmd="$CONDOR_MASTER"
       "$CONDOR_MASTER"
     else
-      if [ "$CONDOR_RUN" != "" -a ! -d "$CONDOR_RUN" ] ; then
-        mkdir "$CONDOR_RUN"
-        if [ "$USER" = "root" -a "$CONDOR_USER" != "" ] ; then
-          chown "$CONDOR_USER" "$CONDOR_RUN"
-        fi
-      fi
       cmd="$CONDOR_MASTER -pidfile $PIDFILE"
       "$CONDOR_MASTER" -pidfile "$PIDFILE"
     fi

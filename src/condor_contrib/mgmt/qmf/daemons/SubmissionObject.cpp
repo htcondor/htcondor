@@ -104,6 +104,14 @@ SubmissionObject::Increment ( const Job *job )
             m_held.insert ( job );
             mgmtObject->inc_Held();
             break;
+        case TRANSFERRING_OUTPUT:
+            m_transferring_output.insert ( job );
+            mgmtObject->inc_TransferringOutput();
+            break;
+        case SUSPENDED:
+            m_suspended.insert ( job );
+            mgmtObject->inc_Suspended();
+            break;
         default:
             dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
                       ATTR_JOB_STATUS, status, job->GetKey() );
@@ -139,6 +147,14 @@ SubmissionObject::Decrement ( const Job *job )
         case HELD:
             m_held.erase ( job );
             mgmtObject->dec_Held();
+            break;
+        case TRANSFERRING_OUTPUT:
+            m_transferring_output.erase ( job );
+            mgmtObject->dec_TransferringOutput();
+            break;
+        case SUSPENDED:
+            m_suspended.erase ( job );
+            mgmtObject->dec_Suspended();
             break;
         default:
             dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
@@ -176,6 +192,18 @@ const SubmissionObject::JobSet &
 SubmissionObject::GetHeld()
 {
     return m_held;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetTransferringOutput()
+{
+    return m_transferring_output;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetSuspended()
+{
+    return m_suspended;
 }
 
 void
@@ -276,6 +304,34 @@ SubmissionObject::GetJobSummaries ( Variant::List &jobs,
 	if ( !PopulateVariantMapFromAd ( ad, job ) )
         {
             text = "Error retrieving attributes for Held job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+    //6) Transferring Output
+    for ( SubmissionObject::JobSet::const_iterator i = GetTransferringOutput().begin();
+            GetTransferringOutput().end() != i; i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for TransferringOutput job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+    //7) Suspended
+    for ( SubmissionObject::JobSet::const_iterator i = GetSuspended().begin();
+            GetSuspended().end() != i; i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for Suspended job";
             return STATUS_USER + 1;
         }
 

@@ -11,7 +11,7 @@ void condor_sockaddr::clear()
 }
 
 // init only accepts network-ordered ip and port
-void condor_sockaddr::init(int32_t ip, unsigned port)
+void condor_sockaddr::init(uint32_t ip, unsigned port)
 {
 	clear();
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN

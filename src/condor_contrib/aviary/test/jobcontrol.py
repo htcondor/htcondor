@@ -25,7 +25,7 @@ from aviary.util import *
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
-cmds = ['holdJob', 'releaseJob', 'removeJob']
+cmds = ['holdJob', 'releaseJob', 'removeJob', 'suspendJob', 'continueJob']
 
 parser = build_basic_parser('Control job state remotely via SOAP.','http://localhost:9090/services/job/')
 parser.add_option('--cmd', action="store", choices=(cmds), dest='cmd', help=str(cmds))

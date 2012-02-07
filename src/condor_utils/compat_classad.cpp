@@ -61,6 +61,12 @@ EvalResult::~EvalResult()
 	}
 }
 
+void EvalResult::clear()
+{
+	this->~EvalResult();
+	type = LX_UNDEFINED;
+}
+
 void
 EvalResult::deepcopy(const EvalResult & rhs)
 {
@@ -2638,7 +2644,6 @@ static const char *job_attrs_list[]  = {
 	ATTR_USE_GRID_SHELL,
 	ATTR_REMATCH_CHECK,
 	ATTR_GLOBUS_RSL,
-	ATTR_GLOBUS_XML,
 	ATTR_NORDUGRID_RSL,
 	ATTR_KEYSTORE_ALIAS,
 	ATTR_KEYSTORE_PASSPHRASE_FILE,

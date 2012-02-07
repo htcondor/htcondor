@@ -44,7 +44,7 @@ if (GLIBC_VERSION AND POST26_GLIBC_COMPILE )
 	dprint("GLIBC_VERSION=${GLIBC_VERSION}")
 	set(${_VERSION} ${GLIBC_VERSION})
 else()
-	message(STATUS "NOTE: Could not detect GLIBC_VERSION from copiler")
+	message(STATUS "NOTE: Could not detect GLIBC_VERSION from compiler")
 endif()
 
 

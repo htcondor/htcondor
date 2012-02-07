@@ -404,6 +404,36 @@ SchedulerObject::Remove(std::string key, std::string &reason, std::string &text)
 
 	return STATUS_OK;
 }
+
+Manageable::status_t
+SchedulerObject::Suspend(std::string key, std::string &reason, std::string &text)
+{
+	PROC_ID id = getProcByString(key.c_str());
+	if (id.cluster < 0 || id.proc < 0) {
+		dprintf(D_FULLDEBUG, "Suspend: Failed to parse id: %s\n", key.c_str());
+		text = "Invalid Id";
+		return STATUS_USER + 0;
+	}
+
+	scheduler.enqueueActOnJobMyself(id,JA_SUSPEND_JOBS,true);
+
+	return STATUS_OK;
+}
+
+Manageable::status_t
+SchedulerObject::Continue(std::string key, std::string &reason, std::string &text)
+{
+	PROC_ID id = getProcByString(key.c_str());
+	if (id.cluster < 0 || id.proc < 0) {
+		dprintf(D_FULLDEBUG, "Continue: Failed to parse id: %s\n", key.c_str());
+		text = "Invalid Id";
+		return STATUS_USER + 0;
+	}
+
+	scheduler.enqueueActOnJobMyself(id,JA_CONTINUE_JOBS,true);
+
+	return STATUS_OK;
+}
 #endif
 
 qpid::management::ManagementObject *
@@ -451,6 +481,16 @@ SchedulerObject::ManagementMethod(uint32_t methodId,
 		break;
 	case qmf::com::redhat::grid::Scheduler::METHOD_REMOVEJOB:
 		result = Remove(((ArgsSchedulerRemoveJob &) args).i_Id,
+					  ((ArgsSchedulerRemoveJob &) args).i_Reason,
+					  text);
+		break;
+	case qmf::com::redhat::grid::Scheduler::METHOD_SUSPENDJOB:
+		result = Suspend(((ArgsSchedulerRemoveJob &) args).i_Id,
+					  ((ArgsSchedulerRemoveJob &) args).i_Reason,
+					  text);
+		break;
+	case qmf::com::redhat::grid::Scheduler::METHOD_CONTINUEJOB:
+		result = Continue(((ArgsSchedulerRemoveJob &) args).i_Id,
 					  ((ArgsSchedulerRemoveJob &) args).i_Reason,
 					  text);
 		break;

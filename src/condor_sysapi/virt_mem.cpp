@@ -66,7 +66,9 @@ sysapi_swap_space_raw()
 	}
 
 	/* in B */
-	free_swap = (double)si.freeswap * (double)si.mem_unit;
+	free_swap = (double)si.freeswap * (double)si.mem_unit +
+			(double)si.totalram * (double)si.mem_unit;
+
 	/* in KB */
 	free_swap /= 1024.0;
 

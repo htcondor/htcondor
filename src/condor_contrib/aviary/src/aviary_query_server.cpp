@@ -69,7 +69,7 @@ void main_init(int /* argc */, char * /* argv */ [])
 
     string log_name;
     sprintf(log_name,"aviary_query.log");
-    provider = AviaryProviderFactory::create(log_name);
+    provider = AviaryProviderFactory::create(log_name,default_daemon_name(),"QUERY_SERVER", "services/query/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
@@ -174,6 +174,8 @@ void Stop()
 	}
 
 	delete job_server;
+
+	delete provider;
 
 	DC_Exit(0);
 }

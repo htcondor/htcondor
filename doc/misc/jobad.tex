@@ -554,7 +554,7 @@ a set of job hooks, and added to the ClassAd once a job is fetched.
 %%% ClassAd attribute: ImageSize
 \index{ClassAd job attribute!ImageSize}
 \index{ImageSize!job ClassAd attribute}
-\item[\AdAttr{ImageSize}:]  Estimate of the memory image size
+\item[\AdAttr{ImageSize}:]  Maximum observed memory image size
 (i.e. virtual memory) of the
 job in Kbytes.  The initial value is equal to the size of the
 executable for non-vm universe jobs, and 0 for vm universe jobs.
@@ -1000,7 +1000,7 @@ system PIDs.
 \index{ProportionalSetSizeKb!job ClassAd attribute}
 \item[\AdAttr{ProportionalSetSizeKb}:]
 On Linux execute machines with kernel version more recent than 2.6.27,
-this is the proportional set size (PSS) in Kbytes,
+this is the maximum observed proportional set size (PSS) in Kbytes,
 summed across all processes in the job.
 If the execute machine does not
 support monitoring of PSS or PSS has not yet been measured,
@@ -1106,8 +1106,8 @@ RequestMemory = ceiling(ifThenElse(JobVMMemory =!= UNDEFINED, JobVMMemory,
 %%% ClassAd attribute: ResidentSetSize
 \index{ClassAd job attribute!ResidentSetSize}
 \index{ResidentSetSize!job ClassAd attribute}
-\item[\AdAttr{ResidentSetSize}:]  Estimate of the physical memory
-in use by the job in Kbytes while it is running.
+\item[\AdAttr{ResidentSetSize}:]  Maximum observed
+physical memory in use by the job in Kbytes while running.
 
 %%% ClassAd attribute: StackSize
 \index{ClassAd job attribute!StackSize}
