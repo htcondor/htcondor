@@ -3,21 +3,8 @@
 
 # 
 # Arguments:
-# $1 - fqdn hostname of remote host to install ssh keys
+# add host: add host to cluster
 #
-
-usage()
-{
-    echo "Usage: $0 user@fqdn.example.com"
-}
-
-if [ $# -ne 1 ]; then
-    usage
-    exit 1
-fi
-
-# Remote host to connect
-remote_host=$1
 
 # Bosco key location
 bosco_key=$HOME/.ssh/bosco_key.rsa
@@ -25,6 +12,66 @@ bosco_key=$HOME/.ssh/bosco_key.rsa
 # Bosco password location
 PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 
+# Bosco cluster list location
+CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
+
+usage()
+{
+cat << EOM
+usage: $0 command
+
+commands:
+ -l|--list          List the installed clusters
+ -a|--add host      Install and add a cluster
+ -r|--remove host   Remove the installed cluster
+ -t|--test host     Test the installed cluster
+ -h|--help          Show this help message
+
+Where host is user@fqdn.example.com
+
+EOM
+}
+
+list()
+{
+    # Check for the cluster_list file
+    if [ -e $CLUSTERLIST_LOCATION ]; then
+        cat $CLUSTERLIST_LOCATION
+    else
+        echo "No clusters configured"
+    fi
+}
+
+remote_cluster () {
+    # $1 = cluster to remove
+
+    # First, check if the cluster is in the cluster list
+
+    # Remove bosco from the remote cluster
+
+    # Remove the host from the cluster list
+
+}
+
+# The getopt command line.  Using -a for alternate (allow options with only 1 '-')
+TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:help  -n 'bosco_cluster' -- "$@"`
+
+if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
+
+eval set -- "$TEMP"
+
+while true; do
+    case "$1" in
+        -h|--help) usage; exit 1; shift ;;
+        -a|--add) remote_host=$2; shift 2; break ;;
+        -l|--list) list; exit 0 ;;
+        -t|--test) test_cluster;  shift 2 ;;
+        -r|--remove) remove_cluster $2; shift 2; break;;
+        
+        --) echo "No command found" >&2; usage; exit 1;;
+        *) echo "Unknown option"; exit 1;;
+    esac
+done
 
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
@@ -148,6 +195,9 @@ else
 fi
 rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
+
+# Add the cluster to the cluster list
+echo $remote_host > $CLUSTERLIST_LOCATION
 
 echo "Installation complete"
 
