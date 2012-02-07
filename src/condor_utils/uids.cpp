@@ -687,7 +687,9 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 					// make certain we're back to 'condor' before impersonating
 					RevertToSelf();
 				}
-				ImpersonateLoggedOnUser(CurrUserHandle);
+				if ( ! ImpersonateLoggedOnUser(CurrUserHandle)) {
+					dprintf(D_ALWAYS, "ImpersonateLoggedOnUser() failed, err=%d\n", GetLastError());
+				}
 			} else {
 				// we don't want to exit here because reusing the shadow in 7.5.4
 				// ends up here because of a dprintf inside uninit_user_ids

@@ -77,10 +77,12 @@ split_sin( const char *addr, char **host, char **port, char **params )
 			// mis-match bracket
 			return 0;
 		}
-		*host = (char*)malloc(pos - addr + 1);
-		ASSERT( *host );
-		(*host)[pos - addr] = '\0';
-		memcpy(*host, addr, pos - addr);
+		if ( host ) {
+			*host = (char*)malloc(pos - addr + 1);
+			ASSERT( *host );
+			memcpy(*host, addr, pos - addr);
+			(*host)[pos - addr] = '\0';
+		}
 		addr = pos + 1;
 	} else {
 		// everything else
