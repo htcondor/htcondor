@@ -42,7 +42,7 @@ list()
     fi
 }
 
-remote_cluster () {
+remove_cluster () {
     # $1 = cluster to remove
 
     # First, check if the cluster is in the cluster list
@@ -72,6 +72,11 @@ while true; do
         *) echo "Unknown option"; exit 1;;
     esac
 done
+
+
+################################################################
+# The rest of the file covers the 'add' cluster functionality.
+################################################################
 
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
