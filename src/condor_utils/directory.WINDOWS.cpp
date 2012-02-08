@@ -2052,7 +2052,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
 
     SECURITY_DESCRIPTOR         security_descriptor;
     SECURITY_ATTRIBUTES         security_attributes;
-    PACL                        acl             = NULL;
+    PACL                        pacl            = NULL;
     SID_IDENTIFIER_AUTHORITY    nt_authority    = SECURITY_NT_AUTHORITY;
     PSID                        user_sid        = NULL,
                                 system_sid      = NULL,
@@ -2139,11 +2139,11 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
              + ( 6 * ( sizeof ( ACCESS_ALLOWED_ACE ) 
                        - sizeof ( DWORD ) ) );
 
-        acl = (PACL) new BYTE[size];
-        ASSERT( acl );
+        pacl = (PACL) malloc(size);
+        ASSERT( pacl );
 
         initialized = InitializeAcl (
-            acl, 
+            pacl, 
             size, 
             ACL_REVISION );
 
@@ -2167,7 +2167,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
         for ( i = 0; i < count; ++i ) {
             
             added = AddAccessAllowedAce (
-                acl,
+                pacl,
                 ACL_REVISION,
                 FILE_ALL_ACCESS,
                 sids[i] );
@@ -2193,7 +2193,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
         for ( i = 0; i < count; ++i ) {
             
             added = AddAccessAllowedAceEx (
-                acl,
+                pacl,
                 ACL_REVISION,
                 OBJECT_INHERIT_ACE 
                 | CONTAINER_INHERIT_ACE 
@@ -2240,7 +2240,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
         sd_set = SetSecurityDescriptorDacl (
             &security_descriptor, 
             TRUE, 
-            acl, 
+            pacl, 
             FALSE );
 
         if ( !sd_set ) {
@@ -2297,8 +2297,8 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
             FreeSid ( admin_sid );
         }
 
-        if ( acl ) {
-             delete[] acl;
+        if ( pacl ) {
+            free (pacl);
         }
 
     }
