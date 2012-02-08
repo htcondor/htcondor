@@ -61,20 +61,23 @@ AttrGetName( CONDOR_ATTR which )
     case ATTR_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->Get() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->Get() );
 		break;
     case ATTR_FLAG_DISTRO_UC:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetUc() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->GetUc() );
 		break;
     case ATTR_FLAG_DISTRO_CAP:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetCap() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->GetCap() );
 		break;
     }
 
