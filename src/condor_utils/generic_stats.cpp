@@ -655,6 +655,9 @@ T stats_histogram<T>::Remove(T val)
 }
 #endif
 
+#define is_space(ch) isspace((unsigned char)(ch))
+#define is_digit(ch) isdigit((unsigned char)(ch))
+
 // Parse a string of the form "NNN Kb, NNN Mb" and return an array of sizes in bytes
 // the valid scaling factors are b B Kb KB Mb MB Gb GB Tb TB
 // commas and the scaling factors (Kb, Mb, etc) are parsed, but not required. 
@@ -669,16 +672,16 @@ int stats_histogram_ParseSizes(
    int64_t size = 0;
    for (const char* p = psz; p && *p; ++p) {
 
-      while (isspace(*p))
+      while (is_space(*p))
          ++p;
 
-      if ( ! isdigit(*p)) {
+      if ( ! is_digit(*p)) {
          EXCEPT("Invalid input to ParseSizes at offset %d in '%s'\n", (int)(p-psz), psz);
          break;
       }
 
       bool saw_digit = false;
-      while (isdigit(*p)) {
+      while (is_digit(*p)) {
          saw_digit = true;
          size *= 10;
          size += *p - '0';
@@ -687,7 +690,7 @@ int stats_histogram_ParseSizes(
 
       if (saw_digit) {
 
-         while (isspace(*p))
+         while (is_space(*p))
             ++p;
 
          int64_t scale = 1;
@@ -697,7 +700,7 @@ int stats_histogram_ParseSizes(
          else if (*p == 'T') ++p, scale = (int64_t)1024*1024*1024*1024;
          if (*p == 'b' || *p == 'B') ++p;
 
-         while (isspace(*p))
+         while (is_space(*p))
             ++p;
 
          if (*p == ',') ++p;
@@ -709,7 +712,7 @@ int stats_histogram_ParseSizes(
          size = 0;
       }
 
-      while (isspace(*p))
+      while (is_space(*p))
          ++p;
    }
 
@@ -737,16 +740,16 @@ int stats_histogram_ParseTimes(
    time_t time = 0;
    for (const char* p = psz; p && *p; ++p) {
 
-      while (isspace(*p))
+      while (is_space(*p))
          ++p;
 
-      if ( ! isdigit(*p)) {
+      if ( ! is_digit(*p)) {
          EXCEPT("Invalid input to ParseTimes at offset %d in '%s'\n", (int)(p-psz), psz);
          break;
       }
 
       bool saw_digit = false;
-      while (isdigit(*p)) {
+      while (is_digit(*p)) {
          saw_digit = true;
          time *= 10;
          time += *p - '0';
@@ -755,7 +758,7 @@ int stats_histogram_ParseTimes(
 
       if (saw_digit) {
 
-         while (isspace(*p))
+         while (is_space(*p))
             ++p;
 
          time_t scale = 1;
@@ -782,7 +785,7 @@ int stats_histogram_ParseTimes(
             }
          }
 
-         while (isspace(*p))
+         while (is_space(*p))
             ++p;
 
          if (*p == ',') ++p;
@@ -794,7 +797,7 @@ int stats_histogram_ParseTimes(
          time = 0;
       }
 
-      while (isspace(*p))
+      while (is_space(*p))
          ++p;
    }
 
