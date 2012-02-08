@@ -460,7 +460,7 @@ int condor_sockaddr::get_address_len() const {
 in6_addr condor_sockaddr::to_ipv6_address() const
 {
 	if (is_ipv6()) return v6.sin6_addr;
-	in6_addr ret;
+	in6_addr ret = {0};
 		// the field name of struct in6_addr is differ from platform to
 		// platform. thus, we use a pointer.
 	uint32_t* addr = (uint32_t*)&ret;

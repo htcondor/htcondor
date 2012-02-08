@@ -3581,6 +3581,7 @@ char*
 ULogEvent::rusageToStr (rusage usage)
 {
 	char* result = (char*) malloc(128);
+	ASSERT( result != NULL );
 
 	int usr_secs = usage.ru_utime.tv_sec;
 	int sys_secs = usage.ru_stime.tv_sec;

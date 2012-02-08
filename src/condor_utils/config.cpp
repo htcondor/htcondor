@@ -449,6 +449,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 
 		/* Insert it */
 	bucket = (BUCKET *)MALLOC( sizeof(BUCKET) );
+	ASSERT( bucket != NULL );
 	bucket->name = strdup( tmp_name );
 	bucket->value = strdup( value );
 	bucket->used = 0;
@@ -513,6 +514,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 	if ( buflen < (unsigned int)requested_bufsize ) {
 		if ( buf ) free(buf);
 		buf = (char *)malloc(requested_bufsize);
+		ASSERT( buf != NULL );
 		buflen = requested_bufsize;
 	}
 	buf[0] = '\0';
@@ -789,6 +791,7 @@ hash_iter_begin(BUCKET ** table, int table_size)
 	ASSERT(table != NULL);
 	ASSERT(table_size > 0);
 	hash_iter * p = (hash_iter *)MALLOC(sizeof(hash_iter));
+	ASSERT( p != NULL );
 	p->table = table;
 	p->table_size = table_size;
 	p->index = 0;

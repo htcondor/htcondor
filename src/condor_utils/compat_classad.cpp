@@ -1544,7 +1544,7 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
                         3 +     // " = "
                         1;      // null termination
         buffer = (char*) malloc(buffersize);
-        
+        ASSERT( buffer != NULL );
     } 
 
     snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
