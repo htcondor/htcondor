@@ -376,7 +376,7 @@ const char* EC2UserData = "ec2_user_data";
 const char* EC2UserDataFile = "ec2_user_data_file";
 const char* EC2SecurityGroups = "ec2_security_groups";
 const char* EC2KeyPair = "ec2_keypair";
-//const char* EC2KeyPairFile = "ec2_keypair_file";
+const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
 const char* EC2EBSVolumes = "ec2_ebs_volumes";
@@ -5051,19 +5051,29 @@ SetGridParams()
 		exit( 1 );
 	}
 	
-//	// EC2KeyPairFile is not a necessary parameter
-//	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
-//		// for the relative path, the keypair output file will be written to the IWD
-//		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
-//		free( tmp );
-//		InsertJobExpr( buffer.Value() );
-//	}
-
+	bool bKeyPairPresent=false;
+	
 	// EC2KeyPair is not a necessary parameter
 	if( (tmp = condor_param( EC2KeyPair, ATTR_EC2_KEY_PAIR )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
+		bKeyPairPresent=true;
+	}
+	
+	// EC2KeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+	    if (bKeyPairPresent)
+	    {
+	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n", EC2SecretAccessKey );
+	    }
+	    else
+	    {
+	      // for the relative path, the keypair output file will be written to the IWD
+	      buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+	      free( tmp );
+	      InsertJobExpr( buffer.Value() );
+	    }
 	}
 	
 	// EC2GroupName is not a necessary parameter

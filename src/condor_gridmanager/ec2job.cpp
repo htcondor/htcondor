@@ -144,6 +144,8 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	myResource = NULL;
 	gahp = NULL;
 	m_group_names = NULL;
+	m_should_gen_key_pair = false;
+	m_keypair_created = false;
 	
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
@@ -189,6 +191,15 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	m_vm_check_times = 0;
 
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
+	
+	if (m_key_pair.empty())
+	{
+	  m_should_gen_key_pair = true;
+	  if (!jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file ))
+	  {
+	    m_key_pair_file = NULL_FILE;
+	  }
+	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -421,12 +432,54 @@ void EC2Job::doEvaluateState()
 				if (m_client_token.empty()) {
 					SetClientToken(build_client_token().c_str());
 				}
+				
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
 					requestScheddUpdate( this, true );
 					break;
 				}
-				gmState = GM_START_VM;
+				
+				////////////////////////////////
+				// Here we create the keypair only 
+				// if we need to.  
+				if ( m_should_gen_key_pair && !m_keypair_created )
+				{	
+				    if (m_key_pair.empty())
+				    {
+				      SetKeypairId( build_keypair().c_str() );
+				    }
+				
+				    rc = gahp->ec2_vm_create_keypair(m_serviceUrl, 
+								     m_public_key_file, 
+								     m_private_key_file, 
+								     m_key_pair, 
+								     m_key_pair_file, 
+								     gahp_error_code);
+
+				    if ( rc == GAHPCLIENT_COMMAND_PENDING || 
+				      rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ) {
+					    break;
+				    }
+
+				    if (rc == 0) {
+				      m_keypair_created = true;
+				      gmState = GM_START_VM;
+				    } else {
+				
+					    // May need to add back retry logic, but why?
+					    errorString = gahp->getErrorString();
+					    dprintf(D_ALWAYS,"(%d.%d) job create keypair failed: %s: %s\n",
+							    procID.cluster, procID.proc, gahp_error_code,
+							    errorString.c_str() );
+					    gmState = GM_HOLD;
+					    break;
+				    }
+				}
+				else
+				{
+				  gmState = GM_START_VM;
+				}
+				
 				break;
 
 
@@ -903,7 +956,36 @@ void EC2Job::doEvaluateState()
 				
 				
 			case GM_DELETE:
-				
+			  
+				if (m_keypair_created)
+				{
+				  // Yes, now let's destroy the temporary keypair 
+				  rc = gahp->ec2_vm_destroy_keypair(m_serviceUrl,
+								    m_public_key_file, 
+								    m_private_key_file, 
+								    m_key_pair, gahp_error_code);
+
+				  if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+					  break;
+				  }
+
+				  if (rc == 0) {
+					  
+					  // remove temporary keypair local output file
+					  if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
+						  dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
+					  }
+					  SetKeypairId( NULL );
+					  m_keypair_created = false;
+				  } else {
+					  errorString = gahp->getErrorString();
+					  dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
+							  procID.cluster, procID.proc, gahp_error_code,
+							  errorString.c_str() );
+				  }
+				  
+				}
+								
 				// We are done with the job. Propagate any remaining updates
 				// to the schedd, then delete this object.
 				DoneWithJob();
@@ -953,6 +1035,18 @@ void EC2Job::SetRemoteVMName(const char * name)
 	requestScheddUpdate( this, false );
 }
 
+void EC2Job::SetKeypairId( const char *keypair_id )
+{
+	if ( keypair_id == NULL ) {
+		m_key_pair = "";
+	} else {
+		m_key_pair = keypair_id;
+	}
+	
+	jobAd->Assign( ATTR_EC2_KEY_PAIR, m_key_pair );
+	
+	requestScheddUpdate( this, false );
+}
 
 void EC2Job::SetClientToken(const char *client_token)
 {
@@ -1018,6 +1112,34 @@ string EC2Job::build_client_token()
 	uuid_str[36] = '\0';
 
 	return string(uuid_str);
+}
+
+std::string EC2Job::build_keypair()
+{
+	// Build a name for the ssh keypair that will be unique to this job.
+	// Our pattern is SSH_<collector name>_<GlobalJobId>
+
+	// get condor pool name
+	// In case there are multiple collectors, strip out the spaces
+	// If there's no collector, insert a dummy name
+	char* pool_name = param( "COLLECTOR_HOST" );
+	if ( pool_name ) {
+		StringList collectors( pool_name );
+		free( pool_name );
+		pool_name = collectors.print_to_string();
+	} else {
+		pool_name = strdup( "NoPool" );
+	}
+
+	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
+	std::string job_id;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+
+	std::string key_pair;
+	sprintf( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
+
+	free( pool_name );
+	return key_pair;
 }
 
 StringList* EC2Job::build_groupnames()
