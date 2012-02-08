@@ -270,25 +270,24 @@ BOOL INtDll::NtDllStatus = INtDll::Init();
 BOOL INtDll::Init()
 {
 	// Get the NtDll function pointers
-	NtQuerySystemInformation = (PNtQuerySystemInformation)
-					GetProcAddress( GetModuleHandle( "ntdll.dll" ),
-                    "NtQuerySystemInformation" );
+	HMODULE hmod = GetModuleHandle( "ntdll.dll" );
+	if (hmod)
+	{
+		NtQuerySystemInformation = (PNtQuerySystemInformation)
+					GetProcAddress( hmod, "NtQuerySystemInformation" );
 
-	NtQueryObject = (PNtQueryObject)
-					GetProcAddress(	GetModuleHandle( "ntdll.dll" ),
-                    "NtQueryObject" );
+		NtQueryObject = (PNtQueryObject)
+					GetProcAddress(	hmod, "NtQueryObject" );
 
-	NtQueryInformationThread = (PNtQueryInformationThread)
-					GetProcAddress(	GetModuleHandle( "ntdll.dll" ),
-                    "NtQueryInformationThread" );
+		NtQueryInformationThread = (PNtQueryInformationThread)
+					GetProcAddress(	hmod, "NtQueryInformationThread" );
 
-	NtQueryInformationFile = (PNtQueryInformationFile)
-					GetProcAddress(	GetModuleHandle( "ntdll.dll" ),
-                    "NtQueryInformationFile" );
+		NtQueryInformationFile = (PNtQueryInformationFile)
+					GetProcAddress(	hmod, "NtQueryInformationFile" );
 
-	NtQueryInformationProcess = (PNtQueryInformationProcess)
-					GetProcAddress(	GetModuleHandle( "ntdll.dll" ),
-                    "NtQueryInformationProcess" );
+		NtQueryInformationProcess = (PNtQueryInformationProcess)
+					GetProcAddress(	hmod, "NtQueryInformationProcess" );
+	}
 
 	return  NtQuerySystemInformation	!= NULL &&
 			NtQueryObject				!= NULL &&

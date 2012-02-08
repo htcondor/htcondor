@@ -2057,13 +2057,9 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
     PSID                        user_sid        = NULL,
                                 system_sid      = NULL,
                                 admin_sid       = NULL;
-    PSID                        sids[]          = { user_sid, 
-                                                    system_sid, 
-                                                    admin_sid };
     DWORD                       last_error      = ERROR_SUCCESS,
                                 size            = 0,
-                                i               = 0,
-                                count           = 0;
+                                i               = 0;
     ACE_HEADER                  *ace_header     = NULL;
     BOOL                        got_sid         = FALSE,
                                 initialized     = FALSE,
@@ -2166,7 +2162,8 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
         }
 
         /* add non-inheritable ACEs */
-        count = condor_countof ( sids );
+        PSID sids[] = { user_sid, system_sid, admin_sid };
+        UINT count = condor_countof ( sids );
         for ( i = 0; i < count; ++i ) {
             
             added = AddAccessAllowedAce (
