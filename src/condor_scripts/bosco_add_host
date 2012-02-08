@@ -137,12 +137,17 @@ release_dir=`condor_config_val RELEASE_DIR`
 echo "Installing BOSCO on $remote_host..."
 
 # Make the necessary remote directories
-ssh $remote_host "mkdir -p bosco"
+ssh $remote_host "mkdir -p bosco/glite/lib"
 
 # Copy over blahp
-rsync -aq  $glite_location $remote_host:bosco/libexec/
-rsync -aq  $release_dir/lib/libclassad.so* $remote_host:bosco/lib/
-rsync -aq  $release_dir/lib/condor $remote_host:bosco/lib/
+rsync -aq $glite_location/[^l]* $remote_host:bosco/glite/
+if [ -d $release_dir/lib64 ] ; then
+    libdir=lib64
+else
+    libdir=lib
+fi
+rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
+rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 
 echo "Installation complete"
 

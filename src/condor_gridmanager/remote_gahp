@@ -22,7 +22,7 @@
 REMOTE_HOSTNAME=""
 REMOTE_USER=`whoami`
 # Needs '~' because resolved on remote site
-REMOTE_GLITE="~/bosco/libexec/glite"
+REMOTE_GLITE="~/bosco/glite"
 # We do this in case $HOME isn't set properly
 PASSPHRASE_LOCATION=`echo ~/.bosco/.pass`
 PRIVATE_KEY_LOCATION=`echo ~/.ssh/bosco_key.rsa`
