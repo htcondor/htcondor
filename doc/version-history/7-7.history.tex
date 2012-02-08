@@ -46,7 +46,11 @@ available from the source code.
 
 \begin{itemize}
 
-\item None.
+\item The shared library \File{libcondor\_utils} now includes the Condor
+version in its name. This will reduce the chance of a Condor binary
+using the wrong version of the library, which can result in a crash or
+other bad behavior.
+\Ticket{2613}
 
 \end{itemize}
 
