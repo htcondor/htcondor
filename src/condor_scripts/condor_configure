@@ -440,7 +440,17 @@ if ($opt_central_manager) {
 #  --install
 #  --make-personal_condor
 
-if ($opt_make_personal_condor || $opt_bosco ||
+if ($opt_bosco) {
+    $local_config{START}="";
+    $local_config{PREEMPT}="";
+    $local_config{SUSPEND}="";
+    $local_config{KILL}="";
+    
+    $local_config{COLLECTOR_NAME}="";
+
+	$daemon_list{SCHEDD} = 1;
+}
+elsif ($opt_make_personal_condor ||
     (defined($opt_release_dir) && !$opt_type)) {
 
 	$daemon_list{COLLECTOR} = 1;
