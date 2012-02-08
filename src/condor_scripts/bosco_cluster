@@ -42,16 +42,119 @@ list()
     fi
 }
 
+
+start_ssh () {
+    # Copy blahp
+    PASSPHRASE=""
+    if [ -f $PASSPHRASE_LOCATION ]; then
+        PASSPHRASE=`cat $PASSPHRASE_LOCATION`
+    fi
+    
+    # Start the ssh-agent
+    eval `ssh-agent -s` > /dev/null
+    
+    # Create an ssh-agent session to handle the transfers
+    # Copied from remote_gahp
+    # create a temp file for the expect script
+    SSH_ADD_SCRIPT=`mktemp`
+    chmod 700 $SSH_ADD_SCRIPT
+    
+    # Create the expect script
+    echo "#!/usr/bin/expect -f
+        # get arguments
+        set num_args [llength \$argv]
+        set private_key_loc [lindex \$argv 0]
+    
+        # spawn ssh-add process
+        spawn ssh-add $bosco_key
+    
+        set spawn_pid [exp_pid]
+    
+        # set timeout for expected input
+        set timeout 5
+    
+        expect {
+            # no passphrase required
+            \"*Identity added*\" {
+                exit 0
+            }
+            # sends passphrase
+            \"*passphrase*\" {
+                send -- \"$PASSPHRASE\r\"
+            }
+            # no ssh-agent running
+            \"*authentication agent*\" {
+                exit -1
+            }
+            # incorrect private key location
+            timeout {
+                exit -2
+            }
+        }
+    
+        expect {
+            # all done
+            eof {
+                exit 0
+            }
+            # incorrect passphrase
+            \"*passphrase*\" {
+                exit -3
+            }
+            # timeout
+            timeout {
+                exit -4
+            }
+        }" > $SSH_ADD_SCRIPT
+    
+    
+    # call the expect script to ssh-add identity
+    $SSH_ADD_SCRIPT > /dev/null
+    ADD_STATUS=$?
+    
+    # remove temporary script
+    rm $SSH_ADD_SCRIPT
+    
+    # check if ssh-add failed
+    if [ $ADD_STATUS != 0 ] ; then
+        # ssh-add script not found
+        if [ $ADD_STATUS == 1 ] ; then
+            ADD_STATUS=-1
+        fi
+        eval `ssh-agent -sk`
+        exit $ADD_STATUS
+    fi
+}    
+
+
+stop_ssh () {
+    # Shut down ssh-agent
+    eval `ssh-agent -sk` > /dev/null
+}
+
 remove_cluster () {
     # $1 = cluster to remove
+    remote_host=$1
 
     # First, check if the cluster is in the cluster list
+    grep "$remote_host" 
+    if [ $? -eq 0 ]; then
 
-    # Remove bosco from the remote cluster
+        # Remove bosco from the remote cluster
+        start_ssh
+        ssh $1 "rm -rf bosco"
+        stop_ssh
 
-    # Remove the host from the cluster list
+        # Remove the host from the cluster list
+        sed "/\$$remote_host/d" $CLUSTERLIST > $CLUSTERLIST.tmp
+        mv $CLUSTERLIST.tmp $CLUSTERLIST
 
+    else
+        echo "Unable to find cluster $remote_host in cluster list"
+        exit 1
+    fi
 }
+
 
 # The getopt command line.  Using -a for alternate (allow options with only 1 '-')
 TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:help  -n 'bosco_cluster' -- "$@"`
@@ -99,88 +202,7 @@ fi
 echo "Enter password to copy ssh keys to $remote_host:"
 ssh-copy-id -i $bosco_key $remote_host > /dev/null
 
-
-# Copy blahp
-PASSPHRASE=""
-if [ -f $PASSPHRASE_LOCATION ]; then
-    PASSPHRASE=`cat $PASSPHRASE_LOCATION`
-fi
-
-# Start the ssh-agent
-eval `ssh-agent -s` > /dev/null
-
-# Create an ssh-agent session to handle the transfers
-# Copied from remote_gahp
-# create a temp file for the expect script
-SSH_ADD_SCRIPT=`mktemp`
-chmod 700 $SSH_ADD_SCRIPT
-
-# Create the expect script
-echo "#!/usr/bin/expect -f
-    # get arguments
-    set num_args [llength \$argv]
-    set private_key_loc [lindex \$argv 0]
-
-    # spawn ssh-add process
-    spawn ssh-add $bosco_key
-
-    set spawn_pid [exp_pid]
-
-    # set timeout for expected input
-    set timeout 5
-
-    expect {
-        # no passphrase required
-        \"*Identity added*\" {
-            exit 0
-        }
-        # sends passphrase
-        \"*passphrase*\" {
-            send -- \"$PASSPHRASE\r\"
-        }
-        # no ssh-agent running
-        \"*authentication agent*\" {
-            exit -1
-        }
-        # incorrect private key location
-        timeout {
-            exit -2
-        }
-    }
-
-    expect {
-        # all done
-        eof {
-            exit 0
-        }
-        # incorrect passphrase
-        \"*passphrase*\" {
-            exit -3
-        }
-        # timeout
-        timeout {
-            exit -4
-        }
-    }" > $SSH_ADD_SCRIPT
-
-
-# call the expect script to ssh-add identity
-$SSH_ADD_SCRIPT > /dev/null
-ADD_STATUS=$?
-
-# remove temporary script
-rm $SSH_ADD_SCRIPT
-
-# check if ssh-add failed
-if [ $ADD_STATUS != 0 ] ; then
-    # ssh-add script not found
-    if [ $ADD_STATUS == 1 ] ; then
-        ADD_STATUS=-1
-    fi
-    eval `ssh-agent -sk`
-    exit $ADD_STATUS
-fi
-
+start_ssh
 
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
@@ -206,5 +228,4 @@ echo $remote_host > $CLUSTERLIST_LOCATION
 
 echo "Installation complete"
 
-# Shut down ssh-agent
-eval `ssh-agent -sk` > /dev/null
+stop_ssh
