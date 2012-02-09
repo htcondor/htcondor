@@ -58,10 +58,9 @@ extern "C" {
 	int access_via_nfs (const char *);
 	int use_local_access (const char *);
 	int use_special_access (const char *);
-	int use_buffer( char *method, char const *path );
-	int use_compress( char *method, char const *path );
-	int use_fetch( char *method, char const *path );
-	int use_append( char *method, char const *path );
+	int use_compress( const char *method, char const *path );
+	int use_fetch( const char *method, char const *path );
+	int use_append( const char *method, char const *path );
 	void HoldJob( const char* long_reason, const char* short_reason,
 				  int reason_code, int reason_subcode );
 	void reaper();
@@ -521,8 +520,7 @@ pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_
 	if( stat(ICkptName,&st_buf) == 0 ) {
 		a_out = strdup( ICkptName );
 	} else {
-		EXCEPT( "Can't find initial checkpoint file %s",
-			ICkptName?ICkptName:"(null pointer)");
+		EXCEPT( "Can't find initial checkpoint file %s", ICkptName);
 	}
 
 		/* Copy current checkpoint name into space provided */
@@ -532,9 +530,7 @@ pseudo_work_request( PROC *p, char *&a_out, char *&targ, char *&orig, int *kill_
 		orig = strdup( ICkptName );
 	} else {
 		EXCEPT( "Can't find any checkpoint file: CkptFile='%s' "
-			"or ICkptFile='%s'", 
-			CkptName?CkptName:"(null pointer)",
-			ICkptName?ICkptName:"(null pointer)" );
+			"or ICkptFile='%s'", CkptName, ICkptName);
 	}
 
 		/* Copy next checkpoint name into space provided */
@@ -1274,7 +1270,7 @@ add the necessary transformations.
 */
 
 int do_get_file_info( char const *logical_name, char *&url, int allow_complex );
-void append_buffer_info( MyString &url, char *method, char const *path );
+void append_buffer_info( MyString &url, const char *method, char const *path );
 
 int
 pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
@@ -1296,7 +1292,7 @@ do_get_file_info( char const *logical_name, char *&actual_url, int allow_complex
 	MyString	split_file;
 	MyString	full_path;
 	MyString	remap;
-	char	*method;
+	const char	*method;
 	int		want_remote_io;
 	MyString url_buf;
 	static int		warned_once = FALSE;
@@ -1418,7 +1414,7 @@ do_get_file_info( char const *logical_name, char *&actual_url, int allow_complex
 	return 0;
 }
 
-void append_buffer_info( MyString &url, char *method, char const *path )
+void append_buffer_info( MyString &url, const char *method, char const *path )
 {
 	MyString buffer_list;
 	MyString buffer_string;
@@ -1478,17 +1474,17 @@ static int attr_list_has_file( const char *attr, const char *path )
 }
 
 
-int use_append( char * /*method*/, char const *path )
+int use_append( const char * /*method*/, char const *path )
 {
 	return attr_list_has_file( ATTR_APPEND_FILES, path );
 }
 
-int use_compress( char * /*method*/, char const *path )
+int use_compress( const char * /*method*/, char const *path )
 {
 	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
 }
 
-int use_fetch( char * /*method*/, char const *path )
+int use_fetch( const char * /*method*/, char const *path )
 {
 	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
