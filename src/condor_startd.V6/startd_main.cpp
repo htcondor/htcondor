@@ -601,7 +601,7 @@ init_params( int /* first_time */)
 }
 
 
-void
+void PREFAST_NORETURN
 startd_exit() 
 {
 	// Shut down the cron logic
