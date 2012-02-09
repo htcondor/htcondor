@@ -419,6 +419,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 
 	if ( buf == NULL ) {
 		buf = (char*)malloc(buf_size);
+		ASSERT( buf != NULL );
 	}
 
 	ibuf = 0;
@@ -2537,8 +2538,10 @@ GahpClient::globus_gram_client_callback_allow(
 	server->globus_gt2_gram_user_callback_arg = user_callback_arg;
 	server->globus_gt2_gram_callback_contact = strdup(result.argv[1]);
 	ASSERT(server->globus_gt2_gram_callback_contact);
-	*callback_contact = strdup(server->globus_gt2_gram_callback_contact);
-	ASSERT(*callback_contact);
+	if (callback_contact) {
+		*callback_contact = strdup(server->globus_gt2_gram_callback_contact);
+		ASSERT(*callback_contact);
+	}
 
 	return 0;
 }
@@ -2780,6 +2783,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		}
 		if ( *num_ads > 0 ) {
 			*ads = (ClassAd **)malloc( *num_ads * sizeof(ClassAd*) );
+			ASSERT( *ads != NULL );
 			int idst = 0;
 			for ( int i = 0; i < *num_ads; i++,idst++ ) {
 				if ( useXMLClassads ) {

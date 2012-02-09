@@ -149,6 +149,7 @@ CreamResource::CreamResource( const char *resource_name,
 								 name_len +  // host/port
 								 sizeof( service_name ) + 
 								 1 );        // terminating \0
+	ASSERT( serviceUri != NULL );
 	strcpy( serviceUri, "https://" );
 	snprintf( serviceUri + 8, name_len + 1, "%s", name_ptr );
 	strcat( serviceUri, service_name );

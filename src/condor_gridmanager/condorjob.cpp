@@ -394,6 +394,8 @@ void CondorJob::doEvaluateState()
 		old_gm_state = gmState;
 		old_remote_state = remoteState;
 
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
+
 		switch ( gmState ) {
 		case GM_INIT: {
 			// This is the state all jobs start in when the GlobusJob object
@@ -594,7 +596,8 @@ void CondorJob::doEvaluateState()
 					int jproc = -1;
 					if(job_id_string) {
 							// job_id_string is null in many failure cases.
-						sscanf( job_id_string, "%d.%d", &jcluster, &jproc );
+						if (2 != sscanf( job_id_string, "%d.%d", &jcluster, &jproc ))
+							jcluster = jproc = -1;
 					}
 					// if the job failed to submit, the cluster number
 					// will hold the error code for the call to 
