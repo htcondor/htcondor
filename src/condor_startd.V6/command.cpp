@@ -1189,10 +1189,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// slot and job will be checked later, in the normal
 			// course of accepting the claim.
 		rip->r_reqexp->restore();
-		if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
-									req_classad, mach_requirements ) == 0 ) {
-			rip->dprintf( D_FAILURE|D_ALWAYS, 
-						  "Machine requirements not satisfied.\n" );
+		if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+			mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+		}
+		if (mach_requirements == 0) {
+			rip->dprintf(D_ALWAYS, 
+				  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
 			refuse( stream );
 			ABORT;
 		}
