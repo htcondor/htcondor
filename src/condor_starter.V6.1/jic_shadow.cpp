@@ -41,6 +41,8 @@
 #include "condor_vm_universe_types.h"
 #include "authentication.h"
 #include "condor_mkstemp.h"
+#include "globus_utils.h"
+
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -100,6 +102,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 	syscall_sock = (ReliSock *)socks[0];
 	socks++;
 
+	m_proxy_expiration_tid = -1;
+
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
 		   call, leaving the shadow blocked.  -Jim B. */
@@ -111,6 +115,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 
 JICShadow::~JICShadow()
 {
+	if( m_proxy_expiration_tid != -1 ){
+		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+	}
 	if( shadow ) {
 		delete shadow;
 	}
@@ -1694,8 +1701,18 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		dprintf(D_ALWAYS,
 		        "Attempt to refresh X509 proxy FAILED.\n");
 	}
-	
+
 	return reply;
+}
+
+int
+JICShadow::proxyExpiring()
+{
+	int retval = TRUE;
+
+	holdJob("Proxy about to expire", 0, 0);
+
+	return retval;
 }
 
 bool
@@ -1715,7 +1732,46 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		return false;
 	}
 	const char * proxyfilename = condor_basename(path.Value());
-	return ::updateX509Proxy(cmd, s, proxyfilename);
+
+	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
+
+	// now, if the update was successful, create/reset the timer for the proxy
+	// expiring.  we want to evict the job before the proxy expires.
+	//
+	// in the case of glexec (i.e. gpsh != NULL) there are actually two copies
+	// of the proxy, one owned by condor and one owned by the user.  we should
+	// evict before either of them expires.  in practice, they payload is always
+	// shorter lived, so at the moment we only check the payload.
+
+	if(retval) {
+		// if there was a timer registered, cancel it
+		if( m_proxy_expiration_tid != -1 ) {
+			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+			m_proxy_expiration_tid = -1;
+		}
+
+		// for the new timer, start with the payload proxy expiration time
+		time_t expiration = x509_proxy_expiration_time(path.Value());
+		time_t now = time(NULL);
+
+		// now subtract the configurable time allowed for eviction
+		// years of careful research show the default should be one minute.
+		int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
+		time_t expiration_delta = (expiration - now) - evict_window;
+
+		m_proxy_expiration_tid = daemonCore->Register_Timer(
+			expiration_delta,
+			(TimerHandlercpp)&JICShadow::proxyExpiring,
+			"proxy expiring",
+			this );
+		if (m_proxy_expiration_tid > 0) {
+			dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %i\n", m_proxy_expiration_tid, (int)expiration);
+		} else {
+			dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
+		}
+	}
+
+	return retval;
 }
 
 
