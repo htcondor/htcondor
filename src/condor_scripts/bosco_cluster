@@ -291,7 +291,7 @@ rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 
 # Add the cluster to the cluster list
-echo $remote_host > $CLUSTERLIST_LOCATION
+echo $remote_host >> $CLUSTERLIST_LOCATION
 
 echo "Installation complete"
 
