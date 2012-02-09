@@ -183,6 +183,7 @@ test_cluster () {
     fi
     
     # Test condor submission
+    echo "Testing bosco submission"
     submit_dir=`mktemp -d`
     submit_file=$submit_dir/condor.submit
     log_file=$submit_dir/logfile
@@ -225,8 +226,8 @@ while true; do
         -h|--help) usage; exit 1; shift ;;
         -a|--add) remote_host=$2; shift 2; break ;;
         -l|--list) list; exit 0 ;;
-        -t|--test) test_cluster $2;  shift 2; break ;;
-        -r|--remove) remove_cluster $2; shift 2; break;;
+        -t|--test) test_cluster $2;  shift 2; exit 0 ;;
+        -r|--remove) remove_cluster $2; shift 2; exit 0;;
         
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option"; exit 1;;
