@@ -748,6 +748,7 @@ expand_macro( const char *value,
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
 											  strlen(right) + 1));
+			ASSERT( rval != NULL );
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;
