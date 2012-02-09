@@ -137,7 +137,7 @@ remove_cluster () {
     remote_host=$1
 
     # First, check if the cluster is in the cluster list
-    grep "$remote_host" 
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null
     if [ $? -eq 0 ]; then
 
         # Remove bosco from the remote cluster
@@ -156,6 +156,63 @@ remove_cluster () {
 }
 
 
+test_cluster () {
+    remote_host=$1
+
+    # First, check if the cluster is in the clusterlist
+    grep "$remote_host" $CLUSTERLIST_LOCATION
+    if [ $? -ne 0 ]; then
+        echo "Unable to find $remote_host in list of installed clusters."
+        echo "Available clusters:"
+        list
+        exit 1
+    fi
+
+    # Check if passwordless ssh works
+    echo "Testing ssh to $1..."
+    start_ssh
+    ssh $1 "id"
+    ssh_exit=$?
+    stop_ssh
+    if [ $ssh_exit -ne 0 ]; then
+        echo "Failed to run simple ssh on remote cluster."
+        echo "Passwordless ssh to $1 is not working."
+        exit 1
+    else
+        echo "Passed!"
+    fi
+    
+    # Test condor submission
+    submit_dir=`mktemp -d`
+    submit_file=$submit_dir/condor.submit
+    log_file=$submit_dir/logfile
+    cat > $submit_file << End_of_Submit
+universe = grid
+grid_resource = pbs $remote_host
+output = /dev/null
+error = /dev/null
+transfer_executable=false
+executable = /bin/hostname
+log = $log_file
+skip_filechecks = true
+queue
+End_of_Submit
+
+
+    submit_out=`condor_submit $submit_file`
+    if [ $? -ne 0 ]; then
+        echo "Error submitting to local condor:"
+        echo $submit_out
+        exit 1
+    else
+        echo "Submsission to local cluster successful"
+    fi
+
+
+}
+
+
+
 # The getopt command line.  Using -a for alternate (allow options with only 1 '-')
 TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:help  -n 'bosco_cluster' -- "$@"`
 
@@ -168,7 +225,7 @@ while true; do
         -h|--help) usage; exit 1; shift ;;
         -a|--add) remote_host=$2; shift 2; break ;;
         -l|--list) list; exit 0 ;;
-        -t|--test) test_cluster;  shift 2 ;;
+        -t|--test) test_cluster $2;  shift 2; break ;;
         -r|--remove) remove_cluster $2; shift 2; break;;
         
         --) echo "No command found" >&2; usage; exit 1;;
