@@ -171,7 +171,7 @@ test_cluster () {
     # Check if passwordless ssh works
     echo "Testing ssh to $1..."
     start_ssh
-    ssh $1 "id"
+    default_pwd=`ssh $1 "pwd"`
     ssh_exit=$?
     stop_ssh
     if [ $ssh_exit -ne 0 ]; then
@@ -196,6 +196,7 @@ transfer_executable=false
 executable = /bin/hostname
 log = $log_file
 skip_filechecks = true
++remote_iwd="$default_pwd"
 queue
 End_of_Submit
 
@@ -209,6 +210,10 @@ End_of_Submit
         echo "Submsission to local cluster successful"
     fi
 
+    # Check if there is anything in the user log
+
+    
+    rm -rf $submit_dir
 
 }
 
@@ -252,6 +257,10 @@ if [ ! -e $bosco_key ]; then
     chmod go-rwx $PASSPHRASE_LOCATION
     
     ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error running keygen" >&2
+        exit 1
+    fi
 fi
 
 
