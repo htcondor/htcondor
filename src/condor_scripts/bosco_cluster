@@ -171,6 +171,7 @@ test_cluster () {
     # Check if passwordless ssh works
     echo "Testing ssh to $1..."
     start_ssh
+    # Get the pwd from the remote cluster, for use later in the submission file
     default_pwd=`ssh $1 "pwd"`
     ssh_exit=$?
     stop_ssh
@@ -199,7 +200,6 @@ skip_filechecks = true
 +remote_iwd="$default_pwd"
 queue
 End_of_Submit
-
 
     submit_out=`condor_submit $submit_file`
     if [ $? -ne 0 ]; then
