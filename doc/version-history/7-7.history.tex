@@ -276,11 +276,12 @@ affected \Attr{ImageSize} and \Attr{ResidentSetSize} but not
 \item Fixed a rare condition that could cause a job to remain in the
 running state indefinitely when the job was removed or put on hold
 and there was a communication failure between the \Condor{shadow}
-and the \Condor{starter}.  This problem was introduced in 7.7.2.
+and the \Condor{starter}.  
+This problem was introduced in Condor version 7.7.2.
 \Ticket{2591}
 
 \item Fixed a bug in the \Condor{gridmanager} that could cause crashes
-and prevent the \Attr{x509UserProxyEmail} from being set properly for
+and prevent the attribute \Attr{x509UserProxyEmail} from being set properly for
 jobs forwarded via Condor-C.
 \Ticket{2655}
 
