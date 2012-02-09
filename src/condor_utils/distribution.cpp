@@ -65,7 +65,7 @@ void Distribution :: SetDistribution( const char *name )
 {
 	// Make my own private copies of the name
 	strncpy( distribution, name, MAX_DISTRIBUTION_NAME );
-	distribution[MAX_DISTRIBUTION_NAME] = '\0';
+	distribution[MAX_DISTRIBUTION_NAME] = 0;
 	strcpy( distribution_uc, distribution );
 	strcpy( distribution_cap, distribution );
 
