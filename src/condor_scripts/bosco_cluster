@@ -169,7 +169,7 @@ test_cluster () {
     fi
 
     # Check if passwordless ssh works
-    echo "Testing ssh to $1..."
+    echo -n "Testing ssh to $1..."
     start_ssh
     # Get the pwd from the remote cluster, for use later in the submission file
     default_pwd=`ssh $1 "pwd"`
@@ -184,7 +184,7 @@ test_cluster () {
     fi
     
     # Test condor submission
-    echo "Testing bosco submission"
+    echo -n "Testing bosco submission..."
     submit_dir=`mktemp -d`
     submit_file=$submit_dir/condor.submit
     log_file=$submit_dir/logfile
@@ -201,18 +201,45 @@ skip_filechecks = true
 queue
 End_of_Submit
 
-    submit_out=`condor_submit $submit_file`
+    submit_out=`condor_submit $submit_file 2>&1 `
     if [ $? -ne 0 ]; then
-        echo "Error submitting to local condor:"
+        echo "Failed"
         echo $submit_out
+        rm -rf $submit_dir
         exit 1
     else
-        echo "Submsission to local cluster successful"
+        echo "Passed!"
     fi
 
     # Check if there is anything in the user log
-
+    echo -n "Checking for submission to remote pbs cluster (could take ~30 seconds)..."
+    counter=5
+    submit_found=0
+    while [ $counter -gt 0 ]
+    do
+        grep_out=`grep -A 2 -e "^027.*" $log_file`
+        if [ $? -eq 0 ]; then
+            submit_found=1
+            break
+        fi
+        sleep 10
+        counter=$(( $counter - 1 ))
+    done
     
+    if [ $submit_found -eq 1 ]; then
+        echo "Passed!"
+        echo "Execution on the remote cluster could take a while...Exiting"
+    else
+        echo "Failed"
+        echo "Showing last 5 lines of logs:"
+        gridmanager_log=`condor_config_val GRIDMANAGER_LOG`
+        if [ -r $gridmanager_log ]; then
+            tail -5 $gridmanager_log
+        else
+            echo "Failed to open gridmanager log for reading"
+        fi
+    fi
+
     rm -rf $submit_dir
 
 }
