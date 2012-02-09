@@ -243,12 +243,9 @@ int sysapi_disk_space_raw(const char * filename)
 		return(INT_MAX);
 	}
 
-	dprintf( D_FULLDEBUG, "%.0f kbytes available for \"%s\"\n", 
-			 free_kbytes, filename );
-
 	return (int)free_kbytes;
 }
-#endif /* I386 && DYNIX */
+#endif
 
 /*
   Return number of kbytes condor may play with in the named file
