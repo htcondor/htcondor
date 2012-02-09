@@ -1436,18 +1436,19 @@ CStarter::createTempExecuteDir( void )
 			if ( !advapi ) {
 				dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
 				efs_support = false;
-			}
-			FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
-				GetProcAddress(advapi,"EncryptionDisable");
-			if ( !EncryptionDisable ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
-				efs_support = false;
-			}
-			FPEncryptFileA EncryptFile = (FPEncryptFileA) 
-				GetProcAddress(advapi,"EncryptFileA");
-			if ( !EncryptFile ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
-				efs_support = false;
+			} else {
+				FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
+					GetProcAddress(advapi,"EncryptionDisable");
+				if ( !EncryptionDisable ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+					efs_support = false;
+				}
+				FPEncryptFileA EncryptFile = (FPEncryptFileA) 
+					GetProcAddress(advapi,"EncryptFileA");
+				if ( !EncryptFile ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+					efs_support = false;
+				}
 			}
 
 			if ( efs_support ) {
