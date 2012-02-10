@@ -316,7 +316,9 @@ VanillaProc::StartJob()
 			free(mount_under_scratch);
 
 			mount_list.rewind();
-			fs_remap = new FilesystemRemap();
+			if (!fs_remap) {
+				fs_remap = new FilesystemRemap();
+			}
 			char * next_dir;
 			while ( (next_dir=mount_list.next()) ) {
 				if (!*next_dir) {
