@@ -291,6 +291,7 @@ class DaemonCore : public Service
   friend unsigned pidWatcherThread(void*);
 #endif
   friend int dc_main(int, char**);
+  friend class DaemonCommandProtocol;
     
   public:
     
