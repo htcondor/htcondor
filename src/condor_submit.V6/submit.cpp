@@ -1789,6 +1789,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
 				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
+				(strcasecmp (JobGridType, "batch") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||
 				(strcasecmp (JobGridType, "sge") == MATCH) ||
 				(strcasecmp (JobGridType, "lsf") == MATCH) ||

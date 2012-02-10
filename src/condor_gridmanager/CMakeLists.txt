@@ -65,6 +65,8 @@ if(NOT WIN_EXEC_NODE_ONLY)
                 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         endif()
 
+	install (FILES remote_gahp DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
 	endif()
 
 endif(NOT WIN_EXEC_NODE_ONLY)

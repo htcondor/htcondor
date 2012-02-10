@@ -24,14 +24,10 @@
 #include "condor_debug.h"
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
-#include "spooled_job_files.h"
-#include "daemon.h"
-#include "dc_schedd.h"
-#include "setenv.h"
+#include "condor_config.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
-#include "condor_config.h"
 
 
 // GridManager job states
@@ -114,12 +110,11 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		//   system names should be used (pbs, lsf). Glite are the only
 		//   people who care about the old value. This changed happend in
 		//   Condor 6.7.12.
-		// TODO: Why are we doing a substring match? These are the exact
-		//   string we expect to see.
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
 		 ( strncasecmp( resource.c_str(), "blah", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "batch", 5 ) == 0 ||
 		   strncasecmp( resource.c_str(), "pbs", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "lsf", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "nqs", 3 ) == 0 ||
@@ -148,7 +143,6 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	std::string buff;
 	std::string error_string = "";
 	char *gahp_path;
-	std::string cluster_name;
 	ArgList gahp_args;
 
 	gahpAd = NULL;
@@ -161,6 +155,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	remoteJobId = NULL;
 	lastPollTime = 0;
 	pollNow = false;
+	myResource = NULL;
 	gahp = NULL;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
@@ -178,11 +173,13 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		Tokenize( buff );
 
 		token = GetNextToken( " ", false );
+		if ( !strcmp( "batch", token ) ) {
+			token = GetNextToken( " ", false );
+		}
 		batchType = strdup( token );
 
-		token = GetNextToken( " ", false );
-		if ( token ) {
-			cluster_name = token;
+		while ( (token = GetNextToken( " ", false )) ) {
+			gahp_args.AppendArg( token );
 		}
 	} else {
 		sprintf( error_string, "%s is not set in the job ad",
@@ -200,22 +197,41 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	strupr( batchType );
 
-	sprintf( buff, "%s_GAHP", batchType );
-	gahp_path = param(buff.c_str());
-	if ( gahp_path == NULL ) {
-		sprintf( error_string, "%s not defined", buff.c_str() );
-		goto error_exit;
+	if ( gahp_args.Count() > 0 ) {
+		gahp_path = param( "REMOTE_GAHP" );
+		if ( gahp_path == NULL ) {
+			sprintf( error_string, "REMOTE_GAHP not defined" );
+			goto error_exit;
+		}
+	} else {
+		sprintf( buff, "%s_GAHP", batchType );
+		gahp_path = param(buff.c_str());
+		if ( gahp_path == NULL ) {
+			gahp_path = param( "BATCH_GAHP" );
+			if ( gahp_path == NULL ) {
+				sprintf( error_string, "Neither %s nor %s defined", buff.c_str(),
+						 "BATCH_GAHP" );
+				goto error_exit;
+			}
+		}
 	}
 
-	if ( cluster_name != "" ) {
-		gahp_args.AppendArg( cluster_name.c_str() );
+	buff = batchType;
+	if ( gahp_args.Count() > 0 ) {
+		sprintf_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
 	}
-
-	sprintf( buff, "%s/%s", batchType, cluster_name.c_str() );
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
+	myResource = INFNBatchResource::FindOrCreateResource( batchType,
+														  gahp_args.GetArg(0) );
+	myResource->RegisterJob( this );
+	if ( remoteJobId ) {
+		myResource->AlreadySubmitted( this );
+	}
+
 		// Does this have to be lower-case for SetRemoteJobId()?
+
 	strlwr( batchType );
 
 	ASSERT( gahp != NULL );
@@ -245,6 +261,9 @@ INFNBatchJob::~INFNBatchJob()
 {
 	if ( jobProxy != NULL ) {
 		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+	}
+	if ( myResource ) {
+		myResource->UnregisterJob( this );
 	}
 	if ( batchType != NULL ) {
 		free( batchType );
@@ -376,6 +395,13 @@ void INFNBatchJob::doEvaluateState()
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				char *job_id_string = NULL;
+
+				// Once RequestSubmit() is called at least once, you must
+				// CancelRequest() once you're done with the request call
+				if ( myResource->RequestSubmit( this ) == false ) {
+					break;
+				}
+
 				if ( gahpAd == NULL ) {
 					gahpAd = buildSubmitAd();
 				}
@@ -383,6 +409,7 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
+
 				rc = gahp->blah_job_submit( gahpAd, &job_id_string );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -404,6 +431,7 @@ void INFNBatchJob::doEvaluateState()
 							 procID.cluster, procID.proc,
 							 gahp->getErrorString() );
 					errorString = gahp->getErrorString();
+					myResource->CancelSubmit( this );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -541,6 +569,7 @@ void INFNBatchJob::doEvaluateState()
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
 				SetRemoteJobId( NULL );
 				requestScheddUpdate( this, false );
+				myResource->CancelSubmit( this );
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
@@ -566,6 +595,7 @@ void INFNBatchJob::doEvaluateState()
 					break;
 				}
 				SetRemoteJobId( NULL );
+				myResource->CancelSubmit( this );
 			}
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -593,6 +623,7 @@ void INFNBatchJob::doEvaluateState()
 			}
 			errorString = "";
 			SetRemoteJobId( NULL );
+			myResource->CancelSubmit( this );
 			JobIdle();
 			if ( submitLogged ) {
 				JobEvicted();
@@ -793,7 +824,7 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 BaseResource *INFNBatchJob::GetResource()
 {
-	return (BaseResource *)NULL;
+	return (BaseResource *)myResource;
 }
 
 ClassAd *INFNBatchJob::buildSubmitAd()
