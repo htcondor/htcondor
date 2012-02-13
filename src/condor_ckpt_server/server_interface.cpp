@@ -251,6 +251,52 @@ extern "C" int FileExists(const char *filename, const char *owner, const char *s
 	}
 }
 
+// build a string containing "name@domain" in a fixed size buffer
+// truncating the result if necessary, but always returning a zero-terminated
+// output buffer.
+// return:  true if there was enough room, false if truncation was needed.
+//
+extern "C" static bool BuildOwnerName(
+			char * pszOwner,
+			size_t cchOwner,
+			const char * pszName,
+			const char * pszDomain)	 // may be null
+{
+	if (cchOwner <= 0) 
+		return false;
+
+	char * psz = pszOwner;
+	char * pszEnd = pszOwner + cchOwner -1; // ptr to last character in the buffer
+
+	// copy the name part
+	while (psz <= pszEnd) {
+		if (!(*psz = *pszName))
+			break;
+		++psz, ++pszName;
+	}
+
+	// if no domain, we are done, return true if the name fit in the buffer
+	if ( ! pszDomain) {
+		*pszEnd = 0; // put a null in the last char of the buffer just in case.
+		return  (psz <= pszEnd && *psz == 0);
+	}
+
+	// if there is room append @domain
+	if (psz < pszEnd) {
+		*psz++ = '@';
+		while (psz <= pszEnd) {
+			if (!(*psz = *pszDomain))
+				return true; // we copied everything.
+			++psz, ++pszDomain;
+		}
+	}
+
+	// if we get to here, the buffer wasn't big enough
+	// so put a null at the very last character of the buffer
+	// and return false.
+	*pszEnd = 0;
+	return false;
+}
 
 extern "C" int RequestStore(const char*     owner,
 				 const char*	 schedd,
@@ -277,6 +323,9 @@ extern "C" int RequestStore(const char*     owner,
 	req.priority = htonl(0);
 	req.time_consumed = htonl(0);
 	req.key = htonl(key);
+#if 1
+	BuildOwnerName(req.owner, COUNTOF(req.owner), owner, schedd);
+#else
 	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);
 	if (schedd) {
 		int space_left = MAX_NAME_LENGTH-strlen(req.owner)-1;
@@ -286,6 +335,7 @@ extern "C" int RequestStore(const char*     owner,
 			strncat(req.owner, schedd, space_left);
 		}
 	}
+#endif
 	StripPrefix(filename, req.filename);
 	ret_code = net_write(server_sd, (char*) &req, sizeof(req));
 	if (ret_code != sizeof(req)) {
@@ -344,6 +394,9 @@ extern "C" int RequestRestore(const char*     owner,
 		to do the right thing for packet type determination. */
 	req.priority = htonl(0);
 	req.key = htonl(key);
+#if 1
+	BuildOwnerName(req.owner, COUNTOF(req.owner), owner, schedd); 
+#else
 	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);
 	if (schedd) {
 		int space_left = MAX_NAME_LENGTH-strlen(req.owner)-1;
@@ -353,6 +406,7 @@ extern "C" int RequestRestore(const char*     owner,
 			strncat(req.owner, schedd, space_left);
 		}
 	}
+#endif
 	StripPrefix(filename, req.filename);
 	/* assert(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)); */
 	if ( !(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)) ) {
@@ -413,6 +467,9 @@ extern "C" int RequestService(const char*     owner,
 	req.key = htonl(key);
 	req.service = htons((short)type);
 	if (owner != NULL) {
+#if 1
+		BuildOwnerName(req.owner_name, COUNTOF(req.owner_name), owner, schedd); 
+#else
 		strncpy(req.owner_name, owner, MAX_NAME_LENGTH-1);
 		if (schedd) {
 			int space_left = MAX_NAME_LENGTH-strlen(req.owner_name)-1;
@@ -422,6 +479,7 @@ extern "C" int RequestService(const char*     owner,
 				strncat(req.owner_name, schedd, space_left);
 			}
 		}
+#endif
 	}
 	if (filename != NULL)
 		StripPrefix(filename, req.file_name);
@@ -487,6 +545,7 @@ extern "C" int RemoveLocalOrRemoteFile(const char* owner,
 							const char* schedd,
 							const char* filename)
 {
+	MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 	unlink(filename);
 	return (RequestService(owner, schedd, filename, NULL, SERVICE_DELETE, NULL,
 						   NULL, NULL, NULL));
