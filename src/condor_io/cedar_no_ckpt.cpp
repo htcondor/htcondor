@@ -116,7 +116,12 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 		return -1;
 	}
 
-	if(result<0) unlink(destination);
+	if(result<0) {
+		if (unlink(destination) < 0) {
+			dprintf(D_FULLDEBUG, "get_file(): failed to unlink file %s errno = %d: %s.\n", 
+			        destination, errno, strerror(errno));
+		}
+	}
 	
 	return result;
 }
