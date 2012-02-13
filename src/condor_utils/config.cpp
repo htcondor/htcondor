@@ -650,6 +650,9 @@ expand_macro( const char *value,
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
 											  strlen(right) + 1));
+			if( rval == NULL ) {
+				EXCEPT("expand_macro: allocation failure");
+			}
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;
@@ -676,6 +679,9 @@ expand_macro( const char *value,
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
 											  strlen(right) + 1));
+			if( rval == NULL ) {
+				EXCEPT("expand_macro: allocation failure");
+			}
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;
@@ -727,6 +733,9 @@ expand_macro( const char *value,
 			buf[sizeof(buf)-1] = '\0';
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(buf) +
 											  strlen(right) + 1));
+			if( rval == NULL ) {
+				EXCEPT("expand_macro: allocation failure");
+			}
 			(void)sprintf( rval, "%s%s%s", left, buf, right );
 			FREE( tmp );
 			tmp = rval;
@@ -748,7 +757,9 @@ expand_macro( const char *value,
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
 											  strlen(right) + 1));
-			ASSERT( rval != NULL );
+			if( rval == NULL ) {
+				EXCEPT("expand_macro: allocation failure");
+			}
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;
@@ -760,7 +771,9 @@ expand_macro( const char *value,
 	while( find_config_macro(tmp, &left, &name, &right, DOLLAR_ID) ) {
 		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
-		ASSERT( rval != NULL );
+		if( rval == NULL ) {
+			EXCEPT("expand_macro: allocation failure");
+		}
 		(void)sprintf( rval, "%s$%s", left, right );
 		FREE( tmp );
 		tmp = rval;
