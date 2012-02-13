@@ -2488,13 +2488,13 @@ SendDirtyJobAdNotification(char *job_id_str)
 	}
 
 	if( pid > 0 ) {
-		dprintf(D_FULLDEBUG, "Sending signal %d, to pid %d\n", UPDATE_JOBAD, pid);
+		dprintf(D_FULLDEBUG, "Sending signal %s, to pid %d\n", getCommandString(UPDATE_JOBAD), pid);
 		classy_counted_ptr<DCSignalMsg> msg = new DCSignalMsg(pid, UPDATE_JOBAD);
 		daemonCore->Send_Signal_nonblocking(msg.get());
 //		daemonCore->Send_Signal(srec->pid, UPDATE_JOBAD);
 	}
 	else {
-		dprintf(D_ALWAYS, "Failed to send signal %d, no job manager found\n", UPDATE_JOBAD);
+		dprintf(D_ALWAYS, "Failed to send signal %s, no job manager found\n", getCommandString(UPDATE_JOBAD));
 	}
 }
 
