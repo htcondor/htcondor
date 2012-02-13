@@ -153,10 +153,7 @@ delete_all_files_in_filelist(StringList *file_list)
 	char *tmp = NULL;
 	file_list->rewind();
 	while( (tmp = file_list->next()) ) {
-		if (unlink(tmp) < 0) {
-			dprintf(D_FULLDEBUG, "delete_all_files_in_filelist(): failed to unlink file %s errno = %d: %s.\n", 
-			        tmp, errno, strerror(errno));
-		}
+		unlink(tmp);
 		file_list->deleteCurrent();
 	}
 }
