@@ -173,6 +173,21 @@ main_init(int, char *[])
 int
 main( int argc, char **argv )
 {
+   #ifdef WIN32
+	// t1031 - tell dprintf not to exit if it can't write to the log
+	// we have to do this before dprintf_config is called 
+	// (which happens inside dc_main), otherwise KBDD on Win32 will 
+	// except in dprintf_config if the log directory isn't writable
+	// by the current user.
+	dprintf_config_ContinueOnFailure( TRUE );
+
+	// check to see if we are running as a service, and if we are
+	// add a Run key value to the registry for HKLM so that the kbdd
+	// will run as the user whenever a user logs on.
+	//
+	hack_kbdd_registry();
+   #endif
+
 	set_mySubSystem( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 
 	dc_main_init = main_init;
