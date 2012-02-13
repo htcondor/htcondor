@@ -72,6 +72,7 @@ bool parse_vmgahp_command(const char* raw, Gahp_Args& args)
 	int len=strlen(raw);
 
 	char * buff = (char*)malloc(len+1);
+	ASSERT( buff != NULL );
 	int buff_len = 0;
 
 	for (int i = 0; i<len; i++) {
@@ -736,7 +737,8 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		args.GetArgsStringForDisplay( &args_string, 0 );
 		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
 				  args_string.Value() );
-	    fclose(childerr);
+		if (childerr)
+			fclose(childerr);
 		return -1;
 	}
 

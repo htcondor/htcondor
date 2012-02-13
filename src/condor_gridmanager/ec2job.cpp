@@ -132,6 +132,7 @@ int EC2Job::funcRetryInterval = 15;
 int EC2Job::pendingWaitTime = 15;
 int EC2Job::maxRetryTimes = 3;
 
+MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
 EC2Job::EC2Job( ClassAd *classad )
 	: BaseJob( classad )
 {
@@ -383,6 +384,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	return;
 }
+MSC_RESTORE_WARNING(6262) // function uses more than 16k of stack
 
 EC2Job::~EC2Job()
 {

@@ -139,6 +139,7 @@ CreamResource::CreamResource( const char *resource_name,
 										   name_len +  // host/port
 										   sizeof( delegservice_name ) + 
 										   1 );        // terminating \0
+	ASSERT( delegationServiceUri != NULL );
 	strcpy( delegationServiceUri, "https://" );
 	snprintf( delegationServiceUri + 8, name_len + 1, "%s", name_ptr );
 	strcat( delegationServiceUri, delegservice_name );

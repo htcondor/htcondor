@@ -2303,6 +2303,7 @@ set_persistent_config(char *admin, char *config)
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
 		do {
+			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( tmp_filename.Value() );
 			fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 		} while (fd == -1 && errno == EEXIST);
@@ -2356,6 +2357,7 @@ set_persistent_config(char *admin, char *config)
 	// update admin list on disk
 	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
 	do {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( tmp_filename.Value() );
 		fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 	} while (fd == -1 && errno == EEXIST);
@@ -2416,8 +2418,10 @@ set_persistent_config(char *admin, char *config)
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
+			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( toplevel_persistent_config.Value() );
 		}
 	}
@@ -2562,6 +2566,7 @@ process_runtime_configs()
 					 ConfigLineNo, tmp_file, rArray[i].admin );
 			exit(1);
 		}
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink(tmp_file);
 		free(tmp_file);
 	}
