@@ -256,7 +256,7 @@ extern "C" int FileExists(const char *filename, const char *owner, const char *s
 // output buffer.
 // return:  true if there was enough room, false if truncation was needed.
 //
-extern "C" static bool BuildOwnerName(
+extern "C" bool BuildOwnerName(
 			char * pszOwner,
 			size_t cchOwner,
 			const char * pszName,
