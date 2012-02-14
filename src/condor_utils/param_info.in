@@ -10380,7 +10380,7 @@ id=666
 
 [CLAIM_PARTITIONABLE_LEFTOVERS]
 aliases=
-default=true
+default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 range=.*
 state=default
