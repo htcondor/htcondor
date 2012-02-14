@@ -5066,7 +5066,7 @@ SetGridParams()
 	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
 	    if (bKeyPairPresent)
 	    {
-	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n", EC2SecretAccessKey );
+	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n");
 	    }
 	    else
 	    {
