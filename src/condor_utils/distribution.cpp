@@ -63,6 +63,26 @@ Distribution::~Distribution( )
 // Set my actual distro name
 void Distribution :: SetDistribution( const char *name )
 {
+#if 1 // tj:2012 - MSVC_ANALYZE warns about strncpy because it doesn't null terminate
+	// copy name, truncating to MAX_DISTRIBUTION_NAME characters
+	// and creating an all uppercase and a capitalized version as we go.
+	// tj: (this assumes that the input is all lowercase, is that wise?)
+	char ch = name[0];
+	distribution[0] = ch;
+	distribution_cap[0] = distribution_uc[0] = toupper(ch);
+	if (ch) {
+		for (int ii = 1; ii < MAX_DISTRIBUTION_NAME; ++ii) {
+			ch = name[ii];
+			distribution_cap[ii] = distribution[ii] = ch;
+			distribution_uc[0] = toupper(ch);
+			if ( ! ch)
+				break;
+		}
+		distribution[MAX_DISTRIBUTION_NAME] = 0;
+		distribution_cap[MAX_DISTRIBUTION_NAME] = 0;
+		distribution_uc[MAX_DISTRIBUTION_NAME] = 0;
+	}
+#else
 	// Make my own private copies of the name
 	strncpy( distribution, name, MAX_DISTRIBUTION_NAME );
 	distribution[MAX_DISTRIBUTION_NAME] = 0;
@@ -81,7 +101,7 @@ void Distribution :: SetDistribution( const char *name )
 	// Capitalize the first char of the Cap version
 	char	c = distribution_cap[0];
 	distribution_cap[0] = toupper( c );
-
+#endif
 	// Cache away it's length
 	distribution_length = strlen( distribution );
 }
