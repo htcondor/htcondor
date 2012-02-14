@@ -80,8 +80,15 @@ extern "C" {
 
 #if _MSC_VER >= 1400 /* VC++ 2005 version */
 #define PREFAST_NORETURN __declspec(noreturn)
+# ifdef _PREFAST_
+// inform MSVC_ANALYZE of some true thing that it's having trouble figuring out for itself.
+#  define PREFAST_ASSUME(x) __analysis_assume(!!(x))
+# else
+#  define PREFAST_ASSUME(x)
+# endif
 #else
 #define PREFAST_NORETURN
+#define PREFAST_ASSUME(x)
 #endif
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
