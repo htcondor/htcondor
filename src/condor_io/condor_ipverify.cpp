@@ -697,7 +697,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
         who = TotallyWild;
     }
 
-	if ( perm >= COUNTOF(PermTypeArray) || !PermTypeArray[perm] ) {
+	if ( perm >= LAST_PERM || !PermTypeArray[perm] ) {
 		EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
 	}
 
