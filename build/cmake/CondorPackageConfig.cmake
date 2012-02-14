@@ -261,7 +261,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name
 
-	if ( ${LINUX_NAME} STREQUAL  "Debian" )
+	if ( DEB_SYSTEM_NAME )
 
 		message (STATUS "Configuring for Debian package on ${LINUX_NAME}-${LINUX_VER}-${DEBIAN_CODENAME}-${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
 
