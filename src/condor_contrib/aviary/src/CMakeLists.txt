@@ -46,7 +46,7 @@ file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp
 							Codec.cpp JobServerObject.cpp AviaryUtils.cpp )
 
-file( GLOB LOCATOR_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp LocatorObject.cpp
+file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
 			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
 
 ############################
@@ -75,15 +75,15 @@ condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
 ############################
 # locator plugin
 ############################
-src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
-
-add_library (aviary_locator_axis SHARED ${COMMON_GEN_SRCS} ${LOCATOR_GEN_SRCS} ${LOCATOR_SRCS} Codec.cpp AviaryUtils.cpp LocatorObject.cpp )
-# remove unresolved deps by copying in -lwso2_wsf objects
-target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
-
 condor_plugin( AviaryLocatorPlugin-plugin "${COLLECTOR_REF};${LOCATOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryLocatorPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
+
+add_library (aviary_locator_axis SHARED ${COMMON_GEN_SRCS} ${LOCATOR_GEN_SRCS} ${LOCATOR_SRCS})
+# remove unresolved deps by copying in -lwso2_wsf objects
+target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
+# axis2 engine linking forcing our hand again
+target_link_libraries(aviary_locator_axis AviaryLocatorPlugin-plugin)
 
 ############################
 # install targets && configure our axis2.xml for platform
@@ -114,7 +114,7 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-job.wsdl
 		DESTINATION ${C_SERVICES}/job )
 
-install (TARGETS aviary_locator_axis DESTINATION ${C_SERVICES}/job)
+install (TARGETS aviary_locator_axis DESTINATION ${C_SERVICES}/locator)
 install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/locator/services.xml DESTINATION ${C_SERVICES}/locator )
 install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.xsd

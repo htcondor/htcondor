@@ -184,20 +184,11 @@
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="ANY"/>
 			<xs:enumeration value="COLLECTOR"/>
-			<!-- aka SLOT, STARTD -->
-			<xs:enumeration value="EXECUTOR"/>
-			<!-- aka TRIGGERD -->
-			<xs:enumeration value="EVENT_SERVER"/>
-			<!-- QMF job server --> 
-			<xs:enumeration value="JOB_SERVER"/>
-			<!-- aka LOW_LATENCY, CAROD -->
-			<xs:enumeration value="AMQP_SCHEDULER"/>
+			<xs:enumeration value="CUSTOM"/>
 			<xs:enumeration value="MASTER"/>
 			<xs:enumeration value="NEGOTIATOR"/>
-			<!-- Aviary query server -->
-			<xs:enumeration value="QUERY_SERVER"/>
 			<xs:enumeration value="SCHEDULER"/>
-			<xs:enumeration value="CUSTOM"/>
+			<xs:enumeration value="SLOT"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="ResourceID">
@@ -211,8 +202,7 @@
 	<xs:complexType name="ResourceLocation">
 		<xs:sequence>
 			<xs:element name="id" type="tns:ResourceID"/>
-			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>			
 		</xs:sequence>
 	</xs:complexType>
 </xs:schema>
