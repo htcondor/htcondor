@@ -19,22 +19,29 @@
 
 // condor includes
 #include "condor_common.h"
-#include "reli_sock.h"
+#include "condor_classad.h"
 
 // c++ includes
 #include <string>
+#include <dc_service.h>
 
 namespace aviary {
 namespace locator {
 
-class EndpointPublisher
+const char LOCATOR[] = "Locator";
+const char ENDPOINT[] = "Endpoint";
+const char ENDPOINT_URI[] = "EndpointUri";
+const char CUSTOM_TYPE[] = "CustomType";
+
+class EndpointPublisher: public Service
 {
 	public:
 		EndpointPublisher(const std::string& service_name, const std::string& service_type);
 		~EndpointPublisher();
-		virtual bool init(const std::string& uri_suffix, bool for_ssl = false);
-		virtual void publish();
-		virtual void invalidate();
+		bool init(const std::string& uri_suffix, bool for_ssl = false);
+		void start(int);
+		void stop();
+		void invalidate();
 		int getPort();
 
 	protected:
@@ -42,6 +49,11 @@ class EndpointPublisher
 		std::string m_name;
 		std::string m_type;
 		int m_port;
+		int m_update_interval;
+		int m_update_timer;
+		ClassAd m_ad;
+		
+		void publish();
 
 };
 

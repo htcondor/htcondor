@@ -47,6 +47,7 @@ namespace transport {
         virtual SOCKET getListenerSocket() = 0;
         virtual bool processRequest(std::string& _error) = 0;
 		void setPublisher(aviary::locator::EndpointPublisher* ep) {m_ep = ep;}
+		virtual void invalidate() = 0;
 	protected:
 		aviary::locator::EndpointPublisher* m_ep;
     };

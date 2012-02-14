@@ -40,10 +40,10 @@ namespace AviaryLocator
         private:
              
                 axutil_qname_t* qname;
-            std::vector<AviaryCommon::ResourceID*>* property_Ids;
+            AviaryCommon::ResourceID* property_Id;
 
                 
-                bool isValidIds;
+                bool isValidId;
             bool property_PartialMatches;
 
                 
@@ -54,7 +54,7 @@ namespace AviaryLocator
           
 
         bool WSF_CALL
-        setIdsNil();
+        setIdNil();
             
 
 
@@ -80,39 +80,38 @@ namespace AviaryLocator
         /**
          * Constructor for creating Locate
          * @param 
-         * @param Ids std::vector<AviaryCommon::ResourceID*>*
+         * @param Id AviaryCommon::ResourceID*
          * @param PartialMatches bool
          * @return newly created Locate object
          */
-        Locate(std::vector<AviaryCommon::ResourceID*>* arg_Ids,bool arg_PartialMatches);
+        Locate(AviaryCommon::ResourceID* arg_Id,bool arg_PartialMatches);
         
         
         /********************************** Class get set methods **************************************/
-        /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
+        
         
 
         /**
-         * Getter for ids. Deprecated for array types, Use getIdsAt instead
-         * @return Array of AviaryCommon::ResourceID*s.
+         * Getter for id. 
+         * @return AviaryCommon::ResourceID*
          */
-        WSF_EXTERN std::vector<AviaryCommon::ResourceID*>* WSF_CALL
-        getIds();
+        WSF_EXTERN AviaryCommon::ResourceID* WSF_CALL
+        getId();
 
         /**
-         * Setter for ids.Deprecated for array types, Use setIdsAt
-         * or addIds instead.
-         * @param arg_Ids Array of AviaryCommon::ResourceID*s.
+         * Setter for id.
+         * @param arg_Id AviaryCommon::ResourceID*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setIds(std::vector<AviaryCommon::ResourceID*>*  arg_Ids);
+        setId(AviaryCommon::ResourceID*  arg_Id);
 
         /**
-         * Re setter for ids
+         * Re setter for id
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetIds();
+        resetId();
         
         
 
@@ -138,80 +137,10 @@ namespace AviaryLocator
         WSF_EXTERN bool WSF_CALL
         resetPartialMatches();
         
-        /****************************** Get Set methods for Arrays **********************************/
-        /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
-
-        /**
-         * E.g. use of get_at, set_at, add and sizeof
-         *
-         * for(i = 0; i < adb_element->sizeofProperty(); i ++ )
-         * {
-         *     // Getting ith value to property_object variable
-         *     property_object = adb_element->getPropertyAt(i);
-         *
-         *     // Setting ith value from property_object variable
-         *     adb_element->setPropertyAt(i, property_object);
-         *
-         *     // Appending the value to the end of the array from property_object variable
-         *     adb_element->addProperty(property_object);
-         *
-         *     // Removing the ith value from an array
-         *     adb_element->removePropertyAt(i);
-         *     
-         * }
-         *
-         */
-
-        
-        
-        /**
-         * Get the ith element of ids.
-        * @param i index of the item to be obtained
-         * @return ith AviaryCommon::ResourceID* of the array
-         */
-        WSF_EXTERN AviaryCommon::ResourceID* WSF_CALL
-        getIdsAt(int i);
-
-        /**
-         * Set the ith element of ids. (If the ith already exist, it will be replaced)
-         * @param i index of the item to return
-         * @param arg_Ids element to set AviaryCommon::ResourceID* to the array
-         * @return ith AviaryCommon::ResourceID* of the array
-         */
-        WSF_EXTERN bool WSF_CALL
-        setIdsAt(int i,
-                AviaryCommon::ResourceID* arg_Ids);
-
-
-        /**
-         * Add to ids.
-         * @param arg_Ids element to add AviaryCommon::ResourceID* to the array
-         * @return true on success, false otherwise.
-         */
-        WSF_EXTERN bool WSF_CALL
-        addIds(
-            AviaryCommon::ResourceID* arg_Ids);
-
-        /**
-         * Get the size of the ids array.
-         * @return the size of the ids array.
-         */
-        WSF_EXTERN int WSF_CALL
-        sizeofIds();
-
-        /**
-         * Remove the ith element of ids.
-         * @param i index of the item to remove
-         * @return true on success, false otherwise.
-         */
-        WSF_EXTERN bool WSF_CALL
-        removeIdsAt(int i);
-
-        
 
 
         /******************************* Checking and Setting NIL values *********************************/
-        /* Use 'Checking and Setting NIL values for Arrays' to check and set nil for individual elements */
+        
 
         /**
          * NOTE: set_nil is only available for nillable properties
@@ -220,11 +149,11 @@ namespace AviaryLocator
         
 
         /**
-         * Check whether ids is Nill
+         * Check whether id is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isIdsNil();
+        isIdNil();
 
 
         
@@ -244,32 +173,6 @@ namespace AviaryLocator
          */
         bool WSF_CALL
         setPartialMatchesNil();
-        
-
-        /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
-
-        /**
-         * NOTE: You may set this to remove specific elements in the array
-         *       But you can not remove elements, if the specific property is declared to be non-nillable or sizeof(array) < minOccurs
-         */
-        
-        /**
-         * Check whether ids is Nill at position i
-         * @param i index of the item to return.
-         * @return true if the value is Nil at position i, false otherwise
-         */
-        bool WSF_CALL
-        isIdsNilAt(int i);
- 
-       
-        /**
-         * Set ids to NILL at the  position i.
-         * @param i . The index of the item to be set Nill.
-         * @return true on success, false otherwise.
-         */
-        bool WSF_CALL
-        setIdsNilAt(int i);
-
         
 
         /**************************** Serialize and De serialize functions ***************************/
@@ -329,11 +232,11 @@ namespace AviaryLocator
         
 
         /**
-         * Getter for ids by property number (1)
-         * @return Array of AviaryCommon::ResourceIDs.
+         * Getter for id by property number (1)
+         * @return AviaryCommon::ResourceID
          */
 
-        std::vector<AviaryCommon::ResourceID*>* WSF_CALL
+        AviaryCommon::ResourceID* WSF_CALL
         getProperty1();
 
     

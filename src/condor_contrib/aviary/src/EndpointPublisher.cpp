@@ -20,6 +20,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_daemon_core.h"
+#include "condor_version.h"
 #include "reli_sock.h"
 #include "my_hostname.h"
 
@@ -34,6 +35,8 @@ EndpointPublisher::EndpointPublisher(const string& service_name, const string& s
 	m_name = service_name;
 	m_type = service_type;
 	m_port = -1;
+	m_update_interval = 60;
+	m_update_timer = -1;
 }
 
 EndpointPublisher::~EndpointPublisher()
@@ -64,35 +67,80 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 	sprintf(port,":%d/",m_port);
 	m_location = scheme + my_full_hostname() + port + uri_suffix;
 
+	// populate the publish ad
+	//m_ad.Assign("CondorPlatform",CondorPlatform());
+	//m_ad.Assign("CondorVersion",CondorVersion());
+	m_ad = ClassAd();
+	//m_ad.Assign(ATTR_MACHINE,my_full_hostname());
+	m_ad.SetMyTypeName(GENERIC_ADTYPE);
+	m_ad.SetTargetTypeName(ENDPOINT);
+	m_ad.Assign(ATTR_NAME,m_name);
+	//m_ad.Assign(ATTR_MY_ADDRESS, my_ip_string());
+	m_ad.Assign(ENDPOINT_URI,m_location);
+	m_ad.Assign(CUSTOM_TYPE,m_type);
+	daemonCore->publish(&m_ad);
+
 	return true;
+}
+
+void 
+EndpointPublisher::start(int update_interval)
+{
+   if (m_update_interval != update_interval)
+   {
+      m_update_interval = update_interval;
+
+      if (m_update_timer >= 0)
+      {
+         daemonCore->Cancel_Timer(m_update_timer);
+         m_update_timer = -1;
+      }
+
+      dprintf(D_FULLDEBUG, "Updating collector every %d seconds\n", m_update_interval);
+      m_update_timer = daemonCore->Register_Timer(0, m_update_interval,
+                                                        (TimerHandlercpp)&EndpointPublisher::publish,
+                                                        "EndpointPublisher::publish",
+														this
+ 												);
+   }
+
+   dprintf(D_FULLDEBUG, "EndpointPublisher emitting: '%s'\n", m_location.c_str());
+}
+
+void
+EndpointPublisher::stop()
+{
+	invalidate();
+	if (0 <= m_update_timer) {
+      daemonCore->Cancel_Timer(m_update_timer);
+      m_update_timer = -1;
+	}
 }
 
 void
 EndpointPublisher::publish()
 {
-	ClassAd publish_ad;
 	// send our custom classad to location plugin
 	// in the collector
-	dprintf(D_FULLDEBUG, "EndpointPublisher emitting: '%s'\n", m_location.c_str());
-	
-	publish_ad.SetMyTypeName(GENERIC_ADTYPE);
-//	publish_ad.SetTargetTypeName(COLLECTOR_ADTYPE);
-	publish_ad.Assign(ATTR_NAME,m_name);
-	publish_ad.Assign(ATTR_MY_ADDRESS, my_ip_string());
-	publish_ad.Assign("EndpointUri",m_location);
-	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &publish_ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_ad);
 }
 
 void
 EndpointPublisher::invalidate()
 {
-	// notify the collector that we are out of here
-	ClassAd invalidate_ad;
+   ClassAd invalidate_ad;
+   string line;
 
-	invalidate_ad.SetMyTypeName(GENERIC_ADTYPE);
-//	invalidate_ad.SetTargetTypeName(COLLECTOR_ADTYPE);
-	invalidate_ad.Assign(ATTR_NAME, m_name.c_str());
-	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad);
+   invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
+   invalidate_ad.SetTargetTypeName(ENDPOINT);
+   invalidate_ad.Assign(ENDPOINT_URI,m_location.c_str());
+
+   sprintf(line,"%s == \"%s\"", ATTR_NAME, m_name.c_str()); 
+   invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
+
+	dprintf(D_FULLDEBUG, "EndpointPublisher sending INVALIDATE_ADS_GENERIC: '%s'\n", m_location.c_str());
+	// notify the collector that we are out of here
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad,NULL,true);
 }
 
 int
