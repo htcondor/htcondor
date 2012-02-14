@@ -59,7 +59,7 @@ static int starter_stdin_fd = -1;
 static int starter_stdout_fd = -1;
 static int starter_stderr_fd = -1;
 
-static void
+static void PREFAST_NORETURN
 usage()
 {
 	dprintf(D_ALWAYS, "argc = %d\n", my_argc);
@@ -295,7 +295,7 @@ ambiguous( char* opt )
 }
 
 
-void
+void PREFAST_NORETURN
 another( char* opt )
 {
 	dprintf( D_ALWAYS, 

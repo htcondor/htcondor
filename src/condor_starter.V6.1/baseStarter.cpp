@@ -2040,12 +2040,14 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 
 	if ( fclose( tmp_fp ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed close recovery file\n" );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( tmp_file.Value() );
 		return;
 	}
 
 	if ( rotate_file( tmp_file.Value(), m_recoveryFile.Value() ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed to rename recovery file\n" );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( tmp_file.Value() );
 	}
 }
@@ -2054,6 +2056,7 @@ void
 CStarter::RemoveRecoveryFile()
 {
 	if ( m_recoveryFile.Length() > 0 ) {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( m_recoveryFile.Value() );
 		m_recoveryFile = "";
 	}
