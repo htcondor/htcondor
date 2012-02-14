@@ -888,6 +888,7 @@ const char * const ATTR_EC2_ACCESS_KEY_ID = "EC2AccessKeyId";
 const char * const ATTR_EC2_SECRET_ACCESS_KEY = "EC2SecretAccessKey";
 const char * const ATTR_EC2_AMI_ID = "EC2AmiID";
 const char * const ATTR_EC2_SECURITY_GROUPS = "EC2SecurityGroups";
+const char * const ATTR_EC2_KEY_PAIR = "EC2KeyPair";
 const char * const ATTR_EC2_KEY_PAIR_FILE = "EC2KeyPairFile";
 const char * const ATTR_EC2_USER_DATA = "EC2UserData";
 const char * const ATTR_EC2_USER_DATA_FILE = "EC2UserDataFile";
@@ -899,6 +900,8 @@ const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
 const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailabilityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
+const char * const ATTR_EC2_TAG_NAMES = "EC2TagNames";
+const char * const ATTR_EC2_TAG_PREFIX = "EC2Tag";
 
 //************* End of changes for EC2 Jobs *****************//
 

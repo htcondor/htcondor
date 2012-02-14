@@ -54,6 +54,7 @@ const int GahpServer::m_buffer_size = 4096;
 
 int GahpServer::m_reaperid = -1;
 
+const char *escapeGahpString(const std::string input);
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -1227,6 +1228,12 @@ unsigned int
 GahpServer::getPollInterval()
 {
 	return m_pollInterval;
+}
+
+const char *
+escapeGahpString(const std::string input) 
+{
+	return escapeGahpString(input.empty() ? NULL : input.c_str());
 }
 
 const char *
@@ -5573,17 +5580,18 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 }
 
 //  Start VM
-int GahpClient::ec2_vm_start( const char * service_url,
-							  const char * publickeyfile,
-							  const char * privatekeyfile,
-							  const char * ami_id, 
-							  const char * keypair,
-							  const char * user_data,
-							  const char * user_data_file,
-							  const char * instance_type,
-							  const char * availability_zone,
-							  const char * vpc_subnet,
-							  const char * vpc_ip,
+int GahpClient::ec2_vm_start( std::string service_url,
+							  std::string publickeyfile,
+							  std::string privatekeyfile,
+							  std::string ami_id, 
+							  std::string keypair,
+							  std::string user_data,
+							  std::string user_data_file,
+							  std::string instance_type,
+							  std::string availability_zone,
+							  std::string vpc_subnet,
+							  std::string vpc_ip,
+							  std::string client_token,
 							  StringList & groupnames,
 							  char * &instance_id,
 							  char * &error_code)
@@ -5598,20 +5606,24 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	}
 
 	// check the input arguments
-	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (ami_id == NULL) ) {
+	if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 ami_id.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
 	// Generate request line
 
 	// keypair/user_data/user_data_file is a required field. when empty, need to be replaced by "NULL"
-	if ( !keypair ) keypair = NULLSTRING;
-	if ( !user_data ) user_data = NULLSTRING;
-	if ( !user_data_file ) user_data_file = NULLSTRING;
-	if ( !instance_type ) instance_type = NULLSTRING;
-	if ( !availability_zone || 0==strlen(availability_zone) ) availability_zone = NULLSTRING;
-	if ( !vpc_subnet || 0==strlen(vpc_subnet) ) vpc_subnet = NULLSTRING;
-	if ( !vpc_ip || 0==strlen(vpc_ip) ) vpc_ip = NULLSTRING;
+	if ( keypair.empty() ) keypair = NULLSTRING;
+	if ( user_data.empty() ) user_data = NULLSTRING;
+	if ( user_data_file.empty() ) user_data_file = NULLSTRING;
+	if ( instance_type.empty() ) instance_type = NULLSTRING;
+	if ( availability_zone.empty() ) availability_zone = NULLSTRING;
+	if ( vpc_subnet.empty() ) vpc_subnet = NULLSTRING;
+	if ( vpc_ip.empty() ) vpc_ip = NULLSTRING;
+	if ( client_token.empty() ) client_token = NULLSTRING;
 
 	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
 	// XXX: You probably should specify a NULL for all "optional" parameters -matt
@@ -5634,8 +5646,9 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	char* esc9 = strdup( escapeGahpString(availability_zone) );
 	char* esc10 = strdup( escapeGahpString(vpc_subnet) );
 	char* esc11 = strdup( escapeGahpString(vpc_ip) );
+	char* esc12 = strdup( escapeGahpString(client_token) );
 
-	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11 );
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12 );
 
 	free( esc1 );
 	free( esc2 );
@@ -5648,6 +5661,7 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	free( esc9 );
 	free( esc10 );
 	free( esc11 );
+	free( esc12 );
 	ASSERT( x > 0 );
 
 	const char * group_name;
@@ -5726,8 +5740,11 @@ int GahpClient::ec2_vm_start( const char * service_url,
 
 
 // Stop VM
-int GahpClient::ec2_vm_stop( const char *service_url, const char * publickeyfile, const char * privatekeyfile, 
-								const char * instance_id, char* & error_code )
+int GahpClient::ec2_vm_stop( std::string service_url,
+							 std::string publickeyfile,
+							 std::string privatekeyfile,
+							 std::string instance_id,
+							 char* & error_code )
 {	
 	// command line looks like:
 	// EC2_COMMAND_VM_STOP <req_id> <publickeyfile> <privatekeyfile> <instance-id>
@@ -5739,7 +5756,10 @@ int GahpClient::ec2_vm_stop( const char *service_url, const char * publickeyfile
 	}
 	
 	// check input arguments
-	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+	if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 instance_id.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
@@ -5813,8 +5833,12 @@ int GahpClient::ec2_vm_stop( const char *service_url, const char * publickeyfile
 
 
 // Check VM status
-int GahpClient::ec2_vm_status( const char *service_url, const char * publickeyfile, const char * privatekeyfile,
-							  const char * instance_id, StringList &returnStatus, char* & error_code )
+int GahpClient::ec2_vm_status( std::string service_url,
+							   std::string publickeyfile,
+							   std::string privatekeyfile,
+							   std::string instance_id,
+							   StringList &returnStatus,
+							   char* & error_code )
 {	
 	// command line looks like:
 	// EC2_COMMAND_VM_STATUS <return 0;"EC2_VM_STATUS";
@@ -5826,7 +5850,10 @@ int GahpClient::ec2_vm_status( const char *service_url, const char * publickeyfi
 	}
 	
 	// check input arguments
-	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) ) {
+	if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 instance_id.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
@@ -5946,7 +5973,9 @@ int GahpClient::ec2_vm_status( const char *service_url, const char * publickeyfi
 
 
 // Ping to check if the server is alive
-int GahpClient::ec2_ping(const char *service_url, const char * publickeyfile, const char * privatekeyfile)
+int GahpClient::ec2_ping(std::string service_url,
+						 std::string publickeyfile,
+						 std::string privatekeyfile)
 {
 	// we can use "Status All" command to make sure EC2 Server is alive.
 	static const char* command = "EC2_VM_STATUS_ALL";
@@ -5997,8 +6026,12 @@ int GahpClient::ec2_ping(const char *service_url, const char * publickeyfile, co
 
 
 // Create and register SSH keypair
-int GahpClient::ec2_vm_create_keypair( const char *service_url, const char * publickeyfile, const char * privatekeyfile,
-								   	      const char * keyname, const char * outputfile, char* & error_code)
+int GahpClient::ec2_vm_create_keypair( std::string service_url,
+									   std::string publickeyfile,
+									   std::string privatekeyfile,
+									   std::string keyname,
+									   std::string outputfile,
+									   char* & error_code)
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_CREATE_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> <outputfile> 
@@ -6010,7 +6043,11 @@ int GahpClient::ec2_vm_create_keypair( const char *service_url, const char * pub
 	}
 	
 	// check input arguments
-	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) || (outputfile == NULL) ) {
+	if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 keyname.empty() ||
+		 outputfile.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
@@ -6092,8 +6129,11 @@ int GahpClient::ec2_vm_create_keypair( const char *service_url, const char * pub
 // The destroy keypair function will delete the name of keypair, it will not touch the output file of 
 // keypair. So in EC2 Job, we should delete keypair output file manually. We don't need to care about
 // the keypair name/output file in EC2, it will be removed automatically.
-int GahpClient::ec2_vm_destroy_keypair( const char *service_url, const char * publickeyfile, const char * privatekeyfile, 
-										   const char * keyname, char* & error_code )
+int GahpClient::ec2_vm_destroy_keypair( std::string service_url,
+										std::string publickeyfile,
+										std::string privatekeyfile,
+										std::string keyname,
+										char* & error_code )
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_DESTROY_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> 
@@ -6105,7 +6145,10 @@ int GahpClient::ec2_vm_destroy_keypair( const char *service_url, const char * pu
 	}
 	
 	// check input arguments
-	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (keyname == NULL) ) {
+	if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 keyname.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
@@ -6182,8 +6225,11 @@ int GahpClient::ec2_vm_destroy_keypair( const char *service_url, const char * pu
 
 
 // Check all the running VM instances and their corresponding keypair name
-int GahpClient::ec2_vm_vm_keypair_all( const char *service_url, const char* publickeyfile, const char* privatekeyfile,
-										  StringList & returnStatus, char* & error_code )
+int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
+									   std::string publickeyfile,
+									   std::string privatekeyfile,
+									   StringList & returnStatus,
+									   char* & error_code )
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_KEYPAIR_ALL <req_id> <publickeyfile> <privatekeyfile>
@@ -6195,7 +6241,9 @@ int GahpClient::ec2_vm_vm_keypair_all( const char *service_url, const char* publ
 	}
 	
 	// check input arguments
-	if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) ) {
+	if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 	
@@ -6281,11 +6329,11 @@ int GahpClient::ec2_vm_vm_keypair_all( const char *service_url, const char* publ
 
 }
 
-int GahpClient::ec2_associate_address(const char * service_url,
-                                      const char * publickeyfile,
-                                      const char * privatekeyfile,
-                                      const char * instance_id, 
-                                      const char * elastic_ip,
+int GahpClient::ec2_associate_address(std::string service_url,
+                                      std::string publickeyfile,
+                                      std::string privatekeyfile,
+                                      std::string instance_id, 
+                                      std::string elastic_ip,
                                       StringList & returnStatus,
                                       char* & error_code )
 {
@@ -6300,7 +6348,11 @@ int GahpClient::ec2_associate_address(const char * service_url,
     }
 
     // check input arguments
-    if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) || (elastic_ip == NULL) ) {
+    if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 instance_id.empty() ||
+		 elastic_ip.empty() ) {
         return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
     }
 
@@ -6374,12 +6426,113 @@ int GahpClient::ec2_associate_address(const char * service_url,
 
 }
 
-int GahpClient::ec2_attach_volume(const char * service_url,
-                              const char * publickeyfile,
-                              const char * privatekeyfile,
-                              const char * volume_id,
-							  const char * instance_id, 
-                              const char * device_id,
+
+int
+GahpClient::ec2_create_tags(std::string service_url,
+							std::string publickeyfile,
+							std::string privatekeyfile,
+							std::string instance_id, 
+							StringList &tags,
+							StringList &returnStatus,
+							char* &error_code)
+{
+    static const char* command = "EC2_VM_CREATE_TAGS";
+
+    int rc = 0;
+
+    // check if this command is supported
+    if  (!server->m_commands_supported->contains_anycase(command)) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    // check input arguments
+    if (service_url.empty() ||
+		publickeyfile.empty() ||
+		privatekeyfile.empty() ||
+		instance_id.empty()) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    // Generate request line
+    std::string reqline;
+
+    char *esc1 = strdup(escapeGahpString(service_url));
+    char *esc2 = strdup(escapeGahpString(publickeyfile));
+    char *esc3 = strdup(escapeGahpString(privatekeyfile));
+    char *esc4 = strdup(escapeGahpString(instance_id));
+    
+    int x = sprintf(reqline, "%s %s %s %s", esc1, esc2, esc3, esc4);
+    
+    free(esc1);
+    free(esc2);
+    free(esc3);
+    free(esc4);
+    ASSERT(x > 0);
+
+	const char *tag;
+	int count = 0;
+	tags.rewind();
+	if (tags.number() > 0) {
+		while ((tag = tags.next())) {
+			char *esc_tag = strdup(escapeGahpString(tag));
+			sprintf_cat(reqline, " %s", esc_tag);
+			count++;
+			free(esc_tag);
+		}
+	}
+	ASSERT(count == tags.number());
+    
+    const char *buf = reqline.c_str();
+        
+    // Check if this request is currently pending. If not, make it the pending request.
+    if (!is_pending(command, buf)) {
+        // Command is not pending, so go ahead and submit a new one if our command mode permits.
+        if (m_mode == results_only) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending(command, buf, deleg_proxy);
+    }
+    
+    // If we made it here, command is pending.
+
+    // Check first if command completed.
+    Gahp_Args* result = get_pending_result(command, buf);
+
+    if (result) {
+        // command completed and the return value looks like:
+        int return_code = atoi(result->argv[1]);
+        
+        if (return_code == 1) {
+            if (result->argc == 2) {
+                error_string = "";
+            } else if (result->argc == 4) {
+                error_code = strdup(result->argv[2]);
+                error_string = result->argv[3];
+            } else {
+                EXCEPT("Bad %s Result",command);
+            }
+        } else {    // return_code == 0
+            if (((result->argc-2) % 2) != 0) {
+                EXCEPT("Bad %s Result", command);
+            } else {
+                // get the status info
+                for (int i=2; i<result->argc; i++) {
+                    returnStatus.append(strdup(result->argv[i]));
+                }
+                returnStatus.rewind();
+            }
+        }       
+        delete result;
+    }
+    return rc;
+}
+
+int GahpClient::ec2_attach_volume(std::string service_url,
+                              std::string publickeyfile,
+                              std::string privatekeyfile,
+                              std::string volume_id,
+							  std::string instance_id, 
+                              std::string device_id,
                               StringList & returnStatus,
                               char* & error_code )
 {
@@ -6393,7 +6546,12 @@ int GahpClient::ec2_attach_volume(const char * service_url,
     }
 
     // check input arguments
-    if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) || (volume_id == NULL) || (device_id == NULL) ){
+    if ( service_url.empty() ||
+		 publickeyfile.empty() ||
+		 privatekeyfile.empty() ||
+		 instance_id.empty() ||
+		 volume_id.empty() ||
+		 device_id.empty() ){
         return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
     }
 
