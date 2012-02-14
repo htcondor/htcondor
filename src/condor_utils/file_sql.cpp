@@ -436,20 +436,12 @@ FILESQL *FILEObj = NULL;
 /*static */ FILESQL *
 FILESQL::createInstance(bool use_sql_log) { 
 	FILESQL *ptr = NULL;
-	char *tmp; 
 	MyString outfilename = "";
-	char *tmpParamName;
-	const char *daemon_name;
-	
-	daemon_name = get_mySubSystem()->getName();
 
-	tmpParamName = (char *)malloc(10+strlen(daemon_name));
+	MyString param_name;
+	param_name.sprintf("%s_SQLLOG", get_mySubSystem()->getName());
 
-		/* build parameter name based on the daemon name */
-	sprintf(tmpParamName, "%s_SQLLOG", daemon_name);
-	tmp = param(tmpParamName);
-	free(tmpParamName);
-
+	char *tmp = param(param_name.Value());
 	if( tmp ) {
 		outfilename = tmp;
 		free(tmp);
