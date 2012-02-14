@@ -582,6 +582,7 @@ int daemon::RealStart( )
 	}
 
 	if( !m_after_startup_wait_for_file.IsEmpty() ) {
+		MSC_SUPPRESS_WARNING_FIXME(6031)
 		remove( m_after_startup_wait_for_file.Value() );
 	}
 
@@ -1372,6 +1373,7 @@ daemon::InitParams()
 			
 	int length = strlen(name_in_config_file) + 32;
 	buf = (char *)malloc(length);
+	ASSERT( buf != NULL );
 	snprintf( buf, length, "%s_WATCH_FILE", name_in_config_file );
 	watch_name = param( buf );
 	free(buf);
@@ -2040,7 +2042,7 @@ Daemons::ExecMaster()
 	int i=0,j;
 	char **argv = (char **)malloc((condor_main_argc+2)*sizeof(char *));
 
-	ASSERT( condor_main_argc>0 );
+	ASSERT( argv != NULL && condor_main_argc > 0 );
 	argv[i++] = condor_main_argv[0];
 
 		// insert "-f" argument so that new master does not fork
