@@ -123,7 +123,7 @@ void
 AllocationNode::display( void )
 {
 	int level = D_FULLDEBUG;
-	if( ! DebugFlags & level ) {
+	if( ! (DebugFlags & level) ) {
 		return;
 	}
 	dprintf( level, "Allocation for job %d.0, nprocs: %d\n",
@@ -819,6 +819,9 @@ DedicatedScheduler::callHandleDedicatedJobs( void )
 }
 
 
+#ifdef WIN32
+#pragma warning(suppress: 6262) // warning: function uses about 64k of stack
+#endif
 bool
 DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 {
@@ -1944,7 +1947,7 @@ DedicatedScheduler::computeSchedule( void )
 {
 		// Initialization
 		//int proc, cluster, max_hosts;
-	int cluster, max_hosts;
+	int cluster = -1, max_hosts;
 	ClassAd *job = NULL, *ad;
 
 	CandidateList *idle_candidates = NULL;
@@ -2592,6 +2595,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 				// create a new MRecArray
 			matches = new MRecArray();
+			ASSERT(matches != NULL);
 			matches->fill(NULL);
 			
 				// And stick it into the AllocationNode

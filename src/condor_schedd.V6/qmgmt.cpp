@@ -3324,10 +3324,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// First, we need to re-allocate attribute_value to a bigger
 						// buffer.
 					int old_size = strlen(attribute_value);
-					attribute_value = (char *) realloc(attribute_value, 
-											old_size 
-											+ 10);  // for the extra parenthesis
-					ASSERT(attribute_value);
+					void * pv = realloc(attribute_value, old_size 
+										+ 10);  // for the extra parenthesis
+					ASSERT(pv);
+					attribute_value = (char *)pv; 
 						// since attribute_value may have moved, we need
 						// to reset the value of tvalue.
 					tvalue = strstr(attribute_value,"$$");	
@@ -4038,6 +4038,7 @@ GetNextJobByCluster(int c, int initScan)
 	}
 
 	snprintf(cluster,25,"%d.",c);
+	cluster[COUNTOF(cluster)-1] = 0; // force null term.
 	len = strlen(cluster);
 
 	if (initScan) {

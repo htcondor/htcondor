@@ -2423,11 +2423,11 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		if (proc > 0) {
 			return true;
 		}
-		ASSERT( srec != NULL );
-			break;
+		break;
 	default:
 		break;
 	}
+	ASSERT( srec != NULL );
 
 		// if we're still here, make sure we have a match since we
 		// have to spawn a shadow...
@@ -3561,6 +3561,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// will free 'peer_version' and our reaper will free 'jobs' (the
 		// reaper needs 'jobs' for some of its work).
 	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) );
+	ASSERT( thread_arg != NULL );
 	thread_arg->mode = mode;
 	thread_arg->peer_version = peer_version;
 	thread_arg->jobs = jobs;
