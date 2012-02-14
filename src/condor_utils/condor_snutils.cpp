@@ -305,7 +305,7 @@ int strcpy_len(char * out, const char * in, int len)
 	char * p = out;
 	int ix = 0;
 	while (ix < len) {
-		if (*p++ = *in++)
+		if ((*p++ = *in++))
 			++ix;
 		else
 			return ix;	   // non-truncating return
