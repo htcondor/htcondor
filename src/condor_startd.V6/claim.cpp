@@ -2338,7 +2338,9 @@ ClaimId::dropFile( int slot_id )
 	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
 				 filename_new.Value() );
-		unlink( filename_new.Value() );
+		if (unlink(filename_new.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+		}
 	}
 }
 
