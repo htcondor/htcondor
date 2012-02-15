@@ -65,7 +65,7 @@ bool needs_id = true;
 VacateType vacate_type = VACATE_GRACEFUL;
 
 // protoypes of interest
-void usage( const char*, int iExitCode=1 );
+PREFAST_NORETURN void usage( const char*, int iExitCode=1 );
 void version( void );
 void invalid( const char* opt );
 void ambiguous( const char* opt );
@@ -423,6 +423,7 @@ getCommandFromArgv( int argc, char* argv[] )
 		baselen = strlen(base);
 			// we also need to store the space and the '\0'.
 		my_name = (char*)malloc( size + baselen + 2 );
+		ASSERT( my_name != NULL );
 		sprintf( my_name, "%s %s", base, argv[1] );
 			// skip past the basename and the space...
 		cmd_str = my_name+baselen+1;
