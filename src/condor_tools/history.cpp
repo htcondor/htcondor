@@ -290,9 +290,7 @@ main(int argc, char* argv[])
 			break;
 		}
 		owner = (char *) malloc(512 * sizeof(char));
-		ASSERT(owner != NULL);
-		if (sscanf(argv[i], "%s", owner) < 1)
-			owner[0] = 0;
+		sscanf(argv[i], "%s", owner);	
 		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
 		parameters[0] = owner;
 #ifdef HAVE_EXT_POSTGRESQL
