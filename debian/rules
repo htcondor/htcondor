@@ -35,7 +35,7 @@ override_dh_auto_configure:
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
-		-DHAVE_EXT_CGROUP:BOOL=ON
+		-DHAVE_EXT_CGROUP:BOOL=ON \
 		-DHAVE_EXT_ZLIB:BOOL=ON
 		# upstream says: tests aren't reliablei enough yet
 		#-DBUILD_TESTS:BOOL=OFF \
