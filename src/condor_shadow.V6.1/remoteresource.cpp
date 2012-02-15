@@ -2117,6 +2117,48 @@ RemoteResource::checkX509Proxy( void )
 		return;
 	}
 
+
+	// if the proxy has been modified, attempt to reload various attributes
+	// and update them in the jobAd.  we do this on the submit side regardless
+	// of whether or not the remote side succesfully receives the proxy, since
+	// this allows us to use the attributes in job policy (periodic_hold, etc.)
+
+	// first, do the DN and expiration time, which all proxies have
+	char* proxy_subject = x509_proxy_subject_name(proxy_path.Value());
+	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
+	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
+	if (proxy_subject) {
+		free(proxy_subject);
+	}
+
+	// second, worry about the VOMS attributes, which may or may not be present
+	char * voname = NULL;
+	char * firstfqan = NULL;
+	char * quoted_DN_and_FQAN = NULL;
+	int vomserr = extract_VOMS_info_from_file(
+			proxy_path.Value(),
+			0 /*do not verify*/,
+			&voname,
+			&firstfqan,
+			&quoted_DN_and_FQAN);
+	if (vomserr == 0) {
+		// VOMS attributes were found
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "VOMS attributes were found\n");
+		}
+		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
+		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
+		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
+		free(voname);
+		free(firstfqan);
+		free(quoted_DN_and_FQAN);
+	} else {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "VOMS attributes were not found\n");
+		}
+	}
+
 	// Proxy file updated.  Time to upload
 	last_proxy_timestamp = lastmod;
 	updateX509Proxy(proxy_path.Value());
