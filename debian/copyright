@@ -1,63 +1,273 @@
-Format-Specification: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=135
-Name: condor
-Maintainer: Condor Team <condor-admin@cs.wisc.edu>
+Format: http://dep.debian.net/deps/dep5/
+Upstream-Name: condor
+Upstream-Contact: Condor Team <condor-admin@cs.wisc.edu>
 Source: http://www.cs.wisc.edu/condor
 
 
 Files: *
-Copyright: 1990-2010, Condor Team, Computer Sciences Department,
+Copyright: 1990-2012, Condor Team, Computer Sciences Department,
                       University of Wisconsin-Madison, WI.
-License: Apache
- On Debian systems, the full text of the Apache License version 2 can be found
- in the file `/usr/share/common-licenses/Apache-2.0'.
+License: Apache-2.0
+
+
+Files: externals/bundles/openssl/0.9.8h-p2/ossl_typ-post.h
+Copyright: 1998-2001, The OpenSSL Project
+License: Custom
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+  1. Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer. 
+ .
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in
+     the documentation and/or other materials provided with the
+     distribution.
+ .
+  3. All advertising materials mentioning features or use of this
+     software must display the following acknowledgment:
+     "This product includes software developed by the OpenSSL Project
+     for use in the OpenSSL Toolkit. (http://www.openssl.org/)"
+ .
+  4. The names "OpenSSL Toolkit" and "OpenSSL Project" must not be used to
+     endorse or promote products derived from this software without
+     prior written permission. For written permission, please contact
+     openssl-core@openssl.org.
+ .
+  5. Products derived from this software may not be called "OpenSSL"
+     nor may "OpenSSL" appear in their names without prior written
+     permission of the OpenSSL Project.
+ .
+  6. Redistributions of any form whatsoever must retain the following
+     acknowledgment:
+     "This product includes software developed by the OpenSSL Project
+     for use in the OpenSSL Toolkit (http://www.openssl.org/)"
+ .
+ THIS SOFTWARE IS PROVIDED BY THE OpenSSL PROJECT ``AS IS'' AND ANY
+ EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE OpenSSL PROJECT OR
+ ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Files: src/condor_daemon_core.V6/valgrind.h
+Copyright: 2000-2006, Julian Seward
+License: BSD-4-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+  1. Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+ .
+  2. The origin of this software must not be misrepresented; you must
+     not claim that you wrote the original software.  If you use this
+     software in a product, an acknowledgment in the product
+     documentation would be appreciated but is not required.
+ .
+  3. Altered source versions must be plainly marked as such, and must
+     not be misrepresented as being the original software.
+ .
+  4. The name of the author may not be used to endorse or promote
+     products derived from this software without specific prior written
+     permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+ OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Files: src/condor_rmdir/{tokenize.cpp,bprint.h,harylist.h}
+Copyright: 2010, John M. Knoeller
+License: Apache-2.0
+
+
+Files: src/condor_dagman/node_scheduler/*
+Copyright: 2005 Argonne National Laboratory
+License: Apache-2.0
+
+
+Files: src/safefile/*
+Copyright: 2007-2008, 2011 James A. Kupsch
+License: Apache-2.0
+
+
+Files: src/nordugrid_gahp/*
+Copyright: 1999-2006, University of Chicago
+License: Apache-2.0
+
+
+Files: src/condor_filetransfer_plugins/hdfs*
+Copyright: 2006, Apache Software Foundation
+License: Apache-2.0
+
+
+Files: src/condor_filetransfer_plugins/stdint-msvc.h
+Copyright: 2006-2008, Alexander Chemeris
+License: BSD-3-clause
+
+
+Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/*
+Copyright: 2007, Vincent Oberle, <vincent@oberle.org>
+License: GPL-2+
+
+
+Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/twitter.py
+Copyright: 2007, Google Inc
+License: Apache-2.0
+
+
+Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/Skype4Py/*
+Copyright: 2007-2008, Arkadiusz Wahlig
+License: BSD-3-clause
+
+
+Files: src/condor_contrib/aviary/test/module/aviary/https.py
+Copyright: 2011, Joseph Turner
+           2011, David Norton, Jr
+           2009-2011 Red Hat, Inc
+License: Apache-2.0
+
+
+Files: src/condor_includes/condor_gssapi_openssl.h
+Copyright: 1999-2006 University of Chicago
+License: Apache-2.0
+
+
+Files: src/condor_utils/my_getopt.cpp
+Copyright: 1997, 2000, 2001, 2002, Benjamin Sittler
+License: Expat
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated documentation
+ files (the "Software"), to deal in the Software without
+ restriction, including without limitation the rights to use, copy,
+ modify, merge, publish, distribute, sublicense, and/or sell copies
+ of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+
+
+Files: build/cmake/macros/CheckTypeExists.cmake
+Copyright: 2009, Michihiro NAKAJIMA
+           2011 Red Hat, Inc
+           2006, Alexander Neundorf, <neundorf@kde.org>
+License: Apache-2.0
+
+
+Files: build/cmake/modules/CPackDeb.cmake
+Copyright: 2007-2009 Kitware, Inc
+           2007-2009 Mathieu Malaterre <mathieu.malaterre@gmail.com>
+License: BSD-3-clause
+
+
+Files: *.cmake
+ src/condor_contrib/plumage/*
+ src/condor_contrib/triggerd/*
+ src/condor_contrib/aviary/*
+ src/condor_contrib/utils/broker_utils.*
+ src/condor_contrib/mgmt/qmf/*
+ src/condor_collector.V6/*CollectorPlugin*
+ src/condor_master.V6/*MasterPlugin*
+ src/condor_startd.V6/*StartdPlugin*
+ src/condor_schedd.V6/*Plugin*
+ src/condor_utils/*Plugin*
+ src/condor_utils/ClassAdReevaluator*
+ src/condor_utils/ConcurrencyLimitUtils.*
+ src/condor_negotiator.V6/*NegotiatorPlugin*
+ src/condor_mail/AssemblyInfo.cpp
+ src/condor_examples/condor_limits_wrapper.sh
+Copyright: 2008 Red Hat, Inc
+License: Apache-2.0
 
 
 Files: debian/*
 Copyright: 2004, Andreas Hirczy <ahi@itp.tu-graz.ac.at>
            2004-2006, Peter Troeger <peter.troeger@hpi.uni-potsdam.de>
            2006, Guillaume Pernot <gpernot@praksys.org>
-           2010, Michael Hanke <mih@debian.org>
-Licenses: Apache
+           2010-2012, Michael Hanke <mih@debian.org>
+Licenses: Apache-2.0
 
 
-TODO: Figure out if any of the following is actually the case for the Debian
-      package.
+License: Apache-2.0
+ This file is licensed under the terms of the Apache License Version 2.0
+ http://www.apache.org/licenses. This notice must appear in modified or not
+ redistributions of this file.
+ .
+ Redistributions of this Software, with or without modification, must
+ reproduce the Apache License in: (1) the Software, or (2) the Documentation
+ or some other similar material which is provided with the Software (if any).
+ .
+ On Debian systems, the full text of the Apache License version 2 can be found
+ in the file `/usr/share/common-licenses/Apache-2.0'.
 
-This product includes software developed by and/or derived from the
-Globus Project (http://www.globus.org/) to which the U.S. Government
-retains certain rights. Copyright (c) 1999 University of Chicago and
-The University of Southern California. All Rights Reserved.
 
-This product includes software developed by the OpenSSL Project for
-use in the OpenSSL Toolkit (http://www.openssl.org/).  Complete
-conditions and disclaimers for OpenSSL can be found at
-http://www.openssl.org/source/license.html
+License: BSD-3-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+  1. Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+  3. Neither the name of the University nor the names of its contributors
+     may be used to endorse or promote products derived from this software
+     without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
 
-Some distributions of Condor include software developed by the 
-Info-ZIP Project (http://www.info-zip.org/).  Complete conditions 
-and disclaimers for Info-ZIP can be found at 
-http://www.info-zip.org/doc/LICENSE
 
-Some distributions of Condor include MAKEMSI software developed by 
-Dennis Bareis (http://dennisbareis.com/makemsi.htm).  Complete 
-conditions and disclaimers for MAKEMSI can be found at 
-http://makemsi-manual.dennisbareis.com/disclaimer.htm
+License: GPL-2+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in `/usr/share/common-licenses/GPL-2'.
 
-Some distributions of Condor include a compiled, unmodified version
-of the GNU C library. The complete source code to GNU glibc can be
-found at http://www.gnu.org/software/libc/.
-
-Part of the software embedded in this product is gSOAP software.
-Portions created by gSOAP are Copyright (C) 2001-2004 Robert A. van
-Engelen, Genivia inc. All Rights Reserved.
-THE SOFTWARE IN THIS PRODUCT WAS IN PART PROVIDED BY GENIVIA INC AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
