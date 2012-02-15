@@ -75,7 +75,7 @@ struct HostStatistics {
 	HostStatistics(const char executeHost[]) :
 		allocations(0), kills(0),
 		wall_time(0),	good_time(0), cpu_usage(0) 
-		{ strcpy(host, executeHost); }
+		{ strcpy_len(host, executeHost, COUNTOF(host)); }
 	char host[128];
 	int allocations, kills;
 	int wall_time;
@@ -116,10 +116,12 @@ main(int argc, char *argv[])
 				break;
 			case 'j': {
 				i++;
-				sscanf(argv[i], "%d", &select_cluster);
+				if (1 != sscanf(argv[i], "%d", &select_cluster))
+					select_cluster = -1;
 				char *proc_str = strchr(argv[i], '.');
 				if (proc_str) {
-					sscanf(proc_str+1, "%d", &select_proc);
+					if (1 != sscanf(proc_str+1, "%d", &select_proc))
+						select_proc = -1;
 				}
 				break;
 			}
