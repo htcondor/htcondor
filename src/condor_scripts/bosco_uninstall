@@ -1,0 +1,24 @@
+#!/bin/sh
+
+IS_BOSCO=`condor_config_val IS_BOSCO`
+echo "$IS_BOSCO" | grep -q -i true 
+if [ $? != 0 ] ; then
+    echo "Please source the bosco.[sh|csh] script first."
+fi
+
+echo Ensuring Condor is stopped...
+bosco_stop
+if [ $? != 0 ] ; then
+    echo "Failed to stop Condor, aborting."
+    exit 1
+fi
+
+RELEASE_DIR=`condor_config_val RELEASE_DIR`
+if [ ! -d $RELEASE_DIR ] ; then
+    echo "BOSCO installation directory $RELEASE_DIR doesn't exist, aborting."
+    exit 1
+fi
+echo Removing BOSCO installation under $RELEASE_DIR
+rm -rf $RELEASE_DIR
+
+echo Done

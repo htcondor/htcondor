@@ -448,6 +448,8 @@ if ($opt_bosco) {
     
     $local_config{COLLECTOR_NAME}="";
 
+	$local_config{IS_BOSCO}="True"
+
 	$daemon_list{SCHEDD} = 1;
 }
 elsif ($opt_make_personal_condor ||
@@ -570,6 +572,13 @@ unless ( $opt_disable_env_scripts ) {
 	print CSH "setenv PATH \"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
 	close( CSH );
 
+	if ( $opt_bosco ) {
+		$env_sh = $opt_env_scripts_dir ."/bosco.sh";
+		$env_csh = $opt_env_scripts_dir ."/bosco.csh";
+		system( "cp $opt_env_scripts_dir/condor.sh $env_sh" );
+		system( "cp $opt_env_scripts_dir/condor.csh $env_csh" );
+	}
+
 	print "Created scripts which can be sourced by users to setup their\n";
 	print "Condor environment variables.  These are:\n";
 	print "   sh: $env_sh\n";
@@ -670,6 +679,10 @@ e.g. mymachine.mydomain.com \n";
 #}
 
 sub parse_command_line() {
+
+	if ( $0 =~ /bosco_install$/ ) {
+		unshift( @ARGV, "--bosco" );
+	}
 
 	if ( $#ARGV < 0 ) {
 		usage( 1 );
