@@ -137,14 +137,14 @@ preserve_log_file()
 
 #if defined(WIN32)
 
-	unlink(old);
+	(void)unlink(old);
 
 	/* use rename on WIN32, since link isn't available */
 	if (rename(debug_fn, old) < 0) {
 		/* the rename failed, perhaps one of the log files
 		 * is currently open.  Sleep a half second and try again. */		 
 		Sleep(500);
-		unlink(old);
+		(void)unlink(old);
 		if ( rename(debug_fn,old) < 0) {
 			/* Feh.  Some bonehead must be keeping one of the files
 			 * open for an extended period.  Win32 will not permit an

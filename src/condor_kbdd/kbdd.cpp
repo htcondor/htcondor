@@ -46,6 +46,7 @@ XInterface *xinter = NULL;
 static void hack_kbdd_registry();
 #endif
 
+MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 bool
 update_startd()
 {
@@ -71,6 +72,7 @@ update_startd()
 	dprintf( D_FULLDEBUG, "Sent update to startd at: %s\n", startd.addr() );
 	return true;		
 }
+MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
 
 void 
@@ -231,6 +233,7 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 		return GetLastError();
 	}
 	parameters = (char**)malloc(sizeof(char*)*nArgs + 1);
+	ASSERT( parameters != NULL );
 	parameters[0] = "condor_kbdd";
 	parameters[nArgs] = NULL;
 
@@ -242,6 +245,7 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 		//There's a *2 on the size to provide some leeway for non-ascii characters being split.  Suggested by TJ.
 		int argSize = ((wcslen(cmdArgs[counter]) + 1) * sizeof(char)) * 2;
 		parameters[counter] = (char*)malloc(argSize);
+		ASSERT( parameters[counter] != NULL );
 		int converted = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, cmdArgs[counter], -1, parameters[counter], argSize, NULL, NULL);
 		if(converted == 0)
 		{
