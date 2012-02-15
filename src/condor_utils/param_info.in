@@ -10394,3 +10394,36 @@ url=
 tags=schedd,startd,claim
 id=603
 
+[MOUNT_UNDER_SCRATCH]
+aliases=
+default=
+version=7.7.5
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Mount Under Scratch
+usage=
+url=
+tags=starter
+id=603
+
+[NAMED_CHROOT]
+aliases=
+default=
+version=7.7.5
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Named Chroot
+usage=
+url=
+tags=starter
+id=603
+
+
