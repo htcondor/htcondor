@@ -196,7 +196,7 @@
 			<xs:element name="resource" type="tns:ResourceType"/>
 			<xs:element name="pool" type="xs:string" minOccurs="0"/>
 			<xs:element name="name" type="xs:string" minOccurs="0"/>
-			<xs:element name="custom_type" type="xs:string" minOccurs="0"/>
+			<xs:element name="sub_type" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="ResourceLocation">

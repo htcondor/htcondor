@@ -34,6 +34,7 @@
 #include "JobServerObject.h"
 #include "HistoryProcessingUtils.h"
 #include "Globals.h"
+#include "AviaryUtils.h"
 
 // about self
 DECL_SUBSYSTEM("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
@@ -42,6 +43,7 @@ using namespace std;
 using namespace aviary::transport;
 using namespace aviary::query;
 using namespace aviary::history;
+using namespace aviary::util;
 
 ClassAd	*ad = NULL;
 AviaryProvider* provider = NULL;
@@ -56,6 +58,8 @@ void Dump();
 int HandleTransportSocket(Service *, Stream *);
 int HandleResetSignal(Service *, int);
 void ProcessHistoryTimer(Service*);
+
+const char QUERY_SERVER[] = "QUERY_SERVER";
 
 //-------------------------------------------------------------
 
@@ -72,7 +76,9 @@ int main_init(int /* argc */, char * /* argv */ [])
 
     string log_name;
     sprintf(log_name,"aviary_query.log");
-    provider = AviaryProviderFactory::create(log_name,string(build_valid_daemon_name("query")),string("QUERY_SERVER"), string("services/query/"));
+	string myname = "query@" + getScheddName();
+    provider = AviaryProviderFactory::create(log_name,myname,
+											 "CUSTOM",QUERY_SERVER, "services/query/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
@@ -221,7 +227,6 @@ main_pre_dc_init( int /* argc */, char* /* argv */ [] )
 {
 		// dprintf isn't safe yet...
 }
-
 
 void
 main_pre_command_sock_init( )

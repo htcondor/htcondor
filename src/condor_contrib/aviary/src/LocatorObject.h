@@ -30,7 +30,8 @@ namespace locator {
 struct Endpoint {
 	// properties
 	string      Name;
-	string		CustomType;
+	string		MajorType;
+	string		MinorType;
     string      MyAddress;
 	string		EndpointUri;
 	int 		missed_updates;
@@ -44,7 +45,7 @@ class LocatorObject
 public:
 
 	// SOAP-facing method
-	void locate(const string& _name, const string& _class, bool partials, 
+	void locate(const string& name, const string& major, const string& minor, bool partials, 
 				EndpointVectorType& matches);
 
 	// daemonCore-facing methods

@@ -24,6 +24,7 @@
 #include "AviaryScheddPlugin.h"
 #include "AviaryProvider.h"
 #include "SchedulerObject.h"
+#include "AviaryUtils.h"
 
 // Global from the condor_schedd, it's name
 extern char * Name;
@@ -35,6 +36,7 @@ extern char * Name;
 using namespace std;
 using namespace aviary::job;
 using namespace aviary::transport;
+using namespace aviary::util;
 
 // global SchedulerObject
 // TODO: convert to singleton
@@ -53,7 +55,9 @@ AviaryScheddPlugin::earlyInitialize()
 
     string log_name;
     sprintf(log_name,"aviary_job.log");
-    provider = AviaryProviderFactory::create(log_name,string(build_valid_daemon_name("job")),string("SCHEDULER"),string("services/job/"));
+	string myname = "job@" + getScheddName();
+    provider = AviaryProviderFactory::create(log_name,myname,
+											 "SCHEDULER","JOB","services/job/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
