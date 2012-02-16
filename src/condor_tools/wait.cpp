@@ -105,7 +105,7 @@ int main( int argc, char *argv[] )
 	for( i=1; i<argc; i++ ) {
 		if(!strcmp(argv[i],"-help")) {
 			usage(argv[0]);
-			EXIT_FAILURE;
+			EXIT_SUCCESS;
 		} else if(!strcmp(argv[i],"-version")) {
 			version();
 			EXIT_FAILURE;

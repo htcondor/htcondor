@@ -45,7 +45,7 @@ const char* dagman_exe = "condor_dagman";
 const char* valgrind_exe = "valgrind";
 #endif
 
-int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
+int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, int argc,
 			const char * const argv[]);
@@ -927,10 +927,9 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 				exit( 0 );
 			}
-			else if (strArg.find("-help") != -1) // -help
+			else if (strArg.find("-help") != -1 || strArg.find("-h") != -1) // -help
 			{
-				printUsage();
-				exit( 0 );
+				printUsage(0);
 			}
 				// submit and stick to a specific schedd
 			else if (strArg.find("-schedd-daemon-ad-file") != -1)
@@ -1196,7 +1195,7 @@ parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 }
 
 //---------------------------------------------------------------------------
-int printUsage() 
+int printUsage(int iExitCode) 
 {
     printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
     printf("  where dag_file1, etc., is the name of a DAG input file\n");
@@ -1241,5 +1240,5 @@ int printUsage()
 	printf("    -import_env         (explicitly import env into submit file)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
-	exit(1);
+	exit(iExitCode);
 }

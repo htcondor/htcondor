@@ -142,7 +142,7 @@ main(int argc, char *argv[])
 					avoid_dns = false;
 				} else {
 					fprintf(stderr, usage, argv[0]);
-					exit(1);
+					exit(0);
 				}
 				break;
 			}

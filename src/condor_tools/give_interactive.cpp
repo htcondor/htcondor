@@ -57,6 +57,7 @@ ExprTree *PreemptionReq;	// only preempt if true
 ExprTree *PreemptionRank; 	// rank preemption candidates
 
 DECL_SUBSYSTEM("TOOL", SUBSYSTEM_TYPE_TOOL);
+void usage(const char *name, int iExitCode=1);
 
 bool
 obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
@@ -389,7 +390,7 @@ findSubmittor( char *name )
 }
 
 void
-usage(const char *name)
+usage(const char *name, int iExitCode)
 {
 	printf("\nUsage: %s [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] \n", name);
 	printf(" -m: Return entire machine, not slots\n");
@@ -399,7 +400,7 @@ usage(const char *name)
 	printf(" -r r_expr: Use r_expr as the rank expression\n");
 	printf(" -p pool: Contact the Condor pool \"pool\"\n");
 	printf(" -h: this screen\n\n");
-	exit(1);
+	exit(iExitCode);
 }
 
 
@@ -416,6 +417,7 @@ main(int argc, char *argv[])
 	ClassAd *offer;
 	char *tmp;
 	int i;
+	int iExitUsageCode=1;
 	char buffer[1024];
 	HashTable<HashKey, int>	*slot_counts;
 
@@ -468,8 +470,10 @@ main(int argc, char *argv[])
 				}
 				rank = *ptr;
 				break;
+			case 'h': 
+			      iExitUsageCode = 0;
 			default:
-				usage(condor_basename(argv[0]));
+				usage(condor_basename(argv[0]), iExitUsageCode);
 			}		
 		}
 	}
