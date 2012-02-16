@@ -415,6 +415,8 @@ getCommandFromArgv( int argc, char* argv[] )
 				// should print the version, not give an error.
 			if( argv[1][1] == 'v' ) {
 				version();
+			} if( argv[1][1] == 'h' ) {
+			      usage( base, 0 );
 			} else {
 				usage( base );
 			}
@@ -950,7 +952,7 @@ usage( const char *str, int iExitCode )
 
 	if( ! str ) {
 		fprintf( stderr, "Use \"-help\" to see usage information\n" );
-		exit( 1 );
+		exit( iExitCode );
 	}
 	if( !cmd ) {
 		fprintf( stderr, "Usage: %s [command] [options]\n", str );
@@ -965,7 +967,7 @@ usage( const char *str, int iExitCode )
 		printCmd( DELEGATE_GSI_CRED_STARTD );
 		fprintf( stderr, "use %s [command] -help for more "
 				 "information on a given command\n", str ); 
-		exit( 1 );
+		exit( iExitCode );
 	}
 
 	switch( cmd ) {
