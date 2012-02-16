@@ -28,15 +28,17 @@
 namespace aviary {
 namespace locator {
 
+const char CUSTOM[] = "Custom";
 const char LOCATOR[] = "Locator";
 const char ENDPOINT[] = "Endpoint";
 const char ENDPOINT_URI[] = "EndpointUri";
-const char CUSTOM_TYPE[] = "CustomType";
+const char MAJOR_TYPE[] = "MajorType";
+const char MINOR_TYPE[] = "MinorType";
 
 class EndpointPublisher: public Service
 {
 	public:
-		EndpointPublisher(const std::string& service_name, const std::string& service_type);
+		EndpointPublisher(const std::string& service_name, const std::string& major_type, const std::string& minor_type);
 		~EndpointPublisher();
 		bool init(const std::string& uri_suffix, bool for_ssl = false);
 		void start(int);
@@ -47,7 +49,8 @@ class EndpointPublisher: public Service
 	protected:
 		std::string m_location;
 		std::string m_name;
-		std::string m_type;
+		std::string m_major_type;
+		std::string m_minor_type;
 		int m_port;
 		int m_update_interval;
 		int m_update_timer;

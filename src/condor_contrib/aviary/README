@@ -344,9 +344,11 @@ listed:
     * idle
     * removed
     * running
+	* transferring output
+	* suspended
 
 Individual job summaries can also be included in the response by setting the 
-XML attribute includeJobSummaries to be true in the request
+XML attribute includeJobSummaries to be true in the request.
 
 Security
 ========
@@ -369,6 +371,52 @@ listen securely at the value of HTTP_PORT.
 OpenSSL provides utilities for managing PKI. The following link is a decent
 reference:
 http://www.madboa.com/geek/openssl/
+
+Locator
+=======
+
+Aviary provides a "bootstrap" WSDL interface for finding other Aviary SOAP 
+endpoints called the locator. This is implemented within a Collector-specific 
+plugin that receives generic ClassAds from Aviary endpoint publishers that 
+contain a fully-formed base URL with which a client can invoke their target 
+services. The client must still append the appropriate target operation to the 
+end of the URL. 
+
+When a locator is configured, Aviary endpoints will bind to ephemeral ports 
+on their respective hosts and publish their addressable URL to the locator 
+plugin. Upon graceful exit, endpoints will notify the locator plugin through 
+ad invalidation. For failed endpoints, the plugin monitors regular updates of 
+the published ads and prune them using a policy of missed update count over a 
+configurable interval.
+
+The default locator can be invoked at port 9000 on the Collector host (e.g.,
+http://localhost:9000/services/locator/locate)
+
+Arguments to the locate operation:
+* ResourceType (required and one of 'ANY','COLLECTOR','CUSTOM','MASTER',
+			  'NEGOTIATOR','SCHEDULER','SLOT')
+* name (optional, fragment or exact full name of endpoint host)
+* sub_type (optional full string of a subtype of CUSTOM resource like 'QUERY_SERVER')
+
+Exact matching (applicable to name field only) can be used in the locate request 
+by setting the XML attribute partialMatches to be false in the request. The sub_type 
+field must always be an exact match.
+
+Relevant configuration variables and their defaults:
+
+AVIARY_PUBLISH_LOCATION = False 
+(locator publishing on or off)
+
+AVIARY_PUBLISH_INTERVAL = 10 
+(frequency in seconds that endpoints send out their heartbeat ad)
+
+AVIARY_LOCATOR_PRUNE_INTERVAL = 20 
+(frequency in seconds that the locator plugin sweeps and marks unresponsive or 
+missing endpoints)
+
+AVIARY_LOCATOR_MISSED_UPDATES = 2
+(the number of updates an endpoint can miss before becoming a candidate for
+garbage collection from the available list)
 
 Client Examples
 ===============

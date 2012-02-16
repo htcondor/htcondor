@@ -62,8 +62,7 @@
         }
         AviaryLocator::Locate::~Locate()
         {
-            axutil_qname_free (qname,Environment::getEnv());
-			if (property_Id) delete property_Id;
+
         }
 
         

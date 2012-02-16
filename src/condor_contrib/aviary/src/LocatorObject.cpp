@@ -57,11 +57,21 @@ LocatorObject::getPool() {
 }
 
 void
-LocatorObject::locate(const string& _name, const string& _class, bool partials, 
+LocatorObject::locate(const string& name, const string& major, const string& minor, bool partials, 
 					  EndpointVectorType& matches)
 {
+	dprintf(D_FULLDEBUG,"LocatorObject::locate: %s/%s/%s\n",name.c_str(),major.c_str(),minor.c_str());
 	for (EndpointMapType::iterator it = m_endpoints.begin(); it != m_endpoints.end(); it++) {
-			matches.push_back((*it).second);
+		if (major == (*it).second.MajorType || major == "ANY") {
+			if (minor == (*it).second.MinorType || minor.empty()) {
+				if (!partials && name == (*it).second.Name) {
+					matches.push_back((*it).second);
+				}
+				else if (string::npos != (*it).second.Name.find(name)) {
+					matches.push_back((*it).second);
+				}
+			}
+		}
 	}
 }
 
@@ -122,7 +132,8 @@ LocatorObject::createEndpoint(const compat_classad::ClassAd& ad) {
 	STRING(MyAddress);
 	STRING(Name);
 	STRING(EndpointUri);
-	STRING(CustomType);
+	STRING(MajorType);
+	STRING(MinorType);
 
 	m_stats.missed_updates = 0;
 
