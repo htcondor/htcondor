@@ -43,8 +43,13 @@ extern int load_startd_mgmt(void);
 // Define global variables
 
 // windows-specific: notifier for the condor "birdwatcher" (system tray icon)
+// shared memory perf related stuff
 #ifdef WIN32
 CondorSystrayNotifier systray_notifier;
+HANDLE shared_stat_handle;
+TCHAR shared_stat_name[] = TEXT("Global\\CondorStats");
+#define STAT_BUFF 256
+int* stat_buffer_ptr = NULL;
 #endif
 
 // Resource manager
@@ -225,6 +230,33 @@ main_init( int, char* argv[] )
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
+
+#ifdef WIN32
+	int proc_count = resmgr->numSlots();
+	DWORD statBufSize = (proc_count + 1) * sizeof(int);
+	shared_stat_handle = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		statBufSize,
+		shared_stat_name);
+
+	if(shared_stat_handle == NULL)
+	{
+		//error, how severe?
+	}
+
+	stat_buffer_ptr = (int*)MapViewOfFile(
+		shared_stat_handle,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		statBufSize);
+	ZeroMemory(stat_buffer_ptr, statBufSize);
+	//CopyMemory(stat_buffer_ptr, &proc_count, sizeof(int));
+	stat_buffer_ptr[0] = proc_count;
+#endif
 
 		// register daemoncore stuff
 
@@ -652,6 +684,9 @@ startd_exit()
 
 #ifdef WIN32
 	systray_notifier.notifyCondorOff();
+
+	UnmapViewOfFile(stat_buffer_ptr);
+	CloseHandle(shared_stat_handle);
 #endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
