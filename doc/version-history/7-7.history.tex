@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor binaries will now look for the Condor configuration file in
+\File{\$(HOME)/.condor/condor\_config} in addition to the locations where
+they already look.
+\File{\$(HOME)/.condor/condor\_config} is checked immediately after the 
+\Env{CONDOR\_CONFIG} environment variable.
+
 \item The \condor{hdfs} daemon has been moved to the contrib section, and is 
 available from the source code.
 \Ticket{2797}
