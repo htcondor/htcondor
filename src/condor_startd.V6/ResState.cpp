@@ -21,6 +21,11 @@
 #include "condor_common.h"
 #include "startd.h"
 
+#ifdef WIN32
+enum ECpuStatus { kSystrayStatusIdle, kSystrayStatusClaimed, kSystrayStatusJobRunning, kSystrayStatusJobSuspended, kSystrayStatusJobPreempting };
+extern int* stat_buffer_ptr;
+#endif
+
 ResState::ResState( Resource* res_ip )
 {
 	r_state = owner_state;
@@ -665,16 +670,32 @@ ResState::enter_action( State s, Activity a,
 						bool statechange, bool ) 
 {
 #ifdef WIN32
+	int index = rip->r_id;
 	if (a == busy_act)
+	{
+		stat_buffer_ptr[index] = kSystrayStatusJobRunning;
 		systray_notifier.notifyCondorJobRunning(rip->r_id - 1);
+	}
 	else if (s == unclaimed_state)
+	{
+		stat_buffer_ptr[index] = kSystrayStatusIdle;
 		systray_notifier.notifyCondorIdle(rip->r_id - 1);
+	}
 	else if (s == preempting_state)
+	{
+		stat_buffer_ptr[index] = kSystrayStatusJobPreempting;
 		systray_notifier.notifyCondorJobPreempting(rip->r_id - 1);
+	}
 	else if (a == suspended_act)
+	{
+		stat_buffer_ptr[index] = kSystrayStatusJobSuspended;
 		systray_notifier.notifyCondorJobSuspended(rip->r_id - 1);
+	}
 	else
+	{
+		stat_buffer_ptr[index] = kSystrayStatusClaimed;
 		systray_notifier.notifyCondorClaimed(rip->r_id - 1);
+	}
 #endif
 
 	
