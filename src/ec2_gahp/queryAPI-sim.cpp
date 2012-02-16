@@ -527,7 +527,7 @@ bool handleCreateTags( AttributeValueMap & avm, std::string & reply, unsigned re
 
     bool found = false;
     std::string userID;
-    User & user = validateAndAcquireUser( avm, userID, reply, found );
+    validateAndAcquireUser( avm, userID, reply, found );
     if( ! found ) { return false; }
 
     std::string tagName = getObject< std::string >( avm, "Tag.0.Key", found );
