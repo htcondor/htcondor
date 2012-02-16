@@ -17,7 +17,7 @@
  ############################################################### 
 
 # The source tarball for this external was downloaded from this URL:
-#   http://jra1mw.cvs.cern.ch/cgi-bin/jra1mw.cgi/org.glite.ce.blahp.tar.gz?view=tar&pathrev=glite-ce-blahp_R_1_16_1_0
+#   http://jra1mw.cvs.cern.ch/cgi-bin/jra1mw.cgi/org.glite.ce.blahp.tar.gz?view=tar&pathrev=glite-ce-blahp_R_1_16_3_3
 
 if ( LINUX )
 	option(WITH_BLAHP "Compiling with support for BLAHP" ON)
@@ -59,20 +59,23 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.1-p7 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.3.3-p2 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.1.tar.gz ${CMD_TERM}
+						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.3.3.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
-						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.1.tar.gz
+						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.3.3.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&
@@ -80,7 +83,7 @@ if ( WITH_BLAHP )
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
-							./bootstrap || ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
+							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg

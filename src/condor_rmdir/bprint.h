@@ -87,6 +87,7 @@ __inline bool bprint_Clear(BPRINT_BUFFER & bp)
  #pragma comment(lib,"shlwapi.lib")
 #endif
 
+#pragma warning(disable: 6262) // function uses more than 16K of stack.
 
 BPRINT_BUFFER g_bprint = {0, 0x10000};
 

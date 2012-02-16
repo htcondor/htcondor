@@ -195,7 +195,9 @@ check_recovery_file( const char *execute_dir )
 
 	if ( si.Error() ) {
 		if ( si.Error() != SINoFile ) {
-			unlink( recovery_file.Value() );
+			if (unlink(recovery_file.Value()) < 0) {
+				dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+			}
 		}
 		return;
 	}
@@ -204,7 +206,9 @@ check_recovery_file( const char *execute_dir )
 
 	recovery_fp = safe_fopen_wrapper_follow( recovery_file.Value(), "r" );
 	if ( recovery_fp == NULL ) {
-		unlink( recovery_file.Value() );
+		if (unlink(recovery_file.Value()) < 0) {
+			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+		}
 		return;
 	}
 
@@ -214,7 +218,9 @@ check_recovery_file( const char *execute_dir )
 	recovery_ad = new ClassAd( recovery_fp, "***", eof, error, empty );
 	if ( error || empty ) {
 		fclose( recovery_fp );
-		unlink( recovery_file.Value() );
+		if (unlink(recovery_file.Value()) < 0) {
+			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+		}
 		return;
 	}
 
@@ -230,7 +236,9 @@ check_recovery_file( const char *execute_dir )
 
 	delete recovery_ad;
 	fclose( recovery_fp );
-	unlink( recovery_file.Value() );
+	if (unlink(recovery_file.Value()) < 0) {
+		dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.Value() );
+	}
 }
 
 void

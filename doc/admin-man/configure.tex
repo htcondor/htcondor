@@ -7184,8 +7184,7 @@ Configuration File Macros}
   regarding privilege separation). This means that the \Condor{procd}
   does not include the normal Condor logging subsystem, and thus 
   multiple debug levels are not supported.
-  There is no default value for this variable, 
-  so if not defined, there will be no log for the \Condor{procd}.
+  \MacroNI{PROCD\_LOG} defaults to \File{\$(LOG)/ProcLog}.
   Note that enabling \Dflag{PROCFAMILY} in the debug level for any
   other daemon will cause it to log all interactions with the
   \Condor{procd}.

@@ -32,6 +32,7 @@ typedef std::map< std::string, ActionHandler > ActionToHandlerMap;
  *      CreateKeyPair
  *      DeleteKeyPair
  *      DescribeKeyPairs
+ *      CreateTags
  */
 
 /*
@@ -522,6 +523,42 @@ bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsi
     return true;
 }
 
+bool handleCreateTags( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
+
+    bool found = false;
+    std::string userID;
+    validateAndAcquireUser( avm, userID, reply, found );
+    if( ! found ) { return false; }
+
+    std::string tagName = getObject< std::string >( avm, "Tag.0.Key", found );
+    if( (! found) || tagName.empty() ) {
+        fprintf( stderr, "Failed to find TagName in query.\n" );
+        reply = "Required parameter TagName missing or empty.\n";
+        return false;
+    }
+    
+    std::string tagValue = getObject< std::string >( avm, "Tag.0.Value", found );
+    if( (! found) || tagValue.empty() ) {
+        fprintf( stderr, "Failed to find tagValue in query.\n" );
+        reply = "Required parameter tagValue missing or empty.\n";
+        return false;
+    }
+    
+    char rID[] = "1234";
+    snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
+    std::string requestID = rID;
+
+    std::ostringstream xml;
+    xml << "<CreateTagsResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
+    xml << xmlTag( "requestId", rID ) << std::endl;
+    xml << xmlTag( "tagName", tagName ) << std::endl;
+    xml << xmlTag( "tagValue", tagValue ) << std::endl;
+    xml << "/<CreateTagsResponse>" << std::endl;
+    
+    reply = xml.str();
+    return true;
+}
+
 bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
     // fprintf( stdout, "handleCreateKeyPair()\n" );
 
@@ -633,6 +670,7 @@ void registerAllHandlers() {
     simulatorActions[ "CreateKeyPair" ] = & handleCreateKeyPair;
     simulatorActions[ "DeleteKeyPair" ] = & handleDeleteKeyPair;
     simulatorActions[ "DescribeKeyPairs" ] = & handleDescribeKeyPairs;
+    simulatorActions[ "CreateTags" ] = & handleCreateTags;
 }
 
 // m/^Host: <host>\r\n/

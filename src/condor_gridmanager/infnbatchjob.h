@@ -28,6 +28,7 @@
 #include "classad_hashtable.h"
 
 #include "basejob.h"
+#include "infnbatchresource.h"
 #include "gahp-client.h"
 
 
@@ -36,7 +37,7 @@ void INFNBatchJobReconfig();
 BaseJob *INFNBatchJobCreate( ClassAd *jobad );
 bool INFNBatchJobAdMatch( const ClassAd *job_ad );
 
-//class CondorResource;
+class INFNBatchResource;
 
 class INFNBatchJob : public BaseJob
 {
@@ -79,6 +80,7 @@ class INFNBatchJob : public BaseJob
 	Proxy *jobProxy;
 	time_t remoteProxyExpireTime;
 
+	INFNBatchResource *myResource;
 	GahpClient *gahp;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );

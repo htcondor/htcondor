@@ -1,0 +1,229 @@
+#!/bin/sh
+
+################################################################################
+# blahp-over-ssh shim script
+#
+# command [options] remote_hostname [remote options/arguments]
+#
+# Options:
+#   see usage string 
+#
+# Arguments:
+#   mandatory: remote_hostname
+#
+# Remote options/arguments are passed along
+#
+# Assumes public/private key pair is already created and exists on host
+#
+# Exits with 0 on success, 1 if wrong arguments, < 0 if ssh-add failed, > 0 if ssh failed
+################################################################################
+
+#Defaults
+REMOTE_HOSTNAME=""
+REMOTE_USER=`whoami`
+# Needs '~' because resolved on remote site
+REMOTE_GLITE="~/bosco/glite"
+# We do this in case $HOME isn't set properly
+PASSPHRASE_LOCATION=`echo ~/.bosco/.pass`
+PRIVATE_KEY_LOCATION=`echo ~/.ssh/bosco_key.rsa`
+
+
+# List of remote hosts to connect to
+# Customize this for different remote hosts
+# This overrides the default and is overridden by options
+#
+# Format:
+# "remote_hostname remote_script_path passphrase_location private_key_location"
+# - remote_hostname: name of server to connect to (required)
+# - remote_script_path: path to script to start up blahp (required)
+# - passphrase_location: location of passphrase protecting ssh private key
+#     (default is no passphrase required)
+# - private_key_location: location of ssh private key (default is ~/.ssh/id_rsa)
+
+REMOTE_HOSTS=(
+	"glow-c004 /home/slauson/remote-test/batch_gahp.wrapper /scratch.1/slauson/condor-blahp_over_ssh/passphrase"
+	"condor-student1 /afs/cs.wisc.edu/u/s/l/slauson/public/test /afs/cs.wisc.edu/u/s/l/slauson/private/condor/git2/CONDOR_SRC/src/passphrase"
+)
+
+
+###### Setting options #####
+# 1. defaults
+# 2. host defaults from REMOTE_HOSTS list
+# 3. command line options
+# Higher number overrides the lower one
+
+# Parse command line arguments 
+PROG_NAME=$0
+USAGE="Usage: $PROG_NAME [options] remote_hostname [remote options and arguments]\n \
+ --rgahp-user REMOTE_USER \tuser name on the remote host\n \
+ --rgahp-key PRIVATE-KEY-PATH \tlocation of ssh private key (~/.ssh/id_rsa)\n \
+ --rgahp-nokey  \t\tno ssh private key or key already enabled (same as empty rgahp-key)\n \
+ --rgahp-pass PASSPHRASE \tlocation of passphrase protecting ssh private key (~/.bosco/.pass)\n \
+ --rgahp-nopass \t\tno passphrase protecting ssh private key (same as empty rgahp-pass)\n \
+ --rgahp-script SCRIPT \tpath to script to start up blahp (~/.bosco/batch_gahp)\n \
+ --help, -h \t\t\tprint this\n \
+"
+TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
+
+if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+
+eval set -- "$TEMP"
+
+# Remote hostname is mandatory
+# It is the first argument after the rgahp options
+tmp_found=1
+for i; do
+	if [ $tmp_found -eq 0 ] ; then 
+		REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
+		echo "$i" | grep -q '@'
+		if [ $? -eq 0 ] ; then
+		    REMOTE_USER=`echo "$i" | sed 's/@.*//'`
+		fi
+		break
+	fi
+	if [ "$i" = "--" ]; then tmp_found=0; fi
+done
+
+if [ "X${REMOTE_HOSTNAME}X" = "XX" ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+
+
+# Go through possible remote hosts and set eventual host default
+for host in "${REMOTE_HOSTS[@]}" ; do
+
+	# split string on ' '
+	parts=($host)
+
+	# check if this is a host we care about
+	if [ "$REMOTE_HOSTNAME" == ${parts[0]} ] ; then
+		#REMOTE_HOSTNAME=${parts[0]}
+		REMOTE_GLITE=${parts[1]}
+		PASSPHRASE_LOCATION=${parts[2]}
+		PRIVATE_KEY_LOCATION=${parts[3]}
+		break
+	fi
+done
+
+# Set values specified in command line arguments (these override defaults and REMOTE_HOSTS)
+for i; do
+	case "$i" in
+		-h | --help  ) echo -e "$USAGE"
+			exit 0;;
+		--rgahp-user  ) REMOTE_USER="$2"
+			shift 2;;
+		--rgahp-nokey  ) PRIVATE_KEY_LOCATION=""
+			shift ;;
+		--rgahp-key  ) PRIVATE_KEY_LOCATION="$2"
+			shift ; shift  ;;
+		--rgahp-pass  ) PASSPHRASE_LOCATION="$2"
+			shift 2;;
+		--rgahp-nopass  ) PASSPHRASE_LOCATION=""
+			shift ;;
+		--rgahp-glite ) REMOTE_GLITE="$2"
+			shift 2;;
+		--  ) shift; break ;;
+	esac
+done
+
+
+##### Handling authentication #####
+# Start and init ssh agent if key file is specified
+
+
+# if a passphrase is required, start up a ssh-agent and do ssh-add
+if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
+	# start the ssh-agent
+	eval `ssh-agent -s` 1>&2
+
+	# get the passphrase
+        PASSPHRASE=""
+        if [ -f $PASSPHRASE_LOCATION ]; then
+		PASSPHRASE=`cat $PASSPHRASE_LOCATION`
+        fi
+
+	# create a temp file for the expect script
+	SSH_ADD_SCRIPT=`mktemp`
+	chmod 700 $SSH_ADD_SCRIPT
+
+	# Create the expect script
+	echo "#!/usr/bin/expect -f
+		# get arguments
+		set num_args [llength \$argv]
+		set private_key_loc [lindex \$argv 0]
+
+		# spawn ssh-add process
+		spawn ssh-add $PRIVATE_KEY_LOCATION
+
+		set spawn_pid [exp_pid]
+
+		# set timeout for expected input
+		set timeout 5
+
+		expect {
+			# no passphrase required
+			\"*Identity added*\" {
+				exit 0
+			}
+			# sends passphrase
+			\"*passphrase*\" {
+				send -- \"$PASSPHRASE\r\"
+			}
+			# no ssh-agent running
+			\"*authentication agent*\" {
+				exit -1
+			}
+			# incorrect private key location
+			timeout {
+				exit -2
+			}
+		}
+
+		expect {
+			# all done
+			eof	{
+				exit 0
+			}
+			# incorrect passphrase
+			\"*passphrase*\" {
+				exit -3
+			}
+			# timeout
+			timeout {
+				exit -4
+			}
+		}" > $SSH_ADD_SCRIPT
+	
+
+	# call the expect script to ssh-add identity
+	$SSH_ADD_SCRIPT 1>&2
+	ADD_STATUS=$?
+
+	# remove temporary script
+	rm $SSH_ADD_SCRIPT
+
+	# check if ssh-add failed
+	if [ $ADD_STATUS != 0 ] ; then
+		# ssh-add script not found
+		if [ $ADD_STATUS == 1 ] ; then
+			ADD_STATUS=-1
+		fi
+		eval `ssh-agent -sk` 1>&2
+		exit $ADD_STATUS
+	fi
+fi
+
+
+##### Running remote command and cleanup #####
+
+# remove hostname from arglist
+shift
+
+# use BatchMode so we fail if a password is requested
+#echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
+ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -i -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+
+SSH_STATUS=$?
+
+# kill the ssh-agent if it exists
+eval `ssh-agent -sk` 1>&2
+
+exit $SSH_STATUS

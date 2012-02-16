@@ -221,8 +221,8 @@ int ReadPipeEnd::read(void* buffer, int len)
 
 		ASSERT(!m_registered);
 
-		DWORD result = WaitForSingleObject(m_event, m_nonblocking ? 0 : INFINITE);
-		if (result == WAIT_TIMEOUT) {
+		DWORD res = WaitForSingleObject(m_event, m_nonblocking ? 0 : INFINITE);
+		if (res == WAIT_TIMEOUT) {
 			errno = EWOULDBLOCK;
 			return -1;
 		}

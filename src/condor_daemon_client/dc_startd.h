@@ -213,6 +213,7 @@ public:
 	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 
+	const ClassAd *getJobAd() { return &m_job_ad;}
 private:
 	MyString m_claim_id;
 	ClassAd m_job_ad;

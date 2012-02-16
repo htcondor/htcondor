@@ -425,7 +425,7 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 	int result = -1;
 
 #ifdef WIN32	// only implemented on Win32 so far...
-	char * filename = NULL;
+	//char * filename = NULL;
 	int filename_len;
 	char *ptr = NULL;
 	char mutex_name[MAX_PATH];

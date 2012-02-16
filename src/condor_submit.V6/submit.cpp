@@ -375,6 +375,7 @@ const char* EC2AmiID = "ec2_ami_id";
 const char* EC2UserData = "ec2_user_data";
 const char* EC2UserDataFile = "ec2_user_data_file";
 const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2KeyPair = "ec2_keypair";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
@@ -382,6 +383,7 @@ const char* EC2EBSVolumes = "ec2_ebs_volumes";
 const char* EC2AvailabilityZone= "ec2_availability_zone";
 const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
+const char* EC2TagNames = "ec2_tag_names";
 
 
 //
@@ -1789,6 +1791,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
 				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
+				(strcasecmp (JobGridType, "batch") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||
 				(strcasecmp (JobGridType, "sge") == MATCH) ||
 				(strcasecmp (JobGridType, "lsf") == MATCH) ||
@@ -5049,12 +5052,29 @@ SetGridParams()
 		exit( 1 );
 	}
 	
-	// EC2KeyPairFile is not a necessary parameter
-	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
-		// for the relative path, the keypair output file will be written to the IWD
-		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+	bool bKeyPairPresent=false;
+	
+	// EC2KeyPair is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPair, ATTR_EC2_KEY_PAIR )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
+		bKeyPairPresent=true;
+	}
+	
+	// EC2KeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+	    if (bKeyPairPresent)
+	    {
+	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n");
+	    }
+	    else
+	    {
+	      // for the relative path, the keypair output file will be written to the IWD
+	      buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+	      free( tmp );
+	      InsertJobExpr( buffer.Value() );
+	    }
 	}
 	
 	// EC2GroupName is not a necessary parameter
@@ -5161,7 +5181,83 @@ SetGridParams()
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
-	
+
+		//
+		// Handle EC2 tags - don't require user to specify the list of tag names
+		//
+		// Collect all the EC2 tag names, then param for each
+		//
+		// EC2TagNames is needed because EC2 tags are case-sensitive
+		// and ClassAd attribute names are not. We build it for the
+		// user, but also let the user override entries in it with
+		// their own case preference. Ours will always be lower-cased.
+		//
+
+	StringList tagNames;
+	if ((tmp = condor_param(EC2TagNames, ATTR_EC2_TAG_NAMES))) {
+		tagNames.initializeFromString(tmp);
+		free(tmp); tmp = NULL;
+	}
+
+	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
+	for (;!hash_iter_done(it); hash_iter_next(it)) {
+		char *key = hash_iter_key(it);
+		char *name = NULL;
+		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
+			key[prefix_len]) {
+			name = &key[prefix_len];
+		} else if (!strncasecmp(key, "ec2_tag_", 8) &&
+				   key[8]) {
+			name = &key[8];
+		} else {
+			continue;
+		}
+
+		if (strncasecmp(name, "Names", 5) &&
+			!tagNames.contains_anycase(name)) {
+			tagNames.append(name);
+		}
+	}
+	hash_iter_delete(&it);
+
+	stringstream ss;
+	char *tagName;
+	tagNames.rewind();
+	while ((tagName = tagNames.next())) {
+			// XXX: Check that tagName does not contain an equal sign (=)
+		string tag;
+		string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
+		string tagCmd("ec2_tag_"); tagCmd.append(tagName);
+		char *value = NULL;
+		if ((value = condor_param(tagCmd.c_str(), tagAttr.c_str()))) {
+			buffer.sprintf("%s = \"%s\"", tagAttr.c_str(), value);
+			InsertJobExpr(buffer.Value());
+			free(value); value = NULL;
+		} else {
+				// XXX: Should never happen, we just searched for the names, error or something
+		}
+	}
+
+		// For compatibility with the AWS Console, set the Name tag to
+		// be the executable, which is just a label for EC2 jobs
+	tagNames.rewind();
+	if (!tagNames.contains_anycase("Name")) {
+		if (JobUniverse == CONDOR_UNIVERSE_GRID &&
+			JobGridType != NULL &&
+			(strcasecmp( JobGridType, "ec2" ) == MATCH)) {
+			char *ename = condor_param(Executable, ATTR_JOB_CMD); // !NULL by now
+			tagNames.append("Name");
+			buffer.sprintf("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
+			InsertJobExpr(buffer);
+			free(ename); ename = NULL;
+		}
+	}
+
+	buffer.sprintf("%s = \"%s\"",
+				   ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
+	InsertJobExpr(buffer.Value());
+
 
 	//
 	// Deltacloud grid-type submit attributes

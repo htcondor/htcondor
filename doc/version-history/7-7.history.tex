@@ -29,8 +29,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The condor\_hdfs daemon has been moved to the contrib section, and is 
+\item Condor binaries will now look for the Condor configuration file in
+\File{\$(HOME)/.condor/condor\_config} in addition to the locations where
+they already look.
+\File{\$(HOME)/.condor/condor\_config} is checked immediately after the 
+\Env{CONDOR\_CONFIG} environment variable.
+
+\item The \condor{hdfs} daemon has been moved to the contrib section, and is 
 available from the source code.
+\Ticket{2797}
+
+\item Several of the Condor programs used to be a single executable
+hard linked to multiple filenames. Now, symbolic links are used.
+\Ticket{2140}
 
 \end{itemize}
 
@@ -46,7 +57,11 @@ available from the source code.
 
 \begin{itemize}
 
-\item None.
+\item The shared library \File{libcondor\_utils} now includes the Condor
+version in its name. This will reduce the chance of a Condor binary
+using the wrong version of the library, which can result in a crash or
+other bad behavior.
+\Ticket{2613}
 
 \end{itemize}
 
@@ -200,7 +215,7 @@ whether the DAG ended successfully or not.
 See section~\ref{sec:DAGFinalNode} for details.
 \Ticket{1482}
 
-\item Improved the ouput of \Condor{userprio} to better support hierarchical
+\item Improved the output of \Condor{userprio} to better support hierarchical
 groups. 
 The first column of the output no longer truncates long user or group names.
 User names are shown indented under group names,
@@ -249,8 +264,9 @@ using the new default configuration setting
 \Ticket{2729}
 
 \item The configuration macro \MacroNI{PROCD\_LOG} now defaults to
- \File{\$(LOG)/ProcLog}.  Previously, there was no default value,
- so the \Condor{procd} did not log by default.
+\File{\$(LOG)/ProcLog}.  Previously, there was no default value,
+so the \Condor{procd} did not log by default.
+\Ticket{2775}
 
 \item The meaning of the \Attr{VirtualMemory} attribute of the \Condor{startd} 
 has been changed for Linux platforms.
@@ -262,18 +278,26 @@ is the sum of paging space and physical memory,
 which more accurately represents the virtual memory size of the machine.
 \Ticket{2763}
 
-\item The submit file attribute \SubmitCmd{globus\_xml} is no longer
-recognized. The following configuration parameters are no longer
+\item The submit command \SubmitCmd{globus\_xml} is no longer
+recognized. Therefore, the following configuration variables are no longer
 recognized:
 \begin{itemize}
-  \item \Macro{GRIDFTP\_SERVER}
-  \item \Macro{GRIDFTP\_SERVER\_WRAPPER}
-  \item \Macro{GRIDFTP\_URL\_BASE}
-  \item \Macro{GT4\_GAHP}
-  \item \Macro{GT4\_LOCATION}
-  \item \Macro{GT42\_GAHP}
-  \item \Macro{GT42\_LOCATION}
-  \item \Macro{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}
+  \item \Expr{GRIDFTP\_SERVER}
+\index{GRIDFTP\_SERVER configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDFTP\_SERVER} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GRIDFTP\_SERVER\_WRAPPER}
+\index{GRIDFTP\_SERVER\_WRAPPER configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDFTP\_SERVER\_WRAPPER} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GRIDFTP\_URL\_BASE}
+\index{GRIDFTP\_URL\_BASE configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDFTP\_URL\_BASE} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT4\_GAHP}
+\index{GT4\_GAHP configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT4\_GAHP} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT4\_LOCATION}
+\index{GT4\_LOCATION configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT4\_LOCATION} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT42\_GAHP}
+\index{GT42\_GAHP configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT42\_GAHP} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT42\_LOCATION}
+\index{GT42\_LOCATION configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT42\_LOCATION} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}
+\index{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE} configuration variable no longer exists as of Condor version 7.7.5}
 \end{itemize}
 \Ticket{2782}
 
@@ -301,7 +325,7 @@ to be directories instead of files.
 
 \item Communication errors were not always correctly handled when
 fetching results of a query when using the \Opt{-stream} option to
-\Condor{q}.  This problem was introduced in 7.7.0.
+\Condor{q}.  This problem was introduced in Condor version 7.7.0.
 \Ticket{2601}
 
 \item Fixed Condor's CronTab (Crondor, section~\ref{sec:CronTab})
@@ -322,11 +346,12 @@ affected \Attr{ImageSize} and \Attr{ResidentSetSize} but not
 \item Fixed a rare condition that could cause a job to remain in the
 running state indefinitely when the job was removed or put on hold
 and there was a communication failure between the \Condor{shadow}
-and the \Condor{starter}.  This problem was introduced in 7.7.2.
+and the \Condor{starter}.  
+This problem was introduced in Condor version 7.7.2.
 \Ticket{2591}
 
 \item Fixed a bug in the \Condor{gridmanager} that could cause crashes
-and prevent the \Attr{x509UserProxyEmail} from being set properly for
+and prevent the attribute \Attr{x509UserProxyEmail} from being set properly for
 jobs forwarded via Condor-C.
 \Ticket{2655}
 
@@ -338,8 +363,8 @@ its children are still running.
 \Ticket{2463}
 
 \item Fixed a bug in \Condor{dagman} that caused a DAG to fail if node
-job user log files were actually symlinks.  This problem was introduced
-in the 7.7 series.
+job user log files were actually symbolic links.  
+This problem was introduced in the Condor 7.7 development series.
 \Ticket{2704}
 
 \item Fixed a bug in the collection of Statistics attributes,

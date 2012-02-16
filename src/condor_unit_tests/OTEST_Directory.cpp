@@ -413,6 +413,7 @@ static void setup() {
 	cut_assert_z( fclose(file_1) );
 }
 
+MSC_DISABLE_WARNING(6031) // return value ignored.
 static void cleanup() {
 	// Remove the created files/directories/symlinks
 	cut_assert_z( chdir(tmp.Value()) );
@@ -466,6 +467,7 @@ static void cleanup() {
 	
 	cut_assert_z( rmdir(tmp.Value()) );
 }
+MSC_RESTORE_WARNING(6031) // return value ignored.
 
 static bool test_path_constructor_null() {
 	emit_test("Test the Directory constructor when passed a NULL directory "

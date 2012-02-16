@@ -79,8 +79,10 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 
 		// #5
 		char psNewDir[MAX_PATH];
-		GetWindowsDirectory(psNewDir, MAX_PATH);
-		listDirectoriesInPath.insert(psNewDir);
+		if (GetWindowsDirectory(psNewDir, MAX_PATH) > 0)
+			listDirectoriesInPath.insert(psNewDir);
+		else
+			dprintf( D_FULLDEBUG, "GetWindowsDirectory() failed, err=%d\n", GetLastError());
 
 		listDirectoriesInPath.rewind();
 		listDirectoriesInPath.next();
@@ -93,15 +95,19 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 		listDirectoriesInPath.next();
 
 		// #3
-		GetSystemDirectory(psNewDir, MAX_PATH);
-		listDirectoriesInPath.insert(psNewDir);
+		if (GetSystemDirectory(psNewDir, MAX_PATH) > 0)
+			listDirectoriesInPath.insert(psNewDir);
+		else
+			dprintf( D_FULLDEBUG, "GetSystemDirectory() failed, err=%d\n", GetLastError());
 
 		listDirectoriesInPath.rewind();
 		listDirectoriesInPath.next();
 
 		// #2
-		_getcwd(psNewDir, MAX_PATH);
-		listDirectoriesInPath.insert(psNewDir);
+		if (_getcwd(psNewDir, MAX_PATH))
+			listDirectoriesInPath.insert(psNewDir);
+		else
+			dprintf( D_FULLDEBUG, "_getcwd() failed, err=%d\n", errno);
 
 		// #1  had better be covered by the user passing in strAdditionalSearchDir
 	}

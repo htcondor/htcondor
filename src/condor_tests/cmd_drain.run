@@ -74,7 +74,7 @@ my $quick_drain_on_execute = sub {
 
 # verify that a 20s job gets evicted during quick draining
 JobIsEvicted::RunCheck(
-  duration=>20,
+  duration=>3600,
   on_execute=>$quick_drain_on_execute
 );
 

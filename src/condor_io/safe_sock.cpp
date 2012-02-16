@@ -274,6 +274,7 @@ SafeSock::peek_end_of_message()
 	return false;
 }
 
+MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
 SafeSock::my_ip_str()
 {
@@ -320,6 +321,7 @@ SafeSock::my_ip_str()
 	strcpy(_my_ip_buf, addr.to_ip_string().Value());
 	return _my_ip_buf;
 }
+MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int SafeSock::connect(
 	char const	*host,
@@ -802,8 +804,9 @@ char * SafeSock::serialize(char *buf)
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
 	int itmp;
-	sscanf(ptmp,"%d*",&itmp);
-	_special_state=safesock_state(itmp);
+	int citems = sscanf(ptmp,"%d*",&itmp);
+	if (1 == citems)
+		_special_state=safesock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
     if(ptmp) ptmp++;
@@ -819,7 +822,8 @@ char * SafeSock::serialize(char *buf)
     else if(ptmp) {
 		size_t sinful_len = strlen(ptmp);
 		sinful_string = new char [1 + sinful_len];
-        sscanf(ptmp,"%s",sinful_string);
+        citems = sscanf(ptmp,"%s",sinful_string);
+		if (1 != citems) sinful_string[0] = 0;
 		sinful_string[sinful_len] = 0;
     }
 

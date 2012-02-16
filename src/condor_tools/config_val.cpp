@@ -73,7 +73,7 @@ enum ModeType {CONDOR_QUERY, CONDOR_SET, CONDOR_UNSET,
 
 // On some systems, the output from config_val sometimes doesn't show
 // up unless we explicitly flush before we exit.
-void
+void PREFAST_NORETURN
 my_exit( int status )
 {
 	fflush( stdout );
@@ -632,6 +632,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// We need a version with a newline at the end to make
 		// everything cool at the other end.
 	char* buf = (char*)malloc( strlen(param_value) + 2 );
+	ASSERT( buf != NULL );
 	sprintf( buf, "%s\n", param_value );
 
 	s.timeout( 30 );

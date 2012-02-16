@@ -52,8 +52,10 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
     int server_status = AUTH_SSL_A_OK;
     int client_status = AUTH_SSL_A_OK;
     int done = 0;
+    MSC_DISABLE_WARNING(6326) // comparison of a constant with another constant.
     int success = (0 == 0);
     int fail = (0 == 1);
+    MSC_RESTORE_WARNING(6326) // comparison of a constant with another constant.
     int round_ctr = 0;
     BIO *conn_in = NULL, *conn_out = NULL;
     SSL *ssl = NULL;

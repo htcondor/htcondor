@@ -512,6 +512,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
+	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 	unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
@@ -530,6 +531,7 @@ int main_shutdown_remove(Service *, int) {
 void ExitSuccess() {
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
+	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 	unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -1028,6 +1030,7 @@ void main_init (int argc, char ** const argv) {
 			}
 			
 			dagman.dag->RemoveRunningJobs(dagman, true);
+			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 			unlink( lockFileName );
 			dagman.CleanUp();
 			
@@ -1084,6 +1087,7 @@ void main_init (int argc, char ** const argv) {
 			}
 			
 			dagman.dag->RemoveRunningJobs(dagman, true);
+			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 			unlink( lockFileName );
 			dagman.CleanUp();
 			

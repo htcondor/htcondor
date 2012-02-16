@@ -532,6 +532,7 @@ if (BUILD_TESTS)
 	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "core;quick;full;quicknolink")
 	condor_pl_test(job_partitionable_basic_van "Test basic partitionable slot capability" "core;quick;full;quicknolink")
 	condor_pl_test(job_hgq_negfail_basic_van "Test basic Hierarchical Group Quota behavior" "core;quick;full;quicknolink")
+	condor_pl_test(job_hgq_autoregroup_basic_van "Test Hierarchical Group Quota autoregroup and group sort" "core;quick;full;quicknolink")
 
 	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")

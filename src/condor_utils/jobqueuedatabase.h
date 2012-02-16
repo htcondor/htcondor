@@ -164,6 +164,7 @@ public:
 
 		len = 2048;
 		sql_str = (char *) malloc (len * sizeof(char));
+		ASSERT( sql_str );
 
 		snprintf(sql_str, len, "SELECT major, minor, back_to_major, back_to_minor FROM quill_schema_version");
 

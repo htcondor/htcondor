@@ -243,6 +243,20 @@ END_C_DECLS
 
 #endif
 
+// leave this code here, but disable it when not actively checking for MSVC_WARNINGS
+// defeat warnings MSVC_WARNINGS about isspace, isdigit, etc
+inline int is_space(char ch) { return isspace( (int)( (unsigned char)(ch) ) ); }
+inline int is_digit(char ch) { return isdigit( (int)( (unsigned char)(ch) ) ); }
+inline int is_xdigit(char ch){ return isxdigit((int)( (unsigned char)(ch) ) ); }
+inline int is_alnum(char ch) { return isalnum( (int)( (unsigned char)(ch) ) ); }
+inline int is_alpha(char ch) { return isalpha( (int)( (unsigned char)(ch) ) ); }
+
+#define isspace(ch) is_space(ch)
+#define isdigit(ch) is_digit(ch)
+#define isxdigit(ch) is_xdigit(ch)
+#define isalnum(ch) is_alnum(ch)
+#define isalpha(ch) is_alpha(ch)
+//*/
 
 /* Define the PRIx64 macros */
 

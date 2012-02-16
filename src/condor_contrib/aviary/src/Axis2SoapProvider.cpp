@@ -25,6 +25,15 @@
 #include <axutil_file_handler.h>
 
 using namespace aviary::soap;
+using namespace aviary::transport;
+
+void
+Axis2SoapProvider::invalidate() {
+
+	if (m_ep) {
+		m_ep->stop();
+	}
+}
 
 Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, const char* _repo_path)
 {
@@ -44,7 +53,11 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
     m_allocator = axutil_allocator_init(NULL);
     m_env = axutil_env_create(m_allocator);
 
-	m_ep = NULL;
+	// the factory gave us ownership for this
+	if (m_ep) {
+		delete m_ep;
+		m_ep = NULL;
+	}
 
 }
 
@@ -66,13 +79,10 @@ Axis2SoapProvider::~Axis2SoapProvider()
 
     axiom_xml_reader_cleanup();
 
-	// the factory gave us ownership for this
 	if (m_ep) {
-		m_ep->invalidate();
 		delete m_ep;
 		m_ep = NULL;
 	}
-
 }
 
 bool

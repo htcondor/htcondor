@@ -2778,6 +2778,7 @@ obtainAdsFromCollector (
 				subReqs = ExprTreeToString(reqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);
+				ASSERT( newReqs != NULL );
 				snprintf(newReqs, length+15, "Saved%s = %s", 
 							ATTR_REQUIREMENTS, subReqs); 
 				ad->InsertOrUpdate(newReqs);
@@ -2790,6 +2791,7 @@ obtainAdsFromCollector (
 				subReqs = ExprTreeToString(negReqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
 				newReqs = (char *)malloc(length+16);
+				ASSERT( newReqs != NULL );
 
 				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, 
 							subReqs); 
@@ -4072,6 +4074,7 @@ Warning: scheddAddr may not be the actual address we'll use to contact the
 schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
+MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
@@ -4141,6 +4144,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	savedRequirements = NULL;
 	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;
 	tmp = (char *)malloc(length);
+	ASSERT( tmp != NULL );
 	snprintf(tmp, length, "Saved%s", ATTR_REQUIREMENTS);
 	savedRequirements = offer->LookupExpr(tmp);
 	free(tmp);
@@ -4243,6 +4247,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			 offline ? " (offline)" : "");
 	return MM_GOOD_MATCH;
 }
+MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
 void
 Matchmaker::calculateSubmitterLimit(

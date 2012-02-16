@@ -22,6 +22,8 @@
         
        #include "AviaryCommon_ResourceLocation.h"
           
+       #include "AviaryCommon_Status.h"
+          
         #include <axutil_qname.h>
         
 
@@ -44,6 +46,10 @@ namespace AviaryLocator
 
                 
                 bool isValidResources;
+            AviaryCommon::Status* property_Status;
+
+                
+                bool isValidStatus;
             
 
         /*** Private methods ***/
@@ -51,6 +57,10 @@ namespace AviaryLocator
 
         bool WSF_CALL
         setResourcesNil();
+            
+
+        bool WSF_CALL
+        setStatusNil();
             
 
 
@@ -77,9 +87,10 @@ namespace AviaryLocator
          * Constructor for creating LocateResponse
          * @param 
          * @param Resources std::vector<AviaryCommon::ResourceLocation*>*
+         * @param Status AviaryCommon::Status*
          * @return newly created LocateResponse object
          */
-        LocateResponse(std::vector<AviaryCommon::ResourceLocation*>* arg_Resources);
+        LocateResponse(std::vector<AviaryCommon::ResourceLocation*>* arg_Resources,AviaryCommon::Status* arg_Status);
         
         
         /********************************** Class get set methods **************************************/
@@ -108,6 +119,30 @@ namespace AviaryLocator
          */
         WSF_EXTERN bool WSF_CALL
         resetResources();
+        
+        
+
+        /**
+         * Getter for status. 
+         * @return AviaryCommon::Status*
+         */
+        WSF_EXTERN AviaryCommon::Status* WSF_CALL
+        getStatus();
+
+        /**
+         * Setter for status.
+         * @param arg_Status AviaryCommon::Status*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setStatus(AviaryCommon::Status*  arg_Status);
+
+        /**
+         * Re setter for status
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetStatus();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -196,6 +231,16 @@ namespace AviaryLocator
          */
         bool WSF_CALL
         isResourcesNil();
+
+
+        
+
+        /**
+         * Check whether status is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isStatusNil();
 
 
         
@@ -289,6 +334,17 @@ namespace AviaryLocator
 
         std::vector<AviaryCommon::ResourceLocation*>* WSF_CALL
         getProperty1();
+
+    
+        
+
+        /**
+         * Getter for status by property number (2)
+         * @return AviaryCommon::Status
+         */
+
+        AviaryCommon::Status* WSF_CALL
+        getProperty2();
 
     
 

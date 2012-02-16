@@ -2933,6 +2933,7 @@ ShadowExceptionEvent::writeEvent (FILE *file)
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	snprintf(messagestr, 512, "Shadow exception: %s", message);
+	messagestr[COUNTOF(messagestr)-1] = 0;
 
 		// remove the new line in the end if any
 	if  (messagestr[strlen(messagestr)-1] == '\n')
@@ -3581,6 +3582,7 @@ char*
 ULogEvent::rusageToStr (rusage usage)
 {
 	char* result = (char*) malloc(128);
+	ASSERT( result != NULL );
 
 	int usr_secs = usage.ru_utime.tv_sec;
 	int sys_secs = usage.ru_stime.tv_sec;

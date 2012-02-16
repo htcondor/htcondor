@@ -25,8 +25,8 @@
 // local includes
 #include "AviaryUtils.h"
 #include "AviaryProvider.h"
-#include "EndpointObject.h"
 #include "LocatorObject.h"
+#include "AviaryLocatorServiceSkeleton.h"
 
 using namespace std;
 using namespace aviary::util;
@@ -34,23 +34,17 @@ using namespace aviary::transport;
 using namespace aviary::locator;
 
 AviaryProvider* provider = NULL;
-LocatorObject* locatorObj = NULL;
 
 struct AviaryLocatorPlugin : public Service, CollectorPlugin
 {
-	typedef HashTable<AdNameHashKey, EndpointObject *> GenericAdHashTable;
-	GenericAdHashTable *endpointAds;
 
 	void
 	initialize()
 	{
-		int port;
 		char *tmp;
 		string collName;
 
 		dprintf(D_FULLDEBUG, "AviaryLocatorPlugin: Initializing...\n");
-
-		endpointAds = new GenericAdHashTable(4096, &adNameHashFunction);
 
 		tmp = param("COLLECTOR_NAME");
 		if (NULL == tmp) {
@@ -62,7 +56,7 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 
 		string log_name;
 		sprintf(log_name,"aviary_locator.log");
-		provider = AviaryProviderFactory::create(log_name, getPoolName(),"LOCATOR", "services/locator/");
+		provider = AviaryProviderFactory::create(log_name, getPoolName(),LOCATOR, "services/locator/");
 		if (!provider) {
 			EXCEPT("Unable to configure AviaryProvider. Exiting...");
 		}
@@ -79,27 +73,22 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 		if (-1 == (index =
 				daemonCore->Register_Socket((Stream *) sock,
 											"Aviary Method Socket",
-										   (SocketHandlercpp) ( &AviaryLocatorPlugin::HandleTransportSocket ),
+										   (SocketHandlercpp) ( &AviaryLocatorPlugin::handleTransportSocket ),
 										   "Handler for Aviary Methods.", this))) {
 			EXCEPT("Failed to register transport socket");
 		}
-	}
 
-	// TODO: need this?
-	void
-	initPublicAd()
-	{
-// 		publicAd = new ClassAd();
-// 		publicAd.SetMyTypeName(GENERIC_ADTYPE);
-// 		publicAd.SetTargetTypeName("Locator");
-// 
-// 		publicAd.Assign(ATTR_NAME, daemonName.c_str());
-// 		daemonCore->publish(&publicAd);
+		int pruning_interval = param_integer("AVIARY_LOCATOR_PRUNE_INTERVAL",20);
+		if (-1 == (index = daemonCore->Register_Timer(
+			pruning_interval,pruning_interval*2,
+							(TimerHandlercpp)(&AviaryLocatorPlugin::handleTimerCallback),
+							"Timer for pruning unresponsive endpoints", this))) {
+        	EXCEPT("Failed to register pruning timer");
+        }
 	}
-
 
 	void invalidate_all() {
-		endpointAds->clear();
+		locator.invalidate_all();
 	}
 
 	void
@@ -112,28 +101,17 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 	void
 	update(int command, const ClassAd &ad)
 	{
-		MyString name;
-		AdNameHashKey hashKey;
-		EndpointObject *endpointObject;
+		string generic_target_name;
 
 		switch (command) {
 		case UPDATE_AD_GENERIC:
 			dprintf(D_FULLDEBUG, "AviaryLocatorPlugin: Received UPDATE_AD_GENERIC\n");
-
-			if (!makeGenericAdHashKey(hashKey, ((ClassAd *) &ad))) {
-				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+			if (ad.LookupString(ATTR_TARGET_TYPE,generic_target_name)) {
+				if (generic_target_name != ENDPOINT) {
+					return;
+				}
+				locator.update(ad);
 			}
-
-			if (endpointAds->lookup(hashKey, endpointObject)) {
-				// Key doesn't exist
-				endpointObject = new EndpointObject(hashKey.name.Value());
-
-				// TODO: Ignore old value?
-				endpointAds->insert(hashKey, endpointObject);
-			}
-
-			endpointObject->update(ad);
-
 			break;
 
 		default:
@@ -145,22 +123,16 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 	void
 	invalidate(int command, const ClassAd &ad)
 	{
-		AdNameHashKey hashKey;
-		EndpointObject *endpointObject;
+		string generic_target_name;
 
 		switch (command) {
 			case INVALIDATE_ADS_GENERIC:
 				dprintf(D_FULLDEBUG, "AviaryLocatorPlugin: Received INVALIDATE_ADS_GENERIC\n");
-				if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad))) {
-					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
-					return;
-				}
-				if (0 == endpointAds->lookup(hashKey, endpointObject)) {
-					endpointAds->remove(hashKey);
-					delete endpointObject;
-				}
-				else {
-					dprintf(D_FULLDEBUG, "%s endpoint key not found for removal\n",HashString(hashKey).Value());
+				if (ad.LookupString(ATTR_TARGET_TYPE,generic_target_name)) {
+					if (generic_target_name != ENDPOINT) {
+						return;
+					}
+					locator.invalidate(ad);
 				}
 			break;
 			default:
@@ -170,13 +142,20 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 	}
 
 	int
-	HandleTransportSocket(Stream *)
+	handleTransportSocket(Stream *)
 	{
     	string provider_error;
     	if (!provider->processRequest(provider_error)) {
         	dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
     	}
     	return KEEP_STREAM;
+	}
+
+	void
+	handleTimerCallback(Service *)
+	{
+		int max_misses = param_integer("AVIARY_LOCATOR_MISSED_UPDATES",2);
+		locator.pruneMissingEndpoints(max_misses);
 	}
 };
 

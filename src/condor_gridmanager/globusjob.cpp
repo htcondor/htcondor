@@ -986,6 +986,8 @@ void GlobusJob::doEvaluateState()
 		old_gm_state = gmState;
 		old_globus_state = globusState;
 
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
+
 		switch ( gmState ) {
 		case GM_INIT: {
 			// This is the state all jobs start in when the GlobusJob object

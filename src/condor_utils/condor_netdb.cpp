@@ -213,6 +213,7 @@ condor_gethostbyaddr_ipv6(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
     struct sockaddr_in sinaddr;
     int e;
 
+    MSC_SUPPRESS_WARNING(6287) // warning: Redundant code: the left and right sub-expressions are identical
     if (type != AF_INET || type != PF_INET) {
         // fallback
         return condor_gethostbyaddr_ipv4(addr, len, type);
@@ -398,13 +399,13 @@ convert_ip_to_hostname(const char *addr,
 	if (NULL != (default_domain_name = param("DEFAULT_DOMAIN_NAME"))) {
 		int h_name_len;
 		int i;
-		memset(h_name, 0, maxlen);
 		strncpy(h_name, inet_ntoa(*((struct in_addr *) addr)), maxlen - 1);
 		for (i = 0; h_name[i]; i++) {
 			if ('.' == h_name[i]) {
 				h_name[i] = '-';
 			}
 		}
+		h_name[maxlen-1] = 0; // make sure of null term
 		h_name_len = strlen(h_name);
 		snprintf(&(h_name[h_name_len]), maxlen - h_name_len, ".%s",
 				 default_domain_name);
