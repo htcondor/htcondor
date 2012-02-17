@@ -1716,7 +1716,7 @@ JICShadow::proxyExpiring()
 {
 	int retval = TRUE;
 
-	holdJob("Proxy about to expire", 0, 0);
+	holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
 
 	return retval;
 }
