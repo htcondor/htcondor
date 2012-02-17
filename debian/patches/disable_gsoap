@@ -1,0 +1,26 @@
+diff --git a/debian/control b/debian/control
+index b13f72f..32d5253 100644
+--- a/debian/control
++++ b/debian/control
+@@ -12,7 +12,7 @@ Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev,
+  libboost-system-dev, libboost-regex-dev, libboost-filesystem-dev,
+  libexpat1-dev, libxml2-dev, libvirt-dev, zlib1g-dev, gcj-jdk | java-compiler,
+  libcgroup-dev (>= 0.37~), uuid-dev, chrpath, libldap2-dev | libldap-dev,
+- help2man, gsoap (>= 2.7.17-1~)
++ help2man
+ Standards-Version: 3.9.2
+ 
+ 
+diff --git a/debian/rules b/debian/rules
+index 133172c..f9f327a 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -25,7 +25,7 @@ override_dh_auto_configure:
+ 		-DBUILDID:STRING="Debian-$(debver)"\
+ 		-DFORCE_PRE_RELEASE:STRING="Debian-$(debver)"\
+ 		-DCMAKE_INSTALL_RPATH:STRING="/usr/lib/condor" \
+-		-DHAVE_EXT_GSOAP:BOOL=ON \
++		-DHAVE_EXT_GSOAP:BOOL=OFF \
+ 		-DHAVE_EXT_CURL:BOOL=ON \
+ 		-DHAVE_EXT_OPENSSL:BOOL=ON \
+ 		-DHAVE_EXT_BOOST:BOOL=ON \
