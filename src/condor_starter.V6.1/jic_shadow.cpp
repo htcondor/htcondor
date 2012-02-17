@@ -1741,15 +1741,16 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 
 	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
 
-	// now, if the update was successful, create/reset the timer for the proxy
-	// expiring.  we want to evict the job before the proxy expires.
-	//
-	// in the case of glexec (i.e. gpsh != NULL) there are actually two copies
-	// of the proxy, one owned by condor and one owned by the user.  we should
-	// evict before either of them expires.  in practice, they payload is always
-	// shorter lived, so at the moment we only check the payload.
-
-	if(retval) {
+	// now, if the update was successful, and we are using glexec, make sure we
+	// set a timer to put the job on hold before the proxy expires and we lose
+	// control of it.
+#if defined(LINUX)
+	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
+#else
+	// dummy for non-linux platforms.
+	int* gpsh = NULL;
+#endif
+	if(retval && gpsh) {
 		// if there was a timer registered, cancel it
 		if( m_proxy_expiration_tid != -1 ) {
 			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
