@@ -115,6 +115,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
+[MASTER_NEW_BINARY_RESTART]
+aliases=
+default=GRACEFUL
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Master New Binary Restart Mode
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=572
+
 [MASTER_CHECK_NEW_EXEC_INTERVAL]
 aliases=
 default=300
