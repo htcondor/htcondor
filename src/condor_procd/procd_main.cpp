@@ -367,8 +367,12 @@ main(int argc, char* argv[])
 {
 	// close stdin and stdout right away, since we don't use them
 	//
-	fclose(stdin);
-	fclose(stdout);
+	if (freopen(NULL_FILE, "r", stdin) == NULL ||
+		freopen(NULL_FILE, "w", stdout) == NULL) {
+		fprintf(stderr, "Failed to reopen stdin and stdout, errno=%d (%s)\n",
+				errno, strerror(errno));
+		exit(1);
+	}
 
 	// this modifies our static configuration variables based on
 	// our command line parameters
@@ -519,7 +523,11 @@ main(int argc, char* argv[])
 	// this way, calling programs can set up a pipe to block on until
 	// we're accepting connections
 	//
-	fclose(stderr);
+	if ( freopen(NULL_FILE, "w", stderr) == NULL ) {
+		fprintf( stderr, "Failed to reopen stderr, errno=%d (%s)\n",
+				 errno, strerror(errno) );
+		exit( 1 );
+	}
 
 	// finally, enter the server's wait loop
 	//

@@ -637,8 +637,6 @@ WANT_SUSPEND_VANILLA = True
 KILL = False
 IS_GLIDEIN = True
 STARTD_EXPRS = IS_GLIDEIN, START, DaemonStopTime
-
-MASTER_WAITS_FOR_GCB_BROKER = False
 EOF
 	if( $config_gsi ) {
 	    print CONDOR_CONFIG <<"EOF";

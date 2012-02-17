@@ -65,7 +65,7 @@ to this module.
 
 class CondorFileInfo {
 public:
-	CondorFileInfo( char *n ) {
+	CondorFileInfo( const char *n ) {
 		info_name = strdup(n);
 		open_count = 0;
 		read_count = read_bytes = 0;
@@ -231,7 +231,7 @@ void CondorFileTable::dump()
 		if( p ) {
 			dprintf(D_ALWAYS,"fd %d\n",j);
 			dprintf(D_ALWAYS,"\tlogical name: %s\n",p->logical_name);
-			dprintf(D_ALWAYS,"\toffset:       %d\n",p->offset);
+			dprintf(D_ALWAYS,"\toffset:       %ld\n",(long)p->offset);
 			dprintf(D_ALWAYS,"\tdups:         %d\n",count_pointer_uses(p));
 			dprintf(D_ALWAYS,"\topen flags:   0x%x\n",p->flags);
 			if( p->file ) {
@@ -527,11 +527,11 @@ CondorFile * CondorFileTable::open_url_retry( char const *url, int flags, int mo
 	if(f) return f;
 
 	if( RemoteSysCalls() ) {
-		char *path;
+		const char *path;
 
 		if( strstr(url,"remote:") ) return 0;
 
-		path = (char*)strrchr(url,':');
+		path = strrchr(url,':');
 		if(!path) return 0;
 
 		path++;
@@ -824,7 +824,7 @@ ssize_t CondorFileTable::read( int fd, void *data, size_t nbyte )
 		return -1;
 	}
 	
-	if( (!data) || (nbyte<0) ) {
+	if (!data) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -863,7 +863,7 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 		return -1;
 	}
 
-	if( (!data) || (nbyte<0) ) {
+	if (!data) {
 		errno = EINVAL;
 		return -1;
 	}

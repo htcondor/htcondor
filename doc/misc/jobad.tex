@@ -316,15 +316,33 @@ a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_instance\_type}.
 Specifies a service-specific instance type.
 
-%%% ClassAd attribute: EC2KeyPairFile
-\index{ClassAd job attribute!EC2KeyPairFile}
-\index{EC2KeyPairFile!job ClassAd attribute}
-\item[\AdAttr{EC2KeyPairFile}:] 
+%%% ClassAd attribute: EC2KeyPair
+\index{ClassAd job attribute!EC2KeyPair}
+\index{EC2KeyPair!job ClassAd attribute}
+\item[\AdAttr{EC2KeyPair}:] 
 Used for grid type ec2 jobs;
 a string taken from the definition of the submit description file command
-\SubmitCmd{ec2\_key\_pair\_file}.
-Defines that path and file name of the file 
-into which to write the SSH key used to access the image, once it is running. 
+\SubmitCmd{ec2\_key\_pair}.
+Defines the key pair associated with the EC2 instance. 
+
+%%% ClassAd attribute: EC2TagNames
+\index{ClassAd job attribute!EC2TagNames}
+\index{EC2TagNames!job ClassAd attribute}
+\item[\AdAttr{EC2TagNames}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_tag\_names}.
+Defines the set, and case, of tags associated with the EC2 instance. 
+
+%%%% ClassAd attribute: EC2KeyPairFile
+%\index{ClassAd job attribute!EC2KeyPairFile}
+%\index{EC2KeyPairFile!job ClassAd attribute}
+%\item[\AdAttr{EC2KeyPairFile}:] 
+%Used for grid type ec2 jobs;
+%a string taken from the definition of the submit description file command
+%\SubmitCmd{ec2\_key\_pair\_file}.
+%Defines that path and file name of the file 
+%into which to write the SSH key used to access the image, once it is running. 
 
 %%% ClassAd attribute: EC2RemoteVirtualMachineName
 \index{ClassAd job attribute!EC2RemoteVirtualMachineName}
@@ -536,7 +554,7 @@ a set of job hooks, and added to the ClassAd once a job is fetched.
 %%% ClassAd attribute: ImageSize
 \index{ClassAd job attribute!ImageSize}
 \index{ImageSize!job ClassAd attribute}
-\item[\AdAttr{ImageSize}:]  Estimate of the memory image size
+\item[\AdAttr{ImageSize}:]  Maximum observed memory image size
 (i.e. virtual memory) of the
 job in Kbytes.  The initial value is equal to the size of the
 executable for non-vm universe jobs, and 0 for vm universe jobs.
@@ -982,7 +1000,7 @@ system PIDs.
 \index{ProportionalSetSizeKb!job ClassAd attribute}
 \item[\AdAttr{ProportionalSetSizeKb}:]
 On Linux execute machines with kernel version more recent than 2.6.27,
-this is the proportional set size (PSS) in Kbytes,
+this is the maximum observed proportional set size (PSS) in Kbytes,
 summed across all processes in the job.
 If the execute machine does not
 support monitoring of PSS or PSS has not yet been measured,
@@ -1065,6 +1083,12 @@ utilized when dynamic \Condor{startd} provisioning is enabled.
 \item[\AdAttr{RequestDisk}:]  The amount of disk space in Kbytes requested 
 for this job; utilized when dynamic \Condor{startd} provisioning is enabled.
 
+%%% ClassAd attribute: RequestedChroot
+\index{ClassAd job attribute!RequestedChroot}
+\index{RequestedChroot!job ClassAd attribute}
+\item[\AdAttr{RequestedChroot}:]  A full path to the directory that the job
+requests the \Condor{starter} use as an argument to \Procedure{chroot}.
+
 %%% ClassAd attribute: RequestMemory
 \index{ClassAd job attribute!RequestMemory}
 \index{RequestMemory!job ClassAd attribute}
@@ -1082,8 +1106,8 @@ RequestMemory = ceiling(ifThenElse(JobVMMemory =!= UNDEFINED, JobVMMemory,
 %%% ClassAd attribute: ResidentSetSize
 \index{ClassAd job attribute!ResidentSetSize}
 \index{ResidentSetSize!job ClassAd attribute}
-\item[\AdAttr{ResidentSetSize}:]  Estimate of the physical memory
-in use by the job in Kbytes while it is running.
+\item[\AdAttr{ResidentSetSize}:]  Maximum observed
+physical memory in use by the job in Kbytes while running.
 
 %%% ClassAd attribute: StackSize
 \index{ClassAd job attribute!StackSize}

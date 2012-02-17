@@ -35,6 +35,48 @@
 #include "condor_distribution.h"
 #include "condor_version.h"
 
+#include <vector>
+#include <sstream>
+#include <iostream>
+
+using std::vector;
+using std::string;
+using std::stringstream;
+
+struct SortSpec {
+    string arg;
+    string keyAttr;
+    string keyExprAttr;
+    ExprTree* expr;
+    ExprTree* exprLT;
+    ExprTree* exprEQ;
+
+    SortSpec(): arg(), keyAttr(), keyExprAttr(), expr(NULL), exprLT(NULL), exprEQ(NULL) {}
+    ~SortSpec() {
+        if (NULL != expr) delete expr;
+        if (NULL != exprLT) delete exprLT;
+        if (NULL != exprEQ) delete exprEQ;
+    }
+
+    SortSpec(const SortSpec& src): expr(NULL), exprLT(NULL), exprEQ(NULL) { *this = src; }
+    SortSpec& operator=(const SortSpec& src) {
+        if (this == &src) return *this;
+
+        arg = src.arg;
+        keyAttr = src.keyAttr;
+        keyExprAttr = src.keyExprAttr;
+        if (NULL != expr) delete expr;
+        expr = src.expr->Copy();
+        if (NULL != exprLT) delete exprLT;
+        exprLT = src.exprLT->Copy();
+        if (NULL != exprEQ) delete exprEQ;
+        exprEQ = src.exprEQ->Copy();
+
+        return *this;
+    }
+};
+
+
 // global variables
 AttrListPrintMask pm;
 const char		*DEFAULT= "<default>";
@@ -53,11 +95,10 @@ CondorQuery *query;
 char		buffer[1024];
 ClassAdList result;
 char		*myName;
-StringList	*sortConstraints = NULL;
-ExtArray<ExprTree*> sortLessThanExprs( 4 );
-ExtArray<ExprTree*> sortEqualExprs( 4 );
+vector<SortSpec> sortSpecs;
 bool            javaMode = false;
 bool			vmMode = false;
+bool        absentMode = false;
 char 		*target = NULL;
 ClassAd		*targetAd = NULL;
 ArgList projList;		// Attributes that we want the server to send us
@@ -233,6 +274,18 @@ main (int argc, char *argv[])
 		projList.AppendArg(ATTR_JAVA_VENDOR);
 		projList.AppendArg(ATTR_JAVA_VERSION);
 
+	}
+	
+	if(absentMode) {
+	    sprintf( buffer, "%s == TRUE", ATTR_ABSENT );
+	    if (diagnose) {
+	        printf( "Adding constraint %s\n", buffer );
+	    }
+	    query->addANDConstraint( buffer );
+	    
+	    projList.AppendArg( ATTR_ABSENT );
+	    projList.AppendArg( ATTR_LAST_HEARD_FROM );
+	    projList.AppendArg( ATTR_CLASSAD_LIFETIME );
 	}
 
 	if(vmMode) {
@@ -421,28 +474,38 @@ main (int argc, char *argv[])
                 exit (1);
 	}
 
-
-	// sort the ad
-	if( sortLessThanExprs.getlast() > -1 ) {
-		result.Sort((SortFunctionType) customLessThanFunc );
+	if (sortSpecs.empty()) {
+        // default classad sorting
+		result.Sort((SortFunctionType)lessThanFunc);
 	} else {
-		result.Sort ((SortFunctionType)lessThanFunc);
+        // User requested custom sorting expressions:
+        // insert attributes related to custom sorting
+        result.Open();
+        while (ClassAd* ad = result.Next()) {
+            for (vector<SortSpec>::iterator ss(sortSpecs.begin());  ss != sortSpecs.end();  ++ss) {
+                ss->expr->SetParentScope(ad);
+                classad::Value v;
+                ss->expr->Evaluate(v);
+                stringstream vs;
+                // This will properly render all supported value types,
+                // including undefined and error, although current semantic
+                // pre-filters classads where sort expressions are undef/err:
+                vs << ((v.IsStringValue())?"\"":"") << v << ((v.IsStringValue())?"\"":"");
+                ad->AssignExpr(ss->keyAttr.c_str(), vs.str().c_str());
+                // Save the full expr in case user wants to examine on output:
+                ad->AssignExpr(ss->keyExprAttr.c_str(), ss->arg.c_str());
+            }
+        }
+        
+        result.Open();
+		result.Sort((SortFunctionType)customLessThanFunc);
 	}
 
 	
 	// output result
 	prettyPrint (result, &totals);
 	
-
-	// be nice ...
-	{
-		int last = sortLessThanExprs.getlast();
-		delete query;
-		for( int i = 0 ; i <= last ; i++ ) {
-			if( sortLessThanExprs[i] ) delete sortLessThanExprs[i];
-			if( sortEqualExprs[i] ) delete sortEqualExprs[i];
-		}
-	}
+    delete query;
 
 	return 0;
 }
@@ -489,7 +552,7 @@ usage ()
 //		"\t-world\t\t\tDisplay all pools reporting to UW collector\n"
 		"    and [display-opt] is one of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
-		"\t-sort <attr>\t\tSort entries by named attribute\n"
+		"\t-sort <expr>\t\tSort entries by expressions\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n"
 		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
@@ -632,6 +695,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-java", 2)) {
 			javaMode = true;
 		} else
+		if (matchPrefix (argv[i], "-absent", 3)) {
+			absentMode = true;
+		} else
 		if (matchPrefix (argv[i], "-vm", 3)) {
 			vmMode = true;
 		} else
@@ -734,22 +800,36 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
-			char	exprString[1024];
-			ExprTree	*sortExpr;
-			exprString[0] = '\0';
-			sprintf( exprString, "MY.%s < TARGET.%s", argv[i], argv[i] );
-			if( ParseClassAdRvalExpr( exprString, sortExpr ) ) {
-				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
-				exit( 1 );
-			}
-			sortLessThanExprs[sortLessThanExprs.getlast()+1] = sortExpr;
-			sprintf( exprString, "MY.%s == TARGET.%s", argv[i], argv[i] );
-			if( ParseClassAdRvalExpr( exprString, sortExpr ) ) {
-				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
-				exit( 1 );
-			}
-			sortEqualExprs[sortEqualExprs.getlast()+1] = sortExpr;
 
+            int jsort = sortSpecs.size();
+            SortSpec ss;
+			ExprTree* sortExpr = NULL;
+			if (ParseClassAdRvalExpr(argv[i], sortExpr)) {
+				fprintf(stderr, "Error:  Parse error of: %s\n", argv[i]);
+				exit(1);
+			}
+            ss.expr = sortExpr;
+
+            ss.arg = argv[i];
+            sprintf(ss.keyAttr, "CondorStatusSortKey%d", jsort);
+            sprintf(ss.keyExprAttr, "CondorStatusSortKeyExpr%d", jsort);
+
+			string exprString;
+			sprintf(exprString, "MY.%s < TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
+			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
+                fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
+                exit(1);
+			}
+			ss.exprLT = sortExpr;
+
+			sprintf(exprString, "MY.%s == TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
+			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
+                fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
+                exit(1);
+			}
+			ss.exprEQ = sortExpr;
+
+            sortSpecs.push_back(ss);
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
 		} else
@@ -993,19 +1073,19 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 	return ( strcmp( buf1.Value(), buf2.Value() ) < 0 );
 }
 
+
 int
 customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 {
 	EvalResult 	lt_result;
-	int			last = sortLessThanExprs.getlast();
 
-	for( int i = 0 ; i <= last ; i++ ) {
-		if(EvalExprTree( sortLessThanExprs[i], ad1, ad2, &lt_result)
+	for (unsigned i = 0;  i < sortSpecs.size();  ++i) {
+		if (EvalExprTree(sortSpecs[i].exprLT, ad1, ad2, &lt_result)
 			&& lt_result.type == LX_INTEGER ) {
 			if( lt_result.i ) {
 				return 1;
 			} else {
-				if(EvalExprTree( sortEqualExprs[i], ad1,
+				if (EvalExprTree( sortSpecs[i].exprEQ, ad1,
 					ad2, &lt_result ) &&
 				(( lt_result.type != LX_INTEGER || !lt_result.i ))){
 					return 0;

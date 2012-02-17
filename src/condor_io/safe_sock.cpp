@@ -274,6 +274,7 @@ SafeSock::peek_end_of_message()
 	return false;
 }
 
+MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
 SafeSock::my_ip_str()
 {
@@ -320,6 +321,7 @@ SafeSock::my_ip_str()
 	strcpy(_my_ip_buf, addr.to_ip_string().Value());
 	return _my_ip_buf;
 }
+MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int SafeSock::connect(
 	char const	*host,
@@ -792,21 +794,19 @@ char * SafeSock::serialize() const
 
 char * SafeSock::serialize(char *buf)
 {
-	char sinful_string[28];
-	char usernamebuf[128];
+	char * sinful_string = NULL;
 	char *ptmp, *ptr = NULL;
     
 	ASSERT(buf);
-    memset(sinful_string, 0, 28);
-    memset(usernamebuf, 0, 128);
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
 	int itmp;
-	sscanf(ptmp,"%d*",&itmp);
-	_special_state=safesock_state(itmp);
+	int citems = sscanf(ptmp,"%d*",&itmp);
+	if (1 == citems)
+		_special_state=safesock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
     if(ptmp) ptmp++;
@@ -814,14 +814,21 @@ char * SafeSock::serialize(char *buf)
     // Now, see if we are 6.3 or 6.2
     if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // We are 6.3
+		sinful_string = new char [1 + ptr - ptmp];
         memcpy(sinful_string, ptmp, ptr - ptmp);
+		sinful_string[ptr - ptmp] = 0;
         ptmp = ++ptr;
     }
     else if(ptmp) {
-        sscanf(ptmp,"%s",sinful_string);
+		size_t sinful_len = strlen(ptmp);
+		sinful_string = new char [1 + sinful_len];
+        citems = sscanf(ptmp,"%s",sinful_string);
+		if (1 != citems) sinful_string[0] = 0;
+		sinful_string[sinful_len] = 0;
     }
 
 	_who.from_sinful(sinful_string);
+	delete [] sinful_string;
 
 	return NULL;
 }

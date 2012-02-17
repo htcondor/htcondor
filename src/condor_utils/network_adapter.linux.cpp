@@ -260,6 +260,7 @@ LinuxNetworkAdapter::getAdapterInfo( void )
 	}
 
 	// And, we're done
+	close(sock);
 # endif
 	return ok;
 }

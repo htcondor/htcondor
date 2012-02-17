@@ -20,29 +20,6 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
-#ifdef __GNUC__
-# if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
-#  define GCC_DIAG_STR(S) #S
-#  define GCC_DIAG_JOINSTR(X,Y) GCC_DIAG_STR(X ## Y)
-#  define GCC_DIAG_DO_PRAGMA(X) _Pragma (#X)
-#  define GCC_DIAG_PRAGMA(X) GCC_DIAG_DO_PRAGMA(GCC diagnostic X)
-#  if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
-#    define GCC_DIAG_OFF(X) GCC_DIAG_PRAGMA(push) \
-        GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,X))
-#    define GCC_DIAG_ON(X) GCC_DIAG_PRAGMA(pop)
-#  else
-#    define GCC_DIAG_OFF(X) GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,X))
-#    define GCC_DIAG_ON(X)  GCC_DIAG_PRAGMA(warning GCC_DIAG_JOINSTR(-W,X))
-#  endif
-# else
-#  pragma GCC system_header // this turns off all warnings
-#  define GCC_DIAG_OFF(X)
-#  define GCC_DIAG_ON(X)
-# endif
-#else
-# define GCC_DIAG_OFF(X)
-# define GCC_DIAG_ON(X)
-#endif
 
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
@@ -229,7 +206,9 @@ public:
    T*  pbuf;   // allocated buffer for the ring.
 
    T& operator[](int ix) { 
-      if ( ! pbuf || ! cMax) return pbuf[0]; // yes, we do want to segfault if pbuf==NULL
+      // yes, we do want to segfault if pbuf==NULL
+      MSC_SUPPRESS_WARNING_FOREVER(6011) // dereferencing null pointer.
+      if ( ! pbuf || ! cMax) return pbuf[0];
       return pbuf[(ixHead+ix+cMax) % cMax];
    }
 

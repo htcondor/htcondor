@@ -76,6 +76,10 @@ private:
 	status_t Release(std::string id, std::string &reason, std::string &text);
 
 	status_t Remove(std::string id, std::string &reason, std::string &text);
+
+	status_t Suspend(std::string id, std::string &reason, std::string &text);
+
+	status_t Continue(std::string id, std::string &reason, std::string &text);
 #endif
 
 };

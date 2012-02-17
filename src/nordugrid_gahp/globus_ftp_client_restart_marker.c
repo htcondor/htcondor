@@ -716,7 +716,7 @@ globus_ftp_client_restart_marker_from_string(
 {
     globus_off_t				offset;
     globus_off_t				end;
-    globus_size_t				consumed;
+    int                                         consumed;
     globus_object_t *				err;
     globus_result_t				res;
     const char *				p;

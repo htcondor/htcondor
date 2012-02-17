@@ -1621,26 +1621,18 @@ back on line.
 The \Condor{schedd} daemon receives signal 25,
 dies, and is restarted when the
 history file reaches a 2 Gbyte size limit.
-Until a larger history file size or the rotation of the history
-file is supported in Condor,
-try one of these work arounds:
-
-\begin{enumerate}
-\item When the history file becomes large, remove it.
-Note that this causes a loss of the information in the history file,
-but the \Condor{schedd} daemon will not die.
-\item When the history file becomes large, move it.
-\item Stop keeping the history.
-Only \Condor{history} accesses the history file, 
-so this particular functionality will be gone.
-To stop keeping the history, place
+On 32-bit OSes, Condor cannot write log files larger than
+2 Gbytes.
+If you need to keep more than 2 Gbytes of history, you can set a
+maximum history file size of 2 Gbytes and multiple rotations of the
+file.
+For example, to keep 6 Gbytes of history, you would put these lines in
+your Condor configuration file:
 \begin{verbatim}
-HISTORY=
+ENABLE_HISTORY_ROTATION = True
+MAX_HISTORY_LOG = 2000000000
+MAX_HISTORY_ROTATIONS = 2
 \end{verbatim}
-in the configuration,
-followed by a \Condor{reconfig} command to recognize the change in
-currently executing daemons.
-\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{When I ssh/telnet to a machine to check particulars of how

@@ -58,6 +58,7 @@
 #include "transfer_queue.h"
 #include "timed_queue.h"
 #include "schedd_stats.h"
+#include "condor_holdcodes.h"
 
 using std::map;
 
@@ -632,7 +633,7 @@ private:
 	int				insert_owner(char const*);
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
-	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, shadow_rec * srec);
+	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			attempt_shutdown();
@@ -699,7 +700,6 @@ private:
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	shadow_rec*     find_shadow_rec(PROC_ID*);
-	void			NotifyUser(shadow_rec*, const char*, int, int);
 	
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );

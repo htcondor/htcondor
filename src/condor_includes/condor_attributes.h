@@ -172,7 +172,6 @@ extern const char * const  ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
 extern const char * const  ATTR_JOB_MUST_EXPAND;
 extern const char * const  ATTR_GLOBUS_RSL;
 extern const char * const  ATTR_GLOBUS_STATUS;
-extern const char * const  ATTR_GLOBUS_XML;
 extern const char * const  ATTR_X509_USER_PROXY;
 extern const char * const  ATTR_X509_USER_PROXY_EXPIRATION;
 extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;
@@ -181,9 +180,6 @@ extern const char * const  ATTR_X509_USER_PROXY_VONAME;
 extern const char * const  ATTR_X509_USER_PROXY_FIRST_FQAN;
 extern const char * const  ATTR_X509_USER_PROXY_FQAN;
 extern const char * const  ATTR_DELEGATED_PROXY_EXPIRATION;
-extern const char * const  ATTR_GRIDFTP_SERVER_JOB;
-extern const char * const  ATTR_GRIDFTP_URL_BASE;
-extern const char * const  ATTR_REQUESTED_GRIDFTP_URL_BASE;
 extern const char * const  ATTR_GRID_RESOURCE;
 extern const char * const  ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
 extern const char * const  ATTR_GRID_JOB_ID;
@@ -255,6 +251,9 @@ extern const char * const  ATTR_ORIG_JOB_CMD;
 extern const char * const  ATTR_JOB_CORE_DUMPED;
 extern const char * const  ATTR_JOB_CORE_FILENAME;
 extern const char * const  ATTR_JOB_CURRENT_START_DATE;
+extern const char * const  ATTR_JOB_CURRENT_START_EXECUTING_DATE;
+extern const char * const  ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE;
+extern const char * const  ATTR_CUMULATIVE_TRANSFER_TIME;
 extern const char * const  ATTR_JOB_DURATION;
 extern const char * const  ATTR_JOB_ENVIRONMENT1;
 extern const char * const  ATTR_JOB_ENVIRONMENT1_DELIM;
@@ -422,6 +421,9 @@ extern const char * const  ATTR_OFFLINE;
 extern const char * const  ATTR_OPSYS;
 extern const char * const  ATTR_OPSYSVER;
 extern const char * const  ATTR_OPSYS_AND_VER;
+extern const char * const  ATTR_OPSYS_MAJOR_VER;
+extern const char * const  ATTR_OPSYS_NAME;
+extern const char * const  ATTR_OPSYS_DISTRO;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
 extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OUTPUT_DESTINATION;
@@ -798,6 +800,7 @@ extern const char * const ATTR_VM_CKPT_IP;
 extern const char * const ATTR_EC2_ACCESS_KEY_ID;
 extern const char * const ATTR_EC2_SECRET_ACCESS_KEY;
 extern const char * const ATTR_EC2_AMI_ID;
+extern const char * const ATTR_EC2_KEY_PAIR;
 extern const char * const ATTR_EC2_KEY_PAIR_FILE;
 extern const char * const ATTR_EC2_SECURITY_GROUPS;
 extern const char * const ATTR_EC2_USER_DATA;
@@ -810,6 +813,8 @@ extern const char * const ATTR_EC2_AVAILABILITY_ZONE;
 extern const char * const ATTR_EC2_EBS_VOLUMES;
 extern const char * const ATTR_EC2_VPC_SUBNET;
 extern const char * const ATTR_EC2_VPC_IP;
+extern const char * const ATTR_EC2_TAG_NAMES;
+extern const char * const ATTR_EC2_TAG_PREFIX;
 //************* End of changes for EC2 Jobs *****************//
 
 extern const char * const ATTR_REQUEST_CPUS;
@@ -913,6 +918,20 @@ extern const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
 extern const char * const ATTR_CHECK_EXPR;
 extern const char * const ATTR_PROJECTION;
 extern const char * const ATTR_LAST_DRAIN_START_TIME;
+
+// temporary attributes for raw utsname info
+extern const char * const ATTR_UTSNAME_SYSNAME;
+extern const char * const ATTR_UTSNAME_NODENAME;
+extern const char * const ATTR_UTSNAME_RELEASE;
+extern const char * const ATTR_UTSNAME_VERSION;
+extern const char * const ATTR_UTSNAME_MACHINE;
+
+// Introduced for configurable sorting of accounting groups
+extern const char* const ATTR_GROUP_QUOTA;
+extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
+extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
+extern const char* const ATTR_SORT_EXPR;
+extern const char* const ATTR_SORT_EXPR_STRING;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

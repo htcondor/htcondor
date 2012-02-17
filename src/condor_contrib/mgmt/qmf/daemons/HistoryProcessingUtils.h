@@ -22,10 +22,10 @@
 
 using namespace qpid::types;
 
-void init_history_files();
+void process_history_files();
 void ProcessHistoryDirectory();
 void ProcessOrphanedIndices();
-void ProcessCurrentHistory(bool force_reset = false);
+void ProcessCurrentHistory(bool do_reset = false);
 bool PopulateVariantMapFromJob ( ClassAd& ad, Variant::Map& _map );
 
 #endif /* _HISTORYPROCESSINGUTILS_H */

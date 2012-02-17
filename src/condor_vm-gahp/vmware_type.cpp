@@ -59,11 +59,6 @@ change_monolithicSparse_snapshot_vmdk_file(const char* file, bool use_fullpath, 
 		return;
 	}
 
-	// find the filesize of vmdk file
-	int file_size = 0; 
-	StatWrapper swrap(file);
-	file_size = swrap.GetBuf()->st_size;
-
 	// read snapshot vmdk file to find "parentFileNameHint"
 	int fd = -1;
 	fd = safe_open_wrapper_follow(file, O_RDWR);

@@ -25,7 +25,7 @@ if ( CONDOR_BUILD_SHARED_LIBS )
 endif()
 
 condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
-"chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GCB_FOUND};${GLOBUS_FOUND}" OFF )
+"chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GLOBUS_FOUND}" OFF )
 
 install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 

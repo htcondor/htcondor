@@ -292,7 +292,7 @@ int chirp_fetch(int argc, char **argv) {
 int chirp_put(int argc, char **argv) {
 
 	int fileOffset = 2;
-	char default_mode [] = "cwt";
+	char default_mode [] = "cwb";
 	char *mode = default_mode;
 	unsigned perm = 0777;
 
@@ -322,7 +322,7 @@ int chirp_put(int argc, char **argv) {
 	}
 	
 	// Use putfile
-	if(strcmp(mode, "cwt") == 0 && strcmp(argv[fileOffset], "-") != 0) {
+	if(strcmp(mode, "cwb") == 0 && strcmp(argv[fileOffset], "-") != 0) {
 		return chirp_put_one_file(argv[fileOffset], argv[fileOffset + 1], perm);
 	}
 	// Use open, write
@@ -789,7 +789,10 @@ int chirp_chmod(int argc, char **argv) {
 	CONNECT_STARTER(client);
 
 	unsigned mode;
-	sscanf(argv[3], "%o", &mode);
+	if (1 != sscanf(argv[3], "%o", &mode)) {
+		free(client);
+		return EINVAL;
+	}
 	int status = chirp_client_chmod(client, argv[2], mode);
 	DISCONNECT_AND_RETURN(client, status);
 }

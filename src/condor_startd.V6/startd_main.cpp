@@ -122,14 +122,13 @@ usage( char* MyName)
 	fprintf( stderr, "Usage: %s [option]\n", MyName );
 	fprintf( stderr, "  where [option] is one of:\n" );
 	fprintf( stderr, 
-			 "     [-skip-benchmarks]\t(don't run initial benchmarks)\n" );
+			 "     [-skip-benchmarks]\t(now a no-op)\n" );
 	DC_Exit( 1 );
 }
 
 void
 main_init( int, char* argv[] )
 {
-	int		skip_benchmarks = FALSE;
 	char**	ptr; 
 
 	// Reset the cron & benchmark managers to a known state
@@ -143,7 +142,6 @@ main_init( int, char* argv[] )
 		}
 		switch( ptr[0][1] ) {
 		case 's':
-			skip_benchmarks = TRUE;
 			break;
 		case 'n':
 			ptr++;
@@ -603,7 +601,7 @@ init_params( int /* first_time */)
 }
 
 
-void
+void PREFAST_NORETURN
 startd_exit() 
 {
 	// Shut down the cron logic

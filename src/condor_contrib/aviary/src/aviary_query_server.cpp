@@ -69,7 +69,7 @@ void main_init(int /* argc */, char * /* argv */ [])
 
     string log_name;
     sprintf(log_name,"aviary_query.log");
-    provider = AviaryProviderFactory::create(log_name);
+    provider = AviaryProviderFactory::create(log_name,string(build_valid_daemon_name("query")),string("QUERY_SERVER"), string("services/query/"));
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
@@ -173,7 +173,13 @@ void Stop()
 		Dump();
 	}
 
-	delete job_server;
+	if (provider) {
+		provider->invalidate();
+		delete provider;
+	}
+	if (job_server) {
+		delete job_server;
+	}
 
 	DC_Exit(0);
 }
@@ -237,9 +243,7 @@ HandleResetSignal(Service *, int)
 
 void ProcessHistoryTimer(Service*) {
 	dprintf(D_FULLDEBUG, "ProcessHistoryTimer() called\n");
-    processHistoryDirectory();
-    processOrphanedIndices();
-    processCurrentHistory();
+    process_history_files();
 }
 
 

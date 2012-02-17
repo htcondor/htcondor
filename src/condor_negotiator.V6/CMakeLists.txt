@@ -19,7 +19,11 @@
 if (NOT WIN_EXEC_NODE_ONLY)
 
 	file( GLOB negotiatorRmvElements Example* )
+	if (UNIX)
+	set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+	endif(UNIX)
+
 	condor_daemon( negotiator "${negotiatorRmvElements}"
-	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF )
+	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF )
 
 endif(NOT WIN_EXEC_NODE_ONLY)

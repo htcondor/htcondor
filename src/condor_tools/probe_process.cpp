@@ -31,7 +31,7 @@ SegmentTable g_segment_table;
 SegmentTable *g_st = &g_segment_table;
 
 void usage(char *argv0);
-int matches(char *arg, char *thing);
+int matches(char *arg, const char *thing);
 
 void usage(char *argv0)
 {
@@ -49,7 +49,7 @@ void usage(char *argv0)
 }
 
 /* return 1 if the two exactly match, 0 if not */
-int matches(char *arg, char *thing)
+int matches(char *arg, const char *thing)
 {
 	if (strncmp(arg, thing, strlen(thing)) == 0) {
 		return 1;
@@ -60,11 +60,10 @@ int matches(char *arg, char *thing)
 
 int main(int argc, char *argv[], char *envp[])
 {
-	unsigned long long vdso_idx;
+	int vdso_idx;
 	int i;
 	int pers_change = 1; /* assume yes */
 	char **new_args;
-	char my_exec[PATH_MAX];
 
 	Termlog = 1;
 	dprintf_config("TOOL", get_param_functions());

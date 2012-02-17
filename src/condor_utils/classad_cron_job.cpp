@@ -48,7 +48,7 @@ ClassAdCronJobParams::Initialize( void )
 		char	*name_uc = strdup( mgr_name );
 		char	*name_ptr;
 		for( name_ptr = name_uc; *name_ptr; name_ptr++ ) {
-			if ( islower ( *name_ptr ) ) {
+			if ( islower ( (unsigned char) *name_ptr ) ) {
 				*name_ptr = toupper( *name_ptr );
 			}
 		}

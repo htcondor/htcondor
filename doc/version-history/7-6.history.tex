@@ -16,15 +16,15 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-5}Version 7.6.5}
+\subsection*{\label{sec:New-7-6-7}Version 7.6.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.6.5 not yet released.
-%\item Condor version 7.6.5 released on Month Date, 2011.
+\item Condor version 7.6.7 not yet released.
+%\item Condor version 7.6.7 released on Month Date, 2012.
 
 \end{itemize}
 
@@ -33,13 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added explicit support for Linux kernels with a major version number of 3,
-to detect and utilize the load average information.
-\Ticket{2579}
-
-\item The FS authentication method now works when \File{/tmp} is
-Btrfs.  Previously, authentication failed.
-\Ticket{2583}
+\item None.
 
 \end{itemize}
 
@@ -54,6 +48,216 @@ Btrfs.  Previously, authentication failed.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a rare bug in the parallel universe, where if a claim was removed
+as the shadow was starting up, all ranks of the job would never completely 
+start.
+\Ticket{2786}
+
+\item Fixed a bug that caused disk capacity to be under-reported in Windows
+for drives with 1TB or more of free space.
+\Ticket{2798}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-6}Version 7.6.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.6 released on January 17, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a memory leak affecting the \Condor{schedd} when the
+configuration variable
+\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
+description file command \SubmitCmd{job\_ad\_information\_attrs} were used.
+\Ticket{2730}
+
+\item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
+it to always return a status of -1073740777 for \Condor{chirp}
+ commands that succeeded.
+\Ticket{2739}
+
+\item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
+the \Opt{put}, \Opt{whoami}, \Opt{getdir}, and \Opt{fetch} 
+\Condor{chirp} commands to always fail.
+\Ticket{2743}
+
+\item Fixed a bug in the checkpoint server that could cause it to abort and
+crash during a file rename operation on RHEL6 and newer versions.
+\Ticket{2738}
+
+\item Fix a bug introduced in Condor version 7.6.5,
+that could cause the \Condor{schedd} to exit with the following error:
+\begin{verbatim}
+ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
+/home/condor/execute/dir_10444/userdir/src/condor_daemon_core.V6/daemon_core.cpp
+\end{verbatim}
+\Ticket{2736}
+
+\item Fixed the example Linux startup script \File{condor.boot.rpm}
+to no longer assume that the contents of file \File{/var/run} will 
+persist across a reboot,
+or that environment variable \Env{USER} is set.
+\Ticket{2133}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-5}Version 7.6.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.5 released on December 28, 2011.
+
+\item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to the
+behavior it exhibited before Hierarchical Group Quotas were introduced
+in Condor version 7.5.6.
+That behavior has submitters with no accounting group,
+which are listed as \Expr{<none>}, negotiate last.
+And, in addition, any accounting groups with \MacroNI{GROUP\_AUTOREGROUP}
+enabled negotiate both normally and then also along with the 
+submitters with no accounting group.
+For Condor versions 7.5.6 through 7.6.4, configuration variable
+\MacroNI{GROUP\_AUTOREGROUP} (or \MacroNI{GROUP\_AUTOREGROUP\_<groupname>})
+was a synonym for 
+\Macro{GROUP\_ACCEPT\_SURPLUS} 
+(or \MacroNI{GROUP\_ACCEPT\_SURPLUS\_<groupname>}).
+They now implement distinct features,
+and it is not legal to set both to \Expr{True} in the configuration
+for the \Condor{negotiator}.
+\Ticket{2679}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added explicit support for Linux kernels with a major version number of 3,
+to detect and utilize the load average information.
+\Ticket{2579}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+
+%\item Exposed the negotiation order of accounting groups to configuration
+%via the configuration parameter \Macro{GROUP\_SORT\_EXPR}.
+%\Ticket{2678}
+
+\item Fixed a bug in Chirp when using absolute file paths. This bug caused
+most MPI jobs to fail in the parallel universe.
+\Ticket{2630}
+
+\item Fixed a bug in mapping users using the \Macro{CERTIFICATE\_MAPFILE}
+mechanism, where entries using the NTSSPI method on Windows would not be mapped
+using the map file, but would instead fall back to just the user name.
+\Ticket{2709}
+
+\item Fixed a hierarchical accounting groups bug in which
+the \Condor{schedd} did not properly restore accounting group 
+information to submitters on a restart of the \Condor{schedd},
+and therefore negotiated for and allocated machines incorrectly.
+\Ticket{2705}
+
+\item The Windows installer had a bad value set for the configuration variable
+\Macro{JAVA\_CLASSPATH\_SEPARATOR}, causing java universe jobs to fail. 
+\Ticket{2586}
+
+\item \MacroNI{HDFS} was not listed in the default
+\MacroNI{DC\_DAEMON\_LIST}, so the \Condor{hdfs} daemon exited
+shortly after being started,
+and the HDFS service did not run.
+\Ticket{849}
+
+\item File System (FS) authentication now works when \File{/tmp} 
+is on a Btrfs file system.  Previously, authentication failed.
+\Ticket{2583}
+
+\item Fixed a bug that caused a failure to start jobs when using PrivSep
+and supplemental group process tracking.  
+Prior to Condor version 7.6.4, this problem
+only occurred when \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set
+to \Expr{False}.  
+In Condor version 7.6.4, the problem occurred regardless of the setting
+of this configuration variable.
+\Ticket{2658}
 
 \item Fixed a performance problem on Windows platforms
 that caused claim activations to
@@ -96,32 +300,88 @@ was running as Local System for non-English versions of Windows.
 The bug caused Condor to fail to run jobs on the slot accounts.
 \Ticket{2642}
 
-\item Fixed a bug in the Windows version of Condor where it would try and use an
-account from the submit machine rather than from the local machine.  When that
-account failed to exist on the local machine, it would fall back to using the Everyone
-account rather than trying to use a local machine account with the same username like
-the Linux version does.
+\item Fixed a bug in the Windows version of Condor,
+in which the transfer of output failed due to the use of the Everyone account,
+which lacks read permission.
+Usage of the Everyone account occurred as a fallback,
+when the account name failed to exist because it
+included the domain of the local submit machine.
+The fix adds the same capability as exists on Linux platforms,
+which uses the user name without the domain.
 \Ticket{2643}
 
-\item Fixed a bug where job submission via condor-c could fail because it did not
-convert account names to fully qualifed (including domain) before comparing to see
+\item Fixed a bug in which job submission via Condor-C could fail,
+because it did not convert account names to fully qualified (including domain)
+before comparing to see
 if the current account was the same as the desired account.
 \Ticket{2644}
 
-\item Fixed a bug where \Macro{transfer\_input\_files} did not work for directories on Windows.
+\item Fixed a bug in which use of the submit command 
+\SubmitCmd{transfer\_input\_files} did not work for directories on 
+Windows platforms.
 \Ticket{2387}
 
-\item Fixed a bug that could cause failure to clean up job processes
-when using glexec after a restart of \Condor{master}.
+\item Fixed a bug that could cause a failure in cleaning up job processes
+when using \Prog{glexec} after a restart of the \Condor{master} daemon.
 \Ticket{2614}
 
 \item Fixed a bug in \Condor{power} that caused it to fail when
-operating on a machine with a 15 byte subnet mask string.
+operating on a machine with a 15-byte subnet mask string.
 \Ticket{2651}
 
 \item Fixed a bug that could cause the \Condor{schedd} to no longer start
-idle jobs or send ads to the \Condor{collector}.
+idle jobs or send ClassAds to the \Condor{collector}.
 \Ticket{2647}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash if a
+hold reason contained a percent character (\verb|%|),
+and the user log for the job was in XML format.
+\Ticket{2660}
+
+\item Fixed a Windows 7 and Vista bug in \Condor{softkill},
+in which it would fail to kill the target process,
+when run by a Personal Condor inside a System Condor slot account.
+\Ticket{2677}
+
+\item A possible fix has been made for a problem in which the
+CCB-enabled daemon took an unexpectedly long time to timeout when
+reading from the CCB server.  Additional information is logged
+to help identify the problem if it still remains.
+\Ticket{2695}
+
+\item Fixed a bug in \Condor{dagman} that occurred when 
+dealing with nested splices.
+\Condor{dagman} incorrectly issued a parse error and exited
+in the case where the parent splice contained only splices, and no nodes jobs.
+\Ticket{1751}
+
+\item Fixed a bug that caused grid universe jobs submitted via SOAP to
+be held when trying to write output files into the spool directory.
+\Ticket{2568}
+
+\item Fixed a bug that caused \Condor{credd} and possibly other
+daemons to crash when the file used for \MacroNI{CERTIFICATE\_MAPFILE}
+contained more than 80 entries.
+\Ticket{2409}
+
+\item Fixed a bug that caused hibernation to fail on certain Linux platforms
+for certain hibernation states.
+To work correctly on these Linux platforms,
+the plug-in needs the command line arguments defined by
+\Macro{HIBERNATION\_PLUGIN\_ARGS} when initially invoked, 
+as well as for other invocations.  
+\Ticket{2561}
+
+\item The \Condor{schedd} now aborts the claim and reschedules the job,
+if it does not hear from the \Condor{startd} for longer than the job
+lease duration.
+\Ticket{2706}
+
+\item Fixed some bugs in the renewing of CREAM job leases. Before, the
+\Condor{gridmanager} could fail to renew the leases or attempt to set
+lease expirations in the past.
+\Ticket{2351}
+\Ticket{2455}
 
 \end{itemize}
 

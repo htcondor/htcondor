@@ -51,7 +51,7 @@ install (FILES
 		openmpiscript
 		DESTINATION ${C_ETC_EXAMPLES})
 
-install (FILES condor_limits_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+install (FILES condor_limits_wrapper.sh condor_schedd.init DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 
 
 #Prepare OS specific config file
@@ -105,7 +105,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 			RENAME		condor)
 
-elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
+elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

@@ -311,7 +311,7 @@ VirshType::Checkpoint()
 // I really need a good way to determine the type of a classad
 // attribute.  Right now I just try all four possibilities, which is a
 // horrible mess...
-bool VirshType::CreateVirshConfigFile(const char* filename)
+bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
 {
   vmprintf(D_FULLDEBUG, "In VirshType::CreateVirshConfigFile\n");
   //  std::string name;

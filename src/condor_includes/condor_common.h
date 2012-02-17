@@ -50,14 +50,6 @@
 #include "cedar_enums.h"
 #include "../condor_sysapi/sysapi.h"
 
-/**********************************************************************
-** C++ specific stuff 
-**********************************************************************/
-#if defined(__cplusplus)
-
-
-#endif /* __cplusplus */
-
 /*********************************************************************
 ** On WinNT, we _must_ make redefine the assert() macro to be EXCEPT.
 ** One reason we must do this is the system assert() on NT is a

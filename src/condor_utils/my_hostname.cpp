@@ -32,7 +32,7 @@ static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
-static void init_hostnames();
+//static void init_hostnames();
 
 // Return our hostname in a static data buffer.
 const char *
@@ -376,14 +376,14 @@ void ConfigConvertDefaultIPToSocketIP()
 	enable_convert_default_IP_to_socket_IP = true;
 
 	/*
-	  Woe is us. If GCB is enabled, we should *NOT* be re-writing IP
+	  Woe is us. If CCB is enabled, we should *NOT* be re-writing IP
 	  addresses in the ClassAds we send out. :(  We already go
 	  through a lot of trouble to make sure they're all set how they
 	  should be.  This only used to work at all because of a bug in
-	  GCB + CEDAR where all outbound connections were hitting
-	  GCB_bind() and so we thought my_sock_ip below was the GCB
+	  CCB + CEDAR where all outbound connections were hitting
+	  CCB_bind() and so we thought my_sock_ip below was the CCB
 	  broker's IP, and it all "worked".  Once we're not longer
-	  pounding the GCB broker for all outbound connections, this bug
+	  pounding the CCB broker for all outbound connections, this bug
 	  becomes visible.
 	*/
 	if (param_boolean("NET_REMAP_ENABLE", false)) {
@@ -422,6 +422,7 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 	return network_interface_matches_all ||
 		configured_network_interface_ips.count(ip) != 0;
 }
+
 
 void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
 {

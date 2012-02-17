@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -165,10 +165,9 @@ ScheddNegotiate::setAutoClusterRejected(int auto_cluster_id)
 }
 
 bool
-ScheddNegotiate::fixupPartitionableSlot(PROC_ID job_id, ClassAd *job_ad, ClassAd *match_ad, char const *slot_name)
+ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 {
 	ASSERT( match_ad );
-	ASSERT( slot_name );
 	ASSERT( job_ad );
 
 	int is_partitionable = 0;
@@ -176,6 +175,17 @@ ScheddNegotiate::fixupPartitionableSlot(PROC_ID job_id, ClassAd *job_ad, ClassAd
 	if (!is_partitionable) {
 		return true;
 	}
+
+		// Grab some attribute values so we can print out nicer debug messages.
+	std::string slot_name_buf;
+	match_ad->LookupString(ATTR_NAME,slot_name_buf);
+	char const *slot_name = slot_name_buf.c_str();
+	PROC_ID job_id;
+	job_id.cluster = -1;
+	job_id.proc = -1;
+	job_ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID,job_id.proc);
+
 
 		// We want to avoid re-using a claim to a partitionable slot
 		// for jobs that do not fit the dynamically created
@@ -212,6 +222,13 @@ ScheddNegotiate::fixupPartitionableSlot(PROC_ID job_id, ClassAd *job_ad, ClassAd
 	}
 
 	if( result ) {
+		// If successful, remove attribute claiming this slot is partitionable
+		// and instead mark it as dynamic. This is what the startd does. Plus,
+		// removing the paritionable attribute means if we happen to call
+		// fixupPartitionableSlot again in the future on this same ad, we 
+		// won't mangle it a second time.
+		match_ad->Assign(ATTR_SLOT_DYNAMIC, true);
+		match_ad->Assign(ATTR_SLOT_PARTITIONABLE,false);
 		dprintf(D_FULLDEBUG,
 				"Partitionable slot %s adjusted for job %d.%d: "
 				"cpus = %d, memory = %d, disk = %d\n",
@@ -290,15 +307,20 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		break;
 
 	case PERMISSION_AND_AD: {
-		std::string slot_name_buf;
-		m_match_ad.LookupString(ATTR_NAME,slot_name_buf);
-		char const *slot_name = slot_name_buf.c_str();
-
-		if( !fixupPartitionableSlot(m_current_job_id,&m_current_job_ad,&m_match_ad,slot_name) )
+		// If the slot we matched is partitionable, edit it
+		// so it will look like the resulting dynamic slot. 
+		// NOTE: Seems like we no longer need to do this here,
+		// since we also do the fixup at claim time in
+		// contactStartd().  - Todd 1/12 <tannenba@cs.wisc.edu>
+		if( !fixupPartitionableSlot(&m_current_job_ad,&m_match_ad) )
 		{
 			nextJob();
 			break;
 		}
+
+		std::string slot_name_buf;
+		m_match_ad.LookupString(ATTR_NAME,slot_name_buf);
+		char const *slot_name = slot_name_buf.c_str();
 
 		int offline = false;
 		m_match_ad.EvalBool(ATTR_OFFLINE,NULL,offline);

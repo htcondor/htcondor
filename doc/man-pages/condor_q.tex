@@ -96,7 +96,7 @@ a one line summary of information as follows:
 \end{description}
 
 If the \Opt{-dag} option is specified, the OWNER column is replaced
-with NODENAME for jobs started by Condor DAGMan.
+with NODENAME for jobs started by the \Condor{dagman} instance.
 
 If the \Opt{-run} option is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
@@ -217,10 +217,12 @@ per machine basis.
     and the reason why the job was placed in the hold state.}
   \OptItem{\Opt{-globus}}{Get information only about jobs submitted
     to grid resources described as \SubmitCmd{gt2}
-    or \SubmitCmd{gt4}.}
+    or \SubmitCmd{gt5}.}
   \OptItem{\Opt{-goodput}}{Display job goodput statistics.}
   \OptItem{\Opt{-io}}{Display job input/output summaries.}
-  \OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
+  \OptItem{\Opt{-dag}}{Display DAG node jobs under their \Condor{dagman} 
+    instance. Child nodes are listed using indentation to show the structure
+    of the DAG. }
   \OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
   \OptItem{\Opt{-long}}{Display job ads in long format}
   \OptItem{\Opt{-xml}}{Display job ads  in xml format.
@@ -330,6 +332,10 @@ is rapidly changing state) which cannot be accurately diagnosed.
 \Arg{-goodput}, \Arg{-cputime}, and \Arg{-io} are most useful for STANDARD
 universe jobs, since they rely on values computed when a job
 checkpoints.
+
+It is possible to to hold jobs that are in the X state, to avoid this it 
+is best to construct a \OptArg{-constraint}{expression} that contains
+'JobStatus != 3' if the user wishes to avoid this condition. 
 
 \Examples
 

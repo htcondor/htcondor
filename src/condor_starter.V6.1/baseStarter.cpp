@@ -978,9 +978,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	int setup_pid;
 	if( privSepHelper() ) {
-		setup_pid = privSepHelper()->create_process(
+		privSepHelper()->create_process(
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			setup_env,
@@ -994,7 +993,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			NULL);
 	}
 	else {
-		setup_pid = daemonCore->Create_Process(
+		daemonCore->Create_Process(
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			PRIV_USER_FINAL,
@@ -1437,18 +1436,19 @@ CStarter::createTempExecuteDir( void )
 			if ( !advapi ) {
 				dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
 				efs_support = false;
-			}
-			FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
-				GetProcAddress(advapi,"EncryptionDisable");
-			if ( !EncryptionDisable ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
-				efs_support = false;
-			}
-			FPEncryptFileA EncryptFile = (FPEncryptFileA) 
-				GetProcAddress(advapi,"EncryptFileA");
-			if ( !EncryptFile ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
-				efs_support = false;
+			} else {
+				FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
+					GetProcAddress(advapi,"EncryptionDisable");
+				if ( !EncryptionDisable ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+					efs_support = false;
+				}
+				FPEncryptFileA EncryptFile = (FPEncryptFileA) 
+					GetProcAddress(advapi,"EncryptFileA");
+				if ( !EncryptFile ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+					efs_support = false;
+				}
 			}
 
 			if ( efs_support ) {
@@ -2819,7 +2819,9 @@ CStarter::removeTempExecuteDir( void )
 		// since we chdir()'d to the execute directory, we can't
 		// delete it until we get out (at least on WIN32). So lets
 		// just chdir() to EXECUTE so we're sure we can remove it. 
-		chdir(Execute);
+		if (chdir(Execute)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
+		}
 
 		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
 				 DIR_DELIM_CHAR, dir_name.Value() );
@@ -2841,7 +2843,9 @@ CStarter::exitAfterGlexec( int code )
 	// using glexec. this directory will be the parent directory of
 	// EXECUTE. we first "cd /", so that our working directory
 	// is not in the directory we're trying to delete
-	chdir( "/" );
+	if (chdir( "/" )) {
+		dprintf(D_ALWAYS, "Error: chdir(\"/\") failed: %s\n", strerror(errno));
+	}
 	char* glexec_dir_path = condor_dirname( Execute );
 	ASSERT( glexec_dir_path );
 	Directory glexec_dir( glexec_dir_path );

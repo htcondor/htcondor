@@ -263,8 +263,8 @@ check_job_spool_hierarchy( char const *parent, char const *child, StringList &ba
 		// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
 
 	char *end=NULL;
-	strtol(child,&end,10);
-	if( !end || *end != '\0' ) {
+	long l = strtol(child,&end,10);
+	if( l == LONG_MIN || !end || *end != '\0' ) {
 		return false; // not part of the job spool hierarchy
 	}
 
@@ -545,11 +545,10 @@ is_v3_ckpt( const char *name )
 {
 	int		cluster;
 	int		proc;
-	int		subproc;
 
 	cluster = grab_val( name, "cluster" );
 	proc = grab_val( name, ".proc" );
-	subproc = grab_val( name, ".subproc" );
+	grab_val( name, ".subproc" );
 
 		
 	if( proc < 0 ) {
@@ -817,8 +816,8 @@ init_params()
 		char const *name = (*params)[p].name.Value();
 		char *tail = NULL;
 		if( strncasecmp( name, "SLOT", 4 ) != 0 ) continue;
-		strtol( name+4, &tail, 10 );
-		if( tail <= name || strcasecmp( tail, "_EXECUTE" ) != 0 ) continue;
+		long l = strtol( name+4, &tail, 10 );
+		if( l == LONG_MIN || tail <= name || strcasecmp( tail, "_EXECUTE" ) != 0 ) continue;
 
 		Execute = param(name);
 		if( Execute ) {

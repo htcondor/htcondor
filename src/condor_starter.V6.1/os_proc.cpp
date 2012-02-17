@@ -70,7 +70,7 @@ OsProc::~OsProc()
 
 
 int
-OsProc::StartJob(FamilyInfo* family_info)
+OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 {
 	int nice_inc = 0;
 	bool has_wrapper = false;
@@ -539,7 +539,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                     core_size_ptr,
                                              affinity_mask,
 											 NULL,
-                                             &create_process_err_msg);
+                                             &create_process_err_msg,
+                                             fs_remap);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
@@ -910,6 +911,7 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 		dprintf(D_FULLDEBUG, "Setting cpu affinity to %d\n", slotId - 1);	
 		int *mask = (int *) malloc(sizeof(int) * 2);
+		ASSERT( mask != NULL );
 		mask[0] = 2;
 		mask[1] = slotId - 1; // slots start at 1, cpus at 0
 		return mask;
@@ -924,6 +926,9 @@ OsProc::makeCpuAffinityMask(int slotId) {
 	}
 
 	int *mask = (int *) malloc(sizeof(int) * (cpus.number() + 1));
+	if ( ! mask)
+		return mask;
+
 	mask[0] = cpus.number() + 1;
 	cpus.rewind();
 	char *cpu;

@@ -80,10 +80,11 @@ namespace soap {
 class Axis2SoapProvider: public aviary::transport::AviaryProvider {
     public:
         Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
-        virtual ~Axis2SoapProvider();
+        ~Axis2SoapProvider();
         bool init(int _port, int _read_timeout, std::string& _error);
         SOCKET getListenerSocket();
         bool processRequest(std::string& _error);
+		void invalidate();
 
 		const axutil_env_t* getEnv() {return m_env;}
 

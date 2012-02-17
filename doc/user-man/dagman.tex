@@ -383,9 +383,10 @@ Both the job associated with the node and
 any \Arg{POST} script will not be executed,
 and the node will be marked as successful.
 
-Six variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
-\Env{\$MAX\_RETRIES}, \Env{\$RETURN}, and \Env{\$PRE\_SCRIPT\_RETURN}) can be
-used within the DAG input file as arguments passed to a PRE or POST script.
+Eight variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
+\Env{\$MAX\_RETRIES}, \Env{\$RETURN}, \Env{\$PRE\_SCRIPT\_RETURN},
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the
+DAG input file as arguments passed to a PRE or POST script.
 
 \index{DAGMan!JOB@\verb^$JOB^ value}
 The variable \Env{\$JOB} evaluates to the (case sensitive) string
@@ -454,6 +455,9 @@ of the PRE script;
 the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
+
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} are documented in
+section ~\ref{sec:DAGFinalNode} below.
 
 As an example, consider the diamond-shaped DAG example.
 Suppose the PRE script expands a compressed file 
@@ -815,6 +819,59 @@ machine is scheduled to go down,
 DAGMan will clean up memory and exit.
 However, it will leave any submitted jobs
 in Condor's queue.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DagSuspend}Suspending a Running DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+It may be desired to temporarily suspend a running DAG.
+For example, the load may be high on the submit machine,
+and therefore it is desired to prevent DAGMan from
+submitting any more jobs until the load goes down.
+There are two ways to suspend (and resume) a running DAG.
+
+\begin{itemize}
+\item Use \Condor{hold}/\Condor{release} on the \Condor{dagman} job.
+
+After placing the \Condor{dagman} job on hold,
+no new node jobs will be submitted,
+and no PRE or POST scripts will be run.
+Any node jobs already in the Condor queue will continue undisturbed.
+If the \Condor{dagman} job is left on hold,
+it will remain in the Condor queue after all of the currently running
+node jobs are finished.
+To resume the DAG, use \Condor{release} on the \Condor{dagman} job.
+
+Note that while the \Condor{dagman} job is on hold,
+no updates will be made to the \File{dagman.out} file.
+
+\item Use a DAG halt file.
+
+The second way of suspending a DAG uses the existence of a specially-named
+file to change the state of the DAG.
+When in this halted state,
+no PRE scripts will be run, and no node jobs will be submitted.  
+Running node jobs will continue undisturbed.
+A halted DAG will still run POST scripts,
+and it will still update the \File{dagman.out} file.
+This differs from behavior of a DAG that is held.
+Furthermore, a halted DAG will not remain in the queue indefinitely;
+when all of the running node jobs have finished, 
+DAGMan will create a Rescue DAG and exit.
+
+To resume a halted DAG, remove the halt file.
+
+The specially-named file must be placed in the same directory
+as the DAG input file.
+The naming is the same as the DAG input file concatenated with the
+string \File{.halt}.
+For example, if the DAG input file is \File{test1.dag}, 
+then \File{test1.dag.halt} will be the required name of the halt file.
+
+As any DAG is first submitted with \Condor{submit\_dag}, 
+a check is made for a halt file.
+If one exists, it is removed.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:AdvDAGMan}Advanced Features of DAGMan}
@@ -1356,6 +1413,41 @@ configuration file.
 
 Configuration variables relating to DAGMan may be found
 in section~\ref{sec:DAGMan-Config-File-Entries}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Condor{dagman} works by watching log files for events, such as submission,
+termination, and going on hold.
+When a new job is ready to be run, it is submitted to the \Condor{schedd}, 
+which needs to acquire a computing resource. 
+Acquisition requires the \Condor{schedd} to contact the central
+manager and get a claim on a machine,
+and this claim cycle can take many minutes.
+
+Configuration variable
+\Macro{DAGMAN\_HOLD\_CLAIM\_TIME} 
+avoids the wait for a negotiation cycle.
+When set to a non zero value, 
+the \Condor{schedd} keeps a claim idle,
+such that the \Condor{startd} delays in shifting from
+the Claimed to the Preempting state (see Figure~\ref{fig:machine-states}).
+Thus, if another job appears that is suitable for the claimed resource,
+then the \Condor{schedd} will submit the job directly to the \Condor{startd}, 
+avoiding the wait and overhead of a negotiation cycle.
+This results in a speed up of job completion,
+especially for linear DAGs in pools that have lengthy negotiation cycle times.
+
+By default, \MacroNI{DAGMAN\_HOLD\_CLAIM\_TIME} is 20, 
+causing a claim to remain idle for 20 seconds, 
+during which time a new job can be submitted
+directly to the already-claimed \Condor{startd}. 
+A value of 0 means that claims are not held idle for a running DAG.
+If a DAG node has no children,
+the value of \MacroNI{DAGMAN\_HOLD\_CLAIM\_TIME} will be ignored;
+the \Attr{KeepClaimIdle} attribute will not be defined in the Job ClassAd 
+of the node job. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}
@@ -2034,6 +2126,131 @@ Note that non-global category names are
 prefixed with their splice name(s), so to refer to a non-global category 
 at a higher level, the splice name must be included.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:DAGFinalNode}FINAL node}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAG FINAL node}
+\index{DAGMan input file!FINAL key word}
+
+A FINAL node is a special node that is always run at the end of the DAG,
+even if previous nodes in the DAG have failed.  Final nodes can be used
+for tasks such as cleaning up intermediate files and checking the output
+of previous nodes.
+
+The \Arg{FINAL} key word specifies a job to be run at the end of
+the DAG.  The syntax used for each \Arg{FINAL} entry is
+
+\Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
+\oOptArg{DIR}{directory} \oOpt{NOOP}
+
+The FINAL node is identified by \Arg{JobName}, and the Condor job
+is described by the contents of the Condor submit description file
+given by \Arg{SubmitDescriptionFileName}.
+
+The key words \Arg{DIR} and \Arg{NOOP} are not case sensitive.
+Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
+in the order shown above.
+See section~\ref{dagman:JOB} for the descriptions of these two keywords.
+
+The only case in which a FINAL node is not run
+is if the configuration variable \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} 
+is set to \Expr{True},
+and a cycle is detected at start up time.
+If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
+a cycle is detected during the course of the run, 
+the FINAL node will be run.
+
+One of the most important considerations with a FINAL node is that the
+success or failure of the FINAL node overrides all previous status
+in determining the success or failure of the DAG.
+For example, if some nodes of a DAG fail,
+but the FINAL node succeeds, the DAG will be considered successful.
+Therefore, it is important
+to be careful about setting the exit status of the FINAL node.
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[FINAL node-related macros]
+\end{description}
+
+Two special macros have been introduced for use by FINAL nodes:
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}.
+These macros may also be used by other nodes.
+
+\index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
+\Env{\$DAG\_STATUS} is the status of the DAG,
+defined with the following values:
+\begin{itemize}
+\item 0: OK
+\item 1: error; an error condition different than those listed here
+\item 2: one or more nodes in the DAG have failed
+\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
+\item 4: removed; the DAG has been removed by \Condor{rm}
+\item 5: cycle; a cycle was found in the DAG
+\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
+\end{itemize}
+
+\index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
+\Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
+DAG.
+
+The \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} macros can be used both
+as PRE and POST script arguments, and in node job submit description files.
+As an example of this, here are the partial contents of the DAG input file,
+\begin{verbatim}
+    FINAL final_node final_node.sub
+    SCRIPT PRE final_node final_pre.pl $DAG_STATUS $FAILED_COUNT
+\end{verbatim}
+
+and here are the partial contents of the submit description file, 
+\File{final\_node.sub}
+\begin{verbatim}
+    arguments = "$(DAG_STATUS) $(FAILED_COUNT)"
+\end{verbatim}
+
+If there is a FINAL node specified for a DAG, 
+it will be run at the end of the workflow.
+If this FINAL node must not do anything in certain cases, 
+use the \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}
+macros to take appropriate actions.  
+Here is an example of that behavior.
+It uses a PRE script that aborts if the DAG has been removed with \Condor{rm},
+which, in turn,
+causes the FINAL node to be considered failed without actually submitting the
+Condor job specified for the node.
+Partial contents of the DAG input file:
+\begin{verbatim}
+    FINAL final_node final_node.sub
+    SCRIPT PRE final_node final_pre.pl $DAG_STATUS
+\end{verbatim}
+
+and partial contents of the Perl PRE script, \File{final\_pre.pl}:
+\begin{verbatim}
+    #! /usr/bin/env perl
+    
+    if ($ARGV[0] eq 4) {
+        exit(1);
+    }
+   
+\end{verbatim}
+
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[FINAL node limitations]
+\end{description}
+
+There are restrictions on usage of a FINAL node.
+There is no DONE option for the Condor job.
+And, other nodes may \emph{not} reference the FINAL node in specifications of 
+\begin{itemize}
+\item PARENT, CHILD
+\item RETRY
+\item ABORT-DAG-ON
+\item PRIORITY
+\item CATEGORY
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}Job Recovery:  The Rescue DAG}

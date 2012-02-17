@@ -259,6 +259,7 @@ quote_x509_string( char* instr) {
 
 	// malloc new string (with NULL terminator)
 	result_string = (char*) malloc (result_string_len + 1);
+	ASSERT( result_string );
 	*result_string = 0;
 	result_string_len = 0;
 
@@ -1464,6 +1465,7 @@ void parse_resource_manager_string( const char *string, char **host,
 	char *my_port = (char *)calloc( len+1, sizeof(char) );
 	char *my_service = (char *)calloc( len+1, sizeof(char) );
 	char *my_subject = (char *)calloc( len+1, sizeof(char) );
+	ASSERT( my_host && my_port && my_service && my_subject );
 
 	p = my_host;
 	q = my_host;

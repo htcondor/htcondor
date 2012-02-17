@@ -449,6 +449,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 
 		/* Insert it */
 	bucket = (BUCKET *)MALLOC( sizeof(BUCKET) );
+	ASSERT( bucket != NULL );
 	bucket->name = strdup( tmp_name );
 	bucket->value = strdup( value );
 	bucket->used = 0;
@@ -515,6 +516,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		buf = (char *)malloc(requested_bufsize);
 		buflen = requested_bufsize;
 	}
+	ASSERT( buf != NULL );
 	buf[0] = '\0';
 	end_ptr = buf;
 	line_ptr = buf;
@@ -746,6 +748,7 @@ expand_macro( const char *value,
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
 											  strlen(right) + 1));
+			ASSERT( rval != NULL );
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;
@@ -757,6 +760,7 @@ expand_macro( const char *value,
 	while( find_config_macro(tmp, &left, &name, &right, DOLLAR_ID) ) {
 		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
+		ASSERT( rval != NULL );
 		(void)sprintf( rval, "%s$%s", left, right );
 		FREE( tmp );
 		tmp = rval;
@@ -789,6 +793,7 @@ hash_iter_begin(BUCKET ** table, int table_size)
 	ASSERT(table != NULL);
 	ASSERT(table_size > 0);
 	hash_iter * p = (hash_iter *)MALLOC(sizeof(hash_iter));
+	ASSERT( p != NULL );
 	p->table = table;
 	p->table_size = table_size;
 	p->index = 0;

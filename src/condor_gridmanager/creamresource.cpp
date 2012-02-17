@@ -139,6 +139,7 @@ CreamResource::CreamResource( const char *resource_name,
 										   name_len +  // host/port
 										   sizeof( delegservice_name ) + 
 										   1 );        // terminating \0
+	ASSERT( delegationServiceUri != NULL );
 	strcpy( delegationServiceUri, "https://" );
 	snprintf( delegationServiceUri + 8, name_len + 1, "%s", name_ptr );
 	strcat( delegationServiceUri, delegservice_name );
@@ -149,6 +150,7 @@ CreamResource::CreamResource( const char *resource_name,
 								 name_len +  // host/port
 								 sizeof( service_name ) + 
 								 1 );        // terminating \0
+	ASSERT( serviceUri != NULL );
 	strcpy( serviceUri, "https://" );
 	snprintf( serviceUri + 8, name_len + 1, "%s", name_ptr );
 	strcat( serviceUri, service_name );
@@ -358,6 +360,15 @@ dprintf(D_FULLDEBUG,"*** deleting delegation %s\n",job->delegatedCredentialURI);
 	}
 
 	BaseResource::UnregisterJob( job );
+
+		// We have trouble maintaining the shared lease with the cream
+		// server while we have no jobs for this resource object.
+		// This can lead to trouble if a new job shows up before we're
+		// deleted. So delete immediately until we can overhaul the
+		// lease-update code.
+	if ( IsEmpty() ) {
+		daemonCore->Reset_Timer( deleteMeTid, 0 );
+	}
 }
 
 const char *CreamResource::GetHashName()
@@ -676,7 +687,7 @@ CreamResource::BatchStatusResult CreamResource::StartBatchStatus()
 		const GahpClient::CreamJobStatus & status = it->second;
 
 		std::string full_job_id = CreamJob::getFullJobId(ResourceName(), status.job_id.c_str());
-		BaseJob * bjob;
+		BaseJob * bjob = NULL;
 		int rc2 = BaseJob::JobsByRemoteId.lookup( 
 			HashKey( full_job_id.c_str()), bjob);
 		if(rc2 != 0) {
@@ -727,7 +738,7 @@ GahpClient * CreamResource::BatchGahp() { return status_gahp; }
 const char *CreamResource::getLeaseId()
 {
 	// TODO trigger a DoUpdateLeases() if we don't have a lease set yet
-	if ( m_sharedLeaseExpiration ) {
+	if ( lastUpdateLeases ) {
 		return m_leaseId.c_str();
 	} else {
 		return NULL;

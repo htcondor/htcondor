@@ -27,6 +27,7 @@
 #else
 #include <netdb.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #endif
 #include "read_user_log.h"
 
@@ -71,6 +72,7 @@ int main(int argc, char* argv[])
 		jobidstr = argv[3];
 		jobid   = atoi(argv[3]); // optional
 		maxjobs = jobid;
+		// Presumably one of these MAXPOSTs should be something else...
 		if( (strcmp(action,"MAXJOBS") == 0) || (strcmp(action,"MAXPOST") == 0) || (strcmp(action,"MAXPOST") == 0) )
 		{
 			jobid = 0;
@@ -98,8 +100,9 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
+		printf("Illegal action %s\n", action);
 		usage(argv[0], stdout);
-		return 0;
+		return 1;
 	}
 
 	int clust, proc, subproc;
@@ -136,6 +139,10 @@ int main(int argc, char* argv[])
 	char* placeptr = NULL;
 	char machinedotaddr[256];
 
+	if ( access( logfile, F_OK ) != 0 ) {
+		fprintf(stderr, "Logfile %s does not exist!\n", logfile);
+		return -1;
+	}
 	ReadUserLog* rul = new ReadUserLog(logfile);
 	if( !rul ) {
 		fprintf(stderr, "Invalid logfile: %s\n", logfile);
@@ -194,7 +201,7 @@ int main(int argc, char* argv[])
 					case ULOG_EXECUTE:
 						//printf("Job executed\n");
 						//returnval = ((ExecuteEvent*)e)->return_value;
-						extractptr = hostmachine = (char *) ((ExecuteEvent*)e)->getExecuteHost();
+						extractptr = hostmachine = const_cast<char *> ( ((ExecuteEvent*)e)->getExecuteHost());
 						placeptr =  machinedotaddr;
 						while(*extractptr != ':')
 						{

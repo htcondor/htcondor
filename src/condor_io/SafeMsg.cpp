@@ -1169,7 +1169,7 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 		n += msgbufsize;
 		tempPkt++;
 		tempData = 0;
-		if(tempPkt == SAFE_MSG_NO_OF_DIR_ENTRY) {
+		if(tempPkt >= SAFE_MSG_NO_OF_DIR_ENTRY) {
 			if(!tempDir->nextDir) {
 				return -1;
 			}
@@ -1282,7 +1282,7 @@ void _condorInMsg::dumpMsg()
     sprintf(str, "ID: %s, %d, %lu, %d\n",
             inet_ntoa(in), msgID.pid, msgID.time, msgID.msgNo);
     sprintf(&str[strlen(str)], "len:%lu, lastNo:%d, rcved:%d, lastTime:%lu\n",
-            msgLen, lastNo, received, lastTime);
+            msgLen, lastNo, received, (long)lastTime);
     dprintf(D_NETWORK, "========================\n%s\n===================\n", str);
 
     /*

@@ -78,7 +78,8 @@ displayJobShort(AttrList* ad)
             int cmd_len = strlen(cmd);
             int extra_len = 14 - cmd_len;
             if (extra_len > 0) {
-                cmd = (char *) realloc(cmd, 16);
+                void * pv = realloc(cmd, 16); ASSERT ( pv != NULL );
+                cmd = (char *)pv;
                 strcat(cmd, " ");
                 strncat(cmd, args, extra_len);
             }

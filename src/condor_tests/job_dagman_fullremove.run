@@ -36,7 +36,6 @@ my $joblog;
 
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -61,7 +60,8 @@ $executed = sub
 	CondorTest::debug("Good. We need the remove the dag to test full removal\n",1);
 	my %info = @_;
 	my $cluster = $info{cluster};
-	sleep 2;
+	# Allow time for the jobs to actually start.
+	sleep 30;
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";

@@ -116,7 +116,7 @@ echo "</table>\n";
 <h2>Slots</h2>
 <table>
 <tr>
-  <th>Platform</th><th>Total</th><th>Avail.</th>
+  <th>Platform</th><th>Total</th><th>Avail.</th><th>Utilization</th>
 </tr>
 
 <?php
@@ -131,9 +131,19 @@ foreach ($platforms AS $platform) {
 }
 
 arsort($free_slots, SORT_NUMERIC);
+$all_slots = 0;
+$all_free = 0;
 foreach (array_keys($free_slots) as $platform) {
-  print "<tr><td style=\"text-align:left\">$platform</td><td>$total_slots[$platform]</td><td>$free_slots[$platform]</td></tr>\n";
+  $all_slots += $total_slots[$platform];
+  $all_free  += $free_slots[$platform];
+  print "<tr><td style=\"text-align:left\">$platform</td><td>$total_slots[$platform]</td><td>$free_slots[$platform]</td>";
+
+  $util = sprintf("%.2f", ($total_slots[$platform] - $free_slots[$platform]) / $total_slots[$platform]);
+  print "<td>$util</td></tr>\n";
 }
+
+$all_util = sprintf("%.2f", ($all_slots - $all_free) / $all_slots);
+print "<tr><td><b>Totals</b></td><td>$all_slots</td><td>$all_free</td><td>$all_util</td></tr>";
 ?>
 
 </table>

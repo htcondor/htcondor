@@ -36,10 +36,6 @@
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-#endif
-
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
 #include "condor_crypt_3des.h"
@@ -1571,34 +1567,36 @@ char * Sock::serializeCryptoInfo(char * buf)
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    sscanf(ptmp, "%d*", &encoded_len);
-    if ( encoded_len > 0 ) {
+    int citems = sscanf(ptmp, "%d*", &encoded_len);
+    if ( citems == 1 && encoded_len > 0 ) {
         len = encoded_len/2;
         kserial = (unsigned char *) malloc(len);
+        ASSERT ( kserial )
 
         // skip the *
         ptmp = strchr(ptmp, '*');
-		ASSERT( ptmp );
+        ASSERT( ptmp );
         ptmp++;
 
         // Reading protocol
-        sscanf(ptmp, "%d*", &protocol);
+        citems = sscanf(ptmp, "%d*", &protocol);
         ptmp = strchr(ptmp, '*');
-		ASSERT( ptmp );
+        ASSERT( ptmp && citems == 1 );
         ptmp++;
 
         // read the encryption mode
         int encryption_mode = 0;
-        sscanf(ptmp, "%d*", &encryption_mode);
+        citems = sscanf(ptmp, "%d*", &encryption_mode);
         ptmp = strchr(ptmp, '*');
-        ASSERT( ptmp );
+        ASSERT( ptmp && citems == 1 );
         ptmp++;
 
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
-            sscanf(ptmp, "%2X", &hex);
+            citems = sscanf(ptmp, "%2X", &hex);
+			if (citems != 1) break;
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
@@ -1631,21 +1629,23 @@ char * Sock::serializeMdInfo(char * buf)
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    sscanf(ptmp, "%d*", &encoded_len);
-    if ( encoded_len > 0 ) {
+    int citems = sscanf(ptmp, "%d*", &encoded_len);
+    if ( 1 == citems && encoded_len > 0 ) {
         len = encoded_len/2;
         kmd = (unsigned char *) malloc(len);
+        ASSERT( kmd );
 
         // skip the *
         ptmp = strchr(ptmp, '*');
-		ASSERT( ptmp );
+        ASSERT( ptmp );
         ptmp++;
 
         // Now, convert from Hex back to binary
         unsigned char * ptr = kmd;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
-            sscanf(ptmp, "%2X", &hex);
+            citems = sscanf(ptmp, "%2X", &hex);
+            if (citems != 1) break;
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
@@ -1746,6 +1746,7 @@ char * Sock::serialize(char *buf)
 	ASSERT(verstring);
 	memset(verstring,0,verstring_len+1);
 	strncpy(verstring,buf,verstring_len);
+	verstring[verstring_len] = 0;
 	if( verstring_len ) {
 			// daemoncore does not like spaces in our serialized string
 		char *s;
@@ -2259,28 +2260,10 @@ Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loop
 {
 	int rval;
 
-#if HAVE_EXT_GCB
-	if (outbound || loopback) {
-		rval = GCB_local_bind(fd, 
-			/* XXX This evil, evil typecast is here because
-				this codepath only exists on linux. The
-				real way to fix this is to parameterize
-				the functions signatures all the way down to the
-				the Generic_bind() call in the GCB
-				external. */
-                addr.to_sockaddr(),
-				addr.get_socklen());
-	}
-	else {
-			//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
-		rval = condor_bind(fd, addr);
-	}
-#else
 	if (outbound) {} // To remove unused variable warning
 	if (loopback) {} // To remove unused variable warning
 		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 	rval = condor_bind(fd, addr);
-#endif /* HAVE_EXT_GCB */
 	return rval;
 }
 

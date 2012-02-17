@@ -110,6 +110,10 @@ public:
 		*/
 	void sendHold( ClassAd* ad, const char* reason );
 	void sendRemove( ClassAd* ad, const char* reason );
+	void sendRelease( ClassAd* ad, const char* reason );
+	void sendHoldAdmin( ClassAd* ad, const char* reason );
+	void sendRemoveAdmin( ClassAd* ad, const char* reason );
+	void sendReleaseAdmin( ClassAd* ad, const char* reason );
 
 private:
 		// // // // // //
@@ -119,6 +123,7 @@ private:
 	FILE* fp;	/// The currently open message (if any)
 	int cluster;
 	int proc;
+	bool email_admin;
 
 
 		// // // // // //

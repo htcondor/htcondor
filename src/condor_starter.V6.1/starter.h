@@ -58,7 +58,7 @@ public:
 			cleanup code we always need, then call DC_Exit() with the
 			given exit code.
 		*/
-	virtual void StarterExit( int code );
+	virtual void PREFAST_NORETURN StarterExit( int code );
 
 		/** Do any potential cleanup before exiting. Used both in 
 		    successful exits (StarterExit()) and EXCEPT()ions.
@@ -189,6 +189,9 @@ public:
 			once everything is cleaned, calls JIC::allJobsGone().
 		*/
 	virtual bool cleanupJobs( void );
+
+		/** Return the Execute dir */
+	const char *GetExecuteDir() const { return Execute; }
 
 		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir.Value(); }

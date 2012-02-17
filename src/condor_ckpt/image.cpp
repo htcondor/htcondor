@@ -665,13 +665,13 @@ Image::Save()
 		// Set up data segment
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	dprintf(D_CKPT, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
+	dprintf(D_CKPT, "Adding a DATA segment: start[0x%lx], end [0x%lx]\n",
 		(unsigned long)data_start, (unsigned long)data_end);
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
-	dprintf(D_CKPT, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
+	dprintf(D_CKPT, "Adding a STACK segment: start[0x%lx], end [0x%lx]\n",
 		(unsigned long)stack_start, (unsigned long)stack_end);
 	AddSegment( "STACK", stack_start, stack_end, 0 );
 
@@ -770,16 +770,16 @@ Image::Save()
 	position = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
 	for( i=0; i<head.N_Segs(); i++ ) {
 		position = map[i].SetPos( position );
-		dprintf( D_CKPT,"Pos: %d\n",position);
+		dprintf( D_CKPT,"Pos: %ld\n",(long)position);
 	}
 
 	if( position < 0 ) {
-		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %d\n",
-													position );
+		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %ld\n",
+													(long)position );
 		Suicide();
 	}
 
-	dprintf( D_ALWAYS, "Size of ckpt image = %d bytes\n", position );
+	dprintf( D_ALWAYS, "Size of ckpt image = %ld bytes\n", (long)position );
 	len = position;
 
 	valid = TRUE;
@@ -819,7 +819,7 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 	}
 
 	dprintf(D_CKPT, 
-		"Image::AddSegment: name=[%s], start=[%p], end=[%p], length=[0x%x], "
+		"Image::AddSegment: name=[%s], start=[%p], end=[%p], length=[0x%lx], "
 		"prot=[0x%x]\n", 
 		name, (void*)start, (void*)end, (unsigned long)length, prot);
 
@@ -1152,6 +1152,7 @@ Image::Write( const char *ckpt_file )
 
 		// Write out the checkpoint
 	if( Write(file_d) < 0 ) {
+		close(file_d);
 		SetSyscalls(scm);
 		return -1;
 	}
@@ -1213,7 +1214,7 @@ Image::Write( int file_d )
 
 		// Write out the SegMaps
 	if( (nbytes=write(file_d,map,sizeof(SegMap)*head.N_Segs()))
-		!= sizeof(SegMap)*head.N_Segs() ) {
+		!= (int)sizeof(SegMap)*head.N_Segs() ) {
 		return -1;
 	}
 	position += nbytes;
@@ -1316,8 +1317,8 @@ Image::Write( int file_d )
 		}
 
 		ack = ntohl( ack );	// Ack is in network byte order, fix here
-		if( ack != len ) {
-			dprintf( D_ALWAYS, "Ack - expected %d, but got %d\n", len, ack );
+		if( ack != (long) len ) {
+			dprintf( D_ALWAYS, "Ack - expected %ld, but got %d\n", (long)len, ack );
 			return -1;
 		}
 	}
@@ -1401,8 +1402,8 @@ SegMap::Read( int fd, ssize_t pos )
 			dprintf( D_ALWAYS, "Checkpoint sequence error at a position "
 				"greater than UINT_MAX. Sorry.\n");
 		} else {
-			dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %u)\n", 
-				pos, (unsigned int)file_loc );
+			dprintf( D_ALWAYS, "Checkpoint sequence error (%ld != %u)\n", 
+					 (long)pos, (unsigned int)file_loc );
 		}
 		Suicide();
 	}
@@ -1592,8 +1593,8 @@ SegMap::Write( int fd, ssize_t pos )
 			dprintf( D_ALWAYS, "Checkpoint sequence error at a position "
 				"greater than UINT_MAX. Sorry.\n");
 		} else {
-			dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %u)\n", 
-				pos, (unsigned int)file_loc );
+			dprintf( D_ALWAYS, "Checkpoint sequence error (%ld != %u)\n", 
+					 (long)pos, (unsigned int)file_loc );
 		}
 		Suicide();
 	}
@@ -1637,7 +1638,7 @@ SegMap::Write( int fd, ssize_t pos )
 		return len;
 	}
 #endif
-	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%x,len=0x%x)\n",
+	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
 			fd, core_loc, len );
 
 	int bytes_to_go = len, nbytes;
@@ -1680,7 +1681,7 @@ extern "C" {
   periodic checkpoint). -Todd Tannenbaum
 */
 void
-Checkpoint( int sig, int code, void *scp )
+Checkpoint( int sig, int  /*code*/, void *scp )
 {
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint

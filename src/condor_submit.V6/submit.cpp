@@ -247,7 +247,6 @@ const char	*X509UserProxy	= "x509userproxy";
 const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
-const char	*GlobusXML = "globus_xml";
 const char	*NordugridRSL = "nordugrid_rsl";
 const char	*RendezvousDir	= "rendezvousdir";
 const char	*KeystoreFile = "keystore_file";
@@ -376,6 +375,7 @@ const char* EC2AmiID = "ec2_ami_id";
 const char* EC2UserData = "ec2_user_data";
 const char* EC2UserDataFile = "ec2_user_data_file";
 const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2KeyPair = "ec2_keypair";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
@@ -383,6 +383,7 @@ const char* EC2EBSVolumes = "ec2_ebs_volumes";
 const char* EC2AvailabilityZone= "ec2_availability_zone";
 const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
+const char* EC2TagNames = "ec2_tag_names";
 
 
 //
@@ -1272,7 +1273,6 @@ SetRemoteAttrs()
 
 	ExprItem tostringize[] = {
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
-		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
 		{ GridResource, 0, ATTR_GRID_RESOURCE },
 	};
@@ -1780,7 +1780,7 @@ SetUniverse()
 		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
-			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    gt2, gt5, infn, blah, pbs, lsf, nqs, naregi, condor,
 			//    unicore, cream, deltacloud, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1789,7 +1789,6 @@ SetUniverse()
 			//   Condor 6.7.12.
 			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
-				(strcasecmp (JobGridType, "gt4") == MATCH) ||
 				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
 				(strcasecmp (JobGridType, "batch") == MATCH) ||
@@ -1813,7 +1812,7 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
-				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
+				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
 						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
@@ -2652,7 +2651,7 @@ SetTransferFiles()
 	// Starting with Condor 7.7.2, we only do this remapping if we're
 	// spooling files to the schedd. The shadow/starter will do any
 	// required renaming in the non-spooling case.
-	CondorVersionInfo cvi(MySchedd->version());
+	CondorVersionInfo cvi((MySchedd) ? MySchedd->version() : NULL);
 	if ( (!cvi.built_since_version(7, 7, 2) && should_transfer != STF_NO &&
 		  JobUniverse != CONDOR_UNIVERSE_GRID &&
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
@@ -4906,7 +4905,6 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ||
 		 strcasecmp (JobGridType, "gt5") == MATCH ||
 		 strcasecmp (JobGridType, "nordugrid") == MATCH ) {
 
@@ -4931,8 +4929,7 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt5") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ) {
+		 strcasecmp (JobGridType, "gt5") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
@@ -4953,12 +4950,6 @@ SetGridParams()
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
-		free( tmp );
-		InsertJobExpr ( buffer );
-	}
-
-	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
@@ -5020,6 +5011,12 @@ SetGridParams()
 				exit(1);
 			}
 			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
 		}
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -5039,6 +5036,12 @@ SetGridParams()
 				exit(1);
 			}
 			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
 		}
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -5049,12 +5052,29 @@ SetGridParams()
 		exit( 1 );
 	}
 	
-	// EC2KeyPairFile is not a necessary parameter
-	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
-		// for the relative path, the keypair output file will be written to the IWD
-		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+	bool bKeyPairPresent=false;
+	
+	// EC2KeyPair is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPair, ATTR_EC2_KEY_PAIR )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
+		bKeyPairPresent=true;
+	}
+	
+	// EC2KeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+	    if (bKeyPairPresent)
+	    {
+	      fprintf(stderr, "\nWARNING: EC2 job(s) contain both ec2_keypair && ec2_keypair_file, ignoring ec2_keypair_file\n");
+	    }
+	    else
+	    {
+	      // for the relative path, the keypair output file will be written to the IWD
+	      buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+	      free( tmp );
+	      InsertJobExpr( buffer.Value() );
+	    }
 	}
 	
 	// EC2GroupName is not a necessary parameter
@@ -5161,7 +5181,83 @@ SetGridParams()
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
-	
+
+		//
+		// Handle EC2 tags - don't require user to specify the list of tag names
+		//
+		// Collect all the EC2 tag names, then param for each
+		//
+		// EC2TagNames is needed because EC2 tags are case-sensitive
+		// and ClassAd attribute names are not. We build it for the
+		// user, but also let the user override entries in it with
+		// their own case preference. Ours will always be lower-cased.
+		//
+
+	StringList tagNames;
+	if ((tmp = condor_param(EC2TagNames, ATTR_EC2_TAG_NAMES))) {
+		tagNames.initializeFromString(tmp);
+		free(tmp); tmp = NULL;
+	}
+
+	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
+	for (;!hash_iter_done(it); hash_iter_next(it)) {
+		char *key = hash_iter_key(it);
+		char *name = NULL;
+		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
+			key[prefix_len]) {
+			name = &key[prefix_len];
+		} else if (!strncasecmp(key, "ec2_tag_", 8) &&
+				   key[8]) {
+			name = &key[8];
+		} else {
+			continue;
+		}
+
+		if (strncasecmp(name, "Names", 5) &&
+			!tagNames.contains_anycase(name)) {
+			tagNames.append(name);
+		}
+	}
+	hash_iter_delete(&it);
+
+	stringstream ss;
+	char *tagName;
+	tagNames.rewind();
+	while ((tagName = tagNames.next())) {
+			// XXX: Check that tagName does not contain an equal sign (=)
+		string tag;
+		string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
+		string tagCmd("ec2_tag_"); tagCmd.append(tagName);
+		char *value = NULL;
+		if ((value = condor_param(tagCmd.c_str(), tagAttr.c_str()))) {
+			buffer.sprintf("%s = \"%s\"", tagAttr.c_str(), value);
+			InsertJobExpr(buffer.Value());
+			free(value); value = NULL;
+		} else {
+				// XXX: Should never happen, we just searched for the names, error or something
+		}
+	}
+
+		// For compatibility with the AWS Console, set the Name tag to
+		// be the executable, which is just a label for EC2 jobs
+	tagNames.rewind();
+	if (!tagNames.contains_anycase("Name")) {
+		if (JobUniverse == CONDOR_UNIVERSE_GRID &&
+			JobGridType != NULL &&
+			(strcasecmp( JobGridType, "ec2" ) == MATCH)) {
+			char *ename = condor_param(Executable, ATTR_JOB_CMD); // !NULL by now
+			tagNames.append("Name");
+			buffer.sprintf("%sName = \"%s\"", ATTR_EC2_TAG_PREFIX, ename);
+			InsertJobExpr(buffer);
+			free(ename); ename = NULL;
+		}
+	}
+
+	buffer.sprintf("%s = \"%s\"",
+				   ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
+	InsertJobExpr(buffer.Value());
+
 
 	//
 	// Deltacloud grid-type submit attributes
@@ -5297,7 +5393,6 @@ SetGSICredentials()
 	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (strcasecmp (JobGridType, "gt2") == MATCH ||
-		  strcasecmp (JobGridType, "gt4") == MATCH ||
 		  strcasecmp (JobGridType, "gt5") == MATCH ||
 		  strcasecmp (JobGridType, "cream") == MATCH ||
 		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
@@ -5306,7 +5401,7 @@ SetGSICredentials()
 		if ( proxy_file == NULL ) {
 
 			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, gt4, nordugrid or cream jobs\n");
+			fprintf( stderr, "x509 user proxy is required for gt2, nordugrid or cream jobs\n");
 			exit (1);
 		}
 	}
@@ -6558,6 +6653,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 #else
 	// will just do nothing here and leave
 	// it up to the runtime to nicely report errors.
+	pathname = pathname;
 	return (err == EISDIR);
 #endif
 }
@@ -6608,7 +6704,7 @@ check_open( const char *name, int flags )
 	}
 
 	if ( !DisableFileChecks ) {
-		if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
 			if( ( errno == EISDIR || errno == EACCES ) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {

@@ -45,7 +45,7 @@ sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
 	unsigned int t_hi, t_lo, temp;
-	const unsigned int lowest_ten_mask = 0x00000cff;
+	const unsigned int lowest_ten_mask = 0x000003ff;
 	
 	t_hi = t_lo = temp = 0;
 	sysapi_internal_reconfig();
@@ -127,7 +127,11 @@ reserve_for_afs_cache()
 	if( !fp ) {
 		return 0;
 	}
-	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
+	if (fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size ) != 2) {
+		dprintf( D_ALWAYS, "Failed to parse AFS cache parameters, assuming no cache\n" );
+		cache_size = 0;
+		cache_in_use = 0;
+	}
 	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",
 		cache_in_use,
@@ -239,12 +243,9 @@ int sysapi_disk_space_raw(const char * filename)
 		return(INT_MAX);
 	}
 
-	dprintf( D_FULLDEBUG, "%.0f kbytes available for \"%s\"\n", 
-			 free_kbytes, filename );
-
 	return (int)free_kbytes;
 }
-#endif /* I386 && DYNIX */
+#endif
 
 /*
   Return number of kbytes condor may play with in the named file

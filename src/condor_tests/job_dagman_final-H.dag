@@ -1,0 +1,13 @@
+# This tests a DAG that has a cycle, in combination with a final node.
+# The final node should be passed a DAG_STATUS value of 5 (DAG_STATUS_CYCLE)
+# when it's run.
+
+JOB H_A job_dagman_final-H-nodeA.cmd
+JOB H_B1 job_dagman_final-H-nodeB1.cmd
+JOB H_B2 job_dagman_final-H-nodeB2.cmd
+FINAL H_C job_dagman_final-H-nodeC.cmd
+
+PARENT H_A CHILD H_B1
+PARENT H_B1 CHILD H_B2
+PARENT H_B2 CHILD H_B1
+

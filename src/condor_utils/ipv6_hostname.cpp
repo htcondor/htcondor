@@ -406,6 +406,12 @@ MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr)
 	ret += ".";
 	ret += default_domain;
 
+	// Hostnames can't begin with -, as per RFC 1123
+	// ipv6 zero-compression could cause this, esp. for the loopback addr
+	if (ret[0] == '-') {
+		ret = "0" + ret;
+	}
+
 	return ret;
 }
 

@@ -143,7 +143,7 @@ typedef struct user_arg_struct {
 	ptr_ref_count *cred;
 	void *buff;
 	globus_size_t buff_len;
-	int buff_filled;
+	globus_size_t buff_filled;
 	int fd;
 	globus_ftp_client_complete_callback_t first_callback;
 	ftp_cmd_t cmd_type;
@@ -1438,7 +1438,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 		return;
 	}
 
-	assert( offset + length == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
 
 	if ( eof ) {
 		free( buffer );
@@ -1662,7 +1662,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 {
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
-	int written = 0;
+	globus_size_t written = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -2369,7 +2369,7 @@ void gridftp_transfer_write_callback( void *arg,
 		return;
 	}
 
-	assert( offset + length == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
 
 	if ( eof ) {
 		free( buffer );
@@ -2412,7 +2412,7 @@ void gridftp_transfer_read_callback( void *arg,
 {
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
-	int written = 0;
+	globus_size_t written = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */

@@ -79,6 +79,7 @@ SetMasterProxy( Proxy *master, const Proxy *copy_src )
 
 	rc = rotate_file( tmp_file.c_str(), master->proxy_filename );
 	if ( rc != 0 ) {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( tmp_file.c_str() );
 		return false;
 	}
@@ -805,11 +806,24 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 
 	// Print password (this will end up in stdin for myproxy-get-delegation)
-	pipe (myProxyEntry->get_delegation_password_pipe);
-	write (myProxyEntry->get_delegation_password_pipe[1],
+	if (pipe (myProxyEntry->get_delegation_password_pipe)) {
+		dprintf(D_ALWAYS,
+				"Failed to pipe(2) in RefreshProxyThruMyProxy "
+				"for writing password, aborting\n");
+		return FALSE;
+	}
+	int written = write (myProxyEntry->get_delegation_password_pipe[1],
 		   myProxyEntry->myproxy_password,
 		   strlen (myProxyEntry->myproxy_password));
-	write (myProxyEntry->get_delegation_password_pipe[1], "\n", 1);
+	if (written < (int) strlen (myProxyEntry->myproxy_password)) {
+		dprintf(D_ALWAYS, "Failed to write to pipe in RefreshProxyThruMyProxy %d\n", errno);
+		return FALSE;
+    }
+	written = write (myProxyEntry->get_delegation_password_pipe[1], "\n", 1);
+	if (written < 1) {
+		dprintf(D_ALWAYS, "Failed to write to pipe in RefreshProxyThruMyProxy %d\n", errno);
+		return FALSE;
+	}
 
 
 	// Figure out user name;
@@ -856,6 +870,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	if(!myProxyEntry->get_delegation_err_filename) {
 		dprintf( D_ALWAYS, "Failed to create temp file");
 	} else {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'chmod' ignored.
 		chmod (myProxyEntry->get_delegation_err_filename, 0600);
 		myProxyEntry->get_delegation_err_fd = safe_open_wrapper_follow(myProxyEntry->get_delegation_err_filename,O_RDWR);
 		if (myProxyEntry->get_delegation_err_fd == -1) {
@@ -912,6 +927,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	}
 
 	if (myProxyEntry->get_delegation_err_filename) {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink (myProxyEntry->get_delegation_err_filename);// Remove the tempora
 		free (myProxyEntry->get_delegation_err_filename);
 		myProxyEntry->get_delegation_err_filename=NULL;
@@ -1017,6 +1033,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 
 	matched_entry->get_delegation_err_fd=-1;
 	matched_entry->get_delegation_pid=FALSE;
+	MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 	unlink (matched_entry->get_delegation_err_filename);// Remove the temporary file
 	free (matched_entry->get_delegation_err_filename);
 	matched_entry->get_delegation_err_filename=NULL;

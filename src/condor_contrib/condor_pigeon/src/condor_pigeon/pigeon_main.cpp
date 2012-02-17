@@ -28,36 +28,36 @@
 
 static Pigeon qpidObj;
 
-int main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * /* argv */ [])
 {     
         qpidObj.initialize();
-        return TRUE;
+        //return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int 
+void 
 main_config(  )
 {
         qpidObj.initialize();
-        return TRUE;
+        //return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
         qpidObj.stop(true);
         DC_Exit(0);
-        return TRUE;	// to satisfy c++
+        //return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
         qpidObj.stop();
-        return TRUE;	// to satisfy c++
+        //return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

@@ -66,6 +66,50 @@ int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 	the checkpointing directory. */
 int ValidateNoPathComponents(char *path);
 
+/* Attempt a write.  If the write fails, exit with READWRITE_ERROR.
+This code might in the future retry, especially on EAGAIN or EINTR, but
+no gaurantees are made.  Really, you should call write() and check your
+return, retrying if necessary.  However, in light of the anticipiated
+short remaining life on the checkpoint server, this is an acceptable
+solution for existing code.  DO NOT USE FOR NETWORK CONNECTIONS.
+*/
+static ssize_t write_or_die(int fd, const void * buf, size_t count) {
+	ssize_t ret = write(fd, buf, count);
+	if(ret < 0) {
+		dprintf(D_ALWAYS, "Error: error trying to write %d bytes to FD %d. %d: %s\n",
+			(int)count, (int)fd, (int)errno, strerror(errno));
+		exit(READWRITE_ERROR);
+	}
+	if(((size_t)ret) != count) {
+		dprintf(D_ALWAYS, "Error: only wrote %d bytes out of %d to FD %d. %d: %s\n",
+			(int)ret, (int)count, (int)fd, (int)errno, strerror(errno));
+		exit(READWRITE_ERROR);
+	}
+	return ret;
+}
+
+/* Attempt a read.  If the read fails, exit with READWRITE_ERROR.
+This code might in the future retry, especially on EAGAIN or EINTR, but
+no gaurantees are made.  Really, you should call read() and check your
+return, retrying if necessary.  However, in light of the anticipiated
+short remaining life on the checkpoint server, this is an acceptable
+solution for existing code.  DO NOT USE FOR NETWORK CONNECTIONS.
+*/
+static ssize_t read_or_die(int fd, void * buf, size_t count) {
+	ssize_t ret = read(fd, buf, count);
+	if(ret < 0) {
+		dprintf(D_ALWAYS, "Error: error trying to read %d bytes to FD %d. %d: %s\n",
+			(int)count, (int)fd, (int)errno, strerror(errno));
+		exit(READWRITE_ERROR);
+	}
+	if(((size_t)ret) != count) {
+		dprintf(D_ALWAYS, "Error: only read %d bytes out of %d to FD %d. %d: %s\n",
+			(int)ret, (int)count, (int)fd, (int)errno, strerror(errno));
+		exit(READWRITE_ERROR);
+	}
+	return ret;
+}
+
 
 Server::Server()
 {
@@ -141,8 +185,7 @@ void Server::Init()
 		// We have to do this after we call config, not in the Server
 		// constructor, or we won't have NETWORK_INTERFACE yet.
         // Commented out the following line so that server_addr is determined after
-        // the socket is bound to an address. This is a part of making Condor GCB
-        // friendly. -- Sonny 5/18/2005
+        // the socket is bound to an address. -- Sonny 5/18/2005
 	//server_addr.s_addr = htonl( my_ip_addr() );
 
 	dprintf( D_ALWAYS,
@@ -345,7 +388,8 @@ int Server::SetUpPort(u_short port)
 
 void Server::SetUpPeers()
 {
-	char *peers, *peer, peer_addr[256], *ckpt_host;
+	char *peers, *peer, *ckpt_host;
+	//char peer_addr[256];
 	StringList peer_name_list;
 
 	if ((peers = param("CKPT_SERVER_HOSTS")) == NULL) {
@@ -377,7 +421,7 @@ void Server::SetUpPeers()
 void Server::Execute()
 {
 	fd_set         req_sds;
-	int            num_sds_ready;
+	int            num_sds_ready = 0;
 	time_t         current_time;
 	time_t         last_reclaim_time;
 	time_t		   last_clean_time;
@@ -690,10 +734,10 @@ void Server::ProcessServiceReq(int             req_id,
 	service_reply_pkt  service_reply;
 	char               log_msg[256];
 	condor_sockaddr    server_sa;
-	int                data_conn_sd;
+	int                data_conn_sd = -1;
 	struct stat        chkpt_file_status;
 	char               pathname[MAX_PATHNAME_LENGTH];
-	int                num_files;
+	int                num_files = 0;
 	int                child_pid;
 	int                ret_code;
 
@@ -1029,7 +1073,7 @@ void Server::ProcessServiceReq(int             req_id,
 			} else {
 				child_pid = fork();
 				if (child_pid < 0) {
-					close(data_conn_sd);
+					if(data_conn_sd != -1) { close(data_conn_sd); }
 					Log("Unable to honor status service request:");
 					Log("Cannot fork child processes");	  
 				} else if (child_pid != 0)  {
@@ -1052,7 +1096,7 @@ void Server::ProcessServiceReq(int             req_id,
 						bit witdh that requested this reply, I could easily
 						pass the FDContext here instead which will tell me
 						what to send to the client. */
-					SendStatus(data_conn_sd);
+					if(data_conn_sd != -1) { SendStatus(data_conn_sd); }
 					exit(CHILDTERM_SUCCESS);
 				}
 			}
@@ -1100,7 +1144,8 @@ void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
 void Server::Replicate()
 {
 	int 				child_pid, bytes_recvd=0, bytes_read;
-	int					bytes_sent=0, bytes_written, bytes_left;
+	size_t				bytes_sent=0;
+	ssize_t				bytes_left, bytes_written;
 	char        		log_msg[256], buf[10240];
 	char				pathname[MAX_PATHNAME_LENGTH];
 	int 				server_sd, ret_code, fd;
@@ -1337,7 +1382,6 @@ void Server::ProcessStoreReq(int            req_id,
 							struct in_addr shadow_IP,
 							store_req_pkt  store_req)
 {
-	int                ret_code;
 	store_reply_pkt    store_reply;
 	int                data_conn_sd;
 	condor_sockaddr    server_sa;
@@ -1481,7 +1525,7 @@ void Server::ProcessStoreReq(int            req_id,
 		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
 				err_code);
 		Log(0, log_msg);
-		exit(ret_code);
+		exit(BIND_ERROR);
 	}
 
 	if (I_listen(data_conn_sd, 1) != CKPT_OK) {
@@ -1635,9 +1679,9 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
 	peer_info_fd = safe_open_wrapper_follow(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
-		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
+		write_or_die(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
-		write(peer_info_fd, (char *)&bytes_recvd, sizeof(bytes_recvd));
+		write_or_die(peer_info_fd, (char *)&bytes_recvd, sizeof(bytes_recvd));
 		close(peer_info_fd);
 	}
 
@@ -1655,7 +1699,6 @@ void Server::ProcessRestoreReq(int             req_id,
 {
 	struct stat        chkpt_file_status;
 	condor_sockaddr    server_sa;
-	int                ret_code;
 	restore_reply_pkt  restore_reply;
 	int                data_conn_sd;
 	int                child_pid;
@@ -1821,7 +1864,7 @@ void Server::ProcessRestoreReq(int             req_id,
       if ((err_code=I_bind(data_conn_sd, server_sa,FALSE)) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
 		  Log(0, log_msg);
-		  exit(ret_code);
+		  exit(BIND_ERROR);
 	  }
       if (I_listen(data_conn_sd, 1) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_listen() fails to listen");
@@ -1931,9 +1974,9 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
 	peer_info_fd = safe_open_wrapper_follow(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (peer_info_fd >= 0) {
-		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
+		write_or_die(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
 			  sizeof(struct in_addr));
-		write(peer_info_fd, (char *)&bytes_sent, sizeof(bytes_sent));
+		write_or_die(peer_info_fd, (char *)&bytes_sent, sizeof(bytes_sent));
 		close(peer_info_fd);
 	}
 
@@ -2133,8 +2176,8 @@ void Server::ChildComplete()
 		sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", child_pid);
 		peer_info_fd = safe_open_wrapper_follow(peer_info_filename, O_RDONLY);
 		if (peer_info_fd >= 0) {
-			read(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
-			read(peer_info_fd, (char *)&xfer_size, sizeof(xfer_size));
+			read_or_die(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
+			read_or_die(peer_info_fd, (char *)&xfer_size, sizeof(xfer_size));
 			close(peer_info_fd);
 			unlink(peer_info_filename);
 		}
@@ -2208,14 +2251,14 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path,
 		return;
 	}
 
-	if (realpath(path, real_path) < 0) {
+	if (realpath(path, real_path) == 0) {
 		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
 			"not resolve %s into a real path: %d(%s). Ignoring.\n",
 			path, errno, strerror(errno));
 		return;
 	}
 
-	if (realpath(ckpt_server_dir, real_ckpt_server_dir) < 0) {
+	if (realpath(ckpt_server_dir, real_ckpt_server_dir) == 0) {
 		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
 			"not resolve %s into a real path: %d(%s). Strange..ignoring "
 			"remove request for file under this directory.\n",
@@ -2509,7 +2552,7 @@ void UnblockSignals()
 }
 
 
-int main( int argc, char **argv )
+int main( int /*argc*/, char **argv )
 {
 	/* For daemonCore, etc. */
 	set_mySubSystem( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );

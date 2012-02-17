@@ -37,6 +37,7 @@
 #ifdef WIN32
 /* Get rid of warnings; we cannot change this code */
 #pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
+#pragma warning( disable: 6011 6001 ) // not checking malloc return, Enum_Loc uninitialized at 305 
 #endif
 
 #include <stdio.h>

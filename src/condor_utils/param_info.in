@@ -4132,6 +4132,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,proxymanager
 id=224
 
+[GRIDMANAGER_PROXY_REFRESH_TIME]
+aliases=
+default=21600
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gridmanager Proxy Refresh Time
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,proxymanager
+id=224
+
 [CONDOR_GAHP]
 aliases=
 default=$(SBIN)/condor_c-gahp
@@ -4164,54 +4180,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,unicore_gahp_wrapper
 id=227
 
-[GRIDFTP_URL_BASE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Url Base
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=228
-
-[GRIDFTP_SERVER]
-aliases=
-default=$(LIBEXEC)/globus-gridftp-server
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Server
-usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=229
-
-[GRIDFTP_SERVER_WRAPPER]
-aliases=
-default=$(LIBEXEC)/gridftp_wrapper.sh
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridftp Server Wrapper
-usage=GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gridftpmanager
-id=230
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT]
 aliases=
 default=3
@@ -4243,22 +4211,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,basejob
 id=234
-
-[GRIDMANAGER_MAX_WS_DESTROYS_PER_RESOURCE]
-aliases=
-default=5
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Gridmanager Max Ws Destroys Per Resource
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gt4resource
-id=235
 
 [ENABLE_GRID_MONITOR]
 aliases=
@@ -7113,7 +7065,7 @@ id=432
 
 [JAVA_BENCHMARK_TIME]
 aliases=
-default=2
+default=0
 version=0.0.0
 range=.*
 state=default
@@ -8936,22 +8888,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=541
 
-[MASTER_GCB_RECONNECT_TIMEOUT]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Gcb Reconnect Timeout
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=542
-
 [DC_DAEMON_LIST]
 aliases=
 default=
@@ -9015,22 +8951,6 @@ usage=one from this setting.
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=master,master
 id=546
-
-[MASTER_WAITS_FOR_GCB_BROKER]
-aliases=
-default=true
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Waits For Gcb Broker
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=master,master
-id=549
 
 [COLLECTOR_LOG]
 aliases=
@@ -10185,6 +10105,22 @@ url=
 tags=schedd
 id=602
 
+[SCHEDD_ROUND_ATTR_ResidentSetSize]
+aliases=
+default=25%
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=schedd
+id=602
+
 [ENABLE_VERSIONED_OPSYS]
 aliases=
 default=true
@@ -10425,3 +10361,36 @@ usage=Job Queue File
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag
 id=550
+
+[GROUP_SORT_EXPR]
+aliases=
+default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Accounting Group Sorting Expression
+usage=
+url=
+tags=negotiator
+id=666
+
+[CLAIM_PARTITIONABLE_LEFTOVERS]
+aliases=
+default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
+version=7.7.5
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Claim Parititionable Leftovers
+usage=
+url=
+tags=schedd,startd,claim
+id=603
+

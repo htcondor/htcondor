@@ -49,6 +49,9 @@ typedef struct ScheddStatistics {
    stats_entry_recent<time_t> JobsAccumTimeToStart; // sum of all time jobs spent waiting to start
    stats_entry_recent<time_t> JobsAccumRunningTime; // sum of all time jobs spent running.
    stats_entry_recent<time_t> JobsAccumBadputTime;  // sum of all time jobs spent running badput
+   stats_entry_recent<time_t> JobsAccumExecuteTime;  // sum of all time jobs spent executing the user code
+   stats_entry_recent<time_t> JobsAccumPreExecuteTime;  // sum of all time jobs spent transferring input
+   stats_entry_recent<time_t> JobsAccumPostExecuteTime; // sum of all time jobs spent transferring output
 
    // counts of various exit conditions.
    stats_entry_recent<int> JobsExitedNormally; // jobs that exited with JOB_EXITED or JOB_EXITED_AND_CLAIM_CLOSING

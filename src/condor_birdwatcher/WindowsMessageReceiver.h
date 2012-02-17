@@ -26,7 +26,7 @@ class WindowsMessageReceiver;
 class WindowsMessageReceiverOwner
 {
 public:
-	virtual void onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam) = 0;
+	virtual LRESULT onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam) = 0;
 };
 
 class WindowsMessageReceiver

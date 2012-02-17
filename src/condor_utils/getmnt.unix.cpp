@@ -39,8 +39,8 @@
 
 
 int
-getmnt( int * start, struct fs_data buf[], unsigned bufsize,
-		int mode, char * path )
+getmnt( int * /*start*/, struct fs_data buf[], unsigned /*bufsize*/,
+		int /*mode*/, char * /*path*/ )
 {
 	struct statfs	*data = NULL;
 	struct stat	st_buf;

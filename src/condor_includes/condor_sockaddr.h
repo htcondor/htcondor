@@ -54,7 +54,9 @@ public:
 	condor_sockaddr(const sockaddr_in* sin) ;
 	condor_sockaddr(const sockaddr_in6* sin6);
 
-	void init(int32_t ip, unsigned port);
+private:
+	void init(uint32_t ip, unsigned port);
+public:
 
 	// the caller is responsible for checking is_ipv4().
 	sockaddr_in to_sin() const;

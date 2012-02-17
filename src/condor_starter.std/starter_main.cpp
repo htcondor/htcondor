@@ -312,7 +312,7 @@ init_params()
 
 		// if the domain is null, don't honor any UIDs
 	if( UidDomain == NULL || UidDomain[0] == '\0' ) {
-		UidDomain = "Unknown";
+		UidDomain = strdup("Unknown");
 	}
 
 		// if the domain is "*", honor all UIDs - a dangerous idea
@@ -622,8 +622,8 @@ susp_ckpt_timer()
 int
 susp_all()
 {
-	char *susp_msg = "TISABH Starter: Suspended user job: ";
-	char *unsusp_msg = "TISABH Starter: Unsuspended user job.";
+	const char *susp_msg = "TISABH Starter: Suspended user job: ";
+	const char *unsusp_msg = "TISABH Starter: Unsuspended user job.";
 	char msg[4096];
 	UserProc	*proc;
 	int sum;

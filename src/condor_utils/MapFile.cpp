@@ -115,7 +115,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		return -1;
 	}
 
-    while (!feof(file)) {
+	while (!feof(file)) {
 		MyString input_line;
 		int offset;
 		MyString method;
@@ -162,21 +162,25 @@ MapFile::ParseCanonicalizationFile(const MyString filename)
 		canonical_entries[last].method = method;
 		canonical_entries[last].principal = principal;
 		canonical_entries[last].canonicalization = canonicalization;
-
-		const char *errptr;
-		int erroffset;
-		if (!canonical_entries[last].regex.compile(principal,
-												   &errptr,
-												   &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s.  Skipping to next line.\n",
-					principal.Value(),
-					errptr);
-
-			continue;
-		}
 	}
 
 	fclose(file);
+
+	// Compile the entries and print error messages for the ones that don't compile.
+	// We don't do this in the loop above because canonical_entries[] allocates 
+	// a whole new array when it needs to grow and we don't want to be copying 
+	// compiled regex's when that happens. see #2409
+	for (int ix = 0; ix <= canonical_entries.getlast(); ++ix) {
+		const char *errptr;
+		int erroffset;
+		if (!canonical_entries[ix].regex.compile(canonical_entries[ix].principal,
+												 &errptr,
+												 &erroffset)) {
+			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s.  this entry will be ignored.\n",
+					canonical_entries[ix].principal.Value(),
+					errptr);
+		}
+	}
 
 	return 0;
 }
@@ -224,6 +228,7 @@ MapFile::ParseUsermapFile(const MyString filename)
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
 						line, filename.Value());
 				
+				fclose(file);
 				return line;
 		}
 	

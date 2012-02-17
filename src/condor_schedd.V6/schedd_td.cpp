@@ -506,6 +506,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		if (respad.put(*rsock) == 0) {
 			dprintf(D_ALWAYS, "Submittor %s closed connection. Aborting "
 				"getting sandbox info for user.\n", fquser.Value());
+			delete treq;
 			return FALSE;
 		}
 		rsock->end_of_message();
@@ -564,6 +565,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	if (respad.put(*rsock) == 0) {
 		dprintf(D_ALWAYS, "Submittor %s closed connection. Aborting "
 			"getting sandbox info for user.\n", fquser.Value());
+		delete treq;
 		return FALSE;
 	}
 	rsock->end_of_message();

@@ -31,6 +31,7 @@
 #include "condor_arglist.h"
 #include <map>
 #include <queue>
+#include <string>
 
 
 struct GahpProxyInfo
@@ -39,12 +40,6 @@ struct GahpProxyInfo
 	int cached_expiration;
 	int num_references;
 };
-
-typedef void (* globus_gt4_gram_callback_func_t)(void * user_callback_arg,
-												 const char * job_contact,
-												 const char * state,
-												 const char * fault,
-												 const int exit_code);
 
 typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
@@ -60,8 +55,6 @@ static const int GAHPCLIENT_COMMAND_NOT_SUPPORTED = -101;
 static const int GAHPCLIENT_COMMAND_NOT_SUBMITTED = -102;
 ///
 static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
-
-static const int GT4_NO_EXIT_CODE = -1;
 
 void GahpReconfig();
 
@@ -196,11 +189,6 @@ class GahpServer : public Service {
 	void *globus_gt2_gram_user_callback_arg;
 	globus_gram_client_callback_func_t globus_gt2_gram_callback_func;
 	int globus_gt2_gram_callback_reqid;
-
-	char *globus_gt4_gram_callback_contact;
-	void *globus_gt4_gram_user_callback_arg;
-	globus_gt4_gram_callback_func_t globus_gt4_gram_callback_func;
-	int globus_gt4_gram_callback_reqid;
 
 	unicore_gahp_callback_func_t unicore_gahp_callback_func;
 	int unicore_gahp_callback_reqid;
@@ -403,72 +391,6 @@ class GahpClient : public Service {
 		globus_gram_client_get_jobmanager_version(const char * resource_manager_contact);
 
 
-		///
-		int
-		gt4_generate_submit_id (char ** submit_id);
-
-
-		int
-		gt4_gram_client_callback_allow(
-			globus_gt4_gram_callback_func_t callback_func,
-			void * user_callback_arg,
-			char ** callback_contact);
-
-		///
-		int 	
-		gt4_gram_client_job_create(
-								   const char * submit_id,
-								   const char * resource_manager_contact,
-								   const char * jobmanager_type,
-								   const char * callback_contact,
-								   const char * rsl,
-								   time_t termination_time,
-								   char ** job_contact);
-
-		int 
-		gt4_gram_client_job_create(const char * resource_manager_contact,
-			const char * description,
-			const char * callback_contact,
-			char ** job_contact);
-
-		///
-		int
-		gt4_gram_client_job_start(const char *job_contact);
-
-		///
-		int 
-		gt4_gram_client_job_destroy(const char * job_contact);
-
-		///
-		int
-		gt4_gram_client_job_status(const char * job_contact,
-			char ** job_status, char ** job_fault, int * exit_code);
-
-		///
-		int
-		gt4_gram_client_job_callback_register(const char * job_contact,
-			const char * callback_contact);
-
-		///
-		int 
-		gt4_gram_client_ping(const char * resource_manager_contact);
-
-		///
-		int
-		gt4_gram_client_delegate_credentials(const char *delegation_service_url,
-											 char ** delegation_uri);
-
-		///
-		int
-		gt4_gram_client_refresh_credentials(const char *delegation_uri);
-
-		///
-		int
-		gt4_set_termination_time(const char *resource_uri,
-								 time_t &new_termination_time);
-
-
-
 		int
 		condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 						  char **job_id);
@@ -624,67 +546,77 @@ class GahpClient : public Service {
 		
 		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
 
-		int ec2_vm_start( const char * service_url,
-						  const char * publickeyfile,
-						  const char * privatekeyfile,
-						  const char * ami_id,
-						  const char * keypair,
-						  const char * user_data,
-						  const char * user_data_file,
-						  const char * instance_type,
-						  const char * availability_zone,
-						  const char * vpc_subnet,
-						  const char * vpc_ip,
+		int ec2_vm_start( std::string service_url,
+						  std::string publickeyfile,
+						  std::string privatekeyfile,
+						  std::string ami_id,
+						  std::string keypair,
+						  std::string user_data,
+						  std::string user_data_file,
+						  std::string instance_type,
+						  std::string availability_zone,
+						  std::string vpc_subnet,
+						  std::string vpc_ip,
+						  std::string client_token,
 						  StringList & groupnames,
 						  char* & instance_id,
 						  char* & error_code );
 
-		int ec2_vm_stop( const char * service_url,
-						 const char * publickeyfile,
-						 const char * privatekeyfile,
-						 const char * instance_id,
+		int ec2_vm_stop( std::string service_url,
+						 std::string publickeyfile,
+						 std::string privatekeyfile,
+						 std::string instance_id,
 						 char* & error_code );
 
-		int ec2_vm_status( const char * service_url,
-							  const char * publickeyfile,
-							  const char * privatekeyfile,
-							  const char * instance_id,
+		int ec2_vm_status( std::string service_url,
+							  std::string publickeyfile,
+							  std::string privatekeyfile,
+							  std::string instance_id,
 							  StringList & returnStatus,
 							  char* & error_code );
 
-		int ec2_ping( const char * service_url,
-					  const char * publickeyfile,
-					  const char * privatekeyfile );
+		int ec2_ping( std::string service_url,
+					  std::string publickeyfile,
+					  std::string privatekeyfile );
 
-		int ec2_vm_create_keypair( const char * service_url,
-								   const char * publickeyfile,
-								   const char * privatekeyfile,
-								   const char * keyname,
-								   const char * outputfile,
+		int ec2_vm_create_keypair( std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
+								   std::string keyname,
+								   std::string outputfile,
 								   char* & error_code );
 
-		int ec2_vm_destroy_keypair( const char * service_url,
-									const char * publickeyfile,
-									const char * privatekeyfile,
-									const char * keyname,
+		int ec2_vm_destroy_keypair( std::string service_url,
+									std::string publickeyfile,
+									std::string privatekeyfile,
+									std::string keyname,
 									char* & error_code );
 
-		int ec2_vm_vm_keypair_all( const char * service_url,
-								   const char * publickeyfile,
-								   const char * privatekeyfile,
+		int ec2_vm_vm_keypair_all( std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
 								   StringList & returnStatus,
 								   char* & error_code );
 
         /**
          * Used to associate an elastic ip with a running instance
          */
-        int ec2_associate_address(const char * service_url,
-                                  const char * publickeyfile,
-                                  const char * privatekeyfile,
-                                  const char * instance_id, 
-                                  const char * elastic_ip,
+        int ec2_associate_address(std::string service_url,
+                                  std::string publickeyfile,
+                                  std::string privatekeyfile,
+                                  std::string instance_id, 
+                                  std::string elastic_ip,
                                   StringList & returnStatus,
                                   char* & error_code );
+
+		// Used to associate a tag with an resource, like a running instance
+        int ec2_create_tags(std::string service_url,
+							std::string publickeyfile,
+							std::string privatekeyfile,
+							std::string instance_id, 
+							StringList & tags,
+							StringList & returnStatus,
+							char* & error_code );
 		
         /**
          * Used to release an elastic ip from an instance
@@ -700,12 +632,12 @@ class GahpClient : public Service {
 		/**
 		 * Used to attach to an ecs volume(s).
 		 */
-		int ec2_attach_volume(const char * service_url,
-                              const char * publickeyfile,
-                              const char * privatekeyfile,
-                              const char * volume_id,
-							  const char * instance_id, 
-                              const char * device_id,
+		int ec2_attach_volume(std::string service_url,
+                              std::string publickeyfile,
+                              std::string privatekeyfile,
+                              std::string volume_id,
+							  std::string instance_id, 
+                              std::string device_id,
                               StringList & returnStatus,
                               char* & error_code );
 

@@ -21,7 +21,7 @@
 #include "WindowsMessageReceiver.h"
 #include <windows.h>
 
-#pragma warning(disable:4786)
+//#pragma warning(disable:4786)
 #include "birdwatcher.h"
 using namespace std;
 
@@ -69,7 +69,7 @@ void WindowsMessageReceiver::createHwnd()
 {
 	static WNDCLASS	wc;
 	static bool bFirstTime = true;
-	static WCHAR pszClassNameBuf[] = L"WindowsMessageReceiver";
+	static TCHAR pszClassNameBuf[] = TEXT("WindowsMessageReceiver");
 
 	srand(GetTickCount());
 
@@ -78,44 +78,27 @@ void WindowsMessageReceiver::createHwnd()
 	if (bFirstTime)
 	{
 		bFirstTime = false;
-
-		wc.style					= CS_HREDRAW | CS_VREDRAW;
-		wc.lpfnWndProc				= WMR_WindowProc;
-		wc.cbClsExtra				= 0x0;
-		wc.cbWndExtra				= sizeof(DWORD);
-		wc.hInstance				= hInst;// NULL
-		wc.hIcon					= NULL;
-		wc.hCursor					= NULL;
-		wc.hbrBackground			= (HBRUSH)GetStockObject(BLACK_BRUSH);
-		wc.lpszMenuName				= NULL;
-		wc.lpszClassName			= (LPCSTR)pszClassNameBuf;
-
-		//WCHAR wmreceiver[] = ;
-		//wcscpy_s(pszClassNameBuf, wcslen(wmreceiver), wmreceiver);
-		
-		int iTries = 0;
-		while (!RegisterClass(&wc)) 
-		{
-			int iRand = rand()%10000;
-			WCHAR sRand[32];
-			_itow_s(iRand, sRand, wcslen(sRand), 10);
-			//wcscpy_s(pszClassNameBuf, wcslen(wmreceiver), wmreceiver);
-			//wcscat_s(pszClassNameBuf, wcslen(sRand), sRand);
-			
-			iTries++;
-			if (iTries > 10)
-			{
-				break;
-			}
-		}
+		ZeroMemory(&wc, sizeof(wc));
+		wc.style			= CS_HREDRAW | CS_VREDRAW;
+		wc.lpfnWndProc		= WMR_WindowProc;
+		wc.cbClsExtra		= 0x0;
+		wc.cbWndExtra		= sizeof(DWORD);
+		wc.hInstance		= hInst;// NULL
+		wc.hIcon			= NULL;
+		wc.hCursor			= NULL;
+		wc.hbrBackground	= (HBRUSH)GetStockObject(BLACK_BRUSH);
+		wc.lpszMenuName		= NULL;
+		wc.lpszClassName	= pszClassNameBuf;
+		RegisterClass(&wc);
 	}
-	m_hWnd = CreateWindow((LPCSTR)pszClassNameBuf, TEXT(""), 0, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL,	NULL, hinst, NULL);
+
+	m_hWnd = CreateWindow(pszClassNameBuf, TEXT(""), 0, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL,	NULL, hinst, NULL);
 	if(!m_hWnd)
 	{
-		DWORD temp = GetLastError();
-		WCHAR buffer[256];
-		_ltow(temp, buffer, 10);
-		OutputDebugString((LPCSTR)buffer);
+		DWORD err = GetLastError();
+		TCHAR sz[256];
+		wsprintf(sz, TEXT("CreateWindow failed err=%d"), err);
+		OutputDebugString(sz);
 	}
 	mapWindowsMessageReceivers()[m_hWnd] = this;
 }

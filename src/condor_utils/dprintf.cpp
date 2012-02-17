@@ -35,12 +35,6 @@
 **	(*DebugId)() which takes DebugFP as an argument.
 **
 ************************************************************************/
-
-// This needs to precede all of our includes so that the off_t used in
-// dprintf_internal.h is 64 bits on 32-bit linuxes. Otherwise, we can't
-// deal with logs larger than 2GB.
-#define _FILE_OFFSET_BITS 64
-
 #include "condor_common.h"
 #include "condor_sys_types.h"
 #include "condor_debug.h"
@@ -70,7 +64,7 @@ static void debug_open_lock(void);
 static void debug_close_lock(void);
 static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic);
 
-void _condor_dprintf_exit( int error_code, const char* msg );
+PREFAST_NORETURN void _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_set_debug_flags( const char *strflags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
@@ -457,6 +451,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	if ( _condor_dprintf_critsec == NULL ) {
 		_condor_dprintf_critsec = 
 			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
+		ASSERT( _condor_dprintf_critsec );
 		InitializeCriticalSection(_condor_dprintf_critsec);
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);
@@ -628,8 +623,12 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 						   new directory and set a flag so we
 						   retry the safe_open_wrapper(). */
 #ifndef WIN32
-						chown( dirpath, get_condor_uid(),
-							   get_condor_gid() );
+						if (chown( dirpath, get_condor_uid(),
+								   get_condor_gid() )) {
+							fprintf( stderr, "Failed to chown(%s) to %d.%d: %s\n",
+									 dirpath, get_condor_uid(),
+									 get_condor_gid(), strerror(errno) );
+						}
 #endif
 						retry = 1;
 					}
@@ -782,7 +781,7 @@ debug_lock(int debug_flags, const char *mode, int force_lock)
 static FILE *
 debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic)
 {
-	off_t		length = 0; // this gets assigned return value from lseek()
+	int64_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
@@ -839,8 +838,16 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
-
-	if( (length=lseek(fileno(debug_file_ptr), 0, SEEK_END)) < 0 ) {
+#ifdef WIN32
+	length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);
+#elif Solaris
+	length = llseek(fileno(debug_file_ptr), 0, SEEK_END);
+#elif Linux
+	length = lseek64(fileno(debug_file_ptr), 0, SEEK_END);
+#else
+	length = lseek(fileno(debug_file_ptr), 0, SEEK_END);
+#endif
+	if(length < 0 ) {
 		if (dont_panic) {
 			if(locked) debug_close_lock();
 			debug_close_file(it);
@@ -852,6 +859,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
+	//This is checking for a non-zero max length.  Zero is infinity.
 	if( it->maxLog && length > it->maxLog ) {
 		if( !locked ) {
 			/*
@@ -1186,7 +1194,13 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(debug_file_ptr), 0, SEEK_END );
+#if Solaris
+	llseek(fileno(debug_file_ptr), 0, SEEK_END);
+#elif Linux
+	lseek64(fileno(debug_file_ptr), 0, SEEK_END);
+#else
+	lseek(fileno(debug_file_ptr), 0, SEEK_END);
+#endif
 	fprintf( debug_file_ptr, "%s\n", panic_msg );
 	(void)fflush( debug_file_ptr );
 
@@ -1493,6 +1507,7 @@ _condor_save_dprintf_line( int flags, const char* fmt, va_list args )
 
 		/* finally, make a new node in our list and save the line */
 	new_node = (struct saved_dprintf *)malloc( sizeof(struct saved_dprintf) );
+	ASSERT( new_node != NULL );
 	if( saved_list == NULL ) {
 		saved_list = new_node;
 	} else {
@@ -1551,7 +1566,7 @@ static int
 lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 {
 	int result = -1;
-	char * filename = NULL;
+	//char * filename = NULL;
 	int filename_len;
 	char *ptr = NULL;
 	char mutex_name[MAX_PATH];
@@ -1669,7 +1684,7 @@ dprintf_wrapup_fork_child( ) {
 
 #if HAVE_BACKTRACE
 
-static void
+static int
 safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned int num_args)
 {
 	unsigned int arg_index;
@@ -1677,15 +1692,16 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 	char intbuf[50];
 	char *intbuf_pos;
 
+	int r = 0;
 	for(;*msg;msg++) {
 		if( *msg != '%' ) {
-			write(fd,msg,1);
+			r = write(fd,msg,1);
 		}
 		else {
 				// format is % followed by index of argument in args array
 			arg_index = *(++msg)-'0';
 			if( arg_index >= num_args || !*msg ) {
-				write(fd," INVALID! ",10);
+				r = write(fd," INVALID! ",10);
 				break;
 			}
 			arg = args[arg_index];
@@ -1699,10 +1715,11 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 				// intbuf now contains the base-10 digits of arg
 				// in order of least to most significant
 			while( intbuf_pos-- > intbuf ) {
-				write(fd,intbuf_pos,1);
+				r = write(fd,intbuf_pos,1);
 			}
 		}
 	}
+	return r;
 }
 
 void

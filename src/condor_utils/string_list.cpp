@@ -75,9 +75,6 @@ StringList::StringList( const StringList &other )
 		ASSERT( dup );
 		m_strings.Append( dup );
 	}
-	if ( other.getDelimiters( ) ) {
-		m_delimiters = strnewp( other.getDelimiters() );
-	}
 }
 
 void
@@ -116,6 +113,7 @@ StringList::initializeFromString (const char *s)
 		// malloc new space for just this item
 		int len = (walk_ptr - begin_ptr);
 		char *tmp_string = (char*)malloc( 1 + len );
+		ASSERT( tmp_string );
 		strncpy (tmp_string, begin_ptr, len);
 		tmp_string[len] = '\0';
 		
@@ -549,11 +547,15 @@ static int string_compare(const void *x, const void *y) {
 
 void
 StringList::qsort() {
-	char *str;
- 	int i;
 	int count = m_strings.Length();
-	char **list = (char **) calloc(count, sizeof(char *));
+	if (count < 2)
+		return;
 
+	char **list = (char **) calloc(count, sizeof(char *));
+	ASSERT( list );
+
+ 	int i;
+	char *str;
 	for (i = 0, m_strings.Rewind(); (str = m_strings.Next()); i++) {
 		list[i] = strdup(str); // If only we had InsertAt on List...
 	}
@@ -573,6 +575,7 @@ StringList::shuffle() {
  	unsigned int i;
 	unsigned int count = m_strings.Length();
 	char **list = (char **) calloc(count, sizeof(char *));
+	ASSERT( list );
 
 	for (i = 0, m_strings.Rewind(); (str = m_strings.Next()); i++) {
 		list[i] = strdup(str);

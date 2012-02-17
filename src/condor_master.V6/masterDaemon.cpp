@@ -2044,7 +2044,7 @@ Daemons::ExecMaster()
 	argv[i++] = condor_main_argv[0];
 
 		// insert "-f" argument so that new master does not fork
-	argv[i++] = "-f";
+	argv[i++] = const_cast<char *>("-f");
 	for(j=1;j<condor_main_argc;j++) {
 		size_t len = strlen(condor_main_argv[j]);
 		if( strncmp(condor_main_argv[j],"-foreground",len)==0 ) {
@@ -2144,7 +2144,7 @@ Daemons::FinalRestartMaster()
 }
 
 
-char* Daemons::DaemonLog( int pid )
+const char* Daemons::DaemonLog( int pid )
 {
 	std::map<std::string, class daemon*>::iterator iter;
 

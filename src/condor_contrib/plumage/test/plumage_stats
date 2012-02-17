@@ -52,7 +52,11 @@ def print_users():
 			print user
 
 def print_usergroups():
-	# TODO: revisit with mongodb group()
+	# NOTE: after revisiting, mongodb group() seems significantly slower than find()/distinct() below
+	# ie., db['samples.submitter'].group({key: {'sn': true,'mn':true }, cond: {}, initial: {}, reduce: function() {}});
+	#usergroups = db['samples.submitter'].group(['sn','mn'], None, {}, 'function() {}')
+	#for ug in usergroups:
+		#print '%s/%s' % (ug['sn'],ug['mn'])
 	mnlist = db['samples.submitter'].distinct('mn')
 	for mn in mnlist:
 		snlist = db['samples.submitter'].find({'mn': mn}).distinct('sn')

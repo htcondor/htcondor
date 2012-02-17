@@ -138,6 +138,32 @@ bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
 #if defined(__cplusplus) && !defined( WIN32 )
 #include "passwd_cache.unix.h"
 extern passwd_cache* pcache(void);
+
+// An object that automatically returns the previous privilege level when destroyed
+class TemporaryPrivSentry {
+
+public:
+	TemporaryPrivSentry(priv_state dest_state) {
+		m_orig_state = set_priv(dest_state);
+	}
+
+	~TemporaryPrivSentry() {
+		if (m_orig_state != PRIV_UNKNOWN) {
+			set_priv(m_orig_state);
+		}
+	}
+
+private:
+	// no default constructor
+	TemporaryPrivSentry();
+
+	// non-copyable.
+	TemporaryPrivSentry(const TemporaryPrivSentry&);
+	TemporaryPrivSentry& operator=(const TemporaryPrivSentry&);
+
+	priv_state m_orig_state;
+};
+
 #endif
 
 #endif /* _UID_H */

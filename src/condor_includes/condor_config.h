@@ -31,8 +31,6 @@
 
 #include "param_info.h"
 
-#define CONDOR_GCB_INVALID_BROKER "0.0.0.1"
-
 typedef struct bucket {
 	char	*name;
 	char	*value;
@@ -289,6 +287,8 @@ extern "C" {
 	int find_special_config_macro( const char *prefix, bool only_id_chars,
 		register char *value, register char **leftp,
 		register char **namep, register char **rightp);
+
+	void init_config ( bool );
 }
 
 #endif
@@ -316,7 +316,6 @@ BEGIN_C_DECLS
 	of size TABLESIZE.
 	*/
 	char * macro_expand ( const char *name );
-	void init_config ( bool );
 	void clear_config ( void );
 	void set_debug_flags( const char * strFlags);
 	void config_insert( const char* attrName, const char* attrValue);

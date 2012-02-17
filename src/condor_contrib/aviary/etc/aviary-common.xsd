@@ -122,6 +122,8 @@
 			<xs:enumeration value="REMOVED"/>
 			<xs:enumeration value="COMPLETED"/>
 			<xs:enumeration value="HELD"/>
+			<xs:enumeration value="TRANSFERRING_OUTPUT"/>
+			<xs:enumeration value="SUSPENDED"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<!-- reuse through extension not available for the following related types -->
@@ -157,6 +159,8 @@
 			<xs:element name="idle" type="xs:int"/>
 			<xs:element name="removed" type="xs:int"/>
 			<xs:element name="running" type="xs:int"/>
+			<xs:element name="suspended" type="xs:int"/>
+			<xs:element name="transferring_output" type="xs:int"/>
 			<xs:element name="jobs" type="tns:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
 	</xs:complexType>
@@ -182,23 +186,27 @@
 	</xs:complexType>
 	<xs:simpleType name="ResourceType">
 		<xs:restriction base="xs:string">
+			<xs:enumeration value="ANY"/>
 			<xs:enumeration value="COLLECTOR"/>
-			<xs:enumeration value="EXECUTOR"/>
-			<xs:enumeration value="EVENT_SERVER"/>
-			<xs:enumeration value="JOB_SERVER"/>
-			<xs:enumeration value="LOW_LATENCY"/>
+			<xs:enumeration value="CUSTOM"/>
 			<xs:enumeration value="MASTER"/>
 			<xs:enumeration value="NEGOTIATOR"/>
 			<xs:enumeration value="SCHEDULER"/>
-			<xs:enumeration value="CUSTOM"/>
+			<xs:enumeration value="SLOT"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="ResourceID">
 		<xs:sequence>
-			<xs:element name="subsystem_type" type="tns:ResourceType"/>
-			<xs:element name="pool" type="xs:string"/>
-			<xs:element name="name" type="xs:string"/>
-			<xs:element name="custom_name" type="xs:string" minOccurs="0"/>
+			<xs:element name="resource" type="tns:ResourceType"/>
+			<xs:element name="pool" type="xs:string" minOccurs="0"/>
+			<xs:element name="name" type="xs:string" minOccurs="0"/>
+			<xs:element name="custom_type" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ResourceLocation">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>			
 		</xs:sequence>
 	</xs:complexType>
 </xs:schema>

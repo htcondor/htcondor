@@ -574,9 +574,9 @@ private:
 	void cancel_connect();
 
 	/**
-	   Private helper that sees if we're GCB enabled, if we're doing
-	   an outbound connection, and if so, uses GCB_local_bind() to
-	   avoid pounding the GCB broker for all outbound connections.
+	   Private helper that sees if we're CCB enabled, if we're doing
+	   an outbound connection, and if so, uses CCB_local_bind() to
+	   avoid pounding the CCB broker for all outbound connections.
 	*/
 	//int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 	//	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);

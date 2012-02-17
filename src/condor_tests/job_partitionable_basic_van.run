@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 
 my $testname = "job_partitionable_basic_van";
@@ -50,7 +51,12 @@ sub timed_callback {
     # and there should be no other slots
     if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
         $test_passed = 1;
-    }
+    } else {
+		print "Haven't seen expected condor_status output (yet).  What I saw was...\n";
+		print $stat;
+		print "condor_status shows\n";
+		runcmd("condor_status");
+	}
 }
 
 
@@ -62,7 +68,11 @@ sub exit_success_callback {
 }
 
 # personal condor, with 5 partitionable slots, 4 cpus each (total 20 cpus)
-# set the negotiator interval down to so test runs faster
+# set the negotiator interval down to so test runs faster.
+# also set CLAIM_PARTITIONABLE_LEFTOVERS to false - with it
+# set to true (which is the default), there is no guarantee that
+# the dynamic slots will be evenly divided across the partitionable
+# slots like this test expects.
 my $append_condor_config = "
 DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 NEGOTIATOR_INTERVAL = 20
@@ -70,6 +80,7 @@ NUM_CPUS = 20
 SLOT_TYPE_1 = cpus=4
 SLOT_TYPE_1_PARTITIONABLE = TRUE
 NUM_SLOTS_TYPE_1 = 5
+CLAIM_PARTITIONABLE_LEFTOVERS = false
 ";
 
 CondorTest::StartCondorWithParams(

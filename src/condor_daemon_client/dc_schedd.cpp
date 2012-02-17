@@ -606,7 +606,8 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 
 	if (invalid_request == FALSE) {
 		// not an invalid request
-		*regsock_ptr = rsock;
+		if (regsock_ptr)
+			*regsock_ptr = rsock;
 		return true;
 	}
 
@@ -1568,6 +1569,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	if( ! str ) {
 		return false;
 	}
+	buf[0] = 0; // in case result is bogus..
 
 	result = getResult( job_id );
 

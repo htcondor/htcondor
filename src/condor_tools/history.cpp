@@ -700,9 +700,11 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
             // Find previous delimiter + summary
             fseek(fd, prevOffset, SEEK_SET);
             buf.readLine(fd);
-            
-            owner = (char *) realloc (owner, buf.Length() * sizeof(char));
-      
+
+            void * pvner = realloc (owner, buf.Length() * sizeof(char));
+            ASSERT( pvner != NULL );
+            owner = (char *) pvner;
+
 			prevOffset = -1;
 			clusterId = -1;
 			procId = -1;

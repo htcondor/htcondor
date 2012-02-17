@@ -1,0 +1,4 @@
+JOB A job_dagman_final-A.cmd
+JOB B job_dagman_final-B.cmd
+FINAL C job_dagman_final-C.cmd
+PARENT A CHILD B

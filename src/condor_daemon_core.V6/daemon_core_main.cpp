@@ -40,10 +40,6 @@
 #include "exit.h"
 #include "param_functions.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-#endif
-
 #include "file_sql.h"
 #include "file_xml.h"
 
@@ -367,6 +363,7 @@ kill_daemon_ad_file()
 		return;
 	}
 
+	MSC_SUPPRESS_WARNING_FOREVER(6031) // return value of unlink ignored.
 	unlink(ad_file);
 
 	free(ad_file);
@@ -460,7 +457,11 @@ do_kill()
 		}
 	}
 	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
-		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
+		if (fscanf( PID_FILE, "%lu", &tmp_ul_int ) != 1) {
+			fprintf( stderr, "DaemonCore: ERROR: fscanf failed processing pid file %s\n",
+					 pidFile );
+			exit( 1 );
+		}
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
 	} else {
@@ -695,7 +696,9 @@ linux_sig_coredump(int signum)
 	setgid(0);
 
 	if (core_dir != NULL) {
-		chdir(core_dir);
+		if (chdir(core_dir)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", core_dir, strerror(errno));
+		}
 	}
 
 	WriteCoreDump("core");
@@ -974,6 +977,7 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 
 		if( strchr(ext,DIR_DELIM_CHAR) ) {
 			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			free(pname);
 			return FALSE;
 		}
 	}
@@ -1079,9 +1083,10 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		fullPath += "/";
 		fullPath += filename;
 		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
-		if (fd > 0) {
+		if (fd >= 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
+			close(fd);
 		}
 	}
 
@@ -1418,6 +1423,7 @@ dc_reconfig()
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
 			char segfault;	
+			MSC_SUPPRESS_WARNING_FOREVER(6011) // warning about NULL pointer deref.
 			segfault = *ptmp; // should blow up here
 			if (segfault) {} // Line to avoid compiler warnings.
 			ptmp[0] = 'a';
@@ -1506,26 +1512,43 @@ handle_dc_sigquit( Service*, int )
 	return TRUE;
 }
 
-void
-handle_gcb_recovery_failed( )
+const size_t OOM_RESERVE = 2048;
+static char *oom_reserve_buf;
+static void OutOfMemoryHandler()
 {
-	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
-			 "Broker. Performing fast shutdown.\n" );
-	dc_main_shutdown_fast();
+	std::set_new_handler(NULL);
+
+		// free up some memory to improve our chances of
+		// successfully logging
+	delete [] oom_reserve_buf;
+
+	int monitor_age = 0;
+	unsigned long vsize = 0;
+	unsigned long rss = 0;
+
+	if( daemonCore && daemonCore->monitor_data.last_sample_time != -1 ) {
+		monitor_age = (int)(time(NULL)-daemonCore->monitor_data.last_sample_time);
+		vsize = daemonCore->monitor_data.image_size;
+		rss = daemonCore->monitor_data.rs_size;
+	}
+
+	dprintf_dump_stack();
+
+	EXCEPT("Out of memory!  %ds ago: vsize=%lu KB, rss=%lu KB",
+		   monitor_age,
+		   vsize,
+		   rss);
 }
 
-#if HAVE_EXT_GCB
-static void
-gcb_recovery_failed_callback()
+static void InstallOutOfMemoryHandler()
 {
-		// BEWARE! This function is called by GCB. Most likely, either
-		// DaemonCore is blocked on a select() or CEDAR is blocked on a
-		// network operation. So we register a daemoncore timer to do
-		// the real work.
-	daemonCore->Register_Timer( 0, handle_gcb_recovery_failed,
-								"handle_gcb_recovery_failed" );
+	if( !oom_reserve_buf ) {
+		oom_reserve_buf = new char[OOM_RESERVE];
+		memset(oom_reserve_buf,0,OOM_RESERVE);
+	}
+
+	std::set_new_handler(OutOfMemoryHandler);
 }
-#endif
 
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
@@ -2017,6 +2040,25 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
+#ifdef WIN32
+	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
+	if (wait_for_win32_debugger) {
+		UINT ms = GetTickCount() - 10;
+		BOOL is_debugger = IsDebuggerPresent();
+		while ( ! is_debugger) {
+			if (GetTickCount() > ms) {
+				dprintf(D_ALWAYS,
+						"%s is %d, waiting for debugger to attach to pid %d.\n", 
+						debug_wait_param.Value(), wait_for_win32_debugger, GetCurrentProcessId());
+				ms = GetTickCount() + (1000 * 60 * 1); // repeat message every 1 minute
+			}
+			sleep(10);
+			is_debugger = IsDebuggerPresent();
+		}
+	}
+#endif
+
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
 		// pid. 
@@ -2137,11 +2179,6 @@ int dc_main( int argc, char** argv )
 	{
 		EXCEPT("Failed to create async pipe socket pair");
 	}
-#endif
-
-#if HAVE_EXT_GCB
-		// Set up our GCB failure callback
-	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
 	if ( dc_main_pre_command_sock_init ) {
@@ -2358,6 +2395,8 @@ int dc_main( int argc, char** argv )
 	FILEObj = FILESQL::createInstance(use_sql_log); 
     // create an xml log object
     XMLObj = FILEXML::createInstanceXML();
+
+	InstallOutOfMemoryHandler();
 
 	// call the daemon's main_init()
 	dc_main_init( argc, argv );

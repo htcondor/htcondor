@@ -1838,7 +1838,7 @@ static int shell ( const char *command, int len )
 	if( LocalSysCalls() || do_local ) {
 		rval = local_system_posix( command );
 	} else {
-		rval = remote_system_posix( (char*)command, len );
+		rval = remote_system_posix( command, len );
 	}
 
 	_condor_signals_enable( condor_omask );
@@ -1921,7 +1921,7 @@ static int local_system_posix(const char *command)
 	int status = -1;
 	struct sigaction ignore, saveintr, savequit;
 	sigset_t chldmask, savemask;
-	char *argv[4];
+	const char *argv[4];
 	extern char **environ;
 
 	if (command == NULL) {
@@ -1968,7 +1968,7 @@ static int local_system_posix(const char *command)
 
 		argv[0] = "sh";
 		argv[1] = "-c";
-		argv[2] = (char*)command;
+		argv[2] = command;
 		argv[3] = NULL;
 		syscall(SYS_execve, "/bin/sh", argv, environ);
 
@@ -2061,7 +2061,7 @@ int isatty( int fd )
 /* Same purpose as isatty, but asks if tape.  Present in Fortran library.
    I don't know if this is the real function format, but it's a good guess. */
 
-int __istape( int fd )
+int __istape( int /*fd*/ )
 {
         return 0;
 }

@@ -375,8 +375,8 @@ int send_service_reply_pkt(service_reply_pkt *srp, FDContext *fdc)
 	uint16_t			req_status;
 	struct in_addr		server_addr;
 	uint16_t			port;
-	uint32_t			num_files_32;
-	uint64_t			num_files_64;
+	uint32_t			num_files_32 = 0;
+	uint64_t			num_files_64 = 0;
 	char				capacity_free_ACD[MAX_ASCII_CODED_DECIMAL_LENGTH];
 	int					ret = -1;
 
@@ -1034,8 +1034,8 @@ int send_restore_reply_pkt(restore_reply_pkt *rstrp, FDContext *fdc)
 	/* The fields of the packet */
 	struct in_addr		server_name;
 	uint16_t			port;
-	uint32_t			file_size_32;
-	uint64_t			file_size_64;
+	uint32_t			file_size_32 = 0 ;
+	uint64_t			file_size_64 = 0 ;
 	uint16_t			req_status;
 	int					ret = -1;
 

@@ -31,7 +31,7 @@ enum exit_value {
 	EXIT_RESTART = 3,	// exit but indicate that we should be restarted
 };
 
-void main_shutdown_rescue( int exitVal );
+void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus );
 void main_shutdown_graceful( void );
 void print_status();
 
@@ -203,6 +203,7 @@ class Dagman {
 	bool _runPost;
 		// Default priority that DAGman uses for nodes.
 	int _defaultPriority;
+	int _claim_hold_time;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

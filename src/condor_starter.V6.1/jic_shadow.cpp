@@ -365,7 +365,7 @@ JICShadow::Continue( void )
 
 bool JICShadow::allJobsDone( void )
 {
-	bool r1, r2;
+	bool r1, r2 = false;
 	ClassAd update_ad;
 
 	r1 = JobInfoCommunicator::allJobsDone();
@@ -375,7 +375,7 @@ bool JICShadow::allJobsDone( void )
 		r2 = updateShadow( &update_ad, true );
 	}
 
-	return r1;
+	return r1 || r2;
 }
 
 
@@ -887,6 +887,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	if( tmp_val ) {
 		size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
 		tmp = (char*) malloc( size * sizeof(char) );
+		ASSERT( tmp != NULL );
 		sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
 		ad->Insert( tmp );
 		free( tmp );
@@ -895,6 +896,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	size = strlen(ATTR_HAS_RECONNECT) + 6;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
 	ad->Insert( tmp );
 	free( tmp );
