@@ -2158,6 +2158,7 @@ RemoteResource::checkX509Proxy( void )
 			dprintf(D_SECURITY, "VOMS attributes were not found\n");
 		}
 	}
+	shadow->updateJobInQueue(U_X509);
 
 	// Proxy file updated.  Time to upload
 	last_proxy_timestamp = lastmod;
