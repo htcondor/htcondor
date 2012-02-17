@@ -31,6 +31,7 @@
 #include "condor_arglist.h"
 #include <map>
 #include <queue>
+#include <string>
 
 
 struct GahpProxyInfo
@@ -545,67 +546,77 @@ class GahpClient : public Service {
 		
 		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
 
-		int ec2_vm_start( const char * service_url,
-						  const char * publickeyfile,
-						  const char * privatekeyfile,
-						  const char * ami_id,
-						  const char * keypair,
-						  const char * user_data,
-						  const char * user_data_file,
-						  const char * instance_type,
-						  const char * availability_zone,
-						  const char * vpc_subnet,
-						  const char * vpc_ip,
+		int ec2_vm_start( std::string service_url,
+						  std::string publickeyfile,
+						  std::string privatekeyfile,
+						  std::string ami_id,
+						  std::string keypair,
+						  std::string user_data,
+						  std::string user_data_file,
+						  std::string instance_type,
+						  std::string availability_zone,
+						  std::string vpc_subnet,
+						  std::string vpc_ip,
+						  std::string client_token,
 						  StringList & groupnames,
 						  char* & instance_id,
 						  char* & error_code );
 
-		int ec2_vm_stop( const char * service_url,
-						 const char * publickeyfile,
-						 const char * privatekeyfile,
-						 const char * instance_id,
+		int ec2_vm_stop( std::string service_url,
+						 std::string publickeyfile,
+						 std::string privatekeyfile,
+						 std::string instance_id,
 						 char* & error_code );
 
-		int ec2_vm_status( const char * service_url,
-							  const char * publickeyfile,
-							  const char * privatekeyfile,
-							  const char * instance_id,
+		int ec2_vm_status( std::string service_url,
+							  std::string publickeyfile,
+							  std::string privatekeyfile,
+							  std::string instance_id,
 							  StringList & returnStatus,
 							  char* & error_code );
 
-		int ec2_ping( const char * service_url,
-					  const char * publickeyfile,
-					  const char * privatekeyfile );
+		int ec2_ping( std::string service_url,
+					  std::string publickeyfile,
+					  std::string privatekeyfile );
 
-		int ec2_vm_create_keypair( const char * service_url,
-								   const char * publickeyfile,
-								   const char * privatekeyfile,
-								   const char * keyname,
-								   const char * outputfile,
+		int ec2_vm_create_keypair( std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
+								   std::string keyname,
+								   std::string outputfile,
 								   char* & error_code );
 
-		int ec2_vm_destroy_keypair( const char * service_url,
-									const char * publickeyfile,
-									const char * privatekeyfile,
-									const char * keyname,
+		int ec2_vm_destroy_keypair( std::string service_url,
+									std::string publickeyfile,
+									std::string privatekeyfile,
+									std::string keyname,
 									char* & error_code );
 
-		int ec2_vm_vm_keypair_all( const char * service_url,
-								   const char * publickeyfile,
-								   const char * privatekeyfile,
+		int ec2_vm_vm_keypair_all( std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
 								   StringList & returnStatus,
 								   char* & error_code );
 
         /**
          * Used to associate an elastic ip with a running instance
          */
-        int ec2_associate_address(const char * service_url,
-                                  const char * publickeyfile,
-                                  const char * privatekeyfile,
-                                  const char * instance_id, 
-                                  const char * elastic_ip,
+        int ec2_associate_address(std::string service_url,
+                                  std::string publickeyfile,
+                                  std::string privatekeyfile,
+                                  std::string instance_id, 
+                                  std::string elastic_ip,
                                   StringList & returnStatus,
                                   char* & error_code );
+
+		// Used to associate a tag with an resource, like a running instance
+        int ec2_create_tags(std::string service_url,
+							std::string publickeyfile,
+							std::string privatekeyfile,
+							std::string instance_id, 
+							StringList & tags,
+							StringList & returnStatus,
+							char* & error_code );
 		
         /**
          * Used to release an elastic ip from an instance
@@ -621,12 +632,12 @@ class GahpClient : public Service {
 		/**
 		 * Used to attach to an ecs volume(s).
 		 */
-		int ec2_attach_volume(const char * service_url,
-                              const char * publickeyfile,
-                              const char * privatekeyfile,
-                              const char * volume_id,
-							  const char * instance_id, 
-                              const char * device_id,
+		int ec2_attach_volume(std::string service_url,
+                              std::string publickeyfile,
+                              std::string privatekeyfile,
+                              std::string volume_id,
+							  std::string instance_id, 
+                              std::string device_id,
                               StringList & returnStatus,
                               char* & error_code );
 

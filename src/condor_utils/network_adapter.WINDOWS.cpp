@@ -435,6 +435,7 @@ WindowsNetworkAdapter::getRegistryProperty (
                     __leave;
 
                 }
+                ASSERT( pdidd != NULL ); // this is a no-op, but makes warnings go away
 
                 //dprintf ( D_FULLDEBUG, "DevicePath: %s\n", pdidd->DevicePath );
 

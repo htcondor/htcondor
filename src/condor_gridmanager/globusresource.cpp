@@ -715,6 +715,7 @@ GlobusResource::CleanupMonitorJob()
 
 		sprintf( tmp_dir, "%s.remove", monitorDirectory );
 
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rename' ignored.
 		rename( monitorDirectory, tmp_dir.c_str() );
 		free( monitorDirectory );
 		monitorDirectory = NULL;
@@ -722,6 +723,7 @@ GlobusResource::CleanupMonitorJob()
 		Directory tmp( tmp_dir.c_str() );
 		tmp.Remove_Entire_Directory();
 
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rmdir' ignored.
 		rmdir( tmp_dir.c_str() );
 	}
 	if(monitorJobStatusFile)

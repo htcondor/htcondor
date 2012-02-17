@@ -1436,18 +1436,19 @@ CStarter::createTempExecuteDir( void )
 			if ( !advapi ) {
 				dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
 				efs_support = false;
-			}
-			FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
-				GetProcAddress(advapi,"EncryptionDisable");
-			if ( !EncryptionDisable ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
-				efs_support = false;
-			}
-			FPEncryptFileA EncryptFile = (FPEncryptFileA) 
-				GetProcAddress(advapi,"EncryptFileA");
-			if ( !EncryptFile ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
-				efs_support = false;
+			} else {
+				FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
+					GetProcAddress(advapi,"EncryptionDisable");
+				if ( !EncryptionDisable ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+					efs_support = false;
+				}
+				FPEncryptFileA EncryptFile = (FPEncryptFileA) 
+					GetProcAddress(advapi,"EncryptFileA");
+				if ( !EncryptFile ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+					efs_support = false;
+				}
 			}
 
 			if ( efs_support ) {
@@ -2039,12 +2040,14 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 
 	if ( fclose( tmp_fp ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed close recovery file\n" );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( tmp_file.Value() );
 		return;
 	}
 
 	if ( rotate_file( tmp_file.Value(), m_recoveryFile.Value() ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed to rename recovery file\n" );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( tmp_file.Value() );
 	}
 }
@@ -2053,6 +2056,7 @@ void
 CStarter::RemoveRecoveryFile()
 {
 	if ( m_recoveryFile.Length() > 0 ) {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( m_recoveryFile.Value() );
 		m_recoveryFile = "";
 	}

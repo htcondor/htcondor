@@ -486,6 +486,7 @@ JobRouterHookMgr::addKnownHook(const char* key, HookType hook)
 		return false;
 	}
 	HOOK_RUN_INFO *hook_info = (HOOK_RUN_INFO*) malloc(sizeof(HOOK_RUN_INFO));
+	ASSERT( hook_info != NULL );
 	hook_info->hook_type = hook;
 	hook_info->key = strdup(key);
 	return(m_job_hook_list.Append(hook_info));

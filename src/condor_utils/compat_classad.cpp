@@ -1544,7 +1544,7 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
                         3 +     // " = "
                         1;      // null termination
         buffer = (char*) malloc(buffersize);
-        
+        ASSERT( buffer != NULL );
     } 
 
     snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
@@ -1627,6 +1627,7 @@ NextNameOriginal()
 		m_nameItrState = ItrInChain;
 	}
 	if ( ( m_nameItrState!=ItrInChain && m_nameItr == end() ) ||
+		 ( m_nameItrState==ItrInChain && chained_ad == NULL ) ||
 		 ( m_nameItrState==ItrInChain && m_nameItr == chained_ad->end() ) ) {
 		return NULL;
 	}
@@ -1935,6 +1936,7 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 		m_exprItrState = ItrInChain;
 	}
 	if ( ( m_exprItrState!=ItrInChain && m_exprItr == end() ) ||
+		 ( m_exprItrState==ItrInChain && chained_ad == NULL ) ||
 		 ( m_exprItrState==ItrInChain && m_exprItr == chained_ad->end() ) ) {
 		return false;
 	}

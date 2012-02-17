@@ -2218,6 +2218,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_COD ) { 
 		char buf[64];
 		snprintf( buf, 64, "COD%d", num );
+		buf[COUNTOF(buf)-1] = 0; // snprintf doesn't necessarly null terminate.
 		c_cod_id = strdup( buf );
 	} else {
 		c_cod_id = NULL;
@@ -2337,7 +2338,9 @@ ClaimId::dropFile( int slot_id )
 	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
 				 filename_new.Value() );
-		unlink( filename_new.Value() );
+		if (unlink(filename_new.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+		}
 	}
 }
 

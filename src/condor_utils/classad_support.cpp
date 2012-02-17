@@ -27,6 +27,8 @@ char ATTR_DIRTY_ATTR_LIST [] = "DirtyAttrList";
 
 static const char *assign_str = " = ";
 
+// several fuctions in this module use about 51240 bytes of stack which generates a warning.
+MSC_DISABLE_WARNING(6262) 
 
 /* if the attr isn't already in the dirty list, place it in there */
 void SetAttrDirty(ClassAd *ad, char *attr)

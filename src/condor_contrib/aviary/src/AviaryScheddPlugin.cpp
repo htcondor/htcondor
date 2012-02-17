@@ -18,11 +18,13 @@
 #include "condor_common.h"
 #include "condor_qmgr.h"
 #include "condor_config.h"
+#include "get_daemon_name.h"
 
 // local includes
 #include "AviaryScheddPlugin.h"
 #include "AviaryProvider.h"
 #include "SchedulerObject.h"
+#include "AviaryUtils.h"
 
 // Global from the condor_schedd, it's name
 extern char * Name;
@@ -34,6 +36,7 @@ extern char * Name;
 using namespace std;
 using namespace aviary::job;
 using namespace aviary::transport;
+using namespace aviary::util;
 
 // global SchedulerObject
 // TODO: convert to singleton
@@ -52,7 +55,9 @@ AviaryScheddPlugin::earlyInitialize()
 
     string log_name;
     sprintf(log_name,"aviary_job.log");
-    provider = AviaryProviderFactory::create(log_name,Name,"SCHEDULER","services/job");
+	string myname = "job@" + getScheddName();
+    provider = AviaryProviderFactory::create(log_name,myname,
+											 "SCHEDULER","JOB","services/job/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
@@ -74,7 +79,7 @@ AviaryScheddPlugin::earlyInitialize()
 	if (-1 == (index =
 			   daemonCore->Register_Socket((Stream *) sock,
 										   "Aviary Method Socket",
-										   (SocketHandlercpp) ( &AviaryScheddPlugin::HandleTransportSocket ),
+										   (SocketHandlercpp) ( &AviaryScheddPlugin::handleTransportSocket ),
 										   "Handler for Aviary Methods.",
 										   this))) {
 		EXCEPT("Failed to register transport socket");
@@ -135,6 +140,11 @@ AviaryScheddPlugin::shutdown()
 	if (schedulerObj) {
 		delete schedulerObj;
 		schedulerObj = NULL;
+	}
+	if (provider) {
+		provider->invalidate();
+		delete provider;
+		provider = NULL;
 	}
 }
 
@@ -213,7 +223,7 @@ AviaryScheddPlugin::deleteAttribute(const char */*key*/,
 								  const char */*name*/) { }
 
 int
-AviaryScheddPlugin::HandleTransportSocket(Stream *)
+AviaryScheddPlugin::handleTransportSocket(Stream *)
 {
     // TODO: respond to a transport callback here?
     string provider_error;

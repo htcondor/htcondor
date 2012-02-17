@@ -419,6 +419,7 @@ Directory::do_remove_file( const char* path )
 				// If on NT, remove read-only access if exists.
 #ifdef WIN32
 				// Make file read/write on NT.
+			MSC_SUPPRESS_WARNING(6031) // warning return value of chmod ignored.
 			_chmod( path, _S_IWRITE );
 #else /* UNIX */
 			if( want_priv_change && (desired_priv_state == PRIV_ROOT) ) {

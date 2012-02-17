@@ -1257,6 +1257,7 @@ VMProc::internalVMGahpError()
 	daemonCore->Send_Signal(daemonCore->getpid(), DC_SIGHARDKILL);
 }
 
+MSC_DISABLE_WARNING(6262) // function uses 60844 bytes of stack.
 bool 
 VMProc::reportErrorToStartd()
 {
@@ -1369,6 +1370,7 @@ VMProc::reportVMInfoToStartd(int cmd, const char *value)
 	sleep(1);
 	return true;
 }
+MSC_RESTORE_WARNING(6262) // function uses 60844 bytes of stack.
 
 bool 
 VMProc::vm_univ_detect()

@@ -65,7 +65,9 @@
         }
         AviaryCommon::ResourceLocation::~ResourceLocation()
         {
-
+			if (property_Id) delete property_Id;
+			if (property_Location) delete property_Location;
+			if (property_Status) delete property_Status;
         }
 
         

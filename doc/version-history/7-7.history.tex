@@ -29,8 +29,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The condor\_hdfs daemon has been moved to the contrib section, and is 
+\item Condor binaries will now look for the Condor configuration file in
+\File{\$(HOME)/.condor/condor\_config} in addition to the locations where
+they already look.
+\File{\$(HOME)/.condor/condor\_config} is checked immediately after the 
+\Env{CONDOR\_CONFIG} environment variable.
+
+\item The \condor{hdfs} daemon has been moved to the contrib section, and is 
 available from the source code.
+\Ticket{2797}
+
+\item Several of the Condor programs used to be a single executable
+hard linked to multiple filenames. Now, symbolic links are used.
+\Ticket{2140}
 
 \end{itemize}
 
@@ -46,7 +57,11 @@ available from the source code.
 
 \begin{itemize}
 
-\item None.
+\item The shared library \File{libcondor\_utils} now includes the Condor
+version in its name. This will reduce the chance of a Condor binary
+using the wrong version of the library, which can result in a crash or
+other bad behavior.
+\Ticket{2613}
 
 \end{itemize}
 
@@ -249,8 +264,9 @@ using the new default configuration setting
 \Ticket{2729}
 
 \item The configuration macro \MacroNI{PROCD\_LOG} now defaults to
- \File{\$(LOG)/ProcLog}.  Previously, there was no default value,
- so the \Condor{procd} did not log by default.
+\File{\$(LOG)/ProcLog}.  Previously, there was no default value,
+so the \Condor{procd} did not log by default.
+\Ticket{2775}
 
 \item The meaning of the \Attr{VirtualMemory} attribute of the \Condor{startd} 
 has been changed for Linux platforms.
@@ -330,11 +346,12 @@ affected \Attr{ImageSize} and \Attr{ResidentSetSize} but not
 \item Fixed a rare condition that could cause a job to remain in the
 running state indefinitely when the job was removed or put on hold
 and there was a communication failure between the \Condor{shadow}
-and the \Condor{starter}.  This problem was introduced in 7.7.2.
+and the \Condor{starter}.  
+This problem was introduced in Condor version 7.7.2.
 \Ticket{2591}
 
 \item Fixed a bug in the \Condor{gridmanager} that could cause crashes
-and prevent the \Attr{x509UserProxyEmail} from being set properly for
+and prevent the attribute \Attr{x509UserProxyEmail} from being set properly for
 jobs forwarded via Condor-C.
 \Ticket{2655}
 

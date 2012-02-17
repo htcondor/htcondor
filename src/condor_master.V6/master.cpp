@@ -83,6 +83,7 @@ void	RestartMaster();
 void	run_preen();
 void	usage(const char* );
 void	main_shutdown_graceful();
+void	main_shutdown_normal(); // do graceful or peaceful depending on daemonCore state
 void	main_shutdown_fast();
 void	invalidate_ads();
 void	main_config();
@@ -103,6 +104,7 @@ int		update_interval;
 int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
+StopStateT new_bin_restart_mode = GRACEFUL;
 char	*MasterName = NULL;
 char	*shutdown_program = NULL;
 
@@ -683,6 +685,34 @@ init_params()
 
 	new_bin_delay = param_integer( "MASTER_NEW_BINARY_DELAY", 2*MINUTE, 1 );
 
+	new_bin_restart_mode = GRACEFUL;
+	char * restart_mode = param("MASTER_NEW_BINARY_RESTART");
+	if (restart_mode) {
+		static const struct {
+			const char * text;
+			StopStateT   mode;
+			} modes[] = {
+				{ "GRACEFUL", GRACEFUL },
+				{ "PEACEFUL", PEACEFUL },
+				{ "NEVER", NONE }, { "NONE", NONE }, { "NO", NONE },
+			//	{ "FAST", FAST },
+			//	{ "KILL", KILL },
+			};
+		StopStateT mode = (StopStateT)-1; // prime with -1 so we can detect bad input.
+		for (int ii = 0; ii < (int)COUNTOF(modes); ++ii) {
+			if (MATCH == strcasecmp(restart_mode, modes[ii].text)) {
+				mode = modes[ii].mode;
+				break;
+			}
+		}
+		if (mode == (StopStateT)-1)	{
+			dprintf(D_ALWAYS, "%s is not a valid value for MASTER_NEW_BINARY_RESTART. using GRACEFUL\n", restart_mode);
+		}
+		if (mode >= 0 && mode <= NONE)
+			new_bin_restart_mode = mode;
+		free(restart_mode);
+	}
+
 	preen_interval = param_integer( "PREEN_INTERVAL", 24*HOUR, 0 );
 	if(preen_interval == 0) {
 		EXCEPT("PREEN_INTERVAL in the condor configuration is too low (0).  Please set it to an integer in the range 1 to %d (default %d).  To disable condor_preen entirely, comment out PREEN.", INT_MAX, 24*HOUR);
@@ -997,6 +1027,33 @@ main_shutdown_fast()
 	daemons.StopFastAllDaemons();
 }
 
+/*
+ ** Callback from daemon-core kill all daemons and go away. 
+ */
+void
+main_shutdown_normal()
+{
+	// if we are doing peaceful tell the children, and set a timer to do the real shutdown
+	// so the children have a chance to notice the messages
+	//
+	bool fTimer = false;
+	if (daemonCore->GetPeacefulShutdown()) {
+		int timeout = 5;
+		if (daemons.SetPeacefulShutdown(timeout) > 0) {
+			int tid = daemonCore->Register_Timer(timeout+1, 0,
+							(TimerHandler)main_shutdown_graceful,
+							"main_shutdown_graceful");
+			if (tid == -1)
+				dprintf( D_ALWAYS, "ERROR! Can't register DaemonCore timer!\n" );
+			else
+				fTimer = true;
+		}
+	}
+
+	if ( ! fTimer) {
+		main_shutdown_graceful();
+	}
+}
 
 /*
  ** Cause job(s) to vacate, kill all daemons and go away.
@@ -1203,7 +1260,7 @@ main( int argc, char **argv )
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;
-	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_shutdown_graceful = main_shutdown_normal;
 	dc_main_pre_command_sock_init = main_pre_command_sock_init;
 
 #ifdef WIN32
