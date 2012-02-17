@@ -49,7 +49,11 @@ hard linked to multiple filenames. Now, symbolic links are used.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
+specifies how the condor_master will restart when it notices that the condor_master
+binary has changed. Valid values are GRACEFUL, PEACEFUL and NEVER. 
+The default value is GRACEFUL
+\Ticket{2779}
 
 \end{itemize}
 
@@ -62,6 +66,13 @@ version in its name. This will reduce the chance of a Condor binary
 using the wrong version of the library, which can result in a crash or
 other bad behavior.
 \Ticket{2613}
+
+\item There was a bug on GRACEFUL and PEACEFUL shutdown, where the daemons 
+were stopped in random order. This resulted in the checkpoint server 
+sometimes being shut down before the \Condor{startd}.  The \Condor{startd}
+is now always shutdown first on GRACEFUL or PEACEFUL shutdown, with other
+daemons being shut down only after the \Condor{startd} has exited.
+\Ticket{2779}
 
 \end{itemize}
 
