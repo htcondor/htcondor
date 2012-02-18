@@ -101,13 +101,12 @@ AviaryProviderFactory::create(const string& log_file,
     }
 #endif
 
-	// provider owns this now
-	provider->setPublisher(ep);
-
-	// ready to publish our endpoint
-	if (ep) {
-		ep->start(param_integer("AVIARY_PUBLISH_INTERVAL", 10));
-	}
+    // ready to publish our endpoint
+    if (ep) {
+        // provider owns this now
+        provider->setPublisher(ep);
+        ep->start(param_integer("AVIARY_PUBLISH_INTERVAL", 10));
+    }
 
     return provider;
 }

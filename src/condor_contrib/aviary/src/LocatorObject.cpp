@@ -45,10 +45,16 @@ LocatorObject locator;
 
 LocatorObject::LocatorObject ()
 {
+    m_publishing = param_boolean("AVIARY_PUBLISH_LOCATION",FALSE);
 }
 
 LocatorObject::~LocatorObject()
 {
+}
+
+bool
+LocatorObject::isPublishing() {
+    return m_publishing;
 }
 
 string 
