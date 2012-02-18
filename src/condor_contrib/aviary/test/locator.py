@@ -70,7 +70,7 @@ except Exception, e:
 	exit(1)	
 
 if result.status.code != "OK":
-	print result.status.code
+	print result.status.code,"; ", result.status.text
 	exit(1)
 
 for r in result.resources:

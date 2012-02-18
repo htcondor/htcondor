@@ -54,6 +54,8 @@ The entities of this API are:
     attributes after a submission but a user can also provide their own custom 
     attributes if they are meaningful to the execution of the application that 
     is represented by a job.
+    * resource - A resource is an addressable service that forms the some part 
+    of the Condor runtime. For example, a SCHEDULER or QUERY_SERVER.
 
 SOAP and WSDL
 =============

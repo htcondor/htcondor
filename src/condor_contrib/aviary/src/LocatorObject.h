@@ -53,6 +53,7 @@ public:
 	void invalidate(const ClassAd& ad);
 	void invalidate_all();
 	void pruneMissingEndpoints(int max_misses);
+    bool isPublishing();
 
 	LocatorObject();
     ~LocatorObject();
@@ -61,6 +62,7 @@ public:
 private:
 	Endpoint createEndpoint(const ClassAd& ad);
 	EndpointMapType m_endpoints;
+    bool m_publishing;
 
 };
 

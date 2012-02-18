@@ -40,6 +40,12 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
 	EndpointVectorType endpoints;
 	LocateResponse* response = new LocateResponse;
 
+    if (!locator.isPublishing()) {
+        response->setStatus(new AviaryCommon::Status(new StatusCodeType("UNAVAILABLE"),
+            "Locator service not configured for publishing. Check value of AVIARY_PUBLISH_LOCATION!"));
+        return response;
+    }
+
 	bool partials = _locate->getPartialMatches();
 	ResourceID* id = _locate->getId();
 	locator.locate(id->getName(),id->getResource()->getResourceType(),id->getSub_type(),partials,endpoints);
