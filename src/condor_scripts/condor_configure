@@ -448,7 +448,7 @@ if ($opt_bosco) {
     
     $local_config{COLLECTOR_NAME}="";
 
-	$local_config{IS_BOSCO}="True"
+	$local_config{IS_BOSCO}="True";
 
 	$daemon_list{SCHEDD} = 1;
 }
