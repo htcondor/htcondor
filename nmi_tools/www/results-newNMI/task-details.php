@@ -13,7 +13,6 @@ $platform    = $_REQUEST["platform"];
 $task        = $_REQUEST["task"];
 $description = $_REQUEST["description"];
 $runid       = $_REQUEST["runid"];
-$type        = $_REQUEST["type"];
 
 ?>
 
@@ -139,7 +138,18 @@ foreach ($results as $myrow) {
   $resultspath = "$basedir/$gid/userdir/$platform/results.tar.gz";
   $resfound = file_exists($local_fs_prefix.$resultspath);
   
-  $num_warnings = `grep -c -i warning $filepath.out`;
+  if(preg_match("/_win/", $_REQUEST["platform"])) {
+    # "warning c6" is a Windows coverity warning.  We want to see these as a separate category
+    # to keep track of them.  Talk to TJ for more details.
+    # Note: we want windows to be case sensitive - WARNING (in caps) appears a lot and it is not a problem
+    $num_warnings = `grep -c "warning " $filepath.out`;
+    $num_win_coverity_warnings = `grep -c "warning C6" $filepath.out`;
+    $num_warnings = $num_warnings - $num_win_coverity_warnings;
+  }
+  else {
+    $num_warnings = `grep -c -i warning $filepath.out`;
+  }
+
   $num_warnings_stderr = 0;
   # STDERR is usually empty so don't do a shell callout unless stderr size is > 0
   if($stderr_size > 0) {
@@ -176,6 +186,14 @@ foreach ($results as $myrow) {
   echo "<tr><td>Stderr:</td><td> $stderr_url - (size: $stderr_size_display bytes) </td></tr>\n";
   echo "<tr><td>Run Results:</td><td> $results_url</a></td></tr>\n";
   echo "<tr><td># warnings STDOUT:</td><td>$num_warnings</td></tr>\n";
+  if(preg_match("/_win/", $_REQUEST["platform"])) {
+    if($num_win_coverity_warnings == 0) {
+      echo "<tr><td># warnings coverity:</td><td>$num_win_coverity_warnings</td></tr>\n";
+    }
+    else {
+      echo "<tr><td># warnings coverity:</td><td>$num_win_coverity_warnings</td></tr>\n";
+    }
+  }
   echo "<tr><td># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>\n";
   echo "</table>";
   echo "</p>";
@@ -183,6 +201,14 @@ foreach ($results as $myrow) {
   if($file_found) {
     if($stdout_size > 0) {
       show_file_content("STDOUT", "$filepath.out");
+
+      # Show the Windows coverity warnings
+      if(preg_match("/_win/", $_REQUEST["platform"])) {
+  	$lines = `grep "warning C6" $filepath.out`;
+	$lines = preg_replace("/(C6\d\d\d: )([^:]+)(:)/", "$1<font style='background-color:yellow'>$2</font>$3", $lines);
+	echo "<p>Windows coverity warnings (ALL):\n";
+	echo "<pre>$lines</pre>";
+      }
     }
     
   }
@@ -192,7 +218,7 @@ function show_file_content($header, $file) {
   echo "<hr>\n";
   echo "<h3>$header:</h3>";
 
-  if($_REQUEST["type"] == "build" && preg_match("/_win/", $_REQUEST["platform"])) {
+  if($_REQUEST["task"] == "remote_task.create_tar" && preg_match("/_win/", $_REQUEST["platform"])) {
     // For windows we have a script that does some smarter parsing
     $lines = `./parse-windows-build.pl $file`;
     echo "<pre>$lines</pre>\n";

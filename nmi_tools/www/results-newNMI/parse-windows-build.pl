@@ -24,7 +24,7 @@ open(FILE, '<', $ARGV[0]) or die("Cannot open $ARGV[0]: $!");
 
 my @output;
 my @chunk;
-my $begin_re = qr/^------ /;
+my $begin_re = qr/^\d+\>------ /;
 my $end_re   = qw/ error\(s\),/;
 while(<FILE>) {
     if(/\d+\s+succeeded/) {
