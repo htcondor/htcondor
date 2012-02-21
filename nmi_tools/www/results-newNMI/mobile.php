@@ -25,11 +25,12 @@ td.small {
 
 .build {
   width: 10px;
- }
+}
 
 .test {
-width: 10px;
- }
+  border-right-width: 2px;
+  width: 10px;
+}
 -->
 </style>
 
@@ -196,7 +197,7 @@ foreach ($runs as $run) {
   print "<tr>\n";
 
   // Now print the results for each platform
-  foreach (Array("x86_64_rhap_6.2", "x86_64_winnt_6.1") as $platform) {
+  foreach (Array("x86_64_deb_6.0", "x86_64_fedora_16", "x86_sl_5.7", "x86_64_winnt_6.1") as $platform) {
     // There is no guarantee that each platform is in each run.  So check it here
     if(array_key_exists($platform, $run["platforms"])) {
 
@@ -332,6 +333,7 @@ function make_cell($run, $platform, $run_type, $td_class) {
     $color = "failed";
   }
 
+  /*
   $details = "  <table>";
   $details .= "    <tr><td class='left'>Status</td><td class=\"$color left\">$color</td></tr>";
   $details .= "    <tr><td class='left'><nobr>NMI RunID</nobr></td><td class='left'>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
@@ -357,6 +359,8 @@ function make_cell($run, $platform, $run_type, $td_class) {
   //$details .= "    <tr><td>Submission Host</td><td>" . $run["host"] . "</td></tr>";
 
   $details .= "  </table>";
+  */
+  $details = $platform;
 
   $detail_url = sprintf(DETAIL_URL, $run["runid"]);
 
