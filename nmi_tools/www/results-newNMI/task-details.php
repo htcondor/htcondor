@@ -166,8 +166,11 @@ foreach ($results as $myrow) {
   $resultval = $myrow["result"];
 
 
-  if($resultval != 0) {
-    $pretty_resultval = $dash->get_nmi_result_text($resultval);
+  if($resultval == 0) {
+    $pretty_resultval = "Success";
+  }
+  else {
+    $pretty_resultval = $dash->get_nmi_result_text($resultval);    
   }
 
   $test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">$resultval</a>";
@@ -188,10 +191,10 @@ foreach ($results as $myrow) {
   echo "<tr><td># warnings STDOUT:</td><td>$num_warnings</td></tr>\n";
   if(preg_match("/_win/", $_REQUEST["platform"])) {
     if($num_win_coverity_warnings == 0) {
-      echo "<tr><td># warnings coverity:</td><td>$num_win_coverity_warnings</td></tr>\n";
+      echo "<tr><td># warnings Coverity:</td><td>$num_win_coverity_warnings (Windows Coverity checking may not have been enabled for this run)</td></tr>\n";
     }
     else {
-      echo "<tr><td># warnings coverity:</td><td>$num_win_coverity_warnings</td></tr>\n";
+      echo "<tr><td># warnings Coverity:</td><td>$num_win_coverity_warnings</td></tr>\n";
     }
   }
   echo "<tr><td># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>\n";
