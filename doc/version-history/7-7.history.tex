@@ -122,6 +122,17 @@ For information on enabling IPv6 support in the 7.7 series of Condor,
 see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
 \Ticket{9}
 
+\item The performance for claiming a partitionable slot in a 
+\Condor{startd} is greatly improved.  
+This feature is implemented in both the \Condor{schedd} and \Condor{startd},
+so both sides must be updated to at least Condor version 7.7.5 
+to see the benefit.  
+To disable this feature, set configuration variable
+\Macro{CLAIM\_PARTITIONABLE\_LEFTOVERS} to \Expr{False} 
+on either the submit or execute machines.  
+The default value for this variable is \Expr{True}.
+\Ticket{2790}
+
 \item On Linux platforms, the \Condor{starter} can now optionally measure the
 PSS (Proportional Set Size) of each Condor job,
 if the configuration variable \Macro{USE\_PSS} is \Expr{True}.
