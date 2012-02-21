@@ -1,9 +1,7 @@
-* Do license checks
 * debconf templates should mention format things: comma-separated list, ...
 * debconf: think about switching away from combinatorial setup to a few
   hand-polished config scenarios
 * Allow for configurable UID/GID
 * Security: ALLOW_ADVERTISE_SCHEDD
-* Incompatible with GSOAP 2.8.*
-* Since 7.7.4 no longer builds on Ubuntus (seems to be missing header in
-  EC2-related code)
+* Make condor behave the same on all Debian-like systems
+* Have a test suite that can run at package build time
