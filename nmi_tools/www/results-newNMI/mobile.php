@@ -22,6 +22,14 @@ $blacklist = Array("x86_64_fedora_13");
 td.small {
   font-size: 50%;
 }
+
+.build {
+  width: 10px;
+ }
+
+.test {
+width: 10px;
+ }
 -->
 </style>
 
