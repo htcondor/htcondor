@@ -108,7 +108,9 @@ Copyright: 2007-2008, 2011 James A. Kupsch
 License: Apache-2.0
 
 
-Files: src/nordugrid_gahp/*
+Files: src/nordugrid_gahp/globus*
+       src/condor_includes/condor_gssapi_openssl.h
+       src/gt2_gahp/my_ez.cpp
 Copyright: 1999-2006, University of Chicago
 License: Apache-2.0
 
@@ -142,11 +144,6 @@ Files: src/condor_contrib/aviary/test/module/aviary/https.py
 Copyright: 2011, Joseph Turner
            2011, David Norton, Jr
            2009-2011 Red Hat, Inc
-License: Apache-2.0
-
-
-Files: src/condor_includes/condor_gssapi_openssl.h
-Copyright: 1999-2006 University of Chicago
 License: Apache-2.0
 
 
