@@ -57,7 +57,6 @@ FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
-void _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_set_debug_flags( const char *strflags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
