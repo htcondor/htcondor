@@ -1469,47 +1469,40 @@ sub IsRunningYet
 	}
 
 	if($daemonlist =~ /STARTD/i) {
-            # lets wait for the collector to know about it (if we have a collector)
-            my $done = "no";
-            my $currenthost = CondorTest::getFqdnHost();
-            if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
-                print "Waiting for collector to see startd - ";
-                $loopcount = 0;
-                while($done eq "no") {
-                    $loopcount += 1;
-                    my $out = `condor_status -startd -format \"%s\\n\" name`;
-                    
-                    my $res = $?;
-                    if ($res != 0) {
-                        print "\n";
-                        print "condor_status returned error code $res.\n";
-                        print "The collector probably is not running after all, giving up.\n";
-                        print "Current processes on the system:\n";
-                        print get_process_listing();
-                        print "\n";
-                        my $lsof = "/usr/sbin/lsof";
-                        if(-e $lsof) {
-                            print "$lsof output:\n";
-                            print `$lsof`;
-                        }
-                        else {
-                            print "$lsof does not exist on the system\n";
-                        }
-                        return 0;
-                    }
-                    
-                    if($out =~ /$currenthost/) {
-                        $done = "yes";
-                        print "ok\n";
-                        last;
-                    }
-                    if($loopcount == $runlimit) { 
-                        print "bad\n";
-                        last; 
-                    }
-                    sleep ($loopcount * $backoff);
-                }
-            }
+		# lets wait for the collector to know about it
+		# if we have a collector
+		my $havestartd = "";
+		my $done = "no";
+		my $currenthost = CondorTest::getFqdnHost();
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+			print "Waiting for collector to see startd - ";
+			$loopcount = 0;
+			TRY: while( $done eq "no") {
+				$loopcount += 1;
+				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
+
+				my $res = $?;
+				if ($res != 0) {
+					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
+					return 0;
+				}
+
+    			foreach my $line (@cmd)
+    			{
+        			if( $line =~ /^.*$currenthost.*/)
+        			{
+            			$done = "yes";
+						print "ok\n";
+						last TRY;
+        			}
+    			}
+				if($loopcount == $runlimit) { 
+					print "bad\n";
+					last; 
+				}
+				sleep ($loopcount * $backoff);
+			}
+		}
 	}
 
 	if($daemonlist =~ /SCHEDD/i) {
@@ -1970,19 +1963,6 @@ sub IsThisNightly
 	} else {
 		return(0);
 	}
-}
-
-sub get_process_listing {
-    my $uname = `uname`;
-    if($uname =~ /linux/i) {
-        return `ps aux --forest`;
-    }
-    elsif($uname =~ /darwin/i) {
-        return `ps -u -ww`;
-    }
-    else {
-        return "Unknown operating system ($uname).  Modify CondorPersonal::get_process_listing to teach it about this OS\n";
-    }
 }
 
 
