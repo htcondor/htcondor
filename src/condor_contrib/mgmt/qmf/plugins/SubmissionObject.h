@@ -44,7 +44,7 @@ using namespace std;
 
 struct cmpprocid {
         bool operator()(PROC_ID a, PROC_ID b) const {
-                return a.proc < b.proc;
+		 return (a.cluster < b.cluster) || ((a.cluster == b.cluster) && (a.proc < b.proc));
         }
 };
 

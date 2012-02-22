@@ -141,13 +141,18 @@ static std::string create_failure(const char *req_id, const char *err_msg, ...)
     va_list ap;
     char *tmp;
     unsigned int i;
+    int retval;
 
     buffer += req_id;
     buffer += ' ';
 
     va_start(ap, err_msg);
-    vasprintf(&tmp, err_msg, ap);
+    retval = vasprintf(&tmp, err_msg, ap);
     va_end(ap);
+
+    if (retval == -1) {
+        return "";
+    }
 
     for (i = 0; i < strlen(tmp); i++) {
         if (tmp[i] == ' ')

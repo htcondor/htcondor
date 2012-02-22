@@ -74,6 +74,7 @@ email_open( const char *email_addr, const char *subject )
 		size_t prolog_length = strlen(EMAIL_SUBJECT_PROLOG);
 		size_t subject_length = strlen(subject);
 		FinalSubject = (char *)malloc(prolog_length + subject_length + 1);
+		ASSERT( FinalSubject != NULL );
 		memcpy(FinalSubject, EMAIL_SUBJECT_PROLOG, prolog_length);
 		memcpy(&FinalSubject[prolog_length], subject, subject_length);
 		FinalSubject[prolog_length + subject_length] = '\0';
@@ -310,7 +311,10 @@ email_open_implementation( const char * final_args[])
 		/* this is a simple daemon that if it needs to stat . should be
 			able to. You might not be able to if the shadow's cwd is in the
 			user dir somewhere and not readable by the Condor Account. */
-		chdir("/");
+		int ret = chdir("/");
+		if (ret == -1) {
+			EXCEPT("EMAIL PROCESS: Could not cd /\n");
+		}
 		umask(0);
 
 		/* Change my userid permanently to "condor" */

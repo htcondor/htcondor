@@ -57,12 +57,16 @@ int scandirectory(const char *dir, struct dirent ***namelist,
 	while ((entry=readdir(d)) != NULL) {
 		if (select == NULL || (select != NULL && (*select)(entry))) {
 			*namelist=(struct dirent **)realloc((void *)(*namelist), (size_t)((i+1)*sizeof(struct dirent *)));
-			if (*namelist == NULL) 
+			if (*namelist == NULL) {
+				closedir(d);
 				return -1;
+			}
 			entrysize=sizeof(struct dirent)-sizeof(entry->d_name)+strlen(entry->d_name)+1;
 			(*namelist)[i]=(struct dirent *)malloc(entrysize);
-			if ((*namelist)[i] == NULL) 
+			if ((*namelist)[i] == NULL) {
+				closedir(d);
 				return(-1);
+			}
 			memcpy((*namelist)[i], entry, entrysize);
     	    i++;
 		}
@@ -136,6 +140,7 @@ rotateTimestamp(const char *timeStamp, int maxNum)
 
 	// First, select a name for the rotated history file
 	char *rotated_log_name = (char*)malloc(strlen(logBaseName) + strlen(ts) + 2) ;
+	ASSERT( rotated_log_name );
 	(void)sprintf( rotated_log_name, "%s.%s", logBaseName, ts );
 	save_errno = rotate_file_dprintf(logBaseName, rotated_log_name, 1);
 	free(rotated_log_name);
@@ -207,7 +212,7 @@ int isLogFilename( char *filename) {
 	if (baseDirName[dirLen-1] != DIR_DELIM_CHAR)
 		++dirLen;
     int fLen = strlen(logBaseName);
-    if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen - 1) == 0 ) {
+    if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen) == 0 ) {
     	if (  (strlen(filename) > unsigned(fLen-dirLen)) && 
 			  (filename[fLen-dirLen] == '.')  ) {
 			if (  (isTimestampString(filename+(fLen-dirLen+1)) == 1) ||
@@ -259,6 +264,7 @@ char *findOldest(char *dirName, int *count) {
 		return NULL;
 	} else {
 		oldFile = (char*)malloc(strlen(logBaseName) + 16);
+		ASSERT( oldFile );
 		strcpy(oldFile, ffd.cFileName);
 	}
 	while (result != 0) {

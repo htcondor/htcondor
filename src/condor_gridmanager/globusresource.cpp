@@ -439,6 +439,7 @@ void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
 void
 GlobusResource::CheckMonitor()
 {
+	BaseJob *base_job = NULL;
 	GlobusJob *job;
 	// TODO should we require our jobs to request the grid monitor before
 	//   we'll start it up?
@@ -590,7 +591,8 @@ GlobusResource::CheckMonitor()
 					monitorFirstStartup = false;
 					monitorActive = true;
 					registeredJobs.Rewind();
-					while ( registeredJobs.Next( (BaseJob*&)job ) ) {
+					while ( registeredJobs.Next( base_job ) ) {
+						job = dynamic_cast<GlobusJob*>( base_job );
 						job->SetEvaluateState();
 					}
 				}
@@ -667,6 +669,7 @@ GlobusResource::AbandonMonitor()
 void
 GlobusResource::StopMonitor()
 {
+	BaseJob *base_job = NULL;
 	GlobusJob *job;
 
 	dprintf(D_ALWAYS, "Stopping grid_monitor for resource %s\n", resourceName);
@@ -677,7 +680,8 @@ GlobusResource::StopMonitor()
 	monitorStarting = false;
 	if ( monitorActive || monitorFirstStartup ) {
 		registeredJobs.Rewind();
-		while ( registeredJobs.Next( (BaseJob*&)job ) ) {
+		while ( registeredJobs.Next( base_job ) ) {
+			job = dynamic_cast<GlobusJob*>( base_job );
 			job->SetEvaluateState();
 		}
 	}
@@ -711,6 +715,7 @@ GlobusResource::CleanupMonitorJob()
 
 		sprintf( tmp_dir, "%s.remove", monitorDirectory );
 
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rename' ignored.
 		rename( monitorDirectory, tmp_dir.c_str() );
 		free( monitorDirectory );
 		monitorDirectory = NULL;
@@ -718,6 +723,7 @@ GlobusResource::CleanupMonitorJob()
 		Directory tmp( tmp_dir.c_str() );
 		tmp.Remove_Entire_Directory();
 
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rmdir' ignored.
 		rmdir( tmp_dir.c_str() );
 	}
 	if(monitorJobStatusFile)

@@ -23,6 +23,7 @@ void display_token( int type );
 void reset_yyline();
 
 
+#define YY_NO_UNPUT
 %}
 
 %START C_Comment
@@ -112,7 +113,6 @@ STARTUP_INFO		return grab( TYPE_NAME );
 {STRUCT}dirent		return grab( TYPE_NAME );
 {STRUCT}dirent64	return grab( TYPE_NAME );
 {STRUCT}statfs64	return grab( TYPE_NAME );
-{STRUCT}pollfd		return grab (TYPE_NAME );
 {UNION}wait		return grab (TYPE_NAME );
 ClassAd			return grab( TYPE_NAME );
 "["{WHITE}"]"		return grab( ARRAY );

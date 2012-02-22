@@ -196,7 +196,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
 				"disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
 				jobProcCount );
-	main_shutdown_rescue( EXIT_ERROR );
+	main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
   }
   
   return true;
@@ -231,7 +231,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
 			   const char* directory, const char *logFile,
-			   bool prohibitMultiJobs )
+			   bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -254,7 +254,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				// We don't just return false here because that would
 				// cause us to re-try the submit, which would obviously
 				// just fail again.
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return false; // We won't actually get to here.
 		} else if ( queueCount != 1 ) {
 			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
@@ -263,7 +263,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				// We don't just return false here because that would
 				// cause us to re-try the submit, which would obviously
 				// just fail again.
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return false; // We won't actually get to here.
 		}
 	}
@@ -331,6 +331,20 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( var.Value() );
 	}
 
+		// Set the special DAG_STATUS variable (mainly for use by
+		// "final" nodes).
+	args.AppendArg( "-a" );
+	MyString var = "DAG_STATUS = ";
+	var += dm.dag->_dagStatus;
+	args.AppendArg( var.Value() );
+
+		// Set the special FAILED_COUNT variable (mainly for use by
+		// "final" nodes).
+	args.AppendArg( "-a" );
+	var = "FAILED_COUNT = ";
+	var += dm.dag->NumNodesFailed();
+	args.AppendArg( var.Value() );
+
 		// how big is the command line so far
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
@@ -354,6 +368,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		args.AppendArgsFromArgList( parentNameArgs );
+	}
+
+	if( hold_claim ){
+		args.AppendArg( "-a" );
+		MyString holdit = MyString("+") + MyString(ATTR_JOB_KEEP_CLAIM_IDLE) + " = "
+			+ dm._claim_hold_time;
+		args.AppendArg( holdit.Value() );	
 	}
 
 	args.AppendArg( cmdFile );

@@ -491,6 +491,8 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
 (swap space) expressed in Kbytes.
+On Linux platforms, it is the sum of paging space and physical memory, 
+which more accurately represents the virtual memory size of the machine. 
 %
 \index{ClassAd machine attribute!VM\_AvailNum}
 \item[\AdAttr{VM\_AvailNum}:] The maximum number of vm universe jobs that

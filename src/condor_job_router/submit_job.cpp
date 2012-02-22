@@ -36,6 +36,7 @@
 #include "classad/classad_distribution.h"
 #include "set_user_from_ad.h"
 #include "file_transfer.h"
+#include "exit.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -892,7 +893,7 @@ bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 		return true;
 	}
 
-	int rc = ulog.writeEvent((ULogEvent *)&event);
+	int rc = ulog.writeEvent(const_cast<ULogEvent *>(&event));
 
 	if (!rc) {
 		dprintf( D_FULLDEBUG,
@@ -943,7 +944,7 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 // TODO: put the code into a shared file.
 
 void
-EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
+EmailTerminateEvent(ClassAd * job_ad, bool   /*exit_status_known*/)
 {
 	if ( !job_ad ) {
 		dprintf(D_ALWAYS, 
@@ -951,178 +952,8 @@ EmailTerminateEvent(ClassAd * job_ad, bool exit_status_known)
 		return;
 	}
 
-	int cluster, proc;
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	int notification = NOTIFY_COMPLETE; // default
-	job_ad->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
-
-	switch( notification ) {
-		case NOTIFY_NEVER:    return;
-		case NOTIFY_ALWAYS:   break;
-		case NOTIFY_COMPLETE: break;
-		case NOTIFY_ERROR:    return;
-		default:
-			dprintf(D_ALWAYS, 
-				"Condor Job %d.%d has unrecognized notification of %d\n",
-				cluster, proc, notification );
-				// When in doubt, better send it anyway...
-			break;
-	}
-
-	char subjectline[50];
-	sprintf( subjectline, "Condor Job %d.%d", cluster, proc );
-	FILE * mailer =  email_user_open( job_ad, subjectline );
-
-	if( ! mailer ) {
-		// Is message redundant?  Check email_user_open and euo's children.
-		dprintf(D_ALWAYS, 
-			"email_terminate_event failed to open a pipe to a mail program.\n");
-		return;
-	}
-
-		// gather all the info out of the job ad which we want to 
-		// put into the email message.
-	MyString JobName;
-	job_ad->LookupString( ATTR_JOB_CMD, JobName );
-
-	MyString Args;
-	ArgList::GetArgsStringForDisplay(job_ad,&Args);
-	
-	/*
-	// Not present.  Probably doesn't make sense for Globus
-	int had_core = FALSE;
-	job_ad->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
-	*/
-
-	int q_date = 0;
-	job_ad->LookupInteger(ATTR_Q_DATE,q_date);
-	
-	float remote_sys_cpu = 0.0;
-	job_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
-	
-	float remote_user_cpu = 0.0;
-	job_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
-	
-	int image_size = 0;
-	job_ad->LookupInteger(ATTR_IMAGE_SIZE, image_size);
-	
-	/*
-	int shadow_bday = 0;
-	job_ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	*/
-	
-	float previous_runs = 0;
-	job_ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
-	
-	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
-						   archs, and this means that doing a (time_t*)
-						   cast on & of a 4 byte int makes my life hell.
-						   So we fix it by assigning the time we want to
-						   a real time_t variable, then using ctime()
-						   to convert it to a string */
-	
-	time_t now = time(NULL);
-
-	fprintf( mailer, "Your Condor job %d.%d \n", cluster, proc);
-	if ( JobName.Length() ) {
-		fprintf(mailer,"\t%s %s\n",JobName.Value(),Args.Value());
-	}
-	if(exit_status_known) {
-		fprintf(mailer, "has ");
-
-		int int_val;
-		if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
-			if( int_val ) {
-				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
-					fprintf(mailer, "exited with the signal %d.\n", int_val);
-				} else {
-					fprintf(mailer, "exited with an unknown signal.\n");
-					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
-						 "Signal code unknown.\n", cluster, proc, 
-						 ATTR_ON_EXIT_SIGNAL);
-				}
-			} else {
-				if( job_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
-					fprintf(mailer, "exited normally with status %d.\n",
-						int_val);
-				} else {
-					fprintf(mailer, "exited normally with unknown status.\n");
-					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
-						 "Return code unknown.\n", cluster, proc, 
-						 ATTR_ON_EXIT_CODE);
-				}
-			}
-		} else {
-			fprintf(mailer,"has exited.\n");
-			dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  ",
-				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
-		}
-	} else {
-		fprintf(mailer,"has exited.\n");
-	}
-
-	/*
-	if( had_core ) {
-		fprintf( mailer, "Core file is: %s\n", getCoreName() );
-	}
-	*/
-
-	arch_time = q_date;
-	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
-	
-	double real_time = now - q_date;
-	arch_time = now;
-	fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
-	
-	fprintf(mailer, "Real Time:           %s\n", 
-			format_time((int)real_time));
-
-
-	fprintf( mailer, "\n" );
-	
-		// TODO We don't necessarily have this information even if we do
-		//   have the exit status
-	if( exit_status_known ) {
-		fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
-	}
-
-	double rutime = remote_user_cpu;
-	double rstime = remote_sys_cpu;
-	double trtime = rutime + rstime;
-	/*
-	double wall_time = now - shadow_bday;
-	fprintf(mailer, "Statistics from last run:\n");
-	fprintf(mailer, "Allocation/Run time:     %s\n",format_time(wall_time) );
-	*/
-		// TODO We don't necessarily have this information even if we do
-		//   have the exit status
-	if( exit_status_known ) {
-		fprintf(mailer, "Remote User CPU Time:    %s\n", format_time((int)rutime) );
-		fprintf(mailer, "Remote System CPU Time:  %s\n", format_time((int)rstime) );
-		fprintf(mailer, "Total Remote CPU Time:   %s\n\n", format_time((int)trtime));
-	}
-
-	/*
-	double total_wall_time = previous_runs + wall_time;
-	fprintf(mailer, "Statistics totaled from all runs:\n");
-	fprintf(mailer, "Allocation/Run time:     %s\n",
-			format_time(total_wall_time) );
-
-	// TODO: Can we/should we get this for Globus jobs.
-		// TODO: deal w/ total bytes <- obsolete? in original code)
-	float network_bytes;
-	network_bytes = bytesSent();
-	fprintf(mailer, "\nNetwork:\n" );
-	fprintf(mailer, "%10s Run Bytes Received By Job\n", 
-			metric_units(network_bytes) );
-	network_bytes = bytesReceived();
-	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
-			metric_units(network_bytes) );
-	*/
-
-	email_close(mailer);
+	Email email;
+	email.sendExit(job_ad, JOB_EXITED);
 }
 
 bool EmailTerminateEvent( classad::ClassAd const &ad )

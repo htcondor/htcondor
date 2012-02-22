@@ -234,6 +234,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	strlwr( batchType );
 
+	ASSERT( gahp != NULL );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
@@ -309,6 +310,8 @@ void INFNBatchJob::doEvaluateState()
 		reevaluate_state = false;
 		old_gm_state = gmState;
 		old_remote_state = remoteState;
+
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
 
 		switch ( gmState ) {
 		case GM_INIT: {

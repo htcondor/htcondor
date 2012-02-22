@@ -40,6 +40,7 @@ malloc_Create_Thread_With_Data_Data(int data_n1, int data_n2, void * data_vp,
 {
 	Create_Thread_With_Data_Data * tmp = (Create_Thread_With_Data_Data *)
 		malloc(sizeof(Create_Thread_With_Data_Data));
+	ASSERT( tmp );
 	tmp->data_n1 = data_n1;
 	tmp->data_n2 = data_n2;
 	tmp->data_vp = data_vp;

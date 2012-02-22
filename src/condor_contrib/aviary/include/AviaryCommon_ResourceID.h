@@ -7,7 +7,7 @@
         * ResourceID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
         */
 
        /**
@@ -36,10 +36,10 @@ namespace AviaryCommon
         class ResourceID {
 
         private:
-             AviaryCommon::ResourceType* property_Subsystem_type;
+             AviaryCommon::ResourceType* property_Resource;
 
                 
-                bool isValidSubsystem_type;
+                bool isValidResource;
             std::string property_Pool;
 
                 
@@ -48,17 +48,17 @@ namespace AviaryCommon
 
                 
                 bool isValidName;
-            std::string property_Custom_name;
+            std::string property_Custom_type;
 
                 
-                bool isValidCustom_name;
+                bool isValidCustom_type;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setSubsystem_typeNil();
+        setResourceNil();
             
 
         bool WSF_CALL
@@ -70,7 +70,7 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setCustom_nameNil();
+        setCustom_typeNil();
             
 
 
@@ -96,13 +96,13 @@ namespace AviaryCommon
         /**
          * Constructor for creating ResourceID
          * @param 
-         * @param Subsystem_type AviaryCommon::ResourceType*
+         * @param Resource AviaryCommon::ResourceType*
          * @param Pool std::string
          * @param Name std::string
-         * @param Custom_name std::string
+         * @param Custom_type std::string
          * @return newly created ResourceID object
          */
-        ResourceID(AviaryCommon::ResourceType* arg_Subsystem_type,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_name);
+        ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_type);
         
         
         /********************************** Class get set methods **************************************/
@@ -110,26 +110,26 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for subsystem_type. 
+         * Getter for resource. 
          * @return AviaryCommon::ResourceType*
          */
         WSF_EXTERN AviaryCommon::ResourceType* WSF_CALL
-        getSubsystem_type();
+        getResource();
 
         /**
-         * Setter for subsystem_type.
-         * @param arg_Subsystem_type AviaryCommon::ResourceType*
+         * Setter for resource.
+         * @param arg_Resource AviaryCommon::ResourceType*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setSubsystem_type(AviaryCommon::ResourceType*  arg_Subsystem_type);
+        setResource(AviaryCommon::ResourceType*  arg_Resource);
 
         /**
-         * Re setter for subsystem_type
+         * Re setter for resource
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetSubsystem_type();
+        resetResource();
         
         
 
@@ -182,26 +182,26 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for custom_name. 
+         * Getter for custom_type. 
          * @return std::string*
          */
         WSF_EXTERN std::string WSF_CALL
-        getCustom_name();
+        getCustom_type();
 
         /**
-         * Setter for custom_name.
-         * @param arg_Custom_name std::string*
+         * Setter for custom_type.
+         * @param arg_Custom_type std::string*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setCustom_name(const std::string  arg_Custom_name);
+        setCustom_type(const std::string  arg_Custom_type);
 
         /**
-         * Re setter for custom_name
+         * Re setter for custom_type
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetCustom_name();
+        resetCustom_type();
         
 
 
@@ -215,11 +215,11 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether subsystem_type is Nill
+         * Check whether resource is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isSubsystem_typeNil();
+        isResourceNil();
 
 
         
@@ -245,11 +245,11 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether custom_name is Nill
+         * Check whether custom_type is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isCustom_nameNil();
+        isCustom_typeNil();
 
 
         
@@ -311,7 +311,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for subsystem_type by property number (1)
+         * Getter for resource by property number (1)
          * @return AviaryCommon::ResourceType
          */
 
@@ -344,7 +344,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for custom_name by property number (4)
+         * Getter for custom_type by property number (4)
          * @return std::string
          */
 

@@ -63,3 +63,5 @@ job_filexfer_base_van
 job_filexfer_basic_van
 job_filexfer_input-onegone_van
 job_filexfer_minus1_van
+lib_chirp
+condor_view_classad_types

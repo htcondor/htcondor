@@ -236,10 +236,19 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   "submitfile");
 		}
 
+		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
 						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
+		}
+
+		// Handle a FINAL spec
+		else if(strcasecmp(token, "FINAL") == 0) {
+			parsed_line_successfully = parse_node( dag, 
+					   Job::TYPE_CONDOR, token,
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile" );
 		}
 
 		// Handle a SCRIPT spec
@@ -350,7 +359,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SPLICE, NODE_STATUS_FILE, or PRE_SKIP token\n",
+				"CONFIG, SPLICE, FINAL, NODE_STATUS_FILE, or PRE_SKIP token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
@@ -367,6 +376,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	// always remember which were the inital and final nodes for this dag.
 	// If this dag is used as a splice, then this information is very
 	// important to preserve when building dependancy links.
+	dag->LiftSplices(SELF);
 	dag->RecordInitialAndFinalNodes();
 
 	if ( useDagDir ) {
@@ -536,8 +546,9 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	}
 
 	// looks ok, so add it
+	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
 	if( !AddNode( dag, nodeType, nodeName, directory,
-			submitFile, NULL, NULL, noop, done, whynot ) )
+				submitFile, NULL, NULL, noop, done, isFinal, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -813,8 +824,7 @@ parse_parent(
 	}
 	
 	if (children.Number() < 1) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing Child Job names\n",
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing Child Job names\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
@@ -831,9 +841,9 @@ parse_parent(
 		children.Rewind();
 		while ((child = children.Next()) != NULL) {
 			if (!dag->AddDependency (parent, child)) {
-				debug_printf( DEBUG_QUIET,
-							  "ERROR: %s (line %d) failed to add dependency between "
-							  "parent node \"%s\" and child node \"%s\"\n",
+				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
+						" to add dependency between parent"
+						" node \"%s\" and child node \"%s\"\n",
 							  filename, lineNumber,
 							  parent->GetJobName(), child->GetJobName() );
 				return false;
@@ -877,6 +887,13 @@ parse_retry(
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have retries\n",
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
@@ -976,6 +993,13 @@ parse_abort(
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have ABORT-DAG-ON specification\n",
 					  filename, lineNumber, jobNameOrig );
 		return false;
 	}
@@ -1315,6 +1339,13 @@ parse_priority(
 		}
 	}
 
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have priority\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
 	//
 	// Next token is the priority value.
 	//
@@ -1409,6 +1440,13 @@ parse_category(
 		}
 	}
 
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "ERROR: %s (line %d): Final job %s cannot have category\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
 	//
 	// Next token is the category name.
 	//
@@ -1470,7 +1508,7 @@ parse_splice(
 
 	// Check to make sure we don't already have a node with the name of the
 	// splice.
-	if (dag->NodeExists(spliceName.Value()) == true) {
+	if ( dag->NodeExists(spliceName.Value()) ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): "
 					  " Splice name '%s' must not also be a node name.\n",
@@ -1591,6 +1629,13 @@ parse_splice(
 		return false;
 	}
 
+	// Splices cannot have final nodes.
+	if ( splice_dag->HasFinalNode() ) {
+		debug_printf( DEBUG_QUIET, "ERROR: splice %s has a final node; "
+					"splices cannot have final nodes\n", spliceName.Value() );
+		return false;
+	}
+
 	// munge the splice name
 	spliceName = munge_job_name(spliceName.Value());
 
@@ -1614,16 +1659,12 @@ parse_splice(
 			spliceName.Value());
 		return false;
 	}
-
-	// For now, we only keep track of the splice levels just below this dag.
-	dag->LiftChildSplices();
-
 	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.Value());
 
 	// pop the just pushed value off of the end of the ext array
 	free(_spliceScope[_spliceScope.getlast()]);
 	_spliceScope.truncate(_spliceScope.getlast() - 1);
-
+	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %d\n", _spliceScope.length());
 	return true;
 }
 
@@ -1954,6 +1995,13 @@ parse_done(
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
+	if ( job->GetFinal() ) {
+		debug_printf( DEBUG_QUIET, 
+					  "Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
+					  filename, lineNumber, jobNameOrig );
+		return !check_warning_strictness( DAG_STRICT_1, false );
+	}
+
 	job->SetStatus( Job::STATUS_DONE );
 	
 	return true;
@@ -1977,23 +2025,16 @@ static MyString munge_job_name(const char *jobName)
 
 static MyString current_splice_scope(void)
 {
-	int i;
-	MyString scope;
 	MyString tmp;
-
-	for (i = 0; i < _spliceScope.length(); i++)
-	{
-		tmp = _spliceScope[i];
+	MyString scope;
+	if(_spliceScope.length() > 0) {
 		// While a natural choice might have been : as a splice scoping
 		// separator, this character was chosen because it is a valid character
 		// on all the file systems we use (whereas : can't be a file system
 		// character on windows). The plus, and really anything other than :,
 		// isn't the best choice. Sorry.
-		scope += tmp + "+";
+		tmp = _spliceScope[_spliceScope.length() - 1];
+		scope = tmp + "+";
 	}
-
 	return scope;
 }
-
-
-

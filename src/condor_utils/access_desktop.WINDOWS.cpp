@@ -275,7 +275,7 @@ BOOL ObtainSid(HANDLE hToken, PSID *psid)
 			dwLength,
 			&dwLength
 			))
-			__leave;
+			__leave; ASSERT(ptg);
 
 		// 
 		// determine which group is the logon sid
@@ -371,6 +371,7 @@ BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 			dwSidSize,
 			&dwSdSizeNeeded
 			))
+		{
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 			{
 				psd = (PSECURITY_DESCRIPTOR)HeapAlloc(
@@ -402,7 +403,8 @@ BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 			}
 			else
 				__leave;
-
+		}
+		ASSERT( psdNew != NULL && psd != NULL );
 		// 
 		// create a new dacl
 		// 
@@ -620,6 +622,7 @@ BOOL RemoveTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 			dwSidSize,
 			&dwSdSizeNeeded
 			))
+		{
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 			{
 				psd = (PSECURITY_DESCRIPTOR)HeapAlloc(
@@ -651,6 +654,8 @@ BOOL RemoveTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 			}
 			else
 				__leave;
+		}
+		ASSERT( psdNew != NULL && psd != NULL );
 
 		// 
 		// create a new dacl
@@ -858,6 +863,7 @@ BOOL AddTheAceDesktop(HDESK hdesk, PSID psid)
 			else
 				__leave;
 		}
+		ASSERT( psdNew != NULL && psd != NULL );
 
 		// 
 		// create a new security descriptor
@@ -1068,6 +1074,7 @@ BOOL RemoveTheAceDesktop(HDESK hdesk, PSID psid)
 			else
 				__leave;
 		}
+		ASSERT( psdNew != NULL && psd != NULL );
 
 		// 
 		// create a new security descriptor

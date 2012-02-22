@@ -653,7 +653,7 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 		}
 		break;
 	default:
-		EXCEPT("Unknown state in ResState::leave_action");
+		EXCEPT("Unknown state in ResState::leave_action (%d)", (int)cur_s);
 	}
 
 	return FALSE;

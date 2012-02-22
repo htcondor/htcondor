@@ -11,7 +11,7 @@ void condor_sockaddr::clear()
 }
 
 // init only accepts network-ordered ip and port
-void condor_sockaddr::init(int32_t ip, unsigned port)
+void condor_sockaddr::init(uint32_t ip, unsigned port)
 {
 	clear();
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -461,6 +461,7 @@ in6_addr condor_sockaddr::to_ipv6_address() const
 {
 	if (is_ipv6()) return v6.sin6_addr;
 	in6_addr ret;
+	memset(&ret, 0, sizeof(ret));
 		// the field name of struct in6_addr is differ from platform to
 		// platform. thus, we use a pointer.
 	uint32_t* addr = (uint32_t*)&ret;

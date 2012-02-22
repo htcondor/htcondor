@@ -18,14 +18,14 @@ be termed a \Term{glide-in factory}, especially where the
 factory is behind a firewall.
 Without using the hook mechanism to fetch work,
 a glide-in \Condor{startd} daemon behind a firewall
-depends on CCB or GCB to help it listen and eventually receive
+depends on CCB to help it listen and eventually receive
 work pushed from elsewhere.
 With the hook mechanism, a glide-in \Condor{startd} daemon
 behind a firewall uses the hook to pull work.
 The hook needs only an outbound network connection to complete
 its task,
 thereby being able to operate from behind the firewall,
-without the intervention of CCB or GCB.
+without the intervention of CCB.
 
 Periodically, each execution slot managed by a \Condor{startd} will
 invoke a hook to see if there is any work that can be fetched.

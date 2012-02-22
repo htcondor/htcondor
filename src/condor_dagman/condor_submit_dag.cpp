@@ -442,6 +442,9 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		}
 	}
 
+		// Get rid of the halt file (if one exists).
+	unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
+
 	if (deepOpts.bForce)
 	{
 		unlink(shallowOpts.strSubFile.Value());

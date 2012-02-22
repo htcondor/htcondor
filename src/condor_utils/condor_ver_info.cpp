@@ -248,6 +248,7 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 	if (!ver) {
 		if ( !(ver = (char *)malloc(100)) ) {
 			// out of memory
+			fclose(fp);
 			return NULL;
 		}
 		must_free = true;
@@ -440,10 +441,10 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 	char const *ptr = strchr(verstring,' ');
 	ptr++;		// skip space after the colon
 
-	sscanf(ptr,"%d.%d.%d ",&ver.MajorVer,&ver.MinorVer,&ver.SubMinorVer);
+	int cfld = sscanf(ptr,"%d.%d.%d ",&ver.MajorVer,&ver.MinorVer,&ver.SubMinorVer);
 
 		// Sanity check: the world starts with Condor V6 !
-	if (ver.MajorVer < 6  || ver.MinorVer > 99 || ver.SubMinorVer > 99) {
+	if (cfld != 3 || (ver.MajorVer < 6  || ver.MinorVer > 99 || ver.SubMinorVer > 99)) {
 		ver.MajorVer = 0;
 		return false;
 	}
@@ -474,11 +475,12 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		// Grab day of the month and year
 	int date, year;
 	date = year = -1;
-	sscanf(ptr,"%d %d",&date,&year);
+	cfld = sscanf(ptr,"%d %d",&date,&year);
 
 		// Sanity checks
-	if ( month < 0 || month > 11 || date < 0 || date > 31 || year < 1997 
-		|| year > 2036 ) {
+	if ( cfld != 2 || 
+		(month < 0 || month > 11 || date < 0 || date > 31 || 
+		 year < 1997 || year > 2036 )) {
 		ver.MajorVer = 0;
 		return false;
 	}

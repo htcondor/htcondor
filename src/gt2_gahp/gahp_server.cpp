@@ -2004,7 +2004,7 @@ int main(int, char **)
 	globus_mutex_t manager_mutex;
 	globus_cond_t  manager_cond;
 	globus_mutex_init(&manager_mutex, NULL);
-	globus_cond_init(&manager_cond, NULL);
+	globus_cond_init(&manager_cond, false);
 
 	globus_mutex_lock(&manager_mutex);
 	for (;;) {

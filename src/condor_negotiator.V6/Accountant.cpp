@@ -61,6 +61,9 @@ static char const *StartTimeAttr="StartTime";
 
 static char const *SlotWeightAttr=ATTR_SLOT_WEIGHT;
 
+/* Disable gcc warnings about floating point comparisons */
+GCC_DIAG_OFF(float-equal)
+
 //------------------------------------------------------------------
 // Constructor - One time initialization
 //------------------------------------------------------------------
@@ -1198,6 +1201,22 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     sprintf(tmp, "PriorityFactor%d", gnum);
     ad->Assign(tmp.c_str(), PriorityFactor);
     
+    if (cgrp) {
+        sprintf(tmp, "EffectiveQuota%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->quota);
+        sprintf(tmp, "ConfigQuota%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->config_quota);
+        sprintf(tmp, "SubtreeQuota%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->subtree_quota);
+        sprintf(tmp, "GroupSortKey%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->sort_key);
+        sprintf(tmp, "SurplusPolicy%d", gnum);
+        const char * policy = "no";
+        if (cgrp->autoregroup) policy = "regroup";
+        else if (cgrp->accept_surplus) policy = "byquota";
+        ad->Assign(tmp.c_str(), policy);
+    }
+
     int ResourcesUsed = 0;
     if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
     sprintf(tmp, "ResourcesUsed%d", gnum);
@@ -1737,3 +1756,6 @@ float Accountant::GetSlotWeight(ClassAd *candidate)
 	}
 	return SlotWeight;
 }
+
+GCC_DIAG_ON(float-equal)
+

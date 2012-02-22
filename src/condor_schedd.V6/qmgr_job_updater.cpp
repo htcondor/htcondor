@@ -118,6 +118,9 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE );
+	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
+	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
 	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
 	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );

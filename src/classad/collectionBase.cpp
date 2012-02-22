@@ -1810,7 +1810,15 @@ WriteCheckPoint(){
 	  string buffer;
 	  unparser.Unparse( buffer, &cla );
 	  buffer=buffer+"\n";
-	  write(fd_check,(void*)(buffer.c_str()),buffer.size());
+	  int result = write(fd_check,(void*)(buffer.c_str()),buffer.size());
+	  if (result < 0) {
+			char buf[10];
+			sprintf( buf, "%d", errno );
+			CondorErrMsg = "failed to write to checkpoint file " + CheckFileName + " errno=" +string(buf);
+			fsync(fd_check);
+			close(fd_check);
+			return( false );
+	  }
 	  fsync(fd_check);
 	  close(fd_check);
 	  return true;

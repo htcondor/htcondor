@@ -162,7 +162,7 @@ privsep_get_switchboard_response(FILE* err_fp)
 	// the error pipe
 	//
 	MyString err;
-	while (err.readLine(err_fp, true));
+	while (err.readLine(err_fp, true)) { }
 	fclose(err_fp);
 	
 	// if there was something there, print it out and return
@@ -179,6 +179,8 @@ privsep_get_switchboard_response(FILE* err_fp)
 	//
 	return true;
 }
+
+static int write_error_code;
 
 static pid_t
 privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
@@ -235,7 +237,7 @@ privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
 	            cmd.Value(),
 	            strerror(errno),
 	            errno);
-	write(child_err_fd, err.Value(), err.Length());
+	write_error_code = write(child_err_fd, err.Value(), err.Length());
 	_exit(1);
 }
 
@@ -281,7 +283,7 @@ privsep_exec_set_args(FILE* fp, ArgList& args)
 {
 	int num_args = args.Count();
 	for (int i = 0; i < num_args; i++) {
-		fprintf(fp, "exec-arg<%lu>\n", strlen(args.GetArg(i)));
+		fprintf(fp, "exec-arg<%lu>\n", (unsigned long)strlen(args.GetArg(i)));
 		fprintf(fp, "%s\n", args.GetArg(i));
 	}
 }
@@ -291,7 +293,7 @@ privsep_exec_set_env(FILE* fp, Env& env)
 {
 	char** env_array = env.getStringArray();
 	for (char** ptr = env_array; *ptr != NULL; ptr++) {
-		fprintf(fp, "exec-env<%lu>\n", strlen(*ptr));
+		fprintf(fp, "exec-env<%lu>\n", (unsigned long)strlen(*ptr));
 		fprintf(fp, "%s\n", *ptr);
 	}
 	deleteStringArray(env_array);
@@ -327,6 +329,7 @@ privsep_exec_set_is_std_univ(FILE* fp)
 void
 privsep_exec_set_tracking_group(FILE* fp, gid_t tracking_group)
 {
+	ASSERT( tracking_group != 0 ); // tracking group should never be group 0
 	fprintf(fp, "exec-tracking-group=%u\n", tracking_group);
 }
 #endif

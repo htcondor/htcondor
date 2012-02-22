@@ -46,6 +46,9 @@ lock_file_plain(int fd, LOCK_TYPE type, BOOLEAN do_block)
 	case UN_LOCK:
 		mode = _LK_UNLCK;
 		break;
+	default:
+		EXCEPT("Programmer error in use of lock_file_plain()");
+		break;
 	}
 
 	// _locking() in blocking mode will try 10 times to get

@@ -32,14 +32,12 @@
 
 #include "gridmanager.h"
 #include "gahp-client.h"
-#include "gridftpmanager.h"
 
 #include "globusjob.h"
 
 #include "nordugridjob.h"
 #include "unicorejob.h"
 #include "condorjob.h"
-#include "gt4job.h"
 #include "infnbatchjob.h"
 #include "condor_version.h"
 
@@ -394,14 +392,6 @@ Init()
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
-	new_type->Name = strdup( "GT4" );
-	new_type->InitFunc = GT4JobInit;
-	new_type->ReconfigFunc = GT4JobReconfig;
-	new_type->AdMatchFunc = GT4JobAdMatch;
-	new_type->CreateFunc = GT4JobCreate;
-	jobTypes.Append( new_type );
-
-	new_type = new JobType;
 	new_type->Name = strdup( "Globus" );
 	new_type->InitFunc = GlobusJobInit;
 	new_type->ReconfigFunc = GlobusJobReconfig;
@@ -451,7 +441,6 @@ Reconfig()
 
 	ReconfigProxyManager();
 	GahpReconfig();
-	GridftpServer::Reconfig();
 	BaseJob::BaseJobReconfig();
 
 	JobType *job_type;

@@ -46,7 +46,7 @@ static  char *BaseJobHistoryFileName = NULL;
 // Find all of the history files that the schedd created, and put them
 // in order by time that they were created. The time comes from a
 // timestamp in the file name.
-char **findHistoryFiles(char *paramName, int *numHistoryFiles)
+char **findHistoryFiles(const char *paramName, int *numHistoryFiles)
 {
     int  fileIndex;
     char **historyFiles = NULL;
@@ -78,6 +78,7 @@ char **findHistoryFiles(char *paramName, int *numHistoryFiles)
 
         // Make space for the filenames
         historyFiles = (char **) malloc(sizeof(char*) * (*numHistoryFiles));
+        ASSERT( historyFiles );
 
         // Walk through again to fill in the names
         // Note that we won't get the current history file

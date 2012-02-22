@@ -277,7 +277,7 @@ int
 #if defined(AIX31) || defined(AIX32)
 condor_getpgrp()
 #else
-condor_getpgrp( int pid )		/* Ignore it anyway */
+	condor_getpgrp( int /*pid*/ )		/* Ignore it anyway */
 #endif
 {
 	extern V2_PROC *Proc;

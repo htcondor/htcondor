@@ -85,7 +85,7 @@ void ExceptionHandler::TurnOn() {
 // Lets user change the name of the report file to be generated 
 //==============================================================
 void ExceptionHandler::SetLogFileName( PTSTR pszLogFileName ){
-    _tcscpy( m_szLogFileName, pszLogFileName );
+    _tcsncpy( m_szLogFileName, pszLogFileName, COUNTOF(m_szLogFileName) );
 }
 
 //==============================================================

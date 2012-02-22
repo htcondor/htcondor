@@ -20,7 +20,7 @@
 if (HAVE_EXT_LIBDELTACLOUD)
 
 	condor_exe( deltacloud_gahp "dcloudgahp_main.cpp;dcloudgahp_commands.cpp;PipeBuffer.cpp;dcloudgahp_common.cpp" ${C_SBIN}
-	"${LIBDELTACLOUD_FOUND};${LIBXML2_FOUND};${CURL_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}" OFF )
+	"${LIBDELTACLOUD_FOUND};${LIBXML2_FOUND};${CURL_FOUND};${OPENSSL_FOUND};${LDAP_FOUND};${ZLIB_FOUND}" OFF )
 
 else()
 

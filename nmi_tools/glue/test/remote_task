@@ -40,18 +40,16 @@ use File::Copy;
 use File::Basename;
 use POSIX qw/strftime/;
 
+my $force_cygwin = 1;
 my $dir = dirname($0);
 unshift @INC, $dir;
 require "TestGlue.pm";
 TestGlue::setup_test_environment();
-TestGlue::setup_task_environment();
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";
 }
 my $fulltestname = $ENV{_NMI_TASKNAME};
-
-out("Test environment variable GCBTARGET = '$ENV{GCBTARGET}'");
 
 if( $fulltestname =~ /remote_task/) {
     die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";
@@ -68,7 +66,22 @@ my $perl_exe = "perl";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     my $perlver = `$perl_exe -version`;
     print $perlver;
-    if (!($perlver =~ /cygwin/i)) {
+    if ( ! $force_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) { # if new batlab
+        print "attempting to run tests using current perl\n";
+	if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
+            print "removing base condor from the path\n";
+            my $tmppath = $ENV{PATH};
+            $tmppath =~ s/[a-z]:\\condor\\bin;//i;
+            if ($^O =~ /MSWin32/) {
+	        if ($tmppath =~ /[a-z]:\\cygwin\bin;/i) {
+                    print "removing cygwin from the path\n";
+                    $tmppath =~ s/[a-z]:\\cygwin\bin;//i;
+		}
+	    }
+            print "new PATH=$tmppath\n";
+            $ENV{PATH} = $tmppath;
+        }
+    } elsif (!($perlver =~ /cygwin/i)) {
         print "adding cygwin to the front of the path\n";
         $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
 		print "PATH=$ENV{PATH}\n";

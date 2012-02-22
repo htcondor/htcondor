@@ -59,10 +59,11 @@ struct GroupEntry {
     double config_quota;
 	bool static_quota;
 	bool accept_surplus;
+    bool autoregroup;
 
     // current usage information coming into this negotiation cycle
     double usage;
-    ClassAdList* submitterAds;
+    ClassAdListDoesNotDeleteAds* submitterAds;
     double priority;
 
     // slot quota as computed by HGQ
@@ -85,8 +86,15 @@ struct GroupEntry {
     GroupEntry* parent;
     vector<GroupEntry*> children;
     map<string, size_type, Accountant::ci_less> chmap;
+
+    // attributes for configurable sorting
+    ClassAd* sort_ad;
+    double sort_key;
 };
 
+/* Disable floating-point equality warnings */
+
+GCC_DIAG_OFF(float-equal)
 
 class Matchmaker : public Service
 {
@@ -451,6 +459,7 @@ class Matchmaker : public Service
         string hgq_root_name;
         vector<GroupEntry*> hgq_groups;
         map<string, GroupEntry*> group_entry_map;
+        bool autoregroup;
 
         void hgq_construct_tree();
         void hgq_assign_quotas(GroupEntry* group, double quota);
@@ -479,7 +488,7 @@ class Matchmaker : public Service
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
 };
-
+GCC_DIAG_ON(float-equal)
 
 
 #endif//__MATCHMAKER_H__

@@ -144,7 +144,7 @@ std::cout << "\n ModTrial initStates variables initialized \n" <<std::endl;
   else {
     log = new ReadUserLog () ;
     bool status1 = log->initialize(iFile,erotate,true,true);
-    std::cout << "\nNO PERSIST FILE: DEFAULT INITIALIZATION "<<iFile << erotate<<std::endl;
+    std::cout << "\nNO PERSIST FILE: DEFAULT INITIALIZATION "<<iFile << " Rotations: " <<  erotate<<std::endl;
     log->GetFileState(stateBuf);
     fileVersion =1;
     is_rotated = 0;
@@ -155,6 +155,7 @@ std::cout << "\n ModTrial initStates variables initialized \n" <<std::endl;
   //NOTE:log reader not initialized:this situation can ideally not happen
   if(!log->isInitialized()){
     bool status = log->initialize(stateBuf,erotate,true);
+    std::cout << "\n Unable to initialize userLog.... \n" <<std::endl;
   }
 std::cout << "\n Exitting initStates function.... \n" <<std::endl;
 }

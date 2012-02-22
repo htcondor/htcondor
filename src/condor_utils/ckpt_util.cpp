@@ -35,6 +35,10 @@
 #include "my_hostname.h"
 #include "condor_socket_types.h"
 
+#ifdef WIN32
+# pragma warning(disable: 6262) // two functions in this module use 65580 bytes of stack
+#endif
+
 extern "C" 
 {
 

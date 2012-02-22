@@ -167,7 +167,7 @@ GetExecutableAndArgumentTemplateByExtention (
 		tmp = (LPSTR) value;
 
 		/* strip leading spaces */
-        while ( *tmp && iswspace ( *tmp ) ) {
+        while ( *tmp && isspace ( *tmp ) ) {
             tmp++;
         }
 
@@ -193,7 +193,7 @@ GetExecutableAndArgumentTemplateByExtention (
         } else {
 
 			start = tmp;
-            while ( *tmp && !iswspace ( *tmp ) ) {
+            while ( *tmp && !isspace ( *tmp ) ) {
                 tmp++;
             }
 
@@ -238,7 +238,7 @@ GetExecutableAndArgumentTemplateByExtention (
 			
 			/* strip leading space until we are at the start of the
 			executable's arguments */
-            while ( *start && iswspace ( *start ) ) {
+            while ( *start && isspace ( *start ) ) {
                 start++;
             }
 

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+/*
+ * Copyright 2000-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-locator/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:loc="http://locator.aviary.grid.redhat.com" xmlns:ns="http://common.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-locator/" name="aviary-locator">
+	<wsdl:types>
+		<xsd:schema targetNamespace="http://grid.redhat.com/aviary-locator/">
+			<xsd:import schemaLocation="aviary-locator.xsd" namespace="http://locator.aviary.grid.redhat.com"/>
+		</xsd:schema>
+	</wsdl:types>
+	<wsdl:message name="LocateRequest">
+		<wsdl:part name="parameters" element="loc:Locate"/>
+	</wsdl:message>
+	<wsdl:message name="LocateResponse">
+		<wsdl:part name="parameters" element="loc:LocateResponse"/>
+	</wsdl:message>
+	<wsdl:portType name="AviaryLocator">
+		<wsdl:operation name="locate">
+			<wsdl:input message="tns:LocateRequest"/>
+			<wsdl:output message="tns:LocateResponse"/>
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="AviaryLocatorSOAPBinding" type="tns:AviaryLocator">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<wsdl:operation name="locate">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-locator/locate"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="AviaryLocatorService">
+		<wsdl:port name="AviaryLocatorSOAPPort" binding="tns:AviaryLocatorSOAPBinding">
+			<soap:address location="http://localhost"/>
+		</wsdl:port>
+	</wsdl:service>
+</wsdl:definitions>

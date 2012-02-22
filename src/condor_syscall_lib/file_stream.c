@@ -170,6 +170,7 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	status = connect( fd, (struct sockaddr *)&sa_in, sizeof(sa_in) );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
+		close(fd);
 		SetSyscalls( scm );
 		return -1;
 	}

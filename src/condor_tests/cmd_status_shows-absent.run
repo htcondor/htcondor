@@ -1,0 +1,178 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use CondorCmdStatusWorker;
+use CondorTest;
+
+#
+# FIXME: Use runcmd(), and/or refactor into a function the conversion 
+# from a condor_status command to a hash of ad names.  [from CondorUtils.pm]
+#
+
+#
+# This is terrible hack.
+#
+my $terribleHack = CondorCmdStatusWorker::SetUp( "cmd_status_shows-absent" );
+## my $terribleHack = "x&y";
+if( $terribleHack eq "" ) {
+    die( "Unable to set up personal condor(s).\n" );
+}
+my( $personalCondorA, $personalCondorB ) = split( '&', $terribleHack );
+
+my $stable = CondorCmdStatusWorker::IsSystemStable();
+## my $stable = 1;
+if( $stable != 1 ) {
+    failTestWithReason( "System did not stabilize.\n" );
+}
+
+#
+# Advertise both absent and present ads so that we can check for false
+# positives and false negatives.
+#
+my %adTemplate = (      'MyType'                    => '"Machine"',
+                        'TargetType'                => '"Job"',
+                        'OpSys'                     => '"LINUX"',
+                        'Arch'                      => '"X86_64"',
+                        'State'                     => '"Unclaimed"',
+                        'Activity'                  => '"Idle"',
+                        'LoadAvg'                   => '0.0',
+                        'Memory'                    => '666',
+                        'MyCurrentTime'             => '1666',
+                        'EnteredCurrentActivity'    => '1000',
+                        );
+
+my %absentTemplate = (  %adTemplate,
+                        'Absent'                => "TRUE",
+                        'ClassAdLifetime'       => "1000",
+                        );
+
+my %absentAds;
+addAd( \%absentAds, %absentTemplate,
+                        'Name'                  => '"slot1@absent-machine"',
+                        'Machine'               => '"absent-machine"',
+                        );
+addAd( \%absentAds, %absentTemplate,
+                        'Name'                  => '"slot2@absent-machine"',
+                        'Machine'               => '"absent-machine"',
+                        );
+
+my %presentAds;
+addAd( \%presentAds, %adTemplate,
+                        'Name'                  => '"slot1@present-machine"',
+                        'Machine'               => '"present-machine"',
+                        );
+addAd( \%presentAds, %adTemplate,
+                        'Name'                  => '"slot2@present-machine"',
+                        'Machine'               => '"present-machine"',
+                        );
+
+#
+# Verify that we added the ads succesfully. 
+#
+my $verifyFH;
+my %verifiedAdNames;
+my $verifyCommand = qq/condor_status -f '%s\n' Name -const '(TRUE || Absent)' /;
+my $childPID = open( $verifyFH, '-|', $verifyCommand );
+if( $childPID == 0 ) {
+    failTestWithReason( "Unable to fetch advertised ads.\n" );
+}
+while( my $line = <$verifyFH> ) {
+    $line =~ s/[\012\015]+$//;
+    $verifiedAdNames{ $line } = undef;
+}
+close( $verifyFH );
+waitpid( $childPID, 0 );
+
+if( ! ( subset( \%presentAds, \%verifiedAdNames ) && subset( \%presentAds, \%verifiedAdNames ) ) ) {
+    failTestWithReason( "An advertised ad is missing.\n" );
+}
+
+#
+# Test the -absent flag: when we run condor_status with it do we get 
+# all the absent machines, and only the machines that are absent?
+#
+my $absentFH;
+my %absentAdNames;
+my $absentCommand = qq/condor_status -absent -f "%s\n" Name/;
+$childPID = open( $absentFH, '-|', $absentCommand );
+if( $childPID == 0 ) {
+    failTestWithReason( "Unable to fetch absent ads.\n" );
+}
+while( my $line = <$absentFH> ) {
+    $line =~ s/[\012\015]+$//;
+    $absentAdNames{ $line } = undef;
+}
+close( $absentFH );
+waitpid( $childPID, 0 );
+
+# Tolerate other ads, but fail if a present ad appears.
+# FIXME: ensure that present ads can not appear by using ABSENT_REQUIREMENTS.
+if( ! subset( \%absentAds, \%absentAdNames ) ) {
+    failTestWithReason( "False negative: missing an absent ad.\n" );
+}
+if( grep( /present-machine/, keys( %absentAdNames ) ) ) {
+    failTestWithReason( "False positive: a present ad is in the absent list.\n" );
+}
+
+#
+# Test(s) completed successfully.
+#
+print( "cmd_status_shows-absent SUCCESS\n" );
+exit( 0 );
+
+# -----------------------------------------------------------------------------
+
+sub failTestWithReason {
+    my( $reason ) = @_;
+    
+    warn( $reason );
+    CondorTest::KillPersonal( $personalCondorA );
+    CondorTest::KillPersonal( $personalCondorB );
+    exit( 1 );
+} # end failTestWithReason()
+
+sub addAd {
+    my $hashRef = shift( @_ );
+    my %hash = @_;
+
+    #
+    # Add the ad, by name, to its collection.
+    #
+    my $unquotedName = $hash{ 'Name' };
+    $unquotedName =~ s/"//g;
+    $hashRef->{ $unquotedName } = \%hash;
+    
+    #
+    # Insert the ad into the collector.  Since we'll be verifying
+    # that we get the ads back from the collector in a seperate step,
+    # we can skip some ugly temporary files mess and just shove the
+    # ad down the pipe.
+    #
+    my $adFH;
+    my $adCommand = qq/condor_advertise UPDATE_STARTD_AD -/;
+    my $childPID = open( $adFH, '|-', $adCommand );
+    if( $childPID == 0 ) {
+        failWithTestReason( "Unable to advertise test ads.\n" );
+    }
+    
+    foreach my $key (keys %hash) {
+        print( $adFH "$key = " . $hash{ $key } . "\n" );
+    }
+    
+    close( $adFH );
+    waitpid( $childPID, 0 );
+} # end addAd()
+
+sub subset {
+    my( $sub, $set ) = @_;
+    
+    foreach my $key (keys %{$sub}) {
+        if( ! exists( $set->{ $key } ) ) {
+            return 0;
+        }
+    }
+    
+    return 1;
+} # end subset()

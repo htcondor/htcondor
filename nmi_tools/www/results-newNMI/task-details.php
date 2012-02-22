@@ -120,6 +120,8 @@ foreach ($results as $myrow) {
   if (!$file_found) {
     $stdout_url = "N/A";
     $stderr_url = "N/A";
+    $stdout_size_display = 0;
+    $stderr_size_display = 0;
   }
   else {
     $stat = stat("$filepath.out");
@@ -152,23 +154,29 @@ foreach ($results as $myrow) {
   }
   
   $resultval = $myrow["result"];
+
+
+  if($resultval != 0) {
+    $pretty_resultval = $dash->get_nmi_result_text($resultval);
+  }
+
   $test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">$resultval</a>";
   $run_id = $myrow["runid"];
   echo "<p>";
-  echo "<table style='border: 0px solid black'>";
-  echo "<tr><td>Run ID:</td><td><a href=\"/nmi/results/details?runID=$run_id\">$run_id</a></td></tr>";
-  echo "<tr><td>Hostname:</td><td>" . $myrow["taskhost"] . "</td></tr>";
-  echo "<tr><td>GID:</td><td>".$myrow["gid"] ."</td></tr>";
-  echo "<tr><td>Task ID:</td><td>".$myrow["task_id"] ."</td></tr>";
-  echo "<tr><td>Start:</td><td>".$myrow["start"] ."</td></tr>";
-  echo "<tr><td>Finish:</td><td> ".$myrow["finish"] ."</td></tr>";
-  echo "<tr><td>Duration:</td><td> ".$myrow["duration"] ."</td></tr>";
-  echo "<tr><td>Result:</td><td> $test_results_url </td></tr>";
-  echo "<tr><td>Stdout:</td><td> $stdout_url - (size: $stdout_size_display bytes) </td></tr>";
-  echo "<tr><td>Stderr:</td><td> $stderr_url - (size: $stderr_size_display bytes) </td></tr>";
-  echo "<tr><td>Run Results:</td><td> $results_url</a></td></tr>";
-  echo "<tr><td># warnings STDOUT:</td><td>$num_warnings</td></tr>";
-  echo "<tr><td># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
+  echo "<table style='border: 0px solid black'>\n";
+  echo "<tr><td>Run ID:</td><td><a href=\"/nmi/results/details?runID=$run_id\">$run_id</a></td></tr>\n";
+  echo "<tr><td>Hostname:</td><td>" . $myrow["taskhost"] . "</td></tr>\n";
+  echo "<tr><td>GID:</td><td>".$myrow["gid"] ."</td></tr>\n";
+  echo "<tr><td>Task ID:</td><td>".$myrow["task_id"] ."</td></tr>\n";
+  echo "<tr><td>Start:</td><td>".$myrow["start"] ."</td></tr>\n";
+  echo "<tr><td>Finish:</td><td> ".$myrow["finish"] ."</td></tr>\n";
+  echo "<tr><td>Duration:</td><td> ".$myrow["duration"] ."</td></tr>\n";
+  echo "<tr><td>Result:</td><td> $test_results_url ($pretty_resultval)</td></tr>\n";
+  echo "<tr><td>Stdout:</td><td> $stdout_url - (size: $stdout_size_display bytes) </td></tr>\n";
+  echo "<tr><td>Stderr:</td><td> $stderr_url - (size: $stderr_size_display bytes) </td></tr>\n";
+  echo "<tr><td>Run Results:</td><td> $results_url</a></td></tr>\n";
+  echo "<tr><td># warnings STDOUT:</td><td>$num_warnings</td></tr>\n";
+  echo "<tr><td># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>\n";
   echo "</table>";
   echo "</p>";
 

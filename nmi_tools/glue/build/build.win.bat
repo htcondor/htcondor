@@ -25,10 +25,17 @@ set TMP=%BUILD_ROOT%\Temp
 
 :: pick up compiler path from VS90COMNTOOLS environment variable
 ::
+for /D %%I in ("%VS90COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC90_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS90COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC90_IDE=%%~sdpICommon7\IDE
 for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
 set VC_DIR=%VS_DIR%\VC
-set VC_BIN=%VS_DIR%\bin
+set VC_BIN=%VC_DIR%\bin
+
+:: pick up vs2010 compiler path from VS100COMNTOOLS environment variable
+::
+for /D %%I in ("%VS100COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC100_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS100COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC100_IDE=%%~sdpICommon7\IDE
 
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
@@ -89,14 +96,18 @@ if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
 if "~%CMAKE_BIN_DIR:~-1%"=="~\" set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
 
 :: set path to WIX binaries
+if "~%WIX%"=="~" goto no_wix
 set WIX_PATH=%WIX%
 if "~%WIX_PATH:~-1%"=="~\" set WIX_PATH=%WIX_PATH:~0,-1%
 if NOT "~%WIX_PATH%"=="~" set WIX_PATH=%WIX_PATH%\bin
+:no_wix
 
 :: set path to MSCONFIG binaries
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
 
-set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%;%ZIP_PATH%;%WIX_PATH%
+set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%
+if NOT "~%ZIP_PATH%"=="~" set PATH=%PATH%;%ZIP_PATH%
+if NOT "~%WIX_PATH%"=="~" set PATH=%PATH%;%WIX_PATH%
 @echo PATH=%PATH%
 
 set INCLUDE=%BUILD_ROOT%\src\condor_utils

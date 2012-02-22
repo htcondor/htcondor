@@ -519,6 +519,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			value_s = "";
 			condition->ToString( cond_s );
 			strncpy( cond, cond_s.c_str( ), 1023 );
+			cond[1023] = 0;
 
 			sprintf( info, "%i", condition->explain.numberOfMatches );
 
@@ -540,7 +541,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			}
 			}
 
-   			if( strlen( cond ) < 46 ) {
+			if( strlen( cond ) < 46 ) {
 				sprintf( formatted, "%-4i%-34s%-20s%s\n", i, cond, info,
 						 suggest );
 			} else {
@@ -1173,7 +1174,8 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	int vrNum = 0;
 	ExtArray<classad::Operation::OpKind> ops ( numConds );
 	ExtArray<Condition*> conds ( numConds );
-	ExtArray<bool> tooComplex ( numConds ); 
+//	ExtArray<bool> tooComplex ( numConds ); 
+	std::vector<bool> tooComplex( numConds, false);
 //	classad::Operation::OpKind op1, op2;
 	classad::Value val;
 	p->Rewind( );
@@ -1443,6 +1445,7 @@ FindConflicts( Profile *p, ResourceGroup &rg )
 	bvList.Rewind( );
 	while( bvList.Next( currBV ) ) {
 		if( currBV == NULL ) {
+			delete currIS;
 			return false;
 		}
 		currIS = new IndexSet( );
@@ -1456,6 +1459,9 @@ FindConflicts( Profile *p, ResourceGroup &rg )
 		currIS->GetCardinality( card );
 		if( card > 1 ) {
 			p->explain.conflicts->Append( currIS );
+		} else {
+			delete currIS;
+			currIS = NULL;
 		}
 	}
 
@@ -2088,7 +2094,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 		return false;
 	}
 
-	classad::Operation::OpKind op;
+	classad::Operation::OpKind op = (classad::Operation::OpKind)0;
 	classad::Value val;
 	bool undef = false;
 	bool twoVals = false;
@@ -2358,6 +2364,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 					else {
 						vr->Init( i, undef );
 					}
+					delete i;
 					return true;
 				}
 			case classad::Operation::EQUAL_OP:

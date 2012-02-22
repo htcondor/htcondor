@@ -79,11 +79,40 @@ if( ! -d $pub_dir ) {
 
 # copy in the package targets
 if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
-	system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup");
-	system("mv *.zip $pub_dir");
-	system("mv *.msi $pub_dir");
-	system("mv release_dir $pub_dir");
-	system("mv msconfig $pub_dir");
+	# munge cleanup is needed only if cygwin is messing with ACLs.
+	# in new batlab, instead of cleaning up, just don't allow it.
+	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
+                my $bsdtar = "$BaseDir/msconfig/tar.exe";
+		print "COMPUTERNAME=$ENV{COMPUTERNAME} In new batlab\n";
+		if ( -f "$bsdtar" ) {
+			my $zips = ""; if ( <$BaseDir/*.zip> ) { $zips = '*.zip'; }
+			my $msis = ""; if ( <$BaseDir/*.msi> ) { $msis = '*.msi'; }
+			my $reldir = ""; if ( -d "$BaseDir/release_dir" ) { $reldir = "release_dir"; }
+			print "Tarring up results and tests ($zips $msis $reldir)\n";
+			open( TAR, "$bsdtar -czvf results.tar.gz -C $BaseDir $zips $msis $reldir msconfig -C $SrcDir condor_tests condor_examples |" ) || 
+				die "Can't open tar as a pipe: $!\n";
+			while( <TAR> ) { 
+				print;
+			}
+			close( TAR );
+			my $tarstatus = $? >> 8;
+			if( $tarstatus ) {
+				die "Can't tar zcf results.tar.gz public: status $tarstatus\n";
+			}
+			print "Done bsd-tarring results\n";
+			exit 0;
+		} else {
+			system("nmi_tools\\glue\\build\\munge.bat $pub_dir move");
+			$ENV{PATH} ="$ENV{PATH};c:/cygwin/bin;$pub_dir/msconfig";
+		}
+	} else {
+		print "COMPUTERNAME=$ENV{COMPUTERNAME} In old batlab\n";
+		system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup move");
+		#system("mv *.zip $pub_dir");
+		#system("mv *.msi $pub_dir");
+		#system("mv release_dir $pub_dir");
+		#system("mv msconfig $pub_dir");
+	}
 }
 else {
     system("mv *.tar.gz *.rpm *.deb $pub_dir");

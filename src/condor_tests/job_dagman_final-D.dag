@@ -1,0 +1,12 @@
+JOB D_A job_dagman_final-D-nodeA.cmd
+
+# This node fails.
+JOB D_B job_dagman_final-D-nodeB.cmd
+
+# Condor job and POST script will succeed for this node, overriding the
+# failure of the rest of the DAG.
+FINAL D_C job_dagman_final-D-nodeC.cmd
+SCRIPT PRE D_C job_dagman_final-D-script.pl D_C Pre 0 $DAG_STATUS $FAILED_COUNT -1
+SCRIPT POST D_C job_dagman_final-D-script.pl D_C Post $RETURN $DAG_STATUS $FAILED_COUNT $RETURN
+
+PARENT D_A CHILD D_B

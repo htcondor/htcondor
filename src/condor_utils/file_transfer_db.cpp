@@ -29,6 +29,8 @@
 #include "file_sql.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
+#include "my_hostname.h"
+
 
 #ifdef HAVE_EXT_POSTGRESQL
 extern FILESQL *FILEObj;

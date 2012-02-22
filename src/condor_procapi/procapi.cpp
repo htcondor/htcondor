@@ -465,12 +465,18 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 
 #if HAVE_PSS
 int
-ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status ) 
+ProcAPI::getPSSInfo( pid_t pid, procInfo& procRaw, int &status ) 
 {
 	char path[64];
 	FILE *fp;
 	int number_of_attempts;
 	const int max_attempts = 5;
+
+	char *use_pss;
+	use_pss = getenv("_condor_USE_PSS");
+	if ((use_pss == 0) || (*use_pss == 'f') || (*use_pss == 'F')) {
+		return PROCAPI_SUCCESS;
+	}
 
 		// Note that HAVE_PSS may be true at compile-time, but that
 		// does not mean /proc/pid/smaps will actually contain
@@ -721,13 +727,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// close the file
 	fclose( fp );
 
-#if HAVE_PSS
-	getPSSInfo(pid,procRaw,status);
-	if( status != PROCAPI_OK ) {
-		return PROCAPI_FAILURE;
-	}
-#endif
-
 		// only one value for times
 	procRaw.user_time_2 = 0;
 	procRaw.sys_time_2 = 0;
@@ -872,8 +871,8 @@ ProcAPI::checkBootTime(long now)
 		if( (fp = safe_fopen_wrapper_follow("/proc/uptime","r")) ) {
 			double uptime=0;
 			double dummy=0;
-			fgets( s, 256, fp );
-			if (sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
+			char *r = fgets( s, 256, fp );
+			if (r && sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
 				// uptime is number of seconds since boottime
 				// convert to nearest time stamp
 				uptime_boottime = (unsigned long)(now - uptime + 0.5);
@@ -883,9 +882,9 @@ ProcAPI::checkBootTime(long now)
 
 		// get stat_boottime
 		if( (fp = safe_fopen_wrapper_follow("/proc/stat", "r")) ) {
-			fgets( s, 256, fp );
-			while( strstr(s, "btime") == NULL ) {
-				fgets( s, 256, fp );
+			char * r = fgets( s, 256, fp );
+			while( r && strstr(s, "btime") == NULL ) {
+				r = fgets( s, 256, fp );
 			}
 			sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
@@ -1697,7 +1696,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
     if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
-	}    
+        ASSERT( offsets );
+    }
         // at this point we're all set to march through the data block to find
         // the instance with the pid we want.  
 
@@ -1784,6 +1784,7 @@ ProcAPI::buildProcInfoList()
 	PPERF_OBJECT_TYPE pThisObject = firstObject(pDataBlock);
     if( !offsets ) {
         grabOffsets( pThisObject );
+        ASSERT( offsets );
 	}
 	PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
 
@@ -2816,6 +2817,7 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     PPERF_COUNTER_DEFINITION pThisCounter;
   
     offsets = (struct Offset*) malloc ( sizeof ( struct Offset ));
+	ASSERT( offsets );
 
     pThisCounter = firstCounter(pThisObject);
 //    printcounter ( stdout, pThisCounter );
@@ -2984,11 +2986,10 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
     // if buffer not big enough, reallocate and try again.
     
     if ( lError == ERROR_MORE_DATA ) {
-      pDataBlock = (PPERF_DATA_BLOCK) realloc ( pDataBlock, 
-                                                _msize (pDataBlock ) + 
-                                                EXTEND_SIZE );
-      if ( !pDataBlock)
+      void * pvNew = realloc ( pDataBlock, _msize (pDataBlock ) + EXTEND_SIZE );
+      if ( ! pvNew) 
         return lError;
+      pDataBlock = (PPERF_DATA_BLOCK) pvNew;
       ++cReallocs;
     }
     else
@@ -3266,7 +3267,7 @@ ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 #else // everything else
 
 int
-ProcAPI::confirmProcessId(ProcessId& procId, int& status){
+ProcAPI::confirmProcessId(ProcessId& /*procId*/, int& status){
 		// do nothing
 	status = PROCAPI_OK;
 	return PROCAPI_SUCCESS;

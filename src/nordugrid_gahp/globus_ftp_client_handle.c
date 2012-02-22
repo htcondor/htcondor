@@ -554,7 +554,7 @@ globus_ftp_client_handle_get_user_pointer(
 
 	goto error;
     }
-    i_handle = *(globus_i_ftp_client_handle_t **) handle;
+    i_handle = *(globus_i_ftp_client_handle_t * const *) handle;
     *user_pointer = i_handle->user_pointer;
 
     return GLOBUS_SUCCESS;
@@ -592,7 +592,7 @@ globus_ftp_client_handle_get_restart_marker(
 
         goto error;
     }
-    i_handle = *(globus_i_ftp_client_handle_t **) handle;
+    i_handle = *(globus_i_ftp_client_handle_t * const *) handle;
     globus_ftp_client_restart_marker_copy(marker, &i_handle->restart_marker);
 
     return GLOBUS_SUCCESS;

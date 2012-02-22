@@ -549,8 +549,7 @@ ProcFamily::count_tasks_cgroup()
 }
 
 bool
-inline
-_check_stat_uint64(const struct cgroup_stat stats, const char* name, u_int64_t* result){
+_check_stat_uint64(const struct cgroup_stat &stats, const char* name, u_int64_t* result){
 	u_int64_t tmp;
 	if (0 == strcmp(name, stats.name)) {
 		errno = 0;
@@ -670,7 +669,7 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	struct cgroup_stat stats;
 	void **handle;
 	u_int64_t tmp = 0, image = 0;
-	bool found_rss;
+	bool found_rss = false;
 
 	// Update memory
 	handle = (void **)malloc(sizeof(void*));
@@ -805,7 +804,12 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 		usage->total_image_size += member->m_proc_info->imgsize;
 		usage->total_resident_set_size += member->m_proc_info->rssize;
 #if HAVE_PSS
-		if( member->m_proc_info->pssize_available ) {
+
+		// PSS is special: it's expensive to calculate for every process,
+		// so we calculate it on demand
+		int status; // Is ignored
+		int rc = ProcAPI::getPSSInfo(member->m_proc_info->pid, *(member->m_proc_info), status);
+		if( (rc == PROCAPI_SUCCESS) && (member->m_proc_info->pssize_available) ) {
 			usage->total_proportional_set_size_available = true;
 			usage->total_proportional_set_size += member->m_proc_info->pssize;
 		}

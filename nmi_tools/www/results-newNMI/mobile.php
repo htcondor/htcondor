@@ -188,7 +188,7 @@ foreach ($runs as $run) {
   print "<tr>\n";
 
   // Now print the results for each platform
-  foreach (Array("x86_64_rhap_6.1", "x86_64_winnt_6.1") as $platform) {
+  foreach (Array("x86_64_rhap_6.2", "x86_64_winnt_6.1") as $platform) {
     // There is no guarantee that each platform is in each run.  So check it here
     if(array_key_exists($platform, $run["platforms"])) {
 

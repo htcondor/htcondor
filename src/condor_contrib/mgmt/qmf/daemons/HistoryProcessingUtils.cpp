@@ -34,6 +34,8 @@
 
 #include "HistoryFile.h"
 
+#include "Globals.h"
+
 // from src/management
 #include "Utils.h"
 
@@ -54,13 +56,17 @@ using namespace std;
 typedef set<long unsigned int> HistoryFileListType;
 static HistoryFileListType m_historyFiles;
 MyString m_path;
+bool force_reset;
 
 // force a reset of history processing
-void init_history_files() {
-    m_historyFiles.clear();
+void process_history_files() {
+	if (force_reset) {
+        dprintf ( D_FULLDEBUG, "global_reset triggered\n");
+        global_reset();
+    }
     ProcessHistoryDirectory();
     ProcessOrphanedIndices();
-    ProcessCurrentHistory(true);
+    ProcessCurrentHistory(force_reset);
 }
 
 // Processing jobs from history file must allow for
@@ -117,6 +123,10 @@ void
 ProcessHistoryDirectory()
 {
     const char *file = NULL;
+
+    if (force_reset) {
+        m_historyFiles.clear();
+    }
 
     Directory dir ( m_path.Value() );
     dir.Rewind();
@@ -208,20 +218,20 @@ ProcessOrphanedIndices()
  * 4) detect rotations
  */
 void
-ProcessCurrentHistory(bool force_reset)
+ProcessCurrentHistory(bool do_reset)
 {
     static MyString currentHistoryFilename = m_path + DIR_DELIM_STRING + "history";
     static HistoryFile currentHistory ( currentHistoryFilename.Value() );
 
     CondorError errstack;
 
-    if (force_reset) {
+    if (do_reset) {
        currentHistory.cleanup();
     }
 
 	// (1)
     long unsigned int id;
-    if ( !currentHistory.getId ( id ) || force_reset)
+    if ( !currentHistory.getId ( id ) || do_reset)
     {
         if ( !currentHistory.init ( errstack ) )
         {
@@ -267,5 +277,8 @@ ProcessCurrentHistory(bool force_reset)
         }
         ASSERT ( currentHistory.getId ( id ) );
         m_historyFiles.insert ( id );
+        force_reset = true;
+        return;
     }
+    force_reset = false;
 }

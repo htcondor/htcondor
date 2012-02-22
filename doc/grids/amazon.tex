@@ -74,15 +74,15 @@ ec2_secret_access_key = /path/to/x.509/private.key
 
 If using an X.509 proxy, specify the proxy in both places.
 
-Condor can use the EC2 API to create an SSH key pair that allows
-secure log in to the virtual machine once it is running.
-If the command
-\SubmitCmd{ec2\_keypair\_file}
-is set in the submit description file,
-Condor will write an SSH private key into the indicated file.
-The key can be used to log into the virtual machine.
-Note that modification will also be needed of the firewall
-rules for the job to incoming SSH connections.
+%Condor can use the EC2 API to create an SSH key pair that allows
+%secure log in to the virtual machine once it is running.
+%If the command
+%\SubmitCmd{ec2\_keypair\_file}
+%is set in the submit description file,
+%Condor will write an SSH private key into the indicated file.
+%The key can be used to log into the virtual machine.
+%Note that modification will also be needed of the firewall
+%rules for the job to incoming SSH connections.
 
 An EC2 service uses a firewall to restrict network access to 
 the virtual machine instances it runs.

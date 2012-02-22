@@ -1,0 +1,2 @@
+JOB B_A_A cmd_q_shows-dag-B_A_A.cmd
+VARS B_A_A JOB="B_A_A"

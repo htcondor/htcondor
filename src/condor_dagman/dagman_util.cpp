@@ -112,7 +112,7 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 #if defined(WIN32)
 			sleep( sleepTime );
 #else
-			while( (sleepTime = sleep( sleepTime ) ) != 0 );
+			while( (sleepTime = sleep( sleepTime ) ) != 0 ) { }
 #endif
 
 				//

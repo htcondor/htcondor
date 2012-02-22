@@ -23,10 +23,10 @@
 namespace aviary {
 namespace history {
 
-void init_history_files();
+void process_history_files();
 void processHistoryDirectory();
 void processOrphanedIndices();
-void processCurrentHistory(bool force_reset = false);
+void processCurrentHistory(bool do_reset = false);
 bool populateMapFromClassAd ( ClassAd& ad, AttributeMapType& _map );
 
 }}

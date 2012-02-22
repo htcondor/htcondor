@@ -48,7 +48,8 @@ globus_module_descriptor_t globus_i_ftp_client_perf_plugin_module =
     globus_l_ftp_client_perf_plugin_deactivate,
     GLOBUS_NULL,
     GLOBUS_NULL,
-    &local_version
+    &local_version,
+    GLOBUS_NULL
 };
 
 static

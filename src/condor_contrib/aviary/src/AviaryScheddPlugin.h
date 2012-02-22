@@ -78,7 +78,7 @@ private:
 
 	bool m_isPublishing;
 
-	int HandleTransportSocket(Stream *);
+	int handleTransportSocket(Stream *);
 
 	void processDirtyJobs();
 

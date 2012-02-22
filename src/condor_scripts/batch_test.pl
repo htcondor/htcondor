@@ -110,14 +110,16 @@ Condor::DebugLevel(5);
 #select(STDOUT); $| = 1;
 
 my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
-print "$time: batch_test.pl starting up\n";
+print "$time: batch_test.pl starting up ($^O perl)\n";
 
 my $iswindows = CondorUtils::is_windows();
+my $iscygwin  = CondorUtils::is_cygwin_perl();
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
 my $hush = 0;
+my $cmd_prompt = 0;
 my $sortfirst = 0;
 my $timestamp = 0;
 my $kindwait = 1; # run tests one at a time
@@ -129,9 +131,14 @@ my $want_core_dumps = 1;
 my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
-	my $tmp = `cygpath -m $testpersonalcondorlocation`;
-	CondorUtils::fullchomp($tmp);
-	$wintestpersonalcondorlocation = $tmp;
+	if ($iscygwin) {
+		my $tmp = `cygpath -m $testpersonalcondorlocation`;
+		CondorUtils::fullchomp($tmp);
+		$wintestpersonalcondorlocation = $tmp;
+	} else {
+		$wintestpersonalcondorlocation = $testpersonalcondorlocation;
+		$wintestpersonalcondorlocation =~ s|/|\\|g;
+	}
 }
 
 my $targetconfig = $testpersonalcondorlocation . "/condor_config";
@@ -175,7 +182,8 @@ my $testfile = "";
 my $ignorefile = "";
 my @testlist;
 
-# -d[irectory <dir>: just test this directory
+# -c[md] create a command prompt with the testing environment (windows only)\n
+# -d[irectory] <dir>: just test this directory
 # -f[ile] <filename>: use this file as the list of tests to run
 # -i[gnore] <filename>: use this file as the list of tests to skip
 # -s[ort] sort tests before testing
@@ -193,7 +201,8 @@ while( $_ = shift( @ARGV ) ) {
   SWITCH: {
         if( /-h.*/ ) {
 	    print "the args:\n";
-	    print "-d[irectory <dir>: just test this directory\n";
+	    print "-c[md] create a command prompt with the testing environment (windows only)\n";
+	    print "-d[irectory] <dir>: just test this directory\n";
 	    print "-f[ile] <filename>: use this file as the list of tests to run\n";
 	    print "-i[gnore] <filename>: use this file as the list of tests to skip\n";
 	    print "-t[estname] <test-name>: just run this test\n";
@@ -231,6 +240,10 @@ while( $_ = shift( @ARGV ) ) {
         }
         if( /^-w.*/ ) {
 				$ENV{WRAP_TESTS} = "yes";
+                next SWITCH;
+        }
+        if( /^-c.*/ ) {
+                $cmd_prompt = 1;
                 next SWITCH;
         }
         if( /^-d.*/ ) {
@@ -335,9 +348,15 @@ if(!($wantcurrentdaemons)) {
 	}
 
 	if($iswindows == 1) {
-		my $tmp = `cygpath -m $targetconfig`;
-		CondorUtils::fullchomp($tmp);
+		my $tmp = $targetconfig;
+		if ($iscygwin) {
+			$tmp = `cygpath -m $targetconfig`;
+			CondorUtils::fullchomp($tmp);
+		}
 		$ENV{CONDOR_CONFIG} = $tmp;
+		print "setting CONDOR_CONFIG=$tmp\n";
+		# need to know if there is already a personal condor running 
+		# at CONDOR_CONFIG so we know if we have to uniqify ports & pipes
 		$res = CondorPersonal::IsRunningYet($tmp);
 	} else {
 		$ENV{CONDOR_CONFIG} = $targetconfig;
@@ -357,7 +376,13 @@ if(!($wantcurrentdaemons)) {
 
 		if($iswindows == 1) {
 			my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
-			$mcmd =~ s/\\/\//g;
+			if ($iscygwin) {
+				$mcmd =~ s|\\|/|g;
+			} else {
+				my $keep = "/c"; if ($cmd_prompt) { $keep = "/k"; }
+				#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
+				$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
+			}
 			debug( "Starting master like this:\n",2);
 			debug( "\"$mcmd\"\n",2);
 			CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
@@ -804,38 +829,52 @@ sub WhereIsInstallDir
 	if($iswindows == 1) {
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
-		my $crunched = `cygpath -m $top`;
-		CondorUtils::fullchomp($crunched);
-		debug( "cygpath changed it to: \"$crunched\"\n",2);
-		my $ppwwdd = `pwd`;
-		debug( "pwd says: $ppwwdd\n",2);
+		if ($iscygwin) {
+			my $crunched = `cygpath -m $top`;
+			CondorUtils::fullchomp($crunched);
+			debug( "cygpath changed it to: \"$crunched\"\n",2);
+			my $ppwwdd = `pwd`;
+			debug( "pwd says: $ppwwdd\n",2);
+		} else {
+			my $ppwwdd = `cd`;
+			debug( "cd says: $ppwwdd\n",2);
+		}
 	}
 
-	my $tmp = CondorTest::Which("condor_master");
-	if ( ! ($tmp =~ /^\// ) ) {
-		print STDERR "Unable to find a condor_master in your \$PATH!\n";
+	my $master_name = "condor_master"; if ($iswindows) { $master_name = "condor_master.exe"; }
+	my $tmp = CondorTest::Which($master_name);
+	if ( ! ($tmp =~ /condor_master/ ) ) {
+ 		print STDERR "CondorTest::Which($master_name) returned <<$tmp>>\n";
+		print STDERR "Unable to find a $master_name in your \$PATH!\n";
 		exit(1);
 	}
 	CondorUtils::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
-	if($iswindows == 0) {
-	    $tmp =~ s|//|/|g;
+	if ($iswindows) {
+		if ($iscygwin) {
+			$tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
+			if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
+				$installdir = $1;
+				$tmp = `cygpath -m $1`;
+				CondorUtils::fullchomp($tmp);
+				$wininstalldir = $tmp;
+			}
+		} else {
+			$tmp =~ s/\\bin\\condor_master.exe$//i;
+			$installdir = $tmp;
+			$wininstalldir = $tmp;
+		}
+		$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
+		$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
+		print "Testing this Install Directory: \"$wininstalldir\"\n";
+	} else {
+		$tmp =~ s|//|/|g;
 		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
-		    ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
+			($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
 			$installdir = $1;
 			print "Testing This Install Directory: \"$installdir\"\n";
-		}
-		else {
-		    die "'$tmp' didn't match path RE\n";
-		}
-	} else {
-		if($tmp =~ /^(.*)\/bin\/condor_master\s*$/) {
-			$installdir = $1;
-			$tmp = `cygpath -m $1`;
-    		CondorUtils::fullchomp($tmp);
-			$wininstalldir = $tmp;
-			$wininstalldir =~ s/\\/\//;
-			print "Testing This Install Directory: \"$wininstalldir\"\n";
+		} else {
+			die "'$tmp' didn't match path RE\n";
 		}
 	}
 }
@@ -886,6 +925,7 @@ sub CreateConfig
 
 		# create config file with todd's awk script
 		my $configcmd = "gawk -f $awkscript $genericconfig";
+		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
 		debug("awk cmd is $configcmd\n",2);
 
 		open( OLDFIG, " $configcmd 2>&1 |")
@@ -955,6 +995,7 @@ sub CreateLocalConfig
 	if($iswindows == 1) {
 		# create config file with todd's awk script
 		my $configcmd = "gawk -f $awkscript $genericlocalconfig";
+		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
 		debug("gawk cmd is $configcmd\n",2);
 
 		open( ORIG, " $configcmd 2>&1 |")
@@ -1007,6 +1048,10 @@ sub CreateLocalConfig
 	print FIX "MAX_MASTER_LOG          = $logsize\n";
 	print FIX "MASTER_DEBUG            = D_COMMAND\n";
 
+	if($iswindows == 1) {
+		print FIX "WINDOWS_SOFTKILL_LOG = \$(LOG)\\SoftKillLog\n";
+	}
+
 	# Add a shorter check time for periodic policy issues
 	print FIX "PERIODIC_EXPR_INTERVAL = 15\n";
 	print FIX "PERIODIC_EXPR_TIMESLICE = .95\n";
@@ -1042,13 +1087,18 @@ sub CreateLocalConfig
 	my $javabinary = "";
 	if($iswindows == 1) {
 
-		$javabinary = "java.exe";
+	    $javabinary = "java.exe";
+	    if ($^O =~ /MSWin32/) {
+		$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
+		CondorUtils::fullchomp($jvm);
+	    } else {
 		my $whichtest = `which $javabinary`;
-	    CondorUtils::fullchomp($whichtest);
+		CondorUtils::fullchomp($whichtest);
 		$whichtest =~ s/Program Files/progra~1/g;
 		$jvm = `cygpath -m $whichtest`;
 		CondorUtils::fullchomp($jvm);
-		CondorTest::debug("which java said<<$jvm>>\n",2);
+	    }
+	    CondorTest::debug("which java said<<$jvm>>\n",2);
 
 	    $java_libdir = "$wininstalldir/lib";
 
@@ -1081,7 +1131,7 @@ sub CreateLocalConfig
 	}
     # if nothing is found, explain that, otherwise see if they just want to
     # accept what I found.
-	debug ("Setting JAVA=$jvm",2);
+	debug ("Setting JAVA=$jvm\n",2);
     # Now that we have an executable JVM, see if it is a Sun jvm because that
     # JVM it supports the -Xmx argument then, which is used to specify the
     # maximum size to which the heap can grow.

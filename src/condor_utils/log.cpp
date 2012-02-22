@@ -22,11 +22,17 @@
 
 #define _POSIX_SOURCE
 
+#ifdef _NO_CONDOR_
+#include <stdio.h> // for FILE*
+#include <stdlib.h> // for malloc, free, realloc
+#include <string.h> // for strdup
+#include <ctype.h> // for isspace
+#else
 #include "condor_common.h"
+#include "condor_debug.h"
+#endif
 
 #include "log.h"
-
-#include "condor_debug.h"
 
 class LogRecordHead: public LogRecord {
 	virtual char const *get_key() {return NULL;}
@@ -49,6 +55,9 @@ LogRecord::readword(FILE *fp, char * &str)
 	char	*buf = (char *)malloc(bufsize);
 	int ch;
 
+	if ( ! buf)
+		return -1;
+
 	// ignore leading whitespace but don't pass newline
 	do {
 		ch = fgetc( fp );
@@ -57,12 +66,17 @@ LogRecord::readword(FILE *fp, char * &str)
 			return( -1 );
 		}
 		buf[0] = ch;
-	} while (isspace(buf[0]) && buf[0]!='\n' );
+	} while (isspace((unsigned char)buf[0]) && buf[0]!='\n' );
 
 	// read until whitespace
-	for (i = 1; !isspace(buf[i-1]); i++) {
+	for (i = 1; !isspace((unsigned char)buf[i-1]); i++) {
 		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
+			void * vbuf = realloc(buf, bufsize*2);
+			if ( ! vbuf) {
+				free(buf);
+				return -1;
+			}
+			buf = (char *)vbuf;
 			bufsize *= 2;
 		} 
 		ch = fgetc( fp );
@@ -93,6 +107,9 @@ LogRecord::readline(FILE *fp, char * &str)
 	char	*buf = (char *)malloc(bufsize);
 	int ch;
 
+	if ( ! buf)
+		return -1;
+
 	// ignore one leading whitespace character but don't pass newline
 	ch = fgetc( fp );
 	if( ch == EOF || ch == '\0' ) {
@@ -104,7 +121,12 @@ LogRecord::readline(FILE *fp, char * &str)
 	// read until newline
 	for (i = 1; buf[i-1]!='\n'; i++) {
 		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
+			void * vbuf = realloc(buf, bufsize*2);
+			if ( ! vbuf) {
+				free(buf);
+				return -1;
+			}
+			buf = (char *)vbuf;
 			bufsize *= 2;
 		} 
 		ch = fgetc( fp );

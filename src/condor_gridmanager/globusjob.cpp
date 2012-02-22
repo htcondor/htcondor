@@ -432,11 +432,11 @@ static bool write_classad_input_file( ClassAd *classad,
 
 const char *rsl_stringify( const std::string& src )
 {
-	int src_len = src.length();
-	int src_pos = 0;
-	int var_pos1;
-	int var_pos2;
-	int quote_pos;
+	size_t src_len = src.length();
+	size_t src_pos = 0;
+	size_t var_pos1;
+	size_t var_pos2;
+	size_t quote_pos;
 	static std::string dst;
 
 	if ( src_len == 0 ) {
@@ -985,6 +985,8 @@ void GlobusJob::doEvaluateState()
 		reevaluate_state = false;
 		old_gm_state = gmState;
 		old_globus_state = globusState;
+
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
 
 		switch ( gmState ) {
 		case GM_INIT: {
@@ -3540,11 +3542,14 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
-		if ( time(NULL) >= jmProxyExpireTime - 6*3600 ) {
+		// Don't forward the refreshed proxy if the remote proxy has more
+		// than GRIDMANAGER_PROXY_RENEW_LIMIT time left.
+		int renew_min = param_integer( "GRIDMANAGER_PROXY_REFRESH_TIME", 6*3600 );
+		if ( time(NULL) >= jmProxyExpireTime - renew_min ) {
 			return false;
 		} else {
 			daemonCore->Reset_Timer( evaluateStateTid,
-								 ( jmProxyExpireTime - 6*3600 ) - time(NULL) );
+								 ( jmProxyExpireTime - renew_min ) - time(NULL) );
 		}
 	}
 	if ( condorState != IDLE && condorState != RUNNING ) {

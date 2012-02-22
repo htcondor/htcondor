@@ -125,7 +125,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_COREDUMPER:BOOL'	 => 'OFF',
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
-	 '-DWITH_GCB:BOOL'			 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
@@ -440,6 +439,9 @@ our %submit_info = (
 
     'x86_64_sl_6.0' => 'x86_64_rhap_6.1',
 
+	# And now, 6.1 has become 6.2 through the magic of auto-update
+    'x86_64_rhap_6.2' => 'x86_64_rhap_6.1',
+
 	##########################################################################
 	# Platform RHEL 5 on x86_64
 	##########################################################################
@@ -450,7 +452,6 @@ our %submit_info = (
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_fedora_14-updated',
 				'x86_64_opensuse_11.4-updated',
 				'x86_64_rhap_6.1-updated',
 				],
@@ -599,6 +600,20 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_macos_10.6-updated' => 'x86_64_macos_10.6',
 
+	# This is new batlab macos 10.7 machine
+	'x86_64_macos_10.7' => {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
 	##########################################################################
 	# Platform RHEL 5 on x86
 	##########################################################################
@@ -709,6 +724,10 @@ our %submit_info = (
 		},
 	},
 
+	'x86_64_fedora_15'				=> 'x86_64_fedora_14',
+	'x86_64_fedora_16'				=> 'x86_64_fedora_14',
+	'x86_64_fedora_17'				=> 'x86_64_fedora_14',
+	'x86_64_fedora_18'				=> 'x86_64_fedora_14',
 	##########################################################################
 	# Platform Fedora 14 with updates on x86_64
 	##########################################################################
@@ -897,6 +916,23 @@ our %submit_info = (
 		},
 	},
 
+	'x86_sl_5.7' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+
 
 	##########################################################################
 	# Platform RHEL 4 on X86_64
@@ -956,6 +992,7 @@ our %submit_info = (
 		},
 	},
 
+	'x86_64_ubuntu_10.04.3'		=> 'x86_64_ubuntu_10.04',
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86
 	##########################################################################

@@ -80,6 +80,7 @@ CondorQ( void )
 	clusterprocarraysize = 128;
 	clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
 	procarray = (int *) malloc(clusterprocarraysize * sizeof(int));
+	ASSERT( clusterarray != NULL && procarray != NULL );
 	int i;
 	for(i=0; i < clusterprocarraysize; i++) { 
 		clusterarray[i] = -1;
@@ -121,10 +122,13 @@ addDBConstraint (CondorQIntCategories cat, int value)
 		clusterarray[numclusters] = value;
 		numclusters++;
 		if(numclusters == clusterprocarraysize-1) {
-		   clusterarray = (int *) realloc(clusterarray, 
+		   void * pvc = realloc(clusterarray, 
 					clusterprocarraysize * 2 * sizeof(int));
-		   procarray = (int *) realloc(procarray, 
+		   void * pvp = realloc(procarray, 
 					clusterprocarraysize * 2 * sizeof(int));
+		   ASSERT( pvc != NULL && pvp != NULL );
+		   clusterarray = (int *) pvc;
+		   procarray = (int *) pvp;
 		   for(i=clusterprocarraysize; 
 				i < clusterprocarraysize * 2; i++) {
 		      clusterarray[i] = -1;

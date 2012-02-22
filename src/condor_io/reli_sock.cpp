@@ -860,26 +860,29 @@ ReliSock::serialize() const
 char * 
 ReliSock::serialize(char *buf)
 {
-	char sinful_string[28], fqu[256];
+	char * sinful_string = NULL;
+	char fqu[256];
 	char *ptmp, * ptr = NULL;
 	int len = 0;
 
     ASSERT(buf);
-    memset(sinful_string, 0 , 28);
 
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
     int itmp;
-    sscanf(ptmp,"%d*",&itmp);
-    _special_state = relisock_state(itmp);
+    int citems = sscanf(ptmp,"%d*",&itmp);
+	if (citems == 1)
+       _special_state = relisock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
     if(ptmp) ptmp++;
     // Now, see if we are 6.3 or 6.2
     if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // we are 6.3
+		sinful_string = new char [1 + ptr - ptmp];
         memcpy(sinful_string, ptmp, ptr - ptmp);
+		sinful_string[ptr - ptmp] = 0;
 
         ptmp = ++ptr;
         // The next part is for crypto
@@ -887,9 +890,9 @@ ReliSock::serialize(char *buf)
         // Followed by Md
         ptmp = serializeMdInfo(ptmp);
 
-        sscanf(ptmp, "%d*", &len);
-        
-        if (len > 0) {
+        citems = sscanf(ptmp, "%d*", &len);
+
+        if (1 == citems && len > 0) {
             ptmp = strchr(ptmp, '*');
             ptmp++;
             memcpy(fqu, ptmp, len);
@@ -901,10 +904,15 @@ ReliSock::serialize(char *buf)
     }
     else if(ptmp) {
         // we are 6.2, this is the end of it.
-        sscanf(ptmp,"%s",sinful_string);
+		size_t sinful_len = strlen(ptmp);
+		sinful_string = new char [1 + sinful_len];
+        citems = sscanf(ptmp,"%s",sinful_string);
+		if (1 != citems) sinful_string[0] = 0;
+		sinful_string[sinful_len] = 0;
     }
 
 	_who.from_sinful(sinful_string);
+	delete [] sinful_string;
     
     return NULL;
 }

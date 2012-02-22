@@ -1,0 +1,89 @@
+# This waits until the DAG is halted, sleeps, and then un-halts the DAG.
+Job NodeW1 job_dagman_halt-A-node.cmd
+Vars NodeW1 nodename="$(JOB)"
+Vars NodeW1 args="$(JOB) -unhalt"
+Priority NodeW1 10
+
+# This node halts the DAG.
+Job NodeW2 job_dagman_halt-A-node.cmd
+Script Post NodeW2 job_dagman_halt-A-script.pl Post $JOB
+Vars NodeW2 nodename="$(JOB)"
+Vars NodeW2 args="$(JOB) -halt"
+Priority NodeW2 5
+
+# This node runs normally -- tests that things are resumed correctly
+# after the DAG is un-halted.
+Job NodeW3 job_dagman_halt-A-node.cmd
+Vars NodeW3 nodename="$(JOB)"
+Vars NodeW3 args="$(JOB)"
+
+# This waits until the DAG is halted, sleeps, and then un-halts the DAG.
+Job NodeX job_dagman_halt-A-node.cmd
+Vars NodeX nodename="$(JOB)"
+Vars NodeX args="$(JOB) -unhalt"
+Priority NodeX 10
+
+# This node halts the DAG.
+Job NodeY1 job_dagman_halt-A-node.cmd
+Vars NodeY1 nodename="$(JOB)"
+Vars NodeY1 args="$(JOB) -halt"
+Priority NodeY1 5
+
+# This node runs normally -- tests that things are resumed correctly
+# after the DAG is un-halted.
+Job NodeY2 job_dagman_halt-A-node.cmd
+Script Pre NodeY2 job_dagman_halt-A-script.pl Pre $JOB
+Script Post NodeY2 job_dagman_halt-A-script.pl Post $JOB
+Vars NodeY2 nodename="$(JOB)"
+Vars NodeY2 args="$(JOB)"
+
+# Got rid of this node to make the order deterministic.
+# This node runs normally -- tests that things are resumed correctly
+# after the DAG is un-halted.
+#Job NodeY3 job_dagman_halt-A-node.cmd
+#Script Pre NodeY3 job_dagman_halt-A-script.pl Pre $JOB
+#Script Post NodeY3 job_dagman_halt-A-script.pl Post $JOB
+#Vars NodeY3 nodename="$(JOB)"
+#Vars NodeY3 args="$(JOB)"
+
+# This node just runs normally.
+Job NodeA job_dagman_halt-A-node.cmd
+Vars NodeA nodename="$(JOB)"
+Vars NodeA args="$(JOB)"
+
+# This node waits until the DAG is halted, and then exits.
+Job NodeB job_dagman_halt-A-node.cmd
+Script Pre NodeB job_dagman_halt-A-script.pl Pre $JOB
+Script Post NodeB job_dagman_halt-A-script.pl Post $JOB
+Vars NodeB nodename="$(JOB)"
+Vars NodeB args="$(JOB) -sleep"
+Priority NodeB 10
+
+# This node halts the DAG.
+Job NodeC1 job_dagman_halt-A-node.cmd
+Vars NodeC1 nodename="$(JOB)"
+Vars NodeC1 args="$(JOB) -halt"
+Priority NodeC1 5
+
+# This node exists mainly to test that a node that is ready doesn't
+# get run when the DAG is halted (and its PRE script is not run, either).
+Job NodeC2 job_dagman_halt-A-node.cmd
+Script Pre NodeC2 job_dagman_halt-A-script.pl Pre $JOB
+Script Post NodeC2 job_dagman_halt-A-script.pl Post $JOB
+Vars NodeC2 nodename="$(JOB)"
+Vars NodeC2 args="$(JOB)"
+
+# This node should not get run (but would run normally if it did).
+Job NodeD job_dagman_halt-A-node.cmd
+Vars NodeD nodename="$(JOB)"
+Vars NodeD args="$(JOB)"
+
+Parent NodeW2 Child NodeW3
+Parent NodeW3 Child NodeX NodeY1
+#Parent NodeY1 Child NodeY2 NodeY3
+Parent NodeY1 Child NodeY2
+#Parent NodeY2 NodeY3 Child NodeA
+Parent NodeY2 Child NodeA
+Parent NodeA Child NodeB NodeC1
+Parent NodeC1 Child NodeC2
+Parent NodeC2 Child NodeD

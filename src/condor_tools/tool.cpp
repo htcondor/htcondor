@@ -56,7 +56,7 @@ int doSquawkReconnect( char *addr );
 void squawkHelp( char *token );
 int  printAdToFile(ClassAd *ad, char* filename);
 int strncmp_auto(const char *s1, const char *s2);
-void usage( char *str, int iExitCode=1 );
+void PREFAST_NORETURN usage( const char *str, int iExitCode=1 );
 
 // Global variables
 int cmd = 0;
@@ -80,7 +80,6 @@ bool all_good = true;
 
 HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 
-
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
 // messages.  To enable condor.test to produce easily readable
@@ -90,14 +89,14 @@ HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 #endif
 
 void
-usage( char *str, int iExitCode )
+usage( const char *str, int iExitCode )
 {
 	if( ! str ) {
 		fprintf( stderr, "Use \"-help\" to see usage information\n" );
 		exit( 1 );
 	}
 
-	char* tmp = strchr( str, '_' );
+	const char* tmp = strchr( str, '_' );
 	if( !tmp ) {
 		fprintf( stderr, "Usage: %s [command] ", str );
 	} else {
@@ -1621,7 +1620,7 @@ doSquawk( char *address ) {
 		/* making own addr here; memory management in tool confusing. */
 	char line[256], addr[256];
 	int i, done = FALSE;
-	strcpy( addr, address );
+	strcpy_len( addr, address, COUNTOF(addr) );
 	
 	while ( !done ) {
 		printf ( "> " );
@@ -1633,7 +1632,7 @@ doSquawk( char *address ) {
 			for ( i=0 ; line[i] != '\0' ; i++ ) {
 				line[i] = tolower ( line[i] );
 			}
-			if ( line[i-1] == '\n' ) { 
+			if ( i > 0 && line[i-1] == '\n' ) { 
 				line[i-1] = '\0';
 			}
 			done = ! handleSquawk( line, addr );

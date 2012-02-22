@@ -27,9 +27,9 @@
         {
 
         
-                property_Subsystem_type  = NULL;
+                property_Resource  = NULL;
               
-            isValidSubsystem_type  = false;
+            isValidResource  = false;
         
                     property_Pool;
                 
@@ -39,18 +39,18 @@
                 
             isValidName  = false;
         
-                    property_Custom_name;
+                    property_Custom_type;
                 
-            isValidCustom_name  = false;
+            isValidCustom_type  = false;
         
         }
 
-       AviaryCommon::ResourceID::ResourceID(AviaryCommon::ResourceType* arg_Subsystem_type,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_name)
+       AviaryCommon::ResourceID::ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_type)
         {
              
-               property_Subsystem_type  = NULL;
+               property_Resource  = NULL;
              
-            isValidSubsystem_type  = true;
+            isValidResource  = true;
             
                  property_Pool;
              
@@ -60,22 +60,22 @@
              
             isValidName  = true;
             
-                 property_Custom_name;
+                 property_Custom_type;
              
-            isValidCustom_name  = true;
+            isValidCustom_type  = true;
             
-                    property_Subsystem_type = arg_Subsystem_type;
+                    property_Resource = arg_Resource;
             
                     property_Pool = arg_Pool;
             
                     property_Name = arg_Name;
             
-                    property_Custom_name = arg_Custom_name;
+                    property_Custom_type = arg_Custom_type;
             
         }
         AviaryCommon::ResourceID::~ResourceID()
         {
-            if (property_Subsystem_type) delete property_Subsystem_type;
+            if (property_Resource) delete property_Resource;
         }
 
         
@@ -114,7 +114,7 @@
 
                      
                      /*
-                      * building subsystem_type element
+                      * building resource element
                       */
                      
                      
@@ -133,13 +133,13 @@
                                         mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
                                     }
                                    
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "subsystem_type", NULL, NULL);
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "resource", NULL, NULL);
                                  
 
                            if (isParticle() ||  
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("subsystem_type", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("resource", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("subsystem_type", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("resource", axiom_element_get_localname(current_element, Environment::getEnv()))))
                               {
                                 is_early_node_valid = true;
                               }
@@ -149,16 +149,16 @@
                                       status =  element->deserialize(&current_node, &is_early_node_valid, false);
                                       if(AXIS2_FAILURE == status)
                                       {
-                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element subsystem_type");
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element resource");
                                       }
                                       else
                                       {
-                                          status = setSubsystem_type(element);
+                                          status = setResource(element);
                                       }
                                     
                                  if(AXIS2_FAILURE ==  status)
                                  {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for subsystem_type ");
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for resource ");
                                      if(element_qname)
                                      {
                                          axutil_qname_free(element_qname, Environment::getEnv());
@@ -174,7 +174,7 @@
                                       axutil_qname_free(element_qname, Environment::getEnv());
                                   }
                                   /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element subsystem_type missing");
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element resource missing");
                                   return AXIS2_FAILURE;
                               }
                            
@@ -302,17 +302,6 @@
                                  }
                               }
                            
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element pool missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -437,17 +426,6 @@
                                  }
                               }
                            
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element name missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -457,7 +435,7 @@
 
                      
                      /*
-                      * building custom_name element
+                      * building custom_type element
                       */
                      
                      
@@ -485,13 +463,13 @@
                                    }
                                    is_early_node_valid = false;
                                  
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "custom_name", NULL, NULL);
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "custom_type", NULL, NULL);
                                  
 
                            if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_name", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_type", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_name", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_type", axiom_element_get_localname(current_element, Environment::getEnv()))))
                               {
                                 is_early_node_valid = true;
                               }
@@ -500,7 +478,7 @@
                                       text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
                                       if(text_value != NULL)
                                       {
-                                            status = setCustom_name(text_value);
+                                            status = setCustom_type(text_value);
                                       }
                                       
                                       else
@@ -551,19 +529,19 @@
 
                                             if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
                                             {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element custom_name");
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element custom_type");
                                                 status = AXIS2_FAILURE;
                                             }
                                             else
                                             {
                                                 /* after all, we found this is a empty string */
-                                                status = setCustom_name("");
+                                                status = setCustom_type("");
                                             }
                                       }
                                       
                                  if(AXIS2_FAILURE ==  status)
                                  {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for custom_name ");
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for custom_type ");
                                      if(element_qname)
                                      {
                                          axutil_qname_free(element_qname, Environment::getEnv());
@@ -666,11 +644,11 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidSubsystem_type)
+                   if (!isValidResource)
                    {
                       
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property subsystem_type");
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property resource");
                             return NULL;
                           
                    }
@@ -678,11 +656,11 @@
                    {
                      start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
                                  (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("subsystem_type"))); 
+                                  axutil_strlen("resource"))); 
                                  
                                  /* axutil_strlen("<:>") + 1 = 4 */
                      end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("subsystem_type")));
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("resource")));
                                   /* axutil_strlen("</:>") + 1 = 5 */
                                   
                      
@@ -691,29 +669,29 @@
                    
                      
                      /*
-                      * parsing subsystem_type element
+                      * parsing resource element
                       */
 
                     
                     
-                            sprintf(start_input_str, "<%s%ssubsystem_type",
+                            sprintf(start_input_str, "<%s%sresource",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
                             
                         start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%ssubsystem_type>",
+                        sprintf(end_input_str, "</%s%sresource>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                      
-                            if(!property_Subsystem_type->isParticle())
+                            if(!property_Resource->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                             }
-                            property_Subsystem_type->serialize(current_node, parent_element,
-                                                                                 property_Subsystem_type->isParticle() || false, namespaces, next_ns_index);
+                            property_Resource->serialize(current_node, parent_element,
+                                                                                 property_Resource->isParticle() || false, namespaces, next_ns_index);
                             
-                            if(!property_Subsystem_type->isParticle())
+                            if(!property_Resource->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
@@ -730,9 +708,8 @@
                    if (!isValidPool)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property pool");
-                            return NULL;
                           
                    }
                    else
@@ -797,9 +774,8 @@
                    if (!isValidName)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property name");
-                            return NULL;
                           
                    }
                    else
@@ -861,7 +837,7 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidCustom_name)
+                   if (!isValidCustom_type)
                    {
                       
                            /* no need to complain for minoccurs=0 element */
@@ -872,11 +848,11 @@
                    {
                      start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
                                  (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("custom_name"))); 
+                                  axutil_strlen("custom_type"))); 
                                  
                                  /* axutil_strlen("<:>") + 1 = 4 */
                      end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("custom_name")));
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("custom_type")));
                                   /* axutil_strlen("</:>") + 1 = 5 */
                                   
                      
@@ -885,22 +861,22 @@
                    
                      
                      /*
-                      * parsing custom_name element
+                      * parsing custom_type element
                       */
 
                     
                     
-                            sprintf(start_input_str, "<%s%scustom_name>",
+                            sprintf(start_input_str, "<%s%scustom_type>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                             
                         start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%scustom_name>",
+                        sprintf(end_input_str, "</%s%scustom_type>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_4 = (axis2_char_t*)property_Custom_name.c_str();
+                           text_value_4 = (axis2_char_t*)property_Custom_type.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
@@ -932,61 +908,61 @@
         
 
             /**
-             * Getter for subsystem_type by  Property Number 1
+             * Getter for resource by  Property Number 1
              */
             AviaryCommon::ResourceType* WSF_CALL
             AviaryCommon::ResourceID::getProperty1()
             {
-                return getSubsystem_type();
+                return getResource();
             }
 
             /**
-             * getter for subsystem_type.
+             * getter for resource.
              */
             AviaryCommon::ResourceType* WSF_CALL
-            AviaryCommon::ResourceID::getSubsystem_type()
+            AviaryCommon::ResourceID::getResource()
              {
-                return property_Subsystem_type;
+                return property_Resource;
              }
 
             /**
-             * setter for subsystem_type
+             * setter for resource
              */
             bool WSF_CALL
-            AviaryCommon::ResourceID::setSubsystem_type(
-                    AviaryCommon::ResourceType*  arg_Subsystem_type)
+            AviaryCommon::ResourceID::setResource(
+                    AviaryCommon::ResourceType*  arg_Resource)
              {
                 
 
-                if(isValidSubsystem_type &&
-                        arg_Subsystem_type == property_Subsystem_type)
+                if(isValidResource &&
+                        arg_Resource == property_Resource)
                 {
                     
                     return true;
                 }
 
                 
-                  if(NULL == arg_Subsystem_type)
+                  if(NULL == arg_Resource)
                        
                   {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"subsystem_type is being set to NULL, but it is not a nullable element");
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"resource is being set to NULL, but it is not a nullable element");
                       return AXIS2_FAILURE;
                   }
                 
 
                 
-                resetSubsystem_type();
+                resetResource();
 
                 
-                    if(NULL == arg_Subsystem_type)
+                    if(NULL == arg_Resource)
                          
                 {
                     /* We are already done */
                     return true;
                 }
                 
-                        property_Subsystem_type = arg_Subsystem_type;
-                        isValidSubsystem_type = true;
+                        property_Resource = arg_Resource;
+                        isValidResource = true;
                     
                 return true;
              }
@@ -994,10 +970,10 @@
              
 
            /**
-            * resetter for subsystem_type
+            * resetter for resource
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::resetSubsystem_type()
+           AviaryCommon::ResourceID::resetResource()
            {
                int i = 0;
                int count = 0;
@@ -1007,11 +983,11 @@
             
                 
 
-                if(property_Subsystem_type != NULL)
+                if(property_Resource != NULL)
                 {
                    
                    
-                         delete  property_Subsystem_type;
+                         delete  property_Resource;
                      
 
                    }
@@ -1019,26 +995,26 @@
                 
                 
                 
-               isValidSubsystem_type = false; 
+               isValidResource = false; 
                return true;
            }
 
            /**
-            * Check whether subsystem_type is nill
+            * Check whether resource is nill
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::isSubsystem_typeNil()
+           AviaryCommon::ResourceID::isResourceNil()
            {
-               return !isValidSubsystem_type;
+               return !isValidResource;
            }
 
            /**
-            * Set subsystem_type to nill (currently the same as reset)
+            * Set resource to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::setSubsystem_typeNil()
+           AviaryCommon::ResourceID::setResourceNil()
            {
-               return resetSubsystem_type();
+               return resetResource();
            }
 
            
@@ -1077,13 +1053,6 @@
                     return true;
                 }
 
-                
-                  if(arg_Pool.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"pool is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
                 
 
                 
@@ -1168,13 +1137,6 @@
                 }
 
                 
-                  if(arg_Name.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"name is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
 
                 
                 resetName();
@@ -1224,34 +1186,34 @@
            
 
             /**
-             * Getter for custom_name by  Property Number 4
+             * Getter for custom_type by  Property Number 4
              */
             std::string WSF_CALL
             AviaryCommon::ResourceID::getProperty4()
             {
-                return getCustom_name();
+                return getCustom_type();
             }
 
             /**
-             * getter for custom_name.
+             * getter for custom_type.
              */
             std::string WSF_CALL
-            AviaryCommon::ResourceID::getCustom_name()
+            AviaryCommon::ResourceID::getCustom_type()
              {
-                return property_Custom_name;
+                return property_Custom_type;
              }
 
             /**
-             * setter for custom_name
+             * setter for custom_type
              */
             bool WSF_CALL
-            AviaryCommon::ResourceID::setCustom_name(
-                    const std::string  arg_Custom_name)
+            AviaryCommon::ResourceID::setCustom_type(
+                    const std::string  arg_Custom_type)
              {
                 
 
-                if(isValidCustom_name &&
-                        arg_Custom_name == property_Custom_name)
+                if(isValidCustom_type &&
+                        arg_Custom_type == property_Custom_type)
                 {
                     
                     return true;
@@ -1260,11 +1222,11 @@
                 
 
                 
-                resetCustom_name();
+                resetCustom_type();
 
                 
-                        property_Custom_name = std::string(arg_Custom_name.c_str());
-                        isValidCustom_name = true;
+                        property_Custom_type = std::string(arg_Custom_type.c_str());
+                        isValidCustom_type = true;
                     
                 return true;
              }
@@ -1272,36 +1234,36 @@
              
 
            /**
-            * resetter for custom_name
+            * resetter for custom_type
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::resetCustom_name()
+           AviaryCommon::ResourceID::resetCustom_type()
            {
                int i = 0;
                int count = 0;
 
 
                
-               isValidCustom_name = false; 
+               isValidCustom_type = false; 
                return true;
            }
 
            /**
-            * Check whether custom_name is nill
+            * Check whether custom_type is nill
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::isCustom_nameNil()
+           AviaryCommon::ResourceID::isCustom_typeNil()
            {
-               return !isValidCustom_name;
+               return !isValidCustom_type;
            }
 
            /**
-            * Set custom_name to nill (currently the same as reset)
+            * Set custom_type to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::setCustom_nameNil()
+           AviaryCommon::ResourceID::setCustom_typeNil()
            {
-               return resetCustom_name();
+               return resetCustom_type();
            }
 
            

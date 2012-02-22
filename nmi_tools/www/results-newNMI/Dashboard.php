@@ -8,18 +8,85 @@ class Dashboard {
 
   var $nmi;
   var $db;
+  var $nmi_results;
 
   function Dashboard() {
     $this->nmi = new NMI();
     return true;
   }
   
-  function print_header($title) {
+  function print_header($title, $uses_jquery=0, $uses_floating_table_headers=0) {
     print "<html>\n";
     print "<head>\n";
     print "<title>$title</title>\n";
     print "<link rel='stylesheet' href='dashboard.css' type='text/css'>\n";
+
+    if($uses_jquery) {
+      print "<script type='text/javascript' src='jquery-1.6.2.min.js'></script>\n";
+    }
+
+    if($uses_floating_table_headers) {
+      $this->enable_floating_table_headers();
+    }
+
     flush();
+  }
+
+  function enable_floating_table_headers() {
+
+?>
+
+<script type="text/javascript">
+
+   function UpdateTableHeaders() {
+    $("div.divTableWithFloatingHeader").each(function() {
+	var originalHeaderRow = $(".tableFloatingHeaderOriginal", this);
+	var floatingHeaderRow = $(".tableFloatingHeader", this);
+	var offset = $(this).offset();
+	var scrollTop = $(window).scrollTop();
+	if ((scrollTop > offset.top) && (scrollTop < offset.top + $(this).height())) {
+	  floatingHeaderRow.css("visibility", "visible");
+	  floatingHeaderRow.css("top", Math.min(scrollTop - offset.top, $(this).height() - floatingHeaderRow.height()) + "px");
+
+	  // Copy cell widths from original header
+	  $("th", floatingHeaderRow).each(function(index) {
+	      var cellWidth = $("th", originalHeaderRow).eq(index).css('width');
+	      $(this).css('width', cellWidth);
+	    });
+
+	  // Copy row width from whole table
+	  floatingHeaderRow.css("width", $(this).css("width"));
+	}
+	else {
+	  floatingHeaderRow.css("visibility", "hidden");
+	  floatingHeaderRow.css("top", "0px");
+	}
+      });
+    }
+    
+    $(document).ready(function() {
+	$("table.tableWithFloatingHeader").each(function() {
+	$(this).wrap("<div class=\"divTableWithFloatingHeader\" style=\"position:relative\"></div>");
+	
+	var originalHeaderRow = $("tr:first", this)
+	  originalHeaderRow.before(originalHeaderRow.clone());
+	var clonedHeaderRow = $("tr:first", this)
+	  
+	  clonedHeaderRow.addClass("tableFloatingHeader");
+	clonedHeaderRow.css("position", "absolute");
+	clonedHeaderRow.css("top", "0px");
+	clonedHeaderRow.css("left", $(this).css("margin-left"));
+	clonedHeaderRow.css("visibility", "hidden");
+	
+	originalHeaderRow.addClass("tableFloatingHeaderOriginal");
+	  });
+	UpdateTableHeaders();
+	$(window).scroll(UpdateTableHeaders);
+	$(window).resize(UpdateTableHeaders);
+      });
+</script>
+
+<?php
   }
 
   function connect_to_db() {
@@ -114,6 +181,14 @@ class Dashboard {
     }
 
     return $runids;
+  }
+
+  function get_nmi_result_text($result) {
+    if(!array_key_exists($result, $this->nmi_results)) {
+      $this->nmi_results[$result] = $this->nmi->get_result_text($result);
+    }
+
+    return $this->nmi_results[$result];
   }
 
 }
