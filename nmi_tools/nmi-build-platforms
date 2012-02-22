@@ -1,3 +1,4 @@
+# One platform per line.  Comments (starting with #) and blank lines are ignored.
 x86_64_deb_6.0
 x86_64_fedora_15
 x86_64_fedora_16
