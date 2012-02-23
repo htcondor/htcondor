@@ -2194,7 +2194,6 @@ SetImageSize()
 	static bool    got_exe_size = false;
 	static int64_t executable_size_kb = 0;
 	char	*tmp;
-	char	*p;
 	char    buff[2048];
 	MyString buffer;
 
@@ -2222,6 +2221,7 @@ SetImageSize()
 			image_size_kb = 0;
 		}
 #else
+		char	*p;
 		image_size_kb = strtol(tmp, &p, 10);
 		//for( p=tmp; *p && isdigit(*p); p++ )
 		//	;
@@ -6556,7 +6556,6 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
 	if( !checks_disk ) {
-		char * psz = NULL;
 		if (job->Lookup(ATTR_REQUEST_DISK)) {
 			answer += " && (TARGET.Disk >= RequestDisk)";
 		}
@@ -6583,7 +6582,6 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 #if 1
-		char * psz = NULL;
 		if (job->Lookup(ATTR_REQUEST_MEMORY)) {
 			answer += " && (TARGET.Memory >= RequestMemory)";
 		}
