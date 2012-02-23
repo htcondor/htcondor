@@ -165,6 +165,7 @@ int VMVCPUS = 0;
 MyString VMMACAddr;
 bool VMCheckpoint = false;
 bool VMNetworking = false;
+bool VMVNC=false;
 MyString VMNetworkType;
 bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
@@ -360,6 +361,7 @@ const char    *ConcurrencyLimits = "concurrency_limits";
 //
 // VM universe Parameters
 //
+const char    *VM_VNC = "vm_vnc";
 const char    *VM_Type = "vm_type";
 const char    *VM_Memory = "vm_memory";
 const char    *VM_VCPUS = "vm_vcpus";
@@ -1966,6 +1968,14 @@ SetUniverse()
 		vm_tmp = condor_param(VM_Networking, ATTR_JOB_VM_NETWORKING);
 		if( vm_tmp ) {
 			parse_vm_option(vm_tmp, VMNetworking);
+			free(vm_tmp);
+		}
+		
+		// vnc set for vm?
+		VMVNC = false;
+		vm_tmp = condor_param(VM_VNC, ATTR_JOB_VM_VNC);
+		if( vm_tmp ) {
+			parse_vm_option(vm_tmp, VMVNC);
 			free(vm_tmp);
 		}
 
@@ -7747,6 +7757,9 @@ SetVMParams()
 	buffer.sprintf( "%s = %s", ATTR_JOB_VM_NETWORKING, VMNetworking? "TRUE":"FALSE");
 	InsertJobExpr(buffer);
 
+	buffer.sprintf( "%s = %s", ATTR_JOB_VM_VNC, VMVNC? "TRUE":"FALSE");
+	InsertJobExpr(buffer);
+	
 	// Here we need to set networking type
 	if( VMNetworking ) {
 		tmp_ptr = condor_param(VM_Networking_Type, ATTR_JOB_VM_NETWORKING_TYPE);

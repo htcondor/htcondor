@@ -392,6 +392,7 @@ const char * const ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char * const ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
 const char * const  ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
 const char * const  ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
+const char * const  ATTR_JOB_VM_VNC = "JobVMVNCConsole";
 // End VM universe
 const char * const ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char * const ATTR_KEYSTORE_FILE            = "KeystoreFile";
