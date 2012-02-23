@@ -261,7 +261,7 @@ WriteUserLogHeader::Write( WriteUserLog &writer, FILE *fp )
 bool
 WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
-	snprintf( event.info, sizeof(event.info),
+	int len = snprintf( event.info, COUNTOF(event.info),
 			  "Global JobLog:"
 			  " ctime=%d"
 			  " id=%s"
@@ -282,11 +282,17 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  getMaxRotation(),
 			  getCreatorName().Value()
 			  );
-	::dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
-	int		len = strlen( event.info );
-	while( len < 256 ) {
-		strcat( event.info, " " );
-		len++;
+	if (len < 0 || len == sizeof(event.info)) {
+		// not enough room in the buffer
+		len = (int)COUNTOF(event.info)-1;
+		event.info[len] = 0; // make sure it's null terminated.
+		::dprintf( D_FULLDEBUG, "Generated (truncated) log header: '%s'\n", event.info );
+	}  else {
+		::dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
+		while( len < 256 ) {
+			event.info[len++] = ' ';
+			event.info[len] = 0;
+		}
 	}
 
 	return true;

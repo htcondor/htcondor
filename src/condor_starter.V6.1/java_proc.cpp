@@ -230,6 +230,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	int fields;
 
 	char tmp[11]; // enough for "abnormal"
+	tmp[0] = 0;
 
 	int normal_exit = WIFEXITED(status);
 	int exit_code = WEXITSTATUS(status);
@@ -317,7 +318,9 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 	dprintf(D_ALWAYS,"JavaProc: unlinking %s and %s\n",startfile.Value(),endfile.Value());
 
 	priv_state s = set_priv(PRIV_ROOT);
+	MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 	unlink(startfile.Value());
+	MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 	unlink(endfile.Value());
 	set_priv(s);
 

@@ -39,13 +39,13 @@
                 
             isValidName  = false;
         
-                    property_Custom_type;
+                    property_Sub_type;
                 
-            isValidCustom_type  = false;
+            isValidSub_type  = false;
         
         }
 
-       AviaryCommon::ResourceID::ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_type)
+       AviaryCommon::ResourceID::ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Sub_type)
         {
              
                property_Resource  = NULL;
@@ -60,9 +60,9 @@
              
             isValidName  = true;
             
-                 property_Custom_type;
+                 property_Sub_type;
              
-            isValidCustom_type  = true;
+            isValidSub_type  = true;
             
                     property_Resource = arg_Resource;
             
@@ -70,12 +70,12 @@
             
                     property_Name = arg_Name;
             
-                    property_Custom_type = arg_Custom_type;
+                    property_Sub_type = arg_Sub_type;
             
         }
         AviaryCommon::ResourceID::~ResourceID()
         {
-
+            if (property_Resource) delete property_Resource;
         }
 
         
@@ -435,7 +435,7 @@
 
                      
                      /*
-                      * building custom_type element
+                      * building sub_type element
                       */
                      
                      
@@ -463,13 +463,13 @@
                                    }
                                    is_early_node_valid = false;
                                  
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "custom_type", NULL, NULL);
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "sub_type", NULL, NULL);
                                  
 
                            if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_type", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("sub_type", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_type", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("sub_type", axiom_element_get_localname(current_element, Environment::getEnv()))))
                               {
                                 is_early_node_valid = true;
                               }
@@ -478,7 +478,7 @@
                                       text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
                                       if(text_value != NULL)
                                       {
-                                            status = setCustom_type(text_value);
+                                            status = setSub_type(text_value);
                                       }
                                       
                                       else
@@ -529,19 +529,19 @@
 
                                             if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
                                             {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element custom_type");
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element sub_type");
                                                 status = AXIS2_FAILURE;
                                             }
                                             else
                                             {
                                                 /* after all, we found this is a empty string */
-                                                status = setCustom_type("");
+                                                status = setSub_type("");
                                             }
                                       }
                                       
                                  if(AXIS2_FAILURE ==  status)
                                  {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for custom_type ");
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for sub_type ");
                                      if(element_qname)
                                      {
                                          axutil_qname_free(element_qname, Environment::getEnv());
@@ -837,7 +837,7 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidCustom_type)
+                   if (!isValidSub_type)
                    {
                       
                            /* no need to complain for minoccurs=0 element */
@@ -848,11 +848,11 @@
                    {
                      start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
                                  (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("custom_type"))); 
+                                  axutil_strlen("sub_type"))); 
                                  
                                  /* axutil_strlen("<:>") + 1 = 4 */
                      end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("custom_type")));
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("sub_type")));
                                   /* axutil_strlen("</:>") + 1 = 5 */
                                   
                      
@@ -861,22 +861,22 @@
                    
                      
                      /*
-                      * parsing custom_type element
+                      * parsing sub_type element
                       */
 
                     
                     
-                            sprintf(start_input_str, "<%s%scustom_type>",
+                            sprintf(start_input_str, "<%s%ssub_type>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                             
                         start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%scustom_type>",
+                        sprintf(end_input_str, "</%s%ssub_type>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_4 = (axis2_char_t*)property_Custom_type.c_str();
+                           text_value_4 = (axis2_char_t*)property_Sub_type.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
@@ -1186,34 +1186,34 @@
            
 
             /**
-             * Getter for custom_type by  Property Number 4
+             * Getter for sub_type by  Property Number 4
              */
             std::string WSF_CALL
             AviaryCommon::ResourceID::getProperty4()
             {
-                return getCustom_type();
+                return getSub_type();
             }
 
             /**
-             * getter for custom_type.
+             * getter for sub_type.
              */
             std::string WSF_CALL
-            AviaryCommon::ResourceID::getCustom_type()
+            AviaryCommon::ResourceID::getSub_type()
              {
-                return property_Custom_type;
+                return property_Sub_type;
              }
 
             /**
-             * setter for custom_type
+             * setter for sub_type
              */
             bool WSF_CALL
-            AviaryCommon::ResourceID::setCustom_type(
-                    const std::string  arg_Custom_type)
+            AviaryCommon::ResourceID::setSub_type(
+                    const std::string  arg_Sub_type)
              {
                 
 
-                if(isValidCustom_type &&
-                        arg_Custom_type == property_Custom_type)
+                if(isValidSub_type &&
+                        arg_Sub_type == property_Sub_type)
                 {
                     
                     return true;
@@ -1222,11 +1222,11 @@
                 
 
                 
-                resetCustom_type();
+                resetSub_type();
 
                 
-                        property_Custom_type = std::string(arg_Custom_type.c_str());
-                        isValidCustom_type = true;
+                        property_Sub_type = std::string(arg_Sub_type.c_str());
+                        isValidSub_type = true;
                     
                 return true;
              }
@@ -1234,36 +1234,36 @@
              
 
            /**
-            * resetter for custom_type
+            * resetter for sub_type
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::resetCustom_type()
+           AviaryCommon::ResourceID::resetSub_type()
            {
                int i = 0;
                int count = 0;
 
 
                
-               isValidCustom_type = false; 
+               isValidSub_type = false; 
                return true;
            }
 
            /**
-            * Check whether custom_type is nill
+            * Check whether sub_type is nill
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::isCustom_typeNil()
+           AviaryCommon::ResourceID::isSub_typeNil()
            {
-               return !isValidCustom_type;
+               return !isValidSub_type;
            }
 
            /**
-            * Set custom_type to nill (currently the same as reset)
+            * Set sub_type to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryCommon::ResourceID::setCustom_typeNil()
+           AviaryCommon::ResourceID::setSub_typeNil()
            {
-               return resetCustom_type();
+               return resetSub_type();
            }
 
            

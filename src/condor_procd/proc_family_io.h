@@ -94,6 +94,22 @@ struct ProcFamilyUsage {
 	// These are signed so a negative number indicates uninitialized
 	long          block_read_bytes;
 	long          block_write_bytes;
+
+	ProcFamilyUsage() :
+		user_cpu_time(0),
+		sys_cpu_time(0),
+		percent_cpu(0),
+		max_image_size(0),
+		total_image_size(0),
+		total_resident_set_size(0),
+#if HAVE_PSS
+		total_proportional_set_size(0),
+		total_proportional_set_size_available(0),
+#endif
+		num_procs(0),
+		block_read_bytes(0),
+		block_write_bytes(0)
+	{ }
 };
 
 // structures for retrieving a state dump from the ProcD

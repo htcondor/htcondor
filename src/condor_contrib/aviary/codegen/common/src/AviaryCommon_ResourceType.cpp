@@ -269,17 +269,8 @@
                  if (axutil_strcmp(property_ResourceType.c_str(), "COLLECTOR") == 0)
                     return ResourceType_COLLECTOR;
              
-                 if (axutil_strcmp(property_ResourceType.c_str(), "EXECUTOR") == 0)
-                    return ResourceType_EXECUTOR;
-             
-                 if (axutil_strcmp(property_ResourceType.c_str(), "EVENT_SERVER") == 0)
-                    return ResourceType_EVENT_SERVER;
-             
-                 if (axutil_strcmp(property_ResourceType.c_str(), "JOB_SERVER") == 0)
-                    return ResourceType_JOB_SERVER;
-             
-                 if (axutil_strcmp(property_ResourceType.c_str(), "AMQP_SCHEDULER") == 0)
-                    return ResourceType_AMQP_SCHEDULER;
+                 if (axutil_strcmp(property_ResourceType.c_str(), "CUSTOM") == 0)
+                    return ResourceType_CUSTOM;
              
                  if (axutil_strcmp(property_ResourceType.c_str(), "MASTER") == 0)
                     return ResourceType_MASTER;
@@ -287,14 +278,11 @@
                  if (axutil_strcmp(property_ResourceType.c_str(), "NEGOTIATOR") == 0)
                     return ResourceType_NEGOTIATOR;
              
-                 if (axutil_strcmp(property_ResourceType.c_str(), "QUERY_SERVER") == 0)
-                    return ResourceType_QUERY_SERVER;
-             
                  if (axutil_strcmp(property_ResourceType.c_str(), "SCHEDULER") == 0)
                     return ResourceType_SCHEDULER;
              
-                 if (axutil_strcmp(property_ResourceType.c_str(), "CUSTOM") == 0)
-                    return ResourceType_CUSTOM;
+                 if (axutil_strcmp(property_ResourceType.c_str(), "SLOT") == 0)
+                    return ResourceType_SLOT;
              
              
                  /* Error: none of the strings matched; invalid enum value */
@@ -318,47 +306,31 @@
                    {
                      
                        case ResourceType_ANY :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "ANY");
+                            property_ResourceType = ("ANY");
                           break;
                      
                        case ResourceType_COLLECTOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COLLECTOR");
-                          break;
-                     
-                       case ResourceType_EXECUTOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "EXECUTOR");
-                          break;
-                     
-                       case ResourceType_EVENT_SERVER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "EVENT_SERVER");
-                          break;
-                     
-                       case ResourceType_JOB_SERVER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "JOB_SERVER");
-                          break;
-                     
-                       case ResourceType_AMQP_SCHEDULER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "AMQP_SCHEDULER");
-                          break;
-                     
-                       case ResourceType_MASTER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "MASTER");
-                          break;
-                     
-                       case ResourceType_NEGOTIATOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "NEGOTIATOR");
-                          break;
-                     
-                       case ResourceType_QUERY_SERVER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "QUERY_SERVER");
-                          break;
-                     
-                       case ResourceType_SCHEDULER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "SCHEDULER");
+                            property_ResourceType = ("COLLECTOR");
                           break;
                      
                        case ResourceType_CUSTOM :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "CUSTOM");
+                            property_ResourceType = ("CUSTOM");
+                          break;
+                     
+                       case ResourceType_MASTER :
+                            property_ResourceType = ("MASTER");
+                          break;
+                     
+                       case ResourceType_NEGOTIATOR :
+                            property_ResourceType = ("NEGOTIATOR");
+                          break;
+                     
+                       case ResourceType_SCHEDULER :
+                            property_ResourceType = ("SCHEDULER");
+                          break;
+                     
+                       case ResourceType_SLOT :
+                            property_ResourceType = ("SLOT");
                           break;
                      
                      

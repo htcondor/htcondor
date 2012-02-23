@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a rare bug where if the startd was configured to use partionable
+slots, it was possible for the startd to get partioned into more slots
+than there are resources.  That is, it was possible for a four cpu startd
+to split into five slots.
+
 \item Fixed a rare bug in the parallel universe, where if a claim was removed
 as the shadow was starting up, all ranks of the job would never completely 
 start.

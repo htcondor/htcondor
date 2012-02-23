@@ -147,10 +147,10 @@ error( int code, ... )
 	if ( code < 0 ) {
 
 		msg = errmsgs[-code];
-
 		if ( !msg ) {
 			msg = errmsgs[-E_UNKNOWN];
 		}
+		assert ( msg != NULL );
 
 		fprintf ( stderr, "%s: ", name );
 		va_start ( args, code );

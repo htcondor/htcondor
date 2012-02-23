@@ -159,7 +159,7 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 			m_debug = true;
 		} else if( match_prefix( argv[nextarg], "-help" ) ) {
 			printUsage();
-			return false;
+			exit(0);
 		} else if( match_prefix( argv[nextarg], "-name" ) ) {
 			if( argv[nextarg + 1] ) {
 				m_schedd_name = argv[++nextarg];

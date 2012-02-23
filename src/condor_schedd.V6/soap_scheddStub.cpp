@@ -1351,9 +1351,6 @@ condor__listSpool(struct soap * soap,
 				  int jobId,
 				  struct condor__listSpoolResponse & result)
 {
-	List<FileInfo> files;
-	int code;
-	CondorError errstack;
 	ScheddTransaction *entry;
 	if (!stub_prefix("listSpool",
 					 soap,
@@ -1368,6 +1365,8 @@ condor__listSpool(struct soap * soap,
 	}
 
 	bool destroy_job = false;
+	List<FileInfo> files;
+	CondorError errstack;
 
 	Job *job;
 	PROC_ID id; id.cluster = clusterId; id.proc = jobId;
@@ -1377,7 +1376,6 @@ condor__listSpool(struct soap * soap,
 			// part of a transaction, e.g. previously submitted.
 		job = new Job(id);
 		ASSERT(job);
-		CondorError errstack;
 		if (job->initialize(errstack)) {
 			result.response.status.code =
 				(condor__StatusCode) errstack.code();
@@ -1396,6 +1394,9 @@ condor__listSpool(struct soap * soap,
 
 		destroy_job = true;
 	}
+
+	int code;
+	errstack.clear(); // in case it was set above.
 
 	if (job && (code = job->get_spool_list(files, errstack))) {
 		result.response.status.code =

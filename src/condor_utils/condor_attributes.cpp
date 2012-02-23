@@ -61,20 +61,23 @@ AttrGetName( CONDOR_ATTR which )
     case ATTR_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->Get() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->Get() );
 		break;
     case ATTR_FLAG_DISTRO_UC:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetUc() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->GetUc() );
 		break;
     case ATTR_FLAG_DISTRO_CAP:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetCap() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->GetCap() );
 		break;
     }
 
@@ -435,6 +438,7 @@ const char * const ATTR_MAX_HOSTS				 = "MaxHosts";
 const char * const ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";
 const char * const ATTR_MAX_JOBS_RUNNING         = "MaxJobsRunning";
 const char * const ATTR_MEMORY                   = "Memory";
+const char * const ATTR_MEMORY_USAGE             = "MemoryUsage";
 const char * const ATTR_DETECTED_MEMORY          = "DetectedMemory";
 const char * const ATTR_DETECTED_CPUS            = "DetectedCpus";
 const char * const ATTR_MIN_HOSTS				 = "MinHosts";
@@ -885,6 +889,7 @@ const char * const ATTR_EC2_ACCESS_KEY_ID = "EC2AccessKeyId";
 const char * const ATTR_EC2_SECRET_ACCESS_KEY = "EC2SecretAccessKey";
 const char * const ATTR_EC2_AMI_ID = "EC2AmiID";
 const char * const ATTR_EC2_SECURITY_GROUPS = "EC2SecurityGroups";
+const char * const ATTR_EC2_KEY_PAIR = "EC2KeyPair";
 const char * const ATTR_EC2_KEY_PAIR_FILE = "EC2KeyPairFile";
 const char * const ATTR_EC2_USER_DATA = "EC2UserData";
 const char * const ATTR_EC2_USER_DATA_FILE = "EC2UserDataFile";
@@ -896,6 +901,8 @@ const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
 const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailabilityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
+const char * const ATTR_EC2_TAG_NAMES = "EC2TagNames";
+const char * const ATTR_EC2_TAG_PREFIX = "EC2Tag";
 
 //************* End of changes for EC2 Jobs *****************//
 

@@ -185,6 +185,7 @@ vmapi_get_host_classAd(void)
 }
 
 // XXX: Refactor for use with calls like _requestVMRegister
+MSC_DISABLE_WARNING(6262) // function uses 60820 bytes of stack
 bool 
 vmapi_sendCommand(char *addr, int cmd, void *data)
 {
@@ -232,6 +233,7 @@ vmapi_sendCommand(char *addr, int cmd, void *data)
 	free(buffer);
 	return TRUE;
 }
+MSC_RESTORE_WARNING(6262) // function uses 60820 bytes of stack
 
 // Heavily cut and paste from resolveNames in condor_tools/tool.C
 static Daemon*

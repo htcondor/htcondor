@@ -34,10 +34,11 @@
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, we look in the following locations:
 
-      1) /etc/condor/
-      2) /usr/local/etc/
-      3) ~condor/
-      4) ${GLOBUS_LOCATION}/etc/
+      1) ~/.condor/     # if not started as root
+      2) /etc/condor/
+      3) /usr/local/etc/
+      4) ~condor/
+      5) ${GLOBUS_LOCATION}/etc/
 
   If none of the above locations contain a config source, config()
   prints an error message and exits.
@@ -1077,20 +1078,26 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 4;
+		int locations_length = 5;
 		MyString locations[locations_length];
-			// 1) /etc/condor/condor_config
-		locations[0].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
-			// 2) /usr/local/etc/condor_config (FreeBSD)
-		locations[1].sprintf( "/usr/local/etc/%s", file_name );
-		if (tilde) {
-				// 3) ~condor/condor_config
-			locations[2].sprintf( "%s/%s", tilde, file_name );
+			// 1) $HOME/.condor/condor_config
+		struct passwd *pw = getpwuid( geteuid() );
+		if ( !can_switch_ids() && pw && pw->pw_dir ) {
+			sprintf( locations[0], "%s/.%s/%s", pw->pw_dir, myDistro->Get(),
+					 file_name );
 		}
-			// 4) ${GLOBUS_LOCATION}/etc/condor_config
+			// 2) /etc/condor/condor_config
+		locations[1].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
+			// 3) /usr/local/etc/condor_config (FreeBSD)
+		locations[2].sprintf( "/usr/local/etc/%s", file_name );
+		if (tilde) {
+				// 4) ~condor/condor_config
+			locations[3].sprintf( "%s/%s", tilde, file_name );
+		}
+			// 5) ${GLOBUS_LOCATION}/etc/condor_config
 		char *globus_location;
 		if ((globus_location = getenv("GLOBUS_LOCATION"))) {
-			locations[3].sprintf( "%s/etc/%s", globus_location, file_name );
+			locations[4].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
 
 		int ctr;	
@@ -2296,6 +2303,7 @@ set_persistent_config(char *admin, char *config)
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
 		do {
+			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( tmp_filename.Value() );
 			fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 		} while (fd == -1 && errno == EEXIST);
@@ -2349,6 +2357,7 @@ set_persistent_config(char *admin, char *config)
 	// update admin list on disk
 	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
 	do {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( tmp_filename.Value() );
 		fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 	} while (fd == -1 && errno == EEXIST);
@@ -2409,8 +2418,10 @@ set_persistent_config(char *admin, char *config)
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
+			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( toplevel_persistent_config.Value() );
 		}
 	}
@@ -2555,6 +2566,7 @@ process_runtime_configs()
 					 ConfigLineNo, tmp_file, rArray[i].admin );
 			exit(1);
 		}
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink(tmp_file);
 		free(tmp_file);
 	}

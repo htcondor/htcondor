@@ -1,0 +1,25 @@
+--- org.glite.ce.blahp.patched/src/scripts/pbs_status.sh	2011-12-21 16:40:48.555891279 -0600
++++ org.glite.ce.blahp/src/scripts/pbs_status.sh	2011-12-21 16:40:19.328891128 -0600
+@@ -165,7 +165,9 @@
+ 
+         staterr=/tmp/${reqjob}_staterr
+ 	
+-result=`${pbs_binpath}/qstat -f $reqjob 2>$staterr | awk -v jobId=$reqjob '
++result=`${pbs_binpath}/qstat -f $reqjob 2>$staterr`
++qstat_exit_code=$?
++result=`echo "$result" | awk -v jobId=$reqjob '
+ BEGIN {
+     current_job = ""
+     current_wn = ""
+@@ -219,6 +221,11 @@
+         if [ -z "$errout" ] ; then
+                 echo "0"$result
+                 retcode=0
++        elif [ "$qstat_exit_code" -eq "153" ] ; then
++                # If the job has disappeared, assume it's completed 
++                # (same as globus)
++                echo "0[BatchJobId=\"$reqjob\";JobStatus=4;ExitCode=0]"
++                retcode=0
+         else
+                 echo "1ERROR: Job not found"
+                 retcode=1

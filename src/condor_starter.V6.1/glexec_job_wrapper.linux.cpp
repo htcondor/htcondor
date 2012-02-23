@@ -48,13 +48,16 @@ int
 main(int argc, char* argv[])
 {
 	// dup FD 0 since we will later replace FD 0 with the job's stdin
-	//
-	sock_fd = dup(0);
-	if (sock_fd == -1) {
-		err.sprintf("dup error on FD 0: %s", strerror(errno));
-		sock_fd = 0;
-		fatal_error();
-	}
+	// Make sure we dup it to something >= 3 so it doesn't get
+	// clobbered when we set up stdin, stdout, and stderr.
+	do {
+		sock_fd = dup(0);
+		if (sock_fd == -1) {
+			err.sprintf("dup error on FD 0: %s", strerror(errno));
+			sock_fd = 0;
+			fatal_error();
+		}
+	} while( sock_fd < 3 );
 
 	// deal with our arguments
 	//

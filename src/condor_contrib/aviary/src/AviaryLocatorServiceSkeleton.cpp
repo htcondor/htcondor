@@ -14,31 +14,59 @@
  * limitations under the License.
  */
 
-// the implementation methods for AviaryQueryService methods
+// the implementation methods for AviaryLocatorService methods
 
+// condor includes
+#include "condor_common.h"
+
+// axis2 includes
+#include "Environment.h"
 
 // local includes
+#include "LocatorObject.h"
 #include "AviaryLocatorServiceSkeleton.h"
 #include <AviaryLocator_Locate.h>
 #include <AviaryLocator_LocateResponse.h>
 
+using namespace std;
+using namespace wso2wsf;
+using namespace AviaryCommon;
 using namespace AviaryLocator;
+using namespace aviary::locator;
 
+LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*outCtx*/ , Locate* _locate)
+{
+	string error;
+	EndpointVectorType endpoints;
+	LocateResponse* response = new LocateResponse;
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "locate|http://grid.redhat.com/aviary-locator/" operation.
-         * 
-         * @param _locate of the AviaryLocator::Locate
-         *
-         * @return AviaryLocator::LocateResponse*
-         */
-        AviaryLocator::LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext *outCtx ,AviaryLocator::Locate* _locate)
+    if (!locator.isPublishing()) {
+        response->setStatus(new AviaryCommon::Status(new StatusCodeType("UNAVAILABLE"),
+            "Locator service not configured for publishing. Check value of AVIARY_PUBLISH_LOCATION!"));
+        return response;
+    }
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryLocator::LocateResponse*)NULL;
-        }
-     
+	bool partials = _locate->getPartialMatches();
+	ResourceID* id = _locate->getId();
+	locator.locate(id->getName(),id->getResource()->getResourceType(),id->getSub_type(),partials,endpoints);
 
+	if (endpoints.empty()) {
+		response->setStatus(new AviaryCommon::Status(new StatusCodeType("NO_MATCH"),""));
+	}
+	else {
+		for (EndpointVectorType::iterator it = endpoints.begin(); it != endpoints.end(); it++) {
+			ResourceLocation* resLoc = new ResourceLocation;
+			ResourceID* resId = new ResourceID;
+			resId->setName((*it).Name.c_str());
+			resId->setPool(locator.getPool());
+			resId->setResource(new ResourceType((*it).MajorType.c_str()));
+			resId->setSub_type((*it).MinorType.c_str());
+			resLoc->setId(resId);
+			resLoc->addLocation(axutil_uri_parse_string(Environment::getEnv(),(*it).EndpointUri.c_str()));
+			response->addResources(resLoc);
+		}
+		response->setStatus(new AviaryCommon::Status(new StatusCodeType(string("OK")),""));
+	}
+
+	return response;
+}

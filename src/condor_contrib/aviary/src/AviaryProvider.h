@@ -46,7 +46,8 @@ namespace transport {
     public:
         virtual SOCKET getListenerSocket() = 0;
         virtual bool processRequest(std::string& _error) = 0;
-		void setPublisher(aviary::locator::EndpointPublisher* ep) {m_ep = ep;}
+		void setPublisher(aviary::locator::EndpointPublisher* ep) { if (m_ep) delete m_ep; m_ep = ep;}
+		virtual void invalidate() = 0;
 	protected:
 		aviary::locator::EndpointPublisher* m_ep;
     };
@@ -56,7 +57,8 @@ namespace transport {
     class AviaryProviderFactory {
     public:
         static AviaryProvider* create(const std::string& log_file, const std::string& service_name, 
-									  const std::string& service_type, const std::string& uri_suffix);
+									  const std::string& major_type, const std::string& minor_type,
+									  const std::string& uri_suffix);
 
     private:
         AviaryProviderFactory();

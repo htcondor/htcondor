@@ -115,6 +115,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
+[MASTER_NEW_BINARY_RESTART]
+aliases=
+default=GRACEFUL
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Master New Binary Restart Mode
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=572
+
 [MASTER_CHECK_NEW_EXEC_INTERVAL]
 aliases=
 default=300
@@ -4035,6 +4051,38 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=219
+
+[BATCH_GAHP]
+aliases=
+default=$(GLITE_LOCATION)/bin/batch_gahp
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Batch Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
+id=220
+
+[REMOTE_GAHP]
+aliases=
+default=$(SBIN)/remote_gahp
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Batch Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
+id=220
 
 [NORDUGRID_GAHP]
 aliases=
@@ -10348,7 +10396,7 @@ id=666
 
 [CLAIM_PARTITIONABLE_LEFTOVERS]
 aliases=
-default=true
+default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 range=.*
 state=default
@@ -10361,4 +10409,37 @@ usage=
 url=
 tags=schedd,startd,claim
 id=603
+
+[MOUNT_UNDER_SCRATCH]
+aliases=
+default=
+version=7.7.5
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Mount Under Scratch
+usage=
+url=
+tags=starter
+id=603
+
+[NAMED_CHROOT]
+aliases=
+default=
+version=7.7.5
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Named Chroot
+usage=
+url=
+tags=starter
+id=603
+
 

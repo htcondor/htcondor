@@ -26,9 +26,9 @@
         
             qname = NULL;
         
-                property_Ids  = NULL;
+                property_Id  = NULL;
               
-            isValidIds  = false;
+            isValidId  = false;
         
             isValidPartialMatches  = false;
         
@@ -39,14 +39,14 @@
                 
         }
 
-       AviaryLocator::Locate::Locate(std::vector<AviaryCommon::ResourceID*>* arg_Ids,bool arg_PartialMatches)
+       AviaryLocator::Locate::Locate(AviaryCommon::ResourceID* arg_Id,bool arg_PartialMatches)
         {
              
                    qname = NULL;
              
-               property_Ids  = NULL;
+               property_Id  = NULL;
              
-            isValidIds  = true;
+            isValidId  = true;
             
             isValidPartialMatches  = true;
             
@@ -55,7 +55,7 @@
                        "http://locator.aviary.grid.redhat.com",
                        NULL);
                
-                    property_Ids = arg_Ids;
+                    property_Id = arg_Id;
             
                     property_PartialMatches = arg_PartialMatches;
             
@@ -84,11 +84,6 @@
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
           
-               int i = 0;
-            
-               int sequence_broken = 0;
-               axiom_node_t *tmp_node = NULL;
-            
             axutil_qname_t *element_qname = NULL; 
             
                axiom_node_t *first_node = NULL;
@@ -129,109 +124,73 @@
                  parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
                  attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
               
-                       { 
-                    /*
-                     * building Ids array
-                     */
-                       std::vector<AviaryCommon::ResourceID*>* arr_list =new std::vector<AviaryCommon::ResourceID*>();
-                   
 
                      
                      /*
-                      * building ids element
+                      * building id element
                       */
                      
                      
                      
-                                    element_qname = axutil_qname_create(Environment::getEnv(), "ids", NULL, NULL);
-                                  
-                               
-                               for (i = 0, sequence_broken = 0, current_node = first_node; !sequence_broken && current_node != NULL;)
-                                             
-                               {
-                                  if(axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                  {
-                                     current_node =axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                     is_early_node_valid = false;
-                                     continue;
-                                  }
-                                  
-                                  current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                  mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                   current_node = first_node;
+                                   is_early_node_valid = false;
+                                   
+                                   
+                                    while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                    {
+                                        current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                    }
+                                    if(current_node != NULL)
+                                    {
+                                        current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                        mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                    }
+                                   
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "id", NULL, NULL);
+                                 
 
-                                  if (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("ids", axiom_element_get_localname(current_element, Environment::getEnv())))
-                                  {
-                                  
-                                      is_early_node_valid = true;
-                                      
-                                     AviaryCommon::ResourceID* element = new AviaryCommon::ResourceID();
-                                          
-                                          status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                          
-                                          if(AXIS2_FAILURE ==  status)
-                                          {
-					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element ids ");
-                                          }
-                                          else
-                                          {
-                                            arr_list->push_back(element);
-                                            
-                                          }
-                                        
-                                     if(AXIS2_FAILURE ==  status)
-                                     {
-                                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for ids ");
-                                         if(element_qname)
-                                         {
-                                            axutil_qname_free(element_qname, Environment::getEnv());
-                                         }
-                                         if(arr_list)
-                                         {
-                                            delete arr_list;
-                                         }
-                                         return false;
-                                     }
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("id", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("id", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 AviaryCommon::ResourceID* element = new AviaryCommon::ResourceID();
 
-                                     i++;
-                                    current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                  }
-                                  else
-                                  {
-                                      is_early_node_valid = false;
-                                      sequence_broken = 1;
-                                  }
-                                  
-                               }
-
-                               
-                                   if (i < 0)
-                                   {
-                                     /* found element out of order */
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids (@minOccurs = '0') only have %d elements", i);
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element id");
+                                      }
+                                      else
+                                      {
+                                          status = setId(element);
+                                      }
+                                    
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for id ");
                                      if(element_qname)
                                      {
-                                        axutil_qname_free(element_qname, Environment::getEnv());
+                                         axutil_qname_free(element_qname, Environment::getEnv());
                                      }
-                                     if(arr_list)
-                                     {
-                                        delete arr_list;
-                                     }
-                                     return false;
-                                   }
-                               
-
-                               if(0 == arr_list->size())
-                               {
-                                    delete arr_list;
-                               }
-                               else
-                               {
-                                    status = setIds(arr_list);
-                               }
-
-                              
-                            } 
-                        
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element id missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -342,10 +301,6 @@
                 axis2_char_t *qname_prefix = NULL;
                 axis2_char_t *p_prefix = NULL;
             
-               int i = 0;
-               int count = 0;
-               void *element = NULL;
-             
                     axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
@@ -409,79 +364,58 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidIds)
+                   if (!isValidId)
                    {
                       
-                           /* no need to complain for minoccurs=0 element */
                             
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property id");
+                            return NULL;
                           
                    }
                    else
                    {
                      start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
                                  (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("ids"))); 
+                                  axutil_strlen("id"))); 
                                  
                                  /* axutil_strlen("<:>") + 1 = 4 */
                      end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("ids")));
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("id")));
                                   /* axutil_strlen("</:>") + 1 = 5 */
                                   
                      
 
                    
                    
+                     
                      /*
-                      * Parsing Ids array
+                      * parsing id element
                       */
-                     if (property_Ids != NULL)
-                     {
-                        
 
-                            sprintf(start_input_str, "<%s%sids",
+                    
+                    
+                            sprintf(start_input_str, "<%s%sid",
                                  p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
                             
-                         start_input_str_len = axutil_strlen(start_input_str);
-
-                         sprintf(end_input_str, "</%s%sids>",
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sid>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                         end_input_str_len = axutil_strlen(end_input_str);
-
-                         count = property_Ids->size();
-                         for(i = 0; i < count; i++)
-                         {
-                            AviaryCommon::ResourceID* element = (*property_Ids)[i];
-
-                            if(NULL == element) 
-                            {
-                                continue;
-                            }
-
-                    
+                        end_input_str_len = axutil_strlen(end_input_str);
                      
-                     /*
-                      * parsing ids element
-                      */
-
-                    
-                     
-                            if(!element->isParticle())
+                            if(!property_Id->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                             }
-                            element->serialize(current_node, parent_element,
-                                                                                 element->isParticle() || false, namespaces, next_ns_index);
+                            property_Id->serialize(current_node, parent_element,
+                                                                                 property_Id->isParticle() || false, namespaces, next_ns_index);
                             
-                            if(!element->isParticle())
+                            if(!property_Id->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
                             
-                         }
-                     }
-                   
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -527,247 +461,86 @@
         
 
             /**
-             * Getter for ids by  Property Number 1
+             * Getter for id by  Property Number 1
              */
-            std::vector<AviaryCommon::ResourceID*>* WSF_CALL
+            AviaryCommon::ResourceID* WSF_CALL
             AviaryLocator::Locate::getProperty1()
             {
-                return getIds();
+                return getId();
             }
 
             /**
-             * getter for ids.
+             * getter for id.
              */
-            std::vector<AviaryCommon::ResourceID*>* WSF_CALL
-            AviaryLocator::Locate::getIds()
+            AviaryCommon::ResourceID* WSF_CALL
+            AviaryLocator::Locate::getId()
              {
-                return property_Ids;
+                return property_Id;
              }
 
             /**
-             * setter for ids
+             * setter for id
              */
             bool WSF_CALL
-            AviaryLocator::Locate::setIds(
-                    std::vector<AviaryCommon::ResourceID*>*  arg_Ids)
+            AviaryLocator::Locate::setId(
+                    AviaryCommon::ResourceID*  arg_Id)
              {
                 
-                 int size = 0;
-                 int i = 0;
-                 bool non_nil_exists = false;
-                
 
-                if(isValidIds &&
-                        arg_Ids == property_Ids)
+                if(isValidId &&
+                        arg_Id == property_Id)
                 {
                     
                     return true;
                 }
 
                 
-                 size = arg_Ids->size();
-                 
-                 if (size < 0)
-                 {
-                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids has less than minOccurs(0)");
-                     return false;
-                 }
-                 for(i = 0; i < size; i ++ )
-                 {
-                     if(NULL != (*arg_Ids)[i])
-                     {
-                         non_nil_exists = true;
-                         break;
-                     }
-                 }
-
-                 
+                  if(NULL == arg_Id)
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"id is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
 
                 
-                resetIds();
+                resetId();
 
                 
-                    if(NULL == arg_Ids)
+                    if(NULL == arg_Id)
                          
                 {
                     /* We are already done */
                     return true;
                 }
                 
-                        property_Ids = arg_Ids;
-                        if(non_nil_exists)
-                        {
-                            isValidIds = true;
-                        }
-                        
+                        property_Id = arg_Id;
+                        isValidId = true;
                     
                 return true;
              }
 
-            
-            /**
-             * Get ith element of ids.
-             */
-            AviaryCommon::ResourceID* WSF_CALL
-            AviaryLocator::Locate::getIdsAt(int i)
-            {
-                AviaryCommon::ResourceID* ret_val;
-                if(property_Ids == NULL)
-                {
-                    return (AviaryCommon::ResourceID*)0;
-                }
-                ret_val =   (*property_Ids)[i];
-                
-                    return ret_val;
-                  
-            }
-
-            /**
-             * Set the ith element of ids.
-             */
-           bool WSF_CALL
-            AviaryLocator::Locate::setIdsAt(int i,
-                    AviaryCommon::ResourceID* arg_Ids)
-            {
-                 AviaryCommon::ResourceID* element;
-                int size = 0;
-
-                int non_nil_count;
-                bool non_nil_exists = false;
-
-                 
-
-                if( isValidIds &&
-                    property_Ids &&
-                  
-                    arg_Ids == (*property_Ids)[i])
-                  
-                 {
-                    
-                    return AXIS2_SUCCESS; 
-                }
-
-                   
-                     non_nil_exists = true;
-                  
-
-                if(property_Ids == NULL)
-                {
-                    property_Ids = new std::vector<AviaryCommon::ResourceID*>();
-                }
-                else{
-                /* check whether there already exist an element */
-                element = (*property_Ids)[i];
-                }
-
-                
-                        if(NULL != element)
-                        {
-                          
-                          
-                          
-                                delete element;
-                             
-                        }
-                        
-                    
-                    if(!non_nil_exists)
-                    {
-                        
-                        isValidIds = true;
-                        (*property_Ids)[i]= NULL;
-                        
-                        return AXIS2_SUCCESS;
-                    }
-                
-                    (*property_Ids)[i] = arg_Ids;
-                  
-
-               isValidIds = true;
-                
-                return AXIS2_SUCCESS;
-            }
-
-            /**
-             * Add to ids.
-             */
-            bool WSF_CALL
-            AviaryLocator::Locate::addIds(
-                    AviaryCommon::ResourceID* arg_Ids)
-             {
-
-                
-                    if( NULL == arg_Ids
-                     )
-                    {
-                      
-                           return true; 
-                        
-                    }
-                  
-
-                if(property_Ids == NULL)
-                {
-                    property_Ids = new std::vector<AviaryCommon::ResourceID*>();
-                }
-              
-               property_Ids->push_back(arg_Ids);
-              
-                isValidIds = true;
-                return true;
-             }
-
-            /**
-             * Get the size of the ids array.
-             */
-            int WSF_CALL
-            AviaryLocator::Locate::sizeofIds()
-            {
-
-                if(property_Ids == NULL)
-                {
-                    return 0;
-                }
-                return property_Ids->size();
-            }
-
-            /**
-             * remove the ith element, same as set_nil_at.
-             */
-            bool WSF_CALL
-            AviaryLocator::Locate::removeIdsAt(int i)
-            {
-                return setIdsNilAt(i);
-            }
-
-            
+             
 
            /**
-            * resetter for ids
+            * resetter for id
             */
            bool WSF_CALL
-           AviaryLocator::Locate::resetIds()
+           AviaryLocator::Locate::resetId()
            {
                int i = 0;
                int count = 0;
 
 
                
-                if (property_Ids != NULL)
-                {
-                  std::vector<AviaryCommon::ResourceID*>::iterator it =  property_Ids->begin();
-                  for( ; it <  property_Ids->end() ; ++it)
-                  {
-                     AviaryCommon::ResourceID* element = *it;
-                
             
                 
 
-                if(element != NULL)
+                if(property_Id != NULL)
                 {
                    
                    
-                         delete  element;
+                         delete  property_Id;
                      
 
                    }
@@ -775,122 +548,26 @@
                 
                 
                 
-               }
-
-             }
-                
-                    if(NULL != property_Ids)
-                 delete property_Ids;
-                
-               isValidIds = false; 
+               isValidId = false; 
                return true;
            }
 
            /**
-            * Check whether ids is nill
+            * Check whether id is nill
             */
            bool WSF_CALL
-           AviaryLocator::Locate::isIdsNil()
+           AviaryLocator::Locate::isIdNil()
            {
-               return !isValidIds;
+               return !isValidId;
            }
 
            /**
-            * Set ids to nill (currently the same as reset)
+            * Set id to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryLocator::Locate::setIdsNil()
+           AviaryLocator::Locate::setIdNil()
            {
-               return resetIds();
-           }
-
-           
-           /**
-            * Check whether ids is nill at i
-            */
-           bool WSF_CALL
-           AviaryLocator::Locate::isIdsNilAt(int i)
-           {
-               return (isValidIds == false ||
-                       NULL == property_Ids ||
-                     NULL == (*property_Ids)[i]);
-            }
-
-           /**
-            * Set ids to nil at i
-            */
-           bool WSF_CALL
-           AviaryLocator::Locate::setIdsNilAt(int i)
-           {
-                int size = 0;
-                int j;
-                bool non_nil_exists = false;
-
-                int k = 0;
-
-                if(property_Ids == NULL ||
-                            isValidIds == false)
-                {
-                    
-                    non_nil_exists = false;
-                }
-                else
-                {
-                    size = property_Ids->size();
-                    for(j = 0, k = 0; j < size; j ++ )
-                    {
-                        if(i == j) continue; 
-                        if(NULL != (*property_Ids)[i])
-                        {
-                            k++;
-                            non_nil_exists = true;
-                            if( k >= 0)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-
-                if( k < 0)
-                {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of ids is beinng set to be smaller than the specificed number of minOccurs(0)");
-                       return AXIS2_FAILURE;
-                }
- 
-                if(property_Ids == NULL)
-                {
-                    isValidIds = false;
-                    
-                    return true;
-                }
-                 
-                 /* check whether there already exist an element */
-                 AviaryCommon::ResourceID* element = (*property_Ids)[i];
-                if(NULL != element)
-                {
-                  
-                  
-                  
-                        delete element;
-                     
-                 }
-                 
-                    if(!non_nil_exists)
-                    {
-                        
-                        isValidIds = false;
-                        (*property_Ids)[i] = NULL;
-                        return AXIS2_SUCCESS;
-                    }
-                
-
-                
-                (*property_Ids)[i] = NULL;
-                
-                return AXIS2_SUCCESS;
-
+               return resetId();
            }
 
            

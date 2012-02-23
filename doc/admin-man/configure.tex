@@ -4365,6 +4365,17 @@ search for the corresponding attribute names using ``slot'', instead.
   When \Expr{True}, this slot permits dynamic provisioning, as specified in
   section~ \ref{sec:SMP-dynamicprovisioning}.
 
+\label{param:ClaimPartitionableLeftovers}
+\item[\Macro{CLAIM\_PARTITIONABLE\_LEFTOVERS}]
+  A boolean variable that defaults to \Expr{True}.
+  When \Expr{True} within the configuration for both the \Condor{schedd}
+  and the \Condor{startd}, 
+  and the \Condor{schedd} claims a partitionable slot,
+  the \Condor{startd} returns the slot's ClassAd and a claim id for
+  leftover resources.
+  In doing so, the \Condor{schedd} can claim multiple dynamic slots 
+  without waiting for a negotiation cycle.
+
 \label{param:NumSlotsTypeN}
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
   This macro controls how many of a given slot type
@@ -7184,8 +7195,7 @@ Configuration File Macros}
   regarding privilege separation). This means that the \Condor{procd}
   does not include the normal Condor logging subsystem, and thus 
   multiple debug levels are not supported.
-  There is no default value for this variable, 
-  so if not defined, there will be no log for the \Condor{procd}.
+  \MacroNI{PROCD\_LOG} defaults to \File{\$(LOG)/ProcLog}.
   Note that enabling \Dflag{PROCFAMILY} in the debug level for any
   other daemon will cause it to log all interactions with the
   \Condor{procd}.

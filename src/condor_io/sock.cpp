@@ -1567,8 +1567,8 @@ char * Sock::serializeCryptoInfo(char * buf)
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    sscanf(ptmp, "%d*", &encoded_len);
-    if ( encoded_len > 0 ) {
+    int citems = sscanf(ptmp, "%d*", &encoded_len);
+    if ( citems == 1 && encoded_len > 0 ) {
         len = encoded_len/2;
         kserial = (unsigned char *) malloc(len);
         ASSERT ( kserial )
@@ -1579,23 +1579,24 @@ char * Sock::serializeCryptoInfo(char * buf)
         ptmp++;
 
         // Reading protocol
-        sscanf(ptmp, "%d*", &protocol);
+        citems = sscanf(ptmp, "%d*", &protocol);
         ptmp = strchr(ptmp, '*');
-        ASSERT( ptmp );
+        ASSERT( ptmp && citems == 1 );
         ptmp++;
 
         // read the encryption mode
         int encryption_mode = 0;
-        sscanf(ptmp, "%d*", &encryption_mode);
+        citems = sscanf(ptmp, "%d*", &encryption_mode);
         ptmp = strchr(ptmp, '*');
-        ASSERT( ptmp );
+        ASSERT( ptmp && citems == 1 );
         ptmp++;
 
         // Now, convert from Hex back to binary
         unsigned char * ptr = kserial;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
-            sscanf(ptmp, "%2X", &hex);
+            citems = sscanf(ptmp, "%2X", &hex);
+			if (citems != 1) break;
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary
@@ -1628,8 +1629,8 @@ char * Sock::serializeMdInfo(char * buf)
     // other junk from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    sscanf(ptmp, "%d*", &encoded_len);
-    if ( encoded_len > 0 ) {
+    int citems = sscanf(ptmp, "%d*", &encoded_len);
+    if ( 1 == citems && encoded_len > 0 ) {
         len = encoded_len/2;
         kmd = (unsigned char *) malloc(len);
         ASSERT( kmd );
@@ -1643,7 +1644,8 @@ char * Sock::serializeMdInfo(char * buf)
         unsigned char * ptr = kmd;
         unsigned int hex;
         for(int i = 0; i < len; i++) {
-            sscanf(ptmp, "%2X", &hex);
+            citems = sscanf(ptmp, "%2X", &hex);
+            if (citems != 1) break;
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary

@@ -2423,11 +2423,11 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		if (proc > 0) {
 			return true;
 		}
-		ASSERT( srec != NULL );
-			break;
+		break;
 	default:
 		break;
 	}
+	ASSERT( srec != NULL );
 
 		// if we're still here, make sure we have a match since we
 		// have to spawn a shadow...
@@ -3561,6 +3561,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// will free 'peer_version' and our reaper will free 'jobs' (the
 		// reaper needs 'jobs' for some of its work).
 	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) );
+	ASSERT( thread_arg != NULL );
 	thread_arg->mode = mode;
 	thread_arg->peer_version = peer_version;
 	thread_arg->jobs = jobs;
@@ -5515,23 +5516,32 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// If the startd returned any "leftover" partitionable slot resources,
 	// we want to create a match record for it (so we can subsequently find
 	// a job to run on it). 
-	// For now, only do this for non-dedicated scheduler resources until
-	// such date that the dedicated scheduler is more saavy about 
-	// paritionable slots.
-	if ( msg->have_leftovers() && !match->is_dedicated ) {			
+	if ( msg->have_leftovers()) {			
+
+		ScheddNegotiate *sn;
+		if (match->is_dedicated) {
 			// Pass NULLs to constructor since we aren't actually going to
 			// negotiate - we just want to invoke 
 			// MainScheddNegotiate::scheduler_handleMatch(), which
 			// probably could/should be changed to be declared as a static method.
 			// Actually, must pass in owner so FindRunnableJob will find a job.
-		MainScheddNegotiate sn(0,NULL, match->user, NULL);
 
+			sn = new DedicatedScheddNegotiate(0, NULL, match->user, NULL);
+		} else {
+			// Use the DedSched
+			sn = new MainScheddNegotiate(0, NULL, match->user, NULL);
+		}		
 
 			// Setting cluster.proc to -1.-1 should result in the schedd
 			// invoking FindRunnableJob to select an appropriate matching job.
 		PROC_ID jobid;
 		jobid.cluster = -1; jobid.proc = -1;
 
+		if (match->is_dedicated) {
+			const ClassAd *msg_ad = msg->getJobAd();
+			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
+		}
 			// Need to pass handleMatch a slot name; grab from leftover slot ad
 		std::string slot_name_buf;
 		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
@@ -5546,11 +5556,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 			// Tell the schedd about the leftover resources it can go claim.
 			// Note this claiming will happen asynchronously.
-		sn.scheduler_handleMatch(jobid,msg->leftover_claim_id(),
+		sn->scheduler_handleMatch(jobid,msg->leftover_claim_id(),
 			*(msg->leftover_startd_ad()),slot_name);
-	}
 
-	if( match->is_dedicated ) {
+		delete sn;
+	} 
+
+	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
 			// since we might be able to spawn something now.
 		dedicated_scheduler.handleDedicatedJobTimer( 0 );

@@ -2621,6 +2621,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 		unlink(temp_dot_file_name.Value());
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.Value(), "w");
 		if (temp_dot_file == NULL) {
@@ -2656,7 +2657,9 @@ Dag::DumpDotFile(void)
 
 			fprintf(temp_dot_file, "}\n");
 			fclose(temp_dot_file);
+			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 			unlink(current_dot_file_name.Value());
+			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of rename ignored.
 			rename(temp_dot_file_name.Value(), current_dot_file_name.Value());
 		}
 	}
@@ -2728,6 +2731,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
+	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
 	unlink( tmpStatusFile.Value() );
 
 	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.Value(), "w" );

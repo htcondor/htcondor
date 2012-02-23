@@ -123,7 +123,7 @@ void
 AllocationNode::display( void )
 {
 	int level = D_FULLDEBUG;
-	if( ! DebugFlags & level ) {
+	if( ! (DebugFlags & level) ) {
 		return;
 	}
 	dprintf( level, "Allocation for job %d.0, nprocs: %d\n",
@@ -643,35 +643,6 @@ DedicatedScheduler::shutdown_graceful( void )
 	return TRUE;
 }
 
-
-/* DedicatedScheddNegotiate is a class that overrides virtual methods
-   called by ScheddNegotiate when it requires actions to be taken by
-   the schedd during negotiation.  See the definition of
-   ScheddNegotiate for a description of these functions.
-*/
-class DedicatedScheddNegotiate: public ScheddNegotiate {
-public:
-	DedicatedScheddNegotiate(
-		int cmd,
-		ResourceRequestList *jobs,
-		char const *owner,
-		char const *remote_pool
-	): ScheddNegotiate(cmd,jobs,owner,remote_pool) {}
-
-		// Define the virtual functions required by ScheddNegotiate //
-
-	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
-
-	virtual bool scheduler_skipJob(PROC_ID job_id);
-
-	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
-
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name);
-
-	virtual void scheduler_handleNegotiationFinished( Sock *sock );
-
-};
-
 bool
 DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 {
@@ -848,6 +819,9 @@ DedicatedScheduler::callHandleDedicatedJobs( void )
 }
 
 
+#ifdef WIN32
+#pragma warning(suppress: 6262) // warning: function uses about 64k of stack
+#endif
 bool
 DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 {
@@ -1973,7 +1947,7 @@ DedicatedScheduler::computeSchedule( void )
 {
 		// Initialization
 		//int proc, cluster, max_hosts;
-	int cluster, max_hosts;
+	int cluster = -1, max_hosts;
 	ClassAd *job = NULL, *ad;
 
 	CandidateList *idle_candidates = NULL;
@@ -2621,6 +2595,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 				// create a new MRecArray
 			matches = new MRecArray();
+			ASSERT(matches != NULL);
 			matches->fill(NULL);
 			
 				// And stick it into the AllocationNode
