@@ -6486,7 +6486,7 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
 	checks_mem = machine_refs.contains_anycase(ATTR_MEMORY);
-	checks_reqmem = job_refs.contains_anycase(ATTR_REQUEST_MEMORY);
+	//checks_reqmem = job_refs.contains_anycase(ATTR_REQUEST_MEMORY);
 
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
