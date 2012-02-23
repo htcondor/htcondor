@@ -438,6 +438,7 @@ const char * const ATTR_MAX_HOSTS				 = "MaxHosts";
 const char * const ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";
 const char * const ATTR_MAX_JOBS_RUNNING         = "MaxJobsRunning";
 const char * const ATTR_MEMORY                   = "Memory";
+const char * const ATTR_MEMORY_USAGE             = "MemoryUsage";
 const char * const ATTR_DETECTED_MEMORY          = "DetectedMemory";
 const char * const ATTR_DETECTED_CPUS            = "DetectedCpus";
 const char * const ATTR_MIN_HOSTS				 = "MinHosts";

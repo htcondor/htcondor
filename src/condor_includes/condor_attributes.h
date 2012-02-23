@@ -373,6 +373,7 @@ extern const char * const  ATTR_MAX_HOSTS;
 extern const char * const  ATTR_MAX_JOB_RETIREMENT_TIME;
 extern const char * const  ATTR_MAX_JOBS_RUNNING;
 extern const char * const  ATTR_MEMORY;
+extern const char * const  ATTR_MEMORY_USAGE;
 extern const char * const  ATTR_DETECTED_MEMORY;
 extern const char * const  ATTR_DETECTED_CPUS;
 extern const char * const  ATTR_MIN_HOSTS;
