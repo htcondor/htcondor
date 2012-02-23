@@ -1379,7 +1379,7 @@ Dag::StartFinalNode()
 	if ( _final_job && _final_job->GetStatus() == Job::STATUS_NOT_READY ) {
 		debug_printf( DEBUG_QUIET, "Starting final node...\n" );
 
-			// Clear out the empty queue so "regular" jobs don't run
+			// Clear out the ready queue so "regular" jobs don't run
 			// when we run the final node (this is really just needed
 			// for the DAG abort and DAG halt cases).
 		Job* job;
