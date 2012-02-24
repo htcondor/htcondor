@@ -47,9 +47,9 @@ extern int load_startd_mgmt(void);
 #ifdef WIN32
 CondorSystrayNotifier systray_notifier;
 HANDLE shared_stat_handle;
-TCHAR shared_stat_name[] = TEXT("Global\\CondorStats");
+const TCHAR shared_stat_name[] = TEXT("Global\\CondorStats");
 #define STAT_BUFF 256
-int* stat_buffer_ptr = NULL;
+DWORD* stat_buffer_ptr = NULL;
 #endif
 
 // Resource manager
@@ -233,7 +233,7 @@ main_init( int, char* argv[] )
 
 #ifdef WIN32
 	int proc_count = resmgr->numSlots();
-	DWORD statBufSize = (proc_count + 1) * sizeof(int);
+	DWORD statBufSize = (proc_count + 1) * sizeof(DWORD);
 	shared_stat_handle = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
 		NULL,
@@ -247,7 +247,7 @@ main_init( int, char* argv[] )
 		//error, how severe?
 	}
 
-	stat_buffer_ptr = (int*)MapViewOfFile(
+	stat_buffer_ptr = (DWORD*)MapViewOfFile(
 		shared_stat_handle,
 		FILE_MAP_ALL_ACCESS,
 		0,
