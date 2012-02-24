@@ -111,6 +111,7 @@ int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( const char *strflags );
+void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags );
 
