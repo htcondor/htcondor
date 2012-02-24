@@ -685,6 +685,10 @@ startd_exit()
 #ifdef WIN32
 	systray_notifier.notifyCondorOff();
 
+<<<<<<< HEAD
+=======
+	stat_buffer_ptr[0] = 0;
+>>>>>>> 39110eb83745b319082ce8301a300dad9c259104
 	UnmapViewOfFile(stat_buffer_ptr);
 	CloseHandle(shared_stat_handle);
 #endif
