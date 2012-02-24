@@ -6379,7 +6379,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_arch = false;
 	bool	checks_disk = false;
 	bool	checks_mem = false;
-	bool	checks_reqmem = false;
+	//bool	checks_reqmem = false;
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
@@ -7033,7 +7033,7 @@ compress( MyString &path )
 	dst = str;
 
 #ifdef WIN32
-	if (str) {
+	if (*src) {
 		*dst++ = *src++;	// don't compress WIN32 "share" path
 	}
 #endif
