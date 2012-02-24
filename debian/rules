@@ -8,7 +8,7 @@ upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 # then described this commit relative to the last release tag (V...)
 # If this should make any sense the local upstream branch must track upstream's
 # master or whatever other source branch.
-gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git merge-base -a HEAD upstream) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')
+gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git merge-base -a HEAD upstream) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')~dfsg.1
 
 # one ring to rule them all ...
 %:
