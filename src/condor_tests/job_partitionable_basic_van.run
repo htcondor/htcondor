@@ -96,6 +96,7 @@ log = $testname.log
 output = $testname.out
 error = $testname.err
 notification = never
+request_memory = 1
 arguments = 60
 queue 10
 ";
