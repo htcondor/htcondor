@@ -42,6 +42,19 @@ For information on enabling IPv6 support in the 7.7 series of Condor,
 see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
 \Ticket{9}
 
+\item Default values for the submit commands
+\SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}
+were introduced in Condor version 7.7.3,
+but the manual did not reflect this change.
+Across platforms, default values are now
+\begin{verbatim}
+  should_transfer_files = IF_NEEDED
+  when_to_transfer_output = ON_EXIT
+\end{verbatim}
+See section ~\ref{sec:file-transfer-if-when} for details.
+\Ticket{2281}
+\Ticket{2273}
+
 \item The performance for claiming a partitionable slot in a 
 \Condor{startd} is greatly improved.  
 This feature is implemented in both the \Condor{schedd} and \Condor{startd},
