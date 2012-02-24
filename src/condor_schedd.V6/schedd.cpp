@@ -4557,6 +4557,17 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 					 "Failed to write abort event to the user log\n" ); 
 		}
 		DestroyProc( job_id.cluster, job_id.proc );
+
+		shadow_rec * srec = scheduler.FindSrecByProcID(job_id);
+		if(srec == NULL) {
+			dprintf( D_FULLDEBUG, "(%d.%d) Shadow %d already gone\n", 
+				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
+		} else {
+			dprintf( D_FULLDEBUG, "(%d.%d) Killing shadow %d\n", 
+				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
+			scheduler.sendSignalToShadow(srec->pid, SIGKILL, job_id);
+		}
+
 		break;
     }
 	case JA_CLEAR_DIRTY_JOB_ATTRS:
