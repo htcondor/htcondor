@@ -1,8 +1,15 @@
-condor (7.7.4-3) UNRELEASED; urgency=low
+condor (7.7.4+git3-gd7ce75b~dfsg.1-1) experimental; urgency=low
 
+  * Initial upload to Debian experimental (Closes: #233482).
+    After acceptance into Debian an upload to unstable is expected to happen
+    once a build-time test suite is operational.
+  * Drop NeuroDebian team as maintainer, upstream will eventually become the
+    primary maintainer, with Michael Hanke being the uploader for the time
+    being.
+  * Merge commits from 7.7.4 maintenance branch.
   * Enable GSOAP support.
 
- -- Michael Hanke <mih@debian.org>  Mon, 06 Feb 2012 09:49:03 +0100
+ -- Michael Hanke <mih@debian.org>  Fri, 24 Feb 2012 08:37:32 +0100
 
 condor (7.7.4-2) UNRELEASED; urgency=low
 
@@ -101,6 +108,6 @@ condor (7.5.4+git567-gb10f6b4-2) UNRELEASED; urgency=low
 
 condor (7.5.4+git567-gb10f6b4-1) UNRELEASED; urgency=low
 
-  * Initial release (Closes: #233482).
+  * Initial packaging.
 
  -- Michael Hanke <mih@debian.org>  Sun, 26 Dec 2010 10:10:19 -0500

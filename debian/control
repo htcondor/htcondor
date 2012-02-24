@@ -1,9 +1,7 @@
 Source: condor
 Section: science
 Priority: extra
-Maintainer: NeuroDebian team <team@neuro.debian.net>
-Uploaders: Michael Hanke <mih@debian.org>,
- Yaroslav Halchenko <debian@onerussian.com>
+Maintainer: Michael Hanke <mih@debian.org>
 Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev,
  libcurl4-openssl-dev, zlib1g-dev, libglobus-gss-assist-dev,
  libglobus-gram-protocol-dev, libglobus-gram-client-dev,
