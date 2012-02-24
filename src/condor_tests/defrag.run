@@ -78,20 +78,26 @@ for(my $i=2; $i<5; $i++) {
 # we will submit jobs to pool1, since it has the schedd
 $pool1->MakeThisTheDefaultInstance();
 
+my $append_submit_commands = '
+  request_memory = 1
+  requirements = DrainRank>=4
+';
+
 # Verify that a 30s job runs on startd4, the startd with the highest
 # DRAIN_RANK.  It should not be drained, because this startd does not
 # match DRAIN_REQUIREMENTS
 SimpleJob::RunCheck(
   duration=>30,
-  append_submit_commands=>"requirements = DrainRank>=4"
+  append_submit_commands => $append_submit_commands
 );
 
 # Verify that a 30s job gets evicted from startd3.  This startd
 # matches DRAIN_REQUIREMENTS and is higher DRAIN_RANK than
 # startd1.
+$append_submit_commands =~ s/DrainRank>=4/DrainRank==3/i;
 JobIsEvicted::RunCheck(
   duration=>30,
-  append_submit_commands=>"requirements = DrainRank==3"
+  append_submit_commands => $append_submit_commands
 );
 
 CondorTest::EndTest();

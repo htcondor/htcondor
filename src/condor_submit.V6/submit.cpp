@@ -125,12 +125,13 @@ SandboxTransferMethod	STMethod = STM_USE_SCHEDD_ONLY;
 
 char *	IckptName;	/* Pathname of spooled initial ckpt file */
 
-unsigned int TransferInputSize;	/* total size of files transfered to exec machine */
+int64_t TransferInputSizeKb;	/* total size of files transfered to exec machine */
 const char	*MyName;
 int		Quiet = 1;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		JobDisableFileChecks = 0;
+int		SetDefaultMemoryUsage = 1;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -159,11 +160,12 @@ char* RunAsOwnerCredD = NULL;
 
 // For vm universe
 MyString VMType;
-int VMMemory = 0;
+int VMMemoryMb = 0;
 int VMVCPUS = 0;
 MyString VMMACAddr;
 bool VMCheckpoint = false;
 bool VMNetworking = false;
+bool VMVNC=false;
 MyString VMNetworkType;
 bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
@@ -227,6 +229,7 @@ const char	*Preferences	= "preferences";
 const char	*Rank				= "rank";
 const char	*ImageSize		= "image_size";
 const char	*DiskUsage		= "disk_usage";
+const char	*MemoryUsage	= "memory_usage";
 
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
@@ -358,6 +361,7 @@ const char    *ConcurrencyLimits = "concurrency_limits";
 //
 // VM universe Parameters
 //
+const char    *VM_VNC = "vm_vnc";
 const char    *VM_Type = "vm_type";
 const char    *VM_Memory = "vm_memory";
 const char    *VM_VCPUS = "vm_vcpus";
@@ -422,7 +426,7 @@ void 	SetExecutable();
 void 	SetUniverse();
 void	SetMachineCount();
 void 	SetImageSize();
-int 	calc_image_size( const char *name);
+int64_t	calc_image_size_kb( const char *name);
 int 	find_cmd( char *name );
 char *	get_tok();
 void 	SetStdFile( int which_file );
@@ -563,6 +567,82 @@ void non_negative_int_fail(const char * Name, char * Value)
 	}
 	
 	// sigh lexical_cast<>
+}
+
+// parse a input string for an int64 value optionally followed by K,M,G,or T
+// as a scaling factor, then divide by a base scaling factor and return the
+// result by ref. base is expected to be a multiple of 2 usually  1, 1024 or 1024*1024.
+// result is truncated to the next largest value by base.
+//
+// Return value is true if the input string contains only a valid int, false if
+// there are any unexpected characters other than whitespace.  value is
+// unmodified when false is returned.
+//
+// this function exists to regularize the former ad-hoc parsing of integers in the
+// submit file, it expands parsing to handle 64 bit ints and multiplier suffixes.
+// Note that new classads will interpret the multiplier suffixes without
+// regard for the fact that the defined units of many job ad attributes are
+// in Kbytes or Mbytes. We need to parse them in submit rather than
+// passing the expression on to the classad code to be parsed to preserve the
+// assumption that the base units of the output is not bytes.
+//
+bool parse_int64_bytes(const char * input, int64_t & value, int base)
+{
+	const char * tmp = input;
+	while (isspace(*tmp)) ++tmp;
+
+	char * p;
+#ifdef WIN32
+	int64_t val = _strtoi64(tmp, &p, 10);
+#else
+	int64_t val = strtol(tmp, &p, 10);
+#endif
+
+	// allow input to have a fractional part, so "2.2M" would be valid input.
+	// this doesn't have to be very accurate, since we round up to base anyway.
+	double fract = 0;
+	if (*p == '.') {
+		++p;
+		if (isdigit(*p)) { fract += (*p - '0') / 10.0; ++p; }
+		if (isdigit(*p)) { fract += (*p - '0') / 100.0; ++p; }
+		if (isdigit(*p)) { fract += (*p - '0') / 1000.0; ++p; }
+		while (isdigit(*p)) ++p;
+	}
+
+	// if the first non-space character wasn't a number
+	// then this isn't a simple integer, return false.
+	if (p == tmp)
+		return false;
+
+	while (isspace(*p)) ++p;
+
+	// parse the multiplier postfix
+	int64_t mult = 1;
+	if (!*p) mult = base;
+	else if (*p == 'k' || *p == 'K') mult = 1024;
+	else if (*p == 'm' || *p == 'M') mult = 1024*1024;
+	else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;
+	else if (*p == 't' || *p == 'T') mult = (int64_t)1024*1024*1024*1024;
+	else return false;
+
+	val = (int64_t)((val + fract) * mult + base-1) / base;
+
+	// if we to to here and we are at the end of the string
+	// then the input is valid, return true;
+	if (!*p || !p[1]) { 
+		value = val;
+		return true; 
+	}
+
+	// Tolerate a b (as in Kb) and whitespace at the end, anything else and return false)
+	if (p[1] == 'b' || p[1] == 'B') p += 2;
+	while (isspace(*p)) ++p;
+	if (!*p) {
+		value = val;
+		return true;
+	}
+
+	return false;
 }
 
 /** Given a universe in string form, return the number
@@ -1890,6 +1970,14 @@ SetUniverse()
 			parse_vm_option(vm_tmp, VMNetworking);
 			free(vm_tmp);
 		}
+		
+		// vnc set for vm?
+		VMVNC = false;
+		vm_tmp = condor_param(VM_VNC, ATTR_JOB_VM_VNC);
+		if( vm_tmp ) {
+			parse_vm_option(vm_tmp, VMVNC);
+			free(vm_tmp);
+		}
 
 		if( VMCheckpoint ) {
 			if( VMNetworking ) {
@@ -2103,41 +2191,47 @@ SetSimpleJobExprs()
 void
 SetImageSize()
 {
-	int		size;
-	unsigned int disk_usage = 0;
-	static int executablesize;
+	static bool    got_exe_size = false;
+	static int64_t executable_size_kb = 0;
 	char	*tmp;
-	char	*p;
 	char    buff[2048];
 	MyString buffer;
 
-	tmp = condor_param( ImageSize, ATTR_IMAGE_SIZE );
-
-	// we should only call calc_image_size on the first
+	// we should only call calc_image_size_kb on the first
 	// proc in the cluster, since the executable cannot change.
-	if ( ProcId < 1 ) {
+	if ( ProcId < 1 || ! got_exe_size ) {
 		ASSERT (job->LookupString (ATTR_JOB_CMD, buff));
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) { 
-			executablesize = 0;
+			executable_size_kb = 0;
 		}else {
-			executablesize = calc_image_size( buff );
+			executable_size_kb = calc_image_size_kb( buff );
 		}
+		got_exe_size = true;
 	}
 
-	size = executablesize;
+	int64_t image_size_kb = executable_size_kb;
 
+	// if the user specifies an initial image size, use that instead 
+	// of the calculated 
+	tmp = condor_param( ImageSize, ATTR_IMAGE_SIZE );
 	if( tmp ) {
-		size = atoi( tmp );
-		for( p=tmp; *p && isdigit(*p); p++ )
-			;
-		while( isspace(*p) ) {
-			p++;
+#if 1
+		if ( ! parse_int64_bytes(tmp, image_size_kb, 1024)) {
+			fprintf(stderr, "\nERROR: '%s' is not valid for Image Size\n", tmp);
+			image_size_kb = 0;
 		}
+#else
+		char	*p;
+		image_size_kb = strtol(tmp, &p, 10);
+		//for( p=tmp; *p && isdigit(*p); p++ )
+		//	;
+		while( isspace(*p) ) p++;
 		if( *p == 'm' || *p == 'M' ) {
-			size *=  1024;
+			image_size_kb *=  1024;
 		}
+#endif
 		free( tmp );
-		if( size < 1 ) {
+		if( image_size_kb < 1 ) {
 			fprintf(stderr, "\nERROR: Image Size must be positive\n" );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
@@ -2151,20 +2245,35 @@ SetImageSize()
 	// the requirements line, but that caused many problems.
 	// Jeff Ballard 11/4/98
 
-	buffer.sprintf( "%s = %d", ATTR_IMAGE_SIZE, size);
+	buffer.sprintf( "%s = %"PRId64, ATTR_IMAGE_SIZE, image_size_kb);
 	InsertJobExpr (buffer);
 
-	buffer.sprintf( "%s = %u", ATTR_EXECUTABLE_SIZE, 
-					executablesize);
+	buffer.sprintf( "%s = %"PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
 	InsertJobExpr (buffer);
 
+	// set an initial value for memory usage
+	//
+	tmp = condor_param( MemoryUsage, ATTR_MEMORY_USAGE );
+	if (tmp) {
+		int64_t memory_usage_mb = 0;
+		if ( ! parse_int64_bytes(tmp, memory_usage_mb, 1024*1024) ||
+			memory_usage_mb < 0) {
+			fprintf(stderr, "\nERROR: '%s' is not valid for Memory Usage\n", tmp);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+		free(tmp);
+		buffer.sprintf( "%s = %"PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
+		InsertJobExpr (buffer);
+	}
+
+	// set an initial value for disk usage based on the size of the input sandbox.
+	//
+	int64_t disk_usage_kb = 0;
 	tmp = condor_param( DiskUsage, ATTR_DISK_USAGE );
-
 	if( tmp ) {
-		disk_usage = atoi(tmp);
-
-		if( disk_usage < 1 ) {
-			fprintf( stderr, "\nERROR: disk_usage must be >= 1\n" );
+		if ( ! parse_int64_bytes(tmp, disk_usage_kb, 1024) || disk_usage_kb < 1) {
+			fprintf( stderr, "\nERROR: '%s' is not valid for disk_usage. It must be >= 1\n", tmp);
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -2173,27 +2282,46 @@ SetImageSize()
 		// In vm universe, when a VM is suspended, 
 		// memory being used by the VM will be saved into a file. 
 		// So we need as much disk space as the memory.
-		// For non-vm jobs, VMMemory is 0.
-		disk_usage = executablesize + TransferInputSize + VMMemory*1024;
+		// For non-vm jobs, VMMemoryMb is 0.
+		disk_usage_kb = executable_size_kb + TransferInputSizeKb + (int64_t)VMMemoryMb*1024;
 	}
-	buffer.sprintf( "%s = %u", ATTR_DISK_USAGE, disk_usage );
+	buffer.sprintf( "%s = %"PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
-
-	if ((tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+	tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY);
+	if (tmp) {
+		// if input is an integer followed by K,M,G or T, scale it MB and 
+		// insert it into the jobAd, otherwise assume it is an expression
+		// and insert it as text into the jobAd.
+		int64_t req_memory_mb = 0;
+		if (parse_int64_bytes(tmp, req_memory_mb, 1024*1024)) {
+			buffer.sprintf("%s = %"PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+		}
 		free(tmp);
+		InsertJobExpr(buffer);
 	} else {
+#if 0  // no default expression for RequestMemory
 		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
 					   ATTR_REQUEST_MEMORY,
 					   ATTR_JOB_VM_MEMORY,
 					   ATTR_JOB_VM_MEMORY,
 					   ATTR_IMAGE_SIZE);
+		InsertJobExpr(buffer);
+#endif
 	}
-	InsertJobExpr(buffer);
 
 	if ((tmp = condor_param(RequestDisk, ATTR_REQUEST_DISK))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		// if input is an integer followed by K,M,G or T, scale it MB and 
+		// insert it into the jobAd, otherwise assume it is an expression
+		// and insert it as text into the jobAd.
+		int64_t req_disk_kb = 0;
+		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
+			buffer.sprintf("%s = %"PRId64, ATTR_REQUEST_DISK, req_disk_kb);
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		}
 		free(tmp);
 	} else {
 		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, ATTR_DISK_USAGE);
@@ -2254,8 +2382,8 @@ void SetFileOptions()
 ** the stack.  But how we gonna do that if the executable is for some
 ** other architecture??  Our answer is in kilobytes.
 */
-int
-calc_image_size( const char *name)
+int64_t
+calc_image_size_kb( const char *name)
 {
 	struct stat	buf;
 
@@ -2267,7 +2395,7 @@ calc_image_size( const char *name)
 		// EXCEPT( "Cannot stat \"%s\"", name );
 		return 0;
 	}
-	return (buf.st_size + 1023) / 1024;
+	return ((int64_t)buf.st_size + 1023) / 1024;
 }
 
 void
@@ -2289,7 +2417,7 @@ process_input_file_list(StringList * input_list, MyString *input_files, bool * f
 				input_list->insert(tmp.Value());
 			}
 			check_open(tmp.Value(), O_RDONLY);
-			TransferInputSize += calc_image_size(tmp.Value());
+			TransferInputSizeKb += calc_image_size_kb(tmp.Value());
 		}
 		if ( count ) {
 			tmp_ptr = input_list->print_to_string();
@@ -2301,7 +2429,7 @@ process_input_file_list(StringList * input_list, MyString *input_files, bool * f
 	}
 }
 
-// Note: SetTransferFiles() sets a global variable TransferInputSize which
+// Note: SetTransferFiles() sets a global variable TransferInputSizeKb which
 // is the size of all the transferred input files.  This variable is used
 // by SetImageSize().  So, SetTransferFiles() must be called _before_ calling
 // SetImageSize().
@@ -2328,7 +2456,7 @@ SetTransferFiles()
 	MyString output_remaps;
 
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
-	TransferInputSize = 0;
+	TransferInputSizeKb = 0;
 	if( macro_value ) {
 		input_file_list.initializeFromString( macro_value );
 	}
@@ -2567,7 +2695,7 @@ SetTransferFiles()
 		MyString file_list_tdp;
 		file_list_tdp += file_list;
 		if( tdp_cmd && (!strstr(file_list, tdp_cmd)) ) {
-			TransferInputSize += calc_image_size(tdp_cmd);
+			TransferInputSizeKb += calc_image_size_kb(tdp_cmd);
 			if(file_list[0]) {
 				file_list_tdp += ",";
 			}
@@ -2575,7 +2703,7 @@ SetTransferFiles()
 			changed_it = true;
 		}
 		if( tdp_input && (!strstr(file_list, tdp_input)) ) {
-			TransferInputSize += calc_image_size(tdp_input);
+			TransferInputSizeKb += calc_image_size_kb(tdp_input);
 			if(file_list[0]) {
 				file_list_tdp += ",";
 				file_list_tdp += tdp_input;
@@ -6251,7 +6379,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_arch = false;
 	bool	checks_disk = false;
 	bool	checks_mem = false;
-	bool	checks_reqmem = false;
+	//bool	checks_reqmem = false;
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
@@ -6358,7 +6486,7 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
 	checks_mem = machine_refs.contains_anycase(ATTR_MEMORY);
-	checks_reqmem = job_refs.contains_anycase(ATTR_REQUEST_MEMORY);
+	//checks_reqmem = job_refs.contains_anycase(ATTR_REQUEST_MEMORY);
 
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
@@ -6428,35 +6556,60 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
 	if( !checks_disk ) {
-		if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
+		if (job->Lookup(ATTR_REQUEST_DISK)) {
+			answer += " && (TARGET.Disk >= RequestDisk)";
+		}
+		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			// VM universe uses Total Disk 
 			// instead of Disk for Condor slot
 			answer += " && (TARGET.TotalDisk >= DiskUsage)";
 		}else {
 			answer += " && (TARGET.Disk >= DiskUsage)";
 		}
+	} else {
+		if (JobUniverse != CONDOR_UNIVERSE_VM) {
+			if (job->Lookup(ATTR_REQUEST_DISK)) {
+				answer += " && (TARGET.Disk >= RequestDisk)";
+			}
+			fprintf(stderr, 
+					"\nWARNING: Your Requirements expression refers to TARGET.Disk. "
+					"This is obsolete. Set request_disk and condor_submit will modify the "
+					"Requirements expression as needed.\n");
+		}
 	}
 
 	if ( JobUniverse != CONDOR_UNIVERSE_VM ) {
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
+#if 1
+		if (job->Lookup(ATTR_REQUEST_MEMORY)) {
+			answer += " && (TARGET.Memory >= RequestMemory)";
+		}
+		if (checks_mem) {
+			fprintf(stderr, 
+					"\nWARNING: your Requirements expression refers to TARGET.Memory. "
+					"This is obsolete. Set request_memory and condor_submit will modify the "
+					"Requirements expression as needed.\n");
+		}
+#else
 		if ( !checks_mem ) {
 			answer += " && ( (TARGET.Memory * 1024) >= ImageSize ) ";
 		}
 		if ( !checks_reqmem ) {
 			answer += " && ( ( RequestMemory * 1024 ) >= ImageSize ) ";
 		}
+#endif
 	}
 
 	if( HasTDP && !checks_tdp ) {
-		answer += "&& (TARGET.";
+		answer += " && (TARGET.";
 		answer += ATTR_HAS_TDP;
 		answer += ")";
 	}
 
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		if( ! checks_mpi ) {
-			answer += "&& (TARGET.";
+			answer += " && (TARGET.";
 			answer += ATTR_HAS_MPI;
 			answer += ")";
 		}
@@ -6478,7 +6631,7 @@ check_requirements( char const *orig, MyString &answer )
 				// the FileSystemDomain yet, tack on a clause for
 				// that. 
 			if( ! checks_fsdomain ) {
-				answer += "&& (TARGET.";
+				answer += " && (TARGET.";
 				answer += ATTR_FILE_SYSTEM_DOMAIN;
 				answer += " == MY.";
 				answer += ATTR_FILE_SYSTEM_DOMAIN;
@@ -6489,7 +6642,7 @@ check_requirements( char const *orig, MyString &answer )
 		case STF_YES:
 				// we're definitely going to use file transfer.  
 			if( ! checks_file_transfer ) {
-				answer += "&& (TARGET.";
+				answer += " && (TARGET.";
 				answer += ATTR_HAS_FILE_TRANSFER;
 				if (!checks_per_file_encryption && NeedsPerFileEncryption) {
 					answer += " && TARGET.";
@@ -6506,7 +6659,7 @@ check_requirements( char const *orig, MyString &answer )
 				// domain, but explictly turned on IF_NEEDED, assume
 				// they know what they're doing. 
 			if( ! checks_fsdomain ) {
-				ft_clause = "&& ((TARGET.";
+				ft_clause = " && ((TARGET.";
 				ft_clause += ATTR_HAS_FILE_TRANSFER;
 				if (NeedsPerFileEncryption) {
 					ft_clause += " && TARGET.";
@@ -6880,7 +7033,7 @@ compress( MyString &path )
 	dst = str;
 
 #ifdef WIN32
-	if (str) {
+	if (*src) {
 		*dst++ = *src++;	// don't compress WIN32 "share" path
 	}
 #endif
@@ -7276,7 +7429,7 @@ void transfer_vm_file(const char *filename)
 	char *tmp_ptr = NULL;
 	check_and_universalize_path(fixedname);
 	check_open(fixedname.Value(), O_RDONLY);
-	TransferInputSize += calc_image_size(fixedname.Value());
+	TransferInputSizeKb += calc_image_size_kb(fixedname.Value());
 
 	transfer_file_list.append(fixedname.Value());
 	tmp_ptr = transfer_file_list.print_to_string();
@@ -7475,7 +7628,7 @@ void SetVMRequirements()
 		vmanswer += " >= ";
 
 		MyString mem_tmp;
-		mem_tmp.sprintf("%d", VMMemory);
+		mem_tmp.sprintf("%d", VMMemoryMb);
 		vmanswer += mem_tmp.Value();
 		vmanswer += ")";
 	}
@@ -7489,7 +7642,7 @@ void SetVMRequirements()
 		vmanswer += " >= ";
 
 		MyString mem_tmp;
-		mem_tmp.sprintf("%d", VMMemory);
+		mem_tmp.sprintf("%d", VMMemoryMb);
 		vmanswer += mem_tmp.Value();
 		vmanswer += ")";
 	}
@@ -7602,6 +7755,9 @@ SetVMParams()
 	buffer.sprintf( "%s = %s", ATTR_JOB_VM_NETWORKING, VMNetworking? "TRUE":"FALSE");
 	InsertJobExpr(buffer);
 
+	buffer.sprintf( "%s = %s", ATTR_JOB_VM_VNC, VMVNC? "TRUE":"FALSE");
+	InsertJobExpr(buffer);
+	
 	// Here we need to set networking type
 	if( VMNetworking ) {
 		tmp_ptr = condor_param(VM_Networking_Type, ATTR_JOB_VM_NETWORKING_TYPE);
@@ -7626,10 +7782,10 @@ SetVMParams()
 		DoCleanup(0,0,NULL);
 		exit(1);
 	}else {
-		VMMemory = (int)strtol(tmp_ptr, (char **)NULL, 10);
+		VMMemoryMb = strtol(tmp_ptr, (char **)NULL, 10);
 		free(tmp_ptr);
 	}
-	if( VMMemory <= 0 ) {
+	if( VMMemoryMb <= 0 ) {
 		fprintf( stderr, "\nERROR: '%s' is incorrectly specified\n"
 				"For example, for vm memroy of 128 Megabytes,\n"
 				"you need to use 128 in your submit description file.\n", 
@@ -7637,7 +7793,7 @@ SetVMParams()
 		DoCleanup(0,0,NULL);
 		exit(1);
 	}
-	buffer.sprintf( "%s = %d", ATTR_JOB_VM_MEMORY, VMMemory);
+	buffer.sprintf( "%s = %d", ATTR_JOB_VM_MEMORY, VMMemoryMb);
 	InsertJobExpr( buffer );
 
 	/* 

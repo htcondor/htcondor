@@ -392,6 +392,7 @@ const char * const ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char * const ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
 const char * const  ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
 const char * const  ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
+const char * const  ATTR_JOB_VM_VNC = "JobVMVNCConsole";
 // End VM universe
 const char * const ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char * const ATTR_KEYSTORE_FILE            = "KeystoreFile";
@@ -438,6 +439,7 @@ const char * const ATTR_MAX_HOSTS				 = "MaxHosts";
 const char * const ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";
 const char * const ATTR_MAX_JOBS_RUNNING         = "MaxJobsRunning";
 const char * const ATTR_MEMORY                   = "Memory";
+const char * const ATTR_MEMORY_USAGE             = "MemoryUsage";
 const char * const ATTR_DETECTED_MEMORY          = "DetectedMemory";
 const char * const ATTR_DETECTED_CPUS            = "DetectedCpus";
 const char * const ATTR_MIN_HOSTS				 = "MinHosts";

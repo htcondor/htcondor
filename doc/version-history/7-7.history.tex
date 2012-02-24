@@ -77,6 +77,9 @@ daemons being shut down only after the \Condor{startd} has exited.
 \item Under some circumstances, a job in the removed ("X") state may ignore the -forcex option to \Condor{rm}.  The \Condor{schedd} is now more aggressive about removing such jobs from the queue.
 \Ticket{2809}
 
+\item Fixed copying of scaling factors on ClassAd literal values.
+\Ticket #2839
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -106,7 +109,7 @@ daemons being shut down only after the \Condor{startd} has exited.
 \item Condor version 7.7.5 not yet released.
 %\item Condor version 7.7.5 released on Month Date, 2011.
 
-\item Support for the gt4 grid-type (i.e. Web Services GRAM) in the grid
+\item Support for the gt4 grid type (that is, Web Services GRAM) in the grid
 universe has been removed.
 \Ticket{2782}
 
@@ -267,8 +270,10 @@ but not big enough to hold the whole contents of the spool directory.
 \Ticket{2598}
 
 \item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
-specifies the amount of time in seconds that \Condor{schedd} will hold a claim
-idle for a DAGMan job, using the \AdAttr{KeepClaimIdle} attribute in the JobAd.
+specifies the amount of time in seconds that the \Condor{schedd} 
+will hold a claim idle for a DAGMan job, 
+using the \AdAttr{KeepClaimIdle} attribute in the job ClassAd.
+\Ticket{2673}
 
 \item The job ClassAd attributes
 \AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
@@ -288,7 +293,7 @@ using the new default configuration setting
 \Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
 \Ticket{2729}
 
-\item The configuration macro \MacroNI{PROCD\_LOG} now defaults to
+\item The configuration variable \Macro{PROCD\_LOG} now defaults to
 \File{\$(LOG)/ProcLog}.  Previously, there was no default value,
 so the \Condor{procd} did not log by default.
 \Ticket{2775}
@@ -359,14 +364,15 @@ as they did not correctly take into account
 shifts in time caused by daylight savings time transitions.
 \Ticket{2620}
 
-\item \Condor{ssh\_to\_job} sessions inherited the \Condor{starter}
+\item Previously, \Condor{ssh\_to\_job} sessions inherited the \Condor{starter}
 environment.  Now, this only happens when
 \MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT} is \Expr{True}.
+\Ticket{2621}
 
-\item In Linux, the memory usage was ignored for job sub-processes
-that were created via fork() without calling exec().  This problem
-affected \Attr{ImageSize} and \Attr{ResidentSetSize} but not
-\Attr{ProportionalSetSize}.
+\item On Linux platforms, the memory usage was ignored for job sub-processes
+that were created via \Procedure{fork} without calling \Procedure{exec}.
+This problem affected \Attr{ImageSize} and \Attr{ResidentSetSize},
+but not \Attr{ProportionalSetSize}.
 
 \item Fixed a rare condition that could cause a job to remain in the
 running state indefinitely when the job was removed or put on hold
