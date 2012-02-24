@@ -4854,6 +4854,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 							dprintf( D_SECURITY|D_FULLDEBUG,
 									 "DC_SECURITY: authentication of %s failed but was not required, so continuing.\n",
 									 sock->peer_ip_str());
+							if( the_key ) {
+									// Since we did not authenticate, we have not exchanged a key with our peer.
+								delete the_key;
+								the_key = NULL;
+							}
 						}
 						else {
 							dprintf( D_ALWAYS,
