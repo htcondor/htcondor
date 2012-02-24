@@ -31,15 +31,11 @@ as are currently documented (section~\ref{sec:New-7-6-5}) in this manual.
 
 \begin{itemize}
 
-\item Condor version 7.7.4 has all of the features and fixes of 7.7.3,
-with one major addition.  This is the ability to run in a pure IPv6 network,
-which is disabled by default.  To \emph{enable} IPv6 code, 
-set the configuration variable
-\begin{verbatim}
-  ENABLE_IPV6 = True
-\end{verbatim}
-Note that running in a mixed IPv6 and IPv4 environment has not been tested,
-and is not supported.
+\item Condor version 7.7.4 has all of the features and fixes of 7.7.3, it 
+includes work toward running on a pure IPv6 network.  This is disabled by
+default.  There is an severe bug where enabling IPv6 in a multi-computer pool
+may cause the \Condor{starter} to crash.  For 
+more information on enabling IPv6 support in the 7.7 series of Condor, see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
 \Ticket{9}
 
 \end{itemize}
@@ -64,7 +60,7 @@ and is not supported.
 
 \begin{itemize}
 
-\item None.
+\item When IPv6 is enabled and you have multiple computers in your pool, the \Condor{starter} may crash.
 
 \end{itemize}
 
