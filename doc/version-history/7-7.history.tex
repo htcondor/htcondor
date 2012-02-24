@@ -74,6 +74,9 @@ is now always shutdown first on GRACEFUL or PEACEFUL shutdown, with other
 daemons being shut down only after the \Condor{startd} has exited.
 \Ticket{2779}
 
+\item Under some circumstances, a job in the removed ("X") state may ignore the -forcex option to \Condor{rm}.  The \Condor{schedd} is now more aggressive about removing such jobs from the queue.
+\Ticket{2809}
+
 \end{itemize}
 
 \noindent Known Bugs:
