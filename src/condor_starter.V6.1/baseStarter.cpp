@@ -2642,11 +2642,8 @@ CStarter::PublishToEnv( Env* proc_env )
 		// slot identifier
 	env_name = base.Value();
 	env_name += "SLOT";
-	int slot = getMySlotNumber();
-	if (!slot) {
-		slot = 1;
-	}
-	proc_env->SetEnv(env_name.Value(), slot);
+	
+	proc_env->SetEnv(env_name.Value(), getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -2715,6 +2712,40 @@ CStarter::getMySlotNumber( void )
 	}
 
 	return slot_number;
+}
+
+MyString
+CStarter::getMySlotName(void) {
+	
+	char *logappend = param("STARTER_LOG");		
+	const char *tmp = NULL;
+		
+	MyString slotName = "";
+			
+	if ( logappend ) {
+			// We currently use the extension of the starter log file
+			// name to determine which slot we are.  Strange.
+		char const *log_basename = condor_basename(logappend);
+		MyString prefix;
+
+		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
+		if( resource_prefix ) {
+			prefix.sprintf(".%s",resource_prefix);
+			free( resource_prefix );
+		}
+		else {
+			prefix = ".slot";
+		}
+
+		tmp = strstr(log_basename, prefix.Value());
+		if ( tmp ) {				
+			slotName = (tmp + 1); // skip the .
+		} 
+
+		free(logappend);
+	}
+
+	return slotName;
 }
 
 
