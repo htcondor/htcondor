@@ -116,6 +116,7 @@ License: Apache-2.0
 
 
 Files: src/condor_filetransfer_plugins/hdfs*
+       src/condor_contrib/aviary/src/axis2_*
 Copyright: 2006, Apache Software Foundation
 License: Apache-2.0
 
