@@ -165,6 +165,10 @@ dfsg-source-tree:
 	@git diff --quiet HEAD
 # remove windows binaries that come without sources
 	rm -rf msconfig
+# remove embedded tarballs with 3rd-party software that is
+# currently not used in any way
+	find . -name '*.tar.gz' -delete
+	find . -name '*.tgz' -delete
 # remove all java binaries
 # and other stuff that will be deleted during clean runs anyway
 	find $(CURDIR) -regextype posix-egrep -regex '.*(\.(jar|class|pdf)|TAGS)' -print0 \
