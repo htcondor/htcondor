@@ -295,6 +295,10 @@ fi
 # ssh-copy-id is available on el5 from openssh-clients
 echo "Enter password to copy ssh keys to $remote_host:"
 ssh-copy-id -i $bosco_key $remote_host > /dev/null
+if [ $? -ne 0 ]; then
+    echo "Error running ssh-copy-id.  Please make sure you password is correct."
+    exit 1
+fi
 
 start_ssh
 
