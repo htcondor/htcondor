@@ -49,6 +49,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 7.6.2 that affects jobs run via
+  glexec.  In some installations of glexec, Condor failed to execute
+  the job but reported that the job exited with exit code 1.  In such
+  cases, the stderr of the job contained the following message:
+  \verb|fdpass_recv error on new_sock_fd|.
+\Ticket{2840}
+
 \item Fixed a rare bug where if the startd was configured to use partionable
 slots, it was possible for the startd to get partioned into more slots
 than there are resources.  That is, it was possible for a four cpu startd
