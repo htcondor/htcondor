@@ -2117,10 +2117,8 @@ sub CountFileTrace
 	my $tracefile = $coredir . "/core_error_trace";
 	my $count = 0;
 
-	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
-	while(<CT>) {
-		$count += 1;
-	}
+	open(CT, "<", $tracefile) or return 0;
+	while(<CT>) { $count ++; }
 	close(CT);
 	return($count);
 }
