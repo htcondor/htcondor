@@ -126,6 +126,18 @@ start_ssh () {
     fi
 }    
 
+check_cluster_list () {
+    # $1 = cluster to check for
+    remote_host=$1
+
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 
 stop_ssh () {
     # Shut down ssh-agent
@@ -271,6 +283,16 @@ done
 # The rest of the file covers the 'add' cluster functionality.
 ################################################################
 
+# Check if the cluster is already in the list
+check_cluster_list 
+if [ $? -eq 0 ]; then
+    echo "Cluster $remote_host already installed"
+    echo "Reinstalling on $remote_host"
+    reinstall=1
+else
+    reinstall=0
+fi
+
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
     # Read in password for bosco key
@@ -322,7 +344,9 @@ rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 
 # Add the cluster to the cluster list
-echo $remote_host >> $CLUSTERLIST_LOCATION
+if [ $reinstall -eq 0 ]; then
+    echo $remote_host >> $CLUSTERLIST_LOCATION
+fi
 
 echo "Installation complete"
 
