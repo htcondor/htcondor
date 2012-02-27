@@ -2071,27 +2071,16 @@ sub AddFileTrace
 	my $time = shift;
 	my $entry = shift;
 
-	my $tracefile = $coredir . "/core_error_trace";
-	my $newtracefile = $coredir . "/core_error_trace.new";
-
-	# make sure the trace file exists
-	if(!(-f $tracefile)) {
-		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
-		close(TF);
-	}
-	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
-	while(<TF>) {
-		print NTF "$_";
-	}
-	close(TF);
 	my $buildentry = "$time	$file	$entry\n";
-	print NTF "$buildentry";
-	debug("\n$buildentry",2);
-	close(NTF);
-	runcmd("mv $newtracefile $tracefile");
 
+	my $tracefile = $coredir . "/core_error_trace";
+	local *TF;
+	open(TF, '>>', $tracefile)
+		or die qq(Unable to open "$tracefile" for writing: $!);
+	print TF $buildentry;
+	close TF;
+
+	debug("\n$buildentry",2);
 }
 
 sub MoveCoreFile
