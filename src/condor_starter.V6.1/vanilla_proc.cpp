@@ -408,6 +408,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
 
+	std::string memory_usage;
+	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
+		ad->Assign(ATTR_MEMORY_USAGE, memory_usage);
+	}
+
 #if HAVE_PSS
 	if( usage->total_proportional_set_size_available ) {
 		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );

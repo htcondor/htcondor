@@ -1057,6 +1057,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+	if( update_ad->LookupString(ATTR_MEMORY_USAGE, string_value) ) {
+		jobAd->Assign(ATTR_MEMORY_USAGE, string_value);
+	}
+
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
 		int rss = 0;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {

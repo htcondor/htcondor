@@ -10442,4 +10442,34 @@ url=
 tags=starter
 id=603
 
+[MEMORY_USAGE_METRIC]
+aliases=
+default=((ResidentSetSize+1023)/1024)
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=MemoryUsage metric
+usage=
+url=
+tags=starter
+id=603
 
+[MEMORY_USAGE_METRIC_VM]
+aliases=
+default=VM_Memory
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=MemoryUsage metric for VM Universe jobs
+usage=
+url=
+tags=starter
+id=603
