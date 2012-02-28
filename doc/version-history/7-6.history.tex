@@ -51,7 +51,7 @@ The details of each version are described below.
 
 \item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
 \Prog{glexec}.  
-In some installations of \Prog{glexec}, 
+When \Prog{glexec} was configured in log-only mode, 
 Condor failed to execute the job,
 but reported that the job exited with exit code 1.
 In such cases, 
