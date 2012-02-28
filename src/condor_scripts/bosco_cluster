@@ -284,7 +284,7 @@ done
 ################################################################
 
 # Check if the cluster is already in the list
-check_cluster_list 
+check_cluster_list $remote_host
 if [ $? -eq 0 ]; then
     echo "Cluster $remote_host already installed"
     echo "Reinstalling on $remote_host"
