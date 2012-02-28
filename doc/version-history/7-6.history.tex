@@ -49,29 +49,38 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug introduced in 7.6.2 that affects jobs run via
-  glexec.  In some installations of glexec, Condor failed to execute
-  the job but reported that the job exited with exit code 1.  In such
-  cases, the stderr of the job contained the following message:
-  \verb|fdpass_recv error on new_sock_fd|.
+\item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
+\Prog{glexec}.  
+In some installations of \Prog{glexec}, 
+Condor failed to execute the job,
+but reported that the job exited with exit code 1.
+In such cases, 
+the \Expr{stderr} of the job contained the following message:
+\begin{verbatim}
+fdpass_recv error on new_sock_fd
+\end{verbatim}
 \Ticket{2840}
 
-\item Fixed a rare bug where if the startd was configured to use partionable
-slots, it was possible for the startd to get partioned into more slots
-than there are resources.  That is, it was possible for a four cpu startd
+\item Fixed a rare bug in which if the \Condor{startd} was configured 
+to use partitionable slots,
+it was possible for the \Condor{startd} to get partitioned into more slots
+than there were resources.
+That is, it was possible for a four cpu \Condor{startd}
 to split into five slots.
+\Ticket{2816}
 
-\item Fixed a rare bug in the parallel universe, where if a claim was removed
-as the shadow was starting up, all ranks of the job would never completely 
-start.
+\item Fixed a rare bug seen with parallel universe jobs,
+in which if a claim was removed as the \Condor{shadow} was starting up, 
+all ranks of the job would never completely start.
 \Ticket{2786}
 
-\item Fixed a bug that caused disk capacity to be under-reported in Windows
-for drives with 1TB or more of free space.
+\item Fixed a bug that caused disk capacity to be under-reported 
+on Windows platforms for drives with 1TB or more of free space.
 \Ticket{2798}
 
-\item Fixed a bug that caused communication failure in some cases after
-failure of authentication when authentication was optional.
+\item Fixed a bug that caused communication failure in some cases,
+ after the failure of authentication, when authentication was configured
+to be optional.
 \Ticket{2845}
 
 \end{itemize}
