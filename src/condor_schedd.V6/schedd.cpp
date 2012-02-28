@@ -4560,8 +4560,8 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 
 		shadow_rec * srec = scheduler.FindSrecByProcID(job_id);
 		if(srec == NULL) {
-			dprintf( D_FULLDEBUG, "(%d.%d) Shadow %d already gone\n", 
-				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
+			dprintf( D_FULLDEBUG, "(%d.%d) Shadow already gone\n", 
+				(int) job_id.cluster, (int)job_id.proc);
 		} else {
 			dprintf( D_FULLDEBUG, "(%d.%d) Killing shadow %d\n", 
 				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
