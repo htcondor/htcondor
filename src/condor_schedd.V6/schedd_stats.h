@@ -49,9 +49,14 @@ typedef struct ScheddStatistics {
    stats_entry_recent<time_t> JobsAccumTimeToStart; // sum of all time jobs spent waiting to start
    stats_entry_recent<time_t> JobsAccumRunningTime; // sum of all time jobs spent running.
    stats_entry_recent<time_t> JobsAccumBadputTime;  // sum of all time jobs spent running badput
-   stats_entry_recent<time_t> JobsAccumExecuteTime;  // sum of all time jobs spent executing the user code
-   stats_entry_recent<time_t> JobsAccumPreExecuteTime;  // sum of all time jobs spent transferring input
-   stats_entry_recent<time_t> JobsAccumPostExecuteTime; // sum of all time jobs spent transferring output
+   stats_entry_recent<time_t> JobsAccumExecuteTime;  // sum of all time jobs spent executing the user code ((reap - start) - (pre + post))
+   stats_entry_recent<time_t> JobsAccumPreExecuteTime;  // sum of all time jobs spent transferring input   (max(0, exec - start))
+   stats_entry_recent<time_t> JobsAccumPostExecuteTime; // sum of all time jobs spent transferring output  (max(0, reap - post))
+
+   // these are to help debug why sum of Execution time doesn't equal sum of running time and badput time.
+   stats_entry_recent<time_t> JobsAccumExecuteAltTime;  // sum of all time jobs spent executing the user code, max(0, (post - exec))
+   stats_entry_recent<time_t> JobsAccumChurnTime;      // sum of all time shadows wasted with jobs that never produced either goodput or badput
+   stats_entry_recent<int>    JobsWierdTimestamps;    // jobs which exited with questionable times for exec or post-exec
 
    // counts of various exit conditions.
    stats_entry_recent<int> JobsExitedNormally; // jobs that exited with JOB_EXITED or JOB_EXITED_AND_CLAIM_CLOSING

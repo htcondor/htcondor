@@ -9309,17 +9309,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
 
-	int job_start_exec_date = 0, job_start_xfer_out_date = 0;
-	int job_pre_exec_time = 0, job_post_exec_time = 0;
-	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date))
-		job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
-	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date))
-		job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
-
-	stats.JobsAccumPreExecuteTime += job_pre_exec_time;
-	stats.JobsAccumPostExecuteTime += job_post_exec_time;
-	stats.JobsAccumExecuteTime += MAX(0, job_running_time - (job_pre_exec_time + job_post_exec_time));
-
 		// We get the name of the daemon that had a problem for 
 		// nice log messages...
 	MyString daemon_name;
@@ -9344,14 +9333,14 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	switch( exit_code ) {
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
-            stats.JobsShadowNoMemory += 1;
+			stats.JobsShadowNoMemory += 1;
 
 		case JOB_EXEC_FAILED:
 				//
 				// The calling function will make sure that
 				// we don't try to start new jobs
 				//
-            stats.JobsExecFailed += 1;
+			stats.JobsExecFailed += 1;
 			break;
 
 		case JOB_CKPTED:
@@ -9403,7 +9392,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if ( srec != NULL ) {
 				srec->removed = true;
 			}
-            stats.JobsShouldRemove += 1;
+			stats.JobsShouldRemove += 1;
 				// no break, fall through and do the action
 
 		case JOB_NO_CKPT_FILE:
@@ -9413,7 +9402,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				set_job_status( job_id.cluster, job_id.proc, REMOVED );
 			}
 			is_badput = true;
-            stats.JobsKilled += 1;
+			stats.JobsKilled += 1;
 			break;
 
 		case JOB_EXITED_AND_CLAIM_CLOSING:
@@ -9422,7 +9411,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
 			}
-            stats.JobsExitedAndClaimClosing += 1;
+			stats.JobsExitedAndClaimClosing += 1;
 			// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
@@ -9454,7 +9443,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// that never started
 				// Andy Pavlo - 01.24.2006 - pavlo@cs.wisc.edu
 				//
-            MyString _error("\"Job missed deferred execution time\"");
+			MyString _error("\"Job missed deferred execution time\"");
 			if ( SetAttribute( job_id.cluster, job_id.proc,
 					  		  ATTR_HOLD_REASON, _error.Value() ) < 0 ) {
 				dprintf( D_ALWAYS, "WARNING: Failed to set %s to %s for "
@@ -9510,7 +9499,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			dprintf( D_ALWAYS,
 					 "ERROR: %s had fatal error writing its log file\n",
 					 daemon_name.Value() );
-            stats.JobsDebugLogError += 1;
+			stats.JobsDebugLogError += 1;
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
 
@@ -9545,14 +9534,47 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	
 		// calculate badput and goodput statistics.
 		//
-	if (is_goodput) {
-		stats.JobsAccumRunningTime += job_running_time;
-		stats.JobsCompletedSizes += (int64_t)job_image_size * 1024;
-		stats.JobsCompletedRuntimes += job_running_time;
-	} else if (is_badput) {
-		stats.JobsAccumBadputTime += job_running_time;
-		stats.JobsBadputSizes += (int64_t)job_image_size * 1024;
-		stats.JobsBadputRuntimes += job_running_time;
+	if ( ! is_goodput && ! is_badput) {
+		stats.JobsAccumChurnTime += job_running_time;
+	} else {
+		int job_pre_exec_time = 0;  // unless we see job_start_exec_date
+		int job_post_exec_time = 0;
+		int job_executing_time = 0;
+		// this time is set in the shadow (remoteresource::beginExecution) so we don't need to worry
+		// if we are talking to a shadow that supports it. the shadow and schedd should be from the same build.
+		int job_start_exec_date = 0; 
+		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date)) {
+			job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
+			job_executing_time = updateTime - job_start_exec_date;
+			if (job_executing_time < 0)
+				stats.JobsWierdTimestamps += 1;
+		} else if (is_badput) {
+			stats.JobsAccumChurnTime += job_running_time;
+		}
+		// this time is also set in the shadow, but there is no gurantee that transfer output ever happened
+		// so it may not exist.
+		int job_start_xfer_out_date = 0;
+		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)) {
+			job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
+			job_executing_time = job_start_xfer_out_date - job_start_exec_date;
+			if (job_executing_time < 0 || job_executing_time > updateTime)
+				stats.JobsWierdTimestamps += 1;
+		}
+
+		stats.JobsAccumPreExecuteTime += job_pre_exec_time;
+		stats.JobsAccumPostExecuteTime += job_post_exec_time;
+		stats.JobsAccumExecuteTime += MAX(0, job_executing_time);
+		stats.JobsAccumExecuteAltTime += MAX(0, job_running_time - (job_pre_exec_time + job_post_exec_time));
+
+		if (is_goodput) {
+			stats.JobsAccumRunningTime += job_running_time;
+			stats.JobsCompletedSizes += (int64_t)job_image_size * 1024;
+			stats.JobsCompletedRuntimes += job_running_time;
+		} else if (is_badput) {
+			stats.JobsAccumBadputTime += job_running_time;
+			stats.JobsBadputSizes += (int64_t)job_image_size * 1024;
+			stats.JobsBadputRuntimes += job_running_time;
+		}
 	}
 
 		// Report the ShadowException

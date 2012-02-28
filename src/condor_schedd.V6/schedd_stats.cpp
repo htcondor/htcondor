@@ -97,12 +97,15 @@ void ScheddStatistics::Init()
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        IF_BASICPUB);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteTime, IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPreExecuteTime,  IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPostExecuteTime,  IF_BASICPUB);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumChurnTime,      IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteAltTime, IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsWierdTimestamps,     IF_VERBOSEPUB);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedNormally,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsKilled,                IF_BASICPUB);

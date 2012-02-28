@@ -256,14 +256,20 @@ class FileTransfer {
 	// filename_remap_find().
 	void AddDownloadFilenameRemaps(char const *remaps);
 
-	int GetUploadTimestamps(int * pEnd = NULL) {
+	int GetUploadTimestamps(time_t * pStart, time_t * pEnd = NULL) {
+		if (uploadStartTime < 0)
+			return false;
 		if (pEnd) *pEnd = uploadEndTime;
-		return uploadStartTime;
+		if (pStart) *pStart = uploadStartTime;
+		return true;
 	}
 
-	int GetDownloadTimestamps(int * pEnd = NULL) {
+	bool GetDownloadTimestamps(time_t * pStart, time_t * pEnd = NULL) {
+		if (downloadStartTime < 0)
+			return false;
 		if (pEnd) *pEnd = downloadEndTime;
-		return downloadStartTime;
+		if (pStart) *pStart = downloadStartTime;
+		return true;
 	}
 
   protected:
@@ -279,8 +285,8 @@ class FileTransfer {
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
-	int uploadStartTime, uploadEndTime;
-	int downloadStartTime, downloadEndTime;
+	time_t uploadStartTime, uploadEndTime;
+	time_t downloadStartTime, downloadEndTime;
 
 	void CommitFiles();
 	void ComputeFilesToSend();
