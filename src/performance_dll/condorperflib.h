@@ -4,10 +4,10 @@
 // that uses this DLL. This way any other project whose source files include this file see 
 // TESTPERFLIB_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
-#ifdef TESTPERFLIB_EXPORTS
-#define TESTPERFLIB_API __declspec(dllexport)
+#ifdef CONDORPERFLIB_EXPORTS
+#define CONDORPERFLIB_API __declspec(dllexport)
 #else
-#define TESTPERFLIB_API __declspec(dllimport)
+#define CONDORPERFLIB_API __declspec(dllimport)
 #endif
 #pragma once
 #include "countersdef.h"
