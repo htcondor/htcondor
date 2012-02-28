@@ -33,6 +33,8 @@ DWORD instances = 0;
 
 HANDLE heapHandle;
 
+static bool IsQuerySupported(LPWSTR pQuery);
+
 DWORD APIENTRY OpenPerfData(LPWSTR pContext)
 {
 	HKEY hKey;

@@ -15,7 +15,3 @@
 extern "C" DWORD APIENTRY OpenPerfData(LPWSTR pContext);
 extern "C" DWORD APIENTRY CollectPerfData(LPWSTR pQuery, PVOID* ppData, LPDWORD pcbData, LPDWORD pObjectsReturned);
 extern "C" DWORD APIENTRY ClosePerfData();
-
-bool IsQuerySupported(LPWSTR pQuery);
-
-const wchar_t szName[] = TEXT("Global\\TestCounterMap");
