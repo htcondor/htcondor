@@ -1175,6 +1175,16 @@ negotiationTime ()
 		return;
 	}
 
+    if (param_boolean("NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE", false)) {
+        // All things being equal, it would be preferable to invoke a full neg reconfig here
+        // instead of just config(), however frequent reconfigs apparently create new nonblocking 
+        // sockets to the collector that the collector waits in vain for, which ties it up, thus
+        // also blocking other daemons trying to talk to the collector, and so forth.  That seems
+        // like it should be fixed as well.
+        dprintf(D_ALWAYS, "Re-reading config.\n");
+        config(0);
+    }
+
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
 	time_t start_time = time(NULL);

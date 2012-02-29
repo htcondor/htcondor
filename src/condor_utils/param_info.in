@@ -9657,6 +9657,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
+[NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Read Config Before Cycle
+usage=When true, negotiator will re-read the configuration prior to each negotiation cycle
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator
+id=555
+
 [SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY]
 aliases=
 default=5
