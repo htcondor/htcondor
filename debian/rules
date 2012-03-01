@@ -35,8 +35,7 @@ override_dh_auto_configure:
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
-		-DHAVE_EXT_CGROUP:BOOL=ON \
-		-DHAVE_EXT_ZLIB:BOOL=ON
+		-DWITH_LIBCGROUP:BOOL=ON
 		# upstream says: tests aren't reliablei enough yet
 		#-DBUILD_TESTS:BOOL=OFF \
 		# upstream says: contrib is to unstable for initial packaging
@@ -89,10 +88,7 @@ doc/build:
 override_dh_auto_install:
 	dh_auto_install
 	# things we do not need in Debian
-	rm debian/tmp/usr/sbin/condor_install* \
-		debian/tmp/usr/sbin/condor_cleanup* \
-		debian/tmp/usr/sbin/install_release \
-		debian/tmp/usr/sbin/cleanup_release
+	rm debian/tmp/usr/sbin/condor_install*
 
 
 override_dh_install:
@@ -136,6 +132,7 @@ override_dh_auto_clean:
 	-rm src/condor_utils/param_info.c
 	# docs
 	$(MAKE) -C doc reallyclean
+	-rm -f doc/condor-*-Manual.tar
 	-rm -rf doc/just-man-pages
 	-rm -rf doc/build
 	-rm -f doc/symbol.tex doc/figuresizing.tex doc/fontsize.tex
@@ -175,7 +172,7 @@ dfsg-source-tree:
 		| xargs -0 -i git rm -f --ignore-unmatch -- {} || true
 # commit any cleanup results
 	@if ! git diff --quiet HEAD; then \
-		git commit -e -a -m "Remove unwanted (e.g. non-DFSG) compliant content"; \
+		git commit -e -a -m "Remove unwanted (e.g. non-DFSG-compliant) content"; \
 	fi
 
 
