@@ -27,7 +27,8 @@ typedef enum {
 	PFT_FLOAT,
 	PFT_CHAR,
 	PFT_STRING,
-	PFT_POINTER
+	PFT_POINTER,
+	PFT_VALUE,    // a ClassAd Value use %f %d or %s as appropriate
 } printf_fmt_t;
 
 

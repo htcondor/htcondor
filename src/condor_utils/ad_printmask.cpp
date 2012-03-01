@@ -243,6 +243,29 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					}
 					break;
 
+				case PFT_VALUE:
+					{
+						// copy the printf format so we can change %v to some other format specifier.
+						char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
+						char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
+						//bool fQuote = (*ptag == 'V');
+						if (*ptag == 'v' || *ptag == 'V')
+							*ptag = 's'; // convert printf format to %s
+						if( EvalExprTree(tree, al, target, &result) ) {
+							result.toString(true);
+							stringValue.sprintf( tfmt, result.s );
+							retval += stringValue;
+						} else {
+								// couldn't eval
+							if( alt ) {
+								stringValue.sprintf( tfmt, alt );
+								retval += stringValue;
+							}
+						}
+						free(tfmt);
+					}
+					break;
+
 				case PFT_INT:
 				case PFT_FLOAT:
 					if( EvalExprTree(tree, al, target, &result) ) {
