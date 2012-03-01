@@ -35,7 +35,7 @@ they already look.
 \File{\$(HOME)/.condor/condor\_config} is checked immediately after the 
 \Env{CONDOR\_CONFIG} environment variable.
 
-\item The \condor{hdfs} daemon has been moved to the contrib section, and is 
+\item The \Condor{hdfs} daemon has been moved to the contrib section, and is 
 available from the source code.
 \Ticket{2797}
 
@@ -50,9 +50,10 @@ hard linked to multiple filenames. Now, symbolic links are used.
 \begin{itemize}
 
 \item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
-specifies how the condor_master will restart when it notices that the condor_master
+specifies how the \Condor{master} will restart,
+when it notices that the \Condor{master}
 binary has changed. Valid values are GRACEFUL, PEACEFUL and NEVER. 
-The default value is GRACEFUL
+The default value is GRACEFUL.
 \Ticket{2779}
 
 \end{itemize}
@@ -78,7 +79,7 @@ daemons being shut down only after the \Condor{startd} has exited.
 \Ticket{2809}
 
 \item Fixed copying of scaling factors on ClassAd literal values.
-\Ticket #2839
+\Ticket{2839}
 
 \end{itemize}
 
