@@ -3580,12 +3580,15 @@ Configuring The Startd Policy.
 \label{param:Preempt}
 \item[\Macro{PREEMPT}]
   A boolean expression that, when \Expr{True},
-  causes Condor to stop a currently running job.
+  causes Condor to stop a currently running job.  This expression
+  is not evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
 
 \label{param:WantHold}
 \item[\Macro{WANT\_HOLD}]
   A boolean expression that defaults to \Expr{False}.
-  When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True},
+  When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True}
+  and \MacroNI{WANT\_SUSPEND} is \Expr{False} and \MacroNI{WANT\_VACATE}
+  is \Expr{True},
   the job is put on hold for the reason
   (optionally) specified by the variables \MacroNI{WANT\_HOLD\_REASON} and
   \MacroNI{WANT\_HOLD\_SUBCODE}.
@@ -3689,7 +3692,8 @@ WANT_HOLD_REASON = \
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
   tells Condor to evaluate the \MacroNI{SUSPEND} expression to decide
-  whether to suspend a running job.
+  whether to suspend a running job.  When \Expr{True}, the \MacroNI{PREEMPT}
+  expression is not evaluated.
   When not explicitly set, the \Condor{startd} exits with an error.
   When explicitly set, but the evaluated value is anything other than
   \Expr{True}, the value is utilized as if it were \Expr{False}.
