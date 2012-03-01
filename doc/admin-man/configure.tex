@@ -4161,6 +4161,27 @@ WANT_HOLD_REASON = \
   WINREG_System_Processes = 166
 \end{verbatim}
 
+\label{param:MountUnderScratch}
+\item[\Macro{MOUNT\_UNDER\_SCRATCH}]
+  A comma separated list of directories. 
+  For each directory in the list, 
+  Condor creates a directory in the job's temporary scratch directory,
+  but make it available at the given name using bind mounts.
+  This is available on Linux systems which provide bind mounts 
+  and per-process tree mount tables,
+  such as Red Hat Enterprise Linux 5.
+  As an example:
+\begin{verbatim}
+  MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
+\end{verbatim}
+  The job will think that it sees the usual \File{/tmp} and \File{/var/tmp}
+  directories, 
+  but they will actually exist as subdirectories in 
+  the job's temporary scratch directory. 
+  This is useful, because the job's scratch directory will be cleaned up 
+  after the job completes,
+  and because jobs will not be able to fill up the real \File{/tmp} directory. 
+
 \end{description}
 
 These macros control if the \Condor{startd} daemon should perform
@@ -4308,7 +4329,6 @@ SMP Machines for details.
      slot2_Activity = "Idle"
      slot2_EnteredCurrentActivity = 1075240035
 \end{verbatim}
-
 
 \end{description}
 
@@ -4698,27 +4718,6 @@ availability statistics in the \Condor{startd}.
   intervals stored by the \Condor{startd} to limit memory and disk consumption.
   Each sample requires 4 bytes of memory and approximately 10 bytes of
   disk space.
-
-\end{description}
-
-The following macros control the optional computation of resource
-availability statistics in the \Condor{startd}.
-
-\begin{description}
-\label{param:MountUnderScratch}
-\item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-On Linux systems which provide bind mounts and per-process tree mount tables,
-such as Red Hat Enterprise Linux 5, the administrator
-can optionally configure Condor to provide new file system bind mounts
-for each job.  This is useful, for example, to give each jobs its own
-\File{/tmp} or \File{/var/tmp} file system mapping, 
-independent of any other job.
-If set,
-this variable specifies a comma separated list of directories 
-to provide new mounts for.
-If it is set to \File{/tmp}, 
-Condor will make a directory under the execute-side sandbox called \File{tmp},
-and bind mount that directory to \File{/tmp}.
 
 \end{description}
 
