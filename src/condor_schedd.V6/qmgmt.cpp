@@ -3595,7 +3595,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 		if ( attribute_not_found ) {
 			MyString hold_reason;
-			hold_reason.sprintf("Cannot expand $$(%s).",name);
+			// Don't put the $$(expr) literally in the hold message, otherwise
+			// if we fix the original problem, we won't be able to expand the one
+			// in the hold message
+			hold_reason.sprintf("Cannot expand $$ expression (%s).",name);
 
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
