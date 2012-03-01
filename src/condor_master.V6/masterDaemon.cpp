@@ -1672,7 +1672,8 @@ Daemons::CheckForNewExecutable()
 		if (NONE == new_bin_restart_mode) {
 			dprintf( D_ALWAYS,"%s was modified, but master restart mode is NEVER\n", 
 					 master->watch_name);
-			CancelNewExecTimer();
+			//don't want to do this in case the user later reconfigs the restart mode.
+			//CancelNewExecTimer();
 		} else {
 			dprintf( D_ALWAYS,"%s was modified, restarting %s %s.\n", 
 					 master->watch_name, 
