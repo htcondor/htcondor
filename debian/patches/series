@@ -1,10 +1,11 @@
 # in order of upstream compatibility and invasiveness
+
+# should be obsolete in condor 7.7.6+
 lsb_compliance
+# should be obsolete in condor 7.7.6+
 use_symlinks_for_install_clones
-#allow_rpath
-disable_java_gt4X
-debian_dynamic_run
 no_java_for_now
 no_compress
 ssh_to_job_setup
+# should be obsolete in condor 7.7.6+
 fix_condor_run

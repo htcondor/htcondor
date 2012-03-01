@@ -28,7 +28,7 @@ Last-Update: <YYYY-MM-DD>
 +++ b/src/condor_chirp/CMakeLists.txt
 @@ -27,7 +27,7 @@
  condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
- "chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GCB_FOUND};${GLOBUS_FOUND}" OFF )
+ "chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GLOBUS_FOUND}" OFF )
  
 -install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 +#install ( FILES Chirp.jar DESTINATION ${C_LIB} )
