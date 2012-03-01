@@ -44,7 +44,7 @@ TransferD::transferd_exit(void)
 }
 
 int
-TransferD::dump_state_handler(int cmd, Stream *sock)
+TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 {
 	ClassAd state;
 	MyString tmp;

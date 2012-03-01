@@ -1,0 +1,222 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This test tests the final DAG node when the rest of the DAG succeeds,
+# but the final node fails and therefore causes the DAG to fail.  It
+# also tests that the DAG status gets updated correctly on node retries,
+# and when a node job fails but the POST script succeeds.
+
+# Note: we should check that the node status file is correct, but I'm
+# skipping that for now.  wenger 2011-12-01
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_final-C.dag';
+$testdesc =  'Condor submit dag - basic final node test C - scheduler U';
+$testname = "job_dagman_final-C";
+$dagman_args = "-verbose";
+
+$outfile = "job_dagman_final-C.nodes.out";
+$scriptfile = "job_dagman_final-C.scripts.out";
+$rescuefile = "job_dagman_final-C.dag.rescue001";
+
+# Note: we must find these lines *in the specified order*.
+@nodelines = ("Job for node C_A",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  FAILED done with C_A",
+			"Job for node C_A",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  OK done with C_A",
+			"Job for node C_B",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  FAILED done with C_B",
+			"Job for node C_C",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  FAILED done with C_C");
+
+# Note: we must find these lines *in the specified order*.
+@scriptlines = ("Node C_B Post",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  RETURN=1",
+			"Node C_C Pre",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  RETURN=-1",
+			"Node C_C Post",
+			"  DAG_STATUS=0",
+			"  FAILED_COUNT=0",
+			"  RETURN=1");
+
+# Note: we must find these lines *in the specified order*.
+@rescuelines = ('# Rescue DAG file, created after running',
+			'#   the job_dagman_final-C.dag DAG file',
+			'# Created .*/.*/.* .*:.*:.* UTC',
+			'# Rescue DAG version: \d*\.\d*\.\d* \(partial\)',
+			'#',
+			'# Total number of Nodes: 3',
+			'# Nodes premarked DONE: 2',
+			'# Nodes that failed: 1',
+			'#   C_C,<ENDLIST>',
+			'^',
+			'DONE C_A',
+			'RETRY C_A 1',
+			'DONE C_B');
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing output files.
+if (-e $outfile) {
+	runcmd("rm -f $outfile");
+}
+if (-e $scriptfile) {
+	runcmd("rm -f $scriptfile");
+}
+runcmd("rm -f job_dagman_final-C.dag.rescue*");
+
+# So node C_A fails the first time through...
+runcmd("touch job_dagman_final-C-nodeA.fails");
+
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and failed completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and failed completion\n",1);
+};
+
+$success = sub
+{
+	die "Error: DAG should fail!\n";
+};
+
+$failure = sub
+{
+	CondorTest::debug("executed with failure\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	# Make sure all expected lines are in the node output file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $outfile\n",1);
+	open(CHECK, "<$outfile") ||
+			die "Cannot open $outfile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#nodelines > $#lines ? $#nodelines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line eq $nodelines[$lineindex]) {
+			CondorTest::debug("$line\n", 1);
+		} else {
+			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$nodelines[$lineindex]>, got <$line>\n", 1);
+		}
+	}
+
+	# Make sure all expected lines are in the script output file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $scriptfile\n",1);
+	open(CHECK, "<$scriptfile") ||
+			die "Cannot open $scriptfile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#scriptlines > $#lines ? $#scriptlines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line eq $scriptlines[$lineindex]) {
+			CondorTest::debug("$line\n", 1);
+		} else {
+			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$scriptlines[$lineindex]>, got <$line>\n", 1);
+		}
+	}
+
+	# Make sure all expected lines are in the rescue DAG file, in the
+	# correct order, and there aren't any "extra" lines.
+	CondorTest::debug("Checking $rescuefile\n",1);
+	open(CHECK, "<$rescuefile") ||
+			die "Cannot open $rescuefile: $!\n";
+	@lines = <CHECK>;
+	close(CHECK);
+	$max = $#rescuelines > $#lines ? $#rescuelines : $#lines;
+	for ($lineindex = 0; $lineindex <= $max; $lineindex++) {
+		$line = $lines[$lineindex];
+		chomp($line);
+		if ($line =~ /$rescuelines[$lineindex]/) {
+			CondorTest::debug("$line\n", 1);
+		} else {
+			$diditpass = 0;
+			CondorTest::debug("Mismatch at line $lineindex: expected <$rescuelines[$lineindex]>, got <$line>\n", 1);
+		}
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed );
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

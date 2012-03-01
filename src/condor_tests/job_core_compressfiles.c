@@ -37,6 +37,8 @@ int main(int argc, char* argv[])
 
     char* testfilein = argv[1];
     char* testfileout = argv[2];
+
+	argc = argc;
 	printf("Test file in is %s\n",testfilein);
 	printf("Test file out is %s\n",testfileout);
 	rfd = open(testfilein,O_RDONLY,0);

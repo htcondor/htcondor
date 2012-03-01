@@ -40,10 +40,6 @@
 #include "exit.h"
 #include "param_functions.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-#endif
-
 #include "file_sql.h"
 #include "file_xml.h"
 
@@ -460,7 +456,11 @@ do_kill()
 		}
 	}
 	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
-		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
+		if (fscanf( PID_FILE, "%lu", &tmp_ul_int ) != 1) {
+			fprintf( stderr, "DaemonCore: ERROR: fscanf failed processing pid file %s\n",
+					 pidFile );
+			exit( 1 );
+		}
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
 	} else {
@@ -695,7 +695,9 @@ linux_sig_coredump(int signum)
 	setgid(0);
 
 	if (core_dir != NULL) {
-		chdir(core_dir);
+		if (chdir(core_dir)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", core_dir, strerror(errno));
+		}
 	}
 
 	WriteCoreDump("core");
@@ -1419,6 +1421,7 @@ dc_reconfig()
 			ptmp = NULL;
 			char segfault;	
 			segfault = *ptmp; // should blow up here
+			if (segfault) {} // Line to avoid compiler warnings.
 			ptmp[0] = 'a';
 			
 			// should never make it to here!
@@ -1505,26 +1508,43 @@ handle_dc_sigquit( Service*, int )
 	return TRUE;
 }
 
-void
-handle_gcb_recovery_failed( )
+const size_t OOM_RESERVE = 2048;
+static char *oom_reserve_buf;
+static void OutOfMemoryHandler()
 {
-	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
-			 "Broker. Performing fast shutdown.\n" );
-	dc_main_shutdown_fast();
+	std::set_new_handler(NULL);
+
+		// free up some memory to improve our chances of
+		// successfully logging
+	delete [] oom_reserve_buf;
+
+	int monitor_age = 0;
+	unsigned long vsize = 0;
+	unsigned long rss = 0;
+
+	if( daemonCore && daemonCore->monitor_data.last_sample_time != -1 ) {
+		monitor_age = (int)(time(NULL)-daemonCore->monitor_data.last_sample_time);
+		vsize = daemonCore->monitor_data.image_size;
+		rss = daemonCore->monitor_data.rs_size;
+	}
+
+	dprintf_dump_stack();
+
+	EXCEPT("Out of memory!  %ds ago: vsize=%lu KB, rss=%lu KB",
+		   monitor_age,
+		   vsize,
+		   rss);
 }
 
-#if HAVE_EXT_GCB
-static void
-gcb_recovery_failed_callback()
+static void InstallOutOfMemoryHandler()
 {
-		// BEWARE! This function is called by GCB. Most likely, either
-		// DaemonCore is blocked on a select() or CEDAR is blocked on a
-		// network operation. So we register a daemoncore timer to do
-		// the real work.
-	daemonCore->Register_Timer( 0, handle_gcb_recovery_failed,
-								"handle_gcb_recovery_failed" );
+	if( !oom_reserve_buf ) {
+		oom_reserve_buf = new char[OOM_RESERVE];
+		memset(oom_reserve_buf,0,OOM_RESERVE);
+	}
+
+	std::set_new_handler(OutOfMemoryHandler);
 }
-#endif
 
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
@@ -1535,7 +1555,6 @@ int dc_main( int argc, char** argv )
 	char**	ptr;
 	int		command_port = -1;
 	char const *daemon_sock_name = NULL;
-	int 	http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
@@ -1762,14 +1781,8 @@ int dc_main( int argc, char** argv )
 					// specify an HTTP port
 				ptr++;
 				if( ptr && *ptr ) {
-					http_port = atoi( *ptr );
-					dcargs += 2;
-				} else {
 					fprintf( stderr, 
-							 "DaemonCore: ERROR: -http needs another argument.\n" );
-					fprintf( stderr, 
-					   "   Please specify the port to use for the HTTP socket.\n" );
-
+							 "DaemonCore: ERROR: -http no longer accepted.\n" );
 					exit( 1 );
 				}
 			} else {
@@ -2023,6 +2036,25 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
+#ifdef WIN32
+	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
+	if (wait_for_win32_debugger) {
+		UINT ms = GetTickCount() - 10;
+		BOOL is_debugger = IsDebuggerPresent();
+		while ( ! is_debugger) {
+			if (GetTickCount() > ms) {
+				dprintf(D_ALWAYS,
+						"%s is %d, waiting for debugger to attach to pid %d.\n", 
+						debug_wait_param.Value(), wait_for_win32_debugger, GetCurrentProcessId());
+				ms = GetTickCount() + (1000 * 60 * 1); // repeat message every 1 minute
+			}
+			sleep(10);
+			is_debugger = IsDebuggerPresent();
+		}
+	}
+#endif
+
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
 		// pid. 
@@ -2143,11 +2175,6 @@ int dc_main( int argc, char** argv )
 	{
 		EXCEPT("Failed to create async pipe socket pair");
 	}
-#endif
-
-#if HAVE_EXT_GCB
-		// Set up our GCB failure callback
-	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
 	if ( dc_main_pre_command_sock_init ) {
@@ -2365,6 +2392,8 @@ int dc_main( int argc, char** argv )
     // create an xml log object
     XMLObj = FILEXML::createInstanceXML();
 
+	InstallOutOfMemoryHandler();
+
 	// call the daemon's main_init()
 	dc_main_init( argc, argv );
 
@@ -2382,7 +2411,7 @@ int dc_main( int argc, char** argv )
 //
 bool dc_args_is_background(int argc, char** argv)
 {
-    bool Foreground = false; // default to background
+    bool ForegroundFlag = false; // default to background
 
 	// Scan our command line arguments for a "-f".  If we don't find a "-f",
 	// or a "-v", then we want to register as an NT Service.
@@ -2398,7 +2427,7 @@ bool dc_args_is_background(int argc, char** argv)
 			ptr++;
 			break;
 		case 'b':		// run in Background (default)
-			Foreground = false;
+			ForegroundFlag = false;
 			break;
 		case 'c':		// specify directory where Config file lives
 			ptr++;
@@ -2406,8 +2435,8 @@ bool dc_args_is_background(int argc, char** argv)
 		case 'd':		// Dynamic local directories
 			break;
 		case 't':		// log to Terminal (stderr), implies -f
-		case 'f':		// run in Foreground
-			Foreground = true;
+		case 'f':		// run in ForegroundFlag
+			ForegroundFlag = true;
 			break;
 		case 'h':		// -http
 			if ( ptr[0][2] && ptr[0][2] == 't' ) {
@@ -2442,7 +2471,7 @@ bool dc_args_is_background(int argc, char** argv)
 			}
 			break;
 		case 'v':		// display Version info and exit
-			Foreground = true;
+			ForegroundFlag = true;
 			break;
 		default:
 			done = true;
@@ -2453,5 +2482,5 @@ bool dc_args_is_background(int argc, char** argv)
 		}
 	}
 
-    return ! Foreground;
+    return ! ForegroundFlag;
 }

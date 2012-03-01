@@ -1,0 +1,173 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This tests using the KeepClaimIdle attribute in a DAG. The KeepClaimIdle
+# attribute tells the schedd to hold a claim for a specified amount of time after
+# the process terminates with the expectation that another process will come
+# along to reuse the claim.  In the test below, we set the hold time to 30
+# seconds.  We verify that the claim is reused.  Also, we verify that the
+# attribute is not set for the final DAGman node.
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'cmd_q_shows-dag.dag';
+$testdesc =  'Test the condor_q -dag formatter';
+$testname = "cmd_q_shows-dag";
+$dagman_args = "-verbose";
+
+$logfile = "${testname}.dag.dagman.out";
+@outfiles = (
+	'cmd_q_shows-dag-A.err',
+	'cmd_q_shows-dag-A.out',
+	'cmd_q_shows-dag-B_A_A.err',
+	'cmd_q_shows-dag-B_A_A.out',
+	'cmd_q_shows-dag-B_B.err',
+	'cmd_q_shows-dag-B_B.out',
+	'cmd_q_shows-dag-B_C.err',
+	'cmd_q_shows-dag-B_C.out',
+	'cmd_q_shows-dag-C.err',
+	'cmd_q_shows-dag-C.out',
+	'cmd_q_shows-dag-B.dag.condor.sub',
+	'cmd_q_shows-dag-B.dag.dagman.log',
+	'cmd_q_shows-dag-B.dag.dagman.out',
+	'cmd_q_shows-dag-B.dag.lib.err',
+	'cmd_q_shows-dag-B.dag.lib.out',
+	'cmd_q_shows-dag-B.log',
+	'cmd_q_shows-dag-B_A.dag.condor.sub',
+	'cmd_q_shows-dag-B_A.dag.dagman.log',
+	'cmd_q_shows-dag-B_A.dag.dagman.out',
+	'cmd_q_shows-dag-B_A.dag.lib.err',
+	'cmd_q_shows-dag-B_A.dag.lib.out',
+	'cmd_q_shows-dag-B_A.log',
+	'cmd_q_shows-dag.dag.condor.sub',
+	'cmd_q_shows-dag.dag.dagman.log',
+	'cmd_q_shows-dag.dag.dagman.out',
+	'cmd_q_shows-dag.dag.lib.err',
+	'cmd_q_shows-dag.dag.lib.out',
+	'cmd_q_shows-dag.log',
+	'cmd_q_shows-dag.output'
+);
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing log and output files
+runcmd("rm -f $logfile") if (-e $logfile);
+
+foreach (@outfiles) {
+	runcmd("rm -f $_") if (-e $_);
+}
+
+# NMI complains if these files are not around
+runcmd("touch cmd_q_shows-dag.out");
+runcmd("touch cmd_q_shows-dag.err");
+
+$abnormal = sub
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	runcmd("touch cmd_q_shows-dag-B_A.log"); 
+	runcmd("x_condor_q_dag.pl");
+};
+
+my @expected_output = ( 'condor_dagman', '|-A', '|-B', '|-B_A', '|-B_A_A', '|-B_B', '|-B_C',
+	'|-C' );
+
+my @rlengths = ( 0, 1, 1, 2, 3, 2, 2, 1 );
+
+$success = sub {
+	CondorTest::debug("DAG Succeeded as expected\n",1);
+	open CONDORQ,"<cmd_q_shows-dag.output" || die "Could not open cmd_q_shows-dag.output\n";
+	my @received = <CONDORQ>;	
+	close CONDORQ;
+	foreach (@received) {
+		chomp $_;
+		CondorTest::debug("Received: $_\n",1);
+	}
+	if( $#received != $#expected_output ) {
+		die "Received unexpected number $#received of lines\n";	
+	}
+	# First loop: See that we got the expected patterns
+	foreach my $i (0..$#expected_output) {
+		if($received[$i] !~ /$expected_output[$i]/) {
+			die "Expected $received[$i], but got \"$expected_output[$i]\"\n";
+		}
+	}
+	# Second loop: Make sure they were nested as expected
+	my $indent_length = 0;
+	if($received[0] =~ /\s*[0-9]+\.[0-9]+(\s*)/) {
+		$indent_length = length $1;	
+	}
+	foreach my $i (0..$#expected_output) {
+		my $rlength;
+		if($received[$i] =~ /\s*[0-9]+\.[0-9]+(\s*)/) {
+			$rlength = length $1;
+		} else {
+			$rlength = 0;
+		}
+		if( $rlength != $rlengths[$i] + $indent_length ) {
+			die "Indentation not correct in cmd_q_shows-dag.output\n";
+		}
+	}
+};
+
+$failure = sub
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}

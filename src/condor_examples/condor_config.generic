@@ -1028,7 +1028,7 @@ RESERVED_DISK		= 5
 ##  addition to some keep alive messages and other non-essential
 ##  communication.  However, in certain situations, it might be
 ##  desirable to disable the UDP command port (for example, to reduce
-##  the number of ports represented by a GCB broker, etc).  If not
+##  the number of ports represented by a CCB broker, etc).  If not
 ##  defined, the UDP command socket is enabled by default, and to
 ##  modify this, you must restart your Condor daemons. Also, this
 ##  setting must be defined machine-wide.  For example, setting
@@ -1083,7 +1083,8 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #DC_DAEMON_LIST = \
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
-#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT
+#DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
+#DEFRAG
 
 
 ##  Where are the binaries for these daemons?
@@ -1093,12 +1094,14 @@ SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
+CKPT_SERVER			= $(SBIN)/condor_ckpt_server
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
 HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 TRANSFERER			= $(LIBEXEC)/condor_transferer
+DEFRAG                          = $(LIBEXEC)/condor_defrag
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1688,13 +1691,11 @@ PROCD = $(SBIN)/condor_procd
 #
 PROCD_ADDRESS = $(LOCK)/procd_pipe
 
-# The procd currently uses a very simplistic logging system. Since this
-# log will not be rotated like other Condor logs, it is only recommended
-# to set PROCD_LOG when attempting to debug a problem. In other Condor
-# daemons, turning on D_PROCFAMILY will result in that daemon logging
-# all of its interactions with the ProcD.
+# Note that in other Condor daemons, turning on D_PROCFAMILY will
+# result in that daemon logging all of its interactions with the
+# ProcD.
 #
-#PROCD_LOG = $(LOG)/ProcLog
+PROCD_LOG = $(LOG)/ProcLog
 
 # This is the maximum period that the procd will use for taking
 # snapshots (the actual period may be lower if a condor daemon registers
@@ -1923,40 +1924,6 @@ C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
 C_GAHP_LOCK = /tmp/CGAHPLock.$(USERNAME)
 C_GAHP_WORKER_THREAD_LOG = /tmp/CGAHPWorkerLog.$(USERNAME)
 C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
-
-##
-## The location of the wrapper for invoking
-## GT4 GAHP server
-##
-GT4_GAHP = $(SBIN)/gt4_gahp
-
-##
-## The location of GT4 files. This should normally be lib/gt4
-##
-GT4_LOCATION = $(LIB)/gt4
-
-##
-## The location of the wrapper for invoking
-## GT4 GAHP server
-##
-GT42_GAHP = $(SBIN)/gt42_gahp
-
-##
-## The location of GT4 files. This should normally be lib/gt4
-##
-GT42_LOCATION = $(LIB)/gt42
-
-##
-## gt4 gram requires a gridftp server to perform file transfers.
-## If GRIDFTP_URL_BASE is set, then Condor assumes there is a gridftp
-## server set up at that URL suitable for its use. Otherwise, Condor
-## will start its own gridftp servers as needed, using the binary
-## pointed at by GRIDFTP_SERVER. GRIDFTP_SERVER_WRAPPER points to a
-## wrapper script needed to properly set the path to the gridmap file.
-##
-#GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-GRIDFTP_SERVER = $(LIBEXEC)/globus-gridftp-server
-GRIDFTP_SERVER_WRAPPER = $(LIBEXEC)/gridftp_wrapper.sh
 
 ##
 ## Location of the PBS/LSF gahp and its associated binaries
@@ -2476,11 +2443,11 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 # %u --> remote user
 # %x --> proxy command
 # %% --> %
-#SSH_TO_JOB_SSH_CMD = ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h
+#SSH_TO_JOB_SSH_CMD = "ssh -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x %h"
 
 # Additional ssh clients may be configured.  They all have the same
 # default as ssh, except for scp, which omits the %h:
-#SSH_TO_JOB_SCP_CMD = scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x
+#SSH_TO_JOB_SCP_CMD = "scp -oUser=%u -oIdentityFile=%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%k -oGlobalKnownHostsFile=%k -oProxyCommand=%x"
 
 # Path to sshd
 #SSH_TO_JOB_SSHD = /usr/sbin/sshd

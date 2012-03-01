@@ -20,21 +20,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main( int argc, char **argv )
+int main( int , char ** /*argv*/ )
 {
 	char *null = NULL;
 	char *space;
 #ifndef WIN32
-	int dumpnow;
+	int dumpnow = atoi("0");
 #endif
 
 	space = (char *) malloc(600000);
 
 	/* try a couple of different ways to dump core. */
 #ifndef WIN32
-	dumpnow = 7 / 0;
+	dumpnow = 7 / dumpnow;
 #endif
-	*null = '\0';
+	*null = space[100]; // just to use space
 
 	return 0;
 }

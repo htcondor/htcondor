@@ -33,7 +33,11 @@ else()
 #						)
 
 	exec_program(${CMAKE_CURRENT_SOURCE_DIR}/configure ${CMAKE_CURRENT_BINARY_DIR}
-               ARGS --srcdir=${CMAKE_CURRENT_SOURCE_DIR} && rm -f ${CMAKE_CURRENT_BINARY_DIR}/config.h )
+               ARGS --srcdir=${CMAKE_CURRENT_SOURCE_DIR} && rm -f ${CMAKE_CURRENT_BINARY_DIR}/config.h 
+			   RETURN_VALUE retval)
+	if (retval)
+		message(FATAL_ERROR "Running configure in safefile library failed")
+	endif(retval)
 
 endif()
 set(SAFE_OPEN_SRC ${SAFE_OPEN_SRC} PARENT_SCOPE)

@@ -36,6 +36,8 @@ NOT ${SYSTEM_NAME} MATCHES "rhel3"  AND NOT ${SYSTEM_NAME} MATCHES "rhel4" )
         "queryAPI-sim.cpp"
         "" )
 
+    set_source_files_properties(queryAPI-sim.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated)
+
     # Declare the test.
     #
     # FIXME: the cmake code is broken and dumps the list_* files into

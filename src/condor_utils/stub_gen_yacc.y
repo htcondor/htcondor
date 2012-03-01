@@ -83,6 +83,7 @@ char * abbreviate( char *type_name );
 void Trace( char *msg );
 char * find_type_name( char *param_name, struct node *param_list );
 int has_out_params( struct node *action_func_list );
+int yyparse(void);
 
 #define MATCH 0 /* for strcmp() */
 
@@ -574,6 +575,7 @@ main( int argc, char *argv[] )
 	FILE	*fp;
 
 	ProgName = *argv;
+	argc = argc;
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
 			switch( arg[1] ) {
@@ -916,7 +918,7 @@ char* consider_return_value_named_with_typecast( struct node *n, int emit_type,
 	if (emit_type == TRUE) {
 		sprintf(str, "%s = (%s)", varname, node_type(n));
 	} else {
-		sprintf(str, "%s = ", varname, node_type(n));
+		sprintf(str, "%s = ", varname);
 	}
 
 	return str;
@@ -1164,6 +1166,9 @@ output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr,
 {
 	struct node	*p;
 
+	/* warning removal */
+	rtn_type = rtn_type ; is_ptr = is_ptr;
+
 	printf( "\t\tvoid *handle;\n");
 	printf( "\t\t%s (*fptr)(", node_type(n));
 	for( p=list->next; p != list; p = p->next ) {
@@ -1406,7 +1411,7 @@ output_receiver( struct node *n )
 			/* unsigned quantities get typecast into an unsigned long
 				for outputting, this is mostly correct */
 			printf( "\t\tdprintf( D_SYSCALLS, \"\t%s = %%lu\\n\", %s );\n",
-				   p->id, (unsigned long)p->id);
+				   p->id, p->id);
 		}
 	}
 
@@ -1505,7 +1510,16 @@ output_receiver( struct node *n )
 	if (is_void(n)) {
 		printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = (void), errno = N/A\\n\" );\n" );
 	} else {
-		printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = %%d, errno = %%d\\n\", ret_val, (int)terrno );\n" );
+		if ((strcmp(node_type(n), "off_t  ") == 0) ||
+			(strcmp(node_type(n), "ssize_t  ") == 0)) {
+			printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = %%ld, errno = %%d\\n\", ret_val, (int)terrno );\n" );
+		} else if ((strcmp(node_type(n), "void* ") == 0) ||
+				   (strcmp(node_type(n), "void * ") == 0) ||
+				   (strcmp(node_type(n), "caddr_t  ") == 0)) {
+			printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = %%p, errno = %%d\\n\", ret_val, (int)terrno );\n" );
+		} else {
+			printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = %%d, errno = %%d\\n\", ret_val, (int)terrno );\n" );
+		}
 	}
 
 	printf( "\n" );
@@ -1521,10 +1535,16 @@ output_receiver( struct node *n )
 		/* Send system call return value, and errno if needed */
 	if (!is_void(n)) {
 		printf( "\t\tassert( syscall_sock->code(ret_val) );\n" );
-		printf( "\t\tif( %s ) {\n",
+
+		/* Only if the return value is signed do we check to see if it is < 0 */
+		if ((strcmp(node_type(n), "uid_t  ") != 0) &&
+			(strcmp(node_type(n), "gid_t  ") != 0) && 
+			(strcmp(node_type(n), "mode_t  ")!= 0)) {
+			printf( "\t\tif( %s ) {\n",
 			syscall_validity_check_named(n, "ret_val") );
-		printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
-		printf( "\t\t}\n" );
+			printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
+			printf( "\t\t}\n" );
+		}
 	}
 
 		/*
@@ -1715,6 +1735,11 @@ output_sender( struct node *n )
 		/* only read the ret_val from the other side if the function isn't 
 			void */
 		printf( "\tassert( syscall_sock->code(ret_val) );\n" );
+
+		/* If the return type is an unsigned type, don't < 0 it */
+		if ((strcmp(node_type(n), "uid_t  ") != 0) &&
+			(strcmp(node_type(n), "gid_t  ") != 0) &&
+			(strcmp(node_type(n), "mode_t  ") != 0)) {
 		printf( "\tif( %s ) {\n", syscall_validity_check(n) );
 		printf( "\t\tassert( syscall_sock->code(terrno) );\n" );
 		printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
@@ -1723,6 +1748,7 @@ output_sender( struct node *n )
 		printf( "\t\terrno = (int)terrno;\n" );
 		printf( "\t\treturn ret_val;\n" );
 		printf( "\t}\n" );
+		}
 	}
 
 		/*
@@ -2134,10 +2160,11 @@ abbreviate( char *type_name )
 }
 
 void
-Trace( char *msg )
+Trace( char *msg)
 {
 #define TRACE 0
 #if TRACE == 0		/* keep quiet */
+	msg = msg;
 	return;
 #elif TRACE == 1	/* trace info to the terminal */
 	fprintf( stderr, "Production: \"%s\"\n", msg );

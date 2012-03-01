@@ -31,13 +31,6 @@
 
 #include "condor_socket_types.h"
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-extern "C" {
-void Generic_stop_logging();
-}
-#endif
-
 #if HAVE_CLONE
 #include <sched.h>
 #include <sys/syscall.h>
@@ -1148,18 +1141,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_private_network_name = tmp;
 		}
 
-#if HAVE_EXT_GCB
-		if (sinful_private == NULL
-			&& (param_boolean("NET_REMAP_ENABLE", false, false))) {
-				// If the knob wasn't defined, and GCB is enabled, ask GCB.
-			struct sockaddr_in addr;
-			SOCKET_LENGTH_TYPE addr_len = sizeof(addr);
-			SOCKET sockd = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_file_desc();
-			if (GCB_real_getsockname(sockd, (struct sockaddr *)&addr, &addr_len) >= 0) {
-				sinful_private = strdup(sin_to_string(&addr));
-			}
-		}
-#endif /* HAVE_EXT_GCB */
 		initialized_sinful_private = true;
 		m_dirty_sinful = true;
 	}
@@ -2749,7 +2730,7 @@ DaemonCore::reconfig(void) {
 		// If we are NOT the schedd, then do not use clone, as only
 		// the schedd benefits from clone, and clone is more susceptable
 		// to failures/bugs than fork.
-	if ( !(get_mySubSystem()->isType(SUBSYSTEM_TYPE_SCHEDD)) ) {
+	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_SCHEDD)) {
 		m_use_clone_to_create_processes = false;
 	}
 #endif /* HAVE CLONE */
@@ -3039,7 +3020,6 @@ void DaemonCore::Driver()
 	int			i;
 	int			tmpErrno;
 	time_t		timeout;
-	int result;
 	time_t min_deadline;
 
 #ifndef WIN32
@@ -3145,7 +3125,7 @@ void DaemonCore::Driver()
 		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to
 		// non-blocking mode via fcntl, so the read below will not block.
-		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
+		while( read(async_pipe[0],asyncpipe_buf,8) > 0 ) { }
 #else
 		// windows version of this code is after selector.execute()
 #endif
@@ -3539,11 +3519,11 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						if ( (*pipeTable)[i].handler )
 							// a C handler
-							result = (*( (*pipeTable)[i].handler))( (*pipeTable)[i].service, pipe_end);
+							(*( (*pipeTable)[i].handler))( (*pipeTable)[i].service, pipe_end);
 						else
 						if ( (*pipeTable)[i].handlercpp )
 							// a C++ handler
-							result = ((*pipeTable)[i].service->*( (*pipeTable)[i].handlercpp))(pipe_end);
+							((*pipeTable)[i].service->*( (*pipeTable)[i].handlercpp))(pipe_end);
 						else
 						{
 							// no handler registered
@@ -4263,7 +4243,6 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	int					index;
 	int					reqFound = FALSE;
 	int					result = FALSE;
-	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
 	MyString            user;
     ClassAd *the_policy     = NULL;
@@ -4625,7 +4604,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 	// read in the command from the sock with a timeout value of just 1 second,
 	// since we know there is already some data waiting for us.
-	old_timeout = sock->timeout(1);
+	sock->timeout(1);
 	result = sock->code(req);
 	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
@@ -5881,7 +5860,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			// we just need to write something to ensure that the
 			// select() in Driver() does not block.
 			if ( async_sigs_unblocked == TRUE ) {
-				write(async_pipe[1],"!",1);
+				_condor_full_write(async_pipe[1],"!",1);
 			}
 #endif
 			msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
@@ -6431,6 +6410,9 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			    const char* cgroup,
                             const char* glexec_proxy)
 {
+    double begintime = UtcTime::getTimeDouble();
+   	double runtime = begintime;
+
 	bool success = false;
 	bool family_registered = false;
 	if (!m_proc_family->register_subfamily(child_pid,
@@ -6443,6 +6425,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
+    runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -6451,6 +6434,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 					child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
+       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
 	}
 	if (login != NULL) {
 		if (!m_proc_family->track_family_via_login(child_pid, login)) {
@@ -6461,9 +6445,11 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        login);
 			goto REGISTER_FAMILY_DONE;
 		}
+       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
 	}
 	if (group != NULL) {
 #if defined(LINUX)
+		*group = 0;
 		if (!m_proc_family->
 			track_family_via_allocated_supplementary_group(child_pid, *group))
 		{
@@ -6473,6 +6459,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
+		ASSERT( *group != 0 ); // tracking gid should never be group 0
 #else
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
@@ -6503,6 +6490,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
+       runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -6513,7 +6501,11 @@ REGISTER_FAMILY_DONE:
 			            "with root %u\n",
 			        child_pid);
 		}
+        runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
 	}
+
+    runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
+
 	return success;
 }
 
@@ -6549,7 +6541,8 @@ public:
 		int the_want_command_port,
 		const sigset_t *the_sigmask,
 		size_t *core_hard_limit,
-		int		*affinity_mask
+		int		*affinity_mask,
+		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
 	   m_inheritbuf(the_inheritbuf),
@@ -6565,6 +6558,7 @@ public:
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
 	   m_core_hard_limit(core_hard_limit),
 	   m_affinity_mask(affinity_mask),
+ 	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
 	   m_no_dprintf_allowed(false)
 	{
@@ -6623,8 +6617,10 @@ private:
 	size_t *m_core_hard_limit;
 	const int    *m_affinity_mask;
 	Env m_envobject;
+    FilesystemRemap *m_fs_remap;
 	bool m_wrote_tracking_gid;
 	bool m_no_dprintf_allowed;
+	priv_state m_priv_state;
 };
 
 enum {
@@ -6863,7 +6859,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom(GetEnviron());
+		m_envobject.Import();
 	}
 
 		// Put the caller's env requests into the job's environment, potentially
@@ -7074,6 +7070,7 @@ void CreateProcessForkit::exec() {
 			}
 
 			if (tracking_gid_ptr != NULL) {
+				ASSERT( *tracking_gid_ptr != 0 ); // tracking group should never be group 0
 				set_user_tracking_gid(*tracking_gid_ptr);
 			}
 		}
@@ -7081,6 +7078,8 @@ void CreateProcessForkit::exec() {
 
 		// This _must_ be called before calling exec().
 	writeTrackingGid(tracking_gid);
+
+		// Create new filesystem namespace if wanted
 
 	int openfds = getdtablesize();
 
@@ -7168,6 +7167,55 @@ void CreateProcessForkit::exec() {
 		}
 	}
 
+	// Now remount filesystems with fs_bind option, to give this
+	// process per-process tree mount table
+
+	// This requires rootly power
+	if (m_fs_remap) {
+		int ret = 0;
+		if (can_switch_ids()) {
+			m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+#ifdef HAVE_UNSHARE
+			int rc = ::unshare(CLONE_NEWNS|CLONE_FS);
+			if (rc) {
+				dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
+				ret = write(m_errorpipe[1], &errno, sizeof(errno));
+				if (ret < 1) {
+					_exit(errno);
+				} else {
+					_exit(errno);
+				}
+			}
+#else
+			dprintf(D_ALWAYS, "Can not remount filesystems because this system does not have unshare(2)\n");
+			errno = ENOSYS;
+			ret = write(m_errorpipe[1], &errno, sizeof(errno));
+			if (ret < 1) {
+				_exit(errno);
+			} else {
+				_exit(errno);
+			}
+#endif
+		} else {
+			dprintf(D_ALWAYS, "Not remapping FS as requested, due to lack of privileges.\n");
+			m_fs_remap = NULL;
+		}
+	}
+
+	if (m_fs_remap && m_fs_remap->PerformMappings()) {
+		int ret = write(m_errorpipe[1], &errno, sizeof(errno));
+		if (ret < 1) {
+			_exit(errno);
+		} else {
+			_exit(errno);
+		}
+	}
+
+	// And back to normal userness
+	if (m_fs_remap) {
+		set_priv_no_memory_changes( m_priv_state );
+	}
+
 
 		/* Re-nice ourself */
 	if( m_nice_inc > 0 ) {
@@ -7250,15 +7298,6 @@ void CreateProcessForkit::exec() {
 		// once again, make sure that if the dprintf code opened a
 		// lock file and has an fd, that we close it before we
 		// exec() so we don't leak it.
-#if HAVE_EXT_GCB
-		/*
-		  this method currently only lives in libGCB.a, so don't even
-		  try to param() or call this function unless we're on a
-		  platform where we're using the GCB external
-		*/
-	Generic_stop_logging();
-#endif
-
 	dprintf_wrapup_fork_child();
 
 	bool found;
@@ -7377,7 +7416,8 @@ int DaemonCore::Create_Process(
 			size_t        *core_hard_limit,
 			int			  *affinity_mask,
 			char const    *daemon_sock,
-			MyString      *err_return_msg
+			MyString      *err_return_msg,
+			FilesystemRemap *remap
             )
 {
 	int i, j;
@@ -7386,6 +7426,9 @@ int DaemonCore::Create_Process(
 	int numInheritFds = 0;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
+
+	// Remap our executable and CWD if necessary.
+	std::string alt_executable_fullpath, alt_cwd;
 
 	// For automagic DC std pipes.
 	int dc_pipe_fds[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
@@ -7445,7 +7488,9 @@ int DaemonCore::Create_Process(
 
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
 
-
+	double runtime = UtcTime::getTimeDouble();
+    double create_process_begin_time = runtime;
+    double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	// First do whatever error checking we can that is not platform specific
@@ -7466,7 +7511,7 @@ int DaemonCore::Create_Process(
 	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
-		//  GCB's trickery if present.  As this address is
+		//  CCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
 	{
@@ -8116,6 +8161,8 @@ int DaemonCore::Create_Process(
 	//
 	if ( priv == PRIV_USER_FINAL ) {
 		create_process_flags |= CREATE_NEW_CONSOLE;
+		si.dwFlags |= STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_SHOWNOACTIVATE;
 	}
 
 	const char *cwdBackup;
@@ -8125,10 +8172,14 @@ int DaemonCore::Create_Process(
 		cwdBackup = cwd;
 	}
 		
+    runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
+
+        runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
+
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
@@ -8176,6 +8227,8 @@ int DaemonCore::Create_Process(
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : executable,
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwdBackup,&si,&piProcess);
+
+        runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
 
 		set_priv(s);
 	}
@@ -8257,6 +8310,9 @@ int DaemonCore::Create_Process(
 		}
 	}
 #else
+	// Squash compiler warning about inherit_handles being set but not used on Linux
+	if (inherit_handles) {}
+
 	// START A NEW PROCESS ON UNIX
 
 		// We have to do some checks on the executable name and the
@@ -8377,6 +8433,15 @@ int DaemonCore::Create_Process(
 		}
 	}
 
+	if (remap) {
+		alt_executable_fullpath = remap->RemapFile(executable_fullpath);
+		alt_cwd = remap->RemapDir(cwd);
+		if (alt_executable_fullpath.compare(executable_fullpath))
+			dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
+		if (alt_cwd.compare(cwd))
+			dprintf(D_ALWAYS, "Remapped cwd: %s\n", alt_cwd.c_str());
+	}
+
 	{
 			// Create a "forkit" object to hold all the state that we need in the child.
 			// In some cases, the "fork" will actually be a clone() operation, which
@@ -8393,9 +8458,9 @@ int DaemonCore::Create_Process(
 			time_of_fork,
 			mii,
 			family_info,
-			cwd,
+			alt_cwd.length() ? alt_cwd.c_str() : cwd,
 			executable,
-			executable_fullpath,
+			alt_executable_fullpath.length() ? alt_executable_fullpath.c_str() : executable_fullpath,
 			std,
 			numInheritFds,
 			inheritFds,
@@ -8404,7 +8469,8 @@ int DaemonCore::Create_Process(
 			want_command_port,
 			sigmask,
 			core_hard_limit,
-			affinity_mask);
+			affinity_mask,
+			remap);
 
 		newpid = forkit.fork_exec();
 	}
@@ -8444,13 +8510,6 @@ int DaemonCore::Create_Process(
 			newpid = FALSE;
 			goto wrapup;
 		}
-#if defined(LINUX)
-		if( family_info && family_info->group_ptr ) {
-				// pass the tracking gid back to our caller
-				// (Currently, we only get here in the starter.)
-			*(family_info->group_ptr) = child_tracking_gid;
-		}
-#endif
 
 			// check our error pipe for any problems before the exec
 		int child_errno = 0;
@@ -8551,6 +8610,17 @@ int DaemonCore::Create_Process(
 			goto wrapup;
 		}
 		close(errorpipe[0]);
+
+#if defined(LINUX)
+		if( family_info && family_info->group_ptr ) {
+				// pass the tracking gid back to our caller
+				// (Currently, we only get here in the starter.)
+				// By the time we get here, we know exec succeeded,
+				// so the tracking gid should never be group 0.
+			ASSERT( child_tracking_gid != 0 );
+			*(family_info->group_ptr) = child_tracking_gid;
+		}
+#endif
 
 			// Now that we've seen if exec worked, if we are trying to
 			// create a paused process, we need to wait for the
@@ -8713,9 +8783,13 @@ int DaemonCore::Create_Process(
 	}
 #endif
 
+    runtime = UtcTime::getTimeDouble();
+    delta_runtime = (runtime - create_process_begin_time);
 	dprintf(D_DAEMONCORE,
-		"Child Process: pid %lu at %s\n",
-		(unsigned long)newpid,pidtmp->sinful_string.Value());
+		"Child Process: pid %lu at %s (%.2f sec)\n",
+		(unsigned long)newpid, 
+        pidtmp->sinful_string.Value(), 
+        delta_runtime);
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -8746,6 +8820,15 @@ int DaemonCore::Create_Process(
 			}
 		}
 	}
+
+    runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
+    runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
+    if ((runtime - create_process_begin_time) > delta_runtime + 0.5) {
+	   dprintf(D_DAEMONCORE,
+           "Warning: cleanup from Create_Process took %.3f sec, Create_Process took %.3f sec overall\n",
+           (runtime - create_process_begin_time) - delta_runtime,
+           (runtime - create_process_begin_time));
+    }
 
 	errno = return_errno;
 	return newpid;
@@ -8913,9 +8996,13 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            write(errorpipe[1], &child_errno, sizeof(child_errno));
+            int ret = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
-            exit(4);
+			if (ret < 1) {
+				exit(4);
+			} else {
+				exit(4);
+			}
         }
 			// if we got this far, we know we don't need the errorpipe
 			// anymore, so we can close it now...
@@ -10578,6 +10665,7 @@ bool DaemonCore::ProcessExitedButNotReaped(pid_t pid)
 #ifndef WIN32
 	WaitpidEntry wait_entry;
 	wait_entry.child_pid = pid;
+	wait_entry.exit_status = 0; // ignored in WaitpidEntry::operator==, avoid uninit warning
 
 	if(WaitpidQueue.IsMember(wait_entry)) {
 		return true;

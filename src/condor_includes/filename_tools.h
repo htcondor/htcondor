@@ -76,6 +76,8 @@ class MyString;
 int filename_split( const char *path, MyString &dir, MyString &file );
 int filename_split( const char *path, std::string &dir, std::string &file );
 
+int is_relative_to_cwd( std::string &path );
+
 /** 
 Take an input string which looks like this:
 "filename = url ; filename = url ; ..."

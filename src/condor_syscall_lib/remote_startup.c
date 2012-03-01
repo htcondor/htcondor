@@ -171,7 +171,6 @@ static void _condor_scan_cmd( char *buf, int *argc, char *argv[] );
 static enum result _condor_do_cmd( int argc, char *argv[] );
 static enum command _condor_find_cmd( const char *name );
 static BOOLEAN condor_iwd( const char *path );
-static BOOLEAN condor_fd( const char *num, const char *path, const char *open_mode );
 static BOOLEAN condor_ckpt( const char *path );
 static BOOLEAN condor_restart( void );
 static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
@@ -560,7 +559,7 @@ _condor_do_cmd( int argc, char *argv[] )
 		return (condor_iwd( argv[1] ))?OK:NOT_OK;
 	  case FD:
 		assert( argc == 4 );
-		return (condor_fd( argv[1], argv[2], argv[3] ))?OK:NOT_OK;
+		return TRUE; /* Never actually used */
 	  case RESTART:
 		if( argc != 1 ) {
 			return NOT_OK;
@@ -611,13 +610,6 @@ condor_iwd( const char *path )
 	int scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
 	chdir( path );
 	SetSyscalls(scm);
-	return TRUE;
-}
-
-static BOOLEAN
-condor_fd( const char *num, const char *path, const char *open_mode )
-{
-	/* no longer used  - ignore */
 	return TRUE;
 }
 

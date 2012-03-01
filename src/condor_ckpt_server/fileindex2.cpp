@@ -57,7 +57,7 @@ machine_node* FileIndex::FindOrAddMachine(struct in_addr machine_IP,
                                           int            AddFlag)
 {
   int           hash_bucket;
-  int           temp;
+  int           temp = 0;
   machine_node* trail=NULL;
   machine_node* ptr;
   char          pathname[MAX_PATHNAME_LENGTH];
@@ -113,7 +113,7 @@ owner_node* FileIndex::FindOrAddOwner(machine_node* m,
 {
   owner_node* trail=NULL;
   owner_node* ptr;
-  int         temp;
+  int         temp = 0;
   char        pathname[MAX_PATHNAME_LENGTH];
 
   ptr = m->owner_root;
@@ -167,7 +167,7 @@ file_node* FileIndex::FindOrAddFile(file_node*& file_root,
 {
   file_node* trail=NULL;
   file_node* ptr;
-  int        temp;
+  int        temp = 0;
 
   ptr = file_root;
   while ((ptr != NULL) && ((temp=strncmp(file_name, ptr->file_name, 
@@ -490,8 +490,9 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 		if (machine_ptr->owner_root == NULL) {
 			sprintf(pathname, "%s%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
 					owner_name);
-			if (rmdir(pathname) != 0)
+			if (rmdir(pathname) != 0) {
 /*				retCode = CANNOT_DELETE_DIRECTORY; */ ;
+			}
 			machine_rep_ptr = machine_ptr->left;
 			if (machine_rep_ptr == NULL) {
 				if (machine_trail == NULL)
@@ -523,8 +524,9 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 			if ((hash_table[hash_bucket] == NULL) && 
 				(retCode != CANNOT_DELETE_DIRECTORY)) {
 				sprintf(pathname, "%s%s", LOCAL_DRIVE_PREFIX, machine_name);
-				if (rmdir(pathname) != 0)
+				if (rmdir(pathname) != 0) {
 /*					retCode = CANNOT_DELETE_DIRECTORY; */ ;
+				}
 			}
 		}
     }

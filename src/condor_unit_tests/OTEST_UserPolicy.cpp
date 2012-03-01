@@ -157,7 +157,6 @@ static ClassAdParser parser;
 static ClassAdUnParser unparser;
 static compat_classad::ClassAd* ad;
 static string classad_string;
-static MyString reason;
 
 //string constants used for initializing ClassAds
 static const char
@@ -2253,6 +2252,7 @@ static bool test_firing_reason_empty() {
 }
 
 static bool test_firing_reason_undefined_timer_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has TimerRemove evaluate to "
 		"undefined.");
@@ -2273,7 +2273,7 @@ static bool test_firing_reason_undefined_timer_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2284,6 +2284,7 @@ static bool test_firing_reason_undefined_timer_remove() {
 }
 
 static bool test_firing_reason_undefined_periodic_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
 		"undefined.");
@@ -2303,7 +2304,7 @@ static bool test_firing_reason_undefined_periodic_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2314,6 +2315,7 @@ static bool test_firing_reason_undefined_periodic_hold() {
 }
 
 static bool test_firing_reason_undefined_periodic_release() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has PeriodicRelease evaluate "
 		"to undefined.");
@@ -2333,7 +2335,7 @@ static bool test_firing_reason_undefined_periodic_release() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2344,6 +2346,7 @@ static bool test_firing_reason_undefined_periodic_release() {
 }
 
 static bool test_firing_reason_undefined_periodic_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has PeriodicRemove evaluate "
 		"to undefined.");
@@ -2363,7 +2366,7 @@ static bool test_firing_reason_undefined_periodic_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2374,6 +2377,7 @@ static bool test_firing_reason_undefined_periodic_remove() {
 }
 
 static bool test_firing_reason_undefined_on_exit_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has OnExitHold evaluate "
 		"to undefined.");
@@ -2393,7 +2397,7 @@ static bool test_firing_reason_undefined_on_exit_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2404,6 +2408,7 @@ static bool test_firing_reason_undefined_on_exit_hold() {
 }
 
 static bool test_firing_reason_undefined_on_exit_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with a ClassAd that has OnExitRemove evaluate "
 		"to undefined.");
@@ -2423,7 +2428,7 @@ static bool test_firing_reason_undefined_on_exit_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2434,6 +2439,7 @@ static bool test_firing_reason_undefined_on_exit_remove() {
 }
 
 static bool test_firing_reason_only_timer_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has TimerRemove evaluate to true.");
@@ -2453,7 +2459,7 @@ static bool test_firing_reason_only_timer_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2464,6 +2470,7 @@ static bool test_firing_reason_only_timer_remove() {
 }
 
 static bool test_firing_reason_only_periodic_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicHold evaluate to true.");
@@ -2482,7 +2489,7 @@ static bool test_firing_reason_only_periodic_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2493,6 +2500,7 @@ static bool test_firing_reason_only_periodic_hold() {
 }
 
 static bool test_custom_firing_reason_only_periodic_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicHold evaluate to true and PeriodicHoldReason is defined.");
@@ -2511,7 +2519,7 @@ static bool test_custom_firing_reason_only_periodic_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2522,6 +2530,7 @@ static bool test_custom_firing_reason_only_periodic_hold() {
 }
 
 static bool test_firing_reason_only_periodic_release() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRelease evaluate to true.");
@@ -2540,7 +2549,7 @@ static bool test_firing_reason_only_periodic_release() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2551,6 +2560,7 @@ static bool test_firing_reason_only_periodic_release() {
 }
 
 static bool test_custom_firing_reason_only_periodic_release() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRelease evaluate to true and PeriodicReleaseReason is defined.");
@@ -2569,7 +2579,7 @@ static bool test_custom_firing_reason_only_periodic_release() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2580,6 +2590,7 @@ static bool test_custom_firing_reason_only_periodic_release() {
 }
 
 static bool test_firing_reason_only_periodic_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRemove evaluate to true.");
@@ -2598,7 +2609,7 @@ static bool test_firing_reason_only_periodic_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2609,6 +2620,7 @@ static bool test_firing_reason_only_periodic_remove() {
 }
 
 static bool test_custom_firing_reason_only_periodic_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
 		"has PeriodicRemove evaluate to true and PeriodicRemoveReason is defined.");
@@ -2627,7 +2639,7 @@ static bool test_custom_firing_reason_only_periodic_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2638,6 +2650,7 @@ static bool test_custom_firing_reason_only_periodic_remove() {
 }
 
 static bool test_firing_reason_only_false() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns false after a call to "
 		"AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has all"
 		" the checked attributes evaluate to false.");
@@ -2651,20 +2664,20 @@ static bool test_firing_reason_only_false() {
 	UserPolicy policy;
 	policy.Init(ad);
 	policy.AnalyzePolicy(PERIODIC_ONLY);
-	MyString reason;
 	int code;
 	int subcode;
 	bool ret_val = policy.FiringReason(reason,code,subcode);
 	emit_output_actual_header();
 	emit_param("Returns false", "%s", tfstr(ret_val == false));
 	CLEANUP;
-	if(ret_val != NULL) {
+	if(ret_val) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_firing_reason_exit_timer_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has TimerRemove evaluate to true.");
@@ -2684,7 +2697,7 @@ static bool test_firing_reason_exit_timer_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2695,6 +2708,7 @@ static bool test_firing_reason_exit_timer_remove() {
 }
 
 static bool test_firing_reason_exit_periodic_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has PeriodicHold evaluate to true.");
@@ -2713,7 +2727,7 @@ static bool test_firing_reason_exit_periodic_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2724,6 +2738,7 @@ static bool test_firing_reason_exit_periodic_hold() {
 }
 
 static bool test_firing_reason_exit_periodic_release() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has PeriodicRelease evaluate to true.");
@@ -2742,7 +2757,7 @@ static bool test_firing_reason_exit_periodic_release() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2753,6 +2768,7 @@ static bool test_firing_reason_exit_periodic_release() {
 }
 
 static bool test_firing_reason_exit_periodic_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has PeriodicRemove evaluate to true.");
@@ -2771,7 +2787,7 @@ static bool test_firing_reason_exit_periodic_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2782,6 +2798,7 @@ static bool test_firing_reason_exit_periodic_remove() {
 }
 
 static bool test_firing_reason_exit_on_exit_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitHold evaluate to true.");
@@ -2800,7 +2817,7 @@ static bool test_firing_reason_exit_on_exit_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2811,6 +2828,7 @@ static bool test_firing_reason_exit_on_exit_hold() {
 }
 
 static bool test_custom_firing_reason_exit_on_exit_hold() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitHold evaluate to true and OnExitHoldReason is defined.");
@@ -2829,7 +2847,7 @@ static bool test_custom_firing_reason_exit_on_exit_hold() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2840,6 +2858,7 @@ static bool test_custom_firing_reason_exit_on_exit_hold() {
 }
 
 static bool test_firing_reason_exit_on_exit_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitRemove evaluate to true.");
@@ -2858,7 +2877,7 @@ static bool test_firing_reason_exit_on_exit_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2869,6 +2888,7 @@ static bool test_firing_reason_exit_on_exit_remove() {
 }
 
 static bool test_custom_firing_reason_exit_on_exit_remove() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has OnExitRemove evaluate to true and OnExitRemoveReason is defined.");
@@ -2887,7 +2907,7 @@ static bool test_custom_firing_reason_exit_on_exit_remove() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -2898,6 +2918,7 @@ static bool test_custom_firing_reason_exit_on_exit_remove() {
 }
 
 static bool test_firing_reason_exit_false() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
 		"that has all the checked attributes evaluate to false.");
@@ -2917,7 +2938,7 @@ static bool test_firing_reason_exit_false() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -3007,6 +3028,7 @@ static bool test_remove_macro_firing_expression_value() {
 }
 
 static bool test_remove_macro_firing_reason() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
 		"that has PeriodicRemove evaluate to false, but SYSTEM_PERIODIC_REMOVE "
@@ -3027,7 +3049,7 @@ static bool test_remove_macro_firing_reason() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -3117,6 +3139,7 @@ static bool test_release_macro_firing_expression_value() {
 }
 
 static bool test_release_macro_firing_reason() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
 		"that has PeriodicRelease evaluate to false, but SYSTEM_PERIODIC_RELEASE "
@@ -3137,7 +3160,7 @@ static bool test_release_macro_firing_reason() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;
@@ -3227,6 +3250,7 @@ static bool test_hold_macro_firing_expression_value() {
 }
 
 static bool test_hold_macro_firing_reason() {
+	MyString reason;
 	emit_test("Test that FiringReason() returns the correct reason after a call"
 		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
 		"that has PeriodicHold evaluate to false, but SYSTEM_PERIODIC_HOLD "
@@ -3247,7 +3271,7 @@ static bool test_hold_macro_firing_reason() {
 	MyString ret_reason;
 	int code;
 	int subcode;
-	bool ret_val = policy.FiringReason(ret_reason,code,subcode);
+	policy.FiringReason(ret_reason,code,subcode);
 	emit_output_actual_header();
 	emit_retval("%s", ret_reason.Value());
 	CLEANUP;

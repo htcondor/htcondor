@@ -145,4 +145,7 @@ if( STD_UNIVERSE )
 	install ( FILES ${LIBGCC_EH} DESTINATION ${C_LIB} RENAME libcomp_libgcc_eh.a )
 	install ( FILES ${STDCPLUS} DESTINATION ${C_LIB} RENAME libcomp_libstdc++.a )
 
+	if (UNIX)
+		set_source_files_properties(receivers.cpp senders.cpp PROPERTIES COMPILE_FLAGS "-Wno-uninitialized -Wno-unused-variable -Wno-unused-parameter")
+	endif(UNIX)
 endif( STD_UNIVERSE )

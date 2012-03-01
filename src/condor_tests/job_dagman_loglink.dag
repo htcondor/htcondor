@@ -1,0 +1,7 @@
+Job nodeA job_dagman_loglink.cmd
+Vars nodeA nodename="$(JOB)"
+
+Job nodeB job_dagman_loglink.cmd
+Vars nodeB nodename="$(JOB)"
+
+Parent nodeA Child nodeB

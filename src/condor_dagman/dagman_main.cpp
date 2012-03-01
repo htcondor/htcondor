@@ -44,7 +44,7 @@ void ExitSuccess();
 	// Note: these functions are declared 'extern "C"' where they're
 	// implemented; if we don't do that here we get a link failure
 	// (I think because of the name mangling).  wenger 2007-02-09.
-extern "C" void process_config_source( char* file, char* name,
+extern "C" void process_config_source( char* file, const char* name,
 			char* host, int required );
 extern "C" bool is_piped_command(const char* filename);
 
@@ -130,7 +130,8 @@ Dagman::Dagman() :
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100),
 	_runPost(true),
-	_defaultPriority(0)
+	_defaultPriority(0),
+	_claim_hold_time(20)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -403,6 +404,7 @@ Dagman::Config()
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
 				0, 1000000 );
+	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME", _claim_hold_time, 0, 3600);
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -452,20 +454,26 @@ main_shutdown_fast()
 void main_shutdown_graceful() {
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
-    dagman.CleanUp();
+	dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
 
-void main_shutdown_rescue( int exitVal ) {
+void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
-	if ( inShutdownRescue) return;
+	if ( inShutdownRescue ) {
+		return;
+	}
 	inShutdownRescue = true;
 
+	dagman.dag->_dagStatus = dagStatus;
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
+		// Avoid writing two different rescue DAGs if the "main" DAG and
+		// the final node (if any) both fail.
+	static bool wroteRescue = false;
 	if( dagman.dag ) {
-			// we write the rescue DAG *before* removing jobs because
+			// We write the rescue DAG *before* removing jobs because
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
@@ -473,7 +481,9 @@ void main_shutdown_rescue( int exitVal ) {
 			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							false, dagman._writePartialRescueDag );
+							wroteRescue, false,
+							dagman._writePartialRescueDag );
+				wroteRescue = true;
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
@@ -491,11 +501,19 @@ void main_shutdown_rescue( int exitVal ) {
 			dagman.dag->RemoveRunningScripts();
 		}
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
+
+			// Start the final node if we have one.
+		if ( dagman.dag->StartFinalNode() ) {
+				// We started a final node; return here so we wait for the
+				// final node to finish, instead of exiting immediately.
+			inShutdownRescue = false;
+			return;
+		}
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
 	unlink( lockFileName ); 
-    dagman.CleanUp();
+	dagman.CleanUp();
 	inShutdownRescue = false;
 	DC_Exit( exitVal );
 }
@@ -505,7 +523,7 @@ void main_shutdown_rescue( int exitVal ) {
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
-	main_shutdown_rescue( EXIT_ABORT );
+	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM );
 	return FALSE;
 }
 
@@ -513,7 +531,7 @@ void ExitSuccess() {
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	unlink( lockFileName ); 
-    dagman.CleanUp();
+	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
 }
 
@@ -895,7 +913,7 @@ void main_init (int argc, char ** const argv) {
 	}
 
 		// if requested, wait for someone to attach with a debugger...
-	while( wait_for_debug );
+	while( wait_for_debug ) { }
 
     {
 		MyString cwd;
@@ -1006,7 +1024,7 @@ void main_init (int argc, char ** const argv) {
 							"because of -DumpRescue flag\n" );
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							true, false );
+							false, true, false );
 			}
 			
 			dagman.dag->RemoveRunningJobs(dagman, true);
@@ -1086,11 +1104,13 @@ void main_init (int argc, char ** const argv) {
 #ifndef NOT_DETECT_CYCLE
 	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{
-		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
+		// Note: maybe we should run the final node here, if there is one.
+		// wenger 2011-12-19.
+		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, please check input\n");
 	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
-				  dagman.dag->NumNodes() );
+				  dagman.dag->NumNodes( true ) );
 
 	MyString firstLocation;
 	if ( dagman.dag->GetReject( firstLocation ) ) {
@@ -1109,7 +1129,8 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-					dagman.multiDags, dagman.maxRescueDagNum, false, false );
+					dagman.multiDags, dagman.maxRescueDagNum, false,
+					false, false );
 		ExitSuccess();
 		return;
 	}
@@ -1169,8 +1190,8 @@ void main_init (int argc, char ** const argv) {
 
 void
 print_status() {
-	int total = dagman.dag->NumNodes();
-	int done = dagman.dag->NumNodesDone();
+	int total = dagman.dag->NumNodes( true );
+	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
 	int submitted = dagman.dag->NumJobsSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
@@ -1225,14 +1246,16 @@ void condor_event_timer () {
 			// Note: it would be nice to also have the proc submit
 			// count here.  wenger, 2006-02-08.
 		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
-					  justSubmitted, justSubmitted == 1 ? "" : "s" );
+				  	justSubmitted, justSubmitted == 1 ? "" : "s" );
 	}
 
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
+			debug_printf( DEBUG_NORMAL,
+						"ProcessLogEvents(CONDORLOG) returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
 	}
@@ -1240,16 +1263,16 @@ void condor_event_timer () {
 	if( dagman.dag->DetectDaPLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
 			debug_printf( DEBUG_NORMAL,
-						"ProcessLogEvents(DAPLOG) returned false\n");
+						"ProcessLogEvents(DAPLOG) returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR );
+			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
 	}
 
     // print status if anything's changed (or we're in a high debug level)
-    if( prevJobsDone != dagman.dag->NumNodesDone()
-        || prevJobs != dagman.dag->NumNodes()
+    if( prevJobsDone != dagman.dag->NumNodesDone( true )
+        || prevJobs != dagman.dag->NumNodes( true )
         || prevJobsFailed != dagman.dag->NumNodesFailed()
         || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
         || prevJobsReady != dagman.dag->NumNodesReady()
@@ -1258,8 +1281,8 @@ void condor_event_timer () {
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
-        prevJobsDone = dagman.dag->NumNodesDone();
-        prevJobs = dagman.dag->NumNodes();
+        prevJobsDone = dagman.dag->NumNodesDone( true );
+        prevJobs = dagman.dag->NumNodes( true );
         prevJobsFailed = dagman.dag->NumNodesFailed();
         prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
         prevJobsReady = dagman.dag->NumNodesReady();
@@ -1273,13 +1296,13 @@ void condor_event_timer () {
 
 	dagman.dag->DumpNodeStatus( false, false );
 
-    ASSERT( dagman.dag->NumNodesDone() + dagman.dag->NumNodesFailed()
-			<= dagman.dag->NumNodes() );
+    ASSERT( dagman.dag->NumNodesDone( true ) + dagman.dag->NumNodesFailed()
+			<= dagman.dag->NumNodes( true ) );
 
     //
     // If DAG is complete, hurray, and exit.
     //
-    if( dagman.dag->DoneSuccess() ) {
+    if( dagman.dag->DoneSuccess( true ) ) {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
@@ -1294,35 +1317,71 @@ void condor_event_timer () {
 		return;
     }
 
+	//
+	// DAG has failed -- dump rescue DAG.
+	//
+    if( dagman.dag->DoneFailed( true ) ) {
+		main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
+		return;
+	}
+
+	//
+	// DAG has succeeded but we haven't run final node yet, so do that.
+	//
+    if( dagman.dag->DoneSuccess( false ) ) {
+		dagman.dag->StartFinalNode();
+		return;
+	}
+
+		// If the DAG is halted, we don't want to actually exit yet if
+		// jobs are still in the queue, or any POST scripts need to be
+		// run (we need to run POST scripts so we don't "waste" jobs
+		// that completed; on the other hand, we don't care about waiting
+		// for PRE scripts because they'll be re-run when the rescue
+		// DAG is run anyhow).
+	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
+				dagman.dag->PostRunNodeCount() == 0 &&
+				!dagman.dag->RunningFinalNode() ) {
+		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
+					"and no jobs or scripts are running\n" );
+		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
+		return;
+	}
+
     //
     // If no jobs are submitted and no scripts are running, but the
     // dag is not complete, then at least one job failed, or a cycle
-    // exists.
+    // exists.  (Note that if the DAG completed successfully, we already
+	// returned from this function above.)
     // 
-    if( dagman.dag->FinishedRunning() ) {
-		if( dagman.dag->DoneFailed() ) {
+    if( dagman.dag->FinishedRunning( false ) ) {
+		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
+		if( dagman.dag->DoneFailed( false ) ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
 				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
+			dagStatus = Dag::DAG_STATUS_NODE_FAILED;
 		} else {
 			// no jobs failed, so a cycle must exist
 			debug_printf( DEBUG_QUIET, "ERROR: DAG finished but not all "
 						"nodes are complete -- checking for a cycle...\n" );
 			if( dagman.dag->isCycle() ) {
 				debug_printf (DEBUG_QUIET, "... ERROR: a cycle exists "
-							"in the dag, plese check input\n");
+							"in the dag, please check input\n");
+				dagStatus = Dag::DAG_STATUS_CYCLE;
 			} else {
 				debug_printf (DEBUG_QUIET, "... ERROR: no cycle found; "
 							"unknown error condition\n");
+				dagStatus = Dag::DAG_STATUS_ERROR;
 			}
 			if ( debug_level >= DEBUG_NORMAL ) {
 				dagman.dag->PrintJobList();
 			}
 		}
 
-		main_shutdown_rescue( EXIT_ERROR );
+		main_shutdown_rescue( EXIT_ERROR, dagStatus );
 		return;
     }
 }

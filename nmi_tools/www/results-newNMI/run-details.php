@@ -5,7 +5,7 @@ define("TASK_URL", "task-details.php?platform=%s&task=%s&runid=%s");
 
 include "Dashboard.php";
 $dash = new Dashboard();
-$dash->print_header("Condor Build and Test Dashboard");
+$dash->print_header("Condor Build and Test Dashboard", 1, 1);
 $dash->connect_to_db();
 
 # get args
@@ -25,39 +25,84 @@ if(!$runid and $sha1) {
 
 ?>
 
-<script type='text/javascript' src='jquery-1.6.2.min.js'></script>
-
 <script type="text/javascript">
   var toggle = 1;
   var toggle2 = 1;
+  var toggle3 = 1;
 
   $(document).ready(function(){
       $("#toggle").click(function(){
 	  if(toggle == 1) {
 	    $(".time").show();
 	    $(".status").hide();
-	    $("#toggle").text("Show task status");
 	    toggle = 0;
 	  }
 	  else {
 	    $(".time").hide();
 	    $(".status").show();
-	    $("#toggle").text("Show task times");
 	    toggle = 1;	    
 	  }
 	});
 
       $("#toggle2").click(function(){
 	  if(toggle2 == 1) {
-	    $(".hide").hide();
-	    $("#toggle2").text("Show successful");
+	    $('.hide').each(function(index) {
+		var hide_count = $(this).data('hide_count');
+		if(isNaN(hide_count)) {
+		  hide_count = 1;
+		}
+		else {
+		  hide_count++;
+		}
+		$(this).data("hide_count", hide_count);
+		$(this).hide();
+	      });
 	    toggle2 = 0;
 	  }
 	  else {
-	    $(".hide").show();
-	    $("#toggle2").text("Show only failed rows");
+	    $('.hide').each(function(index) {
+		var hide_count = $(this).data('hide_count');
+		if(isNaN(hide_count)) {
+		  hide_count = 0;
+		}
+		else {
+		  hide_count--;
+		}
+		$(this).data("hide_count", hide_count);
+		if(hide_count <= 0) {
+		  $(this).show();
+		}
+	      });
 	    toggle2 = 1;
 	  }
+	});
+
+      $("#toggle3").click(function(){
+	  $('.taskrow').each(function(index) {
+	      var hide_count = $(this).data('hide_count');
+	      if(isNaN(hide_count)) {
+		hide_count = 0;
+	      }
+
+	      var task = $(this).text().split("\n")[1];
+	      var regex = $("#toggle3regex").val();
+	      if(!task.match(regex)) {
+		if(toggle3 == 1) {
+		  hide_count++;
+		  $(this).data('hide_count', hide_count);
+		  $(this).hide();
+		}
+		else {
+		  hide_count--;
+		  $(this).data('hide_count', hide_count);
+		  if(hide_count <= 0) {
+		    $(this).show();
+		  }
+		}
+	      }
+	    });
+
+	  toggle3 = (toggle3 + 1) % 2;
 	});
   });
 </script>
@@ -69,6 +114,9 @@ div.status {
 }
 div.time {
   display:none;
+}
+th {
+  background-color: lightgrey;
 }
 -->
 </style>
@@ -168,32 +216,18 @@ foreach ($results as $row) {
 
 print "<p>Filters:<br>\n";
 print "<input type='checkbox' id='toggle' />Show task times &nbsp; &nbsp;\n";
-print "<input type='checkbox' id='toggle2' />Show only failures<br>\n";
+print "<input type='checkbox' id='toggle2' />Hide successful lines &nbsp; &nbsp; \n";
+print "<input type='checkbox' id='toggle3' />Filter by: <input type='textbox' id='toggle3regex' /><br>\n";
 
-
-print "<table border='0' cellspacing='0'>\n";
+print "<table class='tableWithFloatingHeader' border='0' cellspacing='0'>\n";
 print "<tr>\n";
 print "   <th>Build Tasks</th>\n";
 
 
 foreach ($platforms AS $platform) {
-  $display = preg_replace("/nmi:/", "", $platform);
-   
-  if(preg_match("/^x86_64_/", $display)) {
-    $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
-  }
-  elseif(preg_match("/ia64_/", $display)) {
-    $display = preg_replace("/ia64_/", "x86<br>", $display);
-  }
-  else {
-    $display = preg_replace("/x86_/", "x86<br>", $display);
-  }
-
-  $display = "<font style='font-size:75%'>$display</font>";
-
-  print "<td align='center'>$display</td>\n";
+  $display = get_host_display($platform);
+  print "<th align='center'>$display</th>\n";
 }
-
 
 //
 // Print build hosts
@@ -262,8 +296,8 @@ foreach ($build_tasks as $task_name => $results) {
   if($totals["failed"] > 0) { $class = "failed"; }
   elseif($totals["pending"] > 0) { $class = "pending"; }
 
-  print "<tr class=\"hide$class\">\n";
-  print "  <td class=\"left taskname $class\">" . limitSize($task_name,30) . "</td>\n";
+  print "<tr class=\"taskrow hide$class\">\n";
+  print "  <td class=\"left taskname $class\">" . limitSize($task_name,40) . "</td>\n";
   print $output;
   print "</tr>\n";
 }
@@ -274,7 +308,7 @@ foreach ($build_tasks as $task_name => $results) {
 //
 $num_platforms = count($platforms);
 print "<tr><td style='border-bottom-width:0px' colspan=" . ($num_platforms+1) . ">&nbsp;</td></tr>\n";
-print "<tr><th>Test Tasks</th><th colspan=$num_platforms>&nbsp</th></tr>\n";
+print "<tr><th style='background-color:'>Test Tasks</th><th colspan=$num_platforms>&nbsp</th></tr>\n";
 
 
 //
@@ -344,8 +378,8 @@ foreach ($test_tasks as $task_name => $results) {
 
   $link = sprintf(HISTORY_URL, $runid, urlencode($task_name));
 
-  print "<tr class=\"hide$class\">\n";
-  print "  <td class=\"left taskname $class\"><a href='$link'>" . limitSize($task_name,30) . "</a></td>\n";
+  print "<tr class=\"taskrow hide$class\">\n";
+  print "  <td class=\"left taskname $class\"><a href='$link'>" . limitSize($task_name,40) . "</a></td>\n";
   print $output;
   print "</tr>\n";
 }
@@ -378,6 +412,19 @@ function map_result($result) {
   else {
     return "failed";
   }
+}
+
+function get_host_display($platform) {
+  $display = preg_replace("/nmi:/", "", $platform);
+   
+  if(preg_match("/^x86_64_/", $display)) {
+    $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
+  }
+  else {
+    $display = preg_replace("/x86_/", "x86<br>", $display);
+  }
+
+  return "<font style='font-size:75%'>$display</font>";
 }
 
 

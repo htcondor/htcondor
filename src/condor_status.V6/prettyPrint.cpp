@@ -31,6 +31,7 @@ extern AttrListPrintMask 	pm;
 extern int					wantOnlyTotals;
 extern bool javaMode;
 extern bool vmMode;
+extern bool absentMode;
 extern ClassAd *targetAd;
 
 extern char *format_time( int );
@@ -205,6 +206,40 @@ printStartdNormal (ClassAd *ad)
  
 	mem_name = "Mem";
 	mem_attr = ATTR_MEMORY;
+
+    /* 
+     * The absent mode would share no more than four lines of code with
+     * the other two modes, so just handle it separately.
+     */
+    if( absentMode ) {
+        if( ad ) {
+            if( first ) {
+                printf( "\n%-34.34s %-10.10s %-10.10s %-11.11s %-11.11s\n\n",
+                        ATTR_NAME, ATTR_OPSYS, ATTR_ARCH,
+                        "Went Absent", "Will Forget" );
+
+                alpm.registerFormat( "%-34.34s ", ATTR_NAME, "[???] " );
+                alpm.registerFormat( "%-10.10s " , ATTR_OPSYS, "[???] " );
+                alpm.registerFormat( "%-10.10s ", ATTR_ARCH, "[???] " );
+
+                first = false;
+            }
+
+            alpm.display( stdout, ad );
+
+            if( ad->LookupInteger( ATTR_LAST_HEARD_FROM, now ) ) {
+                printf( "%-11.11s", format_date( now ) );
+
+                if( ad->LookupInteger( ATTR_CLASSAD_LIFETIME, actvty ) ) {
+                    printf( " %-11.11s", format_date( now + actvty ) );
+                }
+            }
+
+            printf( "\n" );
+        }
+
+        return;
+    }
 
 	if(javaMode) {
 		opsys_name = opsys_attr = ATTR_JAVA_VENDOR;

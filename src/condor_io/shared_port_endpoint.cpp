@@ -104,7 +104,6 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 
 SharedPortEndpoint::~SharedPortEndpoint()
 {
-	dprintf(D_FULLDEBUG, "SharedPortEndpoint: Inside destructor.\n");
 	StopListener();
 
 #ifdef WIN32

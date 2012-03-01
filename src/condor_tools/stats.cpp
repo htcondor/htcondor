@@ -88,6 +88,7 @@ int ResConvStr(char* InpStr, char* OutStr)
 	  "SHUTDOWN",
 	  "DELETE",
 	  "BACKFILL",
+	  "DRAINED",
   };
   if (State <= NUM_ELEMENTS(StateName) ) {
 	stateStr = StateName[State-1];

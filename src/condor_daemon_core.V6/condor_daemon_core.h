@@ -60,6 +60,7 @@
 #include "condor_sinful.h"
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
+#include "filesystem_remap.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -71,6 +72,7 @@ class ProcFamilyInterface;
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
 template <class Key, class Value> class HashTable; // forward declaration
+class Probe;
 
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;
@@ -429,15 +431,10 @@ class DaemonCore : public Service
     /** Returns the Sinful String <host:port> of the DaemonCore
 		command socket of this process
 		@param usePrivateAddress
-			- If false, return whatever getpeername provides,
-		       which may be a white lie if GCB is involved.
-			- If true, return the "real" local address, no GCB
-			   deception allowed.  Note that the true (no GCB deception)
-			   result should not be passed to another machine; doing
-			   so defeats the entire point of GCB.  This functionality
-			   is provided only for passing to other processes on the
-			   same machine as an optimization.
-        @return A pointer into a <b>static buffer</b>, or NULL on error */
+			- If false, return our address
+			- If true, return our local address, which
+			  may not be valid outside of this machine
+		@return A pointer into a <b>static buffer</b>, or NULL on error */
 	char const * InfoCommandSinfulStringMyself(bool usePrivateAddress);
 
 		/**
@@ -450,7 +447,7 @@ class DaemonCore : public Service
 
 		/**
 		   @return Pointer to a static buffer containing the daemon's
-		   true, local IP address and port if GCB is involved,
+		   true, local IP address and port if CCB is involved,
 		   otherwise NULL.  Nearly the same as
 		   InfoCommandSinfulStringMyself(true) but with a more obvious
 		   name which matches the underlying ClassAd attribute where
@@ -1107,27 +1104,30 @@ class DaemonCore : public Service
         ...
         @param err_return_msg Returned with error message pertaining to
                failure inside the method.  Ignored if NULL (default).
+        @param remap Performs bind mounts for the child process.
+               Ignored if NULL (default).  Ignored on non-Linux.
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
-        const char    *name,
-        ArgList const &arglist,
-        priv_state    priv                 = PRIV_UNKNOWN,
-        int           reaper_id            = 1,
-        int           want_commanand_port  = TRUE,
-        Env const     *env                 = NULL,
-        const char    *cwd                 = NULL,
-        FamilyInfo    *family_info         = NULL,
-        Stream        *sock_inherit_list[] = NULL,
-        int           std[]                = NULL,
-        int           fd_inherit_list[]    = NULL,
-        int           nice_inc             = 0,
-        sigset_t      *sigmask             = NULL,
-        int           job_opt_mask         = 0,
-        size_t        *core_hard_limit     = NULL,
-		int			  *affinity_mask	   = NULL,
-		char const    *daemon_sock         = NULL,
-        MyString      *err_return_msg      = NULL
+        const char      *name,
+        ArgList const   &arglist,
+        priv_state      priv                 = PRIV_UNKNOWN,
+        int             reaper_id            = 1,
+        int             want_commanand_port  = TRUE,
+        Env const       *env                 = NULL,
+        const char      *cwd                 = NULL,
+        FamilyInfo      *family_info         = NULL,
+        Stream          *sock_inherit_list[] = NULL,
+        int             std[]                = NULL,
+        int             fd_inherit_list[]    = NULL,
+        int             nice_inc             = 0,
+        sigset_t        *sigmask             = NULL,
+        int             job_opt_mask         = 0,
+        size_t          *core_hard_limit     = NULL,
+        int              *affinity_mask	     = NULL,
+        char const      *daemon_sock         = NULL,
+        MyString        *err_return_msg      = NULL,
+        FilesystemRemap *remap               = NULL
         );
 
     //@}
@@ -1527,7 +1527,9 @@ class DaemonCore : public Service
        void* New(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);
        void AddToProbe(const char * name, int64_t val);
+       stats_entry_recent<Probe> * AddSample(const char * name, int as, double val);
        double AddRuntime(const char * name, double before); // returns current time.
+       double AddRuntimeSample(const char * name, int as, double before);
 
 	} dc_stats;
 
@@ -1976,6 +1978,19 @@ class DaemonCore : public Service
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
 
+// helper class that uses C++ constructor/destructor to automatically
+// time a function call. 
+class dc_stats_auto_runtime_probe
+{
+public:
+    dc_stats_auto_runtime_probe(const char * name, int as);
+    ~dc_stats_auto_runtime_probe();
+    stats_entry_recent<Probe> * probe;
+    double                    begin;
+};
+
+#define DC_AUTO_RUNTIME_PROBE(n,a) dc_stats_auto_runtime_probe a(n, IF_VERBOSEPUB)
+#define DC_AUTO_FUNCTION_RUNTIME(a) DC_AUTO_RUNTIME_PROBE(__FUNCTION__,a)
 
 
 #ifndef _NO_EXTERN_DAEMON_CORE

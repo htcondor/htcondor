@@ -24,12 +24,6 @@
 **	Set up the various dprintf variables based on the configuration file.
 **
 ************************************************************************/
-
-// This needs to precede all of our includes so that the off_t used in
-// dprintf_internal.h is 64 bits on 32-bit linuxes. Otherwise, we can't
-// deal with logs larger than 2GB.
-#define _FILE_OFFSET_BITS 64
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h" 
@@ -58,11 +52,6 @@ extern void		_condor_dprintf_saved_lines( void );
 extern bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
 
 param_functions *dprintf_param_funcs = NULL;
-
-#if HAVE_EXT_GCB
-void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
-extern "C" void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list args));
-#endif
 
 #if HAVE_BACKTRACE
 static void
@@ -205,7 +194,6 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 
 					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 					if(!logPathParam) {
-						char *str;
 						char *log = param("LOG");
 						char *lsubsys = param("SUBSYSTEM");
 						if(!log || !lsubsys) {
@@ -321,7 +309,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
                 
-                off_t maxlog = 0;
+                int64_t maxlog = 0;
 				pval = param(pname);
 				if (pval != NULL) {
                     // because there is nothing like param_long_long() or param_off_t()
@@ -375,17 +363,6 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 
 	first_time = 0;
 	_condor_dprintf_works = 1;
-#if HAVE_EXT_GCB
-		/*
-		  this method currently only lives in libGCB.a, so don't even
-		  try to param() or call this function unless we're on a
-		  platform where we're using the GCB external
-		*/
-    if ( dprintf_param_funcs->param_boolean_int("NET_REMAP_ENABLE", 0) ) {
-        Generic_set_log_va(_condor_gcb_dprintf_va);
-    }
-#endif
-
 		/*
 		  If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 		  instead of the standard date format in all the log messages
@@ -403,22 +380,3 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 
 	_condor_dprintf_saved_lines();
 }
-
-
-#if HAVE_EXT_GCB
-void
-_condor_gcb_dprintf_va( int flags, char* fmt, va_list args )
-{
-	char* new_fmt;
-	int len;
-
-	len = strlen(fmt);
-	new_fmt = (char*) malloc( (len + 6) * sizeof(char) );
-	if( ! new_fmt ) {
-		EXCEPT( "_condor_gcb_dprintf_va() out of memory!" );
-	}
-	snprintf( new_fmt, len + 6, "GCB: %s", fmt );
-	_condor_dprintf_va( flags, new_fmt, args );
-	free( new_fmt );
-}
-#endif /* HAVE_EXT_GCB */

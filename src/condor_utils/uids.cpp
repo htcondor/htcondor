@@ -31,7 +31,7 @@
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
-static const char* RealUserName = NULL;
+static char* RealUserName = NULL;
 static int SwitchIds = TRUE;
 static int UserIdsInited = FALSE;
 static int OwnerIdsInited = FALSE;
@@ -178,7 +178,7 @@ const PSID my_user_Sid()
 
 	return psid;
 } 
-#endif WIN32
+#endif 
 
 int
 can_switch_ids( void )
@@ -1692,7 +1692,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName)) ) {
+		if ( !(pcache()->get_user_name( my_uid, RealUserName)) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );

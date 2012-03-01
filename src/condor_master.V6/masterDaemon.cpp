@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "condor_email.h"
 #include "condor_environ.h"
-#include "condor_parameters.h"
 #include "daemon_list.h"
 #include "sig_name.h"
 #include "internet.h"
@@ -104,7 +103,7 @@ extern char*		MasterName;
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
 ///////////////////////////////////////////////////////////////////////////
-daemon::daemon(char *name, bool is_daemon_core, bool is_h )
+daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 {
 	char	buf[1000];
 
@@ -223,7 +222,6 @@ daemon::runs_on_this_host()
 	char	*tmp;
 	static bool this_host_addr_cached = false;
 	static std::vector<condor_sockaddr> this_host_addr;
-	int		i, j;
 
 
 	if ( flag_in_config_file != NULL ) {
@@ -253,8 +251,8 @@ daemon::runs_on_this_host()
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
 				return FALSE;
 			} 
-			for (i = 0; i < this_host_addr.size(); ++i) {
-				for (j = 0; j < addrs.size(); ++j) {
+			for (unsigned i = 0; i < this_host_addr.size(); ++i) {
+				for (unsigned j = 0; j < addrs.size(); ++j) {
 					if (this_host_addr[i].compare_address(addrs[j])) {
 						runs_here = TRUE;
 						break;
@@ -587,12 +585,11 @@ int daemon::RealStart( )
 		remove( m_after_startup_wait_for_file.Value() );
 	}
 
-		// Collector needs to listen on a well known port, as does the
-		// Negotiator.  
 		// We didn't want them to use root for any reason, but b/c of
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
+		// Collector needs to listen on a well known port.
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
 
 			// Go through all of the
@@ -2047,7 +2044,7 @@ Daemons::ExecMaster()
 	argv[i++] = condor_main_argv[0];
 
 		// insert "-f" argument so that new master does not fork
-	argv[i++] = "-f";
+	argv[i++] = const_cast<char *>("-f");
 	for(j=1;j<condor_main_argc;j++) {
 		size_t len = strlen(condor_main_argv[j]);
 		if( strncmp(condor_main_argv[j],"-foreground",len)==0 ) {
@@ -2147,7 +2144,7 @@ Daemons::FinalRestartMaster()
 }
 
 
-char* Daemons::DaemonLog( int pid )
+const char* Daemons::DaemonLog( int pid )
 {
 	std::map<std::string, class daemon*>::iterator iter;
 

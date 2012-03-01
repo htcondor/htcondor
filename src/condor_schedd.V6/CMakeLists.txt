@@ -28,6 +28,10 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 	if (HAVE_EXT_GSOAP)
 		install (FILES ${CMAKE_CURRENT_BINARY_DIR}/condorSchedd.wsdl DESTINATION ${C_LIB}/webservice)
+		if (UNIX)
+			set_source_files_properties(schedd_api.cpp PROPERTIES COMPILE_FLAGS -Wno-shadow)
+		endif(UNIX)
+
 	endif(HAVE_EXT_GSOAP)
 
 endif(NOT WIN_EXEC_NODE_ONLY)

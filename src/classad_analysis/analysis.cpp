@@ -917,7 +917,6 @@ MakeResourceGroup( ClassAdList &caList, ResourceGroup &rg )
 	caList.Rewind( );
 	ad = caList.Next( );
 	while( ad ) {
-        classad::ClassAd *converted_classad;
         classad::ClassAd *explicit_classad;
 
 		explicit_classad  = AddExplicitTargets(ad);
@@ -1174,7 +1173,8 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	int vrNum = 0;
 	ExtArray<classad::Operation::OpKind> ops ( numConds );
 	ExtArray<Condition*> conds ( numConds );
-    ExtArray<bool> tooComplex ( numConds ); 
+//	ExtArray<bool> tooComplex ( numConds ); 
+	std::vector<bool> tooComplex( numConds, false);
 //	classad::Operation::OpKind op1, op2;
 	classad::Value val;
 	p->Rewind( );

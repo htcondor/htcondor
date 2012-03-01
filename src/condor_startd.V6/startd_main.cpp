@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_parameters.h"
 #include "subsystem_info.h"
 
 /*
@@ -123,14 +122,13 @@ usage( char* MyName)
 	fprintf( stderr, "Usage: %s [option]\n", MyName );
 	fprintf( stderr, "  where [option] is one of:\n" );
 	fprintf( stderr, 
-			 "     [-skip-benchmarks]\t(don't run initial benchmarks)\n" );
+			 "     [-skip-benchmarks]\t(now a no-op)\n" );
 	DC_Exit( 1 );
 }
 
 void
 main_init( int, char* argv[] )
 {
-	int		skip_benchmarks = FALSE;
 	char**	ptr; 
 
 	// Reset the cron & benchmark managers to a known state
@@ -144,7 +142,6 @@ main_init( int, char* argv[] )
 		}
 		switch( ptr[0][1] ) {
 		case 's':
-			skip_benchmarks = TRUE;
 			break;
 		case 'n':
 			ptr++;
@@ -374,6 +371,16 @@ main_init( int, char* argv[] )
 								(CommandHandler)command_vm_universe, 
 								"command_vm_universe", 0, DAEMON, 
 								D_FULLDEBUG );
+
+	daemonCore->Register_CommandWithPayload( DRAIN_JOBS,
+								  "DRAIN_JOBS",
+								  (CommandHandler)command_drain_jobs,
+								  "command_drain_jobs", 0, ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
+								  "CANCEL_DRAIN_JOBS",
+								  (CommandHandler)command_cancel_drain_jobs,
+								  "command_cancel_drain_jobs", 0, ADMINISTRATOR);
+
 
 		//////////////////////////////////////////////////
 		// Reapers 

@@ -118,6 +118,7 @@ usage()
 	fprintf( stderr, "   -local-name name\t(Specify a local name for use with the config system)\n" );
 	fprintf( stderr, "   -verbose\t\t(print information about where variables are defined)\n" );
 	fprintf( stderr, "   -dump\t\t(print locally defined variables)\n" );
+	fprintf( stderr, "   -expand\t\t(with -dump, expand macros from config files\n" );
 	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
 	my_exit( 1 );
 }
@@ -137,6 +138,7 @@ main( int argc, char* argv[] )
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
 	bool    dump_all_variables = false;
+	bool    expand_dumped_variables = false;
 	bool    print_config_sources = false;
 	bool	write_config = false;
 	bool	debug = false;
@@ -228,6 +230,8 @@ main( int argc, char* argv[] )
 			verbose = true;
 		} else if( match_prefix( argv[i], "-dump" ) ) {
 			dump_all_variables = true;
+		} else if( match_prefix( argv[i], "-expand" ) ) {
+			expand_dumped_variables = true;
 		} else if( match_prefix( argv[i], "-writeconfig" ) ) {
 			write_config = true;
 		} else if( match_prefix( argv[i], "-debug" ) ) {
@@ -349,7 +353,11 @@ main( int argc, char* argv[] )
 				fprintf(stdout, "# Line %d, File %s\n", 
 					pv.lnum, pv.filename.Value());
 			}
-			fprintf(stdout, "%s = %s\n", upname.Value(), pv.value.Value());
+			if (expand_dumped_variables) {
+				fprintf(stdout, "%s = %s\n", upname.Value(), param(upname.Value()));
+			} else {
+				fprintf(stdout, "%s = %s\n", upname.Value(), pv.value.Value());
+			}
 			
 		}
 		fflush( stdout );
@@ -483,7 +491,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 		// just cheating and being lazy here by replicating the old
 		// behavior...
 	char* addr;
-	char* name;
+	const char* name;
 	bool connect_error = true;
 	do {
 		addr = target->addr();
@@ -546,7 +554,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// just cheating and being lazy here by replicating the old
 		// behavior...
 	char* addr;
-	char* name;
+	const char* name;
 	bool connect_error = true;
 
 		// We need to know two things: what command to send, and (for

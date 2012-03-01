@@ -41,11 +41,11 @@
 #include <setjmp.h>
 
 #if defined(LINUX)
-	static char *UtmpName = "/var/run/utmp";
-	static char *AltUtmpName = "/var/adm/utmpx";
+	static const char *UtmpName = "/var/run/utmp";
+	static const char *AltUtmpName = "/var/adm/utmpx";
 #else
-	static char *UtmpName = "/etc/utmpx";
-	static char *AltUtmpName = "/var/adm/utmpx";
+	static const char *UtmpName = "/etc/utmpx";
+	static const char *AltUtmpName = "/var/adm/utmpx";
 #endif
 
 extern void PollActivity();

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -110,9 +110,15 @@ int match_info( Resource*, char* );
 int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
-bool accept_request_claim( Resource* ); 
+bool accept_request_claim( Resource* , Claim * = NULL ); 
 
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 
+
+// Start draining jobs
+int command_drain_jobs( Service*, int dc_cmd, Stream* s );
+
+// Cancel prior request to drain jobs
+int command_cancel_drain_jobs( Service*, int dc_cmd, Stream* s );
 
 #endif /* _STARTD_COMMAND_H */

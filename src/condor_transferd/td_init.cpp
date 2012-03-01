@@ -168,7 +168,7 @@ TransferD::accept_transfer_request(FILE *fin)
 	MyString encapsulation_method_line;
 	MyString encap_end_line;
 	EncapMethod em;
-	int rval;
+	int rval = 0;
 
 	/* The first line of stdin represents an encapsulation method. The
 		encapsulation method I'm using at the time of writing is old classads.
@@ -212,7 +212,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 {
 	int i;
 	int eof, error, empty;
-	char *classad_delimitor = "---\n";
+	const char *classad_delimitor = "---\n";
 	ClassAd *ad;
 	TransferRequest *treq = NULL;
 	MyString cap;
@@ -263,7 +263,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 // Called when the schedd initially connects to the transferd to finish
 // the registration process.
 int
-TransferD::setup_transfer_request_handler(int cmd, Stream *sock)
+TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 {
 	ReliSock *rsock = (ReliSock*)sock;
 	MyString sock_id;
@@ -325,7 +325,6 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 	MyString encap_end_line;
 	EncapMethod em;
 	char *str = NULL;
-	int rval;
 
 	dprintf(D_ALWAYS, 
 		"Entering TransferD::accept_transfer_request_handler()\n");
@@ -363,7 +362,7 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 			break;
 
 		case ENCAP_METHOD_OLD_CLASSADS:
-			rval = accept_transfer_request_encapsulation_old_classads(sock);
+			accept_transfer_request_encapsulation_old_classads(sock);
 			break;
 
 		default:

@@ -1,10 +1,49 @@
 \index{ClassAd!submitter attributes}
 
-\Todo
-
 \begin{description}
 
-%\index{ClassAd submitter attribute!NameOfAttribute}
-\item[\AdAttr{NameOfAttribute}:] Description of attribute.
+\index{ClassAd submitter attribute!FlockedJobs}
+\index{FlockedJobs@\Attr{FlockedJobs}!submitter ClassAd attribute}
+\item[\AdAttr{FlockedJobs}:] The number of jobs from this submitter 
+that are running in another pool.
+
+\index{ClassAd submitter attribute!HeldJobs}
+\index{HeldJobs@\Attr{HeldJobs}!submitter ClassAd attribute}
+\item[\AdAttr{HeldJobs}:] The number of jobs from this submitter 
+that are in the hold state.
+
+\index{ClassAd submitter attribute!IdleJobs}
+\index{IdleJobs@\Attr{IdleJobs}!submitter ClassAd attribute}
+\item[\AdAttr{IdleJobs}:] The number of jobs from this submitter 
+that are now idle.
+
+\index{ClassAd submitter attribute!Name}
+\index{Name@\Attr{Name}!submitter ClassAd attribute}
+\item[\AdAttr{Name}:] The fully qualified name of the user or accounting group.
+It will be of the form \Expr{name@submit.domain}.
+
+\index{ClassAd submitter attribute!RunningJobs}
+\index{RunningJobs@\Attr{RunningJobs}!submitter ClassAd attribute}
+\item[\AdAttr{RunningJobs}:] The number of jobs from this submitter 
+that are running now.
+
+\index{ClassAd submitter attribute!ScheddIpAddr}
+\index{ScheddIpAddr@\Attr{ScheddIpAddr}!submitter ClassAd attribute}
+\item[\AdAttr{ScheddIpAddr}:] The IP address associated with the
+\Condor{schedd} daemon used by the submitter.
+
+\index{ClassAd submitter attribute!ScheddName}
+\index{ScheddName@\Attr{ScheddName}!submitter ClassAd attribute}
+\item[\AdAttr{ScheddName}:] The fully qualified host name of the machine 
+that the submitter submitted from.
+It will be of the form \Expr{submit.domain}.
+
+\index{ClassAd submitter attribute!SubmitterTag}
+\index{SubmitterTag@\Attr{SubmitterTag}!submitter ClassAd attribute}
+\item[\AdAttr{SubmitterTag}:] The fully qualified host name of the
+central manager of the pool used by the submitter,
+if the job flocked to the local pool.
+Or, it will be the empty string if submitter submitted from within
+the local pool.
 
 \end{description}

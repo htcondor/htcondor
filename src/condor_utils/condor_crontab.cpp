@@ -468,8 +468,7 @@ CronTab::nextRunTime( long timestamp ) {
 		// If we get a match then create the timestamp for it
 		// Notice that we have to set explicitly set the the seconds,
 		// offset the month by 1, and change the year to be based
-		// off of 1900. We also use the same daylight saving time
-		// attribute from when got the time struct up above
+		// off of 1900.
 		//
 	if ( this->matchFields( fields, match, CRONTAB_FIELDS - 2 ) ) {
 		struct tm matchTime;
@@ -479,7 +478,7 @@ CronTab::nextRunTime( long timestamp ) {
 		matchTime.tm_mday	= match[CRONTAB_DOM_IDX];
 		matchTime.tm_mon	= match[CRONTAB_MONTHS_IDX] - 1;
 		matchTime.tm_year	= match[CRONTAB_YEARS_IDX] - 1900;
-		matchTime.tm_isdst  = tm->tm_isdst;
+		matchTime.tm_isdst  = -1; // auto-calculate whether daylight savings time applies
 		runtime = (long)mktime( &matchTime );
 		
 			//

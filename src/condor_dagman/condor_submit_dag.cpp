@@ -442,6 +442,9 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		}
 	}
 
+		// Get rid of the halt file (if one exists).
+	unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
+
 	if (deepOpts.bForce)
 	{
 		unlink(shallowOpts.strSubFile.Value());
@@ -860,7 +863,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 
 		// Append user-specified stuff to submit file...
 		// ...first, the insert file, if any...
-	if (shallowOpts.appendFile.Value() != "") {
+	if (shallowOpts.appendFile != "") {
 		FILE *aFile = safe_fopen_wrapper_follow(shallowOpts.appendFile.Value(), "r");
 		if (!aFile)
 		{

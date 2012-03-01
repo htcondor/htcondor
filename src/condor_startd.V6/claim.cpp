@@ -83,6 +83,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_may_unretire = true;
 	c_retire_peacefully = false;
 	c_preempt_was_true = false;
+	c_badput_caused_by_draining = false;
 	c_schedd_closed_claim = false;
 
 	c_last_state = CLAIM_UNCLAIMED;
@@ -1395,7 +1396,13 @@ Claim::starterExited( int status )
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
 	c_starter->exited(status);
-	
+
+	if( c_badput_caused_by_draining ) {
+		int badput = (int)getJobTotalRunTime() * c_rip->r_attr->num_cpus();
+		dprintf(D_ALWAYS,"Adding to badput caused by draining: %d cpu-seconds\n",badput);
+		resmgr->addToDrainingBadput( badput );
+	}
+
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.
 	resetClaim();
@@ -1907,6 +1914,7 @@ Claim::resetClaim( void )
 	c_job_total_suspend_time = 0;
 	c_may_unretire = true;
 	c_preempt_was_true = false;
+	c_badput_caused_by_draining = false;
 }
 
 

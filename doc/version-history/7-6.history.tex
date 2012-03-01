@@ -16,15 +16,15 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-6}Version 7.6.6}
+\subsection*{\label{sec:New-7-6-7}Version 7.6.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.6.6 not yet released.
-%\item Condor version 7.6.6 released on Month Date, 2011.
+\item Condor version 7.6.7 not yet released.
+%\item Condor version 7.6.7 released on Month Date, 2012.
 
 \end{itemize}
 
@@ -49,7 +49,100 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a rare bug in the parallel universe, where if a claim was removed
+as the shadow was starting up, all ranks of the job would never completely 
+start.
+\Ticket{2786}
+
+\item Fixed a bug that caused disk capacity to be under-reported in Windows
+for drives with 1TB or more of free space.
+\Ticket{2798}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
 \item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-6}Version 7.6.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.6 released on January 17, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a memory leak affecting the \Condor{schedd} when the
+configuration variable
+\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS} and/or the submit
+description file command \SubmitCmd{job\_ad\_information\_attrs} were used.
+\Ticket{2730}
+
+\item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
+it to always return a status of -1073740777 for \Condor{chirp}
+ commands that succeeded.
+\Ticket{2739}
+
+\item Fixed a bug in the Windows implementation of \Condor{chirp} that caused
+the \Opt{put}, \Opt{whoami}, \Opt{getdir}, and \Opt{fetch} 
+\Condor{chirp} commands to always fail.
+\Ticket{2743}
+
+\item Fixed a bug in the checkpoint server that could cause it to abort and
+crash during a file rename operation on RHEL6 and newer versions.
+\Ticket{2738}
+
+\item Fix a bug introduced in Condor version 7.6.5,
+that could cause the \Condor{schedd} to exit with the following error:
+\begin{verbatim}
+ERROR "Send_Signal: sent unsafe pid (0)" at line 5492 in file
+/home/condor/execute/dir_10444/userdir/src/condor_daemon_core.V6/daemon_core.cpp
+\end{verbatim}
+\Ticket{2736}
+
+\item Fixed the example Linux startup script \File{condor.boot.rpm}
+to no longer assume that the contents of file \File{/var/run} will 
+persist across a reboot,
+or that environment variable \Env{USER} is set.
+\Ticket{2133}
 
 \end{itemize}
 
@@ -78,8 +171,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.6.5 not yet released.
-%\item Condor version 7.6.5 released on Month Date, 2011.
+\item Condor version 7.6.5 released on December 28, 2011.
 
 \item Restored the semantics of \Macro{GROUP\_AUTOREGROUP} to the
 behavior it exhibited before Hierarchical Group Quotas were introduced
@@ -284,6 +376,12 @@ as well as for other invocations.
 if it does not hear from the \Condor{startd} for longer than the job
 lease duration.
 \Ticket{2706}
+
+\item Fixed some bugs in the renewing of CREAM job leases. Before, the
+\Condor{gridmanager} could fail to renew the leases or attempt to set
+lease expirations in the past.
+\Ticket{2351}
+\Ticket{2455}
 
 \end{itemize}
 

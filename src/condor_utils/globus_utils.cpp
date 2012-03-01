@@ -1346,6 +1346,7 @@ x509_receive_delegation( const char *destination_file,
 	globus_gsi_proxy_handle_t request_handle = NULL;
 	char *buffer = NULL;
 	int buffer_len = 0;
+	char *destination_file_tmp = NULL;
 	BIO *bio = NULL;
 
 	if ( activate_globus_gsi() != 0 ) {
@@ -1413,9 +1414,12 @@ x509_receive_delegation( const char *destination_file,
 	}
 
 	/* globus_gsi_cred_write_proxy() declares its second argument non-const,
-	 * but never modifies it. The cast gets rid of compiler warnings.
+	 * but never modifies it. The copy gets rid of compiler warnings.
 	 */
-	result = globus_gsi_cred_write_proxy( proxy_handle, (char *)destination_file );
+	destination_file_tmp = new char[strlen(destination_file)+1];
+	strcpy(destination_file_tmp, destination_file);
+	result = globus_gsi_cred_write_proxy( proxy_handle, destination_file_tmp );
+	delete[] destination_file_tmp;
 	if ( result != GLOBUS_SUCCESS ) {
 		rc = -1;
 		error_line = __LINE__;

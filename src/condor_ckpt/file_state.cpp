@@ -231,7 +231,7 @@ void CondorFileTable::dump()
 		if( p ) {
 			dprintf(D_ALWAYS,"fd %d\n",j);
 			dprintf(D_ALWAYS,"\tlogical name: %s\n",p->logical_name);
-			dprintf(D_ALWAYS,"\toffset:       %d\n",p->offset);
+			dprintf(D_ALWAYS,"\toffset:       %ld\n",(long)p->offset);
 			dprintf(D_ALWAYS,"\tdups:         %d\n",count_pointer_uses(p));
 			dprintf(D_ALWAYS,"\topen flags:   0x%x\n",p->flags);
 			if( p->file ) {

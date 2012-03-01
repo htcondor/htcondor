@@ -1838,7 +1838,7 @@ static int shell ( const char *command, int len )
 	if( LocalSysCalls() || do_local ) {
 		rval = local_system_posix( command );
 	} else {
-		rval = remote_system_posix( (char*)command, len );
+		rval = remote_system_posix( command, len );
 	}
 
 	_condor_signals_enable( condor_omask );
@@ -2061,7 +2061,7 @@ int isatty( int fd )
 /* Same purpose as isatty, but asks if tape.  Present in Fortran library.
    I don't know if this is the real function format, but it's a good guess. */
 
-int __istape( int fd )
+int __istape( int /*fd*/ )
 {
         return 0;
 }

@@ -11,6 +11,7 @@ Can have one of the following values:
 	\item[\AdStr{Vacating}:] A job is currently checkpointing
 	\item[\AdStr{Killing}:] A job is currently being killed
 	\item[\AdStr{Benchmarking}:] The startd is running benchmarks
+	\item[\AdStr{Retiring}:] Waiting for a job to finish or for the maximum retirement time to expire
 	\end{description}
 %
 \index{ClassAd machine attribute!Arch}
@@ -74,6 +75,15 @@ is the amount of disk space available in the directory specified in
 the Condor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
 %
+\index{ClassAd machine attribute!Draining}
+\item[\AdAttr{Draining}:] This attribute is \Expr{True} when the slot
+is draining and undefined if not.
+%
+\index{ClassAd machine attribute!DrainingRequestId}
+\item[\AdAttr{DrainingRequestId}:] This attribute contains a string that
+is the request id of the draining request that put this slot in a draining
+state.  It is undefined if the slot is not draining.
+%
 \index{ClassAd machine attribute!DotNetVersions}
 \item[\AdAttr{DotNetVersions}:] The .NET framework versions
 currently installed on this computer. 
@@ -99,6 +109,39 @@ this boolean value identifies that this dynamic slot may be partitioned.
 entered the current Activity (see \AdAttr{Activity} entry above).  On
 all platforms (including NT), this is measured in the number of
 integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+%
+\index{ClassAd machine attribute!ExpectedMachineGracefulDrainingBadput}
+\item[\AdAttr{ExpectedMachineGracefulDrainingBadput}:] The
+job runtime in cpu-seconds that would be lost if graceful draining
+were initiated at the time this ad was published.  This calculation assumes
+that jobs will run for the full retirement time and then be evicted
+without saving a checkpoint.
+%
+\index{ClassAd machine attribute!ExpectedMachineGracefulDrainingCompletion}
+\item[\AdAttr{ExpectedMachineGracefulDrainingCompletion}:] Time at
+which graceful draining of the machine could complete if it were
+initiated at the time this ad was published.  This is measured in the
+number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
+1970).  This value is computed with the assumption that the machine
+policy will not suspend jobs during draining while the machine is
+waiting for the job to use up its retirement time.  If suspension
+happens, the upper bound on how long draining could take is
+unlimited.  To avoid suspension during draining, the \MacroNI{SUSPEND}
+and \MacroNI{CONTINUE} expressions could be configured to pay
+attention to the \AdAttr{Draining} attribute.
+%
+\index{ClassAd machine attribute!ExpectedMachineQuickDrainingBadput}
+\item[\AdAttr{ExpectedMachineGracefulQuickBadput}:] The
+job runtime in cpu-seconds that would be lost if quick draining
+were initiated at the time this ad was published.  This calculation assumes
+that all evicted jobs will not save a checkpoint.
+%
+\index{ClassAd machine attribute!ExpectedMachineQuickDrainingCompletion}
+\item[\AdAttr{ExpectedMachineQuickDrainingCompletion}:] Time at
+which quick draining of the machine could complete if it were
+initiated at the time this ad was published.  This is measured in the
+number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
+1970).
 %
 \index{ClassAd machine attribute!FileSystemDomain}
 \item[\AdAttr{FileSystemDomain}:] A domain name configured by the
@@ -129,6 +172,11 @@ less than \AdAttr{ConsoleIdle}.
 \index{ClassAd machine attribute!KFlops}
 \item[\AdAttr{KFlops}:] Relative floating point performance as determined via a
 Linpack benchmark.
+%
+\index{ClassAd machine attribute!LastDrainStartTime}
+\item[\AdAttr{LastDrainStartTime}:] Time when draining of this
+\Condor{startd} was last initiated (e.g. due to \Condor{defrag} or
+\Condor{drain}).
 %
 \index{ClassAd machine attribute!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}:] Time when the Condor central manager last
@@ -311,6 +359,8 @@ match for this resource, but a Condor scheduler has not yet claimed it.
 	\item[\AdStr{Preempting}:] A Condor job is being preempted (possibly
 via checkpointing) in order to clear the machine for either a higher
 priority job or because the machine owner wants the machine back.
+	\item[\AdStr{Drained}:] This slot is not accepting jobs,
+because the machine is being drained.
 	\end{description}   % of State
 %
 \index{ClassAd machine attribute!TargetType}
@@ -322,6 +372,19 @@ always want to be matched with jobs, and vice-versa.
 \item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
+%
+\index{ClassAd machine attribute!TotalMachineDrainingBadput}
+\item[\AdAttr{TotalMachineDrainingBadput}:] The
+total job runtime in cpu-seconds that has been lost due to job evictions
+caused by draining since this \Condor{startd} began executing.  In
+this calculation, it is assumed that jobs are evicted without
+checkpointing.
+%
+\index{ClassAd machine attribute!TotalMachineDrainingUnclaimedTime}
+\item[\AdAttr{TotalMachineDrainingUnclaimedTime}:] The
+total machine-wide time in cpu-seconds that has not been used
+(i.e. not matched to a job submitter) due to draining since this
+\Condor{startd} began executing.
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}
 \item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds
@@ -428,6 +491,8 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
 (swap space) expressed in Kbytes.
+On Linux platforms, it is the sum of paging space and physical memory, 
+which more accurately represents the virtual memory size of the machine. 
 %
 \index{ClassAd machine attribute!VM\_AvailNum}
 \item[\AdAttr{VM\_AvailNum}:] The maximum number of vm universe jobs that

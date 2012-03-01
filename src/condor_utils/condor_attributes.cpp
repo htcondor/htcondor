@@ -87,6 +87,7 @@ AttrGetName( CONDOR_ATTR which )
 // other than ATTR_<blah> to add/lookup expressions/variables *STOP*, add the
 // new variable to this file and use the ATTR_<blah> symbolic constant.  --RR
 
+const char * const ATTR_ABSENT                   = "Absent";
 const char * const ATTR_ACCOUNTING_GROUP         = "AccountingGroup";
 const char * const ATTR_ACTION_CONSTRAINT		 = "ActionConstraint";
 const char * const ATTR_ACTION_IDS				 = "ActionIds";
@@ -199,6 +200,7 @@ const char * const ATTR_ENTERED_CURRENT_ACTIVITY = "EnteredCurrentActivity";
 const char * const ATTR_ENTERED_CURRENT_STATE	 = "EnteredCurrentState";
 const char * const ATTR_ENTERED_CURRENT_STATUS	 = "EnteredCurrentStatus";
 const char * const ATTR_ERROR_STRING             = "ErrorString";
+const char * const ATTR_ERROR_CODE               = "ErrorCode";
 const char * const ATTR_EXCEPTION_HIERARCHY      = "ExceptionHierarchy";
 const char * const ATTR_EXCEPTION_NAME           = "ExceptionName";
 const char * const ATTR_EXCEPTION_TYPE           = "ExceptionType";
@@ -231,7 +233,6 @@ const char * const ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavai
 const char * const ATTR_JOB_MUST_EXPAND			 = "MustExpand";
 const char * const ATTR_GLOBUS_RSL				 = "GlobusRSL";
 const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
-const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
 const char * const ATTR_X509_USER_PROXY_EMAIL	 = "x509UserProxyEmail";
@@ -240,9 +241,6 @@ const char * const ATTR_X509_USER_PROXY_VONAME	 = "x509UserProxyVOName";
 const char * const ATTR_X509_USER_PROXY_FIRST_FQAN	 = "x509UserProxyFirstFQAN";
 const char * const ATTR_X509_USER_PROXY_FQAN	 = "x509UserProxyFQAN";
 const char * const ATTR_DELEGATED_PROXY_EXPIRATION = "DelegatedProxyExpiration";
-const char * const ATTR_GRIDFTP_SERVER_JOB       = "GridftpServerJob";
-const char * const ATTR_GRIDFTP_URL_BASE         = "GridftpUrlBase";
-const char * const ATTR_REQUESTED_GRIDFTP_URL_BASE = "RequestedGridftpUrlBase";
 const char * const ATTR_GRID_RESOURCE			 = "GridResource";
 const char * const ATTR_GRID_RESOURCE_UNAVAILABLE_TIME = "GridResourceUnavailableTime";
 const char * const ATTR_GRID_JOB_ID				 = "GridJobId";
@@ -313,6 +311,9 @@ const char * const ATTR_ORIG_JOB_CMD				= "OrigCmd";
 const char * const ATTR_JOB_CORE_DUMPED			 = "JobCoreDumped";
 const char * const ATTR_JOB_CORE_FILENAME		 = "JobCoreFileName";
 const char * const ATTR_JOB_CURRENT_START_DATE	 = "JobCurrentStartDate";
+const char * const ATTR_JOB_CURRENT_START_EXECUTING_DATE = "JobCurrentStartExecutingDate";
+const char * const ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE = "JobCurrentStartTransferOutputDate";
+const char * const ATTR_CUMULATIVE_TRANSFER_TIME = "CumulativeTransferTime";
 const char * const ATTR_JOB_DURATION			 = "JobDuration";
 const char * const ATTR_JOB_ENVIRONMENT1		 = "Env";
 const char * const ATTR_JOB_ENVIRONMENT1_DELIM	 = "EnvDelim";
@@ -482,6 +483,9 @@ const char * const ATTR_OFFLINE                  ="Offline";
 const char * const ATTR_OPSYS                    = "OpSys";
 const char * const ATTR_OPSYSVER                 = "OpSysVer";
 const char * const ATTR_OPSYS_AND_VER            = "OpSysAndVer";
+const char * const ATTR_OPSYS_MAJOR_VER            = "OpSysMajorVer";
+const char * const ATTR_OPSYS_NAME            = "OpSysName";
+const char * const ATTR_OPSYS_DISTRO            = "OpSysDistro";
 const char * const ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
 const char * const ATTR_OTHER_JOB_REMOVE_REQUIREMENTS    = "OtherJobRemoveRequirements"; 
 const char * const ATTR_OWNER                    = "Owner"; 
@@ -621,6 +625,8 @@ const char * const ATTR_TOTAL_TIME_PREEMPTING_KILLING = "TotalTimePreemptingKill
 const char * const ATTR_TOTAL_TIME_PREEMPTING_VACATING = "TotalTimePreemptingVacating";
 const char * const ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING = "TotalTimeUnclaimedBenchmarking";
 const char * const ATTR_TOTAL_TIME_UNCLAIMED_IDLE     = "TotalTimeUnclaimedIdle";
+const char * const  ATTR_TOTAL_TIME_DRAINED_IDLE      = "TotalTimeDrainedIdle";
+const char * const  ATTR_TOTAL_TIME_DRAINED_RETIRING  = "TotalTimeDrainedRetiring";
 //const char * const ATTR_WINDOWED_STAT_WIDTH = "WindowedStatWidth";
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
@@ -887,7 +893,7 @@ const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
 const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
 const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
 const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
-const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailbityZone";
+const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailabilityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
 
@@ -946,6 +952,26 @@ const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownlo
 const char * const ATTR_MACHINE_MAX_VACATE_TIME = "MachineMaxVacateTime";
 const char * const ATTR_JOB_MAX_VACATE_TIME = "JobMaxVacateTime";
 const char * const ATTR_WANT_GRACEFUL_REMOVAL = "WantGracefulRemoval";
+const char * const ATTR_HOW_FAST = "HowFast";
+const char * const ATTR_RESUME_ON_COMPLETION = "ResumeOnCompletion";
+const char * const ATTR_DRAINING = "Draining";
+const char * const ATTR_DRAINING_REQUEST_ID = "DrainingRequestId";
+const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION = "ExpectedMachineGracefulDrainingCompletion";
+const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION = "ExpectedMachineQuickDrainingCompletion";
+const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT = "ExpectedMachineGracefulDrainingBadput";
+const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT = "ExpectedMachineQuickDrainingBadput";
+const char * const ATTR_TOTAL_MACHINE_DRAINING_BADPUT = "TotalMachineDrainingBadput";
+const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME = "TotalMachineDrainingUnclaimedTime";
+const char * const ATTR_CHECK_EXPR = "CheckExpr";
+const char * const ATTR_PROJECTION = "Projection";
+const char * const ATTR_LAST_DRAIN_START_TIME = "LastDrainStartTime";
+
+// temporary attributes for raw utsname info
+extern const char * const ATTR_UTSNAME_SYSNAME = "UtsnameSysname";
+extern const char * const ATTR_UTSNAME_NODENAME = "UtsnameNodename";
+extern const char * const ATTR_UTSNAME_RELEASE = "UtsnameRelease";
+extern const char * const ATTR_UTSNAME_VERSION = "UtsnameVersion";
+extern const char * const ATTR_UTSNAME_MACHINE = "UtsnameMachine";
 
 const char* const ATTR_GROUP_QUOTA = "GroupQuota";
 const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";

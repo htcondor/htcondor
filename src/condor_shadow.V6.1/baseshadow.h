@@ -90,6 +90,8 @@ class BaseShadow : public Service
 		 */
 	virtual void spawn( void ) = 0;
 
+	bool waitingToUpdateSchedd() { return m_cleanup_retry_tid != -1; }
+
 		/** Shadow should attempt to reconnect to a disconnected
 			starter that might still be running for this job.  
 			This function is <b>pure virtual</b>.

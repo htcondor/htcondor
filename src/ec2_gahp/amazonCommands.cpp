@@ -101,7 +101,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
     close( fd );
     if( written != contents.length() ) {
         dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-            fileName.c_str(), contents.length(), written );
+				 fileName.c_str(), (unsigned long)contents.length(), written );
         return false;
     }
     

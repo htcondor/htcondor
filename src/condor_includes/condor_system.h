@@ -43,6 +43,7 @@
 # define UNIX
 #endif
 
+
 /**********************************************************************
 ** These system-specific files will "fix" anything that needs fixing,
 ** define platform-specific functionality flags we want to use, etc. 
@@ -244,5 +245,8 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 #endif // !WIN32
 
+/* This defines macros that can disable certain gcc warnings */
+/* If not using gcc, macros are null defines */
+#include "gcc_diag.h"
 
 #endif /* CONDOR_SYSTEM_H */

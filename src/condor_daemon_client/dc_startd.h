@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -48,6 +48,8 @@ public:
 		*/
 	DCStartd( const char* const name, const char* const pool,
 			  const char* const addr, const char* const id );
+
+	DCStartd( ClassAd *ad, const char *pool = NULL );
 
 		/// Destructor.
 	~DCStartd();
@@ -164,6 +166,18 @@ public:
 
 	bool getAds( ClassAdList &adsList );
 
+		// request_id: set to the request id (can be used to cancel request)
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
+		// check_expr: optional expression that must be true for all slots to be drained or request fails
+	bool drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,std::string &request_id);
+
+		// request_id: the draining request id
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+	bool cancelDrainJobs(char const *request_id);
+
  private:
 	char* claim_id;
 
@@ -194,6 +208,10 @@ public:
 	bool claimed_startd_success() { return m_reply == OK; }
 	char const *startd_ip_addr() {return m_startd_ip_addr.Value();}
 	char const *startd_fqu() {return m_startd_fqu.Value();}
+	bool have_leftovers() { return m_have_leftovers; }
+	char const *leftover_claim_id() { return m_leftover_claim_id.Value(); }
+	ClassAd * leftover_startd_ad() 
+		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 
 private:
 	MyString m_claim_id;
@@ -204,6 +222,13 @@ private:
 
 		// the startd's reply:
 	int m_reply;
+
+		// if claiming a repartitionable slot, the startd
+		// may send over the newly created repatitionable slot with
+		// the leftover unclaimed resources.
+	bool m_have_leftovers;
+	MyString m_leftover_claim_id;
+	ClassAd m_leftover_startd_ad;
 
 	MyString m_startd_ip_addr;
 	MyString m_startd_fqu;

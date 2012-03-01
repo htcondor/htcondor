@@ -27,8 +27,7 @@
 #endif
 
 MachAttributes::MachAttributes()
-   : m_user_settings_init(false)
-   , m_user_specified(NULL, ";")
+   : m_user_specified(NULL, ";"), m_user_settings_init(false)
 {
 	m_mips = -1;
 	m_kflops = -1;
@@ -40,10 +39,14 @@ MachAttributes::MachAttributes()
 	m_opsys = NULL;
 	m_opsysver = 0;
 	m_opsys_and_ver = NULL;
+	m_opsys_major_ver = 0;
+	m_opsys_name = NULL;
+	m_opsys_distro = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
+	m_named_chroot = NULL;
 
 	m_clock_day = -1;
 	m_clock_min = -1;
@@ -81,6 +84,14 @@ MachAttributes::MachAttributes()
 		// identification of the checkpointing platform signature
 	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 
+        // temporary attributes for raw utsname info
+	m_utsname_sysname = NULL;
+	m_utsname_nodename = NULL;
+	m_utsname_release = NULL;
+	m_utsname_version = NULL;
+	m_utsname_machine = NULL;
+
+
 #if defined ( WIN32 )
 	// Get the version information of the copy of Windows 
 	// we are running
@@ -111,19 +122,28 @@ MachAttributes::~MachAttributes()
 	if( m_arch ) free( m_arch );
 	if( m_opsys ) free( m_opsys );
 	if( m_opsys_and_ver ) free( m_opsys_and_ver );
+	if( m_opsys_name ) free( m_opsys_name );
+	if( m_opsys_distro ) free( m_opsys_distro );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
+	if( m_named_chroot ) free( m_named_chroot );
+
+	if( m_utsname_sysname ) free( m_utsname_sysname );
+	if( m_utsname_nodename ) free( m_utsname_nodename );
+	if( m_utsname_release ) free( m_utsname_release );
+	if( m_utsname_version ) free( m_utsname_version );
+	if( m_utsname_machine ) free( m_utsname_machine );
 
     AttribValue *val = NULL;
     m_lst_dynamic.Rewind();
-    while (val = m_lst_dynamic.Next() ) {
+    while ((val = m_lst_dynamic.Next()) ) {
        if (val) free (val);
        m_lst_dynamic.DeleteCurrent();
     }
 
     m_lst_static.Rewind();
-    while (val = m_lst_static.Next() ) {
+    while ((val = m_lst_static.Next())) {
        if (val) free (val);
        m_lst_static.DeleteCurrent();
     }
@@ -143,14 +163,14 @@ MachAttributes::init_user_settings()
 
 	AttribValue *val = NULL;
 	m_lst_dynamic.Rewind();
-	while (val = m_lst_dynamic.Next())
+	while ((val = m_lst_dynamic.Next()))
     {
         if (val) free (val);
 	    m_lst_dynamic.DeleteCurrent();
 	}
 
 	m_lst_static.Rewind();
-	while (val = m_lst_static.Next())
+	while ((val = m_lst_static.Next()))
     {
 	    if (val) free (val);
 	    m_lst_static.DeleteCurrent();
@@ -328,6 +348,40 @@ MachAttributes::compute( amask_t how_much )
 			free( m_opsys_and_ver );
 		}
 		m_opsys_and_ver = param( "OPSYS_AND_VER" );
+		m_opsys_major_ver = param_integer( "OPSYS_MAJOR_VER", 0 );
+
+		if( m_opsys_name ) {
+			free( m_opsys_name );
+                } 
+		m_opsys_name = param( "OPSYS_NAME" );
+
+		if( m_opsys_distro ) {
+			free( m_opsys_distro );
+                } 
+		m_opsys_distro = param( "OPSYS_DISTRO" );
+
+       		// temporary attributes for raw utsname info
+		if( m_utsname_sysname ) {
+			free( m_utsname_sysname );
+		}
+		if( m_utsname_nodename ) {
+			free( m_utsname_nodename );
+		}
+		if( m_utsname_release ) {
+			free( m_utsname_release );
+		}
+		if( m_utsname_version ) {
+			free( m_utsname_version );
+		}
+		if( m_utsname_machine ) {
+			free( m_utsname_machine );
+		}
+
+       		m_utsname_sysname = param( "UTSNAME_SYSNAME" );
+		m_utsname_nodename = param( "UTSNAME_NODENAME" );
+		m_utsname_release = param( "UTSNAME_RELEASE" );
+		m_utsname_version = param( "UTSNAME_VERSION" );
+		m_utsname_machine = param( "UTSNAME_MACHINE" );
 
 		if( m_uid_domain ) {
 			free( m_uid_domain );
@@ -350,6 +404,35 @@ MachAttributes::compute( amask_t how_much )
 			free(m_ckptpltfrm);
 		}
 		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
+
+		const char * allowed_root_dirs = param("NAMED_CHROOT");
+		if (allowed_root_dirs) {
+			MyString result;
+			bool prev = false;
+			StringList chroot_list(allowed_root_dirs);
+			chroot_list.rewind();
+			const char * next_chroot;
+			std::string requested_chroot;
+			while ( (next_chroot=chroot_list.next()) ) {
+				MyString chroot_spec(next_chroot);
+				chroot_spec.Tokenize();
+				const char * chroot_name = chroot_spec.GetNextToken("=", false);
+				if (chroot_name == NULL) {
+					dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+				}
+				if (prev) {
+					result += ", ";
+				}
+				prev = true;
+				result += chroot_name;
+			}
+			if (prev) {
+				dprintf(D_FULLDEBUG, "Named chroots: %s\n", result.Value() );
+				if (m_named_chroot) free(m_named_chroot);
+				m_named_chroot = strdup( result.Value() );
+			}
+		}
+
     }
 
 
@@ -400,7 +483,7 @@ MachAttributes::compute( amask_t how_much )
 
         AttribValue *pav = NULL;
         m_lst_dynamic.Rewind();
-        while (pav = m_lst_dynamic.Next() ) {
+        while ((pav = m_lst_dynamic.Next()) ) {
            if (pav) {
              #ifdef WIN32
               if ( ! update_WinPerf_Value(pav))
@@ -420,6 +503,8 @@ MachAttributes::compute( amask_t how_much )
 			m_condor_load = m_load;
 		}
 	}
+
+
 }
 
 void
@@ -444,13 +529,23 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		cp->Assign( ATTR_STARTD_IP_ADDR,
 					daemonCore->InfoCommandSinfulString() );
 
-        cp->Assign( ATTR_ARCH, m_arch );
+        	cp->Assign( ATTR_ARCH, m_arch );
 
 		cp->Assign( ATTR_OPSYS, m_opsys );
-        if (m_opsysver) {
+       	 	if (m_opsysver) {
 			cp->Assign( ATTR_OPSYSVER, m_opsysver );
-        }
+ 	        }
 		cp->Assign( ATTR_OPSYS_AND_VER, m_opsys_and_ver );
+
+       	 	if (m_opsys_major_ver) {
+			cp->Assign( ATTR_OPSYS_MAJOR_VER, m_opsys_major_ver );
+        	}
+        	if (m_opsys_name) {
+			cp->Assign( ATTR_OPSYS_NAME, m_opsys_name );
+	        }
+        	if (m_opsys_distro) {
+			cp->Assign( ATTR_OPSYS_DISTRO, m_opsys_distro );
+	        }
 
 		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
 
@@ -604,6 +699,17 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		}
 	}
 
+        // temporary attributes for raw utsname info
+	cp->Assign( ATTR_UTSNAME_SYSNAME, m_utsname_sysname );
+	cp->Assign( ATTR_UTSNAME_NODENAME, m_utsname_nodename );
+	cp->Assign( ATTR_UTSNAME_RELEASE, m_utsname_release );
+	cp->Assign( ATTR_UTSNAME_VERSION, m_utsname_version );
+	cp->Assign( ATTR_UTSNAME_MACHINE, m_utsname_machine );
+
+	// Advertise chroot information
+	if ( m_named_chroot ) {
+		cp->Assign( "NamedChroot", m_named_chroot );
+	}
 }
 
 void
@@ -720,7 +826,7 @@ MachAttributes::credd_test()
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
 							  int slot_type,
-							  int num_cpus, 
+							  int num_cpus_arg, 
 							  int num_phys_mem,
 							  float virt_mem_fraction,
 							  float disk_fraction,
@@ -729,7 +835,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 {
 	map = map_arg;
 	c_type = slot_type;
-	c_num_cpus = num_cpus;
+	c_num_cpus = num_cpus_arg;
 	c_phys_mem = num_phys_mem;
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;

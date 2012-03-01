@@ -528,6 +528,8 @@ Dynamic \Condor{startd} Provisioning: Dynamic Slots}
 \index{dynamic \Condor{startd} provisioning}
 \index{slots!dynamic \Condor{startd} provisioning}
 \index{slots!subdividing slots}
+\index{dynamic slots}
+\index{partitionable slots}
 
 \Term{Dynamic provisioning},
 also referred to as a partitionable \Condor{startd} or as dynamic slots,
@@ -546,7 +548,8 @@ or for groups of dynamic slots.
 For example, for a large number of jobs requiring 1GB of memory,
 a pool might be split up into 1GB dynamic slots. 
 In this instance a job requiring 2GB of memory will be starved
-and unable to run.
+and unable to run.  A partial solution to this problem is provided
+by \Condor{defrag}, which is discussed in section~\ref{sec:SMP-defrag}.
 
 Here is an example that demonstrates how more than one job
 can be matched to a single slot using dynamic provisioning.
@@ -626,5 +629,93 @@ Because it has been effectively broken up into smaller slots,
 these will show as running jobs directly.
 These dynamic slots can also be preempted in the same way as 
 nonpartitioned slots.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-defrag}
+Defragmenting Dynamic Slots}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor daemon!condor\_defrag@\Condor{defrag}}
+\index{daemon!condor\_defrag@\Condor{defrag}}
+\index{condor\_defrag daemon}
+
+When partitionable slots are used, some attention must be given to the
+problem of the starvation of large jobs due to the fragmentation of resources.
+The problem is that over time the machine resources may become
+partitioned into slots suitable for running small jobs.
+If a sufficient number of these slots do not happen to become idle at the
+same time on a machine, then a large job will not be able to claim that
+machine, even if the large job has a better priority than the small jobs.
+
+One way of addressing the partitionable slot fragmentation problem is
+to periodically drain all jobs from fragmented machines so that they
+become defragmented.  
+The \Condor{defrag} daemon implements a configurable policy for doing that.
+To use this daemon,
+\MacroNI{DEFRAG} must be added to \MacroNI{DAEMON\_LIST},
+and the defragmentation policy must be configured.
+Typically, only one instance of the \Condor{defrag} daemon would be
+run per pool.  
+It is a lightweight daemon that should not require a lot of system resources.
+
+Here is an example configuration that puts the \Condor{defrag} daemon to work:
+
+\begin{verbatim}
+DAEMON_LIST = $(DAEMON_LIST) DEFRAG
+DEFRAG_INTERVAL = 3600
+DEFRAG_DRAINING_MACHINES_PER_HOUR = 1.0
+DEFRAG_MAX_WHOLE_MACHINES = 20
+DEFRAG_MAX_CONCURRENT_DRAINING = 10
+\end{verbatim}
+
+This example policy tells \Condor{defrag} to initiate draining 
+jobs from 1 machine per hour,
+but to avoid initiating new draining if there are 
+20 completely defragmented machines or 10 machines in a draining state.
+A full description of each configuration variable
+used by the \Condor{defrag} daemon may be found in 
+section~\ref{sec:Config-defrag}.
+
+By default, when a machine is drained, existing jobs are gracefully evicted.
+This means that each job will be allowed to use the remaining
+time promised to it by \MacroNI{MaxJobRetirementTime}.  
+If the job has not finished when the retirement time runs out, 
+the job will be killed with a soft kill signal, 
+so that it has an opportunity to save a checkpoint
+(if the job supports this).
+No new jobs will be allowed to start while the machine is draining.
+To reduce unused time on the
+machine caused by some jobs having longer retirement time than others,
+the eviction of jobs with shorter retirement time is delayed until the
+job with the longest retirement time needs to be evicted.
+
+There is a trade off between reduced starvation and throughput.
+Frequent draining of machines reduces the chance of starvation of
+large jobs.  However, frequent draining reduces total throughput.
+Some of the machine's resources may go unused during draining,
+if some jobs finish before others.  
+If jobs that cannot produce checkpoints are killed
+because they run past the end of their retirement time during draining,
+this also adds to the cost of draining.
+
+To help gauge the costs of draining, the \Condor{startd} advertises
+the accumulated time that was unused due to draining and the time
+spent by jobs that were killed due to draining.  
+These are advertised
+respectively in the attributes \AdAttr{TotalMachineDrainingUnclaimedTime} and
+\AdAttr{TotalMachineDrainingBadput}.  
+The \Condor{defrag} daemon
+averages these values across the pool and advertises the result in its
+daemon ClassAd in the attributes \AdAttr{AvgDrainingBadput} and
+\AdAttr{AvgDrainingUnclaimed}.  
+Details of all attributes published by
+the \Condor{defrag} daemon are described in
+section~\ref{sec:Defrag-ClassAd-Attributes}.
+
+The following command may be used to view the \Condor{defrag} daemon
+ClassAd:
+
+\begin{verbatim}
+condor_status -l -any -constraint 'MyType == "Defrag"'
+\end{verbatim}
 
 \index{SMP machines!configuration|)}

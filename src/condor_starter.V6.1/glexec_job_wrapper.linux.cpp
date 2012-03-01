@@ -137,10 +137,12 @@ main(int argc, char* argv[])
 	fatal_error();
 }
 
+static int error_return;
+
 static void
 fatal_error()
 {
-	write(sock_fd, err.Value(), err.Length() + 1);
+	error_return = write(sock_fd, err.Value(), err.Length() + 1);
 	exit(1);
 }
 
@@ -156,9 +158,9 @@ read_env()
 			            strerror(errno));
 		}
 		else {
-			err.sprintf("short read of env size: %d of %d bytes",
+			err.sprintf("short read of env size: %d of %u bytes",
 			            bytes,
-			            sizeof(env_len));
+			            (unsigned)sizeof(env_len));
 		}
 		fatal_error();
 	}

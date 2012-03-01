@@ -197,7 +197,13 @@ MultiLogFiles::InitializeFile(const char *filename, bool truncate,
 		dprintf( D_ALWAYS, "MultiLogFiles: truncating log file %s\n",
 					filename );
 	}
-	int fd = safe_create_keep_if_exists( filename, flags );
+
+		// Two-phase attempt at open here is to make things work if
+		// a log file is a symlink to another file (see gittrac #2704).
+	int fd = safe_create_fail_if_exists( filename, flags );
+	if ( fd < 0 && errno == EEXIST ) {
+		fd = safe_open_no_create_follow( filename, flags );
+	}
 	if ( fd < 0 ) {
 		errstack.pushf("MultiLogFiles", UTIL_ERR_OPEN_FILE,
 					"Error (%d, %s) opening file %s for creation "
@@ -344,7 +350,15 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 			the file is opened in text mode.  
 		*/
 	memset(psBuf,0,iLength+1);
-	fread(psBuf, 1, iLength, pFile);
+	int ret = fread(psBuf, 1, iLength, pFile);
+	if (ret == 0) {
+		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
+				"fread failed with errno %d (%s)\n", 
+				errno, strerror(errno) );
+		fclose(pFile);
+		return "";
+	}
+	
 	fclose(pFile);
 
 	strToReturn = psBuf;

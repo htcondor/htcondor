@@ -58,6 +58,8 @@ public:
 	const JobSet & getRemoved();
 	const JobSet & getCompleted();
 	const JobSet & getHeld();
+	const JobSet & getTransferringOutput();
+	const JobSet & getSuspended();
 
 	void setOwner(const char *owner);
 	const char* getOwner() { return m_owner.c_str(); }
@@ -77,6 +79,8 @@ private:
 	JobSet m_removed;
 	JobSet m_completed;
 	JobSet m_held;
+	JobSet m_transferring_output;
+	JobSet m_suspended;
 
 	bool ownerSet;
 	int  m_oldest_qdate;

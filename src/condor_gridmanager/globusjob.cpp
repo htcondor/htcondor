@@ -39,7 +39,6 @@
 #include "basename.h"
 #include "spooled_job_files.h"
 #include "condor_holdcodes.h"
-#include "condor_parameters.h"
 #include "string_list.h"
 #include "filename_tools.h"
 //#include "myproxy_manager.h"
@@ -433,11 +432,11 @@ static bool write_classad_input_file( ClassAd *classad,
 
 const char *rsl_stringify( const std::string& src )
 {
-	int src_len = src.length();
-	int src_pos = 0;
-	int var_pos1;
-	int var_pos2;
-	int quote_pos;
+	size_t src_len = src.length();
+	size_t src_pos = 0;
+	size_t var_pos1;
+	size_t var_pos2;
+	size_t quote_pos;
 	static std::string dst;
 
 	if ( src_len == 0 ) {
@@ -2304,7 +2303,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			// If requested, put the job on hold. Otherwise, wait for the
 			// proxy to be refreshed, then resume handling the job.
 			bool hold_if_credential_expired = 
-				param_boolean(PARAM_HOLD_IF_CRED_EXPIRED,true);
+				param_boolean("HOLD_JOB_IF_CREDENTIAL_EXPIRES",true);
 			if ( hold_if_credential_expired ) {
 					// set hold reason via Globus cred expired error code
 				globusStateErrorCode =
@@ -2627,7 +2626,7 @@ void GlobusJob::NotifyResourceDown()
 		// timer already set, our work is done
 		return;
 	}
-	int timeout = param_integer(PARAM_GLOBUS_GATEKEEPER_TIMEOUT,60*60*24*5);
+	int timeout = param_integer("GLOBUS_GATEKEEPER_TIMEOUT",60*60*24*5);
 	int time_of_death = 0;
 	unsigned int now = time(NULL);
 	jobAd->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
@@ -3541,11 +3540,14 @@ GlobusJob::JmShouldSleep()
 		return false;
 	}
 	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
-		if ( time(NULL) >= jmProxyExpireTime - 6*3600 ) {
+		// Don't forward the refreshed proxy if the remote proxy has more
+		// than GRIDMANAGER_PROXY_RENEW_LIMIT time left.
+		int renew_min = param_integer( "GRIDMANAGER_PROXY_REFRESH_TIME", 6*3600 );
+		if ( time(NULL) >= jmProxyExpireTime - renew_min ) {
 			return false;
 		} else {
 			daemonCore->Reset_Timer( evaluateStateTid,
-								 ( jmProxyExpireTime - 6*3600 ) - time(NULL) );
+								 ( jmProxyExpireTime - renew_min ) - time(NULL) );
 		}
 	}
 	if ( condorState != IDLE && condorState != RUNNING ) {

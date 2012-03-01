@@ -247,7 +247,6 @@ const char	*X509UserProxy	= "x509userproxy";
 const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
-const char	*GlobusXML = "globus_xml";
 const char	*NordugridRSL = "nordugrid_rsl";
 const char	*RendezvousDir	= "rendezvousdir";
 const char	*KeystoreFile = "keystore_file";
@@ -1272,7 +1271,6 @@ SetRemoteAttrs()
 
 	ExprItem tostringize[] = {
 		{ GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
-		{ GlobusXML, "globus_xml", ATTR_GLOBUS_XML },
 		{ NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
 		{ GridResource, 0, ATTR_GRID_RESOURCE },
 	};
@@ -1780,8 +1778,8 @@ SetUniverse()
 		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
-			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    unicore, cream, deltacloud, ec2
+			//    gt2, gt5, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    unicore, cream, deltacloud, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1789,10 +1787,10 @@ SetUniverse()
 			//   Condor 6.7.12.
 			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
-				(strcasecmp (JobGridType, "gt4") == MATCH) ||
 				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||
+				(strcasecmp (JobGridType, "sge") == MATCH) ||
 				(strcasecmp (JobGridType, "lsf") == MATCH) ||
 				(strcasecmp (JobGridType, "nqs") == MATCH) ||
 				(strcasecmp (JobGridType, "naregi") == MATCH) ||
@@ -1811,8 +1809,8 @@ SetUniverse()
 			} else {
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
-				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
+						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -2415,8 +2413,8 @@ SetTransferFiles()
 		//  (D) STF is not STF_NO and WTTO is FTO_NONE
 		//  (E) STF is STF_IF_NEEDED and WTTO is FTO_ON_EXIT_OR_EVICT
 		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
-	char *should = "INTERNAL ERROR";
-	char *when = "INTERNAL ERROR";
+	const char *should = "INTERNAL ERROR";
+	const char *when = "INTERNAL ERROR";
 	bool default_should;
 	bool default_when;
 	FileTransferOutput_t when_output;
@@ -2650,7 +2648,7 @@ SetTransferFiles()
 	// Starting with Condor 7.7.2, we only do this remapping if we're
 	// spooling files to the schedd. The shadow/starter will do any
 	// required renaming in the non-spooling case.
-	CondorVersionInfo cvi(MySchedd->version());
+	CondorVersionInfo cvi((MySchedd) ? MySchedd->version() : NULL);
 	if ( (!cvi.built_since_version(7, 7, 2) && should_transfer != STF_NO &&
 		  JobUniverse != CONDOR_UNIVERSE_GRID &&
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
@@ -3247,7 +3245,7 @@ void
 SetMaxJobRetirementTime()
 {
 	// Assume that SetPriority() has been called before getting here.
-	char *value = NULL;
+	const char *value = NULL;
 
 	value = condor_param( MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME );
 	if(!value && (nice_user_setting || JobUniverse == 1)) {
@@ -4904,7 +4902,6 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ||
 		 strcasecmp (JobGridType, "gt5") == MATCH ||
 		 strcasecmp (JobGridType, "nordugrid") == MATCH ) {
 
@@ -4929,8 +4926,7 @@ SetGridParams()
 
 	if ( JobGridType == NULL ||
 		 strcasecmp (JobGridType, "gt2") == MATCH ||
-		 strcasecmp (JobGridType, "gt5") == MATCH ||
-		 strcasecmp (JobGridType, "gt4") == MATCH ) {
+		 strcasecmp (JobGridType, "gt5") == MATCH ) {
 
 		buffer.sprintf( "%s = %d", ATTR_GLOBUS_STATUS,
 				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
@@ -4951,12 +4947,6 @@ SetGridParams()
 
 	if( (tmp = condor_param(GlobusRSL, ATTR_GLOBUS_RSL)) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
-		free( tmp );
-		InsertJobExpr ( buffer );
-	}
-
-	if( (tmp = condor_param(GlobusXML, ATTR_GLOBUS_XML)) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_GLOBUS_XML, tmp );
 		free( tmp );
 		InsertJobExpr ( buffer );
 	}
@@ -5018,6 +5008,12 @@ SetGridParams()
 				exit(1);
 			}
 			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
 		}
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -5037,6 +5033,12 @@ SetGridParams()
 				exit(1);
 			}
 			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
 		}
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -5295,7 +5297,6 @@ SetGSICredentials()
 	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (strcasecmp (JobGridType, "gt2") == MATCH ||
-		  strcasecmp (JobGridType, "gt4") == MATCH ||
 		  strcasecmp (JobGridType, "gt5") == MATCH ||
 		  strcasecmp (JobGridType, "cream") == MATCH ||
 		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
@@ -5304,7 +5305,7 @@ SetGSICredentials()
 		if ( proxy_file == NULL ) {
 
 			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, gt4, nordugrid or cream jobs\n");
+			fprintf( stderr, "x509 user proxy is required for gt2, nordugrid or cream jobs\n");
 			exit (1);
 		}
 	}
@@ -5334,7 +5335,7 @@ SetGSICredentials()
 				exit( 1 );
 			}
 
-			(void) buffer.sprintf( "%s=%i", ATTR_X509_USER_PROXY_EXPIRATION, 
+			(void) buffer.sprintf( "%s=%li", ATTR_X509_USER_PROXY_EXPIRATION, 
 						   proxy_expiration);
 			InsertJobExpr(buffer);	
 	
@@ -6556,6 +6557,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 #else
 	// will just do nothing here and leave
 	// it up to the runtime to nicely report errors.
+	pathname = pathname;
 	return (err == EISDIR);
 #endif
 }

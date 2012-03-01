@@ -128,6 +128,38 @@ _condor_set_debug_flags( const char *strflags )
 	free( tmp );
 }
 
+#if defined(HAVE__FTIME)
+# include <sys/timeb.h>
+#endif
+
+static double _condor_debug_get_time_double()
+{
+#if defined(HAVE__FTIME)
+	struct _timeb timebuffer;
+	_ftime( &timebuffer );
+	return ( timebuffer.time + (timebuffer.millitm * 0.001) );
+#elif defined(HAVE_GETTIMEOFDAY)
+	struct timeval	tv;
+	gettimeofday( &tv, NULL );
+	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+#else
+    return 0.0;
+#endif
+}
+
+_condor_auto_save_runtime::_condor_auto_save_runtime(double & store)
+   : runtime(store)
+{
+   this->begin = _condor_debug_get_time_double();
+}
+double _condor_auto_save_runtime::current_runtime()
+{
+   return _condor_debug_get_time_double() - begin;
+}
+_condor_auto_save_runtime::~_condor_auto_save_runtime()
+{
+   runtime = current_runtime();
+}
 
 #if 0
 /*

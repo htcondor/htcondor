@@ -38,8 +38,9 @@ public:
 	~Resource();
 
 		// Public methods that can be called from command handlers
-	int		retire_claim( void );	// Gracefully finish job and release claim
-	void	void_retire_claim( void ) { (void)retire_claim(); }
+	int		retire_claim( bool reversible=false );	// Gracefully finish job and release claim
+	void	void_retire_claim( ) { (void)retire_claim(false); }
+	void	void_retire_claim( bool reversible ) { (void)retire_claim(reversible); }
 	int		release_claim( void );	// Send softkill to starter; release claim
 	void	void_release_claim( void ) { (void)release_claim(); }
 	int		kill_claim( void );		// Quickly kill starter and release claim
@@ -66,14 +67,20 @@ public:
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
 
+		// True if this slot is draining
+	bool isDraining();
+
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
-	void	shutdownAllClaims( bool graceful );
+		// reversible: if true, claim may unretire
+	void	shutdownAllClaims( bool graceful, bool reversible=false );
 	void	releaseAllClaims( void );
+	void	releaseAllClaimsReversibly( void );
 	void	killAllClaims( void );
+	void    setBadputCausedByDraining();
 
         // Enable/Disable claims for hibernation
     void    disable ();

@@ -488,7 +488,7 @@ int
 RankSorter( const void *ptr1, const void* ptr2 );
 
 // Print out
-void displayResource( ClassAd* ad, char* str, int debug_level );
+void displayResource( ClassAd* ad, const char* str, int debug_level );
 void displayRequest( ClassAd* ad, char* str, int debug_level );
 
 // Clear out all the fields in the match record that have anything to

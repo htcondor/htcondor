@@ -126,7 +126,7 @@ displayTotals (FILE *file, int keyLength)
 		allTotals.iterate(key, ct);
 		// find the position where we want to insert the key
 		int pos;
-		for (pos = 0; pos < k && strcmp(keys[pos], key.Value()) < 0; pos++);
+		for (pos = 0; pos < k && strcmp(keys[pos], key.Value()) < 0; pos++) { }
 		if (pos < k) {
 			// if we are not inserting at the end of the array, then
 			// we must shift the elements to the right to make room;
@@ -171,6 +171,7 @@ StartdNormalTotal()
 #if HAVE_BACKFILL
 	backfill = 0;
 #endif /* HAVE_BACKFILL */
+	drained = 0;
 }
 
 
@@ -190,6 +191,7 @@ update (ClassAd *ad)
 #if HAVE_BACKFILL
 		case backfill_state:	backfill++;		break;
 #endif
+		case drained_state:		drained++;	break;
 		default: return 0;
 	}
 	machines++;
@@ -333,7 +335,7 @@ displayHeader(FILE *file)
 void StartdRunTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d  %11l"PRIu64"  %11"PRIu64"   %-.3f\n",
+	fprintf (file, "%9d  %11"PRIu64"  %11"PRIu64"   %-.3f\n",
 		 machines, (PRIu64_t)condor_mips, (PRIu64_t)kflops, 
 			 (machines > 0) ? float(loadavg/machines) : 0);
 }
@@ -351,6 +353,7 @@ StartdStateTotal()
 #if HAVE_BACKFILL
 	backfill = 0;
 #endif
+	drained = 0;
 }
 
 int StartdStateTotal::
@@ -372,6 +375,7 @@ update( ClassAd *ad )
 #if HAVE_BACKFILL
 		case backfill_state:	backfill++;		break;
 #endif
+		case drained_state:		drained++;	break;
 		default				:	return false;
 	}
 

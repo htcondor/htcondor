@@ -316,7 +316,7 @@ int BaseShadow::cdToIwd() {
 	int iRet =0;
 	
 #if ! defined(WIN32)
-	priv_state p;
+	priv_state p = PRIV_UNKNOWN;
 	
 	if (m_RunAsNobody)
 		p = set_root_priv();
@@ -361,8 +361,10 @@ BaseShadow::shutDown( int reason )
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
-		shadow_user_policy.checkAtExit();
-			// WARNING: 'this' may have been deleted by the time we get here!!!
+		if( !waitingToUpdateSchedd() ) {
+			shadow_user_policy.checkAtExit();
+				// WARNING: 'this' may have been deleted by the time we get here!!!
+		}
 	}
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
@@ -1402,9 +1404,9 @@ bool
 BaseShadow::jobWantsGracefulRemoval()
 {
 	bool job_wants_graceful_removal = false;
-	ClassAd *jobAd = getJobAd();
-	if( jobAd ) {
-		jobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
+	ClassAd *thejobAd = getJobAd();
+	if( thejobAd ) {
+		thejobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
 	}
 	return job_wants_graceful_removal;
 }

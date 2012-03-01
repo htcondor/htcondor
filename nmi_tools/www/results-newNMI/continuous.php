@@ -11,7 +11,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$blacklist = Array("x86_64_fedora_13");
+$blacklist = Array();
 ?>
 
 </head>
@@ -105,6 +105,9 @@ foreach ($results as $row) {
   // Keep track of every platform that we see, and if it is in the blacklist we
   // will skip it here.
   $platform = preg_replace("/nmi:/", "", $row["platform"]);
+  if(in_array($platform, $blacklist)) {
+    continue;
+  }
 
   $build_runid = $test_mapping[$row["runid"]];
   
@@ -176,9 +179,6 @@ foreach (array_keys($seen_platforms) as $platform) {
   if(preg_match("/^x86_64_/", $platform)) {
     $display = preg_replace("/x86_64_/", "x86_64<br>", $platform);
   }
-  elseif(preg_match("/ia64_/", $platform)) {
-    $display = preg_replace("/ia64_/", "x86<br>", $platform);
-  }
   else {
     $display = preg_replace("/x86_/", "x86<br>", $platform);
   }
@@ -186,7 +186,7 @@ foreach (array_keys($seen_platforms) as $platform) {
   print "  <th colspan=2><font size='-3'>$display" . $queues[$platform]["html-queue"] . "</font></th>\n";
   print "  <th></th>\n";
 }
-print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
+print "  <th><font size='-3'># Bad<br>Tasks</font></th>\n";
 print "</tr>\n";
 
 // Determine the heights of the days-of-the-week that display on the left
@@ -289,15 +289,13 @@ foreach ($runs as $run) {
   }
 
   // Print the summary
-  $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
-  $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
-  $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
-  print "<td class='$td_class'>$txt</td>\n";
-
-  $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
-  $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
-  $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
-  print "<td class='$td_class'>$txt</td>\n";
+  $num = $summary["build"]["pending"] + $summary["build"]["failed"] + $summary["test"]["pending"] + $summary["test"]["failed"];
+  if($num == 0) {
+    print "<td class='passed $td_class'>$num</td>";
+  }
+  else {
+    print "<td class='$td_class'>$num</td>";
+  }
 
   print "</tr>\n";
 }
@@ -411,6 +409,9 @@ function make_cell($run, $platform, $run_type, $td_class) {
   if($run["platforms"][$platform][$run_type]["result"] == NULL) {
     $color = "pending";
   }
+  elseif($run["platforms"][$platform][$run_type]["result"] == -1006) {
+    $color = "interrupted";
+  }
   elseif($run["platforms"][$platform][$run_type]["result"] != 0) {
     $color = "failed";
   }
@@ -432,7 +433,7 @@ function make_cell($run, $platform, $run_type, $td_class) {
     $failed_tasks = "<nobr>" . implode("</nobr><br><nobr>", $run["platforms"][$platform][$run_type]["bad-tasks"]) . "</nobr>";
   }
   else {
-    $failed_tasks = "<nobr>" . implode("<nobr><br></nobr>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1)) . "</nobr>";
+    $failed_tasks = "<nobr>" . implode("</nobr><br><nobr>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1)) . "</nobr>";
     $hidden = count($run["platforms"][$platform][$run_type]["bad-tasks"]) - MAX_TASKS_TO_DISPLAY_IN_POPUP;
     $failed_tasks .= "<br><i>$hidden more...</i>";
   }

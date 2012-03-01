@@ -32,6 +32,8 @@
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
+#include "filesystem_remap.h"
+#include "directory.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -191,6 +193,7 @@ VanillaProc::StartJob()
 		        fi.login);
 	}
 
+	FilesystemRemap * fs_remap = NULL;
 #if defined(LINUX)
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
@@ -229,9 +232,135 @@ VanillaProc::StartJob()
 	}
 #endif
 
+	{
+        // Have Condor manage a chroot
+       std::string requested_chroot_name;
+       JobAd->EvalString("RequestedChroot", NULL, requested_chroot_name);
+       const char * allowed_root_dirs = param("NAMED_CHROOT");
+       if (requested_chroot_name.size()) {
+               dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
+               StringList chroot_list(allowed_root_dirs);
+               chroot_list.rewind();
+               const char * next_chroot;
+               bool acceptable_chroot = false;
+               std::string requested_chroot;
+               while ( (next_chroot=chroot_list.next()) ) {
+                       MyString chroot_spec(next_chroot);
+                       chroot_spec.Tokenize();
+                       const char * chroot_name = chroot_spec.GetNextToken("=", false);
+                       if (chroot_name == NULL) {
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+                       }
+                       const char * next_dir = chroot_spec.GetNextToken("=", false);
+                       if (chroot_name == NULL) {
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+                       }
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.Value());
+                       if (IsDirectory(next_dir) && (strcmp(requested_chroot_name.c_str(), chroot_name) == 0)) {
+                               acceptable_chroot = true;
+                               requested_chroot = next_dir;
+                       }
+               }
+               // TODO: path to chroot MUST be all root-owned, or we have a nice security exploit.
+               // Is this the responsibility of Condor to check, or the sysadmin who set it up?
+               if (!acceptable_chroot) {
+                       return FALSE;
+               }
+               dprintf(D_FULLDEBUG, "Will attempt to set the chroot to %s.\n", requested_chroot.c_str());
+
+               std::string execute_dir(Starter->GetExecuteDir());
+               const char * full_dir = dirscat(requested_chroot, execute_dir);
+               std::string full_dir_str;
+               if (full_dir) {
+                       full_dir_str = full_dir;
+               } else {
+                       dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", requested_chroot.c_str(), execute_dir.c_str());
+                       return FALSE;
+               }
+               delete [] full_dir;
+               if (IsDirectory(execute_dir.c_str())) {
+                       if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
+                               dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+                               return FALSE;
+                       }
+                       if (!fs_remap) {
+                               fs_remap = new FilesystemRemap();
+                       }
+                       dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", execute_dir.c_str(), full_dir_str.c_str());
+                       if (fs_remap->AddMapping(execute_dir, full_dir_str)) {
+                               // FilesystemRemap object prints out an error message for us.
+                               return FALSE;
+                       }
+                       dprintf(D_FULLDEBUG, "Adding mapping %s -> %s.\n", requested_chroot.c_str(), "/");
+                       std::string root_str("/");
+                       if (fs_remap->AddMapping(requested_chroot, root_str)) {
+                               return FALSE;
+                       }
+               } else {
+                       dprintf(D_ALWAYS, "Unable to do chroot because working dir %s does not exist.\n", execute_dir.c_str());
+               }
+       } else {
+               dprintf(D_FULLDEBUG, "Value of RequestedChroot is unset.\n");
+       }
+	}
+
+	// On Linux kernel 2.4.19 and later, we can give each job its
+	// own FS mounts.
+	char * mount_under_scratch = param("MOUNT_UNDER_SCRATCH");
+	if (mount_under_scratch) {
+
+		std::string working_dir = Starter->GetWorkingDir();
+
+		if (IsDirectory(working_dir.c_str())) {
+			StringList mount_list(mount_under_scratch);
+			free(mount_under_scratch);
+
+			mount_list.rewind();
+			fs_remap = new FilesystemRemap();
+			char * next_dir;
+			while ( (next_dir=mount_list.next()) ) {
+				if (!*next_dir) {
+					// empty string?
+					mount_list.deleteCurrent();
+					continue;
+				}
+				std::string next_dir_str(next_dir);
+				// Gah, I wish I could throw an exception to clean up these nested if statements.
+				if (IsDirectory(next_dir)) {
+					char * full_dir = dirscat(working_dir, next_dir_str);
+					if (full_dir) {
+						std::string full_dir_str(full_dir);
+						delete [] full_dir; full_dir = NULL;
+						if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
+							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+							return FALSE;
+						}
+						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir_str.c_str(), next_dir_str.c_str());
+						if (fs_remap->AddMapping(full_dir_str, next_dir_str)) {
+							// FilesystemRemap object prints out an error message for us.
+							return FALSE;
+						}
+					} else {
+						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir.c_str(), next_dir_str.c_str());
+						return FALSE;
+					}
+				} else {
+					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir.c_str(), next_dir, next_dir);
+				}
+			}
+		} else {
+			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir.c_str());
+			return FALSE;
+		}
+	}
+
 	// have OsProc start the job
 	//
-	int retval = OsProc::StartJob(&fi);
+	int retval = OsProc::StartJob(&fi, fs_remap);
+
+	if (fs_remap != NULL) {
+		delete fs_remap;
+	}
 
 #if defined(HAVE_EXT_LIBCGROUP)
 	if (cgroup != NULL)

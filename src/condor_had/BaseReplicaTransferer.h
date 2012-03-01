@@ -48,7 +48,7 @@
 class BaseReplicaTransferer: public Service
 {
 public:
-    typedef enum { TRANSFERER_TRUE = 0, TRANSFERER_FALSE };
+    enum { TRANSFERER_TRUE = 0, TRANSFERER_FALSE };
     /* Function  : BaseReplicaTransferer constructor
      * Arguments : pDaemonSinfulString  - downloading/uploading daemon
      *                                    sinfull string

@@ -631,17 +631,17 @@ int Condor_Auth_X509::authenticate_self_gss(CondorError* errstack)
 	{
 		if (major_status == 851968 && minor_status == 20) {
 			errstack->pushf("GSI", GSI_ERR_NO_VALID_PROXY,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"Failed to authenticate.  Globus is reporting error (%u:%u).  "
 				"This indicates that you do not have a valid user proxy.  "
-				"Run grid-proxy-init.", major_status, minor_status);
+				"Run grid-proxy-init.", (unsigned)major_status, (unsigned)minor_status);
 		} else if (major_status == 851968 && minor_status == 12) {
 			errstack->pushf("GSI", GSI_ERR_NO_VALID_PROXY,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"Failed to authenticate.  Globus is reporting error (%u:%u).  "
 				"This indicates that your user proxy has expired.  "
-				"Run grid-proxy-init.", major_status, minor_status);
+				"Run grid-proxy-init.", (unsigned)major_status, (unsigned)minor_status);
 		} else {
 			errstack->pushf("GSI", GSI_ERR_ACQUIRING_SELF_CREDINTIAL_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  There is probably a problem with your credentials.  (Did you run grid-proxy-init?)", major_status, minor_status);
+				"Failed to authenticate.  Globus is reporting error (%u:%u).  There is probably a problem with your credentials.  (Did you run grid-proxy-init?)", (unsigned)major_status, (unsigned)minor_status);
 		}
 
         sprintf(comment,"authenticate_self_gss: acquiring self credentials failed. Please check your Condor configuration file if this is a server process. Or the user environment variable if this is a user process. \n");
@@ -687,24 +687,24 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
     if (major_status != GSS_S_COMPLETE)	{
 		if (major_status == 655360 && minor_status == 6) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"Failed to authenticate.  Globus is reporting error (%u:%u).  "
 				"This indicates that it was unable to find the issuer "
-				"certificate for your credential", major_status, minor_status);
+				"certificate for your credential", (unsigned)major_status, (unsigned)minor_status);
 		} else if (major_status == 655360 && minor_status == 9) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"Failed to authenticate.  Globus is reporting error (%u:%u).  "
 				"This indicates that it was unable to verify the server's "
-				"credential", major_status, minor_status);
+				"credential", (unsigned)major_status, (unsigned)minor_status);
 		} else if (major_status == 655360 && minor_status == 11) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"Failed to authenticate.  Globus is reporting error (%u:%u).  "
 				"This indicates that it was unable verify the server's "
 				"credentials because a signing policy file was not found or "
-				"could not be read.", major_status, minor_status);
+				"could not be read.", (unsigned)major_status, (unsigned)minor_status);
 		} else {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i)",
-				major_status, minor_status);
+				"Failed to authenticate.  Globus is reporting error (%u:%u)",
+				(unsigned)major_status, (unsigned)minor_status);
 		}
         print_log(major_status,minor_status,token_status,
                   "Condor GSI authentication failure");
@@ -837,11 +837,11 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
     if ( (major_status != GSS_S_COMPLETE)) {
 		if (major_status == 655360) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"COMMON Failed to authenticate (%i:%i)", major_status, minor_status);
+				"COMMON Failed to authenticate (%u:%u)", (unsigned)major_status, (unsigned)minor_status);
 		} else {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to authenticate.  Globus is reporting error (%i:%i)",
-				major_status, minor_status);
+				"Failed to authenticate.  Globus is reporting error (%u:%u)",
+				(unsigned)major_status, (unsigned)minor_status);
 		}
         print_log(major_status,minor_status,token_status, 
                   "Condor GSI authentication failure" );

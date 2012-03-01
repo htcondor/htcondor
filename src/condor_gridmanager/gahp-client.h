@@ -40,12 +40,6 @@ struct GahpProxyInfo
 	int num_references;
 };
 
-typedef void (* globus_gt4_gram_callback_func_t)(void * user_callback_arg,
-												 const char * job_contact,
-												 const char * state,
-												 const char * fault,
-												 const int exit_code);
-
 typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
 static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
@@ -60,8 +54,6 @@ static const int GAHPCLIENT_COMMAND_NOT_SUPPORTED = -101;
 static const int GAHPCLIENT_COMMAND_NOT_SUBMITTED = -102;
 ///
 static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
-
-static const int GT4_NO_EXIT_CODE = -1;
 
 void GahpReconfig();
 
@@ -196,11 +188,6 @@ class GahpServer : public Service {
 	void *globus_gt2_gram_user_callback_arg;
 	globus_gram_client_callback_func_t globus_gt2_gram_callback_func;
 	int globus_gt2_gram_callback_reqid;
-
-	char *globus_gt4_gram_callback_contact;
-	void *globus_gt4_gram_user_callback_arg;
-	globus_gt4_gram_callback_func_t globus_gt4_gram_callback_func;
-	int globus_gt4_gram_callback_reqid;
 
 	unicore_gahp_callback_func_t unicore_gahp_callback_func;
 	int unicore_gahp_callback_reqid;
@@ -401,72 +388,6 @@ class GahpClient : public Service {
 		///
 		int 
 		globus_gram_client_get_jobmanager_version(const char * resource_manager_contact);
-
-
-		///
-		int
-		gt4_generate_submit_id (char ** submit_id);
-
-
-		int
-		gt4_gram_client_callback_allow(
-			globus_gt4_gram_callback_func_t callback_func,
-			void * user_callback_arg,
-			char ** callback_contact);
-
-		///
-		int 	
-		gt4_gram_client_job_create(
-								   const char * submit_id,
-								   const char * resource_manager_contact,
-								   const char * jobmanager_type,
-								   const char * callback_contact,
-								   const char * rsl,
-								   time_t termination_time,
-								   char ** job_contact);
-
-		int 
-		gt4_gram_client_job_create(const char * resource_manager_contact,
-			const char * description,
-			const char * callback_contact,
-			char ** job_contact);
-
-		///
-		int
-		gt4_gram_client_job_start(const char *job_contact);
-
-		///
-		int 
-		gt4_gram_client_job_destroy(const char * job_contact);
-
-		///
-		int
-		gt4_gram_client_job_status(const char * job_contact,
-			char ** job_status, char ** job_fault, int * exit_code);
-
-		///
-		int
-		gt4_gram_client_job_callback_register(const char * job_contact,
-			const char * callback_contact);
-
-		///
-		int 
-		gt4_gram_client_ping(const char * resource_manager_contact);
-
-		///
-		int
-		gt4_gram_client_delegate_credentials(const char *delegation_service_url,
-											 char ** delegation_uri);
-
-		///
-		int
-		gt4_gram_client_refresh_credentials(const char *delegation_uri);
-
-		///
-		int
-		gt4_set_termination_time(const char *resource_uri,
-								 time_t &new_termination_time);
-
 
 
 		int

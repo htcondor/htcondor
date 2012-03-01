@@ -190,6 +190,9 @@ public:
 		*/
 	virtual bool cleanupJobs( void );
 
+		/** Return the Execute dir */
+	const char *GetExecuteDir() const { return Execute; }
+
 		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir.Value(); }
 

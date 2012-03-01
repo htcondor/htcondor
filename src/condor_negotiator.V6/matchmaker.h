@@ -92,6 +92,9 @@ struct GroupEntry {
     double sort_key;
 };
 
+/* Disable floating-point equality warnings */
+
+GCC_DIAG_OFF(float-equal)
 
 class Matchmaker : public Service
 {
@@ -177,7 +180,6 @@ class Matchmaker : public Service
 		   double priority, double share,
 		   double submitterLimit,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
-		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft);
 
@@ -486,7 +488,7 @@ class Matchmaker : public Service
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
 };
-
+GCC_DIAG_ON(float-equal)
 
 
 #endif//__MATCHMAKER_H__

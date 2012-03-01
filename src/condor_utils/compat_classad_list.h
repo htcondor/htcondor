@@ -110,6 +110,8 @@ public:
 		 */
 	void Sort(SortFunctionType smallerThan, void* userInfo = NULL);
 
+	void Shuffle();
+
     // Count classads satisfying constraint.  Optionally remove ads that don't.
     int CountMatches(classad::ExprTree* constraint);
 

@@ -27,6 +27,9 @@
 // c++ includes
 #include <map>
 
+// axis
+#include "axutil_log.h"
+
 // local includes
 #include "AviaryUtils.h"
 
@@ -34,6 +37,38 @@ using namespace std;
 using namespace compat_classad;
 
 const char* RESERVED[] = {"error", "false", "is", "isnt", "parent", "true","undefined", NULL};
+
+typedef std::map<std::string,int> LogLevelMapType;
+LogLevelMapType log_level_map;
+
+int
+aviary::util::getLogLevel() {
+	char *tmp = NULL;
+
+	if (log_level_map.empty()) {
+		log_level_map["AXIS2_LOG_LEVEL_CRITICAL"] = AXIS2_LOG_LEVEL_CRITICAL;
+		log_level_map["AXIS2_LOG_LEVEL_ERROR"] = AXIS2_LOG_LEVEL_ERROR;
+		log_level_map["AXIS2_LOG_LEVEL_WARNING"] = AXIS2_LOG_LEVEL_WARNING;
+		log_level_map["AXIS2_LOG_LEVEL_INFO"] = AXIS2_LOG_LEVEL_INFO;
+		log_level_map["AXIS2_LOG_LEVEL_DEBUG"] = AXIS2_LOG_LEVEL_DEBUG;
+		log_level_map["AXIS2_LOG_LEVEL_USER"] = AXIS2_LOG_LEVEL_USER;
+		log_level_map["AXIS2_LOG_LEVEL_TRACE"] = AXIS2_LOG_LEVEL_TRACE;
+	}
+
+	tmp = param("AXIS2_DEBUG_LEVEL");
+	if (!tmp) {
+		return AXIS2_LOG_LEVEL_CRITICAL;
+	}
+
+	LogLevelMapType::iterator it = log_level_map.find(tmp);
+	free(tmp); tmp = NULL;
+
+	if (it != log_level_map.end()) {
+		return (*it).second;
+	}
+
+	return AXIS2_LOG_LEVEL_CRITICAL;
+}
 
 string
 aviary::util::getPoolName()

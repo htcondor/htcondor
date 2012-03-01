@@ -652,29 +652,6 @@ C_GAHP_WORKER_THREAD_LOG = /tmp/CGAHPWorkerLog.$(USERNAME)
 C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 
 ##
-## The location of the wrapper for invoking
-## GT4 GAHP server
-##
-GT4_GAHP = $(SBIN)/gt4_gahp
-
-##
-## The location of GT4 files. This should normally be lib/gt4
-##
-GT4_LOCATION = $(LIB)/gt4
-
-##
-## gt4 gram requires a gridftp server to perform file transfers.
-## If GRIDFTP_URL_BASE is set, then Condor assumes there is a gridftp
-## server set up at that URL suitable for its use. Otherwise, Condor
-## will start its own gridftp servers as needed, using the binary
-## pointed at by GRIDFTP_SERVER. GRIDFTP_SERVER_WRAPPER points to a
-## wrapper script needed to properly set the path to the gridmap file.
-##
-#GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
-GRIDFTP_SERVER = $(LIBEXEC)/globus-gridftp-server
-GRIDFTP_SERVER_WRAPPER = $(LIBEXEC)/gridftp_wrapper.sh
-
-##
 ## Location of the PBS/LSF gahp and its associated binaries
 ##
 GLITE_LOCATION = $(LIB)/glite

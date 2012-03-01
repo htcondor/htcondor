@@ -23,12 +23,19 @@
 #include "condor_common.h"
 
 #if defined(HAVE_EXT_GLOBUS)
+/* Sigh.  globus forcibly defines IOV_MAX, instead of just gettint
+   it from limits.h.  Do this rigamarole to avoid annoying warnings */
+#define IOV_MAX_SAVE IOV_MAX
+#undef IOV_MAX
 #     include "globus_gsi_credential.h"
 #     include "globus_gsi_system_config.h"
 #     include "globus_gsi_system_config_constants.h"
 #     include "gssapi.h"
 #     include "globus_gss_assist.h"
 #     include "globus_gsi_proxy.h"
+#undef IOV_MAX
+#define IOV_MAX IOV_MAX_SAVE
+#undef IOV_MAX_SAVE
 #endif
 
 #if defined(HAVE_EXT_VOMS)

@@ -2768,19 +2768,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 	AllocationNode *alloc;
 	MRecArray* matches=NULL;
 
-		// Debugging hack: allow config file to specify which
-		// ip address we want the master to run on.
-	    // TODO: resurrect this?
-
-	int last;
-	char* master_ip = param( "mpi_master_ip" );
-	int m_ip_len = 0;
-	if( master_ip ) {
-		m_ip_len = strlen( master_ip );
-		last = 1;
-	}
-
-
 	alloc = new AllocationNode( cluster, nprocs );
 	alloc->num_resources = idle_candidates->Number();
 
@@ -2848,11 +2835,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		// Show world what we did
 	alloc->display();
 
-		// Get rid of our master_ip string, so we don't leak
-		// memory. 
-	if( master_ip ) {
-		free( master_ip );
-	}
 }
 
 
@@ -3488,8 +3470,8 @@ void
 DedicatedScheduler::displayResourceRequests( void )
 {
 	dprintf( D_FULLDEBUG,
-			 "Waiting to negotiate for %d dedicated resource request(s)\n",
-			 resource_requests.size() );
+			 "Waiting to negotiate for %lu dedicated resource request(s)\n",
+			 (unsigned long)resource_requests.size() );
 }
 
 
@@ -4359,7 +4341,7 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 
 
 void
-displayResource( ClassAd* ad, char* str, int debug_level )
+displayResource( ClassAd* ad, const char* str, int debug_level )
 {
 	char arch[128], opsys[128], name[128];
 	ad->LookupString( ATTR_NAME, name );

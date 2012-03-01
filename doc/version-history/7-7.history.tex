@@ -13,6 +13,356 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-5}Version 7.7.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.5 not yet released.
+%\item Condor version 7.7.5 released on Month Date, 2011.
+
+\item Support for the gt4 grid type (that is, Web Services GRAM) in the grid
+universe has been removed.
+\Ticket{2782}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Condor now has experimental support for IPv6.  
+This functionality is disabled by default.  
+This support has a variety of limitations, 
+including a lack of support for security, DNS, and mixed IPv4/IPv6 networks.  
+For information on enabling IPv6 support in the 7.7 series of Condor, 
+see \URL{https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToEnableIpvSix}.
+\Ticket{9}
+
+\item Default values for the submit commands
+\SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}
+were introduced in Condor version 7.7.3,
+but the manual did not reflect this change.
+Across platforms, default values are now
+\begin{verbatim}
+  should_transfer_files = IF_NEEDED
+  when_to_transfer_output = ON_EXIT
+\end{verbatim}
+See section ~\ref{sec:file-transfer-if-when} for details.
+\Ticket{2281}
+\Ticket{2273}
+
+\item The performance for claiming a partitionable slot in a 
+\Condor{startd} is greatly improved.  
+This feature is implemented in both the \Condor{schedd} and \Condor{startd},
+so both sides must be updated to at least Condor version 7.7.5 
+to see the benefit.  
+To disable this feature, set configuration variable
+\Macro{CLAIM\_PARTITIONABLE\_LEFTOVERS} to \Expr{False} 
+on either the submit or execute machines.  
+The default value for this variable is \Expr{True}.
+\Ticket{2790}
+
+\item On Linux platforms, the \Condor{starter} can now optionally measure the
+PSS (Proportional Set Size) of each Condor job,
+if the configuration variable \Macro{USE\_PSS} is \Expr{True}.
+Previously, this measurement was unconditionally on,
+which can cause performance problems in the \Condor{procd} when running
+many short lived jobs.
+\Ticket{2710}
+
+\item On Linux systems, the \Condor{starter} now has an ability to run a 
+job under a chroot directory.  
+If the configuration variable \Macro{NAMED\_CHROOT} is set to a list
+of directories on an execute machine, 
+the job has attribute \Attr{RequestedChroot} defined,
+and the value of \Attr{RequestedChroot} matches an entry 
+in the list defined by \MacroNI{NAMED\_CHROOT},
+then the \Condor{starter} calls \Procedure{chroot} with that directory 
+as an argument.  
+Note that it is up to the administrator to provide a full environment 
+for the job to run in.
+\Ticket{2698}
+
+\item On Linux platforms which support a bind type of file system mount 
+(which are generally RHEL 5 systems and more recent platforms), 
+the administrator can configure the \Condor{startd} 
+to provide per-job file system mounts.  
+One use might be to provide each job its own view of \File{/tmp} 
+and \File{/var/tmp}, which are private to that Condor job,
+and cleared when the job exits.  
+This is implemented with the new \Macro{MOUNT\_UNDER\_SCRATCH} 
+configuration variable, which describes which directories to bind mount.
+\Ticket{2015}
+
+\item Added the new \Opt{-expand} option to \Condor{config\_val}.
+If both \Opt{-dump} and \Opt{-expand} options are specified,
+all configuration variables are expanded before they are printed out.
+\Ticket{2687}
+
+\item The \Opt{-sort} option for \Condor{status} has been generalized to
+accept expressions instead of just simple named attributes.
+\Ticket{2661}
+
+\item A new command \Condor{drain} may be used to control the draining
+of an execute machine.  While a machine is draining, no new jobs may
+start.  Once draining is complete, it enters the Drained/Idle state.
+For more details, see page~\pageref{man-condor-drain}.
+\Ticket{2330}
+
+\item A new daemon \Condor{defrag} has been added to automate a simple
+policy for draining machines.  For more details, see
+page~\pageref{sec:Config-defrag}.
+\Ticket{2330}
+
+\item  \Condor{q} \Opt{-run} now displays the value of the job ClassAd
+attribute \Attr{EC2RemoteVirtualMachineName} instead of
+\Expr{[????????????????]},
+under the HOST(S) column for grid type ec2 jobs.
+\Ticket{2599}
+
+\item Condor can now submit jobs to Grid Engine via the new sge grid type.
+See section ~\ref{sec:SGE} for details.
+\Ticket{1984}
+
+\item Improved logging in more cases when Condor daemons run out of memory.
+\Ticket{2559}
+
+\item Improved verbose logging when \Dflag{MACHINE} is enabled in
+\MacroNI{NEGOTIATOR\_DEBUG}.  Previously, it logged whether each
+candidate machine matched or did not match with each job.  Now, it
+additionally logs whether the match was subsequently rejected for
+other reasons, such as insufficient priority, rank, or fair share
+allocation.
+
+\item Condor will now send email,
+if the submit command \Expr{notification = Error} is set and
+the job is placed on hold because of a failure, and not by user request.
+Previously, email would be sent only if the job was terminated via signal.
+\Ticket{1976}
+
+\item A new feature in DAGMan implements a second way to suspend a running DAG.
+See section ~\ref{sec:DagSuspend} for details.
+\Ticket{2213}
+
+\item The default settings for \Condor{dagman} have changed.
+Now, if a node has children, then \Condor{dagman} uses the
+\Attr{KeepClaimIdle} attribute, 
+introduced in Condor version 7.7.1, to hold onto a claim.
+This is a slight optimization, 
+as it avoids waiting for a negotiation cycle.
+The amount of time is controlled by the
+\Macro{DAGMAN\_HOLD\_CLAIM\_TIME} configuration variable.
+\Ticket{2673}
+
+\item Improved the output of \Condor{q} \Opt{-dag},
+to show the DAG structure as a tree,
+with children indented below their parents.
+\Ticket{1281}
+
+\item The new FINAL node feature in DAGMan allows the specification
+of a special DAG node, 
+which is always run at the end of the workflow,
+whether the DAG ended successfully or not.
+See section~\ref{sec:DAGFinalNode} for details.
+\Ticket{1482}
+
+\item Improved the output of \Condor{userprio} to better support hierarchical
+groups. 
+The first column of the output no longer truncates long user or group names.
+User names are shown indented under group names,
+when hierarchical groups are in use.
+New columns were added to show group quota information.
+A new \Opt{-most} option was added to show 
+the most useful fields,
+since \Opt{-all} now produces a very wide display.
+\Ticket{2680}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{JOB\_QUEUE\_LOG} 
+specifies an alternative path and file name for the \File{job\_queue.log} file.
+The default value is \File{\MacroUNI{SPOOL}/job\_queue.log}.
+This alternative location can be
+useful if there is a solid state drive which is big enough to hold the
+frequently written to \File{job\_queue.log},
+but not big enough to hold the whole contents of the spool directory.
+\Ticket{2598}
+
+\item The new configuration variable \Macro{DAGMAN\_HOLD\_CLAIM\_TIME}
+specifies the amount of time in seconds that the \Condor{schedd} 
+will hold a claim idle for a DAGMan job, 
+using the \AdAttr{KeepClaimIdle} attribute in the job ClassAd.
+\Ticket{2673}
+
+\item The job ClassAd attributes
+\AdAttr{ResidentSetSize} and \AdAttr{ProportionalSetSizeKb} now
+report the maximum observed memory usage.  
+Previously, they reported the most recently observed memory usage.  
+This change makes these attributes similar to \AdAttr{ImageSize}, 
+which also reports the maximum observed value.  
+Previously, \AdAttr{ResidentSetSize} was
+usually reported as 0 in the job history for completed jobs, because
+when the job was finished, the final observation of memory usage
+was 0.
+\Ticket{2725}
+
+\item The job ClassAd attribute \Attr{ResidentSetSize} is now rounded 
+by default,
+using the new default configuration setting
+\Expr{SCHEDD\_ROUND\_ATTR\_ResidentSetSize = 25\%}.
+\Ticket{2729}
+
+\item The configuration variable \Macro{PROCD\_LOG} now defaults to
+\File{\$(LOG)/ProcLog}.  Previously, there was no default value,
+so the \Condor{procd} did not log by default.
+\Ticket{2775}
+
+\item The meaning of the \Attr{VirtualMemory} attribute of the \Condor{startd} 
+has been changed for Linux platforms.
+Previously, it was the amount of paging space configured for the system.
+So, if a machine with a lot of memory had no paging space, 
+the \Attr{VirtualMemory} attribute would report zero.
+Now, the \Attr{VirtualMemory} attribute on Linux platforms 
+is the sum of paging space and physical memory, 
+which more accurately represents the virtual memory size of the machine.
+\Ticket{2763}
+
+\item The submit command \SubmitCmd{globus\_xml} is no longer
+recognized. Therefore, the following configuration variables are no longer
+recognized:
+\begin{itemize}
+  \item \Expr{GRIDFTP\_SERVER}
+\index{GRIDFTP\_SERVER configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDFTP\_SERVER} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GRIDFTP\_SERVER\_WRAPPER}
+\index{GRIDFTP\_SERVER\_WRAPPER configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDFTP\_SERVER\_WRAPPER} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GRIDFTP\_URL\_BASE}
+\index{GRIDFTP\_URL\_BASE configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDFTP\_URL\_BASE} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT4\_GAHP}
+\index{GT4\_GAHP configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT4\_GAHP} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT4\_LOCATION}
+\index{GT4\_LOCATION configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT4\_LOCATION} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT42\_GAHP}
+\index{GT42\_GAHP configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT42\_GAHP} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GT42\_LOCATION}
+\index{GT42\_LOCATION configuration variable no longer exists as of Condor version 7.7.5@\texttt{GT42\_LOCATION} configuration variable no longer exists as of Condor version 7.7.5}
+  \item \Expr{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE}
+\index{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE configuration variable no longer exists as of Condor version 7.7.5@\texttt{GRIDMANAGER\_MAX\_WS\_DESTROYS\_PER\_RESOURCE} configuration variable no longer exists as of Condor version 7.7.5}
+\end{itemize}
+\Ticket{2782}
+
+\item The new configuration variable
+\Macro{GRIDMANAGER\_PROXY\_REFRESH\_TIME} controls when the
+\Condor{gridmanager} forwards a refreshed proxy to the remote GRAM server.
+The lifetime remaining on the proxy on the remote server (in seconds) must
+fall below this value before the \Condor{gridmanager} will forward a
+refreshed proxy. 
+The default value is 21600 seconds (6 hours).
+Previously, this value was not configurable.
+\Ticket{2792}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in which \Condor{submit} allowed the specification of
+\SubmitCmd{ec2\_secret\_access\_key} and \SubmitCmd{ec2\_access\_key\_id}
+to be directories instead of files.
+\Condor{submit} now generates an error in these cases.
+\Ticket{2619}
+
+\item Communication errors were not always correctly handled when
+fetching results of a query when using the \Opt{-stream} option to
+\Condor{q}.  This problem was introduced in Condor version 7.7.0.
+\Ticket{2601}
+
+\item Fixed Condor's CronTab (Crondor, section~\ref{sec:CronTab})
+scheduling of jobs,
+as they did not correctly take into account
+shifts in time caused by daylight savings time transitions.
+\Ticket{2620}
+
+\item Previously, \Condor{ssh\_to\_job} sessions inherited the \Condor{starter}
+environment.  Now, this only happens when
+\MacroNI{JOB\_INHERITS\_STARTER\_ENVIRONMENT} is \Expr{True}.
+\Ticket{2621}
+
+\item On Linux platforms, the memory usage was ignored for job sub-processes
+that were created via \Procedure{fork} without calling \Procedure{exec}.
+This problem affected \Attr{ImageSize} and \Attr{ResidentSetSize},
+but not \Attr{ProportionalSetSize}.
+
+\item Fixed a rare condition that could cause a job to remain in the
+running state indefinitely when the job was removed or put on hold
+and there was a communication failure between the \Condor{shadow}
+and the \Condor{starter}.  
+This problem was introduced in Condor version 7.7.2.
+\Ticket{2591}
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause crashes
+and prevent the attribute \Attr{x509UserProxyEmail} from being set properly for
+jobs forwarded via Condor-C.
+\Ticket{2655}
+
+\item Fixed the output of \Condor{q} \Opt{-dag},
+such that children of a non-existent DAG node would not be mistakenly 
+shown as belonging to another instance of \Condor{dagman}.
+This can happen, for example, when a \Condor{dagman} process dies while
+its children are still running.
+\Ticket{2463}
+
+\item Fixed a bug in \Condor{dagman} that caused a DAG to fail if node
+job user log files were actually symbolic links.  
+This problem was introduced in the Condor 7.7 development series.
+\Ticket{2704}
+
+\item Fixed a bug in the collection of Statistics attributes,
+introduced in Condor version 7.7.2.
+Condor did not count completed scheduler universe jobs in reported statistics.
+\Ticket{2731}
+
+\item Fixed a rare bug in which the \Condor{c-gahp} process could get
+into an infinite loop on start up,
+if more than one \Condor{c-gahp} was running under different users,
+and the names of the users only differed in their last character.
+\Ticket{2749}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item Condor's ability to use cgroup-based process tracking,
+available since Condor version 7.7.0,
+has now been documented in section~\ref{sec:CGroupTracking}.
+\Ticket{1831}
+\Ticket{2120}
+
+\item Submitter ClassAd attributes are now documented in the unnumbered
+appendix on page~\pageref{sec:Submitter-ClassAd-Attributes}.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-7-4}Version 7.7.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -354,7 +704,7 @@ as are currently documented (section~\ref{sec:New-7-6-4}) in this manual.
 linux.}
 A copy of these libraries is included with Condor, under
 \File{lib/condor/} in the tarball releases and under
-\File{/usr/lib/condor/} or \File{/yrs/lib64/condor/} in the native package
+\File{/usr/lib/condor/} or \File{/usr/lib64/condor/} in the native package
 releases.
 \Ticket{2389}
 \Ticket{2390}

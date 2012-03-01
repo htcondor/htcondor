@@ -26,6 +26,13 @@
 #include "named_pipe_watchdog.unix.h"
 #include "named_pipe_util.unix.h"
 
+double pfc_lc_rt_start_connection = 0;
+double pfc_lc_rt_open_pipe = 0;
+double pfc_lc_rt_wait_pipe = 0;
+double pfc_lc_rt_write_pipe = 0;
+double pfc_lc_rt_end_connection = 0;
+double pfc_lc_rt_read_data = 0;
+
 int LocalClient::s_next_serial_number = 0;
 
 LocalClient::LocalClient() :

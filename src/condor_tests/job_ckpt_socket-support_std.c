@@ -142,11 +142,12 @@ FILE *fopen_http( char *server, char *path )
 	return NULL;
 }
 
-int open_tcp( char *server, int port )
+int open_tcp( char *server, int  port )
 {
 	struct addrinfo* res = NULL;
 	int fd;
 	int result = 0;
+	port = port;
 
 	result = getaddrinfo(server, NULL, NULL, &res);
 	if (result != 0) {

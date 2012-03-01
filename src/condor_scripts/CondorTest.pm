@@ -71,7 +71,10 @@ my $isnightly = IsThisNightly($BaseDir);
 my $coredir = "$BaseDir/Cores";
 if(!(-d $coredir)) {
 	debug("Creating collection directory for cores\n",2);
-	runcmd("mkdir -p $coredir");
+#	runcmd("mkdir -p $coredir");
+#	the above command doesn't work on windows (-p isn't valid for windows' mkdir which always has -p behavior)
+#	but since cwd is $BaseDir we can just use perl's mkdir
+        mkdir 'Cores' || die "ERROR: could not create $coredir\n";
 }
 
 # set up for reading in core/ERROR exemptions
@@ -1744,7 +1747,7 @@ sub debug
       my $self = {
           name => shift,
           condor_config => shift,
-          collector_port => shift,
+          collector_addr => shift,
           is_running => shift
       };
       bless $self, $class;
@@ -1755,10 +1758,15 @@ sub debug
       my $self = shift;
       return $self->{condor_config};
   }
+  sub MakeThisTheDefaultInstance
+  {
+      my $self = shift;
+      $ENV{CONDOR_CONFIG} = $self->{condor_config};
+  }
   sub GetCollectorAddress
   {
       my $self = shift;
-      return "localhost:" . $self->{collector_port};
+      return $self->{collector_addr};
   }
 }
 
@@ -1820,10 +1828,11 @@ sub StartPersonal {
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
     my $collector_port = shift @condor_info;
+    my $collector_addr = CondorPersonal::FindCollectorAddress();
 
     $time = strftime("%y/%m/%d %H:%M:%S", localtime);
     print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
-    $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_port, 1 );
+    $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
     $time = strftime("%y/%m/%d %H:%M:%S", localtime);
     print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
@@ -1871,8 +1880,9 @@ sub StartCondorWithParams
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
     my $collector_port = shift @condor_info;
+    my $collector_addr = CondorPersonal::FindCollectorAddress();
 
-    my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_port, 1 );
+    my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_addr, 1 );
     $personal_condors{$condor_name} = $new_condor;
 
     return $new_condor;

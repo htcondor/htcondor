@@ -192,7 +192,7 @@ VMStarterInfo::getIPForVM(void)
 }
 
 void 
-VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t mask )
+VMStarterInfo::publishVMInfo(ClassAd* ad, amask_t  /*mask*/ )
 {
 	if( !ad ) {
 		return;
@@ -294,7 +294,7 @@ VMUniverseMgr::printVMGahpInfo( int debug_level )
 }
 
 void
-VMUniverseMgr::publish( ClassAd* ad, amask_t mask )
+VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 {
 	if( !ad ) {
 		return;

@@ -221,21 +221,21 @@ produce_output()
 	}
 
 	szTmp.sprintf("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
-	dprintf(D_ALWAYS, szTmp.Value()); 
+	dprintf(D_ALWAYS, "%s", szTmp.Value()); 
 		
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
-		fprintf( mailer, szTmp.Value());
+		fprintf( mailer, "%s", szTmp.Value());
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
 		szTmp.sprintf("  %s\n", str);
-		dprintf(D_ALWAYS, szTmp.Value() );
-		fprintf( mailer, szTmp.Value() );
+		dprintf(D_ALWAYS, "%s", szTmp.Value() );
+		fprintf( mailer, "%s", szTmp.Value() );
 	}
 
 	if( MailFlag ) {
-		char *explanation = "\n\nWhat is condor_preen?\n\n"
+		const char *explanation = "\n\nWhat is condor_preen?\n\n"
 "The condor_preen tool examines the directories belonging to Condor, and\n"
 "removes extraneous files and directories which may be left over from Condor\n"
 "processes which terminated abnormally either due to internal errors or a\n"
@@ -263,8 +263,8 @@ check_job_spool_hierarchy( char const *parent, char const *child, StringList &ba
 		// or $(SPOOL)/<cluster mod 10000>/cluster<cluster>.ickpt.subproc<subproc>
 
 	char *end=NULL;
-	strtol(child,&end,10);
-	if( !end || *end != '\0' ) {
+	long l = strtol(child,&end,10);
+	if( l == LONG_MIN || !end || *end != '\0' ) {
 		return false; // not part of the job spool hierarchy
 	}
 
@@ -545,11 +545,10 @@ is_v3_ckpt( const char *name )
 {
 	int		cluster;
 	int		proc;
-	int		subproc;
 
 	cluster = grab_val( name, "cluster" );
 	proc = grab_val( name, ".proc" );
-	subproc = grab_val( name, ".subproc" );
+	grab_val( name, ".subproc" );
 
 		
 	if( proc < 0 ) {
@@ -817,8 +816,8 @@ init_params()
 		char const *name = (*params)[p].name.Value();
 		char *tail = NULL;
 		if( strncasecmp( name, "SLOT", 4 ) != 0 ) continue;
-		strtol( name+4, &tail, 10 );
-		if( tail <= name || strcasecmp( tail, "_EXECUTE" ) != 0 ) continue;
+		long l = strtol( name+4, &tail, 10 );
+		if( l == LONG_MIN || tail <= name || strcasecmp( tail, "_EXECUTE" ) != 0 ) continue;
 
 		Execute = param(name);
 		if( Execute ) {

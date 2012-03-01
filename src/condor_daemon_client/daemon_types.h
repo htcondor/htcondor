@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 const char* daemonString( daemon_t dt );
-daemon_t stringToDaemonType( char* name );
+daemon_t stringToDaemonType( const char* name );
 
 #ifdef __cplusplus
 }

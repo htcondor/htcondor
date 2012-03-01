@@ -243,11 +243,22 @@ private:
 	char*			m_opsys;
 	int 			m_opsysver;
 	char*			m_opsys_and_ver;
+	int			m_opsys_major_ver;
+	char*			m_opsys_name;
+	char*			m_opsys_distro;
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
 	List<AttribValue> m_lst_static;     // list of user-specified static attributes
+
+     	// temporary attributes for raw utsname info
+	char*			m_utsname_sysname;
+	char*			m_utsname_nodename;
+	char*			m_utsname_release;
+	char* 			m_utsname_version;
+	char*			m_utsname_machine;
+
 
 	// this holds strings that m_lst_static and m_lst_dynamic point to
 	// it is initialized from the param STARTD_PUBLISH_WINREG and then parsed/modified and used
@@ -257,6 +268,7 @@ private:
 	StringList      m_user_specified;
 	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
+	char *			m_named_chroot;
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;
 	OSVERSIONINFOEX	m_window_version_info;
@@ -300,6 +312,7 @@ public:
 	void dprintf( int, const char*, ... );
 	void show_totals( int );
 
+	int num_cpus() { return c_num_cpus; }
 	float get_disk() { return c_disk; }
 	float get_disk_fraction() { return c_disk_fraction; }
 	unsigned long get_total_disk() { return c_total_disk; }

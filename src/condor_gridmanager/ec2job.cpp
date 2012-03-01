@@ -1104,12 +1104,10 @@ void EC2Job::doEvaluateState()
 
 				if (rc == 0) {
 					// remove temporary keypair local output file
-					if ( remove_keypair_file(m_key_pair_file.c_str()) ) {
-						gmState = GM_FAILED;
-					} else {
+					if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
 						dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
-						gmState = GM_FAILED;
 					}
+					gmState = GM_FAILED;
 					
 				} else {
 					errorString = gahp->getErrorString();

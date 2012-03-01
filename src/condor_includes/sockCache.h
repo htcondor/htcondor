@@ -44,7 +44,7 @@ What you use doesn't matter, _so long as you are consistent_.  If you pass
 different addr strings for the same host, you'll get multiple connections.  So
 long as you always use the same attribute, you'll be fine.
 
-Why this warning?  When GCB is involved, a single host could have multiple IP
+Why this warning?  When CCB is involved, a single host could have multiple IP
 addresses to contact it at.  Which one we use to contact the host may change
 over time.  If you use the address you connect with _at the moment_ as your
 addr here, you could end up with multiple sockets.

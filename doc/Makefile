@@ -143,7 +143,7 @@ user-man/dagman-node.eps: user-man/dagman-node.fig
 	rm -f $@
 	fig2dev -L eps -m .6 $< > $@
 
-figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
+figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
 
 # commented out by Karen on Dec 14, 2010, as no one uses it, and it is wrong
 # for pulling manual pages.  Target 'just-man-pages' is used.

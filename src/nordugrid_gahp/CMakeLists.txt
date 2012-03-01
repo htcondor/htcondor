@@ -22,6 +22,10 @@ if (HAVE_EXT_GLOBUS AND HAVE_LDAP_H AND LDAP_FOUND )
 
 	condor_glob( HeaderFiles SourceFiles "" )
 
+	# Globus forces a zillion "local variable shadows global" warnings
+
+	set_source_files_properties(${SourceFiles} PROPERTIES COMPILE_FLAGS "-Wno-shadow -Wno-unused-parameter -Wno-unused-variable")
+
 	condor_exe( nordugrid_gahp
 				"${HeaderFiles};${SourceFiles}"
 				${C_SBIN}

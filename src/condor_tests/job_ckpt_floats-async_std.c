@@ -34,13 +34,12 @@
 #include <time.h>
 
 int main( int argc, char* argv[] ) {
-	int i, j, s, num_k_iter, num_secs = 1;
+	int i, j, s, num_secs = 1;
 	time_t old_time, new_time;
 	float x = 45;
 	float y = 23;
 	float z = 256;
 	int success=1;
-	struct utsname uname_s;
 
 	if( argc >= 2 ) {
 		num_secs = atoi( argv[1] );

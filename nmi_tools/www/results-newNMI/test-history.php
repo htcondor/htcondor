@@ -1,10 +1,11 @@
 <?php   
 
 define("DETAIL_URL", "./run-details.php?runid=%s");
+define("TASK_URL", "task-details.php?platform=%s&task=%s&runid=%s");
 
 include "Dashboard.php";
 $dash = new Dashboard();
-$dash->print_header("Condor Build and Test Dashboard");
+$dash->print_header("Condor Build and Test Dashboard", 1, 1);
 $dash->connect_to_db();
 
 # get args
@@ -12,8 +13,6 @@ $runid = (int)$_REQUEST["runid"];
 $test = $_REQUEST["test"];
 
 ?>
-
-<script type='text/javascript' src='jquery-1.6.2.min.js'></script>
 
 <script type="text/javascript">
   var toggle = 1;
@@ -47,8 +46,12 @@ div.time {
 p.toggle {
   cursor: pointer;
 }
+th {
+  background-color: lightgrey;
+}
 -->
 </style>
+
 
 </head>
 <body>
@@ -127,7 +130,7 @@ foreach ($results as $row) {
 
 print "<p><a id='toggle'>Show task times</a>\n";
 
-print "<table border='0' cellspacing='0'>\n";
+print "<table class='tableWithFloatingHeader' border='0' cellspacing='0'>\n";
 print "<tr>\n";
 print "   <th>Run IDs</th>\n";
 
@@ -138,16 +141,13 @@ foreach ($platforms AS $platform) {
   if(preg_match("/^x86_64_/", $display)) {
     $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
   }
-  elseif(preg_match("/ia64_/", $display)) {
-    $display = preg_replace("/ia64_/", "x86<br>", $display);
-  }
   else {
     $display = preg_replace("/x86_/", "x86<br>", $display);
   }
 
   $display = "<font style='font-size:75%'>$display</font>";
 
-  print "<td align='center'>$display</td>\n";
+  print "<th align='center'>$display</td>\n";
 }
 print "</tr>\n";
 
@@ -167,8 +167,10 @@ foreach ($builds as $build_runid => $test_runids) {
       if(array_key_exists($platform, $history[$test_runid])) {
 	  $class = map_result($history[$test_runid][$platform]["result"]);
 
-	  $contents = "<div class='status'>" . $history[$test_runid][$platform]["result"] . "</div>";
-	  $contents .= "<div class='time'>" . sec_to_min($history[$test_runid][$platform]["length"]) . "</div>";
+	  $task_link = sprintf(TASK_URL, $platform, urlencode($test), $test_runid);
+
+	  $contents = "<div class='status'><a href='$task_link'>" . $history[$test_runid][$platform]["result"] . "</a></div>";
+	  $contents .= "<div class='time'><a href='$task_link'>" . sec_to_min($history[$test_runid][$platform]["length"]) . "</a></div>";
 	  print "  <td class=\"$class\">$contents</td>\n";
 	  $found_task = 1;
 	  break;

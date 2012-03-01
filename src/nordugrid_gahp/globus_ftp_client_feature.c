@@ -373,7 +373,8 @@ globus_ftp_client_is_feature_supported(
         error = GLOBUS_I_FTP_CLIENT_ERROR_NULL_PARAMETER("u_features");
         goto error_param;
     }
-    if(feature < 0 || feature >= GLOBUS_FTP_CLIENT_FEATURE_MAX)
+    // Note I dropped the test (feature < 0) as feature is unsigned...
+    if(feature >= GLOBUS_FTP_CLIENT_FEATURE_MAX)
     {
         error = GLOBUS_I_FTP_CLIENT_ERROR_INVALID_PARAMETER("feature");
         goto error_param;

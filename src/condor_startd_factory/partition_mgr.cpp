@@ -79,7 +79,7 @@ void PartitionManager::read_partitions(FILE *fin)
 	int idx;
 	ClassAd *ad = NULL;
 	int eof, error, empty;
-	char *classad_delimitor = "---\n";
+	const char *classad_delimitor = "---\n";
 	MyString tmp_str;
 	bool tmp_bool = true;
 
@@ -208,7 +208,7 @@ void PartitionManager::partition_realization(int &tot_smp, int &tot_dual,
 
 void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	char *generate_script, char *boot_script, char *back_script, 
-	char *shutdown_script, char *destroy_script)
+	char *shutdown_script, char *  /*destroy_script*/)
 {
 	int idx;
 	int total_smp_idle;
@@ -274,7 +274,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			if (m_parts[idx].get_pstate() == BOOTED &&
 				m_parts[idx].get_pkind() == SMP)
 			{
-				dprintf(D_ALWAYS, "Backing SMP partition: %s %d\n",
+				dprintf(D_ALWAYS, "Backing SMP partition: %s %ld\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].back(back_script);
@@ -288,7 +288,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 		SCHED_SMP_GENERATE:
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == GENERATED) {
-				dprintf(D_ALWAYS, "Booting SMP partition: %s %d\n",
+				dprintf(D_ALWAYS, "Booting SMP partition: %s %ld\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].boot(boot_script, SMP);
@@ -327,7 +327,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			if (m_parts[idx].get_pstate() == BOOTED &&
 				m_parts[idx].get_pkind() == DUAL)
 			{
-				dprintf(D_ALWAYS, "Backing DUAL partition: %s %d\n",
+				dprintf(D_ALWAYS, "Backing DUAL partition: %s %ld\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].back(back_script);
@@ -341,7 +341,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 		SCHED_DUAL_GENERATE:
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == GENERATED) {
-				dprintf(D_ALWAYS, "Booting DUAL partition: %s %d\n",
+				dprintf(D_ALWAYS, "Booting DUAL partition: %s %ld\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].boot(boot_script, DUAL);
@@ -378,7 +378,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 			if (m_parts[idx].get_pstate() == BOOTED &&
 				m_parts[idx].get_pkind() == VN)
 			{
-				dprintf(D_ALWAYS, "Backing VN partition: %s %d\n",
+				dprintf(D_ALWAYS, "Backing VN partition: %s %ld\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].back(back_script);
@@ -392,7 +392,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 		SCHED_VN_GENERATE:
 		for (idx = 0; idx < m_parts.length(); idx++) {
 			if (m_parts[idx].get_pstate() == GENERATED) {
-				dprintf(D_ALWAYS, "Booting VN partition: %s %d\n",
+				dprintf(D_ALWAYS, "Booting VN partition: %s %ld\n",
 					m_parts[idx].get_name().Value(),
 					m_parts[idx].get_size());
 				m_parts[idx].boot(boot_script, VN);
@@ -432,7 +432,7 @@ void PartitionManager::schedule_partitions(WorkloadManager &wkld_mgr,
 	// an entire cycle beofre trying to adjust the partitions again.
 	for (idx = 0; idx < m_parts.length(); idx++) {
 		if (m_parts[idx].get_pstate() == BOOTED) {
-			dprintf(D_ALWAYS, "Shutting down unused partition: %s %d %s\n",
+			dprintf(D_ALWAYS, "Shutting down unused partition: %s %ld %s\n",
 				m_parts[idx].get_name().Value(),
 				m_parts[idx].get_size(),
 				pkind_xlate(m_parts[idx].get_pkind()).Value());

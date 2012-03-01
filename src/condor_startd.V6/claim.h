@@ -227,6 +227,7 @@ public:
 	void disallowUnretire()     {c_may_unretire=false;}
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
 	void preemptIsTrue() {c_preempt_was_true=true;}
+	void setBadputCausedByDraining() {c_badput_caused_by_draining=true;}
 	int activationCount() {return c_activation_count;}
 
 		// starter-related functions
@@ -336,6 +337,7 @@ private:
 	bool        c_may_unretire;
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
+	bool        c_badput_caused_by_draining; // was job preempted due to draining?
 	bool        c_schedd_closed_claim;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 

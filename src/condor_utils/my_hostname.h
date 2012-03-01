@@ -21,13 +21,13 @@
 #define MY_HOSTNAME_H
 
 // use get_local_hostname() instead
-extern	char*	my_hostname( void );
+extern	const char*	my_hostname( void );
 
 // use get_local_fqdn() instead
-extern	char*	my_full_hostname( void );
+extern	const char*	my_full_hostname( void );
 
 // use get_local_ipaddr().to_ip_string() instead
-extern	char*	my_ip_string( void );
+extern	const char*	my_ip_string( void );
 
 // following functions are deprecated
 //extern	unsigned int	my_ip_addr( void );

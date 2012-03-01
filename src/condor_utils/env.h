@@ -29,8 +29,10 @@ into the Env object in several formats.
 Example:
 
 Env envobj;
+// Add env settings from the environment
+envobj.Import();
 // Add env settings from job ClassAd:
-envobj.MergeFrom(ad)
+envobj.MergeFrom(ad);
 // Add env settings in raw V2 syntax.
 envobj.MergeFromV2Raw("env1=val1 env2=val2 ...");
 // Add env settings in raw V1 syntax.
@@ -108,8 +110,14 @@ class Env {
 		// Remove all environment entries.
 	void Clear( void );
 
-		// Import environment from process
-	bool Import( void );
+		// Import environment from process.
+		// Unlike MergeFrom(environ), it is not considered
+		// an error if there are entries in the environment
+		// that do not contain an assignment; they are
+		// silently ignored.  The only possible failure
+		// in this function is if it runs out of memory.
+		// It will ASSERT() in that case.
+	void Import( void );
 
 		// Filter for the above
 		//  -- return true to import variable, false to not
@@ -144,7 +152,11 @@ class Env {
 	bool MergeFromV1or2Raw( const char *delimitedString, MyString *error_msg );
 
 		// Add (or overwrite) environment entries from a NULL-terminated
-		// array of key=value strings.
+		// array of key=value strings.  This function returns false
+		// if there are any entries that lack a variable name or
+		// an assignment, but it skips over them and imports all
+		// the valid entries anyway.  If you want that behavior
+		// and do not consider it a failure, use Import() instead.
 	bool MergeFrom( char const * const *stringArray );
 
 		// Add (or overwrite) environment entries from a NULL-delimited
@@ -162,14 +174,20 @@ class Env {
 	bool SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
+		// Returns false if the input is not a valid var=value.
+		// ASSERTS if it runs out of memory.
 	bool SetEnv( const char *nameValueExpr ) {
 		return SetEnvWithErrorMessage(nameValueExpr, NULL);
 	}
 
 		// Add (or overwrite) specified environment variable.
+		// Returns false if not a valid var=value (i.e. if empty var).
+		// ASSERTS if it runs out of memory.
 	bool SetEnv( const char *var, const char *val );
 
 		// Add (or overwrite) specified environment variable.
+		// Returns false if not a valid var=value (i.e. if empty var).
+		// ASSERTS if it runs out of memory.
 	bool SetEnv( const MyString &, const MyString & );
 
 		// Update ClassAd with new environment, possibly adjusting the

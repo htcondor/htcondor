@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "boolValue.h"
 #include "list.h"
-#include "extArray.h"
 
 using namespace std;
 
@@ -585,49 +584,6 @@ OrOfColumn( int col, BoolValue &result )
 }
 
 
-
-bool BoolTable::
-GenerateABVList( List<AnnotatedBoolVector> &result )
-{
-	if( !initialized ) {
-		return false;
-	}
-
-	AnnotatedBoolVector *abv = new AnnotatedBoolVector();
-
-	int frequency = 0;
-	ExtArray<bool> seen ( numCols );
-	ExtArray<bool> tempContexts ( numCols );
-    bool hasCommonTrue;
-
-	for( int i = 0; i < numCols; i++ ) {
-	    if(!seen[i]) {
-			frequency = 1;
-			tempContexts[i] = true;
-			for( int j = i + 1; j < numCols; j++ ) {
-				if( !seen[j] ) {
-					CommonTrue( i, j, hasCommonTrue );
-					if( hasCommonTrue ) {
-						frequency++;
-						seen[j] = true;
-						tempContexts[j] = true;
-					}
-				}
-			}
-			abv->Init( numRows, numCols, frequency );
-			for( int row = 0; row < numRows; row++ ) {
-				abv->SetValue( row, table[i][row] );
-			}
-			for( int col = 0; col < numCols; col++ ) {
-				abv->SetContext( col, tempContexts[col] );
-				tempContexts[col] = false;
-			}	
-			result.Append( abv );
-		}
-	}
-
-	return true;
-}
 
 bool BoolTable::
 GenerateMaxTrueABVList( List<AnnotatedBoolVector> &result )

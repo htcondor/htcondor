@@ -1,0 +1,184 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# This tests using the KeepClaimIdle attribute in a DAG. The KeepClaimIdle
+# attribute tells the schedd to hold a claim for a specified amount of time after
+# the process terminates with the expectation that another process will come
+# along to reuse the claim.  In the test below, we set the hold time to 30
+# seconds.  We verify that the claim is reused.  Also, we verify that the
+# attribute is not set for the final DAGman node.
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_use_hold_claim.dag';
+$testdesc =  'Condor submit dag - Test that DAGman uses hold claim';
+$testname = "job_dagman_use_hold_claim";
+$dagman_args = "-verbose";
+
+$logfile = "${testname}.dag.dagman.out";
+@outfiles = (
+	'job_dagman_use_hold_claim-A.out',
+	'job_dagman_use_hold_claim-B.out',
+	'job_dagman_use_hold_claim-C.out');
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing log and output files
+runcmd("rm -f $logfile") if (-e $logfile);
+
+# NMI complains if these files are not around
+runcmd("touch job_dagman_use_hold_claim.out");
+runcmd("touch job_dagman_use_hold_claim.err");
+
+foreach (@outfiles) {
+	runcmd("rm -f $_") if (-e $_);
+}
+
+$abnormal = sub
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub {
+	CondorTest::debug("Succeeded as expected\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+	my $verifyA=0,$verifyB=0,$verifyC=0;
+	my $claimIdA,$claimIdB,$claimIdC;
+	foreach (@outfiles){
+		my $cmdname = $_;
+		$cmdname =~ s/\.out//;
+		CondorTest::debug("\$cmdname == $cmdname\n",4);
+		open OUT, "<$_" || die "Cannot open $_ for reading\n";
+		while(<OUT>){
+			if($cmdname eq 'job_dagman_use_hold_claim-A'){
+				if(/job_dagman_use_hold_claim-A\s+30$/){ # only line!
+					$claimIdA = $_;
+					$verifyA = 1;
+					CondorTest::debug("Output of job_dagman_use_hold_claim-A successfully verified\n",1);
+					$claimIdA =~ s/\s.+//;
+				}
+			}
+			if($cmdname eq 'job_dagman_use_hold_claim-B'){
+				if(/job_dagman_use_hold_claim-B\s+30$/){ # only line!
+					$claimIdB = $_;
+					$verifyB = 1;
+					CondorTest::debug("Output of job_dagman_use_hold_claim-B successfully verified\n",1);
+					$claimIdB =~ s/\s.+//;
+				}
+			}
+			if($cmdname eq 'job_dagman_use_hold_claim-C'){ # only line!
+					# As node C does not have an children, we expect to have
+					# KeepClaimIdle undefined.
+				if(/job_dagman_use_hold_claim-C\s+KeepClaimIdle undefined$/){
+					$claimIdC = $_;
+					$verifyC = 1;
+					CondorTest::debug("Output of job_dagman_use_hold_claim-C successfully verified\n",1);
+					$claimIdC =~ s/\s.+//;
+				}
+			}
+		}
+		close(OUT);
+	}
+	$diditpass = ($verifyA == 1) && ($verifyB == 1) && ($verifyC == 1);
+	if( $diditpass ) {
+		CondorTest::debug("Output verified.\n",1);
+	} else {
+		CondorTest::debug("Output verification failed:\n",1);	
+	}
+	$diditpass = $diditpass && ($claimIdA eq $claimIdB) && ($claimIdA eq $claimIdC);
+	if($diditpass) { 
+		CondorTest::debug("Verified that ClaimId-s are all equal\n",1);
+	} else {
+		CondorTest::debug("\$claimIdA: \"$claimIdA\"\n",1);
+		CondorTest::debug("\$claimIdB: \"$claimIdB\"\n",1);
+		CondorTest::debug("\$claimIdC: \"$claimIdC\"\n",1);
+		die "Verification of output failed\n";
+	}
+	open OUT,"<$logfile" || die "Could not open $logfile\n";
+	my $submitApassed=0,$submitBpassed=0,$submitCpassed=1;
+	while(<OUT>){
+		if(/submitting:.+dag_node_name\' \'=\' \'job_dagman_use_hold_claim-A.+KeepClaimIdle.+30/){
+			$submitApassed = 1;
+			CondorTest::debug("Verified dagman log correctness for job_dagman_use_hold_claim-A\n",1);
+		}
+		if(/submitting:.+dag_node_name\' \'=\' \'job_dagman_use_hold_claim-B.+KeepClaimIdle.+30/){
+			$submitBpassed = 1;
+			CondorTest::debug("Verified dagman log correctness for job_dagman_use_hold_claim-B\n",1);
+		}
+		if(/submitting:.+dag_node_name\' \'=\' \'job_dagman_use_hold_claim-C.+KeepClaimIdle/){
+			die "KeepClaimIdle should not be set for node job_dagman_use_hold_claim-C\n";
+			$submitCpassed = 0;
+			CondorTest::debug("Dagman log shows incorrect submit for job_dagman_use_hold_claim-C\n",1);
+			die "Incorrect output in job_dagman_use_hold_claim-C\n";
+		}
+	}
+	$diditpass = ($submitApassed == 1 && $submitBpassed == 1 && $submitCpassed == 1);
+	if(!$diditpass){
+		die "All expected files and correct output failed\n";
+	}
+	return 0;
+};
+
+$failure = sub
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}

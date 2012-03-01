@@ -1,0 +1,97 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::JobDoesNotRun;
+use Check::JobIsEvicted;
+use Check::CondorLog;
+
+my $hostname = `condor_config_val full_hostname`;
+
+my $common_condor_config = '
+  NUM_CPUS = 2
+
+  MaxJobRetirementTime = 0
+  MachineMaxVacateTime = 10
+
+  DrainRank = 1
+  STARTD_EXPRS = DrainRank
+  STARTD_NAME = startd$(DrainRank)@$(FULL_HOSTNAME)
+
+  DEFRAG_INTERVAL = 10
+  DEFRAG_REQUIREMENTS = DrainRank < 4
+  DEFRAG_RANK = DrainRank
+  DEFRAG_DRAINING_MACHINES_PER_HOUR = 360
+';
+
+# The startd in pool1 is not partitionable, but it is already
+# fragmented into two slots, so it will always be available to be
+# selected by defrag for draining unless one of the startds with
+# higher DEFRAG_RANK gets partitioned.  In this way, we test that the
+# rank is effective.  (Obviously it does not make sense in the real
+# world for DRAIN_REQUIREMENTS to match startd1, which is not running
+# any jobs and which is not partionable.  This setup is just for
+# testing.)
+
+my $pool1 = CondorTest::StartCondorWithParams(
+    condor_name => "pool1",
+    append_condor_config => $common_condor_config,
+    daemon_list => "MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD, DEFRAG"
+);
+
+my $pool1_collector = $pool1->GetCollectorAddress();
+
+my $partitionable_condor_config = '
+  DAEMON_LIST = MASTER,STARTD
+  SLOT_TYPE_1 = 100%
+  NUM_SLOTS_TYPE_1 = 1
+  SLOT_TYPE_1_PARTITIONABLE = true
+' . "  COLLECTOR_HOST = $pool1_collector\n";
+
+# Start up 3 partitionable startds, all reporting to pool1.
+# These have increasing DRANK_RANK.
+for(my $i=2; $i<5; $i++) {
+  CondorTest::StartCondorWithParams(
+      condor_name => "startd$i",
+      append_condor_config => $common_condor_config . $partitionable_condor_config . "\nDrainRank = $i\n"
+  );
+}
+
+# we will submit jobs to pool1, since it has the schedd
+$pool1->MakeThisTheDefaultInstance();
+
+# Verify that a 30s job runs on startd4, the startd with the highest
+# DRAIN_RANK.  It should not be drained, because this startd does not
+# match DRAIN_REQUIREMENTS
+SimpleJob::RunCheck(
+  duration=>30,
+  append_submit_commands=>"requirements = DrainRank>=4"
+);
+
+# Verify that a 30s job gets evicted from startd3.  This startd
+# matches DRAIN_REQUIREMENTS and is higher DRAIN_RANK than
+# startd1.
+JobIsEvicted::RunCheck(
+  duration=>30,
+  append_submit_commands=>"requirements = DrainRank==3"
+);
+
+CondorTest::EndTest();

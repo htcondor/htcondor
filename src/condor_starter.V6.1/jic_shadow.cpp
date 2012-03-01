@@ -365,7 +365,7 @@ JICShadow::Continue( void )
 
 bool JICShadow::allJobsDone( void )
 {
-	bool r1, r2;
+	bool r1, r2 = false;
 	ClassAd update_ad;
 
 	r1 = JobInfoCommunicator::allJobsDone();
@@ -375,7 +375,7 @@ bool JICShadow::allJobsDone( void )
 		r2 = updateShadow( &update_ad, true );
 	}
 
-	return r1;
+	return r1 || r2;
 }
 
 

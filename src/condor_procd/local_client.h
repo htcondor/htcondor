@@ -84,4 +84,15 @@ private:
 #endif
 };
 
+// these are used to measure performance
+// the countain the runtime in seconds of the most recent call to
+// start_connection, end_connection or read_data.
+//
+extern double pfc_lc_rt_start_connection;
+extern double pfc_lc_rt_open_pipe;
+extern double pfc_lc_rt_wait_pipe;
+extern double pfc_lc_rt_write_pipe;
+extern double pfc_lc_rt_end_connection;
+extern double pfc_lc_rt_read_data;
+
 #endif

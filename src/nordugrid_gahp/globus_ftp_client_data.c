@@ -907,7 +907,7 @@ globus_l_ftp_client_read_all_callback(
     }
     
     if(bytes_read > 0 &&
-       offset_read + bytes_read > client_handle->read_all_biggest_offset)
+       (globus_off_t)(offset_read + bytes_read) > client_handle->read_all_biggest_offset)
     {
 	client_handle->read_all_biggest_offset = offset_read + bytes_read;
     }
@@ -1121,7 +1121,7 @@ globus_i_ftp_client_data_dispatch_queue(
     globus_i_ftp_client_handle_t *		handle)
 {
     globus_i_ftp_client_target_t *		target;
-    globus_result_t				result;
+    globus_result_t				result = GLOBUS_FAILURE;
     globus_object_t *				err;
 
     globus_i_ftp_client_debug_printf(1, 

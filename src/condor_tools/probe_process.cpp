@@ -60,11 +60,10 @@ int matches(char *arg, char *thing)
 
 int main(int argc, char *argv[], char *envp[])
 {
-	unsigned long long vdso_idx;
+	int vdso_idx;
 	int i;
 	int pers_change = 1; /* assume yes */
 	char **new_args;
-	char my_exec[PATH_MAX];
 
 	Termlog = 1;
 	dprintf_config("TOOL", get_param_functions());

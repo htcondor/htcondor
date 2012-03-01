@@ -99,13 +99,12 @@ DWORD WINAPI get_timing(__in LPVOID lpParameter)
 }
 #else
 void
-catch_sigalrm( int sig )
+catch_sigalrm( int  /*sig*/ )
 {
 	int fd;
 	size_t len;
-	size_t ret;
+	int ret;
 	float rtime = 0.0;
-	int lockstatus;
 	char bigbuff[512];
 
 	getrusage(RUSAGE_SELF, &myrusage);

@@ -46,6 +46,32 @@ HashTable <pid_t, procHashNode *> * ProcAPI::procHash =
 
 piPTR ProcAPI::allProcInfos = NULL;
 
+// counters for measuring the performance of GetProcInfoList
+//
+int    ProcAPI::cGetProcInfoList = 0;
+double ProcAPI::sGetProcInfoList = 0.0;
+int    ProcAPI::cGetProcInfoListReg = 0;
+double ProcAPI::sGetProcInfoListReg = 0.0;
+int    ProcAPI::cGetProcInfoListPid = 0;
+double ProcAPI::sGetProcInfoListPid = 0.0;
+int    ProcAPI::cGetProcInfoListCPU = 0;
+double ProcAPI::sGetProcInfoListCPU = 0.0;
+int ProcAPI::getProcInfoListStats(double & sOverall, 
+                                  int & cReg, double & sReg, 
+                                  int & cPid, double & sPid,
+                                  int & cCPU, double & sCPU)
+{
+   cReg = cGetProcInfoListReg;
+   sReg = sGetProcInfoListReg;
+   cPid = cGetProcInfoListPid;
+   sPid = sGetProcInfoListPid;
+   cCPU = cGetProcInfoListCPU;
+   sCPU = sGetProcInfoListCPU;
+   sOverall = sGetProcInfoList;
+   return cGetProcInfoList; 
+}
+
+
 #ifndef WIN32
 pidlistPTR ProcAPI::pidList = NULL;
 int ProcAPI::pagesize		= 0;
@@ -63,6 +89,14 @@ static CSysinfo ntSysInfo;	// for getting parent pid on NT
 const __int64 EPOCH_SHIFT = 11644473600;
 
 PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
+size_t           ProcAPI::cbDataBlockAlloc = 0;
+size_t           ProcAPI::cbDataBlockData = 0;
+int              ProcAPI::cAllocs = 0;
+int              ProcAPI::cReallocs = 0;
+int              ProcAPI::cGetSystemPerfDataCalls = 0;
+int              ProcAPI::cPerfDataQueries = 0;
+double           ProcAPI::sPerfDataQueries = 0.0;
+
 struct Offset * ProcAPI::offsets	= NULL;
 
 #endif // WIN32
@@ -346,58 +380,12 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		pagesize = getpagesize() / 1024;
 	}
 
-		/*
-		  Zero out thread memory, because Linux (as of kernel 2.4)
-		  shows one process per thread, with the mem stats for each
-		  thread equal to the memory usage of the entire process.
-		  This causes ImageSize to be far bigger than reality when
-		  there are many threads, so if the job gets evicted, it might
-		  never be able to match again.
-
-		  There is no perfect method for knowing if a given process
-		  entry is actually a thread.  One way is to compare the
-		  memory usage to the parent process, and if they are
-		  identical, it is probably a thread.  However, there is a
-		  small race condition if one of the entries is updated
-		  between reads; this could cause threads not to be weeded out
-		  every now and then, which can cause the ImageSize problem
-		  mentioned above.
-
-		  So instead, we use the PF_FORKNOEXEC (64) process flag.
-		  This is always turned on in threads, because they are
-		  produced by fork (actually clone), and they continue on from
-		  there in the same code, i.e.  there is no call to exec.  In
-		  some rare cases, a process that is not a thread will have
-		  this flag set, because it has not called exec, and it was
-		  created by a call to fork (or equivalently clone with
-		  options that cause memory not to be shared).  However, not
-		  only is this rare, it is not such a lie to zero out the
-		  memory usage, because Linux does copy-on-write handling of
-		  the memory.  In other words, memory is only duplicated when
-		  the forked process writes to it, so we are once again in
-		  danger of over-counting memory usage.  When in doubt, zero
-		  it out!
-
-		  One exception to this rule is made for processes inherited
-		  by init (ppid=1).  These are clearly not threads but are
-		  background processes (such as condor_master) that fork and
-		  exit from the parent branch.
-		*/
 	pi->imgsize = procRaw.imgsize;  //already in k
 	pi->rssize = procRaw.rssize * pagesize;  // pages to k
 #if HAVE_PSS
 	pi->pssize = procRaw.pssize; // k
 	pi->pssize_available = procRaw.pssize_available;
 #endif
-	if ((procRaw.proc_flags & 64) && procRaw.ppid != 1) { //64 == PF_FORKNOEXEC
-		//zero out memory usage
-		// But do not zero out pssize, because it correctly deals with
-		// sharing between processes.  Also, if the linux version is
-		// modern enough to support PSS, there should be no need to
-		// ignore threads that look like processes.
-		pi->imgsize = 0;
-		pi->rssize = 0;
-	}
 
 		// convert system time and user time into seconds from jiffies
 		// and calculate cpu time
@@ -483,6 +471,12 @@ ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status )
 	FILE *fp;
 	int number_of_attempts;
 	const int max_attempts = 5;
+
+	char *use_pss;
+	use_pss = getenv("_condor_USE_PSS");
+	if ((use_pss == 0) || (*use_pss == 'f') || (*use_pss == 'F')) {
+		return PROCAPI_SUCCESS;
+	}
 
 		// Note that HAVE_PSS may be true at compile-time, but that
 		// does not mean /proc/pid/smaps will actually contain
@@ -884,8 +878,8 @@ ProcAPI::checkBootTime(long now)
 		if( (fp = safe_fopen_wrapper_follow("/proc/uptime","r")) ) {
 			double uptime=0;
 			double dummy=0;
-			fgets( s, 256, fp );
-			if (sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
+			char *r = fgets( s, 256, fp );
+			if (r && sscanf( s, "%lf %lf", &uptime, &dummy ) >= 1) {
 				// uptime is number of seconds since boottime
 				// convert to nearest time stamp
 				uptime_boottime = (unsigned long)(now - uptime + 0.5);
@@ -895,9 +889,9 @@ ProcAPI::checkBootTime(long now)
 
 		// get stat_boottime
 		if( (fp = safe_fopen_wrapper_follow("/proc/stat", "r")) ) {
-			fgets( s, 256, fp );
-			while( strstr(s, "btime") == NULL ) {
-				fgets( s, 256, fp );
+			char * r = fgets( s, 256, fp );
+			while( r && strstr(s, "btime") == NULL ) {
+				r = fgets( s, 256, fp );
 			}
 			sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
@@ -1779,11 +1773,17 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 int
 ProcAPI::buildProcInfoList()
 {
+    double begin = qpcBegin();
+
 	deallocAllProcInfos();
 
 	if (GetProcessPerfData() != PROCAPI_SUCCESS) {
 		return PROCAPI_FAILURE;
 	}
+
+    ++cGetProcInfoList;
+    ++cGetProcInfoListReg;
+    sGetProcInfoListReg += qpcDeltaSec(begin);
 
 	// If we haven't yet gotten the offsets, grab 'em.
 	//
@@ -1814,8 +1814,13 @@ ProcAPI::buildProcInfoList()
 		pi = NULL;
 		initpi(pi);
 
+        double iter_start = qpcBegin();
+
         pi->pid = *(pid_t*)(ctrblk + offsets->procid);
 		pi->ppid = ntSysInfo.GetParentPID(pi->pid);
+
+        ++cGetProcInfoListPid;
+        sGetProcInfoListPid += qpcDeltaSec(iter_start);
 
 		LARGE_INTEGER* liptr;
 		liptr = (LARGE_INTEGER*)(ctrblk + offsets->imgsize);
@@ -1838,6 +1843,8 @@ ProcAPI::buildProcInfoList()
 
 		pi->age = (long)((sampleObjectTime - pi->birthday) / objectFrequency);
 
+        iter_start = qpcBegin();
+
                         /* We figure out the cpu usage (a total counter, not a
                            percent!) and the total page faults here. */
 		double cpu = LI_to_double( pt ) / objectFrequency;
@@ -1846,6 +1853,9 @@ ProcAPI::buildProcInfoList()
 		/* figure out the %cpu and %faults */
 		do_usage_sampling (pi, cpu, faults, 0, sampleObjectTime / objectFrequency);
 
+        ++cGetProcInfoListCPU;
+        sGetProcInfoListCPU += qpcDeltaSec(iter_start);
+
 		pi->next = allProcInfos;
 		allProcInfos = pi;
 
@@ -1853,6 +1863,7 @@ ProcAPI::buildProcInfoList()
 		instanceNum++;
 	}
 
+    sGetProcInfoList += qpcDeltaSec(begin);
 	return PROCAPI_SUCCESS;
 }
 
@@ -2889,12 +2900,40 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
    and the HighPart.  I could have done something fancier, but just hacking
    everything into a double seems like the simplest thing to do.
  */
-double ProcAPI::LI_to_double ( LARGE_INTEGER bigun ) {
+double ProcAPI::LI_to_double ( LARGE_INTEGER & bigun ) {
   
   double ret;
   ret = (double) bigun.LowPart;
   ret += ( ((double) bigun.HighPart) * ( ((double)0xffffffff) + 1.0 ) ) ;
   return ret;
+}
+
+int ProcAPI::grabDataBlockStats(int & cA, int & cR, int & cQueries, double & sQueries, size_t & cbAlloc, size_t & cbData)
+{
+   cA = cAllocs;
+   cR = cReallocs;
+   cbAlloc = cbDataBlockAlloc;
+   cbData  = cbDataBlockData;
+   cQueries = cPerfDataQueries;
+   sQueries = sPerfDataQueries;
+   return cGetSystemPerfDataCalls;
+}
+
+double ProcAPI::qpcBegin()
+{
+   LARGE_INTEGER li;
+   QueryPerformanceCounter(&li);
+   return LI_to_double(li);
+}
+
+double ProcAPI::qpcDeltaSec(double dstart_ticks)
+{
+   LARGE_INTEGER li;
+   QueryPerformanceCounter(&li);
+   double dend_ticks = LI_to_double(li);
+   QueryPerformanceFrequency(&li);
+   double dfreq = LI_to_double(li);
+   return (dend_ticks - dstart_ticks) / dfreq;
 }
 
 DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue ) 
@@ -2921,14 +2960,24 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
     pDataBlock = (PPERF_DATA_BLOCK) malloc ( INITIAL_SIZE );
     if ( pDataBlock == NULL )
       return ERROR_OUTOFMEMORY;
+    ++cAllocs;
   }
-  
+
+  ++cGetSystemPerfDataCalls;
+
   while ( TRUE ) {
     Size = _msize ( pDataBlock ); 
     
+    cbDataBlockAlloc = Size;
+    ++cPerfDataQueries;
+    double begin = qpcBegin();
+
     lError = RegQueryValueEx ( HKEY_PERFORMANCE_DATA, pValue, 0, &Type, 
              (LPBYTE) pDataBlock, &Size );
     
+    cbDataBlockData = Size;
+    sPerfDataQueries += qpcDeltaSec(begin);
+
     // check for success & valid perf data bolck struct.
     
     if ( (!lError) && (Size>0) && 
@@ -2946,6 +2995,7 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
                                                 EXTEND_SIZE );
       if ( !pDataBlock)
         return lError;
+      ++cReallocs;
     }
     else
       return lError;
@@ -3222,7 +3272,7 @@ ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 #else // everything else
 
 int
-ProcAPI::confirmProcessId(ProcessId& procId, int& status){
+ProcAPI::confirmProcessId(ProcessId& /*procId*/, int& status){
 		// do nothing
 	status = PROCAPI_OK;
 	return PROCAPI_SUCCESS;

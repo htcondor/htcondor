@@ -141,8 +141,7 @@ void Server::Init()
 		// We have to do this after we call config, not in the Server
 		// constructor, or we won't have NETWORK_INTERFACE yet.
         // Commented out the following line so that server_addr is determined after
-        // the socket is bound to an address. This is a part of making Condor GCB
-        // friendly. -- Sonny 5/18/2005
+        // the socket is bound to an address. -- Sonny 5/18/2005
 	//server_addr.s_addr = htonl( my_ip_addr() );
 
 	dprintf( D_ALWAYS,
@@ -345,7 +344,8 @@ int Server::SetUpPort(u_short port)
 
 void Server::SetUpPeers()
 {
-	char *peers, *peer, peer_addr[256], *ckpt_host;
+	char *peers, *peer, *ckpt_host;
+	//char peer_addr[256];
 	StringList peer_name_list;
 
 	if ((peers = param("CKPT_SERVER_HOSTS")) == NULL) {
@@ -1113,7 +1113,8 @@ void Server::Replicate()
 	Log("Checking replication schedule...");
 	ReplicationEvent *e = replication_schedule.GetNextReplicationEvent();
 	if (e) {
-		server_sa = condor_sockaddr(&e->ServerAddr());
+		struct sockaddr_in tmp_sockaddr = e->ServerAddr();
+		server_sa = condor_sockaddr(&tmp_sockaddr);
 		sprintf(log_msg, "Replicating: Prio=%d, Serv=%s, File=%s",
 				e->Prio(), server_sa.to_sinful().Value(), e->File());
 		Log(log_msg);
@@ -2508,7 +2509,7 @@ void UnblockSignals()
 }
 
 
-int main( int argc, char **argv )
+int main( int /*argc*/, char **argv )
 {
 	/* For daemonCore, etc. */
 	set_mySubSystem( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );

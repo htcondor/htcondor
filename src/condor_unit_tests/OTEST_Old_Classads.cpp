@@ -2554,7 +2554,7 @@ static bool test_init_from_string_formattime() {
 	compat_classad::ClassAd* classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
 	emit_input_header();
-	emit_param("STRING", classad_string);
+	emit_param("STRING", "%s", classad_string);
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
 	emit_param("Classad != NULL", "TRUE");

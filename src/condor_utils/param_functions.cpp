@@ -23,4 +23,4 @@ char * param_functions::param_without_default(const char *name)
 		return NULL;
 
 	return m_param_wo_default_func(name);
-}
+} 

@@ -141,7 +141,7 @@ JobRouter::GetInstanceLock() {
 	// We may be an ordinary user, so cannot lock in $(LOCK)
 	param(lock_fullname,"JOB_ROUTER_LOCK");
 	ASSERT( !lock_fullname.empty() );
-	canonicalize_dir_delimiters((char *)lock_fullname.c_str());
+	canonicalize_dir_delimiters(const_cast<char *>(lock_fullname.c_str()));
 
 	m_router_lock_fd = safe_open_wrapper_follow(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {
@@ -1491,7 +1491,7 @@ bool
 RoutedJob::CleanupSharedX509UserProxy(JobRoute * /*route*/)
 {
 	if(proxy_file_copy.size()) {
-		priv_state old_priv;
+		priv_state old_priv = PRIV_UNKNOWN;
 		if(proxy_file_copy_chowned) {
 			old_priv = set_root_priv();
 		}
@@ -2235,7 +2235,7 @@ JobRoute::AdjustFailureThrottles() {
 			new_throttle = 1;
 		}
 	}
-	if(new_throttle != m_throttle) {
+	if (fabs(new_throttle - m_throttle) > 0.0001) {
 		dprintf(D_ALWAYS,"JobRouter (route=%s): adjusting throttle from %s to %s.\n",
 				Name(),
 				ThrottleDesc(m_throttle).c_str(),

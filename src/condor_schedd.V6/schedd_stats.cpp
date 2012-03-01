@@ -34,6 +34,11 @@ void ScheddStatistics::Reconfig()
        free(tmp);
     }
     SetWindowSize(this->RecentWindowMax);
+
+    //stats_histogram_sizes::init_sizes_from_param("MAX_HIST_SIZES_LEVELS");
+    //JobSizes.reconfig();
+    //JobSizesGoodput.reconfig();
+    //JobSizesBadput.reconfig();
 }
 
 void ScheddStatistics::SetWindowSize(int window)
@@ -48,6 +53,9 @@ void ScheddStatistics::SetWindowSize(int window)
 #define SCHEDD_STATS_PUB_PEAK(pool,name,as)    STATS_POOL_PUB_PEAK(pool, "", name, as) 
 #define SCHEDD_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "", name, as) 
 
+static const char default_sizes_set[] = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb";
+static const char default_lifes_set[] = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day";
+
 // 
 // 
 void ScheddStatistics::Init() 
@@ -60,8 +68,22 @@ void ScheddStatistics::Init()
       (int64_t)0x10000 * 0x10000,    (int64_t)0x10000 * 0x40000,  //  4Gb,  16Gb
       (int64_t)0x10000 * 0x100000,   (int64_t)0x10000 * 0x400000, // 64Gb, 256Gb
       };
-   //JobSizes.value.set_levels(COUNTOF(sizes), sizes);
-   //JobSizes.recent.set_levels(COUNTOF(sizes), sizes);
+   JobsRunningSizes.set_levels(sizes, COUNTOF(sizes));
+   JobsCompletedSizes.set_levels(sizes, COUNTOF(sizes));
+   JobsBadputSizes.set_levels(sizes, COUNTOF(sizes));
+
+   static const time_t lifes[] = {
+      (time_t)30,            (time_t) 1 * 60,        // 30 Sec,  1 Min
+      (time_t) 3 * 60,       (time_t)10 * 60,        //  3 Min, 10 Min,
+      (time_t)30 * 60,       (time_t) 1 * 60*60,     // 30 Min,  1 Hr,
+      (time_t) 3 * 60*60,    (time_t) 6 * 60*60,     //  3 Hr    6 Hr,
+      (time_t)12 * 60*60,    (time_t) 1 * 24*60*60,  // 12 Hr    1 Day,
+      (time_t) 2 * 24*60*60, (time_t) 4 * 24*60*60,  //  2 Day   4 Day,
+      (time_t) 8 * 24*60*60, (time_t)16 * 24*60*60,  //  8 Day  16 Day,
+      };
+   JobsRunningRuntimes.set_levels(lifes, COUNTOF(lifes));
+   JobsCompletedRuntimes.set_levels(lifes, COUNTOF(lifes));
+   JobsBadputRuntimes.set_levels(lifes, COUNTOF(lifes));
 
    Clear();
    // default window size to 1 quantum, we may set it to something else later.
@@ -73,8 +95,14 @@ void ScheddStatistics::Init()
    SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        IF_BASICPUB);
+
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteTime, IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPreExecuteTime,  IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPostExecuteTime,  IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  IF_BASICPUB);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedNormally,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsKilled,                IF_BASICPUB);
@@ -95,14 +123,20 @@ void ScheddStatistics::Init()
    SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
 
-   //SCHEDD_STATS_ADD_RECENT(Pool, JobSizes,                  IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedSizes,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputSizes,           IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedRuntimes,     IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputRuntimes,        IF_BASICPUB);
 
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
    SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
 
-   SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
-   SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
-
+   //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
+   //SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
+   //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompleted,  IF_BASICPUB);
+   //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompletedSizes,  IF_BASICPUB);
 }
 
 void ScheddStatistics::Clear()
@@ -159,6 +193,8 @@ void ScheddStatistics::Publish(ClassAd & ad, int flags) const
 {
    if ((flags & IF_PUBLEVEL) > 0) {
       ad.Assign("StatsLifetime", (int)StatsLifetime);
+      ad.Assign("JobsSizesHistogramBuckets", default_sizes_set);
+      ad.Assign("JobsRuntimesHistogramBuckets", default_lifes_set);
       if (flags & IF_VERBOSEPUB)
          ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
       if (flags & IF_RECENTPUB) {

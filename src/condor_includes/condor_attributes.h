@@ -26,6 +26,7 @@
 #ifndef __CONDOR_ATTRIBUTES_H__
 #define __CONDOR_ATTRIBUTES_H__
 
+extern const char * const  ATTR_ABSENT;
 extern const char * const  ATTR_ACCOUNTING_GROUP;
 extern const char * const  ATTR_ACTION_CONSTRAINT;
 extern const char * const  ATTR_ACTION_IDS;
@@ -139,6 +140,7 @@ extern const char * const  ATTR_ENTERED_CURRENT_ACTIVITY;
 extern const char * const  ATTR_ENTERED_CURRENT_STATE;
 extern const char * const  ATTR_ENTERED_CURRENT_STATUS;
 extern const char * const  ATTR_ERROR_STRING;
+extern const char * const  ATTR_ERROR_CODE;
 extern const char * const  ATTR_EXCEPTION_HIERARCHY;
 extern const char * const  ATTR_EXCEPTION_NAME;
 extern const char * const  ATTR_EXCEPTION_TYPE;
@@ -170,7 +172,6 @@ extern const char * const  ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
 extern const char * const  ATTR_JOB_MUST_EXPAND;
 extern const char * const  ATTR_GLOBUS_RSL;
 extern const char * const  ATTR_GLOBUS_STATUS;
-extern const char * const  ATTR_GLOBUS_XML;
 extern const char * const  ATTR_X509_USER_PROXY;
 extern const char * const  ATTR_X509_USER_PROXY_EXPIRATION;
 extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;
@@ -179,9 +180,6 @@ extern const char * const  ATTR_X509_USER_PROXY_VONAME;
 extern const char * const  ATTR_X509_USER_PROXY_FIRST_FQAN;
 extern const char * const  ATTR_X509_USER_PROXY_FQAN;
 extern const char * const  ATTR_DELEGATED_PROXY_EXPIRATION;
-extern const char * const  ATTR_GRIDFTP_SERVER_JOB;
-extern const char * const  ATTR_GRIDFTP_URL_BASE;
-extern const char * const  ATTR_REQUESTED_GRIDFTP_URL_BASE;
 extern const char * const  ATTR_GRID_RESOURCE;
 extern const char * const  ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
 extern const char * const  ATTR_GRID_JOB_ID;
@@ -253,6 +251,9 @@ extern const char * const  ATTR_ORIG_JOB_CMD;
 extern const char * const  ATTR_JOB_CORE_DUMPED;
 extern const char * const  ATTR_JOB_CORE_FILENAME;
 extern const char * const  ATTR_JOB_CURRENT_START_DATE;
+extern const char * const  ATTR_JOB_CURRENT_START_EXECUTING_DATE;
+extern const char * const  ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE;
+extern const char * const  ATTR_CUMULATIVE_TRANSFER_TIME;
 extern const char * const  ATTR_JOB_DURATION;
 extern const char * const  ATTR_JOB_ENVIRONMENT1;
 extern const char * const  ATTR_JOB_ENVIRONMENT1_DELIM;
@@ -420,6 +421,9 @@ extern const char * const  ATTR_OFFLINE;
 extern const char * const  ATTR_OPSYS;
 extern const char * const  ATTR_OPSYSVER;
 extern const char * const  ATTR_OPSYS_AND_VER;
+extern const char * const  ATTR_OPSYS_MAJOR_VER;
+extern const char * const  ATTR_OPSYS_NAME;
+extern const char * const  ATTR_OPSYS_DISTRO;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
 extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OUTPUT_DESTINATION;
@@ -581,6 +585,8 @@ extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_KILLING;
 extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_VACATING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
+extern const char * const  ATTR_TOTAL_TIME_DRAINED_IDLE;
+extern const char * const  ATTR_TOTAL_TIME_DRAINED_RETIRING;
 //extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
@@ -896,6 +902,26 @@ extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
 extern const char * const ATTR_MACHINE_MAX_VACATE_TIME;
 extern const char * const ATTR_JOB_MAX_VACATE_TIME;
 extern const char * const ATTR_WANT_GRACEFUL_REMOVAL;
+extern const char * const ATTR_HOW_FAST;
+extern const char * const ATTR_RESUME_ON_COMPLETION;
+extern const char * const ATTR_DRAINING;
+extern const char * const ATTR_DRAINING_REQUEST_ID;
+extern const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION;
+extern const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION;
+extern const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT;
+extern const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT;
+extern const char * const ATTR_TOTAL_MACHINE_DRAINING_BADPUT;
+extern const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
+extern const char * const ATTR_CHECK_EXPR;
+extern const char * const ATTR_PROJECTION;
+extern const char * const ATTR_LAST_DRAIN_START_TIME;
+
+// temporary attributes for raw utsname info
+extern const char * const ATTR_UTSNAME_SYSNAME;
+extern const char * const ATTR_UTSNAME_NODENAME;
+extern const char * const ATTR_UTSNAME_RELEASE;
+extern const char * const ATTR_UTSNAME_VERSION;
+extern const char * const ATTR_UTSNAME_MACHINE;
 
 // Introduced for configurable sorting of accounting groups
 extern const char* const ATTR_GROUP_QUOTA;

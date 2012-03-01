@@ -325,9 +325,9 @@ static void cleanup() {
 	remove("empty_file");
 	remove("full_file");
 	remove("executable_file");
-	chdir("..");
+	cut_assert_z(chdir(".."));
 	rmdir("full_dir");
-	chdir("..");
+	cut_assert_z(chdir(".."));
 
 	cut_assert_z( close(fd) );
 	cut_assert_z( rmdir(tmp.Value()) );

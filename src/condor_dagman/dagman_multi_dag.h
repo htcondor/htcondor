@@ -89,4 +89,9 @@ MyString RescueDagName(const char *primaryDagFile,
 void RenameRescueDagsAfter(const char *primaryDagFile,
 			bool multiDags, int rescueDagNum, int maxRescueDagNum);
 
+/** Generates the halt file name based on the primary DAG name.
+	@return The halt file name.
+*/
+MyString HaltFileName( const MyString &primaryDagFile );
+
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

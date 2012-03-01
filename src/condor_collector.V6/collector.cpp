@@ -26,7 +26,6 @@
 #include "internet.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
-#include "condor_parameters.h"
 #include "condor_email.h"
 #include "condor_query.h"
 
@@ -100,13 +99,12 @@ int CollectorDaemon::UpdateTimerId;
 ClassAd *CollectorDaemon::query_any_result;
 ClassAd CollectorDaemon::query_any_request;
 
-#if ( HAVE_HIBERNATION )
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
-#endif
 
 StringList *viewCollectorTypes;
 
 CCBServer *CollectorDaemon::m_ccb_server;
+bool CollectorDaemon::filterAbsentAds;
 
 //---------------------------------------------------------
 
@@ -281,15 +279,14 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update_expect_ack,
 		"receive_update_expect_ack",NULL,ADVERTISE_STARTD_PERM);
 
-#if ( HAVE_HIBERNATION )
     // add all persisted ads back into the collector's store
     // process the given command
     int     insert = -3;
-    ClassAd *ad;
+    ClassAd *tmpad;
     offline_plugin_.rewind ();
-    while ( offline_plugin_.iterate ( ad ) ) {
-		ad = new ClassAd(*ad);
-	    if ( !collector.collect (UPDATE_STARTD_AD, ad, condor_sockaddr::null,
+    while ( offline_plugin_.iterate ( tmpad ) ) {
+		tmpad = new ClassAd(*tmpad);
+	    if ( !collector.collect (UPDATE_STARTD_AD, tmpad, condor_sockaddr::null,
 								 insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -304,11 +301,10 @@ void CollectorDaemon::Init()
 				    "Received malformed ad. Ignoring.\n" );
 
 	        }
-			delete ad;
+			delete tmpad;
 	    }
 
     }
-#endif
 
 	forkQuery.Initialize( );
 }
@@ -374,7 +370,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	
 		// See if query ad asks for server-side projection
 	char *projection = NULL;
-	cad.LookupString("projection", &projection);
+	cad.LookupString(ATTR_PROJECTION, &projection);
 	SimpleList<MyString> projectionList;
 
 	::split_args(projection, &projectionList);
@@ -648,10 +644,8 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, cad, sock);
 
-#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
-#endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -714,10 +708,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 
 	}
 
-#if ( HAVE_HIBERNATION )
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
-#endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -848,11 +840,9 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
         
     }
 
-#if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
 	if(cad)
     offline_plugin_.update ( command, *cad );
-#endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -939,7 +929,6 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	__query__ = query;
 	__numAds__ = 0;
 	__ClassAdResultList__ = results;
-	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
 	// An empty adType means don't check the MyType of the ads.
 	// This means either the command indicates we're only checking one
 	// type of ad, or the query's TargetType is "Any" (match all ad types).
@@ -951,9 +940,34 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		}
 	}
 
+	__filter__ = query->LookupExpr( ATTR_REQUIREMENTS );
 	if ( __filter__ == NULL ) {
 		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
 		return;
+	}
+
+	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
+	// if ATTR_ABSENT is not alrady referenced in the query.
+	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
+		StringList job_refs;      // job attrs referenced by requirements
+		StringList machine_refs;  // machine attrs referenced by requirements
+		bool checks_absent = false;
+
+		query->GetReferences(ATTR_REQUIREMENTS,job_refs,machine_refs);
+		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
+		if (!checks_absent) {
+			MyString modified_filter;
+			modified_filter.sprintf("(%s) && (%s =!= True)",
+				ExprTreeToString(__filter__),ATTR_ABSENT);
+			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
+			__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
+			if ( __filter__ == NULL ) {
+				dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
+					modified_filter.Value());
+				return;
+			}
+			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.Value());
+		}
 	}
 
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
@@ -1252,9 +1266,7 @@ void CollectorDaemon::Config()
     collector.setClientTimeout( ClientTimeout );
     collector.scheduleHousekeeper( ClassadLifetime );
 
-#if ( HAVE_HIBERNATION )
     offline_plugin_.configure ();
-#endif
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
@@ -1341,6 +1353,13 @@ void CollectorDaemon::Config()
 		dprintf(D_ALWAYS, "Disabling CCB Server.\n");
 		delete m_ccb_server;
 		m_ccb_server = NULL;
+	}
+
+	if ( (tmp=param("ABSENT_REQUIREMENTS")) ) {
+		filterAbsentAds = true;
+		free(tmp);
+	} else {
+		filterAbsentAds = false;
 	}
 
 	return;
@@ -1441,8 +1460,9 @@ void CollectorDaemon::sendCollectorAd()
 		return ;
 	}
 	if ( updateRemoteCollector ) {
+		char update_addr_default [] = "(null)";
 		char *update_addr = updateRemoteCollector->addr();
-		if (!update_addr) update_addr = "(null)";
+		if (!update_addr) update_addr = update_addr_default;
 		if( ! updateRemoteCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad, NULL, false) ) {
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 					 "(%s): %s\n", update_addr,
@@ -1493,17 +1513,17 @@ void CollectorDaemon::init_classad(int interval)
 void
 CollectorDaemon::forward_classad_to_view_collector(int cmd,
 										   const char *filterAttr,
-										   ClassAd *ad)
+										   ClassAd *ad_to_forward)
 {
 	if (vc_list.empty()) return;
 
 	if (!filterAttr) {
-		send_classad_to_sock(cmd, ad);
+		send_classad_to_sock(cmd, ad_to_forward);
 		return;
 	}
 
 	std::string type;
-	if (!ad->EvaluateAttrString(std::string(filterAttr), type)) {
+	if (!ad_to_forward->EvaluateAttrString(std::string(filterAttr), type)) {
 		dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
 		return;
 	}
@@ -1511,7 +1531,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 	if (viewCollectorTypes->contains_anycase(type.c_str())) {
 		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
 				type.c_str(), getCommandString(cmd));
-		send_classad_to_sock(cmd, ad);
+		send_classad_to_sock(cmd, ad_to_forward);
 	}
 }
 

@@ -70,7 +70,7 @@ OsProc::~OsProc()
 
 
 int
-OsProc::StartJob(FamilyInfo* family_info)
+OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 {
 	int nice_inc = 0;
 	bool has_wrapper = false;
@@ -539,7 +539,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                     core_size_ptr,
                                              affinity_mask,
 											 NULL,
-                                             &create_process_err_msg);
+                                             &create_process_err_msg,
+                                             fs_remap);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.

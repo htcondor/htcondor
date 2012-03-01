@@ -87,6 +87,7 @@ class StartdNormalTotal : public ClassTotal
 #if HAVE_BACKFILL
 		int backfill;
 #endif
+		int drained;
 };
 
 
@@ -142,6 +143,7 @@ class StartdStateTotal : public ClassTotal
 #if HAVE_BACKFILL
 		int backfill;
 #endif
+		int drained;
 };
 
 

@@ -129,7 +129,7 @@ void ViewServer::Init()
 	DataFormat[SubmittorData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[SubmittorGroupsData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
-	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
+	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
 	return;
@@ -218,7 +218,7 @@ void ViewServer::Shutdown()
 // HandleQuery to take care of replying to the query
 //-------------------------------------------------------------------
 
-int ViewServer::ReceiveHistoryQuery(Service* s, int command, Stream* sock)
+int ViewServer::ReceiveHistoryQuery(Service* /*s*/, int command, Stream* sock)
 {
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 
@@ -561,7 +561,7 @@ ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray*
 //-------------------------------------------------------------------
 
 fpos_t*
-ViewServer::findOffset(FILE* &fp, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
+ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
 	fpos_t* search_offset_ptr = NULL;
 	if( times_array->length() == 0 ) {
 
@@ -633,8 +633,12 @@ int ViewServer::FindFileStartTime(const char *Name)
 	int T=-1;
 	FILE* fp=safe_fopen_wrapper_follow(Name,"r");
 	if (fp) {
-		fgets(Line,sizeof(Line),fp);
-		T=ReadTime(Line);
+		if (fgets(Line,sizeof(Line),fp)) {
+			T=ReadTime(Line);
+		} else {
+			T=-1; // fgets failed, return -1 instead of parsing uninit memory
+			dprintf(D_ALWAYS, "Failed to parse first line of %s\n", Name);
+		}
 		fclose(fp);
 	}
 	dprintf(D_ALWAYS,"FileName=%s , StartTime=%d\n",Name,T);
@@ -738,7 +742,7 @@ void ViewServer::WriteHistory()
 
 			DataSet[i][j].AccData->startIterations();
 			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
-				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7]);
+				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7], GenRec->Data[8]);
 				delete GenRec;
 				fputs(OutLine, DataFile);
 			}
@@ -922,6 +926,9 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 		break;
 	case backfill_state:
 		st=VIEW_STATE_BACKFILL;
+		break;
+	case drained_state:
+		st=VIEW_STATE_DRAINED;
 		break;
 	default:
 		dprintf( D_ALWAYS,

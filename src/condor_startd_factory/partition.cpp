@@ -236,7 +236,7 @@ PKind Partition::get_pkind(void)
 
 // This is a blocking call and must provide a fully generate partition when
 // it returns. 
-bool Partition::generate(char *script, int size)
+bool Partition::generate(char *  /*script*/, int  /*size*/)
 {
 	return true;
 }
@@ -255,7 +255,7 @@ void Partition::boot(char *script, PKind pkind)
 	// we're told what kind of partition this is going to be
 	set_pkind(pkind);
 
-	dprintf(D_ALWAYS, "\t%s %s %d %s\n",
+	dprintf(D_ALWAYS, "\t%s %s %ld %s\n",
 		script,
 		get_name().Value(),
 		get_size(),
@@ -310,7 +310,7 @@ void Partition::back(char *script)
 	MyString line;
 	priv_state priv;
 
-	dprintf(D_ALWAYS, "\t%s %s %d %s\n",
+	dprintf(D_ALWAYS, "\t%s %s %ld %s\n",
 		script,
 		get_name().Value(),
 		get_size(),
@@ -353,7 +353,7 @@ void Partition::dump(int flags)
 		dprintf(flags, "\tBacked by: %s\n", backer.Value());
 	}
 
-	dprintf(flags, "\tSize: %d\n", get_size());
+	dprintf(flags, "\tSize: %ld\n", get_size());
 	dprintf(flags, "\tPState: %s\n", pstate_xlate(get_pstate()).Value());
 
 	switch(get_pstate()) {

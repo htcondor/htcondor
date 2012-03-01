@@ -131,13 +131,13 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_sread: return "sread";
         case CONDOR_swrite: return "swrite";
         case CONDOR_rmall: return "rmall";
+#endif
         case CONDOR_getfile: return "getfile";
         case CONDOR_putfile: return "putfile";
         case CONDOR_getlongdir: return "getlongdir";
         case CONDOR_getdir: return "getdir";
         case CONDOR_whoami: return "whoami";
         case CONDOR_whoareyou: return "whoareyou";
-#endif
         case CONDOR_fstat: return "fstat";
         case CONDOR_fstatfs: return "fstatfs";
         case CONDOR_fchown: return "fchown";
@@ -176,11 +176,8 @@ do_REMOTE_syscall()
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
 		MyString err_msg;
-		err_msg = "Can no longer talk to condor_starter <";
-		err_msg += syscall_sock->peer_ip_str();
-		err_msg += ':';
-		err_msg += syscall_sock->peer_port();
-		err_msg += '>';
+		err_msg = "Can no longer talk to condor_starter ";
+		err_msg += syscall_sock->get_sinful_peer();
 
             // the socket is closed, there's no way to recover
             // from this.  so, we have to cancel the socket
@@ -193,7 +190,7 @@ do_REMOTE_syscall()
             and surprised if the startd/starter actually did
             what we asked when we deactivated the claim */
        if ( thisRemoteResource->wasClaimDeactivated() ) {
-           return 0;
+           return -1;
        }
 
 		if( Shadow->supportsReconnect() ) {
@@ -1225,6 +1222,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		return 0;
 	}
+#endif // ! WIN32
 case CONDOR_getfile:
 	{
 		result = ( syscall_sock->code(path) );
@@ -1282,7 +1280,7 @@ case CONDOR_putfile:
 		ASSERT( result );
 		
 		errno = 0;
-		fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
+		fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC | _O_BINARY, mode);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		
@@ -1505,6 +1503,8 @@ case CONDOR_getdir:
 		ASSERT( result );
 		return 0;
 	}
+#ifdef WIN32
+#else
 	case CONDOR_fstatfs:
 	{
 		result = ( syscall_sock->code(fd) );

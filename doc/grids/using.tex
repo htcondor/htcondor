@@ -45,9 +45,6 @@ to and from the machine where the job is submitted and the remote resource.
 \item[GridFTP]
 GridFTP is an extension of FTP that provides strong security and 
 high-performance options for large data transfers.
-It is used with the \SubmitCmd{gt4} grid type
-to transfer the job's files between the machine where the job
-is submitted and the remote resource.
 \item[RSL]
 RSL (Resource Specification Language)  is the language GRAM 
 accepts to specify job information.
@@ -86,9 +83,9 @@ The GRAM protocol is also used to when monitoring the job's progress.
 Condor detects and intelligently handles cases
 such as if the remote resource crashes.
 
-There are now three different versions of the GRAM protocol in common
-usage: \SubmitCmd{gt2}, \SubmitCmd{gt4}, and \SubmitCmd{gt5}.
-Condor supports all of them.
+There are now two different versions of the GRAM protocol in common
+usage: \SubmitCmd{gt2} and \SubmitCmd{gt5}.
+Condor supports both of them.
 \begin{description}
 \item[gt2]
 This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
@@ -96,15 +93,7 @@ It is still used by many production systems.
 Where available in the other, more recent versions of the protocol,
 \SubmitCmd{gt2} is referred to as the pre-web services GRAM 
 (or pre-WS GRAM) or GRAM2.
-\item[gt4]
-This GRAM protocol was introduced in Globus Toolkit version 4.0.
-It is a Web Services-based protocol intended to replace GRAM2.
-It is typically called WS GRAM or GRAM4.
-A slightly different version of this GRAM
-protocol was introduced in Globus Toolkit 4.2 due to a change in the
-underlying Web Services standards.
-An installation of the Globus Toolkit version 4 may also
-include the the pre-web services GRAM.
+
 \item[gt5]
 This latest GRAM protocol is an extension of GRAM2 that is intended to
 be more scalable and robust. It's usually referred to as GRAM5.
@@ -437,103 +426,6 @@ This example's attribute name for the additional RSL is
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Using-gt4}The gt4 Grid Type}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{universe!grid, grid type gt4}
-\index{grid computing!submitting jobs to gt4}
-
-% since version 6.7.6
-Condor-G supports submitting jobs to remote resources running
-the Globus Toolkit's Web Services-based GRAM (also called WS GRAM or
-GRAM4), introduced in Globus Toolkit 4.0.
-Globus Toolkit versions 4.0 and 4.2 use slightly different (and
-incompatible) versions of WS GRAM, due to a change in the underlying
-Web Services standards. Condor is able to detect the difference and
-use the appropriate version for each remote resource automatically.
-See
-\URL{http://www-unix.globus.org/toolkit/docs/4.2/index.html}
-for more information about the Globus Toolkit version 4.2.
-
-For grid jobs destined for \SubmitCmd{gt4},
-the submit description file is much the same as for
-\SubmitCmd{gt2} jobs.
-\index{submit commands!grid\_resource}
-The \SubmitCmd{grid\_resource} command is still required,
-and is given in the form of a URL. 
-The syntax follows the form:
-\footnotesize
-\begin{verbatim}
-grid_resource = gt4 [https://]hostname[:port][/wsrf/services/ManagedJobFactoryService] scheduler-string
-\end{verbatim}
-\normalsize
-
-or
-\footnotesize
-\begin{verbatim}
-grid_resource = gt4 [https://]IPaddress[:port][/wsrf/services/ManagedJobFactoryService] scheduler-string
-\end{verbatim}
-\normalsize
-The portions of this syntax specification enclosed within
-square brackets (\Lbr\ and \Rbr) are optional.
-
-The \SubmitCmd{scheduler-string} field of \SubmitCmd{grid\_resource}
-indicates which job execution
-system should to be used on the remote system, to execute the job. One of
-these values is substituted for \SubmitCmd{scheduler-string}:
-\begin{verbatim}
-Fork
-Condor
-PBS
-LSF
-SGE
-\end{verbatim}
-
-%Its value is the URL of the appropriate GT4 job factory service.
-%It is the same, for example,
-%as the URL provided to the \Prog{globusrun-ws} tool in GT4.
-
-The \SubmitCmd{globus\_xml} command can be used to add additional
-attributes to the XML-based RSL string that Condor writes to submit the
-job to GRAM.
-Here is an example of this command from a submit description file:
-\begin{verbatim}
-globus_xml = <project>Test_Project</project>
-\end{verbatim}
-This example's attribute name for the additional RSL is
-\AdAttr{project}, and the value assigned is \AdAttr{Test\_Project}.
-
-File transfer occurs as expected for a Condor job 
-(for the executable, \File{input}, and \File{output}), except that all
-output files other than \File{stdout} and \File{stderr} must be
-explicitly listed using \SubmitCmd{transfer\_output\_files}.
-The underlying transfer mechanism requires a \Prog{GridFTP} server
-to be running on the machine where the job
-is submitted. Condor will start one automatically. It will appear in the
-job queue as an additional job. It will leave the queue when there are
-no more \SubmitCmd{gt4} jobs in the queue.
-If the submit machine has a permanent \Prog{GridFTP} server running,
-instruct Condor to use it by setting the \Macro{GRIDFTP\_URL\_BASE}
-configuration variable.  Here is an example setting:
-\begin{verbatim}
-  GRIDFTP_URL_BASE = gsiftp://mycomp.foo.edu
-\end{verbatim}
-
-On the submit machine,
-there is no requirement for any Globus Toolkit 4.0 components.
-Condor itself installs all necessary framework within the directory 
-\File{\MacroUNI{LIB}/lib/gt4}.
-The machine where the job is submitted
-is required to
-have Java 1.5.0 or a higher version installed.
-You should not use the GNU Java interpreter (GCJ).
-The configuration variable \Macro{JAVA}
-must identify the location of the installation.
-See page~\pageref{param:Java} within
-section~\ref{sec:Configuring-Condor}
-for the complete description of the configuration variable \MacroNI{JAVA}.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Using-gt5}The gt5 Grid Type}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -680,7 +572,7 @@ An example contains commands of the form:
 \begin{verbatim}
 executable      = /usr/bin/my-executable
 universe        = grid
-grid_resource   = gt4 condor-unsup-7
+grid_resource   = gt2 condor-unsup-7
 MyProxyHost     = example.cs.wisc.edu:7512
 MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900
 MyProxyPassword = password

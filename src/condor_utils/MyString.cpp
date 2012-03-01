@@ -669,6 +669,20 @@ MyString::trim( void )
 	}
 }
 
+void
+MyString::compressSpaces( void )
+{
+	if( Len == 0 ) {
+		return;
+	}
+	for ( int i = 0, j = 0; i <= Length(); ++i, ++j ) {
+		if ( isspace ( Data[i] ) ) {
+			i++;
+		}
+		setChar ( j, Data[i] );
+	}
+}
+
 // if len is 10, this means 10 random ascii characters from the set.
 void
 MyString::randomlyGenerate(const char *set, int len)

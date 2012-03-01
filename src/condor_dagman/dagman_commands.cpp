@@ -64,7 +64,7 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		 const char* directory,
 		 const char* submitFile,
 		 const char *precmd, const char *postcmd, bool noop,
-		 bool done,
+		 bool done, bool isFinal,
 		 MyString &failReason )
 {
 	MyString why;
@@ -75,6 +75,13 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 	if( !IsValidSubmitFileName( submitFile, why ) ) {
 		failReason = why;
 		return false;
+	}
+	if( done && isFinal) {
+		failReason.sprintf( "Warning: FINAL Job %s cannot be set to DONE\n",
+					name );
+        debug_printf( DEBUG_QUIET, failReason.Value() );
+		(void)check_warning_strictness( DAG_STRICT_1, false );
+		done = false;
 	}
 	Job* node = new Job( type, name, directory, submitFile );
 	if( !node ) {
@@ -102,9 +109,12 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
+	node->SetFinal( isFinal );
 	ASSERT( dag != NULL );
 	if( !dag->Add( *node ) ) {
-		failReason = "unknown failure adding node to DAG";
+		failReason = "unknown failure adding ";
+		failReason += isFinal? "Final " : "";
+		failReason += "node to DAG";
 		delete node;
 		return false;
 	}

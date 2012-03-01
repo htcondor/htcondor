@@ -41,6 +41,7 @@ extern FILESQL *FILEObj;
 
 //-------------------------------------------------------------
 
+#include "collector.h"
 #include "collector_engine.h"
 
 static void killHashTable (CollectorHashTable &);
@@ -69,8 +70,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
-	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
 	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
+	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
 	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
@@ -1013,7 +1014,7 @@ updateClassAd (CollectorHashTable &hashTable,
 ClassAd * CollectorEngine::
 mergeClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
-			   const char *label,
+			   const char * /*label*/,
 			   ClassAd *new_ad,
 			   AdNameHashKey &hk,
 			   const MyString &hashString,
@@ -1166,6 +1167,16 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey)
 			}
 			else {
 				dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+			    /* let the off-line plug-in know we are about to expire this ad, so it can
+				   potentially mark the ad absent. if expire() returns false, then delete
+				   the ad as planned; if it return true, it was likely marked as absent,
+				   so then this ad should NOT be deleted. */
+				if ( CollectorDaemon::offline_plugin_.expire( *ad ) == true ) {
+					// plugin say to not delete this ad, so continue
+					continue;
+				} else {
+					dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+				}
 			}
 			if (hashTable.remove (hk) == -1)
 			{

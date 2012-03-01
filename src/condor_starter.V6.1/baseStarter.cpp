@@ -946,6 +946,11 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
 	}
 
+    int setup_opt_mask = 0;
+    if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
+        setup_opt_mask =  DCJOBOPT_NO_ENV_INHERIT;
+    }
+
 	if( !preferred_shells.IsEmpty() ) {
 		dprintf(D_FULLDEBUG,
 				"Checking preferred shells: %s\n",preferred_shells.Value());
@@ -973,9 +978,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	int setup_pid;
 	if( privSepHelper() ) {
-		setup_pid = privSepHelper()->create_process(
+		privSepHelper()->create_process(
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			setup_env,
@@ -985,11 +989,11 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			0,
 			NULL,
 			setup_reaper,
-			0,
+			setup_opt_mask,
 			NULL);
 	}
 	else {
-		setup_pid = daemonCore->Create_Process(
+		daemonCore->Create_Process(
 			ssh_to_job_sshd_setup.Value(),
 			setup_args,
 			PRIV_USER_FINAL,
@@ -999,7 +1003,11 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			GetWorkingDir(),
 			NULL,
 			NULL,
-			setup_std_fds);
+			setup_std_fds,
+			NULL,
+			0,
+			NULL,
+			setup_opt_mask);
 	}
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
@@ -2810,7 +2818,9 @@ CStarter::removeTempExecuteDir( void )
 		// since we chdir()'d to the execute directory, we can't
 		// delete it until we get out (at least on WIN32). So lets
 		// just chdir() to EXECUTE so we're sure we can remove it. 
-		chdir(Execute);
+		if (chdir(Execute)) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
+		}
 
 		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
 				 DIR_DELIM_CHAR, dir_name.Value() );
@@ -2832,7 +2842,9 @@ CStarter::exitAfterGlexec( int code )
 	// using glexec. this directory will be the parent directory of
 	// EXECUTE. we first "cd /", so that our working directory
 	// is not in the directory we're trying to delete
-	chdir( "/" );
+	if (chdir( "/" )) {
+		dprintf(D_ALWAYS, "Error: chdir(\"/\") failed: %s\n", strerror(errno));
+	}
 	char* glexec_dir_path = condor_dirname( Execute );
 	ASSERT( glexec_dir_path );
 	Directory glexec_dir( glexec_dir_path );

@@ -77,7 +77,7 @@ foreach (array_keys($oneoff_buf) as $key) {
   $info = $oneoff_buf[$key];
   $branch_url = sprintf(BRANCH_URL, urlencode($info["branch"]), $info["user"]);
   echo "<tr>\n";
-  echo "  <td><a href='$branch_url'>" . $info["branch"] . "</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
+  echo "  <td class='left'><a href='$branch_url'>" . $info["branch"] . "</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
   echo "  <td align='center'>" . $info["runid"] . "</td>\n";
   echo "  <td align='center'>" . $info["start"] . "</td>\n";
   echo "  <td align='center'>" . $info["user"] . "</td>\n";

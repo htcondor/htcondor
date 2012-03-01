@@ -32,10 +32,10 @@ static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
-static void init_hostnames();
+//static void init_hostnames();
 
 // Return our hostname in a static data buffer.
-char *
+const char *
 my_hostname()
 {
 //	if( ! hostnames_initialized ) {
@@ -44,21 +44,21 @@ my_hostname()
 //	return hostname;
     static MyString __my_hostname;
     __my_hostname = get_local_hostname();
-    return const_cast<char*>(__my_hostname.Value());
+    return __my_hostname.Value();
 }
 
 
 // Return our full hostname (with domain) in a static data buffer.
-char* my_full_hostname() {
+const char* my_full_hostname() {
     static MyString __my_full_hostname;
     __my_full_hostname = get_local_fqdn();
-    return const_cast<char*>(__my_full_hostname.Value());
+    return __my_full_hostname.Value();
 }
 
-char* my_ip_string() {
+const char* my_ip_string() {
     static MyString __my_ip_string;
     __my_ip_string = get_local_ipaddr().to_ip_string();
-    return const_cast<char*>(__my_ip_string.Value());
+    return __my_ip_string.Value();
 }
 
 //void
@@ -376,14 +376,14 @@ void ConfigConvertDefaultIPToSocketIP()
 	enable_convert_default_IP_to_socket_IP = true;
 
 	/*
-	  Woe is us. If GCB is enabled, we should *NOT* be re-writing IP
+	  Woe is us. If CCB is enabled, we should *NOT* be re-writing IP
 	  addresses in the ClassAds we send out. :(  We already go
 	  through a lot of trouble to make sure they're all set how they
 	  should be.  This only used to work at all because of a bug in
-	  GCB + CEDAR where all outbound connections were hitting
-	  GCB_bind() and so we thought my_sock_ip below was the GCB
+	  CCB + CEDAR where all outbound connections were hitting
+	  CCB_bind() and so we thought my_sock_ip below was the CCB
 	  broker's IP, and it all "worked".  Once we're not longer
-	  pounding the GCB broker for all outbound connections, this bug
+	  pounding the CCB broker for all outbound connections, this bug
 	  becomes visible.
 	*/
 	if (param_boolean("NET_REMAP_ENABLE", false)) {

@@ -128,8 +128,8 @@ main( int argc, char *argv[] )
 	}
 
 	// specifically allow a NULL return value for the strings. 
-	DCSchedd schedd(schedd_name.Value() == "" ? NULL : schedd_name.Value(),
-					pool_name.Value() == "" ? NULL : pool_name.Value());
+	DCSchedd schedd(schedd_name == "" ? NULL : schedd_name.Value(),
+					pool_name == "" ? NULL : pool_name.Value());
 
 	if ( schedd.locate() == false ) {
 		if (schedd_name == "") {

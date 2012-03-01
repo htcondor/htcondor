@@ -367,7 +367,7 @@ int TransferState::Delete(int child_pid, bool success_flag,
 			ptr->prev->next = ptr->next;
 			ptr->next->prev = ptr->prev;
 		}
-		if (ptr->file_size == -1) {
+		if (((int)ptr->file_size) == -1) {
 			ptr->file_size = xfer_size;
 		}
 		xfer_summary.Result(ptr, success_flag, peer, xfer_size);

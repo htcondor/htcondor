@@ -3754,7 +3754,7 @@ redo:
 
             if(client_handle->attr.pipeline_callback)
             {
-                int                             i;
+                unsigned int                    i;
                 globus_bool_t                   added = GLOBUS_TRUE;
                 globus_i_ftp_client_url_ent_t * url_ent;
     
@@ -3901,7 +3901,7 @@ redo:
             
             if(client_handle->attr.pipeline_callback)
             {
-                int                             i;
+                unsigned int                    i;
                 globus_bool_t                   added = GLOBUS_TRUE;
                 globus_i_ftp_client_url_ent_t * url_ent;
     
@@ -5246,7 +5246,7 @@ globus_l_ftp_client_parse_pasv(
             while(*p && *p != delim) p++;
             if(*p)
             {
-                int                     j = 0;
+                unsigned int            j = 0;
                 char *                  s;
                 char *                  c;
                 
@@ -5877,7 +5877,6 @@ globus_l_ftp_client_parse_cksm(
     globus_ftp_control_response_t *             response)
 {
     char *                                      p;
-    int                                         rc;
     GlobusFuncName(globus_l_ftp_client_parse_cksm);
 
     if(response->code != 213)
@@ -5890,7 +5889,7 @@ globus_l_ftp_client_parse_cksm(
     /* skip 213 <SP> */
     p += 4;
 
-    rc=sscanf(p, "%s", client_handle->checksum);
+    sscanf(p, "%s", client_handle->checksum);
 
 }
 
@@ -6054,7 +6053,7 @@ globus_l_ftp_client_parse_mlst(
     globus_byte_t *                             buffer;
     char *                                      fact_list;
     char *                                      this_filename;
-    char *                                      filename;
+    char *                                      filename = NULL;
     int                                         fact_list_length = 0;
     int                                         total_fact_list_length = 0;
     int                                         filename_length = 0;

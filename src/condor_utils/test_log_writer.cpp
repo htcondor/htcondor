@@ -613,7 +613,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		else if ( arg.Match('w', "worker") ) {	
 			opts = new WorkerOptions( m_shared, *opts );
 			m_workerOptions.push_back( opts );
-			printf( "Created worker option: %d\n", m_workerOptions.size() );
+			printf( "Created worker option: %ld\n", m_workerOptions.size() );
 		}
 # endif
 		else if ( arg.Match('j', "jobid") ) {

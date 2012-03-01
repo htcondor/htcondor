@@ -73,6 +73,8 @@ MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
 char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
 
+GCC_DIAG_OFF(float-equal)
+
 class NegotiationCycleStats
 {
 public:
@@ -423,7 +425,7 @@ reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
-	ExprTree *tmp_expr;
+	ExprTree *tmp_expr = 0;
 
 	// If we got reconfig'ed in the middle of the negotiation cycle,
 	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
@@ -1729,6 +1731,11 @@ void Matchmaker::hgq_construct_tree() {
         EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
+    // Set the root group's autoregroup state to match the effective global value for autoregroup
+    // we do this for the benefit of the accountant, it also can be use to remove some special cases
+    // in the negotiator loops.
+    hgq_root_group->autoregroup = autoregroup;
+
     // With the tree structure in place, we can make a list of groups in breadth-first order
     // For more convenient iteration over the structure
     hgq_groups.clear();
@@ -2524,7 +2531,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					result=negotiate( scheddName.Value(),schedd,submitterPrio,
 								  submitterAbsShare, submitterLimit,
 								  startdAds, claimIds, 
-								  scheddVersion, ignore_submitter_limit,
+								  ignore_submitter_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
@@ -3015,7 +3022,6 @@ int Matchmaker::
 negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, double share,
 		   double submitterLimit,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
-		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft)
 {
@@ -3040,7 +3046,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
 	}
 
-	// Because of GCB, we may end up contacting a different
+	// Because of CCB, we may end up contacting a different
 	// address than scheddAddr!  This is used for logging (to identify
 	// the schedd) and to uniquely identify the host in the socketCache.
 	// Do not attempt direct connections to this sinful string!
@@ -3302,7 +3308,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				int want_match_diagnostics = 0;
 				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
 									want_match_diagnostics);
-				char *diagnostic_message = NULL;
+				const char *diagnostic_message = NULL;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());
@@ -3521,13 +3527,13 @@ SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pi
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
-schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
+schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
 matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &request,
 					 ClassAdListDoesNotDeleteAds &startdAds,
-					 double preemptPrio, double share,
+					 double preemptPrio, double    /*share*/,
 					 double limitUsed, double submitterLimit,
 					 double pieLeft,
 					 bool only_for_startdrank)
@@ -3688,17 +3694,17 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			// the candidate offer and request must match
 		bool is_a_match = IsAMatch(&request, candidate);
 
+		int cluster_id=-1,proc_id=-1;
+		MyString machine_name;
 		if( DebugFlags & D_MACHINE ) {
-			int cluster_id=-1,proc_id=-1;
-			MyString name;
 			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
 			request.LookupInteger(ATTR_PROC_ID,proc_id);
-			candidate->LookupString(ATTR_NAME,name);
+			candidate->LookupString(ATTR_NAME,machine_name);
 			dprintf(D_MACHINE,"Job %d.%d %s match with %s.\n",
 					cluster_id,
 					proc_id,
 					is_a_match ? "does" : "does not",
-					name.Value());
+					machine_name.Value());
 		}
 
 		if( !is_a_match ) {
@@ -3730,6 +3736,10 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
 					// So try the next offer...
+				dprintf(D_MACHINE,
+						"Ignoring %s because it is unclaimed and we are currently "
+						"only considering startd rank preemption for job %d.%d.\n",
+						machine_name.Value(), cluster_id, proc_id);
 				continue;
 			}
 			if ( !(EvalExprTree(rankCondStd, candidate, &request, &result) && 
@@ -3737,6 +3747,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 
+				dprintf(D_MACHINE,
+						"Job %d.%d does not have higher startd rank than existing job on %s.\n",
+						cluster_id, proc_id, machine_name.Value());
 				continue;
 			}
 			// If we made it here, we have a candidate which strictly prefers
@@ -3767,6 +3780,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
 					rejPreemptForPolicy++;
+					dprintf(D_MACHINE,
+							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
+							cluster_id, proc_id, machine_name.Value());
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
@@ -3776,6 +3792,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
+					dprintf(D_MACHINE,
+							"Job %d.%d has lower startd rank than existing job on %s.\n",
+							cluster_id, proc_id, machine_name.Value());
 					continue;
 				}
 			} else {
@@ -3786,6 +3805,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						// preempt one of our own jobs!
 					rejPreemptForPrio++;
 				}
+				dprintf(D_MACHINE,
+						"Job %d.%d has insufficient priority to preempt existing job on %s.\n",
+						cluster_id, proc_id, machine_name.Value());
 				continue;
 			}
 		}
@@ -3799,6 +3821,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
+			dprintf(D_MACHINE,
+					"User's share of the pool is too small for job %d.%d to claim %s.\n",
+					cluster_id, proc_id, machine_name.Value());
 			continue;
 		}
 
@@ -4044,7 +4069,7 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
-schedd, thanks to GCB.  It _is_ suitable for use as a unique identifier, for
+schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 int Matchmaker::
@@ -5243,3 +5268,6 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
         SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT, i, s->submitters_share_limit);
 	}
 }
+
+GCC_DIAG_ON(float-equal)
+

@@ -100,7 +100,7 @@ JICLocalFile::getLocalJobAd( void )
 }
 
 
-char*
+const char*
 JICLocalFile::jobAdFileName( void )
 {
 	if( job_filename ) {

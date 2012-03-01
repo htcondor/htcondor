@@ -53,11 +53,6 @@ extern int load_master_mgmt(void);
 #endif
 #endif
 
-#if HAVE_EXT_GCB
-#include "GCB.h"
-void gcbBrokerDownCallback();
-#endif
-
 #ifdef WIN32
 
 #include "firewall.WINDOWS.h"
@@ -129,7 +124,7 @@ int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
 
-char	*default_daemon_list[] = {
+const char	*default_daemon_list[] = {
 	"MASTER",
 	"STARTD",
 	"SCHEDD",
@@ -140,7 +135,8 @@ char	*default_daemon_list[] = {
 char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
-"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT";
+"REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT, "
+"DEFRAG";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -703,14 +699,6 @@ init_params()
 		free( FS_Preen );
 	}
 	FS_Preen = param( "PREEN" );
-
-#if HAVE_EXT_GCB
-	if ( GetEnv("GCB_INAGENT") ) {
-		GCB_Broker_down_callback_set( gcbBrokerDownCallback, 
-			param_integer("MASTER_GCB_RECONNECT_TIMEOUT", 300) );
-	}
-#endif
-
 }
 
 
@@ -718,7 +706,6 @@ void
 init_daemon_list()
 {
 	char	*daemon_name;
-	class daemon	*new_daemon;
 	StringList daemon_names, dc_daemon_names;
 
 	daemons.ordered_daemon_names.clearAll();
@@ -784,9 +771,9 @@ init_daemon_list()
 		while( (daemon_name = ha_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
 				if( dc_daemon_names.contains(daemon_name) ) {
-					new_daemon = new class daemon(daemon_name, true, true );
+					new class daemon(daemon_name, true, true );
 				} else {
-					new_daemon = new class daemon(daemon_name, false, true );
+					new class daemon(daemon_name, false, true );
 				}
 			}
 		}
@@ -837,16 +824,16 @@ init_daemon_list()
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
 				if( dc_daemon_names.contains(daemon_name) ) {
-					new_daemon = new class daemon(daemon_name);
+					new class daemon(daemon_name);
 				} else {
-					new_daemon = new class daemon(daemon_name, false);
+					new class daemon(daemon_name, false);
 				}
 			}
 		}
 	} else {
 		daemons.ordered_daemon_names.create_union( dc_daemon_names, false );
 		for(int i = 0; default_daemon_list[i]; i++) {
-			new_daemon = new class daemon(default_daemon_list[i]);
+			new class daemon(default_daemon_list[i]);
 		}
 	}
 
@@ -1125,92 +1112,6 @@ RestartMaster()
 	daemons.RestartMaster();
 }
 
-
-#if HAVE_EXT_GCB
-void
-gcb_broker_down_handler()
-{
-	int num_slots;
-	const char *our_broker = GetEnv( "GCB_INAGENT" );
-	const char *next_broker = NULL;
-	bool found_broker = false;
-	char *str = param( "NET_REMAP_INAGENT" );
-	StringList brokers( str );
-	free( str );
-
-	if ( param_boolean( "MASTER_WAITS_FOR_GCB_BROKER", true ) == false ) {
-		dprintf( D_ALWAYS, "Lost connection to current GCB broker. "
-				 "Restarting.\n" );
-		restart_everyone();
-		return;
-	}
-
-	if ( our_broker == NULL ) {
-		dprintf( D_ALWAYS, "Lost connection to current GCB broker, "
-				 "but GCB_INAGENT is undefined!?\n" );
-		return;
-	}
-	dprintf( D_ALWAYS, "Lost connection to current GCB broker %s. "
-			 "Will attempt to reconnect\n", our_broker );
-
-	brokers.remove( our_broker );
-
-	if ( brokers.isEmpty() ) {
-			// No other brokers to query
-		return;
-	}
-
-	brokers.rewind();
-
-	while ( (next_broker = brokers.next()) ) {
-		if ( GCB_broker_query( next_broker, GCB_DATA_QUERY_FREE_SOCKS,
-							   &num_slots ) == 0 ) {
-			found_broker = true;
-			break;
-		}
-	}
-
-	if ( found_broker ) {
-		dprintf( D_ALWAYS, "Found alternate GCB broker %s. "
-				 "Restarting all daemons.\n", next_broker );
-		restart_everyone();
-	} else {
-		dprintf( D_ALWAYS, "No alternate GCB brokers found. "
-				 "Will try again later.\n" );
-	}
-}
-
-void
-gcbBrokerDownCallback()
-{
-		// BEWARE! This function is called by GCB. Most likely, either
-		// DaemonCore is blocked on a select() or CEDAR is blocked on a
-		// network operation. So we register a daemoncore timer to do
-		// the real work.
-	daemonCore->Register_Timer( 0, gcb_broker_down_handler,
-								"gcb_broker_down_handler" );
-}
-
-void
-gcb_recovery_failed_handler()
-{
-	dprintf(D_ALWAYS, "GCB failed to recover from a failure with the "
-			"Broker. Restarting all daemons\n");
-	restart_everyone();
-}
-
-void
-gcbRecoveryFailedCallback()
-{
-		// BEWARE! This function is called by GCB. Most likely, either
-		// DaemonCore is blocked on a select() or CEDAR is blocked on a
-		// network operation. So we register a daemoncore timer to do
-		// the real work.
-	daemonCore->Register_Timer( 0, gcb_recovery_failed_handler,
-								"gcb_recovery_failed_handler" );
-}
-#endif
-
 void
 main_pre_command_sock_init()
 {
@@ -1249,41 +1150,6 @@ main_pre_command_sock_init()
 	lock_or_except( lock_file.Value() );
 	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
 #endif
-
-#if HAVE_EXT_GCB
-	if ( GetEnv("GCB_INAGENT") ) {
-			// Set up our master-specific GCB failure callbacks
-		GCB_Broker_down_callback_set( gcbBrokerDownCallback, 
-			param_integer("MASTER_GCB_RECONNECT_TIMEOUT", 300) );
-		GCB_Recovery_failed_callback_set( gcbRecoveryFailedCallback );
-	}
-
-	if ( GetEnv("GCB_INAGENT") &&
-		 param_boolean( "MASTER_WAITS_FOR_GCB_BROKER", true ) ) {
-
-			// If we can't talk to any of our GCB brokers, then wait
-			// and retry until we find a working one.
-		int delay = 20;
-
-		while ( !strcmp( GetEnv("GCB_INAGENT"), CONDOR_GCB_INVALID_BROKER ) ) {
-				// TODO send email to admin
-				// TODO make delay between retries configurable?
-				// TODO break out of this loop if admin disables GCB or 
-				//   inserts valid broker into list?
-				//   that would require rereading the entire config file
-			dprintf(D_ALWAYS, "Can't talk to any GCB brokers. "
-					"Waiting for one to become available "
-					"(retry in %d seconds).\n", delay);
-			sleep(delay);
-			condor_net_remap_config(true);
-			delay *= 2;
-			if ( delay > 3600 ) {
-				delay = 3600;
-			}
-		}
-	}
-#endif
-
 	MyString daemon_list;
 	if( param(daemon_list,"DAEMON_LIST") ) {
 		StringList sl(daemon_list.Value());
@@ -1327,7 +1193,7 @@ main( int argc, char **argv )
     bool is_daemon = dc_args_is_background(argc, argv);
 #endif
 
-		// If we don't clear this, then we'll use the same GCB broker
+		// If we don't clear this, then we'll use the same CCB broker
 		// as our parent or previous incarnation. If there's a list of
 		// brokers, we want to choose from the whole list.
 	UnsetEnv( "NET_REMAP_ENABLE" );
