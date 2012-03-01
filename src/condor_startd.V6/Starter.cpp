@@ -1387,7 +1387,7 @@ Starter::softkillTimeout( void )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft)
 {
 	if( !s_is_dc ) {
 		return false;  // this starter does not support putting jobs on hold
@@ -1398,13 +1398,20 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode)
 	}
 
 	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
-	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode);
+	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
 	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
 
 	msg->setCallback( m_hold_job_cb );
 
 	starter->sendMsg(msg.get());
+
+	if( soft ) {
+		startSoftkillTimeout();
+	}
+	else {
+		startKillTimer();
+	}
 
 	return true;
 }
