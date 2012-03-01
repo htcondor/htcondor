@@ -245,7 +245,7 @@ public:
 	bool starterKillPg( int sig );
 	bool starterKillSoft( bool state_change = false );
 	bool starterKillHard( void );
-	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode );
+	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad );

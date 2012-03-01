@@ -30,10 +30,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Condor binaries will now look for the Condor configuration file in
-\File{\$(HOME)/.condor/condor\_config} in addition to the locations where
+\File{\$(HOME)/.condor/condor\_config}, in addition to the locations where
 they already look.
+Within the ordered search,
 \File{\$(HOME)/.condor/condor\_config} is checked immediately after the 
 \Env{CONDOR\_CONFIG} environment variable.
+\Ticket{2657}
 
 \item The \Condor{hdfs} daemon has been moved to the contrib section, and is 
 available from the source code.
@@ -55,6 +57,11 @@ when it notices that the \Condor{master}
 binary has changed. Valid values are GRACEFUL, PEACEFUL and NEVER. 
 The default value is GRACEFUL.
 \Ticket{2779}
+
+\item The configuration variable \MacroNI{WANT\_HOLD} now takes effect
+whether or not \MacroNI{WANT\_VACATE} is \Expr{True}.  Previously,
+it only took effect if \MacroNI{WANT\_VACATE} was \Expr{True}.
+\Ticket{2855}
 
 \end{itemize}
 
@@ -84,6 +91,13 @@ daemons being shut down only after the \Condor{startd} has exited.
 
 \item Fixed copying of scaling factors on ClassAd literal values.
 \Ticket{2839}
+
+\item When a job is killed and put on hold because of
+  \MacroNI{WANT\_HOLD}, the maximum vacate time is now enforced.  If
+  it takes longer than the maximum vacate time for the job to be
+  gracefully killed, the job is hard-killed.  Previously, no upper
+  limit was enforced.
+\Ticket{2855}
 
 \end{itemize}
 

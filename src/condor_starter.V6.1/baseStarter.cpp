@@ -1243,11 +1243,13 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 	MyString hold_reason;
 	int hold_code;
 	int hold_subcode;
+	int soft;
 
 	s->decode();
 	if( !s->get(hold_reason) ||
 		!s->get(hold_code) ||
 		!s->get(hold_subcode) ||
+		!s->get(soft) ||
 		!s->end_of_message() )
 	{
 		dprintf(D_ALWAYS,"Failed to read message from %s in CStarter::remoteHoldCommand()\n", s->peer_description());
@@ -1263,6 +1265,10 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
 		dprintf(D_ALWAYS,"Failed to send response to startd in CStarter::remoteHoldCommand()\n");
+	}
+
+	if( !soft ) {
+		return this->ShutdownFast();
 	}
 
 		//

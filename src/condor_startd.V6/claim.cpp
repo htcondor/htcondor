@@ -1591,16 +1591,21 @@ Claim::starterKillHard( void )
 
 
 void
-Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode )
+Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft )
 {
 	if( c_starter ) {
-		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode) ) {
+		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode,soft) ) {
 			return;
 		}
 		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");
 	}
 
-	starterKillSoft();
+	if( soft ) {
+		starterKillSoft();
+	}
+	else {
+		starterKillHard();
+	}
 }
 
 void
