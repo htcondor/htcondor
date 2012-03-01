@@ -2229,7 +2229,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		if( (fetchResult = Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
 											process_buffer_line,
 											useFastPath,
-											&errstack) != Q_OK)) {
+											&errstack)) != Q_OK) {
 			
 			// The parse + fetch failed, print out why
 			switch(fetchResult) {
