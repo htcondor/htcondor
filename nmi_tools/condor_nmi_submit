@@ -387,7 +387,8 @@ sub parseOptions
             if( $platform eq "all" ) {
 		if($runtype eq "build" and is_new_batlab()) {
 		    # For new Batlab, "all" means build on the set of defined build platforms
-		    open(IN, '<', "nmi-build-platforms") or die("Cannot open nmi-build-platforms for reading: $!");
+		    my $file = dirname($0) . "/nmi-build-platforms";
+		    open(IN, '<', $file) or die("Cannot open $file for reading: $!");
 		    while(<IN>) {
 			chomp;
 			next if(/^\s*#/);
