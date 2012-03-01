@@ -58,6 +58,11 @@ binary has changed. Valid values are GRACEFUL, PEACEFUL and NEVER.
 The default value is GRACEFUL.
 \Ticket{2779}
 
+\item The configuration variable \MacroNI{WANT\_HOLD} now takes effect
+whether or not \MacroNI{WANT\_VACATE} is \Expr{True}.  Previously,
+it only took effect if \MacroNI{WANT\_VACATE} was \Expr{True}.
+\Ticket{2855}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -86,6 +91,13 @@ daemons being shut down only after the \Condor{startd} has exited.
 
 \item Fixed copying of scaling factors on ClassAd literal values.
 \Ticket{2839}
+
+\item When a job is killed and put on hold because of
+  \MacroNI{WANT\_HOLD}, the maximum vacate time is now enforced.  If
+  it takes longer than the maximum vacate time for the job to be
+  gracefully killed, the job is hard-killed.  Previously, no upper
+  limit was enforced.
+\Ticket{2855}
 
 \end{itemize}
 

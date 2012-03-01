@@ -3580,15 +3580,16 @@ Configuring The Startd Policy.
 \label{param:Preempt}
 \item[\Macro{PREEMPT}]
   A boolean expression that, when \Expr{True},
-  causes Condor to stop a currently running job.  This expression
-  is not evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
+  causes Condor to stop a currently running job once
+  \Macro{MAXJOBRETIREMENTTIME} has expired.  This expression is not
+  evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
 
 \label{param:WantHold}
 \item[\Macro{WANT\_HOLD}]
   A boolean expression that defaults to \Expr{False}.
   When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True}
-  and \MacroNI{WANT\_SUSPEND} is \Expr{False} and \MacroNI{WANT\_VACATE}
-  is \Expr{True},
+  and \MacroNI{WANT\_SUSPEND} is \Expr{False} and \MacroNI{MAXJOBRETIREMENTTIME}
+  has expired,
   the job is put on hold for the reason
   (optionally) specified by the variables \MacroNI{WANT\_HOLD\_REASON} and
   \MacroNI{WANT\_HOLD\_SUBCODE}.
