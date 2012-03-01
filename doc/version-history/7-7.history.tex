@@ -62,6 +62,10 @@ The default value is GRACEFUL.
 
 \begin{itemize}
 
+\item Fixed a bug in condor\_q so that it no longer emits a parse
+error when it times out talking to the schedd.
+\Ticket{2854}
+
 \item The shared library \File{libcondor\_utils} now includes the Condor
 version in its name. This will reduce the chance of a Condor binary
 using the wrong version of the library, which can result in a crash or
