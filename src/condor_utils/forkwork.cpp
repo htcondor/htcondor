@@ -179,29 +179,34 @@ ForkWork::KillAll( bool force )
 ForkStatus
 ForkWork::NewJob( void )
 {
+	ForkStatus status = FORK_BUSY;
+	
 	// Any open slots?
 	if ( workerList.Number() >= maxWorkers ) {
 		if ( maxWorkers ) {
 			dprintf( D_JOB, "ForkWork: busy\n" );
 		}
-		return FORK_BUSY;
 	}
+	else
+	{
+	  // Fork off the child
+	  ForkWorker	*worker = new ForkWorker( );
+	  status = worker->Fork( );
 
-	// Fork off the child
-	ForkWorker	*worker = new ForkWorker( );
-	ForkStatus status = worker->Fork( );
-
-	// Ok, let's see what happenned..
-	if ( FORK_PARENT == status ) {
-		workerList.Append( worker );
-		return FORK_PARENT;
-	} else if ( FORK_FAILED == status ) {
-		delete worker;
-		return FORK_FAILED;
-	} else {
-		delete worker;
-		return FORK_CHILD;
+	  // Ok, let's see what happenned..
+	  if ( FORK_PARENT == status ) {
+		  workerList.Append( worker );
+	  } else if ( FORK_FAILED == status ) {
+		  delete worker;
+	  } else {
+		  delete worker;
+		  status = FORK_CHILD;
+	  }
 	}
+	
+	dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
+	
+	return status;
 }
 
 // Child worker is done
