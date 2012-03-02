@@ -483,7 +483,7 @@ VanillaProc::Continue()
 	dprintf(D_FULLDEBUG,"in VanillaProc::Continue()\n");
 	
 	// resume user job
-	if (JobPid != -1) {
+	if (JobPid != -1 && is_suspended ) {
 		if (daemonCore->Continue_Family(JobPid) == FALSE) {
 			dprintf(D_ALWAYS,
 			        "error continuing family in VanillaProc::Continue()\n");

@@ -2167,7 +2167,10 @@ CStarter::Continue( void )
 	UserProc *job;
 	m_job_list.Rewind();
 	while ((job = m_job_list.Next()) != NULL) {
-		job->Continue();
+		if (this->suspended)
+		{
+		  job->Continue();
+		}
 	}
 	
 		//
