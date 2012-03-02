@@ -6754,6 +6754,9 @@ These macros affect the \Condor{negotiator}.
   using \Macro{STARTD\_JOB\_EXPRS}.
   If not explicitly set in the Condor configuration file, the default value
   for this expression is \Expr{True}.
+  \MacroNI{PREEMPTION\_REQUIREMENTS} should include the term 
+  \Expr{(SubmitterGroup =?= RemoteGroup)} if a preemption policy that respects
+  \Term{group quotas} is desired.
   Note that this setting does not
   influence other potential causes of preemption, such as startd
   \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
