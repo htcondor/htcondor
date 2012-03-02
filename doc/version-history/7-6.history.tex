@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added logic to the \Condor{negotiator} that enables job \Term{preemption} 
+to properly respect \Term{group quotas}.
+\Ticket{2570}
+
 \item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
 \Prog{glexec}.  
 When \Prog{glexec} was configured in log-only mode, 
