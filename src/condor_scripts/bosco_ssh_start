@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python
 
 import pty
 import os
@@ -33,7 +33,7 @@ def main():
 
             # Send password
             elif re.search('.*passphrase.*', read):
-                if sent_pass == True
+                if sent_pass == True:
                     # Already sent pass, means it failed
                     sys.exit(-1)
                 else:
