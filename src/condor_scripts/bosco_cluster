@@ -52,78 +52,15 @@ start_ssh () {
     
     # Start the ssh-agent
     eval `ssh-agent -s` > /dev/null
-    
-    # Create an ssh-agent session to handle the transfers
-    # Copied from remote_gahp
-    # create a temp file for the expect script
-    SSH_ADD_SCRIPT=`mktemp`
-    chmod 700 $SSH_ADD_SCRIPT
-    
-    # Create the expect script
-    echo "#!/usr/bin/expect -f
-        # get arguments
-        set num_args [llength \$argv]
-        set private_key_loc [lindex \$argv 0]
-    
-        # spawn ssh-add process
-        spawn ssh-add $bosco_key
-    
-        set spawn_pid [exp_pid]
-    
-        # set timeout for expected input
-        set timeout 5
-    
-        expect {
-            # no passphrase required
-            \"*Identity added*\" {
-                exit 0
-            }
-            # sends passphrase
-            \"*passphrase*\" {
-                send -- \"$PASSPHRASE\r\"
-            }
-            # no ssh-agent running
-            \"*authentication agent*\" {
-                exit -1
-            }
-            # incorrect private key location
-            timeout {
-                exit -2
-            }
-        }
-    
-        expect {
-            # all done
-            eof {
-                exit 0
-            }
-            # incorrect passphrase
-            \"*passphrase*\" {
-                exit -3
-            }
-            # timeout
-            timeout {
-                exit -4
-            }
-        }" > $SSH_ADD_SCRIPT
-    
-    
-    # call the expect script to ssh-add identity
-    $SSH_ADD_SCRIPT > /dev/null
-    ADD_STATUS=$?
-    
-    # remove temporary script
-    rm $SSH_ADD_SCRIPT
-    
-    # check if ssh-add failed
-    if [ $ADD_STATUS != 0 ] ; then
-        # ssh-add script not found
-        if [ $ADD_STATUS == 1 ] ; then
-            ADD_STATUS=-1
-        fi
-        eval `ssh-agent -sk`
-        exit $ADD_STATUS
+
+    # Call the external program to do ssh-add
+    bosco_ssh_start
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        return 1
     fi
+
 }    
 
 
