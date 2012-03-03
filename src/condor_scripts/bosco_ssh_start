@@ -18,6 +18,7 @@ def main():
         os.execv ("/usr/bin/ssh-add", [''] + [ BOSCO_KEY ] )
     else:
         # Read from the input
+        sent_pass = False
         while True:
             time.sleep(0.3)
             read = os.read(child, max_read)
@@ -32,6 +33,12 @@ def main():
 
             # Send password
             elif re.search('.*passphrase.*', read):
+                if sent_pass == True
+                    # Already sent pass, means it failed
+                    sys.exit(-1)
+                else:
+                    sent_pass = True
+
                 # Read in the password
                 f = open(BOSCO_PASS)
                 bosco_pass = f.read()
@@ -39,6 +46,7 @@ def main():
                 
                 # Write the password out
                 os.write(child, bosco_pass + "\n")
+
                 continue
 
             if len(read) == 0:
