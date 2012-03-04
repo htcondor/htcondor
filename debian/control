@@ -1,7 +1,8 @@
 Source: condor
 Section: science
 Priority: extra
-Maintainer: Michael Hanke <mih@debian.org>
+Maintainer: Condor Developers <condor-debian@cs.wisc.edu>
+Uploaders: Michael Hanke <mih@debian.org>
 Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev,
  libcurl4-openssl-dev, zlib1g-dev, libglobus-gss-assist-dev,
  libglobus-gram-protocol-dev, libglobus-gram-client-dev,
