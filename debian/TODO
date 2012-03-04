@@ -5,3 +5,4 @@
 * Security: ALLOW_ADVERTISE_SCHEDD
 * Make condor behave the same on all Debian-like systems
 * Have a test suite that can run at package build time
+* Think about an rcondor package (see src/condor_contrib/rcondor)
