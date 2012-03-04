@@ -147,6 +147,9 @@ Copyright: 2011, Joseph Turner
            2009-2011 Red Hat, Inc
 License: Apache-2.0
 
+Files: src/condor_contrib/rcondor/*
+Copryright: 2010, Jeffrey M. Dost <jdost@ucsd.edu>
+License: BSD-3-clause
 
 Files: src/condor_utils/my_getopt.cpp
 Copyright: 1997, 2000, 2001, 2002, Benjamin Sittler
