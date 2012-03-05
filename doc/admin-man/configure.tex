@@ -5908,6 +5908,17 @@ which contain whitespace.
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
   or an executable (with a file extension of \File{.exe} or \File{.com}).
 
+  If the wrapper encounters an error, and is unable to run the user
+  job, it is important that the wrapper indicate this to the Condor system
+  so that Condor does not assign the exit code of the wrapper to the
+  user.  To do this, the wrapper should write a useful error message
+  to the file named in the environment variable \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
+  and exit with a non-zero value.
+  If this file is created by the wrapper, Condor assumes that the wrapper
+  has failed, and will mark the job as idle in the queue, and try to 
+  re-run it.  The starter will also copy the contents of this file to
+  the starter log, so the administrator can debug the problem.
+
   When a wrapper is in use, the executable of a job submission may be
   kept relative and resolved by the user's path by setting:
 \begin{verbatim}
