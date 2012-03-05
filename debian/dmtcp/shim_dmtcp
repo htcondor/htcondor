@@ -20,7 +20,7 @@ LOG="/dev/null"
 STDIN="/dev/null"
 STDOUT="/dev/null"
 STDERR="/dev/null"
-CKPTINT=1800
+CKPTINT=${DMTCP_CHECKPOINT_INTERVAL:-1800}
 
 # The version of the shim script. Useful for debugging between groups using
 # this shim script.
@@ -74,6 +74,9 @@ Options:
   File to store stderr of the job. By default
   no stderr is captured.
 
+--ckptint=<integer>
+  Checkpointing interval in seconds. $SCRIPTNAME also honors the
+  DMTCP_CHECKPOINT_INTERVAL environment variable. Default: 1800
 EOT
 }
 
