@@ -216,11 +216,6 @@ void zz2printf(int debug_levels, KeyInfo *k) {
 }
 */
 
-static unsigned int ZZZZZ = 0;
-int ZZZ_always_increase() {
-	return ZZZZZ++;
-}
-
 static int _condor_exit_with_exec = 0;
 
 void **curr_dataptr;
@@ -4131,6 +4126,7 @@ int DaemonCore::HandleReq(int socki, Stream* asock)
 	return HandleReq(insock, asock);
 }
 
+
 class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 public:
 	DaemonCommandProtocol(Stream *insock, Stream* asock);
@@ -4160,32 +4156,30 @@ private:
 	Sock   *m_sock;
 
 #ifdef HAVE_EXT_GSOAP
-	bool m_is_http_post;	// must initialize to false
-	bool m_is_http_get;   // must initialize to false
+	bool m_is_http_post;
+	bool m_is_http_get;
 #endif
 
 	bool m_nonblocking;
 	bool m_sock_had_no_deadline;
 	int	m_is_tcp;
-	int m_req;
-	int	m_index;
+	int m_req;            // the command that was sent
 	int	m_reqFound;
 	int	m_result;
-    int m_perm;
+	int m_perm;
 	MyString m_user;
-    ClassAd *m_policy;
+	ClassAd *m_policy;
 	ClassAd m_auth_info;
-    KeyInfo *m_key;
-    char    *m_sid;
+	KeyInfo *m_key;
+	char    *m_sid;
 
 	UtcTime m_handle_req_start_time;
 	UtcTime m_async_waiting_start_time;
 	float m_async_waiting_time;
 	SecMan *m_sec_man;
 	DaemonCore::CommandEnt *m_comTable;
-	int m_cmd_index;
-	int m_real_cmd;
-	int m_tmp_cmd;
+	int m_real_cmd;       // for DC_AUTHENTICATE, the final command to execute
+	int m_auth_cmd;       // for DC_AUTHENTICATE, the command the security session will be used for
 
 	bool m_new_session;
 	SecMan::sec_feat_act m_will_enable_encryption;
@@ -4202,11 +4196,9 @@ private:
 	int finalize();
 };
 
-int DaemonCore::HandleReq(Stream *insock, Stream* asock)
-{
-	classy_counted_ptr<DaemonCommandProtocol> r = new DaemonCommandProtocol(insock,asock);
-
-	return r->doProtocol();
+static unsigned int ZZZZZ = 0;
+static int ZZZ_always_increase() {
+	return ZZZZZ++;
 }
 
 DaemonCommandProtocol::DaemonCommandProtocol(Stream *insock, Stream* asock):
@@ -4223,14 +4215,13 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *insock, Stream* asock):
 	m_req(0),
 	m_reqFound(FALSE),
 	m_result(FALSE),
-    m_perm(USER_AUTH_FAILURE),
-    m_policy(NULL),
-    m_key(NULL),
-    m_sid(NULL),
+	m_perm(USER_AUTH_FAILURE),
+	m_policy(NULL),
+	m_key(NULL),
+	m_sid(NULL),
 	m_async_waiting_time(0),
-	m_cmd_index(0),
 	m_real_cmd(0),
-	m_tmp_cmd(0),
+	m_auth_cmd(0),
 	m_new_session(false),
 	m_will_enable_encryption(SecMan::SEC_FEAT_ACT_UNDEFINED),
 	m_will_enable_integrity(SecMan::SEC_FEAT_ACT_UNDEFINED)
@@ -4259,15 +4250,15 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *insock, Stream* asock):
 
 DaemonCommandProtocol::~DaemonCommandProtocol()
 {
-    if (m_policy) {
-        delete m_policy;
-    }
-    if (m_key) {
-        delete m_key;
-    }
-    if (m_sid) {
-        free(m_sid);
-    }
+	if (m_policy) {
+		delete m_policy;
+	}
+	if (m_key) {
+		delete m_key;
+	}
+	if (m_sid) {
+		free(m_sid);
+	}
 }
 
 int DaemonCommandProtocol::doProtocol()
@@ -4327,6 +4318,7 @@ int DaemonCommandProtocol::doProtocol()
 	return finalize();
 }
 
+// Register the socket to call us back when data is available to read.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocketData()
 {
 	if( m_sock->get_deadline() == 0 ) {
@@ -4362,6 +4354,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 	return CommandProtocolInProgress;
 }
 
+// This function is called by DaemonCore when incoming data is
+// available to read, or the socket has become disconnected,
+// or the deadline has expired.
 int
 DaemonCommandProtocol::SocketCallback( Stream *stream )
 {
@@ -4379,6 +4374,9 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 	return rc;
 }
 
+// This is the first thing we do on an incoming TCP command socket.
+// Once this function is finished, m_sock will point to the socket
+// from which we should read the command.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPRequest()
 {
 
@@ -4415,6 +4413,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPReq
 	return CommandProtocolContinue;
 }
 
+// This is the first thing we do on an incoming UDP command socket.
+// Once this function is finished, m_sock will point to the socket
+// from which we should read the command.  If the Condor UDP
+// packet header indicates that this command is using an existing
+// security session, we handle that here.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPRequest()
 {
 	std::string who;
@@ -4513,8 +4516,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 				m_sec_man->key_printf (D_SECURITY, session->key());
 			}
 
-            // Lookup remote user
-            session->policy()->LookupString(ATTR_SEC_USER, who);
+			// Lookup remote user
+			session->policy()->LookupString(ATTR_SEC_USER, who);
 
 			free( sess_id );
 
@@ -4620,10 +4623,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 					turn_encryption_on ? "" : " (but encryption mode is off by default for this packet)");
 				m_sec_man->key_printf (D_SECURITY, session->key());
 			}
-            // Lookup user if necessary
-            if (who.empty()) {
-                session->policy()->LookupString(ATTR_SEC_USER, who);
-            }
+			// Lookup user if necessary
+			if (who.empty()) {
+				session->policy()->LookupString(ATTR_SEC_USER, who);
+			}
 			bool tried_authentication = false;
 			session->policy()->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 			m_sock->setTriedAuthentication(tried_authentication);
@@ -4634,15 +4637,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			}
 		}
 
-        if (!who.empty()) {
-            m_sock->setFullyQualifiedUser(who.c_str());
+		if (!who.empty()) {
+			m_sock->setFullyQualifiedUser(who.c_str());
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: UDP message is from %s.\n", who.c_str());
-        }
+		}
 
 		m_state = CommandProtocolReadCommand;
 		return CommandProtocolContinue;
 }
 
+// Read the command.  This function will either be followed by
+// Authenticate or ExecCommand(), depending on whether authentication
+// was requested.  Soap requests are also handled here.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
 {
 	CondorError errstack;
@@ -4671,7 +4677,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			}
 		} else {
 			dprintf(D_ALWAYS,"Received HTTP GET connection from %s -- "
-				             "DENIED because ENABLE_WEB_SERVER=FALSE\n",
+							 "DENIED because ENABLE_WEB_SERVER=FALSE\n",
 							 m_sock->peer_description());
 		}
 	} else {
@@ -4771,20 +4777,20 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		// look at the ad.  get the command number.
 		m_real_cmd = 0;
-		m_tmp_cmd = 0;
+		m_auth_cmd = 0;
 		m_auth_info.LookupInteger(ATTR_SEC_COMMAND, m_real_cmd);
 
 		if (m_real_cmd == DC_AUTHENTICATE) {
-			// we'll set m_tmp_cmd temporarily to
-			m_auth_info.LookupInteger(ATTR_SEC_AUTH_COMMAND, m_tmp_cmd);
+			// we'll set m_auth_cmd temporarily to
+			m_auth_info.LookupInteger(ATTR_SEC_AUTH_COMMAND, m_auth_cmd);
 		} else {
-			m_tmp_cmd = m_real_cmd;
+			m_auth_cmd = m_real_cmd;
 		}
 
 		// get the auth level of this command
 		// locate the hash table entry
-		m_cmd_index = 0;
-		m_reqFound = daemonCore->CommandNumToTableIndex(m_tmp_cmd,&m_cmd_index);
+		int cmd_index = 0;
+		m_reqFound = daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index);
 
 		if (!m_reqFound) {
 			// we have no idea what command they want to send.
@@ -4793,7 +4799,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			dprintf(D_ALWAYS,
 					"Received %s command (%d) (%s) from %s %s\n",
 					(m_is_tcp) ? "TCP" : "UDP",
-					m_tmp_cmd,
+					m_auth_cmd,
 					"UNREGISTERED COMMAND!",
 					m_user.Value(),
 					m_sock->peer_description());
@@ -4875,9 +4881,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,&return_addr);
 						}
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s%s%s:\n",
-						         session->id(),
-						         return_addr ? " with return address " : "",
-						         return_addr ? return_addr : "");
+								 session->id(),
+								 return_addr ? " with return address " : "",
+								 return_addr ? return_addr : "");
 						free(return_addr);
 					}
 				}
@@ -4915,16 +4921,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				}
 				m_new_session = false;
 
-			} else {
+			} // end of case: using existing session
+			else {
 					// they did not request a cached session.  see if they
 					// want to start one.  look at our security policy.
 				ClassAd our_policy;
 				if( ! m_sec_man->FillInSecurityPolicyAd(
-					m_comTable[m_cmd_index].perm,
+					m_comTable[cmd_index].perm,
 					&our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[cmd_index].force_authentication ) )
 				{
 						// our policy is invalid even without the other
 						// side getting involved.
@@ -5046,7 +5053,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						SecMan::sec_feat_act_rev[m_sec_man->sec_lookup_feat_act(m_auth_info, ATTR_SEC_ENACT)] );
 				}
 
-			}
+			} // end of case: consider establishing a new security session
 
 			if( !m_is_tcp ) {
 					// For UDP, if encryption is not on by default,
@@ -5124,9 +5131,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_state = CommandProtocolPostAuthenticate;
 					return CommandProtocolContinue;
 				}
-			}
-		}
-	}
+			} // end is_tcp
+		} // end !using_cookie
+	} // end DC_AUTHENTICATE
 	m_state = CommandProtocolExecCommand;
 	return CommandProtocolContinue;
 }
@@ -5154,7 +5161,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 	}
 
-	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[m_cmd_index].perm );
+	int cmd_index = 0;
+	if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
+		dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in Authenticate()\n",m_auth_cmd);
+		m_result = FALSE;
+		return CommandProtocolFinished;
+	}
+
+	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[cmd_index].perm );
 
 	char *method_used = NULL;
 	bool auth_success = m_sock->authenticate(m_key, auth_methods, &errstack, auth_timeout, &method_used);
@@ -5166,13 +5180,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	free( auth_methods );
 	free( method_used );
 
-	if( m_comTable[m_cmd_index].force_authentication &&
+	if( m_comTable[cmd_index].force_authentication &&
 		!m_sock->isMappedFQU() )
 	{
 		dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
 				m_sock->peer_description(),
-				m_tmp_cmd,
-				m_comTable[m_cmd_index].command_descrip );
+				m_auth_cmd,
+				m_comTable[cmd_index].command_descrip );
 		if( !auth_success ) {
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
@@ -5299,8 +5313,15 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		// session id
 		pa_ad.Assign(ATTR_SEC_SID, m_sid);
 
+		int cmd_index = 0;
+		if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
+			dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in PostAuthenticate()\n",m_auth_cmd);
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
 		// other commands this session is good for
-		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[m_cmd_index].perm,m_sock->isMappedFQU()).Value());
+		pa_ad.Assign(ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(m_comTable[cmd_index].perm,m_sock->isMappedFQU()).Value());
 
 		// also put some attributes in the policy classad we are caching.
 		m_sec_man->sec_copy_attribute( *m_policy, m_auth_info, ATTR_SEC_SUBSYSTEM );
@@ -5382,9 +5403,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 	return CommandProtocolContinue;
 }
 
+// Call the command handle for the requested command.
+// Authorization is first verified.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand()
 {
 	CondorError errstack;
+	int cmd_index = 0;
 
 	if (m_req == DC_AUTHENTICATE) {
 		if (m_real_cmd == DC_AUTHENTICATE) {
@@ -5395,8 +5419,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		m_req = m_real_cmd;
 		m_result = TRUE;
 
+		if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
+			dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in ExecCommand()\n",m_auth_cmd);
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
 		m_sock->decode();
-		if( m_comTable[m_cmd_index].wait_for_payload == 0 ) {
+		if( m_comTable[cmd_index].wait_for_payload == 0 ) {
 
 				// This command _might_ be one with no further data.
 				// Because of the way DC_AUTHENTICATE was implemented,
@@ -5410,13 +5440,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 
 		// fill in the command info
 		m_reqFound = TRUE;
-		m_index = m_cmd_index;
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: Success.\n");
 	} else {
 		// we received some command other than DC_AUTHENTICATE
 		// get the handler function
-		m_reqFound = daemonCore->CommandNumToTableIndex(m_req,&m_index);
+		m_reqFound = daemonCore->CommandNumToTableIndex(m_req,&cmd_index);
 
 			// There are two cases where we get here:
 			//  1. receiving unauthenticated command
@@ -5427,7 +5456,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		if (m_reqFound &&
 			m_is_tcp &&
 			!m_sock->isAuthenticated() &&
-			m_comTable[m_index].force_authentication &&
+			m_comTable[cmd_index].force_authentication &&
 			!m_sock->triedAuthentication() )
 		{
 			SecMan::authenticate_sock(m_sock, WRITE, &errstack);
@@ -5438,19 +5467,19 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		if (m_reqFound && !m_sock->isAuthenticated()) {
 			// need to check our security policy to see if this is allowed.
 
-			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", m_req, m_comTable[m_index].command_descrip);
+			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i %s.\n", m_req, m_comTable[cmd_index].command_descrip);
 
 			// if the command was registered as "ALLOW", then it doesn't matter what the
 			// security policy says, we just allow it.
-			if (m_comTable[m_index].perm != ALLOW) {
+			if (m_comTable[cmd_index].perm != ALLOW) {
 
 				ClassAd our_policy;
 				if( ! m_sec_man->FillInSecurityPolicyAd(
-					m_comTable[m_index].perm,
+					m_comTable[cmd_index].perm,
 					&our_policy,
 					false,
 					false,
-					m_comTable[m_index].force_authentication ) )
+					m_comTable[cmd_index].force_authentication ) )
 				{
 					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );
@@ -5476,12 +5505,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 					dprintf(D_ALWAYS,
 						"DaemonCore: PERMISSION DENIED for %d (%s) via %s%s%s from host %s (access level %s)\n",
 						m_req,
-						m_comTable[m_index].command_descrip,
+						m_comTable[cmd_index].command_descrip,
 						(m_is_tcp) ? "TCP" : "UDP",
 						!m_user.IsEmpty() ? " from " : "",
 						m_user.Value(),
 						m_sock->peer_description(),
-						PermString(m_comTable[m_index].perm));
+						PermString(m_comTable[cmd_index].perm));
 
 					m_result = FALSE;
 					return CommandProtocolFinished;
@@ -5503,30 +5532,30 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 
 		// grab the user from the socket
-        if (m_is_tcp) {
-            const char *u = m_sock->getFullyQualifiedUser();
+		if (m_is_tcp) {
+			const char *u = m_sock->getFullyQualifiedUser();
 			if (u) {
 				m_user = u;
 			}
 		}
 
 		MyString command_desc;
-		command_desc.sprintf("command %d (%s)",m_req,m_comTable[m_index].command_descrip);
+		command_desc.sprintf("command %d (%s)",m_req,m_comTable[cmd_index].command_descrip);
 
-		if( m_comTable[m_index].force_authentication &&
+		if( m_comTable[cmd_index].force_authentication &&
 			!m_sock->isMappedFQU() )
 		{
 			dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
 					m_sock->peer_description(),
 					m_req,
-					m_comTable[m_index].command_descrip );
+					m_comTable[cmd_index].command_descrip );
 
 			m_perm = USER_AUTH_FAILURE;
 		}
 		else {
 			m_perm = daemonCore->Verify(
 						  command_desc.Value(),
-						  m_comTable[m_index].perm,
+						  m_comTable[cmd_index].perm,
 						  m_sock->peer_addr(),
 						  m_user.Value() );
 		}
@@ -5543,14 +5572,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 				m_sock->end_of_message();
 
 		} else {
-			dprintf(m_comTable[m_index].dprintf_flag | D_COMMAND,
+			dprintf(m_comTable[cmd_index].dprintf_flag | D_COMMAND,
 					"Received %s command %d (%s) from %s %s, access level %s\n",
 					(m_is_tcp) ? "TCP" : "UDP",
 					m_req,
-					m_comTable[m_index].command_descrip,
+					m_comTable[cmd_index].command_descrip,
 					m_user.Value(),
 					m_sock->peer_description(),
-					PermString(m_comTable[m_index].perm));
+					PermString(m_comTable[cmd_index].perm));
 		}
 
 	} else {
@@ -5568,13 +5597,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 			m_sock->end_of_message();
 	}
 /*
-    // Send authorization message
-    if (m_is_tcp) {
-        m_sock->encode();
-        if (!m_sock->code(m_perm) || !m_sock->end_of_message()) {
-            dprintf(D_ALWAYS, "DaemonCore: Unable to send permission results\n");
-        }
-    }
+	// Send authorization message
+	if (m_is_tcp) {
+		m_sock->encode();
+		if (!m_sock->code(m_perm) || !m_sock->end_of_message()) {
+			dprintf(D_ALWAYS, "DaemonCore: Unable to send permission results\n");
+		}
+	}
 */
 	if ( m_reqFound == TRUE ) {
 		// Handlers should start out w/ parallel mode disabled by default
@@ -5646,6 +5675,14 @@ int DaemonCommandProtocol::finalize()
 	else
 		return TRUE;
 }
+
+int DaemonCore::HandleReq(Stream *insock, Stream* asock)
+{
+	classy_counted_ptr<DaemonCommandProtocol> r = new DaemonCommandProtocol(insock,asock);
+
+	return r->doProtocol();
+}
+
 
 
 int DaemonCore::HandleSigCommand(int command, Stream* stream) {
