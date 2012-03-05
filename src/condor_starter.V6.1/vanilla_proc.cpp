@@ -410,7 +410,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
-		ad->Assign(ATTR_MEMORY_USAGE, memory_usage);
+		ad->AssignExpr(ATTR_MEMORY_USAGE, memory_usage.c_str());
 	}
 
 #if HAVE_PSS

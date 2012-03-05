@@ -1193,7 +1193,7 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC_VM", ATTR_VM_MEMORY)) {
-		ad->Assign(ATTR_MEMORY_USAGE, memory_usage);
+		ad->AssignExpr(ATTR_MEMORY_USAGE, memory_usage.c_str());
 	}
 
 	MyString buf;

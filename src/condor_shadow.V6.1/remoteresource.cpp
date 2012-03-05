@@ -1057,8 +1057,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	if( update_ad->LookupString(ATTR_MEMORY_USAGE, string_value) ) {
-		jobAd->Assign(ATTR_MEMORY_USAGE, string_value);
+	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
+	if( tree ) {
+		jobAd->Insert(ATTR_MEMORY_USAGE, tree->Copy());
 	}
 
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
