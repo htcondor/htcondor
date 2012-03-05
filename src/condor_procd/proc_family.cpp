@@ -647,6 +647,10 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 		}
 		ret = cgroup_read_value_next(&handle, line_contents, BLOCK_STATS_LINE_MAX);
 	}
+	if (handle != NULL) {
+		cgroup_read_value_end(&handle);
+	}
+
 	if (ret != ECGEOF) {
 		dprintf(D_ALWAYS, "Internal cgroup error when retrieving block statistics: %s\n", cgroup_strerror(ret));
 		return 1;

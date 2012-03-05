@@ -99,7 +99,7 @@ typedef struct ScheddStatistics {
 
    // methods
    //
-   void Init();
+   void Init(const char * prefix = NULL);
    void Clear();
    time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
    void Reconfig();
@@ -111,5 +111,36 @@ typedef struct ScheddStatistics {
 
    } ScheddStatistics;
 
+typedef struct ScheddOtherStats {
+   struct ScheddOtherStats * next;
+   ScheddStatistics stats;
+   MyString     prefix;
+   MyString     trigger;
+   ExprTree *   trigger_expr;
+   bool         enabled;
+} ScheddOtherStats;
+
+class ScheddOtherStatsMgr {
+public:
+   ScheddOtherStatsMgr() : pools(10, MyStringHash, updateDuplicateKeys) {};
+
+   void Clear();
+   time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
+   void Reconfig();
+   void SetWindowSize(int window);
+   void Publish(ClassAd & ad);
+   void Publish(ClassAd & ad, int flags);
+   void Publish(ClassAd & ad, const char * config);
+
+   bool Enable(const char * pre, const char * trig);
+   bool DisableAll();
+   bool RemoveDisabled();
+   bool AnyEnabled();
+
+   ScheddOtherStats * Matches(ClassAd & ad); // returns a linked list of matches.
+
+private:
+	HashTable<MyString, ScheddOtherStats*> pools;
+};
 
 #endif /* _SCHEDD_STATS_H */
