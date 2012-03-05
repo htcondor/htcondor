@@ -947,6 +947,9 @@ Scheduler::count_jobs()
 	stats.Tick();
 	stats.JobsSubmitted = GetJobQueuedCount();
 
+	OtherPoolStats.Tick();
+	OtherPoolStats.Publish(*cad);
+
 	// publish scheduler generic statistics
 	stats.Publish(*cad);
 
@@ -1261,6 +1264,10 @@ int Scheduler::make_ad_list(
    stats.Tick(now);
    stats.JobsSubmitted = GetJobQueuedCount();
    stats.ShadowsRunning = numShadows;
+
+   OtherPoolStats.Tick(now);
+   int flags = generic_stats_ParseConfigString(stats_config.Value(), "SCHEDD", "SCHEDULER", IF_BASICPUB | IF_RECENTPUB);
+   OtherPoolStats.Publish(*cad, flags);
 
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.Value());
@@ -6816,6 +6823,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
     stats.ShadowsStarted += 1;
     stats.ShadowsRunning = numShadows;
 
+	OtherPoolStats.Tick();
+
 		// If this is a reconnect shadow, update the mrec with some
 		// important info.  This usually happens in StartJobs(), but
 		// in the case of reconnect, we don't go through that code. 
@@ -7000,6 +7009,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	add_shadow_rec( srec );
     stats.Tick();
     stats.ShadowsRunning = numShadows;
+
+	OtherPoolStats.Tick();
 
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
@@ -7910,6 +7921,8 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
         scheduler.stats.Tick();
         scheduler.stats.JobsStarted += 1;
         scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
+
+		scheduler.OtherPoolStats.Tick();
 	}
 
 	// If we're reconnecting, the old ATTR_JOB_CURRENT_START_DATE is still
@@ -9296,6 +9309,18 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	stats.JobsExited += 1;
 	stats.JobsSubmitted = GetJobQueuedCount();
 
+	MyString other;
+	ScheddOtherStats * other_stats = NULL;
+	if (OtherPoolStats.AnyEnabled()) {
+		OtherPoolStats.Tick(updateTime);
+		ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+		if (job_ad) {
+			other_stats = OtherPoolStats.Matches(*job_ad);
+			FreeJobAd(job_ad);
+		}
+	}
+	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+
 		// get attributes that we will need to update goodput & badput statistics.
 		//
 	bool is_badput = false;
@@ -9308,6 +9333,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	int job_running_time = 0;
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
+
 
 		// We get the name of the daemon that had a problem for 
 		// nice log messages...
@@ -9334,6 +9360,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
 			stats.JobsShadowNoMemory += 1;
+			OTHER.JobsShadowNoMemory += 1;
 
 		case JOB_EXEC_FAILED:
 				//
@@ -9341,6 +9368,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// we don't try to start new jobs
 				//
 			stats.JobsExecFailed += 1;
+			OTHER.JobsExecFailed += 1;
 			break;
 
 		case JOB_CKPTED:
@@ -9358,11 +9386,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
             switch (exit_code) {
                case JOB_CKPTED:
                   stats.JobsCheckpointed += 1;
+                  OTHER.JobsCheckpointed += 1;
                   is_goodput = true;
                   break;
                case JOB_SHOULD_REQUEUE:
                //case JOB_NOT_CKPTED: for CONDOR_UNIVERSE_STANDARD
                   stats.JobsShouldRequeue += 1;
+                  OTHER.JobsShouldRequeue += 1;
                   // for standard universe this is actually case JOB_NOT_CKPTED
                   if (CONDOR_UNIVERSE_STANDARD == universe) {
                      is_badput = true;
@@ -9372,6 +9402,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
                   break;
                case JOB_NOT_STARTED:
                   stats.JobsNotStarted += 1;
+                  OTHER.JobsNotStarted += 1;
                   break;
                }
 			break;
@@ -9393,6 +9424,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				srec->removed = true;
 			}
 			stats.JobsShouldRemove += 1;
+			OTHER.JobsShouldRemove += 1;
 				// no break, fall through and do the action
 
 		case JOB_NO_CKPT_FILE:
@@ -9403,6 +9435,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			is_badput = true;
 			stats.JobsKilled += 1;
+			OTHER.JobsKilled += 1;
 			break;
 
 		case JOB_EXITED_AND_CLAIM_CLOSING:
@@ -9412,16 +9445,20 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				DelMrec(srec->match);
 			}
 			stats.JobsExitedAndClaimClosing += 1;
+			OTHER.JobsExitedAndClaimClosing += 1;
 			// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 			stats.JobsExitedNormally += 1;
+			OTHER.JobsExitedNormally += 1;
 			stats.JobsCompleted += 1;
+			OTHER.JobsCompleted += 1;
 			is_goodput = true;
 			// no break, fall through and do the action
 		case JOB_COREDUMPED:
 			if (JOB_COREDUMPED == exit_code) {
 				stats.JobsCoredumped += 1;
+				OTHER.JobsCoredumped += 1;
 				is_badput = true;
 			}
 				// If the job isn't being HELD, set it to COMPLETED
@@ -9489,8 +9526,10 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 
 			if (JOB_MISSED_DEFERRAL_TIME == exit_code) {
 				stats.JobsMissedDeferralTime += 1;
+				OTHER.JobsMissedDeferralTime += 1;
 			} else {
 				stats.JobsShouldHold += 1;
+				OTHER.JobsShouldHold += 1;
 			}
 			break;
 		}
@@ -9500,6 +9539,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 					 "ERROR: %s had fatal error writing its log file\n",
 					 daemon_name.Value() );
 			stats.JobsDebugLogError += 1;
+			OTHER.JobsDebugLogError += 1;
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
 
@@ -9528,6 +9568,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// make sure we hit it
 			reportException = true;
 			stats.JobsExitException += 1;
+			OTHER.JobsExitException += 1;
 			is_badput = true;
 			break;
 	} // SWITCH
@@ -9536,6 +9577,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		//
 	if ( ! is_goodput && ! is_badput) {
 		stats.JobsAccumChurnTime += job_running_time;
+		OTHER.JobsAccumChurnTime += job_running_time;
 	} else {
 		int job_pre_exec_time = 0;  // unless we see job_start_exec_date
 		int job_post_exec_time = 0;
@@ -9546,10 +9588,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date)) {
 			job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
 			job_executing_time = updateTime - job_start_exec_date;
-			if (job_executing_time < 0)
+			if (job_executing_time < 0) {
 				stats.JobsWierdTimestamps += 1;
+				OTHER.JobsWierdTimestamps += 1;
+			}
 		} else if (is_badput) {
 			stats.JobsAccumChurnTime += job_running_time;
+			OTHER.JobsAccumChurnTime += job_running_time;
 		}
 		// this time is also set in the shadow, but there is no gurantee that transfer output ever happened
 		// so it may not exist.
@@ -9557,8 +9602,10 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)) {
 			job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
 			job_executing_time = job_start_xfer_out_date - job_start_exec_date;
-			if (job_executing_time < 0 || job_executing_time > updateTime)
+			if (job_executing_time < 0 || job_executing_time > updateTime) {
 				stats.JobsWierdTimestamps += 1;
+				OTHER.JobsWierdTimestamps += 1;
+			}
 		}
 
 		stats.JobsAccumPreExecuteTime += job_pre_exec_time;
@@ -9575,7 +9622,24 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsBadputSizes += (int64_t)job_image_size * 1024;
 			stats.JobsBadputRuntimes += job_running_time;
 		}
+		if (other_stats) {
+			OTHER.JobsAccumPreExecuteTime += job_pre_exec_time;
+			OTHER.JobsAccumPostExecuteTime += job_post_exec_time;
+			OTHER.JobsAccumExecuteTime += MAX(0, job_executing_time);
+			OTHER.JobsAccumExecuteAltTime += MAX(0, job_running_time - (job_pre_exec_time + job_post_exec_time));
+			if (is_goodput) {
+				OTHER.JobsAccumRunningTime += job_running_time;
+				OTHER.JobsCompletedSizes += (int64_t)job_image_size * 1024;
+				OTHER.JobsCompletedRuntimes += job_running_time;
+			} else if (is_badput) {
+				OTHER.JobsAccumBadputTime += job_running_time;
+				OTHER.JobsBadputSizes += (int64_t)job_image_size * 1024;
+				OTHER.JobsBadputRuntimes += job_running_time;
+			}
+		}
 	}
+
+#undef OTHER
 
 		// Report the ShadowException
 		// This used to be in the default case in the switch statement
@@ -10284,6 +10348,47 @@ Scheduler::Init()
 	}
 	if (flock_collector_hosts) free(flock_collector_hosts);
 	if (flock_negotiator_hosts) free(flock_negotiator_hosts);
+
+	// fetch all params that start with SCHEDD_COLLECT_STATS_FOR_ and
+	// use them to define other scheduler stats pools.  the value of this
+	// param should be a classad expression that evaluates agains the job ad
+	// to a boolean.
+	//
+	{
+		Regex re; int err = 0; const char * pszMsg = 0;
+		ASSERT(re.compile("schedd_collect_stats_for_(.+)", &pszMsg, &err, PCRE_CASELESS));
+		
+		OtherPoolStats.DisableAll();
+
+		ExtArray<const char *> names;
+		if (param_names_matching(re, names)) {
+
+			for (int ii = 0; ii < names.length(); ++ii) {
+
+				//dprintf(D_FULLDEBUG, "Found %s\n", names[ii]);
+				const MyString name = names[ii];
+				char * filter = param(names[ii]);
+				if ( ! filter) {
+					dprintf(D_ALWAYS, "Ignoring param '%s' : value is empty\n", names[ii]);
+					continue;
+				}
+
+				// the pool prefix will be the first submatch of the regex of the param name.
+				// unfortunately it's been lowercased by the time we get here, so we can't
+				// let the user choose the case, just capitalize it and use it as the prefix
+				ExtArray<MyString> groups(2);
+				if (re.match(name, &groups)) {
+					MyString other = groups[1]; // this will be lowercase
+					other.setChar(0, toupper(other[0])); // capitalize it.
+
+					dprintf(D_FULLDEBUG, "Collecting stats for '%s' trigger is %s\n", other.Value(), filter);
+					OtherPoolStats.Enable(other.Value(), filter);
+				}
+				free(filter);
+			}
+			OtherPoolStats.RemoveDisabled();
+		}
+	}
 
 	/* default 5 megabytes */
 	ReservedSwap = param_integer( "RESERVED_SWAP", 0 );
@@ -13552,6 +13657,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
     stats.Tick();
     stats.ShadowsRecycled += 1;
     stats.ShadowsRunning = numShadows;
+	OtherPoolStats.Tick();
 
 		// the add/delete_shadow_rec() functions update the job
 		// ads, so we need to do that here
