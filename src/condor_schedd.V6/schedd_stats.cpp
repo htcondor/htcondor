@@ -358,7 +358,8 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad)
 			ExprTree *tree = NULL;
 			classad::ClassAdParser  parser;
 			if ( ! parser.ParseExpression(po->trigger, tree)) {
-				dprintf(D_ALWAYS, "Schedd_stats: Failed to parse expression for %s stats: '%s'\n", po->prefix.Value(), po->trigger);
+				dprintf(D_ALWAYS, "Schedd_stats: Failed to parse expression for %s stats: '%s'\n", 
+						po->prefix.Value(), po->trigger.Value());
 				continue;
 			}
 			po->trigger_expr = tree;
