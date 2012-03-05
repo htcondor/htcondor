@@ -5890,27 +5890,18 @@ These settings affect the \Condor{starter}.
   This wrapper program must ultimately replace its image with the user job;
   in other words,
   it must \Procedure{exec} the user job, not \Procedure{fork} it.
-  For instance, if the wrapper program is a C/Korn shell script, the
-  last line of execution should be:
-\begin{verbatim}
-        exec $*
-\end{verbatim}
-%$ (for Emacs)
-  This can potentially lose information about the arguments.
-  Any argument with embedded white space will be split into multiple
-  arguments.
-  For example the argument "argument one" will become the two arguments
-  "argument" and "one".
-  For Bourne type shells (sh, bash, ksh),
-  the following preserves the arguments:
+
+  For Bourne type shells (sh, bash, ksh), the last line should be:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
-  For the C type shells (csh, tcsh), the following preserves the
-  arguments:
+  For the C type shells (csh, tcsh), the last line should be:
 \begin{verbatim}
         exec $*:q
 \end{verbatim}
+
+	These precise syntaxes are needed to correctly handle program arguments
+which contain whitespace.
 
 
   For Windows machines, the wrapper will either be
