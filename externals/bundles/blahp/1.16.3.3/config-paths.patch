@@ -31,3 +31,21 @@ diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp.pat
  
  #Path where the LSF conf file is located ($lsf_confpath/lsf.conf)
  lsf_confpath=/etc
+@@ -124,7 +124,7 @@
+ bnotifier_pidfile=/var/tmp/cream_tomcat_bnotifier.pid
+ 
+ #condor bin location
+-condor_binpath=/opt/condor-c/bin
++condor_binpath=`which condor_submit|sed 's|/[^/]*$||'`
+ 
+ #Registry file location
+ job_registry=
+@@ -163,7 +163,7 @@
+ alldone_interval=3600
+ 
+ #path to condor_config
+-export CONDOR_CONFIG="/opt/condor-c/etc/condor_config"
++#export CONDOR_CONFIG="/opt/condor-c/etc/condor_config"
+ 
+ #max number of concurrent threads to serve commands (default = 500)
+ #blah_max_threaded_cmds=100
