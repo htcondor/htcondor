@@ -11,7 +11,7 @@ condor_remove_homedir() {
 			#rm -rf $dname
 			# better have some safety-net and only delete what belongs to condor
 			# if we have a condor user at all
-			id -u condor > /dev/null 2>&1 && find $dname -type f -user condor -group condor -delete
+			id -u condor > /dev/null 2>&1 && [ -d "$dname" ] && find $dname -type f -user condor -group condor -delete
 			# try getting rid of the directory as well, but do not fail if there
 			# were left-overs
 			rmdir $dname || true
