@@ -7,3 +7,9 @@ if [ $? != 0 ] ; then
 fi
 
 condor_master
+if [ $? == 0 ] ; then
+    echo "BOSCO Started"
+else
+    echo "ERROR: BOSCO not started."
+fi
+
