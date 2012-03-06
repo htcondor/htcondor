@@ -169,7 +169,9 @@ class WriteUserLog
 
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
-        will return a successful value.
+        will return a successful value.  Also, if the global event log
+		is enabled, but writing to that log fails, this function will
+		still return success if it is able to write to the "normal" log.
 
         @param event the event to be written
 		@param related job ad
