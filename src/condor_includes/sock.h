@@ -345,10 +345,17 @@ public:
 		/// authenticated
 	bool isAuthenticated() const;
 
+    ///
+	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout);
+    ///
+	// method_used should be freed by the caller when finished with it
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout, char **method_used=NULL);
 
 	/// if we are connecting, merges together Stream::get_deadline
 	/// and connect_timeout_time()
 	virtual time_t get_deadline();
+
+	void invalidateSock();
 
 
 //	PRIVATE INTERFACE TO ALL SOCKS
@@ -424,11 +431,6 @@ protected:
 	///
 	virtual bool is_hdr_encrypt();
     ///
-	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout);
-    ///
-	// method_used should be freed by the caller when finished with it
-	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout, char **method_used=NULL);
-    ///
 	virtual bool is_encrypt();
 #ifdef WIN32
 	int set_inheritable( int flag );
@@ -444,7 +446,6 @@ protected:
 
 	///
 	int move_descriptor_up();
-
 
     /// called whenever the bound or connected state changes
     void addr_changed();

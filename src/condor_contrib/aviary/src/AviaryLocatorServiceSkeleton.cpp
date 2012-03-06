@@ -40,24 +40,16 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
 	EndpointVectorType endpoints;
 	LocateResponse* response = new LocateResponse;
 
+    if (!locator.isPublishing()) {
+        response->setStatus(new AviaryCommon::Status(new StatusCodeType("UNAVAILABLE"),
+            "Locator service not configured for publishing. Check value of AVIARY_PUBLISH_LOCATION!"));
+        return response;
+    }
+
 	bool partials = _locate->getPartialMatches();
 	ResourceID* id = _locate->getId();
-	ADBResourceTypeEnum res_type = id->getResource()->getResourceTypeEnum();
-	switch (res_type) {
-		case ResourceType_CUSTOM:
-			locator.locate(id->getName(),id->getCustom_type(),partials,endpoints);
-		break;
-		case ResourceType_ANY:
-		case ResourceType_COLLECTOR:
-		case ResourceType_MASTER:
-		case ResourceType_NEGOTIATOR:
-		case ResourceType_SCHEDULER:
-		case ResourceType_SLOT:
-		default:
-			locator.locate(id->getName(),id->getResource()->getResourceType(),partials, endpoints);
-		break;
-	}
-	
+	locator.locate(id->getName(),id->getResource()->getResourceType(),id->getSub_type(),partials,endpoints);
+
 	if (endpoints.empty()) {
 		response->setStatus(new AviaryCommon::Status(new StatusCodeType("NO_MATCH"),""));
 	}
@@ -67,7 +59,8 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
 			ResourceID* resId = new ResourceID;
 			resId->setName((*it).Name.c_str());
 			resId->setPool(locator.getPool());
-			resId->setResource(new ResourceType((*it).CustomType.c_str()));
+			resId->setResource(new ResourceType((*it).MajorType.c_str()));
+			resId->setSub_type((*it).MinorType.c_str());
 			resLoc->setId(resId);
 			resLoc->addLocation(axutil_uri_parse_string(Environment::getEnv(),(*it).EndpointUri.c_str()));
 			response->addResources(resLoc);

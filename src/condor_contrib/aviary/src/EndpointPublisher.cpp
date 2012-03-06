@@ -30,10 +30,12 @@
 using namespace std;
 using namespace aviary::locator;
 
-EndpointPublisher::EndpointPublisher(const string& service_name, const string& service_type)
+EndpointPublisher::EndpointPublisher(const string& service_name, const string& major_type,
+	const string& minor_type)
 {
 	m_name = service_name;
-	m_type = service_type;
+	m_major_type = major_type;
+	m_minor_type = minor_type;
 	m_port = -1;
 	m_update_interval = 60;
 	m_update_timer = -1;
@@ -68,16 +70,15 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 	m_location = scheme + my_full_hostname() + port + uri_suffix;
 
 	// populate the publish ad
-	//m_ad.Assign("CondorPlatform",CondorPlatform());
-	//m_ad.Assign("CondorVersion",CondorVersion());
 	m_ad = ClassAd();
-	//m_ad.Assign(ATTR_MACHINE,my_full_hostname());
 	m_ad.SetMyTypeName(GENERIC_ADTYPE);
 	m_ad.SetTargetTypeName(ENDPOINT);
 	m_ad.Assign(ATTR_NAME,m_name);
-	//m_ad.Assign(ATTR_MY_ADDRESS, my_ip_string());
 	m_ad.Assign(ENDPOINT_URI,m_location);
-	m_ad.Assign(CUSTOM_TYPE,m_type);
+	m_ad.Assign(MAJOR_TYPE,m_major_type);
+	if (!m_minor_type.empty()) {
+		m_ad.Assign(MINOR_TYPE,m_minor_type);
+	}
 	daemonCore->publish(&m_ad);
 
 	return true;

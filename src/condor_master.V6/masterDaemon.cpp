@@ -56,6 +56,7 @@ extern int		update_interval;
 extern int		check_new_exec_interval;
 extern int		preen_interval;
 extern int		new_bin_delay;
+extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
@@ -582,6 +583,7 @@ int daemon::RealStart( )
 	}
 
 	if( !m_after_startup_wait_for_file.IsEmpty() ) {
+		MSC_SUPPRESS_WARNING_FIXME(6031)
 		remove( m_after_startup_wait_for_file.Value() );
 	}
 
@@ -1372,6 +1374,7 @@ daemon::InitParams()
 			
 	int length = strlen(name_in_config_file) + 32;
 	buf = (char *)malloc(length);
+	ASSERT( buf != NULL );
 	snprintf( buf, length, "%s_WATCH_FILE", name_in_config_file );
 	watch_name = param( buf );
 	free(buf);
@@ -1589,6 +1592,7 @@ Daemons::Daemons()
 	all_daemons_gone_action = MASTER_RESET;
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
+	stop_other_daemons_when_startds_gone = NONE;
 	prevLHF = 0;
 	m_retry_start_all_daemons_tid = -1;
 	master = NULL;
@@ -1664,15 +1668,38 @@ Daemons::CheckForNewExecutable()
 		return;
 	}
 	if( NewExecutable( master->watch_name, &master->timeStamp ) ) {
-		dprintf( D_ALWAYS,"%s was modified, restarting %s.\n", 
-				 master->watch_name, 
-				 master->process_name );
 		master->newExec = TRUE;
+		if (NONE == new_bin_restart_mode) {
+			dprintf( D_ALWAYS,"%s was modified, but master restart mode is NEVER\n", 
+					 master->watch_name);
+			//don't want to do this in case the user later reconfigs the restart mode.
+			//CancelNewExecTimer();
+		} else {
+			dprintf( D_ALWAYS,"%s was modified, restarting %s %s.\n", 
+					 master->watch_name, 
+					 master->process_name,
+					 (new_bin_restart_mode == PEACEFUL) ? "Peacefully" : "Gracefully");
 			// Begin the master restart procedure.
-		
-		RestartMaster();
+			if (PEACEFUL == new_bin_restart_mode) {
+				DoPeacefulShutdown(5, &Daemons::RestartMasterPeaceful, "RestartMasterPeaceful");
+			} else {
+				RestartMaster();
+			}
+		}
 		return;
 	}
+
+	// don't even bother to look at other binaries if the new bin restart
+	// mode is GRACEFUL/PEACEFUL or NONE we do this because for NONE we don't
+	// want to restart anyway, and for GRACEFUL/PEACEFUL, we don't want to
+	// restart in arbitrary order.  it would be better to detect any binary
+	// changes, wait for things to settle, and then restart everthing that
+	// changed in the correct order. Well save that for a future change
+	//
+	if (PEACEFUL == new_bin_restart_mode || 
+		GRACEFUL == new_bin_restart_mode ||
+		NONE == new_bin_restart_mode)
+		return;
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->runs_here && !iter->second->newExec 
@@ -1823,17 +1850,44 @@ Daemons::StopAllDaemons()
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
 	int running = 0;
-	std::map<std::string, class daemon*>::iterator iter;
 
+	int any_running = 0;
+	int startds_running = 0;
+
+	// first check to see if any startd's are running, if there are, request
+	// that they
+	std::map<std::string, class daemon*>::iterator iter;
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->pid && iter->second->runs_here &&
 			!iter->second->OnlyStopWhenMasterStops() )
 		{
-			iter->second->Stop();
-			running++;
+			if (iter->second->type == DT_STARTD) {
+				iter->second->Stop();
+				++startds_running;
+			}
+			++any_running;
 		}
 	}
-	if( !running ) {
+
+	// if there are daemons running, but no startd's running.
+	// request that the daemons peacefully exit.
+	//
+	if (startds_running) {
+		// tell the all-reaper (actually the AllStartdsGone method) to stop-peaceful
+		// the remaining daemons instead of actually stopping them here.
+		stop_other_daemons_when_startds_gone = GRACEFUL;
+	} else if (any_running) {
+		for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+			if( iter->second->pid && iter->second->runs_here &&
+				!iter->second->OnlyStopWhenMasterStops() )
+			{
+				iter->second->Stop();
+				running++;
+			}
+		}
+	}
+
+	if( !any_running ) {
 		AllDaemonsGone();
 	}	   
 }
@@ -1880,25 +1934,118 @@ Daemons::StopFastAllDaemons()
 	}	   
 }
 
-void
-Daemons::StopPeacefulAllDaemons()
-{
-	CancelRetryStartAllDaemons();
-	daemons.SetAllReaper();
-	int running = 0;
-	std::map<std::string, class daemon*>::iterator iter;
 
+int  Daemons::SendSetPeacefulShutdown(class daemon* target, int timeout)
+{
+	// only STARTDs and SCHEDDs recognise this command.
+	if (target->type != DT_STARTD && target->type != DT_SCHEDD)
+		return 0;
+
+	// fire and forget, if the command fails, we just end up with a graceful shutdown
+	// rather than a peaceful one.
+	classy_counted_ptr<Daemon> d = new Daemon(target->type);
+	classy_counted_ptr<DCCommandOnlyMsg>  msg = new DCCommandOnlyMsg(DC_SET_PEACEFUL_SHUTDOWN);
+	msg->setSuccessDebugLevel(D_ALWAYS);
+	msg->setStreamType(Stream::reli_sock);
+	msg->setTimeout(timeout);
+	d->sendMsg(msg.get());
+	return 0;
+}
+
+int
+Daemons::SetPeacefulShutdown(int timeout)
+{
+	int messages = 0;
+
+	// tell STARTD's and SCHEDD's that this is to be a peaceful shutdown.
+	std::map<std::string, class daemon*>::iterator iter;
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->pid && iter->second->runs_here &&
 			!iter->second->OnlyStopWhenMasterStops() )
 		{
-			iter->second->StopPeaceful();
-			running++;
+			if (iter->second->type == DT_STARTD || iter->second->type == DT_SCHEDD) {
+				SendSetPeacefulShutdown(iter->second, timeout);
+				++messages;
+			}
 		}
 	}
-	if( !running ) {
+
+	return messages;
+}
+
+void
+Daemons::DoPeacefulShutdown(
+	int             timeout,
+	void (Daemons::*pfn)(void),
+	const char *    lbl)
+{
+	int messages = SetPeacefulShutdown(timeout);
+
+	// if we sent any messages, set a timer to to do the StopPeaceful call.
+	// to give the messages a chance to arrive.
+	bool fTimer = false;
+	if (messages > 0) {
+		int tid = daemonCore->Register_Timer(timeout+1, 0, (TimerHandlercpp)pfn, lbl, this);
+		if (tid == -1) {
+			dprintf( D_ALWAYS, "ERROR! Can't register DaemonCore timer!\n" );
+		} else {
+			fTimer = true;
+		}
+	}
+
+	// if the shutdown/restart command isn't going to happen on a timer,
+	// then do it now.
+	if ( ! fTimer) {
+		((this)->*(pfn))();
+	}
+}
+
+void
+Daemons::StopPeacefulAllDaemons()
+{
+	CancelRetryStartAllDaemons();
+	daemons.SetAllReaper(false); // false, because we don't assume that there are any startds
+	int any_running = 0;
+	int startds_running = 0;
+
+	// first check to see if any startd's are running, if there are, request
+	// that they peacefully exit.
+	std::map<std::string, class daemon*>::iterator iter;
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->pid && iter->second->runs_here &&
+			!iter->second->OnlyStopWhenMasterStops() )
+		{
+			if (iter->second->type == DT_STARTD) {
+				iter->second->StopPeaceful();
+				++startds_running;
+			}
+			++any_running;
+		}
+	}
+
+	// if there are daemons running, but no startd's running.
+	// request that the daemons peacefully exit.
+	//
+	if (startds_running) {
+		// tell the all-reaper (actually the AllStartdsGone method) to stop-peaceful
+		// the remaining daemons instead of actually stopping them here.
+		stop_other_daemons_when_startds_gone = PEACEFUL;
+	} else if (any_running) {
+		for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+			if( iter->second->pid && iter->second->runs_here &&
+				!iter->second->OnlyStopWhenMasterStops() )
+			{
+				iter->second->StopPeaceful();
+			}
+		}
+	}
+
+	// if there were no daemons running, do the AllDaemonsGone dance.
+	// if there were startds running
+	//
+	if( !any_running ) {
 		AllDaemonsGone();
-	}	   
+	}
 }
 
 
@@ -2040,7 +2187,7 @@ Daemons::ExecMaster()
 	int i=0,j;
 	char **argv = (char **)malloc((condor_main_argc+2)*sizeof(char *));
 
-	ASSERT( condor_main_argc>0 );
+	ASSERT( argv != NULL && condor_main_argc > 0 );
 	argv[i++] = condor_main_argv[0];
 
 		// insert "-f" argument so that new master does not fork
@@ -2190,6 +2337,24 @@ int Daemons::NumberOfChildren()
 	return result;
 }
 
+// This function returns the number of active child processes with the given daemon type
+// currently being supervised by the master.
+int Daemons::NumberOfChildrenOfType(daemon_t type)
+{
+	int result = 0;
+	std::map<std::string, class daemon*>::iterator iter;
+
+	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+		if( iter->second->runs_here && iter->second->pid
+			&& !iter->second->OnlyStopWhenMasterStops() 
+			&& iter->second->type == type) {
+			result++;
+		}
+	}
+	dprintf(D_FULLDEBUG,"NumberOfChildrenOfType(%d) returning %d\n",type,result);
+	return result;
+}
+
 
 int
 Daemons::AllReaper(int pid, int status)
@@ -2205,6 +2370,8 @@ Daemons::AllReaper(int pid, int status)
 		exit_allowed.erase( valid_iter );
 		if( NumberOfChildren() == 0 ) {
 			AllDaemonsGone();
+		} else if ( NumberOfChildrenOfType(DT_STARTD) == 0 ) {
+			AllStartdsGone();
 		}
 		return TRUE;
 	}
@@ -2214,6 +2381,8 @@ Daemons::AllReaper(int pid, int status)
 			iter->second->Exited( status );
 			if( NumberOfChildren() == 0 ) {
 				AllDaemonsGone();
+			} else if ( NumberOfChildrenOfType(DT_STARTD) == 0 ) {
+				AllStartdsGone();
 			}
 			return TRUE;
 		}
@@ -2255,7 +2424,7 @@ Daemons::DefaultReaper(int pid, int status)
 // This function will set the reaper to one that calls
 // AllDaemonsGone() when all the daemons have exited.
 void
-Daemons::SetAllReaper()
+Daemons::SetAllReaper(bool fStartdsFirst)
 {
 	if( reaper == ALL_R ) {
 			// All reaper is already set.
@@ -2265,6 +2434,7 @@ Daemons::SetAllReaper()
 							  (ReaperHandlercpp)&Daemons::AllReaper,
 							  "Daemons::AllReaper()",this);
 	reaper = ALL_R;
+	stop_other_daemons_when_startds_gone = fStartdsFirst ? GRACEFUL : NONE;
 }
 
 
@@ -2334,6 +2504,28 @@ Daemons::AllDaemonsGone()
 	}
 }
 
+void
+Daemons::AllStartdsGone()
+{
+	StopStateT stop = stop_other_daemons_when_startds_gone;
+	stop_other_daemons_when_startds_gone = NONE;
+	if ( GRACEFUL == stop || PEACEFUL == stop ) {
+		dprintf( D_ALWAYS, "All STARTDs are gone.  Stopping other daemons %s\n",
+				(GRACEFUL == stop) ? "Gracefully" : "Peacefully");
+
+		std::map<std::string, class daemon*>::iterator iter;
+		for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+			if( iter->second->pid && iter->second->runs_here &&
+				!iter->second->OnlyStopWhenMasterStops() )
+			{
+				if (PEACEFUL == stop)
+					iter->second->StopPeaceful();
+				else
+					iter->second->Stop();
+			}
+		}
+	}
+}
 
 void
 Daemons::StartTimers()

@@ -243,6 +243,7 @@ public:
 			running on a slot at all.
 		*/
 	int getMySlotNumber( void );
+	MyString getMySlotName( void );
 
 	bool isGridshell( void ) {return is_gridshell;};
 	const char* origCwd( void ) {return (const char*) orig_cwd;};

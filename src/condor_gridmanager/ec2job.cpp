@@ -27,7 +27,10 @@
 #include "nullfile.h"
 #include "filename_tools.h"
 
+#ifdef WIN32
+#else
 #include <uuid/uuid.h>
+#endif
 
 #include "gridmanager.h"
 #include "ec2job.h"
@@ -1105,6 +1108,16 @@ string EC2Job::build_ami_id()
 // http://docs.amazonwebservices.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html
 string EC2Job::build_client_token()
 {
+#ifdef WIN32
+	GUID guid;
+	if (S_OK != CoCreateGuid(&guid))
+		return NULL;
+	WCHAR wsz[40];
+	StringFromGUID2(guid, wsz, COUNTOF(wsz));
+	char uuid_str[40];
+	WideCharToMultiByte(CP_ACP, 0, wsz, -1, uuid_str, COUNTOF(uuid_str), NULL, NULL);
+	return string(uuid_str);
+#else
 	char uuid_str[37];
 	uuid_t uuid;
 
@@ -1112,8 +1125,8 @@ string EC2Job::build_client_token()
 
 	uuid_unparse(uuid, uuid_str);
 	uuid_str[36] = '\0';
-
 	return string(uuid_str);
+#endif
 }
 
 std::string EC2Job::build_keypair()

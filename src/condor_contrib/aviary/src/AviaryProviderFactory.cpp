@@ -31,7 +31,8 @@ using namespace aviary::locator;
 
 AviaryProvider* 
 AviaryProviderFactory::create(const string& log_file, 
-							  const string& service_name, const string& service_type,
+							  const string& service_name, const string& major_type,
+							  const string& minor_type,
 							  const string& uri_suffix)
 {
     AviaryProvider* provider = NULL;
@@ -67,9 +68,9 @@ AviaryProviderFactory::create(const string& log_file,
 	}
 
 	// see if we are using locator to publish our endpoint
-	bool use_locator = param_boolean("AVIARY_PUBLISH_LOCATION",FALSE) && service_type != LOCATOR;
+	bool use_locator = param_boolean("AVIARY_PUBLISH_LOCATION",FALSE) && minor_type != LOCATOR;
 	if (use_locator) {
-		ep = new EndpointPublisher(service_name, service_type);
+		ep = new EndpointPublisher(service_name, major_type, minor_type);
 		if (!ep->init(uri_suffix,have_ssl)) {
 			dprintf(D_ALWAYS,"Aviary location endpoint config failed\n");
 			return NULL;
@@ -100,13 +101,12 @@ AviaryProviderFactory::create(const string& log_file,
     }
 #endif
 
-	// provider owns this now
-	provider->setPublisher(ep);
-
-	// ready to publish our endpoint
-	if (ep) {
-		ep->start(param_integer("AVIARY_PUBLISH_INTERVAL", 10));
-	}
+    // ready to publish our endpoint
+    if (ep) {
+        // provider owns this now
+        provider->setPublisher(ep);
+        ep->start(param_integer("AVIARY_PUBLISH_INTERVAL", 10));
+    }
 
     return provider;
 }

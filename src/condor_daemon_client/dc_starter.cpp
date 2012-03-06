@@ -210,11 +210,12 @@ DCStarter::delegateX509Proxy( const char * filename, time_t expiration_time, cha
 	return XUS_Error;
 }
 
-StarterHoldJobMsg::StarterHoldJobMsg( char const *hold_reason, int hold_code, int hold_subcode ):
+StarterHoldJobMsg::StarterHoldJobMsg( char const *hold_reason, int hold_code, int hold_subcode, bool soft ):
 	DCMsg(STARTER_HOLD_JOB),
 	m_hold_reason(hold_reason),
 	m_hold_code(hold_code),
-	m_hold_subcode(hold_subcode)
+	m_hold_subcode(hold_subcode),
+	m_soft(soft)
 {
 }
 
@@ -225,7 +226,8 @@ StarterHoldJobMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 	return
 		sock->put(m_hold_reason) &&
 		sock->put(m_hold_code) &&
-		sock->put(m_hold_subcode);
+		sock->put(m_hold_subcode) &&
+		sock->put((int)m_soft);
 }
 
 DCMsg::MessageClosureEnum

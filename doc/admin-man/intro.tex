@@ -283,20 +283,6 @@ pool is configured to use a checkpoint server but that machine (or the
 server itself is down) Condor will revert to sending the checkpoint
 files for a given job back to the submit machine.
 
-\index{Condor daemon!condor\_quill@\Condor{quill}}
-\index{daemon!condor\_quill@\Condor{quill}}
-\index{condor\_quill daemon}
-\item[\Condor{quill}] This daemon
-builds and manages a database that represents a copy of the 
-Condor job queue.
-The \Condor{q} and \Condor{history} tools can then query the database.
-
-\index{Condor daemon!condor\_dbmsd@\Condor{dbmsd}}
-\index{daemon!condor\_dbmsd@\Condor{dbmsd}}
-\index{condor\_dbmsd daemon}
-\item[\Condor{dbmsd}] This daemon
-assists the \Condor{quill} daemon.
-
 \index{Condor daemon!condor\_gridmanager@\Condor{gridmanager}}
 \index{daemon!condor\_gridmanager@\Condor{gridmanager}}
 \index{condor\_gridmanager daemon}
@@ -385,13 +371,6 @@ for jobs requiring a whole machine or larger fraction of a machine.
 on behalf of Condor daemons, thereby reducing the number of required
 ports that must be opened when Condor is accessible through a firewall. 
 
-\index{Condor daemon!condor\_hdfs@\Condor{hdfs}}
-\index{daemon!condor\_hdfs@\Condor{hdfs}}
-\index{condor\_hdfs daemon} 
-\item[\Condor{hdfs}] This daemon manages the configuration of a
-Hadoop file system as well as the invocation of a properly configured
-Hadoop file system.
-
 
 %\index{Condor daemon!stork\_server@\Stork{server}}
 %\index{daemon!stork\_server@\Stork{server}}
@@ -399,6 +378,32 @@ Hadoop file system.
 %\item[\Stork{server}] This daemon
 %handles requests for Stork data placement jobs.
 
+\end{description} 
+
+When compiled from source code,
+the following daemons may be compiled in to provide optional functionality.
+\begin{description} 
+
+\index{Condor daemon!condor\_hdfs@\Condor{hdfs}}
+\index{daemon!condor\_hdfs@\Condor{hdfs}}
+\index{condor\_hdfs daemon} 
+\item[\Condor{hdfs}] This daemon manages the configuration of a
+Hadoop file system as well as the invocation of a properly configured
+Hadoop file system.
+
+\index{Condor daemon!condor\_quill@\Condor{quill}}
+\index{daemon!condor\_quill@\Condor{quill}}
+\index{condor\_quill daemon}
+\item[\Condor{quill}] This daemon
+builds and manages a database that represents a copy of the 
+Condor job queue.
+The \Condor{q} and \Condor{history} tools can then query the database.
+
+\index{Condor daemon!condor\_dbmsd@\Condor{dbmsd}}
+\index{daemon!condor\_dbmsd@\Condor{dbmsd}}
+\index{condor\_dbmsd daemon}
+\item[\Condor{dbmsd}] This daemon
+assists the \Condor{quill} daemon.
 \end{description} 
 
 

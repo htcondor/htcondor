@@ -26,6 +26,7 @@
 #include "dc_collector.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
+#include <vector>
 
 DaemonList::DaemonList()
 {
@@ -283,7 +284,7 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 		return Q_NO_COLLECTOR_HOST;
 	}
 
-	SimpleList<DCCollector *> sorted_collectors;
+	std::vector<DCCollector *> sorted_collectors;
 	DCCollector * daemon;
 	QueryResult result;
 	int pass = 0;
@@ -311,12 +312,16 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 					continue;
 				}
 			}
-			sorted_collectors.Append( daemon );
+			sorted_collectors.push_back(daemon);
 		}
 	}
 
-	sorted_collectors.Rewind();
-	while( sorted_collectors.Next( daemon ) ) {
+        while ( sorted_collectors.size() ) 
+        {
+            // choose a random collector in the list to query.
+            unsigned int idx = get_random_int() % sorted_collectors.size() ;
+            daemon = sorted_collectors[idx];
+
 		if ( ! daemon->addr() ) {
 			if ( daemon->name() ) {
 				dprintf( D_ALWAYS,
@@ -327,26 +332,31 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 						 "Can't resolve nameless collector; skipping\n" );
 			}
 			problems_resolving = true;
-			continue;
 		}
-		dprintf (D_FULLDEBUG, 
-				 "Trying to query collector %s\n", 
-				 daemon->addr());
+		else
+                {
+                    dprintf (D_FULLDEBUG, 
+                                    "Trying to query collector %s\n", 
+                                    daemon->addr());
 
-		if( num_collectors > 1 ) {
-			daemon->blacklistMonitorQueryStarted();
-		}
+                    if( num_collectors > 1 ) {
+                            daemon->blacklistMonitorQueryStarted();
+                    }
 
-		result = 
-			cQuery.fetchAds (adList, daemon->addr(), errstack);
+                    result = 
+                            cQuery.fetchAds (adList, daemon->addr(), errstack);
 
-		if( num_collectors > 1 ) {
-			daemon->blacklistMonitorQueryFinished( result == Q_OK );
-		}
+                    if( num_collectors > 1 ) {
+                            daemon->blacklistMonitorQueryFinished( result == Q_OK );
+                    }
 
-		if (result == Q_OK) {
-			return result;
-		}
+                    if (result == Q_OK) {
+                            return result;
+                    }
+                }
+                
+		// if you got here remove it from the list of potential candidates.
+		sorted_collectors.erase( sorted_collectors.begin()+idx );
 	}
 			
 	// only push an error if the error stack exists and is currently empty

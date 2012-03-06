@@ -80,6 +80,7 @@ CopyFrom(const Literal &literal)
 {
     ExprTree::CopyFrom(literal);
     value.CopyFrom(literal.value);
+    factor = literal.factor;
     return;
 }
 

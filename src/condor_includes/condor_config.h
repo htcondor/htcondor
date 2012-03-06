@@ -98,8 +98,10 @@ class ParamValue {
 	extern MyString global_config_source;
 	extern MyString global_root_config_source;
 	extern StringList local_config_sources;
+	class Regex;
 
 	ExtArray<ParamValue>* param_all(void);
+	int param_names_matching(Regex & re, ExtArray<const char *>& names);
     bool param_defined(const char* name);
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value = 0,

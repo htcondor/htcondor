@@ -2460,3 +2460,9 @@ Sock::canEncrypt()
 {
 	return crypto_ != NULL;
 }
+
+void
+Sock::invalidateSock()
+{
+	_sock = INVALID_SOCKET; 
+}

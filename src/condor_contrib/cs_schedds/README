@@ -1,0 +1,123 @@
+Condor Scheduler managed by Cluster Suite
+-----------------------------------------
+
+Overview
+========
+This contrib provides tools necessary to manage high availability
+condor_schedd configurations with Cluster Suite.  This replaces condor's
+native management of HA schedds.  These tools are built on top of wallaby and
+Cluster Suite tools, so working Cluster Suite and wallaby configurations
+are required.
+
+Dependencies
+============
+wallaby shell
+ccs
+
+Files
+=====
+cmd_cluster.rb   - Wallaby shell commands for managing HA Schedd configurations
+condor_schedd.sh - Cluster Suite Resource Agent for condor_schedd
+
+Cluster Suite versus condor_master
+==================================
+Cluster Suite is an alternative to condor_master for managing a high
+availability condor_schedd.  The key differences are:
+  * Cluster Suite's rgmanager uses a Resource Agent to manage a condor_schedd
+    instance whereas the condor_master manages the condor_schedd instance.
+  * A condor_schedd run by Cluster Suite does not rely on a lock file to
+    ensure only 1 condor_schedd instance per configuration is running whereas
+    the condor_master depends on a lock file on a shared file system.
+  * The Cluster Suite tools configure NFS and ensure the exported directory
+    is only mounted on the node running the condor_schedd instance whereas
+    the condor_master requires the shared resource be mounted on all nodes
+    that could run the condor_schedd instance.
+  * The NFS mount point is managed (mounted/unmounted) by Cluster Suite
+    and the condor_schedd will only run if the NFS file system mounts
+    sucessfully whereas the condor_master has no control over the shared file
+    system.
+  * Cluster Suite provides an optional graphical interface for managing
+    numerous condor_schedd configurations whereas condor_master is only
+    configured through configuration files.
+
+Installation
+============
+RPM
+---
+Install the condor-cluster package for Red Hat Enterprise Linux/Fedora.  This
+will install the required software dependencies and the condor Cluster Suite
+integration files in the correct locations.
+
+Source
+------
+The Resource Agent (condor_schedd.sh) should be installed in the directory
+containing other Resource Agents used by Cluster Suite
+(usually /usr/share/cluster).
+
+The wallaby shell command (cmd_cluster.rb) should be installed in the
+directory containing other wallaby shell commands
+(usually /usr/lib/ruby/site_ruby/1.8/mrg/grid/config/shell).
+
+Usage
+=====
+The cluster related wallaby shell commands wrap the commandline Cluter Suite
+configuration tool (ccs) and interaction with wallaby to simplify configuring
+High Availabilitly schedds in Cluster Suite and wallaby.
+
+Common options
+--------------
+Almost all cluster related wallaby shell commands take the following arguments:
+      --riccipassword : The ricci user password
+  -n, --no-store      : Only configure the cluster, don't update the store
+  -s, --store-only    : Don't configure the cluster, just update the store
+
+cluster-add-node
+----------------
+This command adds a node to an existing HA Schedd cluster configuration.  It
+takes the common options and requires the name of the schedd configuration
+and a list of nodes to add.
+
+example: wallaby cluster-add-node name=schedd1 node1 node2 node3
+
+
+cluster-create
+--------------
+This command creates an HA Schedd cluster configuration.  It takes the common
+options and requires the following information about the configuration in
+addition to a list of nodes:
+NAME   : The unique name of the condor_schedd configuration.  This is used
+         to identify configuration parameters for the schedd instance in
+         wallaby, and to tell Cluster Suite the name that should be passed to
+         the condor_schedd on startup.
+SPOOL  : The spool directory for the condor_schedd.  This is also the mount
+         point of the NFS export.
+SERVER : The server offering the NFS export.
+EXPORT : The directory on the SERVER that is exported over NFS.
+
+example: wallaby cluster-create name=schedd1 spool=/path/to/mountpoint server=NFSserver
+export=/path/on/NFSServer node1 node2 node3
+
+
+cluster-delete
+--------------
+This command deletes an HA Schedd cluster configuration.  It takes the common
+options and requires the name of the schedd configuration to delete.
+
+example: cluster-delete name=schedd1
+
+
+cluster-remove-node
+-------------------
+This command removes a node from an existing HA Schedd cluster configuration.
+It takes the common options and requires the name of the schedd configuration
+and a list of nodes to remove.
+
+example: wallaby cluster-remove-node name=schedd1 node1 node2 node3
+
+
+cluster-sync-to-store
+---------------------
+This command replaces HA Schedd configuration(s) in wallaby with the cluster
+configuration.  It takes no options and requires no arguments.
+
+example: wallaby cluster-sync-to-store

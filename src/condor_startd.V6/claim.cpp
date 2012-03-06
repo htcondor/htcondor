@@ -1591,16 +1591,21 @@ Claim::starterKillHard( void )
 
 
 void
-Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode )
+Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft )
 {
 	if( c_starter ) {
-		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode) ) {
+		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode,soft) ) {
 			return;
 		}
 		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");
 	}
 
-	starterKillSoft();
+	if( soft ) {
+		starterKillSoft();
+	}
+	else {
+		starterKillHard();
+	}
 }
 
 void
@@ -2338,7 +2343,9 @@ ClaimId::dropFile( int slot_id )
 	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
 				 filename_new.Value() );
-		unlink( filename_new.Value() );
+		if (unlink(filename_new.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+		}
 	}
 }
 

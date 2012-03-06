@@ -378,6 +378,7 @@ found.  If none contain a valid configuration file, Condor will print an
 error message and exit:
 \begin{enumerate}
    \item File specified in the \Env{CONDOR\_CONFIG} environment variable
+   \item \File{\$(HOME)/.condor/condor\_config}
    \item \File{/etc/condor/condor\_config}
    \item \File{/usr/local/etc/condor\_config}
    \item \File{\Tilde condor/condor\_config}
@@ -907,8 +908,6 @@ strategies for doing an upgrade:
 changing the running version of Condor 
 from the current installation to a newer version.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{admin-man/condor-view-client.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{admin-man/dynamic-deployment.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

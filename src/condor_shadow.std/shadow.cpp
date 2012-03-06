@@ -979,6 +979,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
+		// For standard universe. MemoryUsed==ImageSize, no need to param this one.
+		// because imagesize is already the best measure of memory usage.
+		SetAttribute(Proc->id.cluster, Proc->id.proc, ATTR_MEMORY_USAGE, "((ImageSize+1023)/1024)");
 
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_EXIT_STATUS,
 						JobExitStatus);

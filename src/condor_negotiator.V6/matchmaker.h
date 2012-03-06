@@ -138,9 +138,7 @@ class Matchmaker : public Service
 		static float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		                              ClassAd &request,ClassAd *resource);
 
-		bool getGroupInfoFromUserId( const char *user, float & groupQuota, 
-			 float & groupUsage );
-		
+		bool getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage);
 
     protected:
 		char * NegotiatorName;
@@ -177,11 +175,11 @@ class Matchmaker : public Service
 					MM_ERROR if problem negotiating w/ this schedd.
 		**/
 		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
-		   double priority, double share,
-		   double submitterLimit,
+		   double priority,
+           double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t startTime, 
-		   int &numMatched, double &limitUsed, double &pieLeft);
+           int& numMatched, double &pieLeft);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,
 								 double untrimmedSlotWeightTotal,
@@ -191,8 +189,11 @@ class Matchmaker : public Service
 			float groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdListDoesNotDeleteAds&,
-									  double=-1.0, double=1.0, double=0.0, double=0.0, double=0.0, bool=false);
+		ClassAd *matchmakingAlgorithm(const char* scheddName, const char* scheddAddr, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
+									  double preemptPrio, 
+                                      double limitUsed, double limitUsedUnclaimed,
+                                      double submitterLimit, double submitterLimitUnclaimed, 
+                                      double pieLeft, bool only_for_startdrank);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);
@@ -228,6 +229,7 @@ class Matchmaker : public Service
 								  double slotWeightTotal,
 		                            /* result parameters: */
 								  double &submitterLimit,
+                                  double& submitterLimitUnclaimed,
 								  double &submitterUsage,
 		                          double &submitterShare,
 		                          double &submitterAbsShare,
@@ -322,8 +324,6 @@ class Matchmaker : public Service
 
 		typedef HashTable<MyString, float> groupQuotasHashType;
 		groupQuotasHashType *groupQuotasHash;
-
-
 
 		// rank condition on matches
 		ExprTree *rankCondStd;// no preemption or machine rank-preemption 

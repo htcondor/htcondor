@@ -155,7 +155,7 @@ FileTransfer::FileTransfer()
 	last_download_time = 0;
 	ActiveTransferTid = -1;
 	TransferStart = 0;
-	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = 0;
+	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = (time_t)-1;
 	ClientCallback = 0;
 	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
@@ -1596,7 +1596,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
 
-	downloadStartTime = (int)time(NULL);
+	downloadStartTime = time(NULL);
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -2503,7 +2503,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number;
 
-	uploadStartTime = (int)time(NULL);
+	uploadStartTime = time(NULL);
 	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 

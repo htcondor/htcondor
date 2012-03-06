@@ -795,6 +795,15 @@ File System Configuration File Entries''.
   be placed in the directory defined by this macro.  \MacroNI{LOG} is
   required to be defined.  Normally, \MacroUNI{LOG} is defined in
   terms of \MacroUNI{LOCAL\_DIR}.
+
+\label{param:Run}
+\item[\Macro{RUN}]
+  Used by the condor init script to specify the directory where the Condor 
+  master should write its process ID
+  (PID) file. 
+
+  If no value for \MacroNI{RUN} is provided, the value of \MacroNI{LOG}
+  is used.
   
 \label{param:Spool}
 \item[\Macro{SPOOL}]
@@ -3580,12 +3589,16 @@ Configuring The Startd Policy.
 \label{param:Preempt}
 \item[\Macro{PREEMPT}]
   A boolean expression that, when \Expr{True},
-  causes Condor to stop a currently running job.
+  causes Condor to stop a currently running job once
+  \Macro{MAXJOBRETIREMENTTIME} has expired.  This expression is not
+  evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
 
 \label{param:WantHold}
 \item[\Macro{WANT\_HOLD}]
   A boolean expression that defaults to \Expr{False}.
-  When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True},
+  When \Expr{True} and the value of \MacroNI{PREEMPT} becomes \Expr{True}
+  and \MacroNI{WANT\_SUSPEND} is \Expr{False} and \MacroNI{MAXJOBRETIREMENTTIME}
+  has expired,
   the job is put on hold for the reason
   (optionally) specified by the variables \MacroNI{WANT\_HOLD\_REASON} and
   \MacroNI{WANT\_HOLD\_SUBCODE}.
@@ -3689,7 +3702,8 @@ WANT_HOLD_REASON = \
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
   tells Condor to evaluate the \MacroNI{SUSPEND} expression to decide
-  whether to suspend a running job.
+  whether to suspend a running job.  When \Expr{True}, the \MacroNI{PREEMPT}
+  expression is not evaluated.
   When not explicitly set, the \Condor{startd} exits with an error.
   When explicitly set, but the evaluated value is anything other than
   \Expr{True}, the value is utilized as if it were \Expr{False}.
@@ -4161,6 +4175,27 @@ WANT_HOLD_REASON = \
   WINREG_System_Processes = 166
 \end{verbatim}
 
+\label{param:MountUnderScratch}
+\item[\Macro{MOUNT\_UNDER\_SCRATCH}]
+  A comma separated list of directories. 
+  For each directory in the list, 
+  Condor creates a directory in the job's temporary scratch directory,
+  but make it available at the given name using bind mounts.
+  This is available on Linux systems which provide bind mounts 
+  and per-process tree mount tables,
+  such as Red Hat Enterprise Linux 5.
+  As an example:
+\begin{verbatim}
+  MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
+\end{verbatim}
+  The job will think that it sees the usual \File{/tmp} and \File{/var/tmp}
+  directories, 
+  but they will actually exist as subdirectories in 
+  the job's temporary scratch directory. 
+  This is useful, because the job's scratch directory will be cleaned up 
+  after the job completes,
+  and because jobs will not be able to fill up the real \File{/tmp} directory. 
+
 \end{description}
 
 These macros control if the \Condor{startd} daemon should perform
@@ -4309,7 +4344,6 @@ SMP Machines for details.
      slot2_EnteredCurrentActivity = 1075240035
 \end{verbatim}
 
-
 \end{description}
 
 The following settings control the number of slots reported
@@ -4364,6 +4398,17 @@ search for the corresponding attribute names using ``slot'', instead.
   A boolean variable that defaults to \Expr{False}.
   When \Expr{True}, this slot permits dynamic provisioning, as specified in
   section~ \ref{sec:SMP-dynamicprovisioning}.
+
+\label{param:ClaimPartitionableLeftovers}
+\item[\Macro{CLAIM\_PARTITIONABLE\_LEFTOVERS}]
+  A boolean variable that defaults to \Expr{True}.
+  When \Expr{True} within the configuration for both the \Condor{schedd}
+  and the \Condor{startd}, 
+  and the \Condor{schedd} claims a partitionable slot,
+  the \Condor{startd} returns the slot's ClassAd and a claim id for
+  leftover resources.
+  In doing so, the \Condor{schedd} can claim multiple dynamic slots 
+  without waiting for a negotiation cycle.
 
 \label{param:NumSlotsTypeN}
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
@@ -4687,27 +4732,6 @@ availability statistics in the \Condor{startd}.
   intervals stored by the \Condor{startd} to limit memory and disk consumption.
   Each sample requires 4 bytes of memory and approximately 10 bytes of
   disk space.
-
-\end{description}
-
-The following macros control the optional computation of resource
-availability statistics in the \Condor{startd}.
-
-\begin{description}
-\label{param:MountUnderScratch}
-\item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-On Linux systems which provide bind mounts and per-process tree mount tables,
-such as Red Hat Enterprise Linux 5, the administrator
-can optionally configure Condor to provide new file system bind mounts
-for each job.  This is useful, for example, to give each jobs its own
-\File{/tmp} or \File{/var/tmp} file system mapping, 
-independent of any other job.
-If set,
-this variable specifies a comma separated list of directories 
-to provide new mounts for.
-If it is set to \File{/tmp}, 
-Condor will make a directory under the execute-side sandbox called \File{tmp},
-and bind mount that directory to \File{/tmp}.
 
 \end{description}
 
@@ -5393,8 +5417,9 @@ SYSTEM_PERIODIC_RELEASE = \
   \label{param:SystemPeriodicRemove}
 \item[\Macro{SYSTEM\_PERIODIC\_REMOVE}]
   This expression behaves identically
-  to the job expression \AdAttr{periodic\_remove}, but it is evaluated by
-  the \Condor{schedd} daemon individually for each job in the queue.
+  to the job expression \AdAttr{periodic\_remove}, but it is evaluated for
+  every job in the queue.  As it is in the configuration file, it is
+  easy for an administrator to set a remove policy that applies to all jobs.
   It defaults to \Expr{False}.
   When \Expr{True}, it causes the job to be removed from the queue.
   Here is an example
@@ -5875,32 +5900,34 @@ These settings affect the \Condor{starter}.
   This wrapper program must ultimately replace its image with the user job;
   in other words,
   it must \Procedure{exec} the user job, not \Procedure{fork} it.
-  For instance, if the wrapper program is a C/Korn shell script, the
-  last line of execution should be:
-\begin{verbatim}
-        exec $*
-\end{verbatim}
-%$ (for Emacs)
-  This can potentially lose information about the arguments.
-  Any argument with embedded white space will be split into multiple
-  arguments.
-  For example the argument "argument one" will become the two arguments
-  "argument" and "one".
-  For Bourne type shells (sh, bash, ksh),
-  the following preserves the arguments:
+
+  For Bourne type shells (sh, bash, ksh), the last line should be:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
-  For the C type shells (csh, tcsh), the following preserves the
-  arguments:
+  For the C type shells (csh, tcsh), the last line should be:
 \begin{verbatim}
         exec $*:q
 \end{verbatim}
+
+	These precise syntaxes are needed to correctly handle program arguments
+which contain whitespace.
 
 
   For Windows machines, the wrapper will either be
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
   or an executable (with a file extension of \File{.exe} or \File{.com}).
+
+  If the wrapper encounters an error, and is unable to run the user
+  job, it is important that the wrapper indicate this to the Condor system
+  so that Condor does not assign the exit code of the wrapper to the
+  user.  To do this, the wrapper should write a useful error message
+  to the file named in the environment variable \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
+  and exit with a non-zero value.
+  If this file is created by the wrapper, Condor assumes that the wrapper
+  has failed, and will mark the job as idle in the queue, and try to 
+  re-run it.  The starter will also copy the contents of this file to
+  the starter log, so the administrator can debug the problem.
 
   When a wrapper is in use, the executable of a job submission may be
   kept relative and resolved by the user's path by setting:
@@ -6739,6 +6766,9 @@ These macros affect the \Condor{negotiator}.
   using \Macro{STARTD\_JOB\_EXPRS}.
   If not explicitly set in the Condor configuration file, the default value
   for this expression is \Expr{True}.
+  \MacroNI{PREEMPTION\_REQUIREMENTS} should include the term 
+  \Expr{(SubmitterGroup =?= RemoteGroup)} if a preemption policy that respects
+  \Term{group quotas} is desired.
   Note that this setting does not
   influence other potential causes of preemption, such as startd
   \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
@@ -7851,161 +7881,6 @@ This allows multiple instances of the
   It is used to further constrain the types
   of ClassAds from the \Condor{collector}.
   There is no default value, resulting in no constraints being placed on query.
-
-\end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:HDFS-Config-File-Entries}\condor{hdfs}
-Configuration File Entries}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$
-
-\index{configuration!condor\_hdfs configuration variables}
-These macros affect the \Condor{hdfs} daemon.
-Many of these variables determine how the \Condor{hdfs} daemon sets
-the HDFS XML configuration.
-
-\begin{description}
-
-\label{param:HDFSHome}
-\item[\Macro{HDFS\_HOME}]
-  The directory path for the Hadoop file system installation directory.
-  Defaults to \File{\MacroUNI{RELEASE\_DIR}/libexec}.
-  This directory is required to contain 
-
-  \begin{itemize}
-  \item{directory \File{lib}},
-  containing all necessary jar files for the execution of a Name node
-  and Data nodes.
-  \item{directory \File{conf}},
-  containing default Hadoop file system configuration files with names that
-  conform to \Expr{*-site.xml}.
-  \item{directory \File{webapps}},
-  containing JavaServer pages (jsp) files for the Hadoop file 
-  system's embedded server.
-  \end{itemize}
-
-\label{param:HDFSNamenode}
-\item[\Macro{HDFS\_NAMENODE}]
-  The host and port number for the HDFS Name node.
-  There is no default value for this required variable.
-  Defines the value of \Expr{fs.default.name} in the HDFS XML configuration.
-
-\label{param:HDFSNamenodeWeb}
-\item[\Macro{HDFS\_NAMENODE\_WEB}]
-  The IP address and port number for the HDFS embedded web server within the
-  Name node with the syntax of \Expr{a.b.c.d:portnumber}.
-  There is no default value for this required variable.
-  Defines the value of \Expr{dfs.http.address} in the HDFS XML configuration.
-
-\label{param:HDFSDatanodeWeb}
-\item[\Macro{HDFS\_DATANODE\_WEB}]
-  The IP address and port number for the HDFS embedded web server within the
-  Data node with the syntax of \Expr{a.b.c.d:portnumber}.
-  The default value for this optional variable is 0.0.0.0:0, which means
-  bind to the default interface on a dynamic port.
-  Defines the value of \Expr{dfs.datanode.http.address} in 
-  the HDFS XML configuration.
-
-\label{param:HDFSNamenodeDir}
-\item[\Macro{HDFS\_NAMENODE\_DIR}]
-  The path to the directory on a local file system where the Name node will
-  store its meta-data for file blocks.
-  There is no default value for this variable; it is required to be defined
-  for the Name node machine.
-  Defines the value of \Expr{dfs.name.dir} in the HDFS XML configuration.
-
-\label{param:HDFSDatanodeDir}
-\item[\Macro{HDFS\_DATANODE\_DIR}]
-  The path to the directory on a local file system where the Data node will
-  store file blocks.
-  There is no default value for this variable; it is required to be defined
-  for a Data node machine.
-  Defines the value of \Expr{dfs.data.dir} in the HDFS XML configuration.
-
-\label{param:HDFSDatanodeAddress}
-\item[\Macro{HDFS\_DATANODE\_ADDRESS}]
-  The IP address and port number of this machine's Data node.
-  There is no default value for this variable; it is required to be defined
-  for a Data node machine, and may be given the value \Expr{0.0.0.0:0}
-  as a Data node need not be running on a known port.
-  Defines the value of \Expr{dfs.datanode.address} in the HDFS XML
-  configuration.
-
-\label{param:HDFS}
-\item[\Macro{HDFS\_NODETYPE}] This parameter specifies the type of
-  HDFS service provided by this machine.  Possible values are
-  \Expr{HDFS\_NAMENODE} and \Expr{HDFS\_DATANODE}.  The default value
-  is \Expr{HDFS\_DATANODE}.
-
-\label{param:HDFSBackupnode}
-\item[\Macro{HDFS\_BACKUPNODE}]
-  The host address and port number for the HDFS Backup node.
-  There is no default value.
-  It defines the value of the HDFS dfs.namenode.backup.address
-  field in the HDFS XML configuration file.
-
-\label{param:HDFSBackupnodeWeb}
-\item[\Macro{HDFS\_BACKUPNODE\_WEB}]
-  The address and port number for the HDFS embedded web server 
-  within the Backup node,
-  with the syntax of hdfs://<host\_address>:<portnumber>.
-  There is no default value for this required variable. 
-  It defines the value of dfs.namenode.backup.http-address in the 
-  HDFS XML configuration. 
-
-\label{param:HDFSNamenodeRole}
-\item[\Macro{HDFS\_NAMENODE\_ROLE}]
-  If this machine is selected to be the Name node,
-  then the role must be defined. 
-  Possible values are \Expr{ACTIVE}, \Expr{BACKUP}, \Expr{CHECKPOINT}, 
-  and \Expr{STANDBY}.
-  The default value is \Expr{ACTIVE}.
-  The \Expr{STANDBY} value exists for future expansion.
-  If \MacroNI{HDFS\_NODETYPE} is selected to be Data node
-  (\MacroNI{HDFS\_DATANODE}), then this variable is ignored.  
-
-\label{param:HDFSLog4j}
-\item[\Macro{HDFS\_LOG4J}]
-  Used to set the configuration for the HDFS debugging level.
-  Currently one of  \Expr{OFF}, \Expr{FATAL}, \Expr{ERROR}, \Expr{WARN},
-  \Expr{INFODEBUG}, \Expr{ALL} or \Expr{INFO}.
-  Debugging output is written to \File{\MacroUNI{LOG}/hdfs.log}.
-  The default value is \Expr{INFO}.
-
-\label{param:HDFSAllow}
-\item[\Macro{HDFS\_ALLOW}]
-  A comma separated list of hosts that are authorized with read and write
-  access to the invoked HDFS.
-  Note that this configuration variable name is likely to change to
-  \MacroNI{HOSTALLOW\_HDFS}.
-
-\label{param:HDFSDeny}
-\item[\Macro{HDFS\_DENY}]
-  A comma separated list of hosts that are denied access to the invoked HDFS.
-  Note that this configuration variable name is likely to change to
-  \MacroNI{HOSTDENY\_HDFS}.
-
-\label{param:HDFSNamenodeClass}
-\item[\Macro{HDFS\_NAMENODE\_CLASS}]
-  An optional value that specifies the class to invoke.
-  The default value is \verb@org.apache.hadoop.hdfs.server.namenode.NameNode@.
-
-\label{param:HDFSDatanodeClass}
-\item[\Macro{HDFS\_DATANODE\_CLASS}]
-  An optional value that specifies the class to invoke.
-  The default value is \verb@org.apache.hadoop.hdfs.server.datanode.DataNode@.
-
-\label{param:HDFSSiteFile}
-\item[\Macro{HDFS\_SITE\_FILE}]
-  The optional value that specifies the HDFS XML configuration file to generate.
-  The default value is \File{hdfs-site.xml}.
-
-\label{param:HDFSReplication}
-\item[\Macro{HDFS\_REPLICATION}]
-  An integer value that facilitates setting the replication factor of an HDFS,
-  defining the value of \Expr{dfs.replication} in the HDFS XML
-  configuration.  This configuration variable is optional, as the HDFS has
-  its own default value of 3 when not set through configuration.
 
 \end{description}
 
