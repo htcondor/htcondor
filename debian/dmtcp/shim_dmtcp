@@ -10,7 +10,7 @@ set -u
 # DEFAULTS, some not sane, some sane
 
 # This first one is the default for debian installations...
-DMTCP_PATH=/usr/lib/dmtcp
+DMTCP_PATH=/usr/bin
 
 # This next one is a default for UW-Madison pools. It is the "release_dir".
 CONDOR_PATH=/unsup/condor-production
@@ -20,7 +20,9 @@ LOG="/dev/null"
 STDIN="/dev/null"
 STDOUT="/dev/null"
 STDERR="/dev/null"
-CKPTINT=${DMTCP_CHECKPOINT_INTERVAL:-1800}
+# set default checkpoint interval to zero -- not repeated snapshoting
+# but on-demand snapshot on vacate command
+CKPTINT=${DMTCP_CHECKPOINT_INTERVAL:-0}
 
 # The version of the shim script. Useful for debugging between groups using
 # this shim script.
@@ -176,9 +178,12 @@ assert_dmtcp_manifest ()
 dmtcp_coordinator
 dmtcp_command
 dmtcp_restart
-dmtcphijack.so
-libmtcp.so
 mtcp_restart"
+
+# Do not check the libs on Debian -- package dependency make sure they are
+# present and their location is differen
+#dmtcphijack.so
+#libmtcp.so
 	
 	logit "Checking DMTCP manifest. An install in cwd overrides default choice."
 
