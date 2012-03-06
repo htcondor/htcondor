@@ -1,0 +1,31 @@
+From: Michael Hanke <michael.hanke@gmail.com>
+Subject: Prevent init script failure on stop with stale PID file
+
+If there is a stale condor PID file on a system the init script would wait till
+timeout for a non-existing process to end. This effectively prevent a Debian
+package from being uninstallable (and hence also upgradable), because the init
+script will always fail until the PID file is removed.
+
+This patch validates the PID read from the file and ignores it if no running
+process for this PID can be found.
+
+diff --git a/src/condor_examples/condor.boot.rpm b/src/condor_examples/condor.boot.rpm
+index 2c58661..ef8d864 100755
+--- a/src/condor_examples/condor.boot.rpm
++++ b/src/condor_examples/condor.boot.rpm
+@@ -518,7 +518,14 @@ condor_master_pids() {
+   masterpid=
+   if [ -f "$PIDFILE" -a -r "$PIDFILE" ] ; then
+     masterpid=`cat "$PIDFILE"` 2>/dev/null
+-    FORCE_PIDFILE="yes"
++    # validate PID
++    `$PS | grep "^$masterpid "` > /dev/null
++    if [ $? -eq 0 ] ; then
++      FORCE_PIDFILE="yes"
++    else
++      masterpid=""
++      # maybe remove the stale PID file here
++    fi
+   fi
+   if [ "$FORCE_PIDFILE" = "yes" ] ; then
+     MASTER_PIDS="$masterpid"

@@ -9,8 +9,11 @@ condor (7.7.5~dfsg.1-2) experimental; urgency=low
   * Set default DMTCP snapshoting interval to zero -- no regular snapshoting,
     but on-demand snapshots on vacate command. In addition the shim script now
     honors DMTCP_CHECKPOINT_INTERVAL.
+  * Added patch to ignore PIDs from a stale PID file when trying to stop
+    condor. This could otherwise prevent package removal/upgrade. The patch
+    has been forwarded upstream.
 
- -- Michael Hanke <mih@debian.org>  Tue, 06 Mar 2012 08:33:57 +0100
+ -- Michael Hanke <mih@debian.org>  Tue, 06 Mar 2012 11:24:35 +0100
 
 condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
 
