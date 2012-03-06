@@ -158,8 +158,9 @@ remove_cluster () {
         stop_ssh
 
         # Remove the host from the cluster list
-        sed "/\$$remote_host/d" $CLUSTERLIST > $CLUSTERLIST.tmp
-        mv $CLUSTERLIST.tmp $CLUSTERLIST
+        tmpfile=`mktemp`
+        sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
+        mv $tmpfile $CLUSTERLIST_LOCATION
 
     else
         echo "Unable to find cluster $remote_host in cluster list"
