@@ -83,6 +83,13 @@ of other job attributes.
 
 \begin{itemize}
 
+\item Fixed a rare bug where the schedd would sometimes not reuse
+an existing claim to run a new job when an existing job exited.  This
+would result in it waiting for a new negotiation cycle to get a new match,
+and thus a small performance penalty.  This bug was actually fixed
+in Condor version 7.7.5.
+\Ticket{2802}
+
 \item Fixed a bug in condor\_q so that it no longer emits a parse
 error when it times out talking to the schedd.
 \Ticket{2854}
