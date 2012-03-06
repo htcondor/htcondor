@@ -197,7 +197,7 @@ End_of_Submit
 
 
 # The getopt command line.  Using -a for alternate (allow options with only 1 '-')
-TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:help  -n 'bosco_cluster' -- "$@"`
+TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
 
 if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 
