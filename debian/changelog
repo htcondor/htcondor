@@ -1,4 +1,18 @@
-condor (7.7.5~dfsg.1-1) experimental; urgency=low
+condor (7.7.5~dfsg.1-2) experimental; urgency=low
+
+  * New primary Debian maintainer contact is Condor upstream. Previous
+    maintainer remains uploader.
+  * Guard against failure due to missing directories in pre-removal script
+    (Closes: #662739). Thanks to Andreas Beckmann for detecting the bug.
+  * Fix DMTCP integration for version 1.2.4 and later -- file location tests
+    became invalid.
+  * Set default DMTCP snapshoting interval to zero -- no regular snapshoting,
+    but on-demand snapshots on vacate command. In addition the shim script now
+    honors DMTCP_CHECKPOINT_INTERVAL.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 06 Mar 2012 08:33:57 +0100
+
+condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
 
   * New upstream release. Feature freeze for upcoming 7.8 stable series.
     - better statistics for monitoring a Condor pool,
@@ -9,10 +23,8 @@ condor (7.7.5~dfsg.1-1) experimental; urgency=low
   * Remove 'disable_java_gt4X' patch -- orresponding upstream code has been
     removed.
   * Remove 'debian_dynamic_run' patch -- merged upstream.
-  * Guard against failure due to missing directories in pre-removal script
-    (Closes: #662739). Thanks to Andreas Beckmann for detecting the bug.
 
- -- Michael Hanke <mih@debian.org>  Tue, 06 Mar 2012 08:14:11 +0100
+ -- Michael Hanke <mih@debian.org>  Thu, 01 Mar 2012 08:47:40 +0100
 
 condor (7.7.4+git3-gd7ce75b~dfsg.1-1) experimental; urgency=low
 
