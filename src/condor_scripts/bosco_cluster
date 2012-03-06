@@ -67,7 +67,7 @@ check_cluster_list () {
     # $1 = cluster to check for
     remote_host=$1
 
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
         return 0
     else
@@ -86,7 +86,7 @@ remove_cluster () {
     remote_host=$1
 
     # First, check if the cluster is in the cluster list
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
 
         # Remove bosco from the remote cluster
