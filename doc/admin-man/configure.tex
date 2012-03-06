@@ -5417,8 +5417,9 @@ SYSTEM_PERIODIC_RELEASE = \
   \label{param:SystemPeriodicRemove}
 \item[\Macro{SYSTEM\_PERIODIC\_REMOVE}]
   This expression behaves identically
-  to the job expression \AdAttr{periodic\_remove}, but it is evaluated by
-  the \Condor{schedd} daemon individually for each job in the queue.
+  to the job expression \AdAttr{periodic\_remove}, but it is evaluated for
+  every job in the queue.  As it is in the configuration file, it is
+  easy for an administrator to set a remove policy that applies to all jobs.
   It defaults to \Expr{False}.
   When \Expr{True}, it causes the job to be removed from the queue.
   Here is an example
