@@ -50,7 +50,7 @@ use warnings;
 
 use Carp;
 use Cwd;
-use POSIX "sys_wait_h";
+use POSIX qw/sys_wait_h strftime/;
 use Socket;
 use Sys::Hostname;
 
@@ -349,7 +349,7 @@ sub DebugOff
 }
 
 sub timestamp {
-    return scalar localtime();
+    return strftime("%y/%m/%d %H:%M:%S", localtime);
 }
 
 sub Reset
@@ -1684,6 +1684,10 @@ sub KillDaemonPids {
     elsif(CondorUtils::is_macos() == 1) {
         # TODO - how do we get the name of process on Mac?
         kill 9, $master_pid, @pids;
+    }
+    elsif(CondorUtils::is_freebsd() == 1) {
+        # TODO - freebsd does not have a useful /proc
+        kill 9, $master_pid, @pids;        
     }
     else {
         foreach my $pid ($master_pid, @pids) {

@@ -537,4 +537,11 @@ sub is_macos {
     return 0;
 }
 
+sub is_freebsd {
+    if($^O eq "freebsd") {
+        return 1;
+    }
+    return 0;
+}
+
 1;
