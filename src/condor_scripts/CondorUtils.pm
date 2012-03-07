@@ -530,18 +530,4 @@ sub is_windows_native_perl {
     return 0;
 }
 
-sub is_macos {
-    if($^O eq "darwin") {
-        return 1;
-    }
-    return 0;
-}
-
-sub is_freebsd {
-    if($^O eq "freebsd") {
-        return 1;
-    }
-    return 0;
-}
-
 1;

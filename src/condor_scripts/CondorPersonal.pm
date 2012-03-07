@@ -50,7 +50,7 @@ use warnings;
 
 use Carp;
 use Cwd;
-use POSIX qw/sys_wait_h strftime/;
+use POSIX "sys_wait_h";
 use Socket;
 use Sys::Hostname;
 
@@ -349,7 +349,7 @@ sub DebugOff
 }
 
 sub timestamp {
-    return strftime("%y/%m/%d %H:%M:%S", localtime);
+    return scalar localtime();
 }
 
 sub Reset
@@ -1589,8 +1589,13 @@ sub IsRunningYet
 #################################################################
 
 sub CollectDaemonPids {
+    my $daemonlist = `condor_config_val daemon_list`;
+    $daemonlist =~ s/\s*//g;
+    my @daemons = split /,/, $daemonlist;
+
     my $logdir = `condor_config_val log`;
     CondorUtils::fullchomp($logdir);
+
     
     my $logfile = "$logdir/MasterLog";
     debug("In CollectDaemonPids(), examining log $logfile\n", $debuglevel);
@@ -1625,18 +1630,6 @@ sub CollectDaemonPids {
         print PIDS "$pids{$daemon}\n";
     }
     close(PIDS);
-
-
-    my $daemonlist = `condor_config_val daemon_list`;
-    $daemonlist =~ s/\s*//g;
-    my @daemons = split /,/, $daemonlist;
-    foreach my $daemon (@daemons) {
-        next if $daemon eq "MASTER";
-        my $exe_name = "condor_" . lc($daemon);
-        if(scalar(grep /$exe_name/, keys %pids) == 0) {
-            debug("\tMissing daemon $daemon\n")
-        }
-    }
 }
 
 #################################################################
@@ -1648,58 +1641,103 @@ sub CollectDaemonPids {
 #
 #################################################################
 
-sub KillDaemonPids {
-    my $desiredconfig = shift;
-    debug("Killing daemons for Condor <$desiredconfig>\n", 1);
-    
-    my $oldconfig = $ENV{CONDOR_CONFIG};
-    $ENV{CONDOR_CONFIG} = $desiredconfig;
+sub KillDaemonPids
+{
+	my $desiredconfig = shift;
+	my $oldconfig = $ENV{CONDOR_CONFIG};
+	$ENV{CONDOR_CONFIG} = $desiredconfig;
+	my $logdir = `condor_config_val log`;
+	$logdir =~ s/\012+$//;
+	$logdir =~ s/\015+$//;
+	my $masterpid = 0;
+	my $cnt = 0;
+	my $cmd;
+	my $saveddebuglevel = $debuglevel;
+	$debuglevel = 1;
 
-    if($isnightly) {
-        DisplayPartialLocalConfig($desiredconfig);
-    }
+	if($isnightly) {
+		DisplayPartialLocalConfig($desiredconfig);
+	}
 
-    my $logdir = `condor_config_val log`;
-    CondorUtils::fullchomp($logdir);
+	#print "logs are here:$logdir\n";
+	my $pidfile = $logdir . "/PIDS";
+	debug("Asked to kill <$oldconfig>\n",$debuglevel);
+	my $thispid = 0;
+	# first find the master and use a kill 3(fast kill)
+	open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+	while(<PD>) {
+		chomp();
+		$thispid = $_;
+		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
+			$masterpid = $1;
+			if(CondorUtils::is_windows() == 1) {
+				$cmd = "/usr/bin/kill -f -s 3 $masterpid";
+				runcmd($cmd);
+			} else {
+				$cnt = kill 3, $masterpid;
+			}
+			debug("Gentle kill for master <$masterpid><$thispid($cnt)>\n",$debuglevel);
+			last;
+		}
+	}
+	close(PD);
+	# give it a little time for a shutdown
+	sleep(10);
+	# did it work.... is process still around?
+	$cnt = kill 0, $masterpid;
+	# try a kill again on master and see if no such process
+	if(CondorUtils::is_windows() == 1) {
+		$cnt = 1;
+		open(KL,"/usr/bin/kill -f -s 15 $masterpid 2>&1 |") 
+			or die "can not grab kill output\n";
+		while(<KL>) {
+			#print "Testing soft kill<$_>\n";
+			if( $_ =~ /^.*couldn\'t\s+open\s+pid\s+.*/ ) {
+				debug("Windows soft kill worked\n",$debuglevel);
+				$cnt = 0;
+			}
+		}
+	}
 
-    my $pidfile = "$logdir/PIDS";
-    my $master_pid;
-    my @pids;
-    open(PIDS, '<', $pidfile) or die("Cannot read file '$pidfile': $!");
-    while(<PD>) {
-        chomp;
-        if(/^(\d+) MASTER/) {
-            $master_pid = $1;
-        }
-        else {
-            push @pids, $_;
-        }
-    }
+	if($cnt == 0) {
+		debug("Gentle kill for master <$thispid> worked!\n",$debuglevel);
+	} else {
+		# hmm bullets are placed in heads here.
+		debug("Gentle kill for master <$thispid><$cnt> failed!\n",$debuglevel);
+		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+		while(<PD>) {
+			chomp();
+			$thispid = $_;
+			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
+				$thispid = $1;
+				debug("Kill MASTER PID <$thispid:$1>\n",$debuglevel);
+				if(CondorUtils::is_windows() == 1) {
+					$cmd = "/usr/bin/kill -f -s 15 $thispid";
+					runcmd($cmd);
+				} else {
+					$cnt = kill 15, $thispid;
+				}
+			} else {
+				debug("Kill non-MASTER PID <$thispid>\n",$debuglevel);
+				if(CondorUtils::is_windows() == 1) {
+					$cmd = "kill -f -s 15 $thispid";
+					runcmd($cmd,{expect_result=>\&ANY});
+				} else {
+					$cnt = kill 15, $thispid;
+				}
+			}
+			if($cnt == 0) {
+				debug("Failed to kill PID <$thispid>\n",$debuglevel);
+			} else {
+				debug("Killed PID <$thispid>\n",$debuglevel);
+			}
+		}
+		close(PD);
+	}
 
-    if(CondorUtils::is_windows() == 1) {
-        # TODO - what do we want to do for Windows?
-        my $pids = $master_pid . " " . join(" ", @pids);
-        runcmd("/usr/bin/kill -f -s 15 $pids");
-    }
-    elsif(CondorUtils::is_macos() == 1) {
-        # TODO - how do we get the name of process on Mac?
-        kill 9, $master_pid, @pids;
-    }
-    elsif(CondorUtils::is_freebsd() == 1) {
-        # TODO - freebsd does not have a useful /proc
-        kill 9, $master_pid, @pids;        
-    }
-    else {
-        foreach my $pid ($master_pid, @pids) {
-            my $file = "/proc/$pid/exe";
-            if((-e $file) && (readlink("/proc/$pid/exe") =~ /condor/)) {
-                kill 9, $pid;
-            }
-        }
-    }
-
-    # reset config to whatever it was.
-    $ENV{CONDOR_CONFIG} = $oldconfig;
+	# reset config to whatever it was.
+	$ENV{CONDOR_CONFIG} = $oldconfig;
+	$debuglevel = $saveddebuglevel;
 }
 
 #################################################################
