@@ -8050,13 +8050,11 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManSubmitDelay}
 \item[\Macro{DAGMAN\_SUBMIT\_DELAY}]
-  An integer that controls the number of seconds
-  that \Condor{dagman} will sleep before submitting consecutive jobs.
-  It can be increased to help reduce the load on the \Condor{schedd} daemon.
-  The legal range of values is 0 to 60.
-  If defined with a value less than 0, the  value 0 will be used.
-  If defined with a value greater than 60, the value 60 will be used.
-  The default value is 0.
+  An integer that controls the number of seconds that \Condor{dagman}
+  will sleep before submitting consecutive jobs.  It can be increased to
+  help reduce the load on the \Condor{schedd} daemon.  The legal range
+  of values is any nonnegative integer.  If defined with a value less
+  than 0, the value 0 will be used.
 
 \label{param:DAGManStartupCycleDetect}
 \item[\Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT}]

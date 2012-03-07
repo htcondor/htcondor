@@ -79,11 +79,20 @@ set into the \Attr{MemoryUsage} attribute for a job.  It is expected that
 this will be a ClassAd expression that defines the job memory usage in terms
 of other job attributes.
 
+\item The configuration variable \Macro{DAGMAN\_SUBMIT\_DELAY} can now be any
+nonnegative integer.  It was formerly limited to values between 0 and 60,
+inclusive.
+\Ticket{2864}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a rare problem that caused a 20 second timeout to occur in
+the \Condor{collector} when authenticating.
+\Ticket{2817}
 
 \item Fixed a rare bug where the schedd would sometimes not reuse
 an existing claim to run a new job when an existing job exited.  This
