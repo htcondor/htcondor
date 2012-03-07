@@ -83,6 +83,10 @@ of other job attributes.
 
 \begin{itemize}
 
+\item Fixed a rare problem that caused a 20 second timeout to occur in
+the \Condor{collector} when authenticating.
+\Ticket{2817}
+
 \item Fixed a rare bug where the schedd would sometimes not reuse
 an existing claim to run a new job when an existing job exited.  This
 would result in it waiting for a new negotiation cycle to get a new match,
