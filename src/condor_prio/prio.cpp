@@ -89,6 +89,7 @@ main( int argc, char *argv[] )
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
+	ASSERT(args != NULL);
 
 	for( argv++; (arg = *argv); argv++ ) {
 		if( (arg[0] == '-' || arg[0] == '+') && isdigit(arg[1]) ) {

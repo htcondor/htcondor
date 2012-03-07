@@ -131,6 +131,7 @@ static unsigned int direct = DIRECT_ALL;
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
+static  bool widescreen = false;
 static  bool expert = false;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
@@ -945,6 +946,10 @@ processCommandLineArguments (int argc, char *argv[])
 		// the '-' for prefix matches
 		arg = argv[i]+1;
 
+		if (match_prefix (arg, "wide")) {
+			widescreen = true;
+			continue;
+		}
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
 			summarize = 0;
@@ -1262,6 +1267,7 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
 			Q.add (CQ_STATUS, HELD);		
 			show_held = true;
+			widescreen = true;
 			attrs.append( ATTR_ENTERED_CURRENT_STATUS );
 			attrs.append( ATTR_HOLD_REASON );
 		}
@@ -1519,7 +1525,7 @@ displayJobShort (ClassAd *ad)
 
 static char *
 bufferJobShort( ClassAd *ad ) {
-	int cluster, proc, date, status, prio, image_size;
+	int cluster, proc, date, status, prio, image_size, memory_usage;
 
 	char encoded_status;
 	int last_susp_time;
@@ -1543,6 +1549,13 @@ bufferJobShort( ClassAd *ad ) {
 		return( return_buff );
 	}
 	
+	// print memory usage unless it's unavailable, then print image size
+	// note that memory usage is megabytes but imagesize is kilobytes.
+	double memory_used_mb = image_size / 1024.0;
+	if (ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
+		memory_used_mb = memory_usage;
+	}
+
 	MyString args_string;
 	ArgList::GetArgsStringForDisplay(ad,&args_string);
 	if (!args_string.IsEmpty()) {
@@ -1575,7 +1588,8 @@ bufferJobShort( ClassAd *ad ) {
 	}
 
 	sprintf( return_buff,
-			 "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+			 widescreen ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
+			            : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
 			 cluster,
 			 proc,
 			 format_owner( owner, ad ),
@@ -1591,7 +1605,7 @@ bufferJobShort( ClassAd *ad ) {
 			 format_time( (int)utime ),
 			 encoded_status,
 			 prio,
-			 (image_size / 1024.0),
+			 memory_used_mb,
 			 buffer.Value() );
 
 	return return_buff;
@@ -1734,7 +1748,7 @@ format_cpu_util (float utime, AttrList *ad)
 static const char *
 format_owner (char *owner, AttrList *ad)
 {
-	static char result_format[15] = "";
+	static char result_format[100] = "";
 
 	// [this is a somewhat kludgey place to implement DAG formatting,
 	// but for a variety of reasons (maintainability, allowing future
@@ -1767,13 +1781,13 @@ format_owner (char *owner, AttrList *ad)
 	int niceUser;
 	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
 		char tmp[100];
-		strncpy(tmp,NiceUserName,99);
+		strncpy(tmp,NiceUserName,80);
 		strcat(tmp, ".");
 		strcat(tmp, owner);
-		sprintf(result_format, "%-14.14s", tmp);
+		owner = tmp;
 	} else {
-		sprintf(result_format, "%-14.14s", owner);
 	}
+	sprintf(result_format, "%-14.14s", owner);
 	return result_format;
 }
 
@@ -1900,6 +1914,7 @@ usage (const char *myName)
 		"\t\t-name <name>\t\tName of schedd\n"
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
 		"\t\t-long\t\t\tVerbose output (entire classads)\n"
+		"\t\t-wide\t\t\tWidescreen output\n"
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
@@ -2134,7 +2149,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			mask.registerFormat( (StringCustomFmt)
 								 format_globusHostAndJM,
 								 ATTR_JOB_CMD, "fork    [?????]" );
-			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
+			mask.registerFormat( widescreen ? "%s\n" : "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -2148,7 +2163,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			mask.registerFormat ( (IntCustomFmt) format_q_date,
 								  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
 			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat( "%-43.43s\n", ATTR_HOLD_REASON );
+			mask.registerFormat( widescreen ? "%s\n" : "%-43.43s\n", ATTR_HOLD_REASON );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -2214,7 +2229,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		if( (fetchResult = Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
 											process_buffer_line,
 											useFastPath,
-											&errstack) != Q_OK)) {
+											&errstack)) != Q_OK) {
 			
 			// The parse + fetch failed, print out why
 			switch(fetchResult) {
@@ -2622,7 +2637,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				mask.registerFormat( (StringCustomFmt)
 									 format_globusHostAndJM,
 									 ATTR_JOB_CMD, "fork    [?????]" );
-				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
+				mask.registerFormat( widescreen ? "%s\n" : "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
 			}
@@ -2639,7 +2654,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				mask.registerFormat ( (IntCustomFmt) format_q_date,
 									  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
 				mask.registerFormat(" ", "*bogus*", " ");  // force space
-				mask.registerFormat( "%-43.43s\n", ATTR_HOLD_REASON );
+				mask.registerFormat( widescreen ? "%s\n" : "%-43.43s\n", ATTR_HOLD_REASON );
 				setup_mask = true;
 				usingPrintMask = true;
 			}

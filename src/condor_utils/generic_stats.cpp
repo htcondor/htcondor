@@ -1036,6 +1036,35 @@ void StatisticsPool::Publish(ClassAd & ad, int flags) const
       }
 }
 
+void StatisticsPool::Publish(ClassAd & ad, const char * prefix, int flags) const
+{
+   pubitem item;
+   MyString name;
+
+   // boo! HashTable doesn't support const, so I have to remove const from this
+   // to make the compiler happy.
+   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(name,item)) 
+      {
+      // check various publishing flags to decide whether to call the Publish method
+      if (!(flags & IF_DEBUGPUB) && (item.flags & IF_DEBUGPUB)) continue;
+      if (!(flags & IF_RECENTPUB) && (item.flags & IF_RECENTPUB)) continue;
+      if ((flags & IF_PUBKIND) && (item.flags & IF_PUBKIND) && !(flags & item.flags & IF_PUBKIND)) continue;
+      if ((item.flags & IF_PUBLEVEL) > (flags & IF_PUBLEVEL)) continue;
+
+      // don't pass the item's IF_NONZERO flag through unless IF_NONZERO is enabled
+      int item_flags = (flags & IF_NONZERO) ? item.flags : (item.flags & ~IF_NONZERO);
+
+      if (item.Publish) {
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         MyString attr(prefix);
+         attr += (item.pattr ? item.pattr : name.Value());
+         (probe->*(item.Publish))(ad, attr.Value(), item_flags);
+         }
+      }
+}
+
 void StatisticsPool::Unpublish(ClassAd & ad) const
 {
    pubitem item;

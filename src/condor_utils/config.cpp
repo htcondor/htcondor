@@ -727,6 +727,7 @@ expand_macro( const char *value,
 			buf[sizeof(buf)-1] = '\0';
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(buf) +
 											  strlen(right) + 1));
+			ASSERT( rval != NULL );
 			(void)sprintf( rval, "%s%s%s", left, buf, right );
 			FREE( tmp );
 			tmp = rval;

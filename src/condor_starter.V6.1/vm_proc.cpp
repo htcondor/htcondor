@@ -1191,6 +1191,11 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 {
 	dprintf( D_FULLDEBUG, "Inside VMProc::PublishUpdateAd()\n" );
 
+	std::string memory_usage;
+	if (param(memory_usage, "MEMORY_USAGE_METRIC_VM", ATTR_VM_MEMORY)) {
+		ad->AssignExpr(ATTR_MEMORY_USAGE, memory_usage.c_str());
+	}
+
 	MyString buf;
 	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		float sys_time = m_vm_cputime;

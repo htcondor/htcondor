@@ -586,6 +586,64 @@ bool stringListRegexpMember_func( const char * /*name*/,
 	return true;
 }
 
+// split user@domain or slot@machine, result is always a list of 2 strings
+// if there is no @ in the input, then for user@domain the domain is empty
+// for slot@machine the slot is empty
+static
+bool splitAt_func( const char * name,
+	const classad::ArgumentList &arg_list,
+	classad::EvalState &state, 
+	classad::Value &result )
+{
+	classad::Value arg0;
+
+	// Must have one argument
+	if ( arg_list.size() != 1) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	// Evaluate the argument
+	if( !arg_list[0]->Evaluate( state, arg0 )) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If either argument isn't a string, then the result is
+	// an error.
+	std::string str;
+	if( !arg0.IsStringValue(str) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::Value first;
+	classad::Value second;
+
+	unsigned int ix = str.find_first_of('@');
+	if (ix >= str.size()) {
+		if (0 == strcasecmp(name, "splitslotname")) {
+			first.SetStringValue("");
+			second.SetStringValue(str);
+		} else {
+			first.SetStringValue(str);
+			second.SetStringValue("");
+		}
+	} else {
+		first.SetStringValue(str.substr(0, ix));
+		second.SetStringValue(str.substr(ix+1));
+	}
+
+	classad::ExprList *lst = new classad::ExprList();
+	ASSERT(lst);
+	lst->push_back(classad::Literal::MakeLiteral(first));
+	lst->push_back(classad::Literal::MakeLiteral(second));
+
+	result.SetListValue(lst);
+
+	return true;
+}
+
 static
 void registerStrlistFunctions()
 {
@@ -614,6 +672,14 @@ void registerStrlistFunctions()
 	name = "stringList_regexpMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
+
+	// user@domain, slot@machine & sinful string crackers.
+	name = "splitusername";
+	classad::FunctionCall::RegisterFunction( name, splitAt_func );
+	name = "splitslotname";
+	classad::FunctionCall::RegisterFunction( name, splitAt_func );
+	//name = "splitsinful";
+	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
 }
 
 void

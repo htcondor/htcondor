@@ -366,7 +366,7 @@ UserProc::getStdFile( std_file_type type,
 		////////////////////////////////////
 		// Use the starter's equivalent fd
 		////////////////////////////////////
-	if( allow_dash && (filename[0] == '-') && !filename[1] )
+	if( allow_dash && filename && (filename[0] == '-') && !filename[1] )
 	{
 			// use the starter's fd
 		switch( type ) {

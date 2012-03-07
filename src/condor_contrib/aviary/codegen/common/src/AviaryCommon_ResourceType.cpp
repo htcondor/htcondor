@@ -306,31 +306,31 @@
                    {
                      
                        case ResourceType_ANY :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "ANY");
+                            property_ResourceType = ("ANY");
                           break;
                      
                        case ResourceType_COLLECTOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COLLECTOR");
+                            property_ResourceType = ("COLLECTOR");
                           break;
                      
                        case ResourceType_CUSTOM :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "CUSTOM");
+                            property_ResourceType = ("CUSTOM");
                           break;
                      
                        case ResourceType_MASTER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "MASTER");
+                            property_ResourceType = ("MASTER");
                           break;
                      
                        case ResourceType_NEGOTIATOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "NEGOTIATOR");
+                            property_ResourceType = ("NEGOTIATOR");
                           break;
                      
                        case ResourceType_SCHEDULER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "SCHEDULER");
+                            property_ResourceType = ("SCHEDULER");
                           break;
                      
                        case ResourceType_SLOT :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "SLOT");
+                            property_ResourceType = ("SLOT");
                           break;
                      
                      

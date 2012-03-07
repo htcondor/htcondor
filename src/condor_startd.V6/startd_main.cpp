@@ -639,7 +639,9 @@ startd_exit()
 		char* filename;
 		for( i = 0; i <= resmgr->numSlots(); i++ ) { 
 			filename = startdClaimIdFile( i );
-			unlink( filename );
+			if (unlink(filename) < 0) {
+				dprintf( D_FULLDEBUG, "startd_exit: Failed to remove file '%s'\n", filename );
+			}
 			free( filename );
 			filename = NULL;
 		}

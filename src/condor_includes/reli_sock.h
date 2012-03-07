@@ -120,6 +120,7 @@ public:
 	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
     /// FALSE means this is an incoming connection
 	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
+	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
 	ReliSock *accept();

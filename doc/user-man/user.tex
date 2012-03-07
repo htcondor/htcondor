@@ -1037,6 +1037,40 @@ associated with the job.  Typically, a user will specify
 This setting is currently available in the
 local, java, and vanilla universes.
 
+\item \Env{\_CONDOR\_JOB\_AD}
+\index{\_CONDOR\_JOB\_AD}
+\index{environment variables!\_CONDOR\_JOB\_AD}
+is the path to a file in the job's scratch directory which contains
+the job ad for the currently running job.  The job ad is current
+as of the start of the job, but is not updated during the running
+of the job.  The job may read attributes and their values out of
+this file as it runs, but any changes will not be acted on in any
+way by Condor.  The format is the same as the output of the
+condor\_q -l command.  This environment variable may be particularly
+useful in a USER\_JOB\_WRAPPER.
+
+\item \Env{\_CONDOR\_MACHINE\_AD}
+\index{\_CONDOR\_MACHINE\_AD}
+\index{environment variables!\_CONDOR\_MACHINE\_AD}
+is the path to a file in the job's scratch directory which contains
+the machine ad for the slot the currently running job is using.  
+The machine ad is current as of the start of the job, but is not updated during the running
+of the job.  The format is the same as the output of the
+condor\_status -l command.
+
+\item \Env{\_CONDOR\_JOB\_IWD}
+\index{\_CONDOR\_JOB\_IWD}
+\index{environment variables!\_CONDOR\_JOB\_IWD}
+is the path to the initial working directory the job was born with.
+
+\item \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE}
+\index{\_CONDOR\_WRAPPER\_ERROR\_FILE}
+\index{environment variables!\_CONDOR\_WRAPPER\_ERROR\_FILE}
+is only set when the administrator has installed a USER\_JOB\_WRAPPER.
+If this file exists, Condor assumes that the job wrapper has failed
+and copies the contents of the file to the StarterLog for the administrator
+to debug the problem.
+
 \end{itemize}
 
 

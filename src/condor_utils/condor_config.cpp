@@ -305,6 +305,24 @@ param_all(void)
 	return pvs;
 }
 
+// return a list of param names that match the given regex, this list is in hashtable order (i.e. no order)
+int param_names_matching(Regex & re, ExtArray<const char *>& names)
+{
+	int cAdded = 0;
+	HASHITER it = hash_iter_begin(ConfigTab, TABLESIZE);
+	while( ! hash_iter_done(it)) {
+		const char *name = hash_iter_key(it);
+		if (re.match(name)) {
+			names.add(name);
+			++cAdded;
+		}
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+
+	return cAdded;
+}
+
 static int ParamValueNameAscendingSort(const void *l, const void *r)
 {
 	const ParamValue *left = (const ParamValue*)l;

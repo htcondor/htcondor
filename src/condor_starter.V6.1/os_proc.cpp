@@ -804,8 +804,12 @@ OsProc::Suspend()
 void
 OsProc::Continue()
 {
-	daemonCore->Send_Signal(JobPid, SIGCONT);
-	is_suspended = false;
+	if (is_suspended)
+	{
+	  
+	  daemonCore->Send_Signal(JobPid, SIGCONT);
+	  is_suspended = false;
+	}
 }
 
 bool

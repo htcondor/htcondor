@@ -59,7 +59,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.3.3-p2 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.3.3-p3 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -73,6 +73,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&

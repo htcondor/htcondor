@@ -843,24 +843,24 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	size = strlen(uid_domain) + strlen(ATTR_UID_DOMAIN) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, uid_domain );
 	ad->Insert( tmp );
 	free( tmp );
 
 	size = strlen(fs_domain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, fs_domain ); 
 	ad->Insert( tmp );
 	free( tmp );
 
-	int slot = Starter->getMySlotNumber();
+	MyString slotName = Starter->getMySlotName();
 	MyString line = ATTR_NAME;
 	line += "=\"";
-	if( slot ) { 
-		line += "slot";
-		line += slot;
-		line += '@';
-	}
+	line += slotName;
+	line += '@';
+	
 	line += my_full_hostname();
 	line += '"';
 	ad->Insert( line.Value() );
@@ -870,6 +870,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	tmp_val = param( "ARCH" );
 	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
 	ad->Insert( tmp );
 	free( tmp );
@@ -878,6 +879,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	tmp_val = param( "OPSYS" );
 	size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
 	ad->Insert( tmp );
 	free( tmp );
@@ -1122,10 +1124,13 @@ JICShadow::initUserPriv( void )
         char *nobody_user = NULL;
 			// 20 is the longest param: len(VM_UNIV_NOBODY_USER) + 1
         char nobody_param[20];
-		int slot = Starter->getMySlotNumber();
-		if( ! slot ) {
-			slot = 1;
+		MyString slotName = Starter->getMySlotName();
+		if (slotName.Length() > 4) {
+			// We have a real slot of the form slotX or slotX_Y
+		} else {
+			slotName = "slot1";
 		}
+		slotName.upper_case();
 
 		if( job_universe == CONDOR_UNIVERSE_VM ) {
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
@@ -1135,15 +1140,15 @@ JICShadow::initUserPriv( void )
 			if( nobody_user == NULL ) {
 				// "VM_UNIV_NOBODY_USER" is NOT defined.
 				// Next, we will try to use SLOTx_VMUSER
-				snprintf( nobody_param, 20, "SLOT%d_VMUSER", slot );
+				snprintf( nobody_param, 20, "%s_VMUSER", slotName.Value() );
 				nobody_user = param(nobody_param);
 			}
 		}
 		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "SLOT%d_USER", slot );
+			snprintf( nobody_param, 20, "SLOT%s_USER", slotName.Value() );
 			nobody_user = param(nobody_param);
 			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
-				snprintf( nobody_param, 20, "VM%d_USER", slot );
+				snprintf( nobody_param, 20, "VM%s_USER", slotName.Value() );
 				nobody_user = param(nobody_param);
 			}
 		}

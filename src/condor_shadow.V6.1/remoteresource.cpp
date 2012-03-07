@@ -1040,15 +1040,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 
-	if( update_ad->LookupInteger(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, int_value) ) {
-		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, int_value);
-	} else {
-		int_value = this->filetrans.GetDownloadTimestamps();
-		if (int_value) {
-			jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, int_value);
-		}
-	}
-
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, float_value);
@@ -1064,6 +1055,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			image_size = int_value;
 			jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
 		}
+	}
+
+	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
+	if( tree ) {
+		jobAd->Insert(ATTR_MEMORY_USAGE, tree->Copy());
 	}
 
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
@@ -1495,6 +1491,12 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 {
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
+
+	// record the start time of transfer output into the job ad.
+	time_t tStart = -1;
+	if (filetrans.GetDownloadTimestamps(&tStart)) {
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, (int)tStart);
+	}
 
 #if 0 // tj: this seems to record only transfer output time, turn it off for now.
 	FileTransfer::FileTransferInfo fi = filetrans.GetInfo();

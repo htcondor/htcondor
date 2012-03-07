@@ -80,8 +80,15 @@ extern "C" {
 
 #if _MSC_VER >= 1400 /* VC++ 2005 version */
 #define PREFAST_NORETURN __declspec(noreturn)
+# ifdef _PREFAST_
+// inform MSVC_ANALYZE of some true thing that it's having trouble figuring out for itself.
+#  define PREFAST_ASSUME(x) __analysis_assume(!!(x))
+# else
+#  define PREFAST_ASSUME(x)
+# endif
 #else
 #define PREFAST_NORETURN
+#define PREFAST_ASSUME(x)
 #endif
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
@@ -104,6 +111,7 @@ int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( const char *strflags );
+void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags );
 

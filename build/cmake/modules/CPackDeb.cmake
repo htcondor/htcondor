@@ -1,4 +1,4 @@
-# Based on CMake 2.8.3, modified for use building Condor
+# Based on CMake 2.8.7, modified for use building Condor
 #
 # - The builtin (binary) CPack Deb generator (Unix only)
 # CPackDeb may be used to create Deb package using CPack.
@@ -22,7 +22,7 @@
 #     Mandatory : YES
 #     Default   : CPACK_PACKAGE_VERSION
 #     The debian package version
-# CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
+# CPACK_DEBIAN_PACKAGE_ARCHITECTURE
 #     Mandatory : YES
 #     Default   : Output of dpkg --print-architecture (or i386 if dpkg is not found)
 #     The debian package architecture
@@ -62,7 +62,7 @@
 # CPACK_DEBIAN_PACKAGE_DEBUG
 #     Mandatory : NO
 #     Default   : -
-#     May be set when invoking cpack in order to trace debug informations
+#     May be set when invoking cpack in order to trace debug information
 #     during CPackDeb run.
 # CPACK_DEBIAN_PACKAGE_PREDEPENDS
 #     Mandatory : NO
@@ -142,6 +142,11 @@ ENDIF(NOT UNIX)
 IF(NOT DEFINED CPACK_DEBIAN_PACKAGE_SHLIBDEPS)
   SET(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
 ENDIF(NOT DEFINED CPACK_DEBIAN_PACKAGE_SHLIBDEPS)
+
+FIND_PROGRAM(FAKEROOT_EXECUTABLE fakeroot)
+IF(FAKEROOT_EXECUTABLE)
+  SET(CPACK_DEBIAN_FAKEROOT_EXECUTABLE ${FAKEROOT_EXECUTABLE})
+ENDIF(FAKEROOT_EXECUTABLE)
 
 IF(CPACK_DEBIAN_PACKAGE_SHLIBDEPS)
   # dpkg-shlibdeps is a Debian utility for generating dependency list
@@ -328,6 +333,29 @@ ENDIF(NOT CPACK_DEBIAN_PACKAGE_PRIORITY )
 # SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
 #    "${CMAKE_CURRENT_SOURCE_DIR/prerm;${CMAKE_CURRENT_SOURCE_DIR}/postrm")
 
+# Are we packaging components ?
+IF(CPACK_DEB_PACKAGE_COMPONENT)
+  SET(CPACK_DEB_PACKAGE_COMPONENT_PART_NAME "-${CPACK_DEB_PACKAGE_COMPONENT}")
+  SET(CPACK_DEB_PACKAGE_COMPONENT_PART_PATH "/${CPACK_DEB_PACKAGE_COMPONENT}")
+  SET(WDIR "${CPACK_TOPLEVEL_DIRECTORY}/${CPACK_PACKAGE_FILE_NAME}/${CPACK_DEB_PACKAGE_COMPONENT}")
+  STRING(TOLOWER "${CPACK_PACKAGE_NAME}${CPACK_DEB_PACKAGE_COMPONENT_PART_NAME}" CPACK_DEBIAN_PACKAGE_NAME)
+ELSE(CPACK_DEB_PACKAGE_COMPONENT)
+  SET(CPACK_DEB_PACKAGE_COMPONENT_PART_NAME "")
+  SET(CPACK_DEB_PACKAGE_COMPONENT_PART_PATH "")
+  SET(WDIR "${CPACK_TOPLEVEL_DIRECTORY}/${CPACK_PACKAGE_FILE_NAME}")
+ENDIF(CPACK_DEB_PACKAGE_COMPONENT)
+
+# Print out some debug information if we were asked for that
+IF(CPACK_DEBIAN_PACKAGE_DEBUG)
+   MESSAGE("CPackDeb:Debug: CPACK_TOPLEVEL_DIRECTORY          = ${CPACK_TOPLEVEL_DIRECTORY}")
+   MESSAGE("CPackDeb:Debug: CPACK_TOPLEVEL_TAG                = ${CPACK_TOPLEVEL_TAG}")
+   MESSAGE("CPackDeb:Debug: CPACK_TEMPORARY_DIRECTORY         = ${CPACK_TEMPORARY_DIRECTORY}")
+   MESSAGE("CPackDeb:Debug: CPACK_OUTPUT_FILE_NAME            = ${CPACK_OUTPUT_FILE_NAME}")
+   MESSAGE("CPackDeb:Debug: CPACK_OUTPUT_FILE_PATH            = ${CPACK_OUTPUT_FILE_PATH}")
+   MESSAGE("CPackDeb:Debug: CPACK_PACKAGE_FILE_NAME           = ${CPACK_PACKAGE_FILE_NAME}")
+   MESSAGE("CPackDeb:Debug: CPACK_PACKAGE_INSTALL_DIRECTORY   = ${CPACK_PACKAGE_INSTALL_DIRECTORY}")
+   MESSAGE("CPackDeb:Debug: CPACK_TEMPORARY_PACKAGE_FILE_NAME = ${CPACK_TEMPORARY_PACKAGE_FILE_NAME}")
+ENDIF(CPACK_DEBIAN_PACKAGE_DEBUG)
 
 # For debian source packages:
 # debian/control

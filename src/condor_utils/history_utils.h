@@ -43,7 +43,7 @@ static char encode_status( int status );
 void
 displayJobShort(AttrList* ad)
 {
-    int cluster, proc, date, status, prio, image_size, CompDate;
+    int cluster, proc, date, status, prio, image_size, memory_usage, CompDate;
     float utime;
     char *owner, *cmd, *args;
 
@@ -73,6 +73,12 @@ displayJobShort(AttrList* ad)
                 return;
         }
         
+	// print memory usage unless it's unavailable, then print image size
+	// note that MemoryUsage is megabytes, but image_size is kilobytes.
+	if (!ad->EvalInteger(ATTR_MEMORY_USAGE, NULL, memory_usage)) {
+		memory_usage = (image_size+1023)/1024;
+	}
+
         shorten (owner, 14);
         if (ad->EvalString ("Args", NULL, &args)) {
             int cmd_len = strlen(cmd);
@@ -86,7 +92,7 @@ displayJobShort(AttrList* ad)
         }
         shorten (cmd, 15);
         short_print (cluster, proc, owner, date, CompDate, (int)utime, status, 
-               prio, image_size, cmd); 
+               prio, memory_usage, cmd); 
 
 
         free(owner);

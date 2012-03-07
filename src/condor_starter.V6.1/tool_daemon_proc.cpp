@@ -375,7 +375,7 @@ ToolDaemonProc::Continue()
 	dprintf(D_FULLDEBUG,"in ToolDaemonProc::Continue()\n");
 	
 	// resume user job
-	if ( JobPid != -1 ) {
+	if ( JobPid != -1 && job_suspended ) {
 		if (daemonCore->Continue_Family(JobPid) == FALSE) {
 			dprintf(D_ALWAYS, "error continuing process family\n");
 		}

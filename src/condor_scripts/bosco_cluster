@@ -52,85 +52,22 @@ start_ssh () {
     
     # Start the ssh-agent
     eval `ssh-agent -s` > /dev/null
-    
-    # Create an ssh-agent session to handle the transfers
-    # Copied from remote_gahp
-    # create a temp file for the expect script
-    SSH_ADD_SCRIPT=`mktemp`
-    chmod 700 $SSH_ADD_SCRIPT
-    
-    # Create the expect script
-    echo "#!/usr/bin/expect -f
-        # get arguments
-        set num_args [llength \$argv]
-        set private_key_loc [lindex \$argv 0]
-    
-        # spawn ssh-add process
-        spawn ssh-add $bosco_key
-    
-        set spawn_pid [exp_pid]
-    
-        # set timeout for expected input
-        set timeout 5
-    
-        expect {
-            # no passphrase required
-            \"*Identity added*\" {
-                exit 0
-            }
-            # sends passphrase
-            \"*passphrase*\" {
-                send -- \"$PASSPHRASE\r\"
-            }
-            # no ssh-agent running
-            \"*authentication agent*\" {
-                exit -1
-            }
-            # incorrect private key location
-            timeout {
-                exit -2
-            }
-        }
-    
-        expect {
-            # all done
-            eof {
-                exit 0
-            }
-            # incorrect passphrase
-            \"*passphrase*\" {
-                exit -3
-            }
-            # timeout
-            timeout {
-                exit -4
-            }
-        }" > $SSH_ADD_SCRIPT
-    
-    
-    # call the expect script to ssh-add identity
-    $SSH_ADD_SCRIPT > /dev/null
-    ADD_STATUS=$?
-    
-    # remove temporary script
-    rm $SSH_ADD_SCRIPT
-    
-    # check if ssh-add failed
-    if [ $ADD_STATUS != 0 ] ; then
-        # ssh-add script not found
-        if [ $ADD_STATUS == 1 ] ; then
-            ADD_STATUS=-1
-        fi
-        eval `ssh-agent -sk`
-        exit $ADD_STATUS
+
+    # Call the external program to do ssh-add
+    bosco_ssh_start
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        return 1
     fi
+
 }    
 
 check_cluster_list () {
     # $1 = cluster to check for
     remote_host=$1
 
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
         return 0
     else
@@ -149,7 +86,7 @@ remove_cluster () {
     remote_host=$1
 
     # First, check if the cluster is in the cluster list
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
 
         # Remove bosco from the remote cluster
@@ -158,8 +95,9 @@ remove_cluster () {
         stop_ssh
 
         # Remove the host from the cluster list
-        sed "/\$$remote_host/d" $CLUSTERLIST > $CLUSTERLIST.tmp
-        mv $CLUSTERLIST.tmp $CLUSTERLIST
+        tmpfile=`mktemp`
+        sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
+        mv $tmpfile $CLUSTERLIST_LOCATION
 
     else
         echo "Unable to find cluster $remote_host in cluster list"
@@ -259,7 +197,7 @@ End_of_Submit
 
 
 # The getopt command line.  Using -a for alternate (allow options with only 1 '-')
-TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:help  -n 'bosco_cluster' -- "$@"`
+TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
 
 if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 
