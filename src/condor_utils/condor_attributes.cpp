@@ -603,6 +603,7 @@ const char * const ATTR_TOOL_DAEMON_INPUT        = "ToolDaemonInput";
 const char * const ATTR_TOOL_DAEMON_OUTPUT       = "ToolDaemonOutput";
 
 const char * const ATTR_TOTAL_CPUS				 = "TotalCpus";
+const char * const ATTR_TOTAL_SLOT_CPUS				 = "TotalSlotCpus";
 const char * const ATTR_TOTAL_DISK				 = "TotalDisk";
 const char * const ATTR_TOTAL_FLOCKED_JOBS		 = "TotalFlockedJobs";
 const char * const ATTR_TOTAL_REMOVED_JOBS		 = "TotalRemovedJobs";

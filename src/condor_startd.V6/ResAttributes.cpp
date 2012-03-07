@@ -835,7 +835,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 {
 	map = map_arg;
 	c_type = slot_type;
-	c_num_cpus = num_cpus_arg;
+	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
 	c_phys_mem = num_phys_mem;
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
@@ -870,6 +870,8 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 		cp->Assign( ATTR_TOTAL_DISK, (int)c_total_disk );
 
 		cp->Assign( ATTR_DISK, (int)c_disk );
+		
+		cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)c_num_slot_cpus );
 	}
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
