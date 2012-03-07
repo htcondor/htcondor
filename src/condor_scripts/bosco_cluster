@@ -122,7 +122,7 @@ test_cluster () {
     echo -n "Testing ssh to $1..."
     start_ssh
     # Get the pwd from the remote cluster, for use later in the submission file
-    default_pwd=`ssh $1 "pwd"`
+    default_pwd=`ssh -o "PasswordAuthentication=no" $1 "pwd"`
     ssh_exit=$?
     stop_ssh
     if [ $ssh_exit -ne 0 ]; then
@@ -269,6 +269,14 @@ if [ $? -ne 0 ]; then
 fi
 
 start_ssh
+
+# Quickly test the ssh
+ssh -o "PasswordAuthentication=no" $remote_host "pwd" >/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
+    echo "Does the remote resource allow password-less ssh?"
+    exit 1
+fi
 
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
