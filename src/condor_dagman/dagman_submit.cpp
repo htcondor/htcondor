@@ -334,14 +334,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Set the special DAG_STATUS variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" );
-	MyString var = "+DAG_STATUS = ";
+	MyString var = "DAG_STATUS = ";
 	var += dm.dag->_dagStatus;
 	args.AppendArg( var.Value() );
 
 		// Set the special FAILED_COUNT variable (mainly for use by
 		// "final" nodes).
 	args.AppendArg( "-a" );
-	var = "+FAILED_COUNT = ";
+	var = "FAILED_COUNT = ";
 	var += dm.dag->NumNodesFailed();
 	args.AppendArg( var.Value() );
 
