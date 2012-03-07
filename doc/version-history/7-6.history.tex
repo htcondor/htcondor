@@ -87,6 +87,10 @@ on Windows platforms for drives with 1TB or more of free space.
 to be optional.
 \Ticket{2845}
 
+\item Fixed a bug where if \Macro{EVENT\_LOG} was configured but not writable,
+the Userlog would not be written to. This, in particular, broke DAGman.
+\Ticket{2858}
+
 \end{itemize}
 
 \noindent Known Bugs:
