@@ -3830,10 +3830,10 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// not KEEP_STREAM, then
 		// delete the socket and the socket handler.
 	if ( result != KEEP_STREAM ) {
-			// delete the cedar socket
-		delete (*sockTable)[i].iosock;
 			// cancel the socket handler
 		Cancel_Socket( (*sockTable)[i].iosock );
+			// delete the cedar socket
+		delete (*sockTable)[i].iosock;
 	} else {
 		// in this case, we are keeping the socket around.
 		// so if this tid has it marked as being serviced,

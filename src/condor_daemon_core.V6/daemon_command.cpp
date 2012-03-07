@@ -189,6 +189,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		return CommandProtocolFinished;
 	}
 
+		// From now on, behave as though we did not do an accept(),
+		// because the distinction is no longer applicable.
+	m_insock = m_sock;
+
 		// Do not allow ourselves to be deleted until after
 		// SocketCallback is called.
 	incRefCount();
@@ -1514,7 +1518,7 @@ int DaemonCommandProtocol::finalize()
 	// Now return KEEP_STREAM only if the user said to _OR_ if m_insock
 	// is a listen socket.  Why?  we always wanna keep a listen socket.
 	// Also, if we did an accept, we already deleted the sock socket above.
-	if ( m_result == KEEP_STREAM || m_insock != m_sock )
+	if ( m_result == KEEP_STREAM || m_sock == NULL )
 		return KEEP_STREAM;
 	else
 		return TRUE;
