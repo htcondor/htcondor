@@ -539,6 +539,7 @@ extern const char * const  ATTR_TOTAL_CLAIM_RUN_TIME;
 extern const char * const  ATTR_TOTAL_CLAIM_SUSPEND_TIME;
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
 extern const char * const  ATTR_TOTAL_CPUS;
+extern const char * const  ATTR_TOTAL_SLOT_CPUS;
 extern const char * const  ATTR_TOTAL_DISK;
 extern const char * const  ATTR_TOTAL_FLOCKED_JOBS;
 extern const char * const  ATTR_TOTAL_REMOVED_JOBS;
