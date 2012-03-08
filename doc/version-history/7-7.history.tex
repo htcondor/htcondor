@@ -43,8 +43,9 @@ See documentation in section ~\ref{sec:Condor-HDFS}.
 
 \Ticket{2797}
 
-\item Several of the Condor programs used to be a single executable
-hard linked to multiple filenames. Now, symbolic links are used.
+\item Several of the Condor programs used to be given by a single executable
+hard linked to multiple file names. 
+Now, symbolic links are used; this fixes problems with Debian installations.
 \Ticket{2140}
 
 \item New functions pow and quantize have been added to ClassAds.
@@ -82,7 +83,7 @@ this will be a ClassAd expression that defines the job memory usage in terms
 of other job attributes.
 
 \item The configuration variable \Macro{DAGMAN\_SUBMIT\_DELAY} can now be any
-nonnegative integer.  It was formerly limited to values between 0 and 60,
+non negative integer.  It was formerly limited to values between 0 and 60,
 inclusive.
 \Ticket{2864}
 
@@ -123,7 +124,7 @@ daemons being shut down only after the \Condor{startd} has exited.
 \item Under some circumstances, a job in the removed ("X") state may ignore the -forcex option to \Condor{rm}.  The \Condor{schedd} is now more aggressive about removing such jobs from the queue.
 \Ticket{2809}
 
-\item Fixed copying of scaling factors on ClassAd literal values.
+\item Fixed the copying of scaling factors on ClassAd literal values.
 \Ticket{2839}
 
 \item When a job is killed and put on hold because of
