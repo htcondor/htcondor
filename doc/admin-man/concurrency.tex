@@ -80,6 +80,21 @@ the \AdStr{XSW} resource are needed results in:
 concurrency_limits = y,XSW:3,Z
 \end{verbatim}
 
+Concurrency limit defaults may also be declared for named groups, which
+allow default limits to be ``scoped'' by a group name, as in this example:
+\begin{verbatim}
+CONCURRENCY_LIMIT_DEFAULT = 5
+CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
+CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
+\end{verbatim}
+
+With the above configuration, a concurrency limit named ``large.swlicense'' 
+will receive a default limit of 100.  A concurrency limit named
+``large.dbsession'' will also receive a default limit of 100.  A limit named
+``small.dbsession'' will receive a default limit of 25.  A concurrency limit 
+``other.license'' will receive the global default limit of 5, as there is
+no declaration for \MacroNI{CONCURRENCY\_LIMIT\_DEFAULT\_OTHER}.
+
 Note that the maximum for any given limit,
 as specified with the configuration variable \MacroNI{<*>\_LIMIT},
 is as strictly enforced \Bold{as possible}.
