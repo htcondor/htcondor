@@ -22,8 +22,13 @@ condor (7.7.5~dfsg.1-2) UNRELEASED; urgency=low
     -- fixed an overlooked and somewhat hidden change of API. Should now be
     stable for the 7.8 series. Also changed associated package name and
     dependencies accordingly.
+  * Let DMTCP perform a blocking checkpointing operation, to avoid Condor
+    killing DMTCP before a checkpoint file is written completely
+    (Closes: #663078).
+  * Make an attempt to let shim_dmtcp remove DMTCP checkpoint output files
+    from a job's EXEC_DIR upon job termination. This is experimental.
 
- -- Michael Hanke <mih@debian.org>  Thu, 08 Mar 2012 10:26:03 +0100
+ -- Michael Hanke <mih@debian.org>  Thu, 08 Mar 2012 15:25:35 +0100
 
 condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
 
