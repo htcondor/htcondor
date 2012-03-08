@@ -1,4 +1,4 @@
-condor (7.7.5~dfsg.1-2) experimental; urgency=low
+condor (7.7.5~dfsg.1-2) UNRELEASED; urgency=low
 
   * New primary Debian maintainer contact is Condor upstream. Previous
     maintainer remains uploader.
@@ -6,14 +6,24 @@ condor (7.7.5~dfsg.1-2) experimental; urgency=low
     (Closes: #662739). Thanks to Andreas Beckmann for detecting the bug.
   * Fix DMTCP integration for version 1.2.4 and later -- file location tests
     became invalid.
-  * Set default DMTCP snapshoting interval to zero -- no regular snapshoting,
+  * Set default DMTCP snapshotting interval to zero -- no regular snapshotting,
     but on-demand snapshots on vacate command. In addition the shim script now
     honors DMTCP_CHECKPOINT_INTERVAL.
+  * Call dmtcp_command with option --quiet in shim_dmtcp to achieve more
+    readable logs, by suppressing DMTCP's license and author boilerplate
+    output.
   * Added patch to ignore PIDs from a stale PID file when trying to stop
-    condor. This could otherwise prevent package removal/upgrade. The patch
-    has been forwarded upstream.
+    condor. This could otherwise prevent package removal/upgrade
+    (Closes: #663033). The patch has been forwarded upstream.
+  * Cherry-pick upstream patch that let's Condor build on all Debian-derived
+    distributions identically. This patch allows the unmodified Debian package
+    to build on Ubuntu.
+  * Cherry-pick upstream patch to bump the libclassad SO version from 2 to 3
+    -- fixed an overlooked and somewhat hidden change of API. Should now be
+    stable for the 7.8 series. Also changed associated package name and
+    dependencies accordingly.
 
- -- Michael Hanke <mih@debian.org>  Tue, 06 Mar 2012 11:24:35 +0100
+ -- Michael Hanke <mih@debian.org>  Thu, 08 Mar 2012 10:26:03 +0100
 
 condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
 
@@ -23,7 +33,7 @@ condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
     - fast claiming of partitionable slots
     - support for some newer Linux kernel features to better support process
       isolation.
-  * Remove 'disable_java_gt4X' patch -- orresponding upstream code has been
+  * Remove 'disable_java_gt4X' patch -- corresponding upstream code has been
     removed.
   * Remove 'debian_dynamic_run' patch -- merged upstream.
 
@@ -91,7 +101,7 @@ condor (7.7.1+git837-g37b7fa3-1) UNRELEASED; urgency=low
   * Added condor-dev package, containing headers files and static versions of
     Condor libraries.
   * Add build-dep on libldap-dev to ensure nordugrid_gahp being built.
-  * Added DMTCP integrationg for snapshotting of vanilla universe jobs.
+  * Added DMTCP integration for snapshotting of vanilla universe jobs.
 
  -- Michael Hanke <mih@debian.org>  Tue, 11 Oct 2011 08:42:35 +0200
 
