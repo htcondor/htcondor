@@ -131,7 +131,7 @@ Replaces: libclassad0-dev
 Conflicts: libclassad0-dev
 Section: libdevel
 Architecture: any
-Depends: libclassad2 (= ${binary:Version}), ${misc:Depends}
+Depends: libclassad3 (= ${binary:Version}), ${misc:Depends}
 Description: library for Condor's classads expression language (development)
  A classad (classified ad) is a mapping from attribute names to expressions. In
  the simplest cases, the expressions are simple constants (integer, floating
@@ -145,7 +145,7 @@ Description: library for Condor's classads expression language (development)
  This package provides the static library and header files.
 
 
-Package: libclassad2
+Package: libclassad3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: library for Condor's classads expression language
