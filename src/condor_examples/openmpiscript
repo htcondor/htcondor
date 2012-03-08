@@ -19,7 +19,7 @@
 ##**************************************************************
 
 # YOU MUST CHANGE THIS TO THE BIN DIR OF OPENMPI
-MPDIR=/u/g/t/gthain/openmpi/bin
+MPDIR=/usr/lib64/openmpi/bin
 PATH=$MPDIR:.:$PATH
 export PATH
 
@@ -80,7 +80,9 @@ export CONDOR_CONTACT_FILE
 sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
 
 ## run the actual mpijob
-mpirun -v --mca plm_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
+mpirun -v --mca orte_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
+########## For mpi versions 1.1 & 1.2 use the line below
+#mpirun -v --mca plm_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
 
 sshd_cleanup
 rm -f machines
