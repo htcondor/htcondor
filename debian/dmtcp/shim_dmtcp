@@ -394,6 +394,9 @@ if [ $restart -eq 0 ]; then
 		do
 			:
 		done
+	else
+		logit "Removing DMTCP checkpoint files"
+		rm -f dmtcpConTable.${DMTCP_PREFIX_ID}*
 	fi
 
 	logit "Program terminated."
@@ -422,6 +425,12 @@ else
 	wait %1
 	ret=$?
 	logit "Application returned: $ret"
+	logit "Removing DMTCP checkpoint files"
+	rm -f ckpt*${DMTCP_PREFIX_ID}*.dmtcp
+	rm -f dmtcp*Table*${DMTCP_PREFIX_ID}*
+	rm -f dmtcp*Map*${DMTCP_PREFIX_ID}*
+	rm -f dmtcp*List*${DMTCP_PREFIX_ID}*
+	rm -f dmtcp_restart_script.sh
 	exit $ret;
 fi
 
