@@ -3251,6 +3251,13 @@ NEGOTIATOR_USERID = condor
   master restarts them.  It is defined in seconds and defaults to 300
   (every 5 minutes).
 
+\label{param:MasterNewBinaryRestart}
+\item[\Macro{MASTER\_NEW\_BINARY\_RESTART}]
+  Defines a mode of operation for the restart of the \Condor{master},
+  when it notices that the \Condor{master} binary has changed.
+  Valid values are \Expr{GRACEFUL}, \Expr{PEACEFUL}, and \Expr{NEVER},
+  with a default value of \Expr{GRACEFUL}.
+
 \label{param:MasterNewBinaryDelay}
 \item[\Macro{MASTER\_NEW\_BINARY\_DELAY}]
   Once the \Condor{master} has

@@ -40,7 +40,6 @@ Within the ordered search,
 \item The \Condor{hdfs} daemon is now available with the source code,
 and is no longer distributed as part of the Condor binaries.
 See documentation in section ~\ref{sec:Condor-HDFS}.
-
 \Ticket{2797}
 
 \item Several of the Condor programs used to be given by a single executable
@@ -66,9 +65,9 @@ the output of \condor{q -long} or \condor{submit -long}.
 
 \item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
 specifies how the \Condor{master} will restart,
-when it notices that the \Condor{master}
-binary has changed. Valid values are GRACEFUL, PEACEFUL and NEVER. 
-The default value is GRACEFUL.
+when it notices that the \Condor{master} binary has changed. 
+Valid values are \Expr{GRACEFUL}, \Expr{PEACEFUL} and \Expr{NEVER}. 
+The default value is \Expr{GRACEFUL}.
 \Ticket{2779}
 
 \item The configuration variable \MacroNI{WANT\_HOLD} now takes effect
@@ -114,11 +113,13 @@ using the wrong version of the library, which can result in a crash or
 other bad behavior.
 \Ticket{2613}
 
-\item There was a bug on GRACEFUL and PEACEFUL shutdown, where the daemons 
-were stopped in random order. This resulted in the checkpoint server 
-sometimes being shut down before the \Condor{startd}.  The \Condor{startd}
-is now always shutdown first on GRACEFUL or PEACEFUL shutdown, with other
-daemons being shut down only after the \Condor{startd} has exited.
+\item There was a bug on GRACEFUL and PEACEFUL shutdown, 
+as the daemons were stopped in a random order. 
+This resulted in the checkpoint server 
+sometimes being shut down before the \Condor{startd}.  
+The \Condor{startd} is now always shut down first on GRACEFUL or PEACEFUL 
+shutdown, 
+with other daemons being shut down only after the \Condor{startd} has exited.
 \Ticket{2779}
 
 \item Under some circumstances, a job in the removed ("X") state may ignore the -forcex option to \Condor{rm}.  The \Condor{schedd} is now more aggressive about removing such jobs from the queue.
