@@ -1,0 +1,22 @@
+From: Jaime Frey <jfrey@cs.wisc.edu>
+Subject: Bump so version of ClassAds library.
+
+This should have been done in Condor 7.7.5. In that version, we started
+using std::tr1::unordered_map instead of __gnu_cxx::hash_map on for the
+AttrList type on most platforms. Better late than never, though.
+
+Origin: upstream
+
+diff --git a/src/classad/CMakeLists.txt b/src/classad/CMakeLists.txt
+index 95096ff..d37273b 100644
+--- a/src/classad/CMakeLists.txt
++++ b/src/classad/CMakeLists.txt
+@@ -65,7 +65,7 @@ if (NOT WINDOWS)
+ 
+   if (LINUX OR DARWIN)  
+   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
+-	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 2 )
++	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 3 )
+ 	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
+ 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
+   endif()
