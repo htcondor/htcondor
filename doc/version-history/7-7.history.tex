@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Concurrency limit defaults may now be declared for named groups
+using \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>} so that any
+concurrency limit with a name of the form <group>.<name> will get its
+default limit from \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>}.
+\Ticket{2863}
+
 \item Condor binaries will now look for the Condor configuration file in
 \File{\$(HOME)/.condor/condor\_config}, in addition to the locations where
 they already look.
