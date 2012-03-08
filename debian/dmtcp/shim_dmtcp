@@ -240,7 +240,7 @@ delay()
 checkpoint()
 {
 	logit "Soft kill signal received by $0 [pid=$$]: Starting checkpoint..."
-	runcmd ${dmtcp_command} --quiet --port $port c
+	runcmd ${dmtcp_command} --quiet --port $port bc
 
 	delay
 
