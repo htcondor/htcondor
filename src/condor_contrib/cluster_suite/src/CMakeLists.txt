@@ -1,6 +1,6 @@
 ###############################################################
 # 
-# Copyright 2012 Red Hat, Inc.
+# Copyright 2012 Red Hat, Inc. 
 # 
 # Licensed under the Apache License, Version 2.0 (the "License"); you 
 # may not use this file except in compliance with the License.  You may 
@@ -14,11 +14,7 @@
 # See the License for the specific language governing permissions and 
 # limitations under the License. 
 # 
-###############################################################
+############################################################### 
 if (LINUX)
-  option(WITH_CLUSTER "Cluster Suite HA Schedd support" ON)
-endif()
-
-if (WITH_CLUSTER)
-  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
+  install (FILES condor.sh cmd_cluster.rb DESTINATION ${C_ETC_EXAMPLES})
 endif()

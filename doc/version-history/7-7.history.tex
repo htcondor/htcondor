@@ -52,7 +52,9 @@ hard linked to multiple filenames. Now, symbolic links are used.
 
 \item New format tags \%v and \%V have been added for use by \Condor{status} -format.
 These tags request that the value of the expression or attribute be printed using
-a format appropriate to it's type.
+a format appropriate to its type.
+When using the \%V format tag, string values appear as they would in
+the output of \condor{q -long} or \condor{submit -long}.
 \Ticket{2857}
 
 \end{itemize}
