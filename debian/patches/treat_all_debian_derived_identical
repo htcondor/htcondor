@@ -1,0 +1,59 @@
+From: Jaime Frey <jfrey@cs.wisc.edu>
+Subject: Better support for miscellaneous Linux distros. #2825
+
+Attempt to guess the name of linux distros that we don't explicitly check for.
+For ones that appear to be derived from Debian, use the Debian customizations
+(no libexec, etc).
+
+Origin: upstream
+Bug: https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2825
+
+diff --git a/build/cmake/CondorPackageConfig.cmake b/build/cmake/CondorPackageConfig.cmake
+index 39acc0c73f9a95cc9444c1410c2aa93ac6d7764e..865b7ca6c19edb78e653abec2830e6dcb7e3200f 100644
+--- a/build/cmake/CondorPackageConfig.cmake
++++ b/build/cmake/CondorPackageConfig.cmake
+@@ -261,7 +261,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
+ 	# it's a smaller subset easier to differentiate.
+ 	# check the operating system name
+ 
+-	if ( ${LINUX_NAME} STREQUAL  "Debian" )
++	if ( DEB_SYSTEM_NAME )
+ 
+ 		message (STATUS "Configuring for Debian package on ${LINUX_NAME}-${LINUX_VER}-${DEBIAN_CODENAME}-${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+ 
+diff --git a/build/cmake/macros/SystemSpecificInformations.cmake b/build/cmake/macros/SystemSpecificInformations.cmake
+index a6941530ca2a3dd042240ea580f3f3c69672b333..5ff62b8f2d5a07defc69f2d9b0118cecd51798e5 100644
+--- a/build/cmake/macros/SystemSpecificInformations.cmake
++++ b/build/cmake/macros/SystemSpecificInformations.cmake
+@@ -177,8 +177,16 @@ if(UNIX)
+ 		string(REPLACE "/" "_" LINUX_VER ${LINUX_VER})        
+ 	endif()
+       endif()
+-      # Mandriva case
+-      # TODO      
++      # Guess at the name for other Linux distros
++      if(NOT SYSTEM_NAME)
++	string(REGEX MATCH "([^ ]+) [^0-9]*([0-9.]+)" DISTRO "${LINUX_ISSUE}")
++        set(LINUX_NAME "${CMAKE_MATCH_1}")
++	set(LINUX_VER "${CMAKE_MATCH_2}")
++	set(SYSTEM_NAME "${LINUX_NAME}")
++	if(EXISTS "/etc/debian_version")
++	  set(DEB_SYSTEM_NAME "${LINUX_NAME}")
++	endif()
++      endif()
+ 
+ 	#Find CPU Arch
+ 	if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
+diff --git a/src/condor_examples/CMakeLists.txt b/src/condor_examples/CMakeLists.txt
+index 09b2a6cfb8a0e24956a8af22e63987ce6b1f293b..28e31c2bdbdc8ebbdf0ff41bf03d015d7b64d960 100644
+--- a/src/condor_examples/CMakeLists.txt
++++ b/src/condor_examples/CMakeLists.txt
+@@ -105,7 +105,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
+ 			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
+ 			RENAME		condor)
+ 
+-elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
++elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
+ 
+ 	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
+ 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
