@@ -240,17 +240,17 @@ delay()
 checkpoint()
 {
 	logit "Soft kill signal received by $0 [pid=$$]: Starting checkpoint..."
-	runcmd ${dmtcp_command} --port $port c
+	runcmd ${dmtcp_command} --quiet --port $port c
 
 	delay
 
 	# when this returns, the checkpointing should be done.
 	logit "what is the coordinator status"
-	runcmd ${dmtcp_command} --port $port s
+	runcmd ${dmtcp_command} --quiet --port $port s
 
 	# kill everything off.
 	logit "killing process hierarchy (coordinator also goes away)"
-	runcmd ${dmtcp_command} --port $port k
+	runcmd ${dmtcp_command} --quiet --port $port k
 
 	delay
 
