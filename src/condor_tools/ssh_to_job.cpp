@@ -83,6 +83,7 @@ private:
 	bool m_auto_retry;
 	int m_retry_delay;
 	MyString m_ssh_keygen_args;
+	bool m_x_forwarding;
 
 	void logError(char const *fmt,...) CHECK_PRINTF_FORMAT(2,3);
 	void printUsage();
@@ -97,7 +98,8 @@ SSHToJob::SSHToJob():
 	m_debug(false),
 	m_retry_sensible(false),
 	m_auto_retry(false),
-	m_retry_delay(30)
+	m_retry_delay(30),
+	m_x_forwarding(false)
 {
 	m_jobid.cluster = m_jobid.proc = -1;
 }
@@ -136,6 +138,7 @@ void SSHToJob::printUsage()
 	fprintf(stderr," -shells shell1,shell2,... (shells to try)\n");
 	fprintf(stderr," -ssh <alt ssh command>    (e.g. sftp or scp)\n");
 	fprintf(stderr," -keygen-options <keygen options>\n");
+	fprintf(stderr," -X                        (enable X11 forwarding)\n");
 }
 
 bool SSHToJob::parseArgs(int argc,char **argv)
@@ -201,6 +204,8 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 			} else {
 				missing_arg=true;
 			}
+		} else if( !strcmp( argv[nextarg], "-X" ) ) {
+			m_x_forwarding = true;
 		} else if( !strcmp( argv[nextarg], "--" ) ) {
 			++nextarg;
 			break;
@@ -639,6 +644,10 @@ bool SSHToJob::execute_ssh()
 	int insert_arg;
 	for(insert_arg=1; insert_arg<ssh_options_arglist.Count(); insert_arg++) {
 		ssh_arglist.InsertArg(ssh_options_arglist.GetArg(insert_arg),insert_arg);
+	}
+
+	if( m_x_forwarding ) {
+		ssh_arglist.InsertArg("-X",insert_arg);
 	}
 
 	char **argarray = ssh_arglist.GetStringArray();

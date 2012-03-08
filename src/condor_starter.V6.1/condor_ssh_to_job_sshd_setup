@@ -25,6 +25,9 @@ while [ 1 ]; do
 done
 
 # save environment so that ssh_to_job_shell_setup can restore it
+# do not preserve the job's DISPLAY environment variable, because
+# that will conflict with X forwarding in the ssh session
+unset DISPLAY
 export -p > "${sshd_dir}/env.sh"
 
 if [ -x /bin/sed ]; then
