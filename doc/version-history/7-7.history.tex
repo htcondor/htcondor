@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added configuration parameter 
+\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}, which causes the
+\Condor{negotiator} to re-read the configuration prior to each
+negotiation cycle when set to \Expr{True}.
+\Ticket{2851}
+
 \item Concurrency limit defaults may now be declared for named groups
 using \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>} so that any
 concurrency limit with a name of the form <group>.<name> will get its
