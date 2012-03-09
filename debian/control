@@ -12,7 +12,10 @@ Build-Depends: debhelper (>= 7.0.50~), po-debconf, cmake, libpq-dev,
  libexpat1-dev, libxml2-dev, libvirt-dev, zlib1g-dev, gcj-jdk | java-compiler,
  libcgroup-dev (>= 0.37~), uuid-dev, chrpath, libldap2-dev | libldap-dev,
  help2man, gsoap (>= 2.7.17-1~)
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
+Homepage: http://research.cs.wisc.edu/condor
+Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/condor.git
+Vcs-Git: git://git.debian.org/git/pkg-exppsy/condor.git
 
 
 Package: condor
@@ -21,6 +24,7 @@ Depends: ${misc:Depends}, ${shlibs:Depends}, ${python:Depends}, ${perl:Depends},
  debconf (>= 0.5) | debconf-2.0, adduser, libdate-manip-perl,
  libcgroup1 (>=0.37~)
 Recommends: dmtcp
+Suggests: coop-computing-tools
 Description: workload management system
  Like other full-featured batch systems, Condor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and

@@ -1,4 +1,4 @@
-condor (7.7.5~dfsg.1-2) UNRELEASED; urgency=low
+condor (7.7.5~dfsg.1-2) experimental; urgency=low
 
   * New primary Debian maintainer contact is Condor upstream. Previous
     maintainer remains uploader.
@@ -27,8 +27,11 @@ condor (7.7.5~dfsg.1-2) UNRELEASED; urgency=low
     (Closes: #663078).
   * Make an attempt to let shim_dmtcp remove DMTCP checkpoint output files
     from a job's EXEC_DIR upon job termination. This is experimental.
+  * Improve README.Debian regarding DMTCP checkpointing setup.
+  * Bumped Standards-version to 3.9.3; no changes necessary.
+  * Added homepage and VCS information to control file.
 
- -- Michael Hanke <mih@debian.org>  Thu, 08 Mar 2012 15:25:35 +0100
+ -- Michael Hanke <mih@debian.org>  Fri, 09 Mar 2012 13:20:25 +0100
 
 condor (7.7.5~dfsg.1-1) UNRELEASED; urgency=low
 
