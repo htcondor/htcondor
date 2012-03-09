@@ -783,6 +783,16 @@ string_to_ipstr( const char* addr )
 
 #endif
 
+// This union allow us to avoid casts, which cause
+// gcc to warn about type punning pointers, which
+// may or may not cause it to generate invalid code
+typedef union {
+	struct sockaddr sa;
+	struct sockaddr_in v4;
+	struct sockaddr_in6 v6;
+	struct sockaddr_storage all;
+} ipv4or6_storage;
+
 /* Bind the given fd to the correct local interface. */
 
 // _condor_local_bind(), get_port_range() and bindWithin()
@@ -809,9 +819,10 @@ _condor_local_bind( int is_outgoing, int fd )
         else
 			return FALSE;
 	} else {
-		struct sockaddr_storage ss;
+		//struct sockaddr_storage ss;
+		ipv4or6_storage ss;
 		socklen_t len = sizeof(ss);
-		int r = getsockname(fd, (struct sockaddr*)&ss, &len);
+		int r = getsockname(fd, &(ss.sa), &len);
 		if (r != 0) {
 			dprintf(D_ALWAYS, "ERROR: getsockname fialed, errno: %d\n",
 					errno);
@@ -820,8 +831,8 @@ _condor_local_bind( int is_outgoing, int fd )
 
 			// this implementation should be changed to the one
 			// using condor_sockaddr class
-		if (ss.ss_family == AF_INET) {
-			struct sockaddr_in* sa_in = (struct sockaddr_in*)&ss;
+		if (ss.all.ss_family == AF_INET) {
+			struct sockaddr_in* sa_in = &(ss.v4);
 			memset( (char *)sa_in, 0, sizeof(struct sockaddr_in) );
 			sa_in->sin_family = AF_INET;
 			sa_in->sin_port = 0;
@@ -835,17 +846,17 @@ _condor_local_bind( int is_outgoing, int fd )
 			  Derek <wright@cs.wisc.edu> 2005-09-20
 			*/
 			sa_in->sin_addr.s_addr = INADDR_ANY;
-		} else if (ss.ss_family == AF_INET6) {
-			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&ss;
+		} else if (ss.all.ss_family == AF_INET6) {
+			struct sockaddr_in6* sin6 = &(ss.v6);
 			sin6->sin6_addr = in6addr_any;
 			sin6->sin6_port = 0;
 		} else {
 			dprintf(D_ALWAYS, "ERROR: getsockname returned with unknown "
-					"socket type %d\n", ss.ss_family);
+					"socket type %d\n", ss.all.ss_family);
 			return FALSE;
 		}
 
-		if( bind(fd, (struct sockaddr*)&ss, len) < 0 ) {
+		if( bind(fd, &(ss.sa), len) < 0 ) {
 			dprintf( D_ALWAYS, "ERROR: bind failed, errno: %d\n",
 					 errno );
 			return FALSE;
