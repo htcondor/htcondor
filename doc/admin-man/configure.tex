@@ -2829,20 +2829,20 @@ Tracking process family by login "cndrusr1"
 \item[\Macro{USE\_NFS}]
   This macro influences
   how Condor jobs running in the standard universe access their
-  files.  Condor will redirect the file I/O requests
-  of standard universe jobs to be executed on the machine which
-  submitted the job.  Because of this, as a Condor job migrates around
+  files.  By default, Condor will redirect the file I/O requests
+  of standard universe jobs from the executing machine to the submitting
+  machine.  So, as a Condor job migrates around
   the network, the file system always appears to be identical to the
   file system where the job was submitted.  However, consider the case
   where a user's data files are sitting on an NFS server. The machine
   running the user's program will send all I/O over the network to the
-  machine which submitted the job, which in turn sends all the I/O
-  over the network a second time back to the NFS file server. Thus,
+  submitting machine, which in turn sends all the I/O back
+  over the network to the NFS file server. Thus,
   all of the program's I/O is being sent over the network twice.
   
   If this macro to \Expr{True}, then Condor will attempt to
-  read/write files without redirecting I/O back to the submitting
-  machine if both the submitting machine and the machine running the job
+  read/write files directly on the executing machine without redirecting I/O back to the submitting
+  machine, if both the submitting machine and the machine running the job
   are both accessing the same NFS servers (\emph{if} they are both in the
   same \MacroUNI{FILESYSTEM\_DOMAIN} and in the same \MacroUNI{UID\_DOMAIN},
   as described above).  The result is I/O performed by Condor standard
@@ -2877,6 +2877,13 @@ Tracking process family by login "cndrusr1"
   append requirements to the Job ClassAd that specify the machine to run
   the job must be in the same \MacroUNI{FILESYSTEM\_DOMAIN} and the same
   \MacroUNI{UID\_DOMAIN}.
+
+  This macro similarly changes the semantics of chirp file i/o
+  when running in the vanilla, java and parallel universe.  If this parameter
+  is set in those universes, chirp will not send i/o requests over the
+  network as requested, but perform them directly to the locally mounted
+  file system.  Other than chirp file access, this macro is unused
+  outside of standard universe.
 
 \label{param:IgnoreNFSLockErrors}
 \item[\Macro{IGNORE\_NFS\_LOCK\_ERRORS}]
