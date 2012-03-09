@@ -2840,8 +2840,9 @@ Tracking process family by login "cndrusr1"
   over the network to the NFS file server. Thus,
   all of the program's I/O is being sent over the network twice.
   
-  If this macro to \Expr{True}, then Condor will attempt to
-  read/write files directly on the executing machine without redirecting I/O back to the submitting
+  If this configuration variable is \Expr{True}, 
+  then Condor will attempt to read/write files directly on the 
+  executing machine without redirecting I/O back to the submitting
   machine, if both the submitting machine and the machine running the job
   are both accessing the same NFS servers (\emph{if} they are both in the
   same \MacroUNI{FILESYSTEM\_DOMAIN} and in the same \MacroUNI{UID\_DOMAIN},
@@ -2878,12 +2879,13 @@ Tracking process family by login "cndrusr1"
   the job must be in the same \MacroUNI{FILESYSTEM\_DOMAIN} and the same
   \MacroUNI{UID\_DOMAIN}.
 
-  This macro similarly changes the semantics of chirp file i/o
-  when running in the vanilla, java and parallel universe.  If this parameter
-  is set in those universes, chirp will not send i/o requests over the
-  network as requested, but perform them directly to the locally mounted
-  file system.  Other than chirp file access, this macro is unused
-  outside of standard universe.
+  This configuration variable similarly changes the semantics of Chirp file I/O
+  when running in the vanilla, java or parallel universe.  
+  If this variable is set in those universes, Chirp will not send I/O requests 
+  over the network as requested, 
+  but perform them directly to the locally mounted file system.  
+  Other than Chirp file access, this variable is unused
+  outside of the standard universe.
 
 \label{param:IgnoreNFSLockErrors}
 \item[\Macro{IGNORE\_NFS\_LOCK\_ERRORS}]
@@ -8077,7 +8079,7 @@ in section~\ref{sec:DAG-configuration}.
   An integer that controls the number of seconds that \Condor{dagman}
   will sleep before submitting consecutive jobs.  It can be increased to
   help reduce the load on the \Condor{schedd} daemon.  The legal range
-  of values is any nonnegative integer.  If defined with a value less
+  of values is any non negative integer.  If defined with a value less
   than 0, the value 0 will be used.
 
 \label{param:DAGManStartupCycleDetect}
