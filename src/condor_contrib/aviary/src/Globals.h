@@ -39,12 +39,14 @@ namespace query {
 typedef map<const char *, Job *, cmpstr> JobCollectionType;
 typedef map<const char *, SubmissionObject *, cmpstr> SubmissionCollectionType;
 typedef map<int, string> OwnerlessClusterType;
-typedef map<int, SubmissionObject*> OwnerlessSubmissionType;
+typedef map<int,SubmissionObject*> SubmissionIndexType;
+typedef multimap<int,SubmissionObject*> SubmissionMultiIndexType;
 
 extern JobCollectionType g_jobs;
 extern SubmissionCollectionType g_submissions;
 extern OwnerlessClusterType g_ownerless_clusters;
-extern OwnerlessSubmissionType g_ownerless_submissions;
+extern SubmissionIndexType g_ownerless_submissions;
+extern SubmissionIndexType g_qdate_submissions;
 
 void global_reset();
 

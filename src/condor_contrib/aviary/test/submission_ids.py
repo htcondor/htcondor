@@ -24,27 +24,40 @@ from optparse import OptionParser
 from aviary.util import *
 
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
+modes = ['AFTER', 'BEFORE']
 
-parser = build_basic_parser('Query submission summaries remotely via SOAP.','http://localhost:9091/services/query/getSubmissionSummary')
-parser.add_option('--name', action="store", dest='name', help='submission name')
+parser = build_basic_parser('Query submission IDs remotely via SOAP.','http://localhost:9091/services/query/getSubmissionID')
+parser.add_option('--size', action="store", dest='size', help='page size')
+parser.add_option('--qdate', action="store", dest='qdate', help='a qdate index')
+parser.add_option('--mode', action="store", choices=(modes), dest='mode', help=str(modes)+ \
+    ' relative from the given qdate')
 (opts,args) =  parser.parse_args()
+
+if opts.size is None:
+    print 'A page size must be supplied'
+    parser.print_help()
+    exit(1)
 
 client = create_suds_client(opts,wsdl,None)
 client.set_options(location=opts.url)
 
+scanMode = None
+# set up our scan mode
+if opts.mode:
+    scanMode = client.factory.create("ns0:ScanMode")
+    scanMode = opts.mode
+
+subId = None
 # set up our ID
-if opts.name:
-	subId = client.factory.create("ns0:SubmissionID")
-	subId.name = opts.name
-else:
-	# returns all submissions
-	subId = None
+if opts.qdate:
+    subId = client.factory.create("ns0:SubmissionID")
+    subId.qdate = opts.qdate
 
 try:
-	submissions = client.service.getSubmissionSummary(subId)
+    submissions = client.service.getSubmissionID(opts.size,scanMode,subId)
 except Exception, e:
-	print "invocation failed: ", opts.url
-	print e
-	exit(1)
+    print "invocation failed: ", opts.url
+    print e
+    exit(1)
 
 print submissions

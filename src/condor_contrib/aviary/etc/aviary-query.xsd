@@ -103,4 +103,23 @@
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
+	<xs:element name="GetSubmissionID">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="size" type="xs:int"/>
+				<!-- declare how we want to search for ids-->
+				<xs:element name="mode" type="mrg:ScanMode" minOccurs="0"/>
+				<!-- the submission id offset is our "iterator" pointer -->
+				<xs:element name="offset" type="mrg:SubmissionID" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSubmissionIDResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="mrg:SubmissionID" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="remaining" type="xs:int"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
 </xs:schema>
