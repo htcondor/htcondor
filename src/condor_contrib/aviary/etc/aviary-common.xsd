@@ -105,6 +105,7 @@
 		<xs:sequence>
 			<xs:element name="name" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
+			<xs:element name="qdate" type="xs:int" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="JobID">
@@ -151,7 +152,6 @@
 		<xs:sequence>
 			<xs:element name="id" type="tns:SubmissionID"/>
 			<xs:element name="status" type="tns:Status"/>
-			<xs:element name="qdate" type="xs:int"/>
 			<xs:element name="completed" type="xs:int"/>
 			<xs:element name="held" type="xs:int"/>
 			<xs:element name="idle" type="xs:int"/>
@@ -205,4 +205,12 @@
 			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>			
 		</xs:sequence>
 	</xs:complexType>
+	<xs:simpleType name="ScanMode">
+        <!-- a set of options for selecting how we scan a contiguous set of ids -->
+        <!-- only meaningful when used with an offset -->
+		<xs:restriction base="xs:string">
+            <xs:enumeration value="AFTER"/>
+            <xs:enumeration value="BEFORE"/>
+        </xs:restriction>
+    </xs:simpleType>
 </xs:schema>

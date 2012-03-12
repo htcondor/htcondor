@@ -204,7 +204,6 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 {
 	GetSubmissionSummaryResponse* getSummaryResponse = new GetSubmissionSummaryResponse;
 
-	SubmissionCollectionType::const_iterator element = g_submissions.begin();
 	SubmissionSummaryCollection* submissions = new SubmissionSummaryCollection;
 
 	SubmissionCollectionType sub_map;
@@ -239,9 +238,8 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			SubmissionID* sid = new SubmissionID;
 			sid->setName(submission->getName());
 			sid->setOwner(submission->getOwner());
+			sid->setQdate(submission->getOldest());
 			summary->setId(sid);
-			// TODO: fully implement getOldest
-			summary->setQdate(submission->getOldest());
 			summary->setCompleted(submission->getCompleted().size());
 			summary->setHeld(submission->getHeld().size());
 			summary->setIdle(submission->getIdle().size());
@@ -329,7 +327,7 @@ GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageC
     return jobStatusResponse;
 }
 
-GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobSummary* _getJobSummary)
+GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::MessageContext* /*outCtx*/ ,AviaryQuery::GetJobSummary* _getJobSummary)
 {
 	GetJobSummaryResponse* jobSummaryResponse = new GetJobSummaryResponse;
 	JobServerObject* jso = JobServerObject::getInstance();
@@ -419,8 +417,8 @@ GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::Messag
 		}
 		job_results->push_back(jd);
 
-        for (aviary::codec::AttributeMapType::iterator i = attr_map.begin();attr_map.end() != i; i++) {
-            delete (*i).second;
+        for (aviary::codec::AttributeMapType::iterator it = attr_map.begin();attr_map.end() != it; it++) {
+            delete (*it).second;
         }
 	}
 
@@ -477,5 +475,96 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 	}
 
     return jobDataResponse;
+}
+
+SubmissionID* makeSubmissionID(SubmissionObject* obj) {
+  SubmissionID* sub_id = new SubmissionID;
+  sub_id->setName(obj->getName());
+  sub_id->setOwner(obj->getOwner());
+  sub_id->setQdate(obj->getOldest());
+  return sub_id;
+}
+
+GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::MessageContext* /*outCtx*/ ,GetSubmissionID* _getSubmissionID)
+{
+    GetSubmissionIDResponse* response = new GetSubmissionIDResponse;
+    SubmissionID* offset = NULL;
+    ScanMode* mode = NULL;
+    
+    int size = _getSubmissionID->getSize();
+    bool scan_back = false;
+    int age = 0;
+
+    if (!_getSubmissionID->isOffsetNil()) {
+        offset = _getSubmissionID->getOffset();
+    }
+    
+    if (!_getSubmissionID->isModeNil()) {
+        mode = _getSubmissionID->getMode();
+    }
+
+    // see if we are scanning using a qdate index
+    if (!_getSubmissionID->isModeNil()) {
+        SubmissionIndexType::iterator it, start;
+
+        scan_back = mode->getScanModeEnum() == ScanMode_BEFORE;
+
+        if (scan_back) {
+            if (offset) {
+                start = g_qdate_submissions.lower_bound(offset->getQdate());
+            }
+            else {
+                start = --g_qdate_submissions.end();
+            }
+        }
+        else {
+            if (offset) {
+                start = g_qdate_submissions.upper_bound(offset->getQdate());
+            }
+            else {
+                start = g_qdate_submissions.begin();
+            }
+        }
+        
+        it = start;
+        int i=0;
+        if (scan_back) {
+            for (it; it!=g_qdate_submissions.begin() && i<size; it--) {
+                response->addIds(makeSubmissionID((*it).second));
+                i++;
+            }
+            response->setRemaining(distance(g_qdate_submissions.begin(),it)+1);
+        }
+        else {
+            for (it; it!=g_qdate_submissions.end() && i<size; it++) {
+                response->addIds(makeSubmissionID((*it).second));
+                i++;
+            }
+            response->setRemaining(distance(it,g_qdate_submissions.end()));
+        }
+        
+        return response;
+    }
+    
+    // otherwise it is a lexical scan of the submissions
+    SubmissionCollectionType::iterator it;
+    if (offset) {
+        it = g_submissions.find(offset->getName().c_str());
+    }
+    else {
+        it = g_submissions.begin();
+    }
+    
+    // bi-directional iterator
+    int i=0;
+    for (it; it!=g_submissions.end() && i<size; it++)
+    {
+        response->addIds(makeSubmissionID((*it).second));
+        i++;
+    }
+    
+    response->setRemaining(distance(it,g_submissions.end()));
+    
+    return response;
 }
 

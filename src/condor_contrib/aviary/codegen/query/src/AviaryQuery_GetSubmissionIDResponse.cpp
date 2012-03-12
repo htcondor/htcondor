@@ -1,13 +1,13 @@
 
 
         /**
-         * GetSubmissionSummary.cpp
+         * GetSubmissionIDResponse.cpp
          *
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
 
-        #include "AviaryQuery_GetSubmissionSummary.h"
+        #include "AviaryQuery_GetSubmissionIDResponse.h"
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -18,9 +18,9 @@
         using namespace AviaryQuery;
         
                /*
-                * Implementation of the GetSubmissionSummary|http://query.aviary.grid.redhat.com Element
+                * Implementation of the GetSubmissionIDResponse|http://query.aviary.grid.redhat.com Element
                 */
-           AviaryQuery::GetSubmissionSummary::GetSubmissionSummary()
+           AviaryQuery::GetSubmissionIDResponse::GetSubmissionIDResponse()
         {
 
         
@@ -30,18 +30,16 @@
               
             isValidIds  = false;
         
-            isValidPartialMatches  = false;
-        
-            isValidIncludeJobSummaries  = false;
+            isValidRemaining  = false;
         
                   qname =  axutil_qname_create (Environment::getEnv(),
-                        "GetSubmissionSummary",
+                        "GetSubmissionIDResponse",
                         "http://query.aviary.grid.redhat.com",
                         NULL);
                 
         }
 
-       AviaryQuery::GetSubmissionSummary::GetSubmissionSummary(std::vector<AviaryCommon::SubmissionID*>* arg_Ids,bool arg_PartialMatches,bool arg_IncludeJobSummaries)
+       AviaryQuery::GetSubmissionIDResponse::GetSubmissionIDResponse(std::vector<AviaryCommon::SubmissionID*>* arg_Ids,int arg_Remaining)
         {
              
                    qname = NULL;
@@ -50,23 +48,19 @@
              
             isValidIds  = true;
             
-            isValidPartialMatches  = true;
-            
-            isValidIncludeJobSummaries  = true;
+            isValidRemaining  = true;
             
                  qname =  axutil_qname_create (Environment::getEnv(),
-                       "GetSubmissionSummary",
+                       "GetSubmissionIDResponse",
                        "http://query.aviary.grid.redhat.com",
                        NULL);
                
                     property_Ids = arg_Ids;
             
-                    property_PartialMatches = arg_PartialMatches;
-            
-                    property_IncludeJobSummaries = arg_IncludeJobSummaries;
+                    property_Remaining = arg_Remaining;
             
         }
-        AviaryQuery::GetSubmissionSummary::~GetSubmissionSummary()
+        AviaryQuery::GetSubmissionIDResponse::~GetSubmissionIDResponse()
         {
 
         }
@@ -74,18 +68,11 @@
         
 
         bool WSF_CALL
-        AviaryQuery::GetSubmissionSummary::deserialize(axiom_node_t** dp_parent,bool *dp_is_early_node_valid, bool dont_care_minoccurs)
+        AviaryQuery::GetSubmissionIDResponse::deserialize(axiom_node_t** dp_parent,bool *dp_is_early_node_valid, bool dont_care_minoccurs)
         {
           axiom_node_t *parent = *dp_parent;
           
           bool status = AXIS2_SUCCESS;
-          
-          axiom_attribute_t *parent_attri = NULL;
-          axiom_element_t *parent_element = NULL;
-          axis2_char_t *attrib_text = NULL;
-
-          axutil_hash_t *attribute_hash = NULL;
-
            
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
@@ -124,7 +111,7 @@
                     else
                     {
                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI,
-                              "Failed in building adb object for GetSubmissionSummary : "
+                              "Failed in building adb object for GetSubmissionIDResponse : "
                               "Expected %s but returned %s",
                               axutil_qname_to_string(qname, Environment::getEnv()),
                               axutil_qname_to_string(mqname, Environment::getEnv()));
@@ -132,9 +119,6 @@
                         return AXIS2_FAILURE;
                     }
                     
-                 parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
-                 attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
-              
                        { 
                     /*
                      * building Ids array
@@ -244,110 +228,83 @@
                      element_qname = NULL;
                   }
                  
-                
-                
-                  parent_attri = NULL;
-                  attrib_text = NULL;
-                  if(attribute_hash)
-                  {
-                       axutil_hash_index_t *hi;
-                       void *val;
-                       const void *key;
 
-                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                       {
-                           axutil_hash_this(hi, &key, NULL, &val);
-                           
-                           
-                               if(!strcmp((axis2_char_t*)key, "partialMatches"))
-                             
-                               {
-                                   parent_attri = (axiom_attribute_t*)val;
-                                   break;
-                               }
-                       }
-                  }
+                     
+                     /*
+                      * building remaining element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "remaining", NULL, NULL);
+                                 
 
-                  if(parent_attri)
-                  {
-                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
-                  }
-                  else
-                  {
-                    /* this is hoping that attribute is stored in "partialMatches", this happnes when name is in default namespace */
-                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "partialMatches");
-                  }
-
-                  if(attrib_text != NULL)
-                  {
-                      
-                      
-                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("remaining", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
-                               setPartialMatches(true);
-                           }
-                           else
-                           {
-                               setPartialMatches(false);
-                           }
-                        
-                    }
-                  
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
-                
-                
-                  parent_attri = NULL;
-                  attrib_text = NULL;
-                  if(attribute_hash)
-                  {
-                       axutil_hash_index_t *hi;
-                       void *val;
-                       const void *key;
-
-                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                       {
-                           axutil_hash_this(hi, &key, NULL, &val);
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("remaining", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setRemaining(atoi(text_value));
+                                      }
+                                      
+                                      else
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element remaining");
+                                          status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for remaining ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
                            
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element remaining missing");
+                                  return AXIS2_FAILURE;
+                              }
                            
-                               if(!strcmp((axis2_char_t*)key, "includeJobSummaries"))
-                             
-                               {
-                                   parent_attri = (axiom_attribute_t*)val;
-                                   break;
-                               }
-                       }
-                  }
-
-                  if(parent_attri)
-                  {
-                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
-                  }
-                  else
-                  {
-                    /* this is hoping that attribute is stored in "includeJobSummaries", this happnes when name is in default namespace */
-                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "includeJobSummaries");
-                  }
-
-                  if(attrib_text != NULL)
-                  {
-                      
-                      
-                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
-                           {
-                               setIncludeJobSummaries(true);
-                           }
-                           else
-                           {
-                               setIncludeJobSummaries(false);
-                           }
-                        
-                    }
-                  
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -358,7 +315,7 @@
        }
 
           bool WSF_CALL
-          AviaryQuery::GetSubmissionSummary::isParticle()
+          AviaryQuery::GetSubmissionIDResponse::isParticle()
           {
             
                  return false;
@@ -367,7 +324,7 @@
 
 
           void WSF_CALL
-          AviaryQuery::GetSubmissionSummary::declareParentNamespaces(
+          AviaryQuery::GetSubmissionIDResponse::declareParentNamespaces(
                     axiom_element_t *parent_element,
                     axutil_hash_t *namespaces, int *next_ns_index)
           {
@@ -379,17 +336,13 @@
         
         
         axiom_node_t* WSF_CALL
-	AviaryQuery::GetSubmissionSummary::serialize(axiom_node_t *parent, 
+	AviaryQuery::GetSubmissionIDResponse::serialize(axiom_node_t *parent, 
 			axiom_element_t *parent_element, 
 			int parent_tag_closed, 
 			axutil_hash_t *namespaces, 
 			int *next_ns_index)
         {
             
-            
-               axiom_attribute_t *text_attri = NULL;
-             
-             axis2_char_t *string_to_stream;
             
          
          axiom_node_t *current_node = NULL;
@@ -411,10 +364,6 @@
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
-                    
-                axis2_char_t *text_value = NULL;
-             
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -436,7 +385,7 @@
                            axutil_hash_set(namespaces, "http://query.aviary.grid.redhat.com", AXIS2_HASH_KEY_STRING, axutil_strdup(Environment::getEnv(), "n"));
                        
                      
-                    parent_element = axiom_element_create (Environment::getEnv(), NULL, "GetSubmissionSummary", ns1 , &parent);
+                    parent_element = axiom_element_create (Environment::getEnv(), NULL, "GetSubmissionIDResponse", ns1 , &parent);
                     
                     
                     axiom_element_set_namespace(parent_element, Environment::getEnv(), ns1, parent);
@@ -446,47 +395,6 @@
                     data_source = axiom_data_source_create(Environment::getEnv(), parent, &current_node);
                     stream = axiom_data_source_get_stream(data_source, Environment::getEnv());
                   
-            if(!parent_tag_closed)
-            {
-            
-                if(isValidPartialMatches)
-                {
-                
-                        p_prefix = NULL;
-                      
-                           
-                           text_value = (axis2_char_t*)((property_PartialMatches)?"true":"false");
-                           string_to_stream = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
-                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
-                                                             axutil_strlen(text_value) + 
-                                                             axutil_strlen("partialMatches")));
-                           sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
-                                                "partialMatches",  text_value);
-                           axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
-                           AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
-                        
-                   }
-                   
-                if(isValidIncludeJobSummaries)
-                {
-                
-                        p_prefix = NULL;
-                      
-                           
-                           text_value = (axis2_char_t*)((property_IncludeJobSummaries)?"true":"false");
-                           string_to_stream = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
-                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
-                                                             axutil_strlen(text_value) + 
-                                                             axutil_strlen("includeJobSummaries")));
-                           sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
-                                                "includeJobSummaries",  text_value);
-                           axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
-                           AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
-                        
-                   }
-                   
-            }
-            
                        p_prefix = NULL;
                       
 
@@ -569,44 +477,63 @@
                  } 
 
                  
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidRemaining)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property remaining");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("remaining"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("remaining")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing remaining element
+                      */
+
                     
-                    if(parent_tag_closed)
-                    {
-                       if(isValidPartialMatches)
-                       {
-                       
-                           p_prefix = NULL;
-                           ns1 = NULL;
-                         
-                           
-                           text_value =  (axis2_char_t*)((property_PartialMatches)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
-                           text_attri = axiom_attribute_create (Environment::getEnv(), "partialMatches", text_value, ns1);
-                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
-                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
-                        
-                      }
-                       
-                  }
-                
                     
-                    if(parent_tag_closed)
-                    {
-                       if(isValidIncludeJobSummaries)
-                       {
-                       
-                           p_prefix = NULL;
-                           ns1 = NULL;
-                         
+                            sprintf(start_input_str, "<%s%sremaining>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sremaining>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                               sprintf (text_value_2, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Remaining);
+                             
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           text_value =  (axis2_char_t*)((property_IncludeJobSummaries)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
-                           text_attri = axiom_attribute_create (Environment::getEnv(), "includeJobSummaries", text_value, ns1);
-                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
-                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
-                        
-                      }
-                       
-                  }
-                
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
                    if(namespaces)
                    {
                        axutil_hash_index_t *hi;
@@ -630,7 +557,7 @@
              * Getter for ids by  Property Number 1
              */
             std::vector<AviaryCommon::SubmissionID*>* WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getProperty1()
+            AviaryQuery::GetSubmissionIDResponse::getProperty1()
             {
                 return getIds();
             }
@@ -639,7 +566,7 @@
              * getter for ids.
              */
             std::vector<AviaryCommon::SubmissionID*>* WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getIds()
+            AviaryQuery::GetSubmissionIDResponse::getIds()
              {
                 return property_Ids;
              }
@@ -648,7 +575,7 @@
              * setter for ids
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::setIds(
+            AviaryQuery::GetSubmissionIDResponse::setIds(
                     std::vector<AviaryCommon::SubmissionID*>*  arg_Ids)
              {
                 
@@ -709,7 +636,7 @@
              * Get ith element of ids.
              */
             AviaryCommon::SubmissionID* WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getIdsAt(int i)
+            AviaryQuery::GetSubmissionIDResponse::getIdsAt(int i)
             {
                 AviaryCommon::SubmissionID* ret_val;
                 if(property_Ids == NULL)
@@ -726,7 +653,7 @@
              * Set the ith element of ids.
              */
            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::setIdsAt(int i,
+            AviaryQuery::GetSubmissionIDResponse::setIdsAt(int i,
                     AviaryCommon::SubmissionID* arg_Ids)
             {
                  AviaryCommon::SubmissionID* element;
@@ -792,7 +719,7 @@
              * Add to ids.
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::addIds(
+            AviaryQuery::GetSubmissionIDResponse::addIds(
                     AviaryCommon::SubmissionID* arg_Ids)
              {
 
@@ -821,7 +748,7 @@
              * Get the size of the ids array.
              */
             int WSF_CALL
-            AviaryQuery::GetSubmissionSummary::sizeofIds()
+            AviaryQuery::GetSubmissionIDResponse::sizeofIds()
             {
 
                 if(property_Ids == NULL)
@@ -835,7 +762,7 @@
              * remove the ith element, same as set_nil_at.
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::removeIdsAt(int i)
+            AviaryQuery::GetSubmissionIDResponse::removeIdsAt(int i)
             {
                 return setIdsNilAt(i);
             }
@@ -846,7 +773,7 @@
             * resetter for ids
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::resetIds()
+           AviaryQuery::GetSubmissionIDResponse::resetIds()
            {
                int i = 0;
                int count = 0;
@@ -890,7 +817,7 @@
             * Check whether ids is nill
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::isIdsNil()
+           AviaryQuery::GetSubmissionIDResponse::isIdsNil()
            {
                return !isValidIds;
            }
@@ -899,7 +826,7 @@
             * Set ids to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::setIdsNil()
+           AviaryQuery::GetSubmissionIDResponse::setIdsNil()
            {
                return resetIds();
            }
@@ -909,7 +836,7 @@
             * Check whether ids is nill at i
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::isIdsNilAt(int i)
+           AviaryQuery::GetSubmissionIDResponse::isIdsNilAt(int i)
            {
                return (isValidIds == false ||
                        NULL == property_Ids ||
@@ -920,7 +847,7 @@
             * Set ids to nil at i
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::setIdsNilAt(int i)
+           AviaryQuery::GetSubmissionIDResponse::setIdsNilAt(int i)
            {
                 int size = 0;
                 int j;
@@ -996,34 +923,34 @@
            
 
             /**
-             * Getter for partialMatches by  Property Number 2
+             * Getter for remaining by  Property Number 2
              */
-            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getProperty2()
+            int WSF_CALL
+            AviaryQuery::GetSubmissionIDResponse::getProperty2()
             {
-                return getPartialMatches();
+                return getRemaining();
             }
 
             /**
-             * getter for partialMatches.
+             * getter for remaining.
              */
-            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getPartialMatches()
+            int WSF_CALL
+            AviaryQuery::GetSubmissionIDResponse::getRemaining()
              {
-                return property_PartialMatches;
+                return property_Remaining;
              }
 
             /**
-             * setter for partialMatches
+             * setter for remaining
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::setPartialMatches(
-                    bool  arg_PartialMatches)
+            AviaryQuery::GetSubmissionIDResponse::setRemaining(
+                    const int  arg_Remaining)
              {
                 
 
-                if(isValidPartialMatches &&
-                        arg_PartialMatches == property_PartialMatches)
+                if(isValidRemaining &&
+                        arg_Remaining == property_Remaining)
                 {
                     
                     return true;
@@ -1032,11 +959,11 @@
                 
 
                 
-                resetPartialMatches();
+                resetRemaining();
 
                 
-                        property_PartialMatches = arg_PartialMatches;
-                        isValidPartialMatches = true;
+                        property_Remaining = arg_Remaining;
+                        isValidRemaining = true;
                     
                 return true;
              }
@@ -1044,119 +971,36 @@
              
 
            /**
-            * resetter for partialMatches
+            * resetter for remaining
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::resetPartialMatches()
+           AviaryQuery::GetSubmissionIDResponse::resetRemaining()
            {
                int i = 0;
                int count = 0;
 
 
                
-               isValidPartialMatches = false; 
+               isValidRemaining = false; 
                return true;
            }
 
            /**
-            * Check whether partialMatches is nill
+            * Check whether remaining is nill
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::isPartialMatchesNil()
+           AviaryQuery::GetSubmissionIDResponse::isRemainingNil()
            {
-               return !isValidPartialMatches;
+               return !isValidRemaining;
            }
 
            /**
-            * Set partialMatches to nill (currently the same as reset)
+            * Set remaining to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::setPartialMatchesNil()
+           AviaryQuery::GetSubmissionIDResponse::setRemainingNil()
            {
-               return resetPartialMatches();
-           }
-
-           
-
-            /**
-             * Getter for includeJobSummaries by  Property Number 3
-             */
-            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getProperty3()
-            {
-                return getIncludeJobSummaries();
-            }
-
-            /**
-             * getter for includeJobSummaries.
-             */
-            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::getIncludeJobSummaries()
-             {
-                return property_IncludeJobSummaries;
-             }
-
-            /**
-             * setter for includeJobSummaries
-             */
-            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummary::setIncludeJobSummaries(
-                    bool  arg_IncludeJobSummaries)
-             {
-                
-
-                if(isValidIncludeJobSummaries &&
-                        arg_IncludeJobSummaries == property_IncludeJobSummaries)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetIncludeJobSummaries();
-
-                
-                        property_IncludeJobSummaries = arg_IncludeJobSummaries;
-                        isValidIncludeJobSummaries = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for includeJobSummaries
-            */
-           bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::resetIncludeJobSummaries()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidIncludeJobSummaries = false; 
-               return true;
-           }
-
-           /**
-            * Check whether includeJobSummaries is nill
-            */
-           bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::isIncludeJobSummariesNil()
-           {
-               return !isValidIncludeJobSummaries;
-           }
-
-           /**
-            * Set includeJobSummaries to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryQuery::GetSubmissionSummary::setIncludeJobSummariesNil()
-           {
-               return resetIncludeJobSummaries();
+               return resetRemaining();
            }
 
            

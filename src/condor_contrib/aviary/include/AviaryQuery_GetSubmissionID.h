@@ -1,24 +1,30 @@
 
 
-        #ifndef AviaryCommon_SUBMISSIONID_H
-        #define AviaryCommon_SUBMISSIONID_H
+        #ifndef AviaryQuery_GETSUBMISSIONID_H
+        #define AviaryQuery_GETSUBMISSIONID_H
 
        /**
-        * SubmissionID.h
+        * GetSubmissionID.h
         *
         * This file was auto-generated from WSDL
         * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
         */
 
        /**
-        *  SubmissionID class
+        *  GetSubmissionID class
         */
 
-        namespace AviaryCommon{
-            class SubmissionID;
+        namespace AviaryQuery{
+            class GetSubmissionID;
         }
         
 
+        
+       #include "AviaryCommon_ScanMode.h"
+          
+       #include "AviaryCommon_SubmissionID.h"
+          
+        #include <axutil_qname.h>
         
 
         #include <stdio.h>
@@ -26,41 +32,43 @@
         #include <ServiceClient.h>
         #include <ADBDefines.h>
 
-namespace AviaryCommon
+namespace AviaryQuery
 {
         
         
 
-        class SubmissionID {
+        class GetSubmissionID {
 
         private:
-             std::string property_Name;
+             
+                axutil_qname_t* qname;
+            int property_Size;
 
                 
-                bool isValidName;
-            std::string property_Owner;
+                bool isValidSize;
+            AviaryCommon::ScanMode* property_Mode;
 
                 
-                bool isValidOwner;
-            int property_Qdate;
+                bool isValidMode;
+            AviaryCommon::SubmissionID* property_Offset;
 
                 
-                bool isValidQdate;
+                bool isValidOffset;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setNameNil();
+        setSizeNil();
             
 
         bool WSF_CALL
-        setOwnerNil();
+        setModeNil();
             
 
         bool WSF_CALL
-        setQdateNil();
+        setOffsetNil();
             
 
 
@@ -70,28 +78,28 @@ namespace AviaryCommon
         public:
 
         /**
-         * Constructor for class SubmissionID
+         * Constructor for class GetSubmissionID
          */
 
-        SubmissionID();
+        GetSubmissionID();
 
         /**
-         * Destructor SubmissionID
+         * Destructor GetSubmissionID
          */
-        ~SubmissionID();
+        ~GetSubmissionID();
 
 
        
 
         /**
-         * Constructor for creating SubmissionID
+         * Constructor for creating GetSubmissionID
          * @param 
-         * @param Name std::string
-         * @param Owner std::string
-         * @param Qdate int
-         * @return newly created SubmissionID object
+         * @param Size int
+         * @param Mode AviaryCommon::ScanMode*
+         * @param Offset AviaryCommon::SubmissionID*
+         * @return newly created GetSubmissionID object
          */
-        SubmissionID(std::string arg_Name,std::string arg_Owner,int arg_Qdate);
+        GetSubmissionID(int arg_Size,AviaryCommon::ScanMode* arg_Mode,AviaryCommon::SubmissionID* arg_Offset);
         
         
         /********************************** Class get set methods **************************************/
@@ -99,74 +107,74 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for name. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getName();
-
-        /**
-         * Setter for name.
-         * @param arg_Name std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setName(const std::string  arg_Name);
-
-        /**
-         * Re setter for name
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetName();
-        
-        
-
-        /**
-         * Getter for owner. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getOwner();
-
-        /**
-         * Setter for owner.
-         * @param arg_Owner std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setOwner(const std::string  arg_Owner);
-
-        /**
-         * Re setter for owner
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetOwner();
-        
-        
-
-        /**
-         * Getter for qdate. 
+         * Getter for size. 
          * @return int*
          */
         WSF_EXTERN int WSF_CALL
-        getQdate();
+        getSize();
 
         /**
-         * Setter for qdate.
-         * @param arg_Qdate int*
+         * Setter for size.
+         * @param arg_Size int*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setQdate(const int  arg_Qdate);
+        setSize(const int  arg_Size);
 
         /**
-         * Re setter for qdate
+         * Re setter for size
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetQdate();
+        resetSize();
+        
+        
+
+        /**
+         * Getter for mode. 
+         * @return AviaryCommon::ScanMode*
+         */
+        WSF_EXTERN AviaryCommon::ScanMode* WSF_CALL
+        getMode();
+
+        /**
+         * Setter for mode.
+         * @param arg_Mode AviaryCommon::ScanMode*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setMode(AviaryCommon::ScanMode*  arg_Mode);
+
+        /**
+         * Re setter for mode
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetMode();
+        
+        
+
+        /**
+         * Getter for offset. 
+         * @return AviaryCommon::SubmissionID*
+         */
+        WSF_EXTERN AviaryCommon::SubmissionID* WSF_CALL
+        getOffset();
+
+        /**
+         * Setter for offset.
+         * @param arg_Offset AviaryCommon::SubmissionID*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setOffset(AviaryCommon::SubmissionID*  arg_Offset);
+
+        /**
+         * Re setter for offset
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetOffset();
         
 
 
@@ -180,31 +188,31 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether name is Nill
+         * Check whether size is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isNameNil();
+        isSizeNil();
 
 
         
 
         /**
-         * Check whether owner is Nill
+         * Check whether mode is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isOwnerNil();
+        isModeNil();
 
 
         
 
         /**
-         * Check whether qdate is Nill
+         * Check whether offset is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isQdateNil();
+        isOffsetNil();
 
 
         
@@ -240,18 +248,18 @@ namespace AviaryCommon
 
         /**
          * Serialize the ADB object to an xml
-         * @param SubmissionID_om_node node to serialize from
-         * @param SubmissionID_om_element parent element to serialize from
+         * @param GetSubmissionID_om_node node to serialize from
+         * @param GetSubmissionID_om_element parent element to serialize from
          * @param tag_closed Whether the parent tag is closed or not
          * @param namespaces hash of namespace uris to prefixes
          * @param next_ns_index an int which contains the next namespace index
          * @return axiom_node_t on success,NULL otherwise.
          */
         axiom_node_t* WSF_CALL
-        serialize(axiom_node_t* SubmissionID_om_node, axiom_element_t *SubmissionID_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
+        serialize(axiom_node_t* GetSubmissionID_om_node, axiom_element_t *GetSubmissionID_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
 
         /**
-         * Check whether the SubmissionID is a particle class (E.g. group, inner sequence)
+         * Check whether the GetSubmissionID is a particle class (E.g. group, inner sequence)
          * @return true if this is a particle class, false otherwise.
          */
         bool WSF_CALL
@@ -266,33 +274,33 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for name by property number (1)
-         * @return std::string
+         * Getter for size by property number (1)
+         * @return int
          */
 
-        std::string WSF_CALL
+        int WSF_CALL
         getProperty1();
 
     
         
 
         /**
-         * Getter for owner by property number (2)
-         * @return std::string
+         * Getter for mode by property number (2)
+         * @return AviaryCommon::ScanMode
          */
 
-        std::string WSF_CALL
+        AviaryCommon::ScanMode* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for qdate by property number (3)
-         * @return int
+         * Getter for offset by property number (3)
+         * @return AviaryCommon::SubmissionID
          */
 
-        int WSF_CALL
+        AviaryCommon::SubmissionID* WSF_CALL
         getProperty3();
 
     
@@ -300,6 +308,6 @@ namespace AviaryCommon
 };
 
 }        
- #endif /* SUBMISSIONID_H */
+ #endif /* GETSUBMISSIONID_H */
     
 

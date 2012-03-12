@@ -21,6 +21,8 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 
+#include <time.h>
+
 extern bool qmgmt_all_users_trusted;
 
 // local includes
@@ -269,7 +271,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 		}
         submitJobResponse->setId(new AviaryCommon::JobID(
 				jobId,schedulerObj->getPool(),schedulerObj->getName(),
-				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str())));
+				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str(),time(NULL))));
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),""));
     }
     qmgmt_all_users_trusted = false;
