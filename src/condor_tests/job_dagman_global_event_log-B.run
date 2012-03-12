@@ -39,9 +39,9 @@ sub HELD{5};
 sub RUNNING{2};
 
 my $global_logfile = `condor_config_val -expand EVENT_LOG`;
-my $global_perms = `stat -c '%a' $global_logfile`;
-chomp($global_perms);
-runcmd("chmod 0 $global_logfile");
+@stat = stat $global_logfile;
+my $global_perms = $stat[2] & 07777;
+chmod 0, $global_logfile;
 
 # Get rid of any existing output files.
 if (-e $outfile) {
@@ -81,6 +81,7 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
+	chmod $global_perms,$global_logfile;
 	
 	open GLOBALLOG, "<$global_logfile" || die "Could not get global event log\n";
 	open USERLOG, "<$userlog" || die "Could not get user log\n";
@@ -111,10 +112,8 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	runcmd("chmod $global_perms $global_logfile");
 	exit(0);
 } else {
-	runcmd("chmod $global_perms $global_logfile");
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 
