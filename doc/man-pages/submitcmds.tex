@@ -2283,24 +2283,6 @@ submission.
 
 \end{description} 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{Pre and Post scripts}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{description} 
-
-\index{submit commands!PreCmd}
-\index{submit commands!PostCmd}
-\item[PreCmd = $<$executable$>$]
-\item[PostCmd = $<$executable$>$]
-
-The vanilla universe has the ability to run prescripts and postscripts, before and
-after the job, respectively.  Note that this is different from the PRE script and POST script in DAGman.  These commands can be executables or scripts which prepare or initialize
-the job. The pre and post scripts aren't automatically transfered with the job,
-as the main executable is, so they must be entered into the transfer\_input\_files
-list, when file transfer is on.
-
-\end{description} 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{ADVANCED COMMANDS}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2912,6 +2894,49 @@ causing the logged submit event to identify the DAG node job submitted.
 (plus) character instructs \Condor{submit} to insert the
 following \Arg{attribute} into the job ClassAd with the given 
 \Arg{value}. 
+
+\end{description} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{PRE AND POST SCRIPTS IMPLEMENTED WITH SPECIALLY-NAMED ATTRIBUTES}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description} 
+
+%%%%%%%%%%%%%%%%%%%
+%% +PreCmd
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!+PreCmd}
+\item[+PreCmd = $<$executable$>$]
+A vanilla universe job may specify that a script is to be run 
+on the execute machine before the job, and this is called a prescript.
+Definition of this specifically-named attribute causes the script,
+identified by path and file name to be executed. 
+The prescript could prepare or initialize the job.
+Note that this definition of a prescript is different from the PRE script 
+described in DAGMan.
+The prescript is not automatically transferred with the job,
+as the main executable is, 
+so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
+when file transfer is enabled.
+
+%%%%%%%%%%%%%%%%%%%
+%% +PostCmd
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!+PostCmd}
+\item[+PostCmd = $<$executable$>$]
+A vanilla universe job may specify that a script is to be run 
+on the execute machine after the job exits, and this is called a postscript.
+Definition of this specifically-named attribute causes the script,
+identified by path and file name to be executed. 
+The postscript is run if the job exits, but not if the job is evicted.
+Note that this definition of a postscript is different from the POST script 
+described in DAGMan.
+The postscript is not automatically transferred with the job,
+as the main executable is, 
+so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
+when file transfer is enabled.
 
 \end{description} 
 
