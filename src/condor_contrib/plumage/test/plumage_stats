@@ -40,36 +40,42 @@ DEFAULT_END_DT = str(datetime.utcnow()-UTC_DIFF)
 verbose = False
 
 def print_user(user,start,end):
-	for item in db['samples.submitter'].find({"sn":{'$regex':'^'+user}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
-		print item['sn'],"\t",item['ts']-UTC_DIFF, "\t",item['jr'],"\t",item['jh'],"\t",item['ji']
+    print "SUBMITTER".ljust(40),"TIMESTAMP".ljust(30),"R".ljust(5),"H".ljust(5),"I"
+    for item in db['samples.submitter'].find({"sn":{'$regex':'^'+user}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
+        print item['sn'].ljust(40),str(item['ts']-UTC_DIFF).ljust(30), str(item['jr']).ljust(5),str(item['jh']).ljust(5),str(item['ji'])
 
 def print_resource(resource,start,end):
-	for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
-		print item['mn'],"\t",item['ts']-UTC_DIFF, "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t",str(item['la'])[:5],"\t",item['st']
+    print "MACHINE".ljust(40),"TIMESTAMP".ljust(30),"ARCH/OS".ljust(15),"IDLE".ljust(8),"LOAD".ljust(5),"STATE"
+    for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
+        print item['mn'].ljust(40),str(item['ts']-UTC_DIFF).ljust(30), str("%s/%s" % (item['ar'],item['os'])).ljust(15),str(item['ki']).ljust(8),\
+        str(item['la'])[:5].ljust(5),item['st']
 
-def print_users():
-		for user in db['samples.submitter'].distinct('sn'):
-			print user
+def print_users(start,end):
+    print "SUBMITTER"
+    for user in db['samples.submitter'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('sn'):
+        print user
 
-def print_usergroups():
-	# NOTE: after revisiting, mongodb group() seems significantly slower than find()/distinct() below
-	# ie., db['samples.submitter'].group({key: {'sn': true,'mn':true }, cond: {}, initial: {}, reduce: function() {}});
-	#usergroups = db['samples.submitter'].group(['sn','mn'], None, {}, 'function() {}')
-	#for ug in usergroups:
-		#print '%s/%s' % (ug['sn'],ug['mn'])
-	mnlist = db['samples.submitter'].distinct('mn')
-	for mn in mnlist:
-		snlist = db['samples.submitter'].find({'mn': mn}).distinct('sn')
-		for sn in snlist:
-			print '%s/%s' % (sn,mn)
+def print_usergroups(start,end):
+    # NOTE: after revisiting, mongodb group() seems significantly slower than find()/distinct() below
+    # ie., db['samples.submitter'].group({key: {'sn': true,'mn':true }, cond: {}, initial: {}, reduce: function() {}});
+    #usergroups = db['samples.submitter'].group(['sn','mn'], None, {}, 'function() {}')
+    #for ug in usergroups:
+        #print '%s/%s' % (ug['sn'],ug['mn'])
+    print "SUBMITTER / MACHINE"
+    mnlist = db['samples.submitter'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('mn')
+    for mn in mnlist:
+        snlist = db['samples.submitter'].find({'mn': mn, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('sn')
+        for sn in snlist:
+            print '%s / %s' % (sn,mn)
 
-def print_resourcelist():
-	for item in db['samples.machine'].distinct('mn'):
-		print item
+def print_resourcelist(start,end):
+    print "MACHINE"
+    for item in db['samples.machine'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('mn'):
+        print item
 
 parser = OptionParser(description='Query Condor ODS for statistics')
 parser.add_option('-v','--verbose', action="store_true",default=False, help='enable logging')
-parser.add_option('-s','--server', action="store", nargs='?', dest='server',
+parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',
                     help='mongodb database server location: e.g., somehost, localhost:2011')
 parser.add_option('--u','--user', dest="user", help='stats for a single submitter: user,timestamp,running,held,idle')
@@ -84,25 +90,25 @@ parser.add_option('--rl','--resourcelist', action="store_true",dest='resourcelis
 verbose = options.verbose
 
 try:
-	connection = pymongo.Connection(options.server)
-	db = connection.condor_stats
+    connection = pymongo.Connection(options.server)
+    db = connection.condor_stats
 except Exception, e:
-	print e
-	exit(1)
+    print e
+    exit(1)
 
 if verbose:
-	print 'from:\t', options.start
-	print 'to:\t', options.end
+    print 'from:\t', options.start
+    print 'to:\t', options.end
 
 if options.user:
-	print_user(options.user,options.start,options.end)
+    print_user(options.user,options.start,options.end)
 elif options.resource:
-	print_resource(options.resource,options.start,options.end)
+    print_resource(options.resource,options.start,options.end)
 elif options.userlist:
-	print_users()
+    print_users(options.start,options.end)
 elif options.usergrouplist:
-	print_usergroups()
+    print_usergroups(options.start,options.end)
 elif options.resourcelist:
-	print_resourcelist()
+    print_resourcelist(options.start,options.end)
 else:
-	parser.print_help()
+    parser.print_help()
