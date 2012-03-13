@@ -137,7 +137,11 @@ shutdown,
 with other daemons being shut down only after the \Condor{startd} has exited.
 \Ticket{2779}
 
-\item Under some circumstances, a job in the removed ("X") state may ignore the -forcex option to \Condor{rm}.  The \Condor{schedd} is now more aggressive about removing such jobs from the queue.
+\item Under some circumstances, 
+a job in the removed ("X") state may have ignored the \Opt{-forcex} option 
+to \Condor{rm}.
+The \Condor{schedd} is now more aggressive about removing such jobs 
+from the queue.
 \Ticket{2809}
 
 \item Fixed the copying of scaling factors on ClassAd literal values.
