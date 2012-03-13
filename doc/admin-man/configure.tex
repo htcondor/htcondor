@@ -3266,6 +3266,10 @@ NEGOTIATOR_USERID = condor
   when it notices that the \Condor{master} binary has changed.
   Valid values are \Expr{GRACEFUL}, \Expr{PEACEFUL}, and \Expr{NEVER},
   with a default value of \Expr{GRACEFUL}.
+  On a \Expr{GRACEFUL} restart of the master, child processes are told to exit,
+  but if they do not before a timer expires, then they are killed.
+  On a \Expr{PEACEFUL} restart, child processes are told to exit,
+  after which the \Condor{master} waits until they do so.
 
 \label{param:MasterNewBinaryDelay}
 \item[\Macro{MASTER\_NEW\_BINARY\_DELAY}]
