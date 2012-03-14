@@ -46,7 +46,7 @@ static bool sockaddr_equivalance(const condor_sockaddr & s,
 static bool test_from_sinful_simple_v4() {
 	const char * sinful = "<1.2.3.4:567>";
 	const int expected_port = 567;
-	const MyString expected_ip_string = "1.2.3.4";
+	const char * expected_ip_string = "1.2.3.4";
 
 	emit_test("Can parse simple IPv4 sinful string");
 	emit_input_header();
@@ -66,11 +66,34 @@ static bool test_from_sinful_simple_v4() {
 	PASS;
 }
 
+static bool test_from_ip_string_simple_v4() {
+	const char * in_ip_string = "86.75.30.9";
+	const int expected_port = 0;
+
+	emit_test("Can parse simple IPv4 string");
+	emit_input_header();
+	emit_param("ip_string", "%s", in_ip_string);
+
+	condor_sockaddr s;
+	bool parsed = s.from_ip_string(in_ip_string);
+
+	emit_output_expected_header();
+	emit_param("Was able to parse?", "%s", "yes");
+	emit_output_actual_header();
+	emit_param("Was able to parse?", "%s", parsed?"yes":"NO");
+	if(!parsed) FAIL;
+
+	bool match = sockaddr_equivalance(s, in_ip_string, expected_port);
+	if(!match) FAIL;
+	PASS;
+}
+
 bool OTEST_condor_sockaddr() {
 	emit_object("condor_sockaddr");
 	emit_comment("condor_sockaddr provides a single wrapper around sockaddr_in and sockaddr_in6, along with a host of functions for creating sockaddrs from other forms (notably strings) and converting back to those other forms.");
 
 	FunctionDriver driver;
 	driver.register_function(test_from_sinful_simple_v4);
+	driver.register_function(test_from_ip_string_simple_v4);
 	return driver.do_all_functions();
 }
