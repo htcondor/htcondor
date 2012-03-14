@@ -343,6 +343,7 @@ private:
 		// Static info
 	int				c_phys_mem;
 	int				c_num_cpus;
+	int				c_num_slot_cpus;
 
 		// These hold the fractions of shared, dynamic resources
 		// that are allocated to this CPU.

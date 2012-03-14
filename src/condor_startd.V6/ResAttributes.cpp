@@ -870,6 +870,8 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 		cp->Assign( ATTR_TOTAL_DISK, (int)c_total_disk );
 
 		cp->Assign( ATTR_DISK, (int)c_disk );
+
+		cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)c_num_slot_cpus );
 	}
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
