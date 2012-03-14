@@ -835,7 +835,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 {
 	map = map_arg;
 	c_type = slot_type;
-	c_num_cpus = num_cpus_arg;
+	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
 	c_phys_mem = num_phys_mem;
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
