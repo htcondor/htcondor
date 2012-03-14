@@ -74,7 +74,7 @@ MgmtScheddPlugin::earlyInitialize()
 
 	Scheduler::registerSelf(agent);
 	Submitter::registerSelf(agent);
-	m_isPublishing = param_boolean("QMF_PUBLISH_SUBMISSIONS", true);
+	m_isPublishing = param_boolean("QMF_PUBLISH_SUBMISSIONS", false);
 	if (m_isPublishing) {
 		JobServer::registerSelf(agent);
 		Submission::registerSelf(agent);
