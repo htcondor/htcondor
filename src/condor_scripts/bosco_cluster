@@ -271,12 +271,25 @@ fi
 start_ssh
 
 # Quickly test the ssh
-ssh -o "PasswordAuthentication=no" $remote_host "pwd" >/dev/null 2>/dev/null
+qmgr_out=`ssh -o "PasswordAuthentication=no" $remote_host "pwd" 2>/dev/null`
 if [ $? -ne 0 ]; then
     echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
     echo "Does the remote resource allow password-less ssh?"
     exit 1
 fi
+
+# Get the queue information
+qmgr_out=`ssh remote_host "qmgr -c 'print server'" 2>/dev/null`
+
+# Get the default queue
+default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
+
+# Get the max queued for the queue default_queue
+max_queued=`expr "$qmgr_out" : ".*set queue $default_queue max_user_queuable = \([0-9]*\).*"`
+if [ $max_queued == "" ]; then
+    max_queued=-1
+fi
+echo "Found max queue to be $max_queued"
 
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
