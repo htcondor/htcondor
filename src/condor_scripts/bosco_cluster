@@ -135,7 +135,17 @@ test_cluster () {
     
     # Test condor submission
     echo -n "Testing bosco submission..."
-    submit_dir=`mktemp -d`
+
+    # Get the bosco (condor) local dir
+    local_dir=`condor_config_val LOCAL_DIR`
+    root_submit_dir=$local_dir/bosco-test
+    mkdir -p $root_submit_dir
+    if [ $? -ne 0 ]; then
+        echo "Unable to create directory $root_submit_dir"
+        echo "Tests FAILED!"
+        exit 1
+    fi
+    submit_dir=`mktemp -d -p $root_submit_dir`
     submit_file=$submit_dir/condor.submit
     log_file=$submit_dir/logfile
     cat > $submit_file << End_of_Submit
@@ -155,11 +165,11 @@ End_of_Submit
     if [ $? -ne 0 ]; then
         echo "Failed"
         echo $submit_out
-        rm -rf $submit_dir
         exit 1
     else
         echo "Passed!"
     fi
+    echo "Submission files for these jobs are in $root_submit_dir"
 
     # Check if there is anything in the user log
     echo -n "Checking for submission to remote pbs cluster (could take ~30 seconds)..."
@@ -189,8 +199,6 @@ End_of_Submit
             echo "Failed to open gridmanager log for reading"
         fi
     fi
-
-    rm -rf $submit_dir
 
 }
 
