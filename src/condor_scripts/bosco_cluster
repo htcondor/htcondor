@@ -94,10 +94,12 @@ add_cluster_to_list () {
 
 get_min_queue () {
     # Should we do this in awk? ugh, ok
-    min_queued=10000
+    min_queued=1000
+    detected=0
     while read line; do
         max_queued=`expr "$line" : ".*max_queued=\([0-9]*\)"`
         if [ $max_queued -lt $min_queued -a $max_queued -ne -1 ]; then
+            detected=1
             min_queued=$max_queued
         fi
     done < $CLUSTERLIST_LOCATION
