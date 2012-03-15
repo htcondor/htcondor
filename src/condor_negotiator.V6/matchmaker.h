@@ -355,6 +355,7 @@ class Matchmaker : public Service
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
 		int rejForSubmitterLimit;   //   - not enough group quota?
+        string rejectedConcurrencyLimit; // the name of concurrency limit rejected
 
 
 		// Class used to store each individual entry in the
