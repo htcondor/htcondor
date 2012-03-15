@@ -24,6 +24,20 @@
 #include "classad/common.h"
 #include "classad/util.h"
 
+// hopefully this can go away when classads has native support for 64bit int
+// in the mean time, we want to do the conversion as close to the classad api
+// as possible.
+#ifndef classad_int64
+# ifdef WIN32
+# define classad_int64 __int64
+# elif defined(__x86_64__)
+# define classad_int64 long
+# else
+# define classad_int64 long long
+# endif
+#endif
+
+
 namespace classad {
 
 class Literal;
@@ -170,7 +184,18 @@ class Value
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
-		inline bool IsIntegerValue(int &i) const; 	
+		inline bool IsIntegerValue(int &i) const;
+		/** Checks if the value is integral.
+			@param i The integer value if the value is integer.
+			@return true iff the value is an integer.
+		*/
+		#if ! defined __x86_64__ && ! defined WIN32
+		inline bool IsIntegerValue(long &i) const;
+		/** Checks if the value is integral.
+			@return true iff the value is an integer.
+		*/
+		#endif
+		inline bool IsIntegerValue(classad_int64 &i) const;
 		/** Checks if the value is integral.
 			@return true iff the value is an integer.
 		*/
@@ -341,6 +366,22 @@ IsBooleanValue() const
 
 inline bool Value::
 IsIntegerValue (int &i) const
+{
+    i = integerValue;
+    return (valueType == INTEGER_VALUE);
+}  
+
+#if ! defined __x86_64__ && ! defined WIN32
+inline bool Value::
+IsIntegerValue (long &i) const
+{
+    i = integerValue;
+    return (valueType == INTEGER_VALUE);
+}  
+#endif
+
+inline bool Value::
+IsIntegerValue (classad_int64 &i) const
 {
     i = integerValue;
     return (valueType == INTEGER_VALUE);

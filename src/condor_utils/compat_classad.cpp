@@ -1061,6 +1061,26 @@ LookupInteger( const char *name, int &value ) const
 }
 
 int ClassAd::
+LookupInteger( const char *name, int64_t &value ) const
+{
+	bool    boolVal;
+	int     haveInteger;
+	string  sName(name);
+	int		tmp_val;
+
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
+		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
+	}
+	return haveInteger;
+}
+
+int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
