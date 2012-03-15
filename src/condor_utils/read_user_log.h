@@ -24,7 +24,7 @@
 #if defined(__cplusplus)
 
 // need this for int64_t, this includes sys/types
-#include <condor_sys_types.h>
+//#include <condor_sys_types.h>
 // why doesnt' the above work when building condor_userlog_job_counter.cpp???
 #ifndef HAVE_INT64_T
 # ifdef WIN32
