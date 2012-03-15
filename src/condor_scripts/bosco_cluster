@@ -36,7 +36,9 @@ list()
 {
     # Check for the cluster_list file
     if [ -e $CLUSTERLIST_LOCATION ]; then
-        cat $CLUSTERLIST_LOCATION
+        while read line; do
+            expr "$line" : "entry=\(.*\) "
+        done < $CLUSTERLIST_LOCATION
     else
         echo "No clusters configured"
     fi
