@@ -1487,10 +1487,17 @@ int DaemonCommandProtocol::finalize()
 		if ( m_is_tcp ) {
 			m_sock->encode();	// we wanna "flush" below in the encode direction
 			m_sock->end_of_message();  // make certain data flushed to the wire
+			
 			if ( m_insock != m_sock ) {	   // delete the sock only if we did an accept; if we
 				delete m_sock;		   //     did not do an accept, Driver() will delete the sock.
 				m_sock = NULL;
 			}
+		
+			if ((m_asock) && (((Sock *)m_asock)->get_file_desc() > 0)) {
+				delete m_asock;
+				m_asock = NULL;
+			}
+		
 		} else {
 			m_sock->decode();
 			m_sock->end_of_message();
