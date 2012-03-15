@@ -41,6 +41,8 @@
 #include "condor_vm_universe_types.h"
 #include "authentication.h"
 #include "condor_mkstemp.h"
+#include "globus_utils.h"
+
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -100,6 +102,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 	syscall_sock = (ReliSock *)socks[0];
 	socks++;
 
+	m_proxy_expiration_tid = -1;
+
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
 		   call, leaving the shadow blocked.  -Jim B. */
@@ -111,6 +115,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 
 JICShadow::~JICShadow()
 {
+	if( m_proxy_expiration_tid != -1 ){
+		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+	}
 	if( shadow ) {
 		delete shadow;
 	}
@@ -1701,8 +1708,32 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		dprintf(D_ALWAYS,
 		        "Attempt to refresh X509 proxy FAILED.\n");
 	}
-	
+
 	return reply;
+}
+
+int
+JICShadow::proxyExpiring()
+{
+	// we log the return value, but even if it failed we still try to clean up
+	// because we are about to lose control of the job otherwise.
+	bool rv = holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
+	dprintf(D_ALWAYS, "ZKM: ABOUT TO HOLD, rv == %i\n", rv);
+
+	// this will actually clean up the job
+	if ( Starter->Hold( ) ) {
+		dprintf( D_FULLDEBUG, "ZKM: Hold() returns true\n" );
+		this->allJobsDone();
+	} else {
+		dprintf( D_FULLDEBUG, "ZKM: Hold() returns false\n" );
+	}
+
+	// and this causes us to exit relatively cleanly.  it tries to communicate
+	// with the shadow, which fails, but i'm not sure what to do about that.
+	bool sd = Starter->ShutdownFast();
+	dprintf(D_ALWAYS, "ZKM: STILL HERE, sd == %i\n", sd);
+
+	return 0;
 }
 
 bool
@@ -1722,7 +1753,47 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		return false;
 	}
 	const char * proxyfilename = condor_basename(path.Value());
-	return ::updateX509Proxy(cmd, s, proxyfilename);
+
+	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
+
+	// now, if the update was successful, and we are using glexec, make sure we
+	// set a timer to put the job on hold before the proxy expires and we lose
+	// control of it.
+#if defined(LINUX)
+	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
+#else
+	// dummy for non-linux platforms.
+	int* gpsh = NULL;
+#endif
+	if(retval && gpsh) {
+		// if there was a timer registered, cancel it
+		if( m_proxy_expiration_tid != -1 ) {
+			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+			m_proxy_expiration_tid = -1;
+		}
+
+		// for the new timer, start with the payload proxy expiration time
+		time_t expiration = x509_proxy_expiration_time(path.Value());
+		time_t now = time(NULL);
+
+		// now subtract the configurable time allowed for eviction
+		// years of careful research show the default should be one minute.
+		int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
+		time_t expiration_delta = (expiration - now) - evict_window;
+
+		m_proxy_expiration_tid = daemonCore->Register_Timer(
+			expiration_delta,
+			(TimerHandlercpp)&JICShadow::proxyExpiring,
+			"proxy expiring",
+			this );
+		if (m_proxy_expiration_tid > 0) {
+			dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %i\n", m_proxy_expiration_tid, (int)expiration);
+		} else {
+			dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
+		}
+	}
+
+	return retval;
 }
 
 
