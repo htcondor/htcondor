@@ -128,7 +128,6 @@ VirshType::Start()
 			vmprintf(D_ALWAYS, "Succeeded to restart with checkpointed files\n");
 
 			// Here we manually update timestamp of all writable disk files
-			updateAllWriteDiskTimestamp(time(NULL));
 			m_start_time.getTime();
 			return true;
 		}else {
@@ -175,7 +174,6 @@ VirshType::Start()
 	m_cpu_time = 0;
 
 	// Here we manually update timestamp of all writable disk files
-	updateAllWriteDiskTimestamp(time(NULL));
 	return true;
 }
 
@@ -1127,23 +1125,6 @@ VirshType::updateLocalWriteDiskTimestamp(time_t timestamp)
 	}
 }
 
-void
-VirshType::updateAllWriteDiskTimestamp(time_t timestamp)
-{
-	struct utimbuf timewrap;
-
-	XenDisk *vdisk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(vdisk) ) {
-		if( !strcasecmp(vdisk->permission.Value(), "w") ||
-				!strcasecmp(vdisk->permission.Value(), "rw")) {
-			// This is a writable disk
-			timewrap.actime = timestamp;
-			timewrap.modtime = timestamp;
-			utime(vdisk->filename.Value(), &timewrap);
-		}
-	}
-}
 
 bool
 VirshType::createCkptFiles(void)
@@ -1185,7 +1166,6 @@ VirshType::createCkptFiles(void)
 			return false;
 		}
 		fclose(fp);
-		updateAllWriteDiskTimestamp(current_time);
 
 		// checkpoint succeeds
 		m_is_checkpointed = true;

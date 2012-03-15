@@ -23,6 +23,7 @@
 #include "condor_email.h"
 #include "basename.h"
 #include "condor_config.h"
+#include <string>
 
 /* MAX_LINES is the max number of lines we can tail */
 #define MAX_LINES 1024 
@@ -113,9 +114,14 @@ email_asciifile_tail( FILE* output, const char* file, int lines )
 	}		
 
 	if( (input=safe_fopen_wrapper_follow(file,"r",0644)) == NULL ) {
-		dprintf( D_FULLDEBUG, 
-			"Failed to email %s: cannot open file\n", file );
+	    // try the .old file in the off shoot case we hit this during the transition.
+	    std::string szTmp = file;
+	    szTmp += ".old"; 
+	    
+	    if( (input=safe_fopen_wrapper_follow(szTmp.c_str(),"r",0644)) == NULL ) {
+		dprintf( D_FULLDEBUG, "Failed to email %s: cannot open file\n", file );
 		return;
+	    }
 	}
 
 	init_queue( q, lines );
