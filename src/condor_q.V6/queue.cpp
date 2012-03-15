@@ -3152,13 +3152,13 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	}
 	if (last_rej_match_time > last_match_time) {
 		time_t t = (time_t)last_rej_match_time;
-		sprintf( return_buff, "%s\tLast failed match: %s",
-				 return_buff, ctime(&t) );
-		buffer[0] = '\0';
-		request->LookupString(ATTR_LAST_REJ_MATCH_REASON, buffer);
-		if (buffer[0]) {
-			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
-					 return_buff, buffer );
+		string timestring(ctime(&t));
+		string rej_str="\tLast failed match: " + timestring + '\n';
+		strcat(return_buff, rej_str.c_str());
+		string rej_reason;
+		if (request->LookupString(ATTR_LAST_REJ_MATCH_REASON, rej_reason)) {
+			rej_str="\tReason for last match failure: " + rej_reason + '\n';
+			strcat(return_buff, rej_str.c_str());	
 		}
 	}
 
@@ -3200,9 +3200,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
     }
 
 	if( fOffConstraint == totalMachines ) {
-		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
-		sprintf( return_buff, "%s   Request %d.%d did not match any "
-			"resource's constraints\n\n", return_buff, cluster, proc);
+        strcat(return_buff, "\nWARNING:  Be advised:\n   Request did not match any resource's constraints\n");
 	}
 
     if (better_analyze) {
