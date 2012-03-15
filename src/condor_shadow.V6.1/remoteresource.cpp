@@ -2161,6 +2161,7 @@ RemoteResource::checkX509Proxy( void )
 		free(proxy_subject);
 	}
 
+#if defined(HAVE_EXT_GLOBUS)
 	// second, worry about the VOMS attributes, which may or may not be present
 	char * voname = NULL;
 	char * firstfqan = NULL;
@@ -2187,6 +2188,7 @@ RemoteResource::checkX509Proxy( void )
 			dprintf(D_SECURITY, "VOMS attributes were not found\n");
 		}
 	}
+#endif
 	shadow->updateJobInQueue(U_X509);
 
 	// Proxy file updated.  Time to upload
