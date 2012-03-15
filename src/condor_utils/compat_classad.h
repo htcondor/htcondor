@@ -32,7 +32,7 @@ class Stream;
 #ifndef classad_int64
 # ifdef WIN32
 # define classad_int64 __int64
-# elif defined(__x86_64__)
+# elif defined(__x86_64__) || defined(Darwin)
 # define classad_int64 long
 # else
 # define classad_int64 long long
@@ -204,7 +204,7 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,unsigned int value)
 	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
 
-#if ! defined __x86_64__ && ! defined WIN32
+#if ! defined __x86_64__ && ! defined WIN32 && ! defined Darwin
 	int Assign(char const *name,long value) // TJ: fix for int64 classad
 	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
 #endif

@@ -30,7 +30,7 @@
 # ifdef WIN32
    typedef __int64 int64_t;
    typedef unsigned __int64 uint64_t;
-# elif defined (__x86_64__)
+# elif defined (__x86_64__) || defined(Darwin)
    typedef long int64_t;
    typedef unsigned long uint64_t;
 # else

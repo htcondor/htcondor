@@ -30,7 +30,7 @@
 #ifndef classad_int64
 # ifdef WIN32
 # define classad_int64 __int64
-# elif defined(__x86_64__)
+# elif defined(__x86_64__) || defined(Darwin)
 # define classad_int64 long
 # else
 # define classad_int64 long long
@@ -189,7 +189,7 @@ class Value
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
-		#if ! defined __x86_64__ && ! defined WIN32
+		#if ! defined __x86_64__ && ! defined WIN32 && ! defined Darwin
 		inline bool IsIntegerValue(long &i) const;
 		/** Checks if the value is integral.
 			@return true iff the value is an integer.
@@ -371,7 +371,7 @@ IsIntegerValue (int &i) const
     return (valueType == INTEGER_VALUE);
 }  
 
-#if ! defined __x86_64__ && ! defined WIN32
+#if ! defined __x86_64__ && ! defined WIN32 && ! defined Darwin
 inline bool Value::
 IsIntegerValue (long &i) const
 {
