@@ -191,7 +191,6 @@ private:
 	std::string m_ip;
 };
 
-bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices);
 bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices);
 
 void sysapi_clear_network_device_info_cache();
