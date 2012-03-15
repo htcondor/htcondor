@@ -103,6 +103,9 @@ get_min_queue () {
             min_queued=$max_queued
         fi
     done < $CLUSTERLIST_LOCATION
+    if [ $detected == 0 ]; then
+        min_queued=10
+    fi
     echo $min_queued
     return $min_queued
 
