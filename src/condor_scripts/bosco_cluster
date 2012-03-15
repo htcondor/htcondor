@@ -75,6 +75,37 @@ check_cluster_list () {
     fi
 }
 
+add_cluster_to_list () {
+    # $1 = cluster to add
+    # $2 = max queued setting of cluster
+    # Remove the host, and readd
+    remote_host=$1
+    max_queued=$2
+    check_cluster_list $remote_host
+    if [ $? -eq 0 ]; then
+        tmpfile=`mktemp`
+        sed "/entry=$remote_host max_queued=.*/d" $CLUSTERLIST_LOCATION > tmpfile
+        mv tmpfile $CLUSTERLIST_LOCATION
+    fi
+
+    echo "entry=$remote_host max_queued=$max_queued" >> $CLUSTERLIST_LOCATION
+
+}
+
+get_min_queue () {
+    # Should we do this in awk? ugh, ok
+    min_queued=10000
+    while read line; do
+        max_queued=`expr "$line" : ".*max_queued=\([0-9]*\)"`
+        if [ $max_queued -lt $min_queued -a $max_queued -ne -1 ]; then
+            min_queued=$max_queued
+        fi
+    done < $CLUSTERLIST_LOCATION
+    echo $min_queued
+    return $min_queued
+
+}
+
 
 stop_ssh () {
     # Shut down ssh-agent
@@ -279,17 +310,20 @@ if [ $? -ne 0 ]; then
 fi
 
 # Get the queue information
-qmgr_out=`ssh remote_host "qmgr -c 'print server'" 2>/dev/null`
+echo -n "Detecting cluster configuration..."
+qmgr_out=`ssh $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
 
 # Get the default queue
 default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
 
 # Get the max queued for the queue default_queue
 max_queued=`expr "$qmgr_out" : ".*set queue $default_queue max_user_queuable = \([0-9]*\).*"`
-if [ $max_queued == "" ]; then
+if [ "x$max_queued" == "x" ]; then
     max_queued=-1
 fi
-echo "Found max queue to be $max_queued"
+
+echo "Done!"
+
 
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
@@ -311,10 +345,15 @@ rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 
 # Add the cluster to the cluster list
-if [ $reinstall -eq 0 ]; then
-    echo $remote_host >> $CLUSTERLIST_LOCATION
-fi
+add_cluster_to_list $remote_host $max_queued
 
 echo "Installation complete"
 
 stop_ssh
+
+# Configure condor
+min_queue_size=`get_min_queue`
+echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> `condor_config_val LOCAL_CONFIG_FILE`
+
+
+
