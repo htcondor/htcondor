@@ -353,7 +353,11 @@ stop_ssh
 
 # Configure condor
 min_queue_size=`get_min_queue`
-echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> `condor_config_val LOCAL_CONFIG_FILE`
-
+tmpfile=`mktemp`
+condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
+sed "/GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE.*/d" $condor_config_file > $tmpfile
+echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> $tmpfile
+mv $tmpfile $condor_config_file
+condor_reconfig
 
 
