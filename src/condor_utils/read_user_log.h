@@ -23,13 +23,26 @@
 
 #if defined(__cplusplus)
 
+// need this for int64_t, this includes sys/types
+#include <condor_sys_types.h>
+// why doesnt' the above work when building condor_userlog_job_counter.cpp???
+#ifndef HAVE_INT64_T
+# ifdef WIN32
+   typedef __int64 int64_t;
+   typedef unsigned __int64 uint64_t;
+# elif defined (__x86_64__)
+   typedef long int64_t;
+   typedef unsigned long uint64_t;
+# else
+   typedef long long int64_t;
+   typedef unsigned long long uint64_t;
+# endif
+# define HAVE_INT64_T 1
+#endif
+
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 #include "condor_event.h"
-
-#ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-#endif
 
 /* Predeclare some classes */
 class FileLockBase;

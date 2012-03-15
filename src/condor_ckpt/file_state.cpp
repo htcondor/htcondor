@@ -219,6 +219,17 @@ void CondorFileTable::set_aggravate_mode( int on_off )
 	aggravate_mode = on_off;
 }
 
+/* This function presumes that init() has been called.  A proper class
+   initializer could force working_dir to be NULL (or a valid pointer),
+   but I'm loathe to make random changes this deep in the standard
+   universe code. */
+void CondorFileTable::set_working_dir( char * dir )
+{
+    ASSERT( dir != NULL );
+    free( working_dir );
+    working_dir = strdup( dir );
+}
+
 void CondorFileTable::dump()
 {
 	CondorFilePointer *p;

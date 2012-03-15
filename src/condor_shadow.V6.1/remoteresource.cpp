@@ -75,7 +75,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	exit_value = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
 	disk_usage = 0;
-	image_size = 0;
+	image_size_kb = 0;
+	memory_usage_mb = -1;
+	proportional_set_size_kb = -1;
 	state = RR_PRE;
 	began_execution = false;
 	supports_reconnect = false;
@@ -983,6 +985,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 		// image size hasn't changed at all...
 
 	int int_value;
+	int64_t int64_value;
 	float float_value;
 
 	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
@@ -993,9 +996,22 @@ RemoteResource::setJobAd( ClassAd *jA )
 		remote_rusage.ru_utime.tv_sec = (int) float_value; 
 	}
 
-	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
-		image_size = int_value;
+	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
+		image_size_kb = int64_value;
 	}
+
+	if( jA->LookupInteger(ATTR_MEMORY_USAGE, int64_value) ) {
+		memory_usage_mb = int64_value;
+	}
+
+	if( jA->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
+		remote_rusage.ru_maxrss = int_value;
+	}
+
+	if( jA->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int64_value) ) {
+		proportional_set_size_kb = int64_value;
+	}
+
 			
 	if( jA->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
@@ -1028,6 +1044,7 @@ void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
+	int64_t int64_value;
 	float float_value;
 	MyString string_value;
 
@@ -1050,10 +1067,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, float_value);
 	}
 
-	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
-		if( int_value > image_size ) {
-			image_size = int_value;
-			jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
+	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
+		if( int64_value > image_size_kb ) {
+			image_size_kb = int64_value;
+			jobAd->Assign(ATTR_IMAGE_SIZE, image_size_kb);
 		}
 	}
 
@@ -1063,16 +1080,18 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
-		int rss = 0;
+		int rss = remote_rusage.ru_maxrss;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
+			remote_rusage.ru_maxrss = int_value;
 			jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
 		}
 	}
 
-	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int_value) ) {
-		int pss = 0;
-		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < int_value ) {
-			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int_value);
+	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int64_value) ) {
+		int64_t pss = proportional_set_size_kb;
+		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < int64_value ) {
+			proportional_set_size_kb = int64_value;
+			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int64_value);
 		}
 	}
 
@@ -1185,6 +1204,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			}
 				// record the new state
 			setResourceState( new_state );
+		}
+	}
+
+	classad::Value val;
+	if (jobAd->EvaluateAttr(ATTR_MEMORY_USAGE, val)) {
+		classad_int64 cint64_value;
+		if (val.IsIntegerValue(cint64_value)) { // TJ: fix for int64 classad
+			memory_usage_mb = cint64_value;
 		}
 	}
 

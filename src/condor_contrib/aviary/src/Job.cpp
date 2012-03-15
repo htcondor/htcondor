@@ -593,7 +593,7 @@ void Job::decrementSubmission() {
 void
 Job::updateSubmission ( int cluster, const char* owner )
 {
-	OwnerlessSubmissionType::const_iterator it = g_ownerless_submissions.find ( cluster );
+	SubmissionIndexType::const_iterator it = g_ownerless_submissions.find ( cluster );
 	if ( g_ownerless_submissions.end() != it ) {
 		SubmissionObject* submission = (*it).second;
 		submission->setOwner(owner);
@@ -638,8 +638,12 @@ Job::setSubmission ( const char* _subName, int cluster )
 		g_ownerless_submissions[cluster] = m_submission;
 	}
 
-	// finally update the overall submission qdate
-	m_submission->setOldest(this->getQDate());
+	// update the overall submission qdate
+	int qdate = this->getQDate();
+	m_submission->setOldest(qdate);
+	
+	// update our qdate index collection
+	g_qdate_submissions.insert(make_pair(qdate,submission));
 
 }
 

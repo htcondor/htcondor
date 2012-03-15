@@ -1048,6 +1048,9 @@ sub CreateLocalConfig
 	print FIX "MAX_MASTER_LOG          = $logsize\n";
 	print FIX "MASTER_DEBUG            = D_COMMAND\n";
 
+	print FIX "EVENT_LOG               = \$(LOG)/EventLog\n";
+	print FIX "EVENT_LOG_MAX_SIZE      = $logsize\n";
+
 	if($iswindows == 1) {
 		print FIX "WINDOWS_SOFTKILL_LOG = \$(LOG)\\SoftKillLog\n";
 	}

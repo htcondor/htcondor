@@ -245,7 +245,7 @@ private:
 	char*			m_opsys_and_ver;
 	int			m_opsys_major_ver;
 	char*			m_opsys_name;
-	char*			m_opsys_distro;
+	char*			m_opsys_long_name;
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages

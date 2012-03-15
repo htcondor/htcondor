@@ -90,8 +90,8 @@ const char* sysapi_uname_opsys(void);
 const char* sysapi_opsys_versioned(void);
         int sysapi_opsys_version(void);
 const char* sysapi_opsys_name(void);
+const char* sysapi_opsys_long_name(void);
         int sysapi_opsys_major_version(void);
-const char* sysapi_opsys_distro(void);
 
 // temporary attributes for raw utsname info
 const char* sysapi_utsname_sysname(void);
@@ -112,21 +112,21 @@ void sysapi_test_dump_internal_vars(void);
 void sysapi_test_dump_functions(void);
 
 /* tranlate between uname-type or LDAP entry values and Condor values */
-const char *sysapi_translate_arch( const char *machine,
-								   const char *sysname );
-const char *sysapi_translate_opsys( const char *sysname,
-									const char *release,
-									const char *version,
-                                    int         append_version);
-int sysapi_translate_opsys_version( const char *sysname,
-									const char *release,
-									const char *version);
-/* Linux specific params for opsys */
-const char * sysapi_get_distro_info(void);
-const char * sysapi_find_distro( const char *opsys_name );
-int sysapi_distro_major_version( const char *opsys_name );
-const char * sysapi_distro_versioned( const char *opsys_name, int opsys_major_version );
+const char *sysapi_translate_arch( const char *machine, const char *sysname );
 
+/* Generic methods for opsys params */ 
+const char * sysapi_find_opsys_versioned( const char *opsys_short_name, int opsys_major_version );
+int sysapi_translate_opsys_version( const char *opsys_long_name );
+int sysapi_find_major_version( const char *opsys_long_name );
+
+/* OS-specific methods for opsys params */
+const char * sysapi_get_darwin_info(void);  
+int sysapi_find_darwin_major_version( const char *opsys_long_name );
+const char * sysapi_find_darwin_opsys_name( int opsys_major_version );
+const char * sysapi_get_bsd_info(const char *opsys_short_name, const char *release); 
+const char * sysapi_get_linux_info(void);
+const char * sysapi_find_linux_name( const char *opsys_long_name );
+const char * sysapi_get_unix_info( const char *sysname, const char *release, const char *version, int append_version );
 
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );

@@ -34,9 +34,9 @@
 #include <string.h>
 #include <ctype.h>
 
-
 #if defined(Darwin)
 #include <sys/sysctl.h>
+#include "my_popen.h"
 #endif
 
 /* ok, here's the deal with these. For some reason, gcc on IRIX is just old
@@ -164,13 +164,15 @@ static int arch_inited = FALSE;
 static int utsname_inited = FALSE;
 static const char* arch = NULL;
 static const char* uname_arch = NULL;
+static const char* uname_opsys = NULL;
+
 static const char* opsys = NULL;
 static const char* opsys_versioned = NULL;
-static const char* uname_opsys = NULL;
 static int opsys_version = 0;
 static const char* opsys_name = NULL;
+static const char* opsys_long_name = NULL;
+static const char* opsys_short_name = NULL;
 static int opsys_major_version = 0;
-static const char* opsys_distro = NULL;
 
 // temporary attributes for raw utsname info
 static const char* utsname_sysname = NULL;
@@ -245,87 +247,243 @@ init_arch(void)
 		EXCEPT( "Out of memory!" );
 	}
 
-	arch = sysapi_translate_arch( buf.machine, buf.sysname );
+	// 02-14-2012 bgietzel
+	// New section for determining OpSys related params
+	// Find values for MacOS, BSD, Linux, then everything else (Unix)
+	// Windows params are set earlier in this code 
 
-	// Changes for Linux attrs
-	// OpSys =       "LINUX" ==> "LINUX"
-	// OpSysAndVer = "LINUX" ==> "RedHat5"
-	// OpSysVer =        206 ==> "501"
-	// OpSysName =       N/A ==> "Red Hat 5.1"
-	// OpSysMajorVer =   N/A ==> "5"
-	// OpSysDistro =     N/A ==> "RedHat"
+	// Param Changes 
+	// NAME             OLD  ==>  Linux        | BSD          | UNIX
+	// ----------------------------------------------------------
+	// OpSys =       "LINUX" ==> "LINUX"       | OSX          | AIX
+	// OpSysAndVer = "LINUX" ==> "RedHat5"     | MacOS107     | AIX53  // opsys_versioned
+	// OpSysVer =        206 ==> "501"         | 1007         | 503    // opsys_version
+	// OpSysLongName =   N/A ==> "Red Hat 5.1" | MACOS 10.7.2 | AIX 5.3 
+	// OpSysMajorVer =   N/A ==> "5"           | 7            | 5
+	// OpSysName(dist) = N/A ==> "RedHat"      | Lion         | AIX
+
+
+#if defined( Darwin )
+
+	opsys = strdup( "OSX" );
+	opsys_short_name = strdup( "MacOS" );
+	opsys_long_name = sysapi_get_darwin_info();  
+	opsys_major_version = sysapi_find_darwin_major_version( opsys_long_name );
+	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_major_version );
+	opsys_version = sysapi_translate_opsys_version( opsys_long_name );
+	opsys_name = sysapi_find_darwin_opsys_name( opsys_major_version );
+	
+#elif defined( CONDOR_FREEBSD )
+
+	opsys = strdup( "FREEBSD" );
+	opsys_name = strdup ( opsys );
+ 	opsys_short_name = strdup( "FreeBSD" );
+	opsys_long_name = sysapi_get_bsd_info( opsys_short_name, buf.release ); 
+	opsys_major_version = sysapi_find_major_version( buf.release );
+	opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
+	opsys_version = sysapi_translate_opsys_version( buf.release );
+#else
 
 	if( !strcasecmp(uname_opsys, "linux") )
         {
-          	opsys_name = sysapi_get_distro_info();
-                opsys = strdup( "LINUX" );
-                opsys_distro = sysapi_find_distro( opsys_name );
-                opsys_major_version = sysapi_distro_major_version( opsys_name );
-                opsys_version = sysapi_translate_opsys_version( opsys_name, opsys_name, opsys_name );
-                opsys_versioned = sysapi_distro_versioned( opsys, opsys_major_version );
+		opsys = strdup( "LINUX" );
+		opsys_short_name = strdup( "Linux" );
+		opsys_long_name = sysapi_get_linux_info();
+		opsys_name = sysapi_find_linux_name( opsys_long_name );
+		opsys_major_version = sysapi_find_major_version( opsys_long_name );
+		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
+		opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
 
      	} else
         {
-                opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
-                opsys_versioned = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, true );
-                opsys_version = sysapi_translate_opsys_version( buf.sysname, buf.release, buf.version );
+		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
+		opsys = strdup( opsys_long_name );
+		opsys_major_version = sysapi_find_major_version( opsys_long_name );
+		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
+		opsys_versioned = sysapi_find_opsys_versioned( opsys, opsys_major_version );
+		opsys_name = strdup( opsys );
+		opsys_short_name = strdup( opsys );
         }
+
+#endif
 
         if (!opsys) {
                 opsys = strdup("Unknown");
         }
+        if (!opsys_name) {
+                opsys_name = strdup("Unknown");
+        }
+        if (!opsys_short_name) {
+                opsys_short_name = strdup("Unknown");
+        }
+        if (!opsys_long_name) {
+                opsys_long_name = strdup("Unknown");
+        }
         if (!opsys_versioned) {
                 opsys_versioned = strdup("Unknown");
         }
+
+	// Print out param values to the logfiles for debugging
+	dprintf(D_FULLDEBUG, "OpSysMajorVersion:  %d \n", opsys_major_version);
+	dprintf(D_FULLDEBUG, "OpSysShortName:  %s \n", opsys_short_name);
+	dprintf(D_FULLDEBUG, "OpSysLongName:  %s \n", opsys_long_name);
+	dprintf(D_FULLDEBUG, "OpSysAndVer:  %s \n", opsys_versioned);
+	dprintf(D_FULLDEBUG, "OpSysName:  %s \n", opsys_name);
+	dprintf(D_FULLDEBUG, "OpSysVer:  %d \n", opsys_version);
+	dprintf(D_FULLDEBUG, "OpSys:  %s \n", opsys);
+
+	// Now find the arch
+	arch = sysapi_translate_arch( buf.machine, buf.sysname );
 
 	if ( arch && opsys ) {
 		arch_inited = TRUE;
 	}
 }
 
-const char *
-sysapi_get_distro_info(void)
+// Darwin (MacOS) methods
+#if defined( Darwin )
+const char * 
+sysapi_get_darwin_info(void)
 {
+    char ver_str[255];
+    char *args[] = {"/usr/bin/sw_vers", "-productVersion", NULL};
+    FILE *output_fp;
+
+    char tmp_info[262];
+    char *info_str;
+    char *os_name = "MACOS ";
+ 
+    if ((output_fp = my_popenv(args, "r", FALSE)) != NULL) {
+	fgets(ver_str, 255, output_fp);
+	my_pclose(output_fp);
+    } else 
+    {
+	info_str = strdup( "Unknown" );
+    }
+
+    sprintf( tmp_info, "%s%s", os_name, ver_str);
+    info_str = strdup( tmp_info );
+
+    if( !info_str ) {
+    	EXCEPT( "Out of memory!" );
+    }
+
+    return info_str;
+}
+
+int
+sysapi_find_darwin_major_version( const char *tmp_opsys_long_name )
+{
+    	const char * ver_str = tmp_opsys_long_name;
+
+	// In the case where something fails above and verstr = Unknown, return 0
+	if ( !strcmp(ver_str, "Unknown") ){
+		return 0;
+	}
+
+    	// skip any leading non-digits.
+   	while (ver_str[0] && (ver_str[0] < '0' || ver_str[0] > '9')) { 
+       		++ver_str;
+  	}
+
+	int ten = 0, major = 0, minor = 0;
+	int fields = sscanf(ver_str, "%d.%d.%d", &ten, &major, &minor);
+	if ((fields != 3) || ten != 10) {
+		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
+	}
+	return major;
+}
+
+const char *
+sysapi_find_darwin_opsys_name( int tmp_opsys_major_version )
+{
+	int vers = tmp_opsys_major_version;
+        const char *osname = NULL;
+
+	const char * versions[] = {
+		"Leopard",             // 5
+		"SnowLeopard",         // 6	
+		"Lion",                // 7
+		"MountainLion",        // 8 
+	};
+
+        if (vers >= 5 && (vers-5) < (int)COUNTOF(versions)) {
+		osname = strdup(versions[vers-5]);
+        } else {
+		osname = strdup("Unknown");
+	}
+        if ( !osname) {  
+		EXCEPT( "Out of memory!" );
+	}
+
+	return osname;
+}
+
+#elif defined( CONDOR_FREEBSD )
+// BSD methods
+const char * 
+sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release) 
+{
+    char tmp_info[strlen(tmp_opsys_short_name) + 1 + 10];
+    char *info_str;
+
+    sprintf( tmp_info, "%s%s", tmp_opsys_short_name, tmp_release);
+    info_str = strdup( tmp_info );
+
+    if( !info_str ) {
+    	EXCEPT( "Out of memory!" );
+    }
+
+    return info_str;
+}
+#endif
+
+// Linux methods
+const char *
+sysapi_get_linux_info(void)
+{
+        char* info_str;
         FILE *my_fp;
-        char* distro_str;
         const char * etc_issue_path = "/etc/issue";
 
         // read the first line only
         my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
         if ( my_fp != NULL ) {
-			char tmp_str[200] = {0};
-			char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
-			if (ret == 0) {
-				fclose(my_fp);
-				return NULL;
-			}
-			fclose(my_fp);
+		char tmp_str[200] = {0};
+		char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
+		if (ret == 0) {
+	        	dprintf(D_FULLDEBUG, "Result of reading /etc/issue:  %s \n", ret);
+			strcpy( tmp_str, "Unknown" );			
+		}
+		fclose(my_fp);
 
 		int len = strlen(tmp_str);
-		if( tmp_str[len-1] == '\n' )
-		{
-    			tmp_str[len-1] = 0;
+		if ( len > 0 ) {
+			if( tmp_str[len-1] == '\n' )
+			{
+    				tmp_str[len-1] = 0;
+			}
 		}
-		distro_str = strdup( tmp_str );
+		info_str = strdup( tmp_str );
         } else 
 	{
-		distro_str = strdup( "Unknown" );
+		info_str = strdup( "Unknown" );
 	}
   
-	if( !distro_str ) {
+	if( !info_str ) {
                	EXCEPT( "Out of memory!" );
        	}
 
-        return distro_str;
+        return info_str;
 }
 
 const char *
-sysapi_find_distro( const char *distro_name )
+sysapi_find_linux_name( const char *info_str )
 {
 	char* distro;
+        char* distro_name_lc = strdup( info_str );
 
-	char* distro_name_lc = strdup( distro_name );
-	int i = 0;
+        int i = 0;
         char c;
         while (distro_name_lc[i])
         {
@@ -358,9 +516,21 @@ sysapi_find_distro( const char *distro_name )
         {
                 distro = strdup("ScientificLinuxFermi");
         }
+   	else if ( strstr(distro_name_lc, "scientific") )
+        {
+                distro = strdup("ScientificLinux");
+        }
         else if ( strstr(distro_name_lc, "centos") )
         {
                 distro = strdup("CentOS");
+        }  
+        else if ( strstr(distro_name_lc, "opensuse") )
+        {
+                distro = strdup("openSUSE");
+	}
+        else if ( strstr(distro_name_lc, "suse") )
+        {
+                distro = strdup("SUSE");
         } else 
 	{
                 distro = strdup("LINUX");
@@ -372,10 +542,111 @@ sysapi_find_distro( const char *distro_name )
 	return distro;
 }
 
-int 
-sysapi_distro_major_version ( const char *distro_name ) 
+// Unix methods
+const char *
+sysapi_get_unix_info( const char *sysname,
+			const char *release,
+			const char *version,
+                        int         append_version)
 {
-    	const char * verstr = distro_name;
+	char tmp[64];
+	char ver[24];
+	const char * pver="";
+	char *tmpopsys;
+
+	// Get OPSYS
+	if( !strcmp(sysname, "SunOS")
+		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
+	{
+        sprintf( tmp, "SOLARIS" );
+		if ( !strcmp(release, "2.11") //LDAP entry
+			|| !strcmp(release, "5.11") )
+		{
+			pver = "211";
+		}
+		if ( !strcmp(release, "2.10") //LDAP entry
+			|| !strcmp(release, "5.10") )
+		{
+			pver = "210";
+		}
+		else if ( !strcmp(release, "2.9") //LDAP entry
+			|| !strcmp(release, "5.9") )
+		{
+			pver = "29";
+		}
+		else if ( !strcmp(release, "2.8") //LDAP entry
+			|| !strcmp(release, "5.8") )
+		{
+			pver = "28";
+		}
+		else if ( !strcmp(release, "2.7") //LDAP entry
+			|| !strcmp(release, "5.7") )
+		{
+			pver = "27";
+		}
+		else if( !strcmp(release, "5.6")
+			||  !strcmp(release, "2.6") ) //LDAP entry
+		{
+			pver = "26";
+		}
+		else if ( !strcmp(release, "5.5.1")
+			|| !strcmp(release, "2.5.1") ) //LDAP entry
+		{
+			pver = "251";
+		}
+		else if ( !strcmp(release, "5.5")
+			|| !strcmp(release, "2.5") ) //LDAP entry
+		{
+			pver = "25";
+		}
+		else {
+            pver = release;
+		}
+	}
+
+	else if( !strcmp(sysname, "HP-UX") ) {
+        sprintf( tmp, "HPUX" );
+		if( !strcmp(release, "B.10.20") ) {
+			pver = "10";
+		}
+		else if( !strcmp(release, "B.11.00") ) {
+			pver = "11";
+		}
+		else if( !strcmp(release, "B.11.11") ) {
+			pver = "11";
+		}
+		else {
+			pver = release;
+		}
+	}
+	else if ( !strncmp(sysname, "AIX", 3) ) {
+        sprintf(tmp, "%s", sysname);
+		if ( !strcmp(version, "5") ) {
+			sprintf(ver, "%s%s", version, release);
+            pver = ver;
+		}
+	}
+	else {
+			// Unknown, just use what uname gave:
+		sprintf( tmp, "%s", sysname);
+        pver = release;
+	}
+        if (append_version && pver) {
+            strcat( tmp, pver );
+        }
+
+	tmpopsys = strdup( tmp );
+	if( !tmpopsys ) {
+		EXCEPT( "Out of memory!" );
+	}
+	return( tmpopsys );
+}
+
+// generic methods
+int 
+sysapi_find_major_version ( const char *info_str ) 
+{
+    	const char * verstr = info_str;
     	int major = 0;
 
 	// In the case where something fails above and verstr = Unknown, return 0
@@ -403,20 +674,67 @@ sysapi_distro_major_version ( const char *distro_name )
 }
 
 const char *
-sysapi_distro_versioned( const char *tmp_opsys, int tmp_opsys_major_version )
+sysapi_find_opsys_versioned( const char *tmp_opsys, int tmp_opsys_major_version )
 {
-        char tmp_distro_versioned[strlen(tmp_opsys) + 1 + 10];
-        char *distro_versioned;
+        char tmp_opsys_versioned[strlen(tmp_opsys) + 1 + 10];
+        char *my_opsys_versioned;
 
-        sprintf( tmp_distro_versioned, "%s%d", tmp_opsys, tmp_opsys_major_version);
+        sprintf( tmp_opsys_versioned, "%s%d", tmp_opsys, tmp_opsys_major_version);
 
-	distro_versioned = strdup( tmp_distro_versioned );
-        if( !distro_versioned ) {
+	my_opsys_versioned = strdup( tmp_opsys_versioned );
+        if( !my_opsys_versioned ) {
                 EXCEPT( "Out of memory!" );
         }
-        return distro_versioned;
+        return my_opsys_versioned;
 }
 
+int
+sysapi_translate_opsys_version ( const char *info_str)
+{
+    const char * psz = info_str;
+    int major = 0;
+
+    // In the case where release == Unknown, return 0
+    if ( !strcmp(psz, "Unknown") ){
+	return major;
+    }
+
+    // skip any leading non-digits.
+    while (psz[0] && (psz[0] < '0' || psz[0] > '9')) {
+       ++psz;
+    }
+
+    // parse digits until the first non-digit as the
+    // major version number.
+    //
+    while (psz[0]) {
+        if (psz[0] >= '0' && psz[0] <= '9') {
+            major = major * 10 + (psz[0] - '0');
+        } else {
+           break;
+        }
+        ++psz;
+    }
+
+    // if the major version number ended with '.' parse
+    // at most 2 more digits as the minor version number.
+    //
+    int minor = 0;
+    if (psz[0] == '.') {
+       ++psz;
+       if (psz[0] >= '0' && psz[0] <= '9') {
+          minor = psz[0] - '0';
+          ++psz;
+       }
+       if (psz[0] >= '0' && psz[0] <= '9') {
+          minor = minor * 10 + psz[0] - '0';
+       }
+    }
+
+    return (major * 100) + minor;
+}
+
+// find arch 
 const char *
 sysapi_translate_arch( const char *machine, const char *)
 {
@@ -533,160 +851,6 @@ sysapi_translate_arch( const char *machine, const char *)
 #endif /* if HPUX else */
 }
 
-const char *
-sysapi_translate_opsys( const char *sysname,
-			const char *release,
-			const char *version,
-                        int         append_version)
-{
-	char tmp[64];
-	char ver[24];
-	const char * pver="";
-	char *tmpopsys;
-
-	// Get OPSYS
-	if( !strcmp(sysname, "SunOS")
-		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
-	{
-        sprintf( tmp, "SOLARIS" );
-		if ( !strcmp(release, "2.10") //LDAP entry
-			|| !strcmp(release, "5.10") )
-		{
-			pver = "210";
-		}
-		else if ( !strcmp(release, "2.9") //LDAP entry
-			|| !strcmp(release, "5.9") )
-		{
-			pver = "29";
-		}
-		else if ( !strcmp(release, "2.8") //LDAP entry
-			|| !strcmp(release, "5.8") )
-		{
-			pver = "28";
-		}
-		else if ( !strcmp(release, "2.7") //LDAP entry
-			|| !strcmp(release, "5.7") )
-		{
-			pver = "27";
-		}
-		else if( !strcmp(release, "5.6")
-			||  !strcmp(release, "2.6") ) //LDAP entry
-		{
-			pver = "26";
-		}
-		else if ( !strcmp(release, "5.5.1")
-			|| !strcmp(release, "2.5.1") ) //LDAP entry
-		{
-			pver = "251";
-		}
-		else if ( !strcmp(release, "5.5")
-			|| !strcmp(release, "2.5") ) //LDAP entry
-		{
-			pver = "25";
-		}
-		else {
-            pver = release;
-		}
-	}
-
-	else if( !strcmp(sysname, "HP-UX") ) {
-        sprintf( tmp, "HPUX" );
-		if( !strcmp(release, "B.10.20") ) {
-			pver = "10";
-		}
-		else if( !strcmp(release, "B.11.00") ) {
-			pver = "11";
-		}
-		else if( !strcmp(release, "B.11.11") ) {
-			pver = "11";
-		}
-		else {
-			pver = release;
-		}
-	}
-	else if ( !strncmp(sysname, "Darwin", 6) ) {
-			//  there's no reason to differentiate across versions of
-			//  OSX, since jobs can freely run on any version, etc.
-		sprintf( tmp, "OSX");
-	}
-	else if ( !strncmp(sysname, "AIX", 3) ) {
-        sprintf(tmp, "%s", sysname);
-		if ( !strcmp(version, "5") ) {
-			sprintf(ver, "%s%s", version, release);
-            pver = ver;
-		}
-	}
-	else if ( !strncmp(sysname, "FreeBSD", 7) ) {
-			//
-			// Pull the major version # out of the release information
-			//
-		sprintf( tmp, "FREEBSD" );
-        sprintf( ver, "%c", release[0]);
-        pver = ver;
-	}
-	else {
-			// Unknown, just use what uname gave:
-		sprintf( tmp, "%s", sysname);
-        pver = release;
-	}
-    if (append_version && pver) {
-        strcat( tmp, pver );
-    }
-
-	tmpopsys = strdup( tmp );
-	if( !tmpopsys ) {
-		EXCEPT( "Out of memory!" );
-	}
-	return( tmpopsys );
-}
-
-int sysapi_translate_opsys_version( 
-    const char * /*sysname*/,
-	const char *release,
-	const char * /*version*/ )
-{
-    const char * psz = release;
-    int major = 0;
-
-    // In the case where retrieving distro info fails and release = Unknown, return 0
-    if ( !strcmp(psz, "Unknown") ){
-	return major;
-    }
-
-    // skip any leading non-digits.
-    while (psz[0] && (psz[0] < '0' || psz[0] > '9')) {
-       ++psz;
-    }
-
-    // parse digits until the first non-digit as the
-    // major version number.
-    //
-    while (psz[0]) {
-        if (psz[0] >= '0' && psz[0] <= '9') {
-            major = major * 10 + (psz[0] - '0');
-        } else {
-           break;
-        }
-        ++psz;
-    }
-
-    // if the major version number ended with '.' parse
-    // at most 2 more digits as the minor version number.
-    //
-    int minor = 0;
-    if (psz[0] == '.') {
-       ++psz;
-       if (psz[0] >= '0' && psz[0] <= '9') {
-          minor = psz[0] - '0';
-          ++psz;
-       }
-       if (psz[0] >= '0' && psz[0] <= '9') {
-          minor = minor * 10 + psz[0] - '0';
-       }
-    }
-
-    return (major * 100) + minor;
-}
 
 const char *
 sysapi_condor_arch(void)
@@ -762,12 +926,12 @@ sysapi_opsys_name(void)
 }
 
 const char *
-sysapi_opsys_distro(void)
+sysapi_opsys_long_name(void)
 {
 	if( ! arch_inited ) {
 		init_arch();
 	}
-	return opsys_distro;
+	return opsys_long_name;
 }
 
 // temporary attributes for raw utsname info

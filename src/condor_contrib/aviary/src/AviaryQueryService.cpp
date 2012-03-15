@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 Red Hat, Inc.
+ * Copyright 2009-2012 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,9 +101,11 @@
             AviaryQuery::GetJobDetailsResponse* ret_val4;
             AviaryQuery::GetJobDetails* input_val4;
 
-			AviaryQuery::GetJobSummaryResponse* ret_val5;
-            AviaryQuery::GetJobSummary* input_val5;
+            AviaryQuery::GetSubmissionIDResponse* ret_val5;
+            AviaryQuery::GetSubmissionID* input_val5;
             
+            AviaryQuery::GetJobSummaryResponse* ret_val6;
+            AviaryQuery::GetJobSummary* input_val6;
             
        
           msg_ctx = msgCtx->getAxis2MessageContext();
@@ -282,49 +284,90 @@
                     
 
                 }
+             
 
+                if ( axutil_strcmp(op_name, "getSubmissionID") == 0 )
+                {
+
+                    
+                    input_val5 =
+                        
+                        new AviaryQuery::GetSubmissionID();
+                        if( AXIS2_FAILURE ==  input_val5->deserialize(&content_node, NULL, false))
+                        {
+                                        
+                            AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryQuery::GetSubmissionID_deserialize: "
+                                        "This should be due to an invalid XML");
+                            return NULL;      
+                        }
+                        
+                        //AviaryQueryServiceSkeleton skel;
+                        ret_val5 =  skel->getSubmissionID(msgCtx ,input_val5);
+                    
+                        if ( NULL == ret_val5 )
+                        {
+                            
+                                delete input_val5;
+                            
+                            return NULL; 
+                        }
+                        ret_node = 
+                                            ret_val5->serialize(NULL, NULL, AXIS2_TRUE, NULL, NULL);
+                                            delete ret_val5;
+                                        
+                                            delete input_val5;
+                                        
+
+                        return new OMElement(NULL,ret_node);
+                    
+
+                    /* since this has no output params it just returns NULL */                    
+                    
+
+                }
+             
 
                 if ( axutil_strcmp(op_name, "getJobSummary") == 0 )
                 {
 
-
-                    input_val5 =
-
+                    
+                    input_val6 =
+                        
                         new AviaryQuery::GetJobSummary();
-                        if( AXIS2_FAILURE ==  input_val5->deserialize(&content_node, NULL, false))
+                        if( AXIS2_FAILURE ==  input_val6->deserialize(&content_node, NULL, false))
                         {
-
+                                        
                             AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
                             AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryQuery::GetJobSummary_deserialize: "
                                         "This should be due to an invalid XML");
-                            return NULL;
+                            return NULL;      
                         }
-
+                        
                         //AviaryQueryServiceSkeleton skel;
-                        ret_val5 =  skel->getJobSummary(msgCtx ,input_val5);
-
-                        if ( NULL == ret_val5 )
+                        ret_val6 =  skel->getJobSummary(msgCtx ,input_val6);
+                    
+                        if ( NULL == ret_val6 )
                         {
-
-                                delete input_val5;
-
-                            return NULL;
+                            
+                                delete input_val6;
+                            
+                            return NULL; 
                         }
-                        ret_node =
-                                            ret_val5->serialize(NULL, NULL, AXIS2_TRUE, NULL, NULL);
-                                            delete ret_val5;
-
-                                            delete input_val5;
-
+                        ret_node = 
+                                            ret_val6->serialize(NULL, NULL, AXIS2_TRUE, NULL, NULL);
+                                            delete ret_val6;
+                                        
+                                            delete input_val6;
+                                        
 
                         return new OMElement(NULL,ret_node);
+                    
 
-
-                    /* since this has no output params it just returns NULL */
-
+                    /* since this has no output params it just returns NULL */                    
+                    
 
                 }
-
              
              }
             

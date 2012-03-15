@@ -425,7 +425,7 @@ extern const char * const  ATTR_OPSYSVER;
 extern const char * const  ATTR_OPSYS_AND_VER;
 extern const char * const  ATTR_OPSYS_MAJOR_VER;
 extern const char * const  ATTR_OPSYS_NAME;
-extern const char * const  ATTR_OPSYS_DISTRO;
+extern const char * const  ATTR_OPSYS_LONG_NAME;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
 extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OUTPUT_DESTINATION;
