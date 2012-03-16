@@ -1636,7 +1636,8 @@ GahpClient::globus_gram_client_job_request(
 	const char * description,
 	const int limited_deleg,
 	const char * callback_contact,
-	char ** job_contact)
+	char ** job_contact,
+	bool is_restart)
 {
 
 	static const char* command = "GRAM_JOB_REQUEST";
@@ -1661,6 +1662,11 @@ GahpClient::globus_gram_client_job_request(
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 	
+	PrioLevel priority = low_prio;
+	if ( is_restart ) {
+		priority = medium_prio;
+	}
+
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -1841,6 +1847,12 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 
+	PrioLevel priority = medium_prio;
+	if ( signal == GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST ||
+		 signal == GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END ) {
+		priority = high_prio;
+	}
+
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -1849,7 +1861,7 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,priority);
 	}
 
 		// If we made it here, command is pending.
@@ -1974,7 +1986,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -2081,7 +2093,7 @@ GahpClient::globus_gram_client_get_jobmanager_version(const char * resource_cont
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
