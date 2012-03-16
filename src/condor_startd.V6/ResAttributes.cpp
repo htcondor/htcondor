@@ -932,7 +932,7 @@ CpuAttributes::compute( amask_t how_much )
 
 		val = c_total_disk * c_disk_fraction;
 		c_disk = (int)floor( val );
-		if (0 == c_slot_disk)
+		if (0 == (int)c_slot_disk)
 		{
 		  // only use the 1st compute ignore subsequent.
 		  c_slot_disk = c_disk; 
