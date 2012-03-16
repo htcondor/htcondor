@@ -45,15 +45,13 @@ static int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
 
-DaemonCommandProtocol::DaemonCommandProtocol(Stream *insock, Stream* asock):
-	m_insock(insock),
-	m_asock(asock),
-	m_sock(NULL),
+DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 #ifdef HAVE_EXT_GSOAP
 	m_is_http_post(false),
 	m_is_http_get(false),
 #endif
-	m_nonblocking(true),
+	m_nonblocking(!is_command_sock), // cannot re-register command sockets for non-blocking read
+	m_delete_sock(!is_command_sock), // must not delete registered command sockets
 	m_sock_had_no_deadline(false),
 	m_is_tcp(0),
 	m_req(0),
@@ -70,14 +68,16 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *insock, Stream* asock):
 	m_will_enable_encryption(SecMan::SEC_FEAT_ACT_UNDEFINED),
 	m_will_enable_integrity(SecMan::SEC_FEAT_ACT_UNDEFINED)
 {
+	m_sock = dynamic_cast<Sock *>(sock);
+
 	m_sec_man = daemonCore->getSecMan();
 	m_comTable = daemonCore->comTable;
 
 	m_handle_req_start_time.getTime();
 
-	ASSERT(m_insock);
+	ASSERT(m_sock);
 
-	switch ( m_insock->type() ) {
+	switch ( m_sock->type() ) {
 		case Stream::reli_sock :
 			m_is_tcp = TRUE;
 			m_state = CommandProtocolAcceptTCPRequest;
@@ -189,10 +189,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		return CommandProtocolFinished;
 	}
 
-		// From now on, behave as though we did not do an accept(),
-		// because the distinction is no longer applicable.
-	m_insock = m_sock;
-
 		// Do not allow ourselves to be deleted until after
 		// SocketCallback is called.
 	incRefCount();
@@ -228,26 +224,6 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPRequest()
 {
 
-	// if the connection was received on a listen socket, do an accept.
-	if ( ((ReliSock *)m_insock)->isListenSock() )
-	{
-		if ( m_asock ) {
-			m_sock = (Sock *)m_asock;
-		} else {
-			m_sock = ((ReliSock *)m_insock)->accept();
-		}
-		if ( !m_sock ) {
-			dprintf(D_ALWAYS, "DaemonCore: accept() failed!\n");
-			// return KEEP_STEAM cuz m_insock is a listen socket
-			m_result = KEEP_STREAM;
-			return CommandProtocolFinished;
-		}
-	}
-	// if the not a listen socket, then just assign sock to m_insock
-	else {
-		m_sock = (Sock *)m_insock;
-	}
-
 	m_state = CommandProtocolReadCommand;
 
 		// we have just accepted a socket or perhaps been given a
@@ -270,10 +246,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 {
 	std::string who;
 
-		// on UDP, we do not have a seperate listen and accept sock.
-		// our "listen sock" is also our "accept" sock, so just
-		// assign sock to the m_insock. UDP = connectionless, get it?
-		m_sock = (Sock *)m_insock;
 		// in UDP we cannot display who the command is from until
 		// we read something off the socket, so we display who from
 		// after we read the command below...
@@ -1487,17 +1459,6 @@ int DaemonCommandProtocol::finalize()
 		if ( m_is_tcp ) {
 			m_sock->encode();	// we wanna "flush" below in the encode direction
 			m_sock->end_of_message();  // make certain data flushed to the wire
-			
-			if ( m_insock != m_sock ) {	   // delete the sock only if we did an accept; if we
-				delete m_sock;		   //     did not do an accept, Driver() will delete the sock.
-				m_sock = NULL;
-			}
-		
-			if ((m_asock) && (((Sock *)m_asock)->get_file_desc() > 0)) {
-				delete m_asock;
-				m_asock = NULL;
-			}
-		
 		} else {
 			m_sock->decode();
 			m_sock->end_of_message();
@@ -1508,9 +1469,11 @@ int DaemonCommandProtocol::finalize()
 
 			// we also need to reset the FQU
 			m_sock->setFullyQualifiedUser(NULL);
+		}
 
-			m_result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
-									// in Condor so far are Initial command socks, so keep it.
+		if( m_delete_sock ) {
+			delete m_sock;
+			m_sock = NULL;
 		}
 	} else {
 		if (!m_is_tcp) {
@@ -1522,9 +1485,7 @@ int DaemonCommandProtocol::finalize()
 		}
 	}
 
-	// Now return KEEP_STREAM only if the user said to _OR_ if m_insock
-	// is a listen socket.  Why?  we always wanna keep a listen socket.
-	// Also, if we did an accept, we already deleted the sock socket above.
+
 	if ( m_result == KEEP_STREAM || m_sock == NULL )
 		return KEEP_STREAM;
 	else

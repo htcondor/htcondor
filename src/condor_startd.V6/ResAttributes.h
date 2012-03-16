@@ -342,6 +342,7 @@ private:
 
 		// Static info
 	int				c_phys_mem;
+	int				c_slot_mem;
 	int				c_num_cpus;
 	int				c_num_slot_cpus;
 
@@ -350,6 +351,7 @@ private:
 	double			c_virt_mem_fraction;
 
 	double			c_disk_fraction; // share of execute dir partition
+	double			c_slot_disk; // share of execute dir partition
 	MyString        c_execute_dir;
 	MyString        c_execute_partition_id;  // unique id for partition
 

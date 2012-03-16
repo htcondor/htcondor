@@ -2161,7 +2161,7 @@ RemoteResource::checkX509Proxy( void )
 		free(proxy_subject);
 	}
 
-#if defined(HAVE_EXT_GLOBUS)
+#if defined(HAVE_EXT_VOMS)
 	// second, worry about the VOMS attributes, which may or may not be present
 	char * voname = NULL;
 	char * firstfqan = NULL;
