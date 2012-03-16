@@ -125,6 +125,7 @@ if( $result == 0 ) {
 	open(ELOG,"./x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
 	open(EXP,"<$expected") || die "Could not read expected values <<$expected>>: $!\n";
 	while(<ELOG>) {
+		next if (_$ =~ /^Job Image Size Changed/);
 		push  @got, $_;
 	}
 	close(ELOG);
