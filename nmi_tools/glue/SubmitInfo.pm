@@ -58,13 +58,7 @@ our %build_and_test_sets = (
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
 	# are those platforms.
 	'nmi_one_offs' => [
-		'x86_64_rhap_5.3-updated',
-		'x86_64_opensuse_11.3-updated',
-		'x86_64_opensuse_11.4-updated',
-		'x86_64_fedora_12-updated',
-		'x86_freebsd_7.4-updated',
 		'x86_64_freebsd_8.2-updated',
-		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 	],
 
@@ -305,7 +299,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-			'xtests'	=>  [ 'x86_64_ubuntu_10.04', 'x86_64_ubuntu_8.04.3' ],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -324,7 +318,7 @@ our %submit_info = (
                               	'-DCLIPPED:BOOL=OFF' => undef,
         	},
         	'prereqs'   => [ 'cmake-2.8.3' ],
-        	'xtests'    =>  [ 'x86_64_ubuntu_10.04', ],
+        	'xtests'    => undef,
     	},
 	
     	'test' => {
@@ -406,7 +400,6 @@ our %submit_info = (
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_rhap_5.2',
 				'x86_64_rhap_6.1-updated' ],
 		},
 
@@ -427,9 +420,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef,
 			},
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [
-				'x86_64_sles_9',
-				'x86_64_rhas_4' ],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -469,7 +460,6 @@ our %submit_info = (
 				'coreutils-5.2.1',
 				'libtool-1.5.26',],
 			'xtests'	=> [
-				'x86_64_macos_10.5-updated',
 				'x86_64_macos_10.6',
 				'x86_64_macos_10.6-updated',
 			],
@@ -549,10 +539,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 
-				'x86_64_rhap_5.2',
-				'unmanaged-x86_rhap_5'
-			],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -575,9 +562,7 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-			 	'x86_rhas_4', 
 			 	'x86_64_rhas_3',
-				'x86_64_rhas_4',
 			],
 		},
 
