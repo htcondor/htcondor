@@ -614,6 +614,36 @@ Optional parameters are given within square brackets.
     This function returns \Expr{ERROR} if other than exactly 1
     argument is given.
 
+  \index{ClassAd functions!splitUserName()}
+  \item[\Code{String list splitUserName(String Name)}]
+    Returns a list of two strings.
+    Where \Code{Name} includes an \Expr{@} character,
+    the first string in the list will be the substring that comes before
+    the \Expr{@} character, 
+    and the second string in the list will be the substring that comes after.
+    Thus, if \Code{Name} is \AdStr{user@domain}, 
+    then the returned list will be \verb|{"user", "domain"}|.
+    If there is no \Expr{@} character in \Code{Name},
+    then the first string in the list will be \Code{Name}, and the
+    second string in the list will be the empty string.
+    Thus, if \Code{Name} is \AdStr{username}, then the returned list
+    will be \verb|{"username", ""}|.
+
+  \index{ClassAd functions!splitSlotName()}
+  \item[\Code{String list splitSlotName(String Name)}]
+    Returns a list of two strings.
+    Where \Code{Name} includes an \Expr{@} character,
+    the first string in the list will be the substring that comes before
+    the \Expr{@} character, 
+    and the second string in the list will be the substring that comes after.
+    Thus, if \Code{Name} is \AdStr{slot1@machine}, then the returned list
+    will be \verb|{"slot1", "machine"}|.
+    If there is no \Expr{@} character in \Code{Name},
+    then the first string in the list will be the empty string,
+    and the second string in the list will be \Code{Name}, 
+    Thus, if \Code{Name} is \AdStr{machinename}, then the returned list
+    will be \verb|{"", "machinename"}|.
+
   \index{ClassAd functions!time()}
   \item[\Code{Integer time()}]
     Returns the current coordinated universal time, which is the same
