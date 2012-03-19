@@ -70,9 +70,10 @@ See section ~\ref{sec:classadFunctions} for definitions of these functions.
 \Ticket{2856}
 \Ticket{2891}
 
-\item New format tags \%v and \%V have been added for use by \Condor{status} -format.
-These tags request that the value of the expression or attribute be printed using
-a format appropriate to its type.
+\item New format tags \%v and \%V have been added for use by the
+\Condor{status} \Opt{-format} option.
+These tags request that the value of the expression or attribute be printed 
+using a format appropriate to its type.
 When using the \%V format tag, string values appear as they would in
 the output of \condor{q -long} or \condor{submit -long}.
 \Ticket{2857}
