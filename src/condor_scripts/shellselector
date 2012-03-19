@@ -1,0 +1,35 @@
+#!/bin/bash
+# shellselector by Marco Mambelli, marco@hep.uchciago.edu
+# Expects the parent process to be a shell and provides its name
+# Used to select a shell dependent setup from an insependent one:
+# source setup.`./shellselector -q`
+# Without "-q" it prints informations about the shell detected
+#
+# Test show that $SHELL is unreliable
+# Current shell is preferrable to the login shell
+#
+if [ "X${1}X" == "X-hX" ]
+then
+ echo "$0 [-h|-q]"
+ echo "         detects a shell and shell family"
+ echo " -h      prints this help message"
+ echo " -q      quiet, prints only the shell family (sh or csh)"
+ exit
+fi
+
+MYSHELL="`ps -o ppid= -p $$ | xargs ps -o comm= -p `"
+# change the case statement below to have different setup files for ksh or zsh
+case "$MYSHELL" in
+ bash|sh|-bash|-sh) SHELLFAM="sh";;
+ ksh|-ksh) SHELLFAM="sh";;
+ zsh|-zsh) SHELLFAM="sh";;
+ tcsh|csh|-tcsh|-csh) SHELLFAM="csh";;
+ *) if [ "X${1}X" == "X-qX" ]
+    then SHELLFAM="sh"
+    else echo "Unknown shell $MYSHELL"; exit 1
+    fi;;
+esac
+if [ "X${1}X" == "X-qX" ]
+then echo "$SHELLFAM"
+else echo "Your shell is $MYSHELL, of type $SHELLFAM"
+fi

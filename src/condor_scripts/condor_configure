@@ -577,16 +577,24 @@ unless ( $opt_disable_env_scripts ) {
 		$env_csh = $opt_env_scripts_dir ."/bosco.csh";
 		system( "cp $opt_env_scripts_dir/condor.sh $env_sh" );
 		system( "cp $opt_env_scripts_dir/condor.csh $env_csh" );
+
+		open( SETENV, ">$opt_env_scripts_dir/bosco_setenv" );
+		print SETENV "# Shell-independent setup\n";
+		print SETENV "source $release_dir/bosco.`$release_dir/libexec/shellselector -q`\n";
+		close( SETENV );
 	}
 
-	print "Created scripts which you can source to setup your Condor\n";
-	print "environment variables.  The command to run depends on\n";
-	print "which shell you are using.\n";
-	print "This can be determined by running 'echo \$SHELL'\n";
-	print "   sh or bash: source $env_sh\n";
-	print "  csh or tcsh: source $env_csh\n";
-	print "The command must be run each time you log in or may be placed\n";
-	print "in your login scripts.\n";
+	if ( $opt_bosco ) {
+		print "Created a script you can source to setup your Condor environment\n";
+		print "variables. This command must be run each time you log in or may\n";
+		print "be placed in your login scripts:\n";
+		print "   source $opt_env_scripts_dir/bosco_setenv\n";
+	} else {
+		print "Created scripts which can be sourced by users to setup their\n";
+		print "Condor environment variables.  These are:\n";
+		print "   sh: $env_sh\n";
+		print "  csh: $env_csh\n";
+	}
 }
 
 print "\n";

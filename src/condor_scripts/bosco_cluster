@@ -37,7 +37,9 @@ list()
 {
     # Check for the cluster_list file
     if [ -e $CLUSTERLIST_LOCATION ]; then
-        cat $CLUSTERLIST_LOCATION
+        while read line; do
+            expr "$line" : "entry=\(.*\) "
+        done < $CLUSTERLIST_LOCATION
     else
         echo "No clusters configured"
     fi
@@ -74,6 +76,42 @@ check_cluster_list () {
     else
         return 1
     fi
+}
+
+add_cluster_to_list () {
+    # $1 = cluster to add
+    # $2 = max queued setting of cluster
+    # Remove the host, and readd
+    remote_host=$1
+    max_queued=$2
+    check_cluster_list $remote_host
+    if [ $? -eq 0 ]; then
+        tmpfile=`mktemp`
+        sed "/entry=$remote_host max_queued=.*/d" $CLUSTERLIST_LOCATION > tmpfile
+        mv tmpfile $CLUSTERLIST_LOCATION
+    fi
+
+    echo "entry=$remote_host max_queued=$max_queued" >> $CLUSTERLIST_LOCATION
+
+}
+
+get_min_queue () {
+    # Should we do this in awk? ugh, ok
+    min_queued=1000
+    detected=0
+    while read line; do
+        max_queued=`expr "$line" : ".*max_queued=\([0-9]*\)"`
+        if [ $max_queued -lt $min_queued -a $max_queued -ne -1 ]; then
+            detected=1
+            min_queued=$max_queued
+        fi
+    done < $CLUSTERLIST_LOCATION
+    if [ $detected == 0 ]; then
+        min_queued=10
+    fi
+    echo $min_queued
+    return $min_queued
+
 }
 
 
@@ -123,7 +161,7 @@ test_cluster () {
     echo -n "Testing ssh to $1..."
     start_ssh
     # Get the pwd from the remote cluster, for use later in the submission file
-    default_pwd=`ssh $1 "pwd"`
+    default_pwd=`ssh -o "PasswordAuthentication=no" $1 "pwd"`
     ssh_exit=$?
     stop_ssh
     if [ $ssh_exit -ne 0 ]; then
@@ -324,6 +362,30 @@ fi
 
 start_ssh
 
+# Quickly test the ssh
+qmgr_out=`ssh -o "PasswordAuthentication=no" $remote_host "pwd" 2>/dev/null`
+if [ $? -ne 0 ]; then
+    echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
+    echo "Does the remote resource allow password-less ssh?"
+    exit 1
+fi
+
+# Get the queue information
+echo -n "Detecting cluster configuration..."
+qmgr_out=`ssh $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
+
+# Get the default queue
+default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
+
+# Get the max queued for the queue default_queue
+max_queued=`expr "$qmgr_out" : ".*set queue $default_queue max_user_queuable = \([0-9]*\).*"`
+if [ "x$max_queued" == "x" ]; then
+    max_queued=-1
+fi
+
+echo "Done!"
+
+
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
 release_dir=`condor_config_val RELEASE_DIR`
@@ -345,10 +407,19 @@ rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:$remote_base_dir/lib
 rsync -aq  $release_dir/$libdir/condor $remote_host:$remote_base_dir/lib/
 
 # Add the cluster to the cluster list
-if [ $reinstall -eq 0 ]; then
-    echo $remote_host >> $CLUSTERLIST_LOCATION
-fi
+add_cluster_to_list $remote_host $max_queued
 
 echo "Installation complete"
 
 stop_ssh
+
+# Configure condor
+min_queue_size=`get_min_queue`
+tmpfile=`mktemp`
+condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
+sed "/GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE.*/d" $condor_config_file > $tmpfile
+echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> $tmpfile
+mv $tmpfile $condor_config_file
+condor_reconfig 2>/dev/null
+
+
