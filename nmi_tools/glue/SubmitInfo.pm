@@ -68,7 +68,6 @@ our %build_and_test_sets = (
 	# release - a build problem on this platform could indicate problems on a future
 	# release of RHEL.
 	'extra_builds' => [
-		'x86_64_rhas_4',
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.4-updated',
 		'x86_64_macos_10.6-updated',

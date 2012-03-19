@@ -143,7 +143,7 @@ options} may be specified.
     \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
       or expression \Arg{attr} in format \Arg{fmt}.
       To display the attribute or expression the format must contain a single
-      \Code{printf(3)} style conversion specifier.
+      \Code{printf(3)}-style conversion specifier.
       Attributes must be from the resource ClassAd.
       Expressions are ClassAd expressions and may
       refer to attributes in the resource ClassAd.
@@ -155,13 +155,19 @@ options} may be specified.
       \%s is suitable for strings such as \Attr{Name},
       \%d for integers such as \Attr{LastHeardFrom},
       and \%f for floating point numbers such as \Attr{LoadAvg}.
+      \%v identifies the type of the attribute, 
+      and then prints the value in an appropriate format.
+      \%V identifies the type of the attribute, 
+      and then prints the value in an appropriate format as it would
+      appear in the \Opt{-long} format.
+      As an example, strings used with \%V will have quote marks.
       An incorrect format will result in undefined behavior.
       Do not use more than one conversion specifier in a given
       format.  More than one conversion specifier will result
       in undefined behavior.  To output multiple attributes
       repeat the \Opt{-format} option once for each desired
       attribute.
-      Like \Code{printf(3)} style formats, one may include other
+      Like \Code{printf(3)}-style formats, one may include other
       text that will be reproduced directly.
       A format without any conversion specifiers may be specified,
       but an attribute is still required.
