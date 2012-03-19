@@ -6514,33 +6514,35 @@ These macros affect the \Condor{collector}.
   of time are purged in order to save memory.  The default is two days.
   It is unlikely that you would ever need to adjust this.
 
+\index{ClassAd attribute added by the condor\_collector!UpdatesHistory}
 \label{param:CollectorDaemonHistorySize}
 \item[\Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}]
-  This macro controls the
-  size of the published update history that the Collector inserts into
+  This variable controls the
+  size of the published update history that the \Condor{collector} inserts into
   the ClassAds it stores and sends.  The default value is 128, which
   means that history is stored and published for the latest 128
-  updates.  This macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS}
-  is not enabled.
+  updates.  This variable's value is ignored,
+  if \Macro{COLLECTOR\_DAEMON\_STATS} is not enabled.
 
-  \index{ClassAd attribute added by the condor\_collector!UpdatesHistory}
-  If this has a non-zero value, the Collector will insert
-  \Attr{UpdatesHistory} into the ClassAd (similar to \Attr{UpdatesTotal}
-  above). Attr{UpdatesHistory} is a hexadecimal string which represents
-  a bitmap of the last \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}
-  updates.  The most significant bit (MSB) of the bitmap represents the
+  If the value is a non-zero one, the \Condor{collector} will insert
+  attribute
+  \Attr{UpdatesHistory} into the ClassAd (similar to \Attr{UpdatesTotal}).
+  Attr{UpdatesHistory} is a hexadecimal string which represents
+  a bitmap of the last \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} updates.
+  The most significant bit (MSB) of the bitmap represents the
   most recent update, and the least significant bit (LSB) represents
-  the least recent.  A value of zero means that the update was not
-  lost, and a value of 1 indicates that the update was detected as
-  lost.
+  the least recent.  A value of zero means that the update was not lost,
+  and a value of 1 indicates that the update was detected as lost.
 
-  For example, if the last update was not lost, the previous lost, and
+  For example, if the last update was not lost, the previous was lost, and
   the previous two not, the bitmap would be 0100, and the matching hex
-  digit would be ``4''.  Note that the MSB can never be marked as lost
-  because its loss can only be detected by a non-lost update (a
-  ``gap'' is found in the sequence numbers).  Thus, UpdatesHistory =
-  "0x40" would be the history for the last 8 updates.  If the next
-  updates are all successful, the values published, after each update,
+  digit would be \AdStr{4}.  Note that the MSB can never be marked as lost
+  because its loss can only be detected by a non-lost update 
+  (a gap is found in the sequence numbers).  
+  Thus, \Expr{UpdatesHistory = "0x40"} 
+  would be the history for the last 8 updates.  
+  If the next updates are all successful, the values published,
+  after each update,
   would be: 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, 0x00.
 
   See page~\pageref{sec:Collector-Added-Attributes} for more information on the
@@ -6549,36 +6551,40 @@ These macros affect the \Condor{collector}.
 
 \label{param:CollectorClassHistorySize}
 \item[\Macro{COLLECTOR\_CLASS\_HISTORY\_SIZE}]
-  This macro controls the
-  size of the published update history that the Collector inserts into
-  the Collector ClassAds it produces.  The default value is zero.
+  This variable controls the
+  size of the published update history that the \Condor{collector} inserts into
+  the \Condor{collector} ClassAds it produces.  
+  The default value is zero.
 
-  If this has a non-zero value, the Collector will insert
-  ``UpdatesClassHistory'' into the Collector ClassAd (similar to
-  ``UpdatesHistory'' above).  These are added ``per class'' of
-  ClassAd, however.  The classes refer to the ``type'' of ClassAds
-  (i.e. ``Start'').  Additionally, there is a ``Total'' class created
-  which represents the history of all ClassAds that this Collector
+  If this variable has a non-zero value, the \Condor{collector} will insert
+  \Attr{UpdatesClassHistory} into the \Condor{collector} ClassAd 
+  (similar to \Attr{UpdatesHistory}).  
+  These are added per class of ClassAd, however.  
+  The classes refer to the type of ClassAds.
+  Additionally, there is a Total class created,
+  which represents the history of all ClassAds that this \Condor{collector}
   receives.
 
-  Note that the collector always publishes Lost, Total and Sequenced
-  counts for all ClassAd ``classes''.  This is similar to the
-  statistics gathered if \MacroU{COLLECTOR\_DAEMON\_STATS} is enabled.
+  Note that the \Condor{collector} always publishes Lost, Total and Sequenced
+  counts for all ClassAd classes.  This is similar to the
+  statistics gathered if \Macro{COLLECTOR\_DAEMON\_STATS} is enabled.
 
 \label{param:CollectorQueryWorkers}
 \item[\Macro{COLLECTOR\_QUERY\_WORKERS}]
-  This macro sets the maximum
-  number of ``worker'' processes that the Collector can have.  When
-  receiving a query request, the UNIX Collector will ``fork'' a new
+  This variable sets the maximum
+  number of worker processes that the \Condor{collector} can have.  
+  When receiving a query request, 
+  the Unix \Condor{collector} will \Procedure{fork} a new
   process to handle the query, freeing the main process to handle
-  other requests.  When the number of outstanding ``worker'' processes
+  other requests.  When the number of outstanding worker processes
   reaches this maximum, the request is handled by the main process.
-  This macro is ignored on Windows, and its default value is zero.
-  The default configuration, however, has this set to 2.
+  This variable is ignored on Windows, and its default value is zero.
+  The default configuration, however, has a value of 2.
 
 \label{param:CollectorDebug}
 \item[\Macro{COLLECTOR\_DEBUG}]
-  This macro (and other macros related to debug logging in the collector)
+  This macro (and other macros related to debug logging in the 
+  \Condor{collector}
   is described in section~\ref{param:SubsysDebug} as
   \MacroNI{<SUBSYS>\_DEBUG}.
 
@@ -6586,7 +6592,7 @@ These macros affect the \Condor{collector}.
 \item[\Macro{CONDOR\_VIEW\_CLASSAD\_TYPES}]
   Provides the ClassAd types that will be forwarded to the
   \MacroNI{CONDOR\_VIEW\_HOST}. The ClassAd types can be found with 
-  \Condor{status -any}. The default forwarding behavior of the 
+  \Condor{status} \Opt{-any}. The default forwarding behavior of the 
   \Condor{collector} is equivalent to 
 \begin{verbatim}
   CONDOR_VIEW_CLASSAD_TYPES=Machine,Submitter
