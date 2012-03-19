@@ -1675,7 +1675,7 @@ GahpClient::globus_gram_client_job_request(
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,priority);
 	}
 
 		// If we made it here, command is pending.
