@@ -123,22 +123,15 @@ if( $result == 0 ) {
 	my @got;
 	open(ELOG,"./x_read_joblog.exe $elog TRACE 2>&1 |") || die "Could not read log <<$elog>>: $!\n";
 	open(EXP,"<$expected") || die "Could not read expected values <<$expected>>: $!\n";
-	my $optional_event = 0;
+	#my $optional_event = 0;
+	print "--x_read_joblog output--\n";
 	while(<ELOG>) {
-		# ignore Job Image Size Changed (if any) which may be followed by
-		# Job Ad Information
-		if ($optional_event) {
-			$optional_event = 0;
-			next if ($_ =~ /^Job Ad Information/);
-		} else {
-			if ($_ =~ /^Job Image Size Changed/) {
-				$optional_event = 1;
-				next;
-			}
-		}
+		next if /^Job Image Size Changed/ .. /^BillBool/;
+		print $_;
 		push  @got, $_;
 	}
 	close(ELOG);
+	print "--end of x_read_joblog output--\n";
 	while(<EXP>) {
 		push  @want, $_;
 	}
