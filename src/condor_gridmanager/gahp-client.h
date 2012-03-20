@@ -339,7 +339,8 @@ class GahpClient : public Service {
 			const char * description,
 			const int limited_deleg,
 			const char * callback_contact,
-			char ** job_contact);
+			char ** job_contact,
+			bool is_restart);
 
 		///
 		int 

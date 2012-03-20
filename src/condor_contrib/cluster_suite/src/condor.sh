@@ -1,10 +1,16 @@
 #!/bin/bash
-# This is a resource agent for controlling the condor_schedd from 
-# cluster suite.  It is a modified version of the condor init script
-# developed by Matt Farrellee.
+# This is a resource agent for controlling condor daemons from 
+# cluster suite.  It is based on the condor init script developed
+# by Matt Farrellee, but modified to be a Resource Agent and to support
+# multiple daemons.
 
 # The program being managed
-prog=condor_schedd
+if [ $OCF_RESKEY_type = "query_server" ]; then
+  prefix="aviary"
+else
+  prefix="condor"
+fi
+prog=${prefix}_$OCF_RESKEY_type
 
 pidfile=/var/run/condor/$prog-$OCF_RESKEY_name.pid
 
@@ -26,23 +32,33 @@ metadata() {
   cat <<EOT
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1-modified.dtd">
-<resource-agent version="rgmanager 2.0" name="condor_schedd">
+<resource-agent version="rgmanager 2.0" name="condor">
   <version>1.0</version>
 
   <longdesc lang="en">
-    condor_schedd resource agent
+    condor resource agent
   </longdesc>
   <shortdesc lang="en">
-    condor_schedd resource agent
+    condor resource agent
   </shortdesc>
 
   <parameters>
     <parameter name="name" unique="1" primary="1">
     <longdesc lang="en">
-      The name of the condor_schedd instance to control
+      The name passed to the condor subsystem type
     </longdesc>
     <shortdesc lang="en">
-    condor_schedd name
+      condor subsystem name
+    </shortdesc>
+    <content type="string"/>
+    </parameter>
+
+    <parameter name="type" required="1">
+    <longdesc lang="en">
+      The type of condor subsystem
+    </longdesc>
+    <shortdesc lang="en">
+      condor subsystem type
     </shortdesc>
     <content type="string"/>
     </parameter>
@@ -66,7 +82,7 @@ start() {
       return $?
     fi
 
-    ocf_log info "Starting condor_schedd $OCF_RESKEY_name"
+    ocf_log info "Starting $prog $OCF_RESKEY_name"
     pid_status $pidfile
     if [ $? -ne 0 ]; then
         rm -f $pidfile
@@ -74,14 +90,14 @@ start() {
     condor_config_val $OCF_RESKEY_name > /dev/null 2> /dev/null
     if [ $? -ne 0 ]; then
       # Configuration for schedd isn't on this node, so fail to start
-      ocf_log err "condor_schedd $OCF_RESKEY_name not configured on this node"
+      ocf_log err "$prog $OCF_RESKEY_name not configured on this node"
       return $OCF_ERR_GENERIC
     fi
     daemon --pidfile $pidfile --check $prog $prog -pidfile $pidfile -local-name $OCF_RESKEY_name
     RETVAL=$?
     echo
     if [ $RETVAL -ne 0 ]; then
-        ocf_log err "Failed to start condor_schedd $OCF_RESKEY_name"
+        ocf_log err "Failed to start $prog $OCF_RESKEY_name"
         return $OCF_ERR_GENERIC
     fi
     return 0
@@ -93,14 +109,14 @@ stop() {
       return $?
     fi
 
-    ocf_log info "Stopping condor_schedd $OCF_RESKEY_name"
+    ocf_log info "Stopping $prog $OCF_RESKEY_name"
     killproc -p $pidfile $prog -QUIT
     RETVAL=$?
     echo
     # Shutdown can take a long time
     wait_pid $pidfile 600
     if [ $? -ne 0 ]; then
-        ocf_log err "Failed to stop condor_schedd $OCF_RESKEY_name"
+        ocf_log err "Failed to stop $prog $OCF_RESKEY_name"
 	RETVAL=$OCF_ERR_GENERIC
     fi
     return $RETVAL

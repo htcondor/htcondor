@@ -7,7 +7,7 @@
         * SubmissionID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
         */
 
        /**
@@ -42,6 +42,10 @@ namespace AviaryCommon
 
                 
                 bool isValidOwner;
+            int property_Qdate;
+
+                
+                bool isValidQdate;
             
 
         /*** Private methods ***/
@@ -53,6 +57,10 @@ namespace AviaryCommon
 
         bool WSF_CALL
         setOwnerNil();
+            
+
+        bool WSF_CALL
+        setQdateNil();
             
 
 
@@ -80,9 +88,10 @@ namespace AviaryCommon
          * @param 
          * @param Name std::string
          * @param Owner std::string
+         * @param Qdate int
          * @return newly created SubmissionID object
          */
-        SubmissionID(std::string arg_Name,std::string arg_Owner);
+        SubmissionID(std::string arg_Name,std::string arg_Owner,int arg_Qdate);
         
         
         /********************************** Class get set methods **************************************/
@@ -135,6 +144,30 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL
         resetOwner();
         
+        
+
+        /**
+         * Getter for qdate. 
+         * @return int*
+         */
+        WSF_EXTERN int WSF_CALL
+        getQdate();
+
+        /**
+         * Setter for qdate.
+         * @param arg_Qdate int*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setQdate(const int  arg_Qdate);
+
+        /**
+         * Re setter for qdate
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetQdate();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -162,6 +195,16 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isOwnerNil();
+
+
+        
+
+        /**
+         * Check whether qdate is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isQdateNil();
 
 
         
@@ -240,6 +283,17 @@ namespace AviaryCommon
 
         std::string WSF_CALL
         getProperty2();
+
+    
+        
+
+        /**
+         * Getter for qdate by property number (3)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty3();
 
     
 

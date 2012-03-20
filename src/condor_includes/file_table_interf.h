@@ -54,6 +54,9 @@ int _condor_get_unmapped_fd( int fd );
 /** Return true if this virtual fd refers to a local file. */
 int _condor_is_fd_local( int user_fd );
 
+/** Set the internal working dir of the FileTab to be dir. */
+void _condor_file_set_working_dir(char *dir);
+
 /** Return true if this file should be accessed locally 
  *  Caller should free local_name when done with it.
  */

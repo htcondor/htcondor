@@ -38,7 +38,8 @@ typedef enum {
 	U_REMOVE,
 	U_REQUEUE,
 	U_EVICT,
-	U_CHECKPOINT
+	U_CHECKPOINT,
+	U_X509
 } update_t;
 
 
@@ -46,7 +47,7 @@ class QmgrJobUpdater : public Service
 {
 public:
 	QmgrJobUpdater( ClassAd* job_a, const char*schedd_address, char const *schedd_version);
-	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), m_pull_attrs(0), job_ad(0), schedd_addr(0), schedd_ver(0), cluster(-1), proc(-1), q_update_tid(-1) {}
+	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), x509_job_queue_attrs(0), m_pull_attrs(0), job_ad(0), schedd_addr(0), schedd_ver(0), cluster(-1), proc(-1), q_update_tid(-1) {}
 	virtual ~QmgrJobUpdater();
 
 	virtual void startUpdateTimer( void );
@@ -132,6 +133,7 @@ private:
 	StringList* requeue_job_queue_attrs;
 	StringList* terminate_job_queue_attrs;
 	StringList* checkpoint_job_queue_attrs;
+	StringList* x509_job_queue_attrs;
 
 		// List of attributes we should pull from the schedd when we
 		// do an update.

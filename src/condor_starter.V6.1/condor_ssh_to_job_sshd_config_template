@@ -20,3 +20,5 @@ StrictModes no
 # Rejection by tcp wrappers is not logged at INFO or VERBOSE log levels,
 # so to make diagnosis of problems easier, we use DEBUG.
 LogLevel DEBUG
+
+X11Forwarding yes
