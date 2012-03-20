@@ -27,6 +27,7 @@
 \oOptArg{-machineads}{file} 
 \oOptArg{-direct}{rdbms \Bar schedd} 
 \oOpt{-stream-results}
+\oOpt{-wide}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
@@ -297,6 +298,9 @@ per machine basis.
     large numbers of jobs, but if \Condor{q} is paused while displaying
     results, this could result in a timeout in communication with
     \Condor{schedd}.}
+  \OptItem{\Opt{-wide}}{If this option is specified, and the command portion
+    of the output would cause the output to extend beyond 80 columns,
+    display beyond the 80 columns. }
   \OptItem{Restriction list}{The restriction list may have zero or more items,
     each of which may be:
         \begin{description}
