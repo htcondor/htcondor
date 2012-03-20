@@ -6069,6 +6069,17 @@ which contain whitespace.
   the \Condor{procd} have been observed, and a setting of \Expr{False}
   may relieve these problems.
 
+\label{param:MemoryUsageMetric} 
+\item[\Macro{MEMORY\_USAGE\_METRIC}]
+  A ClassAd expression that produces an initial value for the job ClassAd
+  attribute \Attr{MemoryUsage} in jobs that are \emph{not} standard 
+  universe and \emph{not} vm universe.
+
+\label{param:MemoryUsageMetricVM} 
+\item[\Macro{MEMORY\_USAGE\_METRIC\_VM}]
+  A ClassAd expression that produces an initial value for the job ClassAd
+  attribute \Attr{MemoryUsage} in vm universe jobs.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

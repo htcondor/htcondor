@@ -100,10 +100,12 @@ it only took effect if \MacroNI{WANT\_VACATE} was \Expr{True}.
 \Ticket{2855}
 
 \item The new configuration variables \Macro{MEMORY\_USAGE\_METRIC} and
-\Macro{MEMORY\_USAGE\_METRIC\_VM} specify the value that the \Condor{starter} will
+\Macro{MEMORY\_USAGE\_METRIC\_VM} specify the value that the 
+\Condor{starter} will
 set into the \Attr{MemoryUsage} attribute for a job.  It is expected that
 this will be a ClassAd expression that defines the job memory usage in terms
 of other job attributes.
+\Ticket{2843}
 
 \item The configuration variable \Macro{DAGMAN\_SUBMIT\_DELAY} can now be any
 non negative integer.  It was formerly limited to values between 0 and 60,

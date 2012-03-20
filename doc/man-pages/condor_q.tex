@@ -92,7 +92,8 @@ a one line summary of information as follows:
         > = transferring output. 
 \item[PRI] User specified priority of the job, ranges from -20 to +20, with 
 	higher numbers corresponding to greater priority. 
-\item[SIZE] The virtual image size of the executable in megabytes. 
+\item[SIZE] The value of job ClassAd attribute \Attr{MemoryUsage} (in Mbytes),
+when the attribute is defined, and \Attr{ImageSize} (in Kbytes), otherwise. 
 \item[CMD] The name of the executable. 
 \end{description}
 
