@@ -109,7 +109,7 @@ Condor::DebugLevel(5);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
-my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
 print "$time: batch_test.pl starting up ($^O perl)\n";
 
 my $iswindows = CondorUtils::is_windows();

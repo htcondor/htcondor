@@ -1819,10 +1819,10 @@ sub StartPersonal {
     $handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
-    my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
-    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
@@ -1830,10 +1830,10 @@ sub StartPersonal {
     my $collector_port = shift @condor_info;
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 
-    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
-    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
