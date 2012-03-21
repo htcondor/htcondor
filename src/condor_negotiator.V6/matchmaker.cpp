@@ -3205,8 +3205,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 
 		// 2a.  ask for job information
 		int sleepy = param_integer("NEG_SLEEP", 0);
+			//  This sleep is useful for any testing that calls for a
+			//  long negotiation cycle, please do not remove
+			//  it. Examples of such testing are the async negotiation
+			//  protocol w/ schedds and reconfig delaying until after
+			//  a negotiation cycle. -matt 21 mar 2012
 		if ( sleepy ) {
-			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+			sleep(sleepy);
 		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
