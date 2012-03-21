@@ -263,6 +263,8 @@ class Lexer
             ch = lexSource->ReadCharacter();
                 //++lexBufferCount;
             if (++lexBufferCur >= lexBufferEnd) {
+                // in real life, we'll re-alloc lexBuffer to make more room,
+                // in the usual logarithmic way
                 CLASSAD_EXCEPT("Mega fail\n");
             }
             if (ch == -1) return;
