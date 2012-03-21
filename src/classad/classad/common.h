@@ -172,12 +172,38 @@ struct StringCaseIgnHash
 #endif
 {
 	size_t operator()( const std::string &s ) const {
-		unsigned long h = 0;
-		char const *ch;
-		for( ch = s.c_str(); *ch; ch++ ) {
-			h = 5*h + (unsigned char)tolower(*ch);
-		}
-		return (size_t)h;
+        // This hash function tested a bit over 2x faster than previous on 
+        // parsing of history files.  It shaved off about 3% of the overall cost for
+        // condor_history
+        const unsigned int f = 53;
+		unsigned int h = 0;
+        size_t ss = s.size();
+        char const* b = s.c_str();
+
+        if (ss < 6) {
+            // for short strings just hash everything
+            for (char const* ch = b;  *ch;  ch++)  {
+                h = f*h + (unsigned int)tolower(*ch);
+            }
+        } else {
+            // variable names may have common prefix or suffix, but
+            // usually not both, so for long strings examine subset of
+            // beginning and end to save time
+            char const* j1 = b;
+            char const* j2 = b+ss-1;
+
+            h = f*h + (unsigned int)tolower(*j1);
+            h = f*h + (unsigned int)tolower(*j2);
+            ++j1; --j2;
+            h = f*h + (unsigned int)tolower(*j1);
+            h = f*h + (unsigned int)tolower(*j2);
+
+            ++j1; --j2;
+            h = f*h + (unsigned int)tolower(*j1);
+            h = f*h + (unsigned int)tolower(*j2);
+        }
+
+        return size_t(h);
 	}
 #ifdef WIN32
 		// On Windows, the hash_map comparison operator is less-than,

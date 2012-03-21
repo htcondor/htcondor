@@ -130,96 +130,104 @@ long timezone_offset( time_t clock, bool no_dst )
     return tz_offset;
 }
 
-void convert_escapes(string &text, bool &validStr)
+void convert_escapes(const char* text, const int length, char* copy, bool &validStr)
 {
-	char *copy;
-	int  length;
-	int  source, dest;
-
-	// We now it will be no longer than the original.
-	length = text.length();
-	copy = new char[length + 1];
-	
 	// We scan up to one less than the length, because we ignore
 	// a terminating slash: it can't be an escape. 
-	dest = 0;
-	for (source = 0; source < length - 1; source++) {
+	int dest = 0;
+	for (int source = 0; source < length - 1; source++) {
 		if (text[source] != '\\' || source == length - 1) {
-			copy[dest++]= text[source]; 
+			copy[dest++]= text[source];
+            continue;
 		}
-		else {
-			source++;
 
-			char new_char;
-			switch(text[source]) {
-			case 'a':	new_char = '\a'; break;
-			case 'b':	new_char = '\b'; break;
-			case 'f':	new_char = '\f'; break;
-			case 'n':	new_char = '\n'; break;
-			case 'r':	new_char = '\r'; break;
-			case 't':	new_char = '\t'; break;
-			case 'v':	new_char = '\v'; break;
-			case '\\':	new_char = '\\'; break;
-			case '\?':	new_char = '\?'; break;
-			case '\'':	new_char = '\''; break;
-			case '\"':	new_char = '\"'; break;
-			default:   
-				if (isodigit(text[source])) {
-					unsigned int  number;
-					// There are three allowed ways to have octal escape characters:
-					//  \[0..3]nn or \nn or \n. We check for them in that order.
-					if (   source <= length - 3
-						&& text[source] >= '0' && text[source] <= '3'
-						&& isodigit(text[source+1])
-						&& isodigit(text[source+2])) {
+        // we encountered the escape-char, so parse what follows it:
+		source++;
 
-						// We have the \[0..3]nn case
-						char octal[4];
-						octal[0] = text[source];
-						octal[1] = text[source+1];
-						octal[2] = text[source+2];
-						octal[3] = 0;
-						sscanf(octal, "%o", &number);
-						new_char = number;
-						source += 2; // to account for the two extra digits
-					} else if (   source <= length -2
-							   && isodigit(text[source+1])) {
+		char new_char;
+		switch(text[source]) {
+		case 'a':	new_char = '\a'; break;
+		case 'b':	new_char = '\b'; break;
+		case 'f':	new_char = '\f'; break;
+		case 'n':	new_char = '\n'; break;
+		case 'r':	new_char = '\r'; break;
+		case 't':	new_char = '\t'; break;
+		case 'v':	new_char = '\v'; break;
+		case '\\':	new_char = '\\'; break;
+		case '\?':	new_char = '\?'; break;
+		case '\'':	new_char = '\''; break;
+		case '\"':	new_char = '\"'; break;
+		default:   
+			if (isodigit(text[source])) {
+				unsigned int  number;
+				// There are three allowed ways to have octal escape characters:
+				//  \[0..3]nn or \nn or \n. We check for them in that order.
+				if (   source <= length - 3
+					&& text[source] >= '0' && text[source] <= '3'
+					&& isodigit(text[source+1])
+					&& isodigit(text[source+2])) {
 
-						// We have the \nn case
-						char octal[3];
-						octal[0] = text[source];
-						octal[1] = text[source+1];
-						octal[2] = 0;
-						sscanf(octal, "%o", &number);
-						new_char = number;
-						source += 1; // to account for the extra digit
-					} else if (source <= length - 1) {
-						char octal[2];
-						octal[0] = text[source];
-						octal[1] = 0;
-						sscanf(octal, "%o", &number);
-						new_char = number;
-					} else {
-						number = new_char = text[source];
-					}
-					if(number == 0) { // "\\0" is an invalid substring within a string literal
-					  validStr = false;
-					  delete [] copy;
-					  return;
-					}
+					// We have the \[0..3]nn case
+					char octal[4];
+					octal[0] = text[source];
+					octal[1] = text[source+1];
+					octal[2] = text[source+2];
+					octal[3] = 0;
+					sscanf(octal, "%o", &number);
+					new_char = number;
+					source += 2; // to account for the two extra digits
+				} else if (   source <= length -2
+						   && isodigit(text[source+1])) {
+
+					// We have the \nn case
+					char octal[3];
+					octal[0] = text[source];
+					octal[1] = text[source+1];
+					octal[2] = 0;
+					sscanf(octal, "%o", &number);
+					new_char = number;
+					source += 1; // to account for the extra digit
+				} else if (source <= length - 1) {
+					char octal[2];
+					octal[0] = text[source];
+					octal[1] = 0;
+					sscanf(octal, "%o", &number);
+					new_char = number;
 				} else {
-					new_char = text[source];
+					number = new_char = text[source];
 				}
-				break;
+				if(number == 0) { // "\\0" is an invalid substring within a string literal
+				  validStr = false;
+				  delete [] copy;
+				  return;
+				}
+			} else {
+				new_char = text[source];
 			}
-			copy[dest++] = new_char;
+			break;
 		}
+		copy[dest++] = new_char;
 	}
 	copy[dest] = 0;
+}
+
+void convert_escapes(string &text, bool &validStr)
+{
+	// We know it will be no longer than the original.
+	int length = text.length();
+	char* copy = new char[length + 1];
+
+    convert_escapes(text.c_str(), length, copy, validStr);
+	
 	text = copy;
 	delete [] copy;
-	return;
 }
+
+void convert_escapes(char* text, bool &validStr) {
+    // this works because source index moves ahead as fast, or faster, than dest index
+    convert_escapes(const_cast<char*>(text), 1+strlen(text), text, validStr);
+}
+
 
 void 
 getLocalTime(time_t *now, struct tm *localtm) 

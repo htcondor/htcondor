@@ -34,7 +34,8 @@ Lexer ()
 {
 	// initialize lexer state (token, etc.) variables
 	tokenType = LEX_END_OF_INPUT;
-	lexBufferCount = 0;
+        //lexBufferCount = 0;
+    lexBufferEnd = lexBuffer + lexBufferSize;
 	savedChar = 0;
 	ch = 0;
 	inString = false;
@@ -61,11 +62,13 @@ bool Lexer::
 Initialize(LexerSource *source)
 {
 	lexSource = source;
-	ch = lexSource->ReadCharacter();
+    ch = lexSource->ReadCharacter();
 
 	// token state initialization
-	lexBuffer = ch;
-	lexBufferCount = 0;
+    lexBufferCur = lexBuffer;
+    *lexBufferCur = ch;
+	//lexBuffer = ch;
+    //lexBufferCount = 0;
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
@@ -79,8 +82,11 @@ Reinitialize(void)
 {
 	ch = lexSource->ReadCharacter();
 	// token state initialization
-	lexBuffer = ch;
-	lexBufferCount = 0;
+	// token state initialization
+    lexBufferCur = lexBuffer;
+    *lexBufferCur = ch;
+	//lexBuffer = ch;
+	//lexBufferCount = 0;
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
@@ -106,6 +112,7 @@ FinishedParse ()
 }
 
 
+#if 0
 // Mark:  This function is called when the beginning of a token is detected
 void Lexer::
 mark (void)
@@ -126,7 +133,6 @@ cut (void)
 	return;
 }
 
-
 // Wind:  This function is called when an additional character must be read
 //        from the input source; the conceptual action is to move the cursor
 void Lexer::
@@ -141,15 +147,17 @@ wind (void)
 	}
 	return;
 }
-
+#endif
 			
 Lexer::TokenType Lexer::
 ConsumeToken (TokenValue *lvalp)
 {
-	if (lvalp) lvalp->CopyFrom( yylval );
-
-	// if a token has already been consumed, get another token
-	if (tokenConsumed) PeekToken (lvalp);
+	if (tokenConsumed) {
+        // if a token has already been consumed, get another token
+        PeekToken(lvalp);
+    } else if (lvalp) {
+        lvalp->CopyFrom(yylval);
+    }
 
 	if (debug) {
 		printf ("Consume: %s\n", strLexToken(tokenType));
@@ -397,9 +405,9 @@ tokenizeNumber (void)
 		if ( _useOldClassAdSemantics ) {
 			// Old ClassAds don't support octal or hexidecimal
 			// representations for integers.
-			l = strtol( lexBuffer.c_str(), NULL, 10 );
+			l = strtol( lexBuffer, NULL, 10 );
 		} else {
-			l = strtol( lexBuffer.c_str(), NULL, 0 );
+			l = strtol( lexBuffer, NULL, 0 );
 		}
 		if ( l > INT_MAX ) {
 			l = INT_MAX;
@@ -409,7 +417,7 @@ tokenizeNumber (void)
 		integer = (int) l;
 	} else if( numberType == REAL ) {
 		cut( );
-		real = strtod( lexBuffer.c_str(), NULL );
+		real = strtod( lexBuffer, NULL );
 	} else {
 		/* If we've reached this point, we have a serious programming
 		 * error: tokenizeNumber should only be called if we are
@@ -464,31 +472,31 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval.SetStringValue( lexBuffer.c_str( ) );
+		yylval.SetStringValue(lexBuffer);
 		
 		return tokenType;
 	}	
 
 	// check if the string is one of the reserved words; Case insensitive
 	cut ();
-	if (strcasecmp(lexBuffer.c_str(), "true") == 0) {
+	if (strcasecmp(lexBuffer, "true") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.SetBoolValue( true );
-	} else if (strcasecmp(lexBuffer.c_str(), "false") == 0) {
+	} else if (strcasecmp(lexBuffer, "false") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.SetBoolValue( false );
-	} else if (strcasecmp(lexBuffer.c_str(), "undefined") == 0) {
+	} else if (strcasecmp(lexBuffer, "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (strcasecmp(lexBuffer.c_str(), "error") == 0) {
+	} else if (strcasecmp(lexBuffer, "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
-	} else if (strcasecmp(lexBuffer.c_str(), "is") == 0 ) {
+	} else if (strcasecmp(lexBuffer, "is") == 0 ) {
 		tokenType = LEX_META_EQUAL;
-	} else if (strcasecmp(lexBuffer.c_str(), "isnt") == 0) {
+	} else if (strcasecmp(lexBuffer, "isnt") == 0) {
 		tokenType = LEX_META_NOT_EQUAL;
 	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval.SetStringValue( lexBuffer.c_str() );
+		yylval.SetStringValue(lexBuffer);
 	}
 
 	return tokenType;
@@ -535,7 +543,9 @@ tokenizeString(char delim)
                 }
 				stringComplete = true;
 			} else {    // the adjacent string is to be concatenated to the existing string
-				lexBuffer.erase(lexBufferCount--); // erase the lagging '\"'
+                    //lexBuffer.erase(lexBufferCount--); // erase the lagging '\"'
+                --lexBufferCur;
+                    //--lexBufferCount;
 				wind();
 			}
 		}
@@ -548,8 +558,8 @@ tokenizeString(char delim)
 	cut( );
 	wind( );	// skip over the close quote
 	bool validStr = true; // to check if string is valid after converting escape
-	convert_escapes(lexBuffer, validStr);
-	yylval.SetStringValue( lexBuffer.c_str( ) );
+    convert_escapes(lexBuffer, validStr);
+	yylval.SetStringValue(lexBuffer);
 	if (validStr) {
 		if(delim == '\"') {
 			tokenType = LEX_STRING_VALUE;

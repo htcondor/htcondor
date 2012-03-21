@@ -201,7 +201,11 @@ class Lexer
 		TokenType ConsumeToken( TokenValue* = 0 );
 
 		// internal buffer for token accumulation
-		std::string lexBuffer;					    // the buffer itselfw
+        static const size_t lexBufferSize = 1000;
+		char lexBuffer[lexBufferSize];
+        char* lexBufferEnd;
+        char* lexBufferCur;
+            //int lexBufferCount;
 
 		// miscellaneous functions
 		static const char *strLexToken (int);		// string rep'n of token
@@ -228,7 +232,6 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		int 		debug; 						// debug flag
@@ -238,9 +241,35 @@ class Lexer
 		bool		tokenConsumed;				// has the token been consumed?
 
 		// internal lexing functions
-		void 		wind(void);					// consume character from source
-		void 		mark(void);					// mark()s beginning of a token
-		void 		cut(void);					// delimits token
+        // Mark:  This function is called when the beginning of a token is detected
+        inline void mark() {
+                //lexBufferCount = 0;
+            lexBufferCur = lexBuffer;
+            *lexBufferCur = ch;
+            accumulating = true;
+        }
+
+        // Cut:  This function is called when the end of a token is detected
+        inline void cut() {
+                //lexBuffer[lexBufferCount] = 0;
+            *lexBufferCur = 0;
+            accumulating = false;
+        }
+
+        // Wind:  This function is called when an additional character must be read
+        //        from the input source; the conceptual action is to move the cursor
+        inline void wind() {
+            if (ch == -1) return;
+            ch = lexSource->ReadCharacter();
+                //++lexBufferCount;
+            if (++lexBufferCur >= lexBufferEnd) {
+                CLASSAD_EXCEPT("Mega fail\n");
+            }
+            if (ch == -1) return;
+            if (accumulating) {
+                *lexBufferCur = ch;
+            }
+        }
 
 		// to tokenize the various tokens
 		int 		tokenizeNumber (void);		// integer or real
