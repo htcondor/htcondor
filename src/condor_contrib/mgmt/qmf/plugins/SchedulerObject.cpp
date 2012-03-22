@@ -168,6 +168,11 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 	ClassAd ad;
 	int universe;
 
+    // ShouldTransferFiles - unset by default, must be set
+    // shadow will try to setup local transfer sandbox otherwise
+    // without good priv
+    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
+
 	if (!PopulateAdFromVariantMap(jobAdMap, ad, text)) {
 		AbortTransaction();
 		return STATUS_USER + 3;
@@ -179,9 +184,6 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 		text = "Job ad is missing required attributes: " + missing;
 		return STATUS_USER + 4;
 	}
-
-    // ShouldTransferFiles - unset by default, must be set
-    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
 
 		// EARLY SET: These attribute are set early so the incoming ad
 		// has a change to override them.
