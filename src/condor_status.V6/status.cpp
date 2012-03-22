@@ -627,7 +627,13 @@ firstPass (int argc, char *argv[])
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i],"-attributes", 3)){
-			// we don't do anything right here ... see prefix check in secondPass
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -attributes requires one additional argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			i++;
 		} else	
 		if (matchPrefix (argv[i], "-run", 2) || matchPrefix(argv[i], "-claimed", 3)) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
@@ -814,7 +820,7 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (matchPrefix (argv[i], "-target", 2)) {
-			i += 2;
+			i++;
 			continue;
 		}
 		if( matchPrefix(argv[i], "-sort", 3) ) {
@@ -832,7 +838,7 @@ secondPass (int argc, char *argv[])
 			while( (s=more_attrs.next()) ) {
 				projList.AppendArg(s);
 			}
-			i += 2;
+			i++;
 			continue;
 		}
 		
