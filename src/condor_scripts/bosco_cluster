@@ -289,7 +289,13 @@ if [ ! -e $bosco_key ]; then
     echo $PASSPHRASE > $PASSPHRASE_LOCATION
     chmod go-rwx $PASSPHRASE_LOCATION
     
-    ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
+    # Check if the passphrase is empty
+    if [ "x$PASSPHRASE" == "x" ]; then
+        ssh-keygen -q -t rsa -f $bosco_key > /dev/null
+    else
+        ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
+    fi   
+ 
     if [ $? -ne 0 ]; then
         echo "Error running keygen" >&2
         exit 1
