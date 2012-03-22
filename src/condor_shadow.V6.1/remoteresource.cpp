@@ -1207,12 +1207,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	classad::Value val;
-	if (jobAd->EvaluateAttr(ATTR_MEMORY_USAGE, val)) {
-		classad_int64 cint64_value;
-		if (val.IsIntegerValue(cint64_value)) { // TJ: fix for int64 classad
-			memory_usage_mb = cint64_value;
-		}
+	if (jobAd->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value)) {
+		memory_usage_mb = int64_value;
 	}
 
 	MyString starter_addr;

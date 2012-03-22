@@ -350,6 +350,12 @@ class ClassAd : public classad::ClassAd
 		 *  but is not an integer
 		 */
 	int EvalInteger (const char *name, classad::ClassAd *target, int &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, classad_int64 & value) {
+		int ival;
+		int result = EvalInteger(name, target, ival);  // TJ: fix for int64 classad
+		value = ival;
+		return result;
+	}
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute
@@ -359,7 +365,13 @@ class ClassAd : public classad::ClassAd
 		 *  but is not a float.
 		 */
 
-	int EvalFloat (const char *name, classad::ClassAd *target, float &value);
+	int EvalFloat (const char *name, classad::ClassAd *target, double &value);
+	int EvalFloat (const char *name, classad::ClassAd *target, float &value) {
+		double dval = value;
+		int result = EvalFloat(name, target, dval);
+		value = dval;
+		return result;
+	}
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a boolean
 		 *  @param name The name of the attribute
