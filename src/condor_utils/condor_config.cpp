@@ -1297,6 +1297,16 @@ fill_attributes()
 		extra_info->AddInternalParam("OPSYS_LONG_NAME");
 	}
 
+	if( (tmp = sysapi_opsys_short_name()) != NULL ) {
+		insert( "OPSYS_SHORT_NAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_SHORT_NAME");
+	}
+
+	if( (tmp = sysapi_opsys_legacy()) != NULL ) {
+		insert( "OPSYS_LEGACY", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_LEGACY");
+	}
+
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
 		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );

@@ -42,6 +42,7 @@ MachAttributes::MachAttributes()
 	m_opsys_major_ver = 0;
 	m_opsys_name = NULL;
 	m_opsys_long_name = NULL;
+	m_opsys_legacy = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
@@ -124,6 +125,7 @@ MachAttributes::~MachAttributes()
 	if( m_opsys_and_ver ) free( m_opsys_and_ver );
 	if( m_opsys_name ) free( m_opsys_name );
 	if( m_opsys_long_name ) free( m_opsys_long_name );
+	if( m_opsys_legacy ) free( m_opsys_legacy );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
@@ -360,6 +362,16 @@ MachAttributes::compute( amask_t how_much )
                 } 
 		m_opsys_long_name = param( "OPSYS_LONG_NAME" );
 
+		if( m_opsys_short_name ) {
+			free( m_opsys_short_name );
+                } 
+		m_opsys_short_name = param( "OPSYS_SHORT_NAME" );
+
+		if( m_opsys_legacy ) {
+			free( m_opsys_legacy );
+                } 
+		m_opsys_legacy = param( "OPSYS_LEGACY" );
+
        		// temporary attributes for raw utsname info
 		if( m_utsname_sysname ) {
 			free( m_utsname_sysname );
@@ -545,6 +557,12 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	        }
         	if (m_opsys_long_name) {
 			cp->Assign( ATTR_OPSYS_LONG_NAME, m_opsys_long_name );
+	        }
+        	if (m_opsys_short_name) {
+			cp->Assign( ATTR_OPSYS_SHORT_NAME, m_opsys_short_name );
+	        }
+        	if (m_opsys_legacy) {
+			cp->Assign( ATTR_OPSYS_LEGACY, m_opsys_legacy );
 	        }
 
 		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
