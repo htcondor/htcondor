@@ -238,7 +238,6 @@ void NordugridResource::DoJobStatus()
 					(next_status = results.next()) ) {
 
 				int rc2;
-				BaseJob *base_job = NULL;
 				NordugridJob *job;
 				const char *dummy;
 				ASSERT( !strncmp( next_job_id, "nordugrid-job-globalid: ", 24 ) );
@@ -248,8 +247,7 @@ void NordugridResource::DoJobStatus()
 				sprintf( key, "nordugrid %s %s", resourceName,
 							 strrchr( next_job_id, '/' ) + 1 );
 				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
-													  base_job );
-				job = dynamic_cast<NordugridJob*>( base_job );
+													  (BaseJob*&)job );
 				if ( rc2 == 0 ) {
 					job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
 				}
