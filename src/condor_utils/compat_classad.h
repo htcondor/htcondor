@@ -367,7 +367,7 @@ class ClassAd : public classad::ClassAd
 
 	int EvalFloat (const char *name, classad::ClassAd *target, double &value);
 	int EvalFloat (const char *name, classad::ClassAd *target, float &value) {
-		double dval = value;
+		double dval;
 		int result = EvalFloat(name, target, dval);
 		value = dval;
 		return result;
