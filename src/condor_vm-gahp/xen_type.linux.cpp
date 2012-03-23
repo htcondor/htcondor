@@ -699,11 +699,37 @@ VirshType::Status()
 	    return false;
 	  }
 	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
-	  {
+	  { 
+	    static unsigned long long LastCpuTime = 0; 
+	    static time_t LastStamp = time(0); 
+	    
+	    time_t CurrentStamp = time(0);
+	    unsigned long long CurrentCpuTime= info->cpuTime;
+	    double percentUtilization=1.0;
+	    
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
+	    
+	    // Here is where we tack on utilization we only cate about the 
+	    m_result_msg += " ";
+	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
+	    m_result_msg += "=";
+	    
+	    if ( (CurrentStamp - LastStamp) > 0 )
+	    {
+	      // Old calc method because of libvirt version mismatches. 
+	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
+	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
+	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
+	    }
+
+	    m_result_msg += percentUtilization;
+	    
+	    LastCpuTime = CurrentCpuTime; 
+	    LastStamp = CurrentStamp;
+	    
 	    virDomainFree(dom);
 	    return true;
 	  }

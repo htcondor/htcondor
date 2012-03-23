@@ -1015,6 +1015,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
+	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
+		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, float_value);
+	}
+	
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
 	    jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
 	}
