@@ -93,11 +93,13 @@ sysapi_condor_arch(void)
 	}
 }
 
+
 const char *
 sysapi_uname_arch(void)
 {
 	return sysapi_condor_arch();
 }
+
 
 const char *
 sysapi_uname_opsys(void)
@@ -105,177 +107,55 @@ sysapi_uname_opsys(void)
 	return sysapi_opsys();
 }
 
-static int windows_inited = FALSE;
-static const char* opsys = NULL;
-static const char* opsys_versioned = NULL;
 static int opsys_version = 0;
-static const char* opsys_name = NULL;
-static const char* opsys_long_name = NULL;
-static const char* opsys_short_name = NULL;
-static int opsys_major_version = 0;
-static const char* opsys_legacy = NULL;
-static const char* opsys_super_short_name = NULL;
 
-
-// Find/create all opsys params in this method using OSVERSIONINFO
-void
-sysapi_get_windows_info(void)
+const char *
+sysapi_opsys_versioned(void)
 {
-    	char tmp_info[255];
+    static char answer[128] = {0};
+    if (answer[0])
+       return answer;
 
-	OSVERSIONINFOEX info;
-	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-	if (GetVersionEx((LPOSVERSIONINFO)&info) > 0 ) {
+	OSVERSIONINFO info;
+	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	if (GetVersionEx(&info) > 0) {
 		switch(info.dwPlatformId) {
 		case VER_PLATFORM_WIN32s:
-			sprintf(tmp_info, "WIN32s%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			sprintf(answer, "WIN32s%d%d", info.dwMajorVersion, info.dwMinorVersion);
 			break;
 		case VER_PLATFORM_WIN32_WINDOWS:
-			sprintf(tmp_info, "WIN32%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			sprintf(answer, "WIN32%d%d", info.dwMajorVersion, info.dwMinorVersion);
 			break;
 		case VER_PLATFORM_WIN32_NT:
-			sprintf(tmp_info, "WINNT%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			sprintf(answer, "WINNT%d%d", info.dwMajorVersion, info.dwMinorVersion);
 			break;
 		default:
-			sprintf(tmp_info, "UNKNOWN");
+			sprintf(answer, "UNKNOWN");
 			break;
 		}
-	}
-	opsys_legacy = strdup( tmp_info );
-	opsys = strdup( "WINDOWS" );
-	
-	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
-		opsys_super_short_name = strdup("7");
-	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 0) {
-		opsys_super_short_name = strdup("Vista");
-	} else if (info.dwMajorVersion == 5 && info.dwMinorVersion == 2) {
-		opsys_super_short_name = strdup("Server2003");
-	} else if (info.dwMajorVersion == 5 && info.dwMinorVersion == 1) {
-		opsys_super_short_name = strdup("XP");
-	} else {
-		opsys_super_short_name = strdup("Unknown");
-	}
-
-        sprintf(tmp_info, "Win%s",  opsys_super_short_name );
-	opsys_short_name = strdup( tmp_info );
-
         opsys_version = info.dwMajorVersion * 100 + info.dwMinorVersion;
-    	opsys_major_version = opsys_version;
-
-        sprintf(tmp_info, "Windows%s",  opsys_super_short_name );
-	opsys_name = strdup( tmp_info );
-
-        sprintf(tmp_info, "Windows %s SP%d",  opsys_super_short_name, info.wServicePackMajor);
-	opsys_long_name = strdup( tmp_info );
-
-        sprintf(tmp_info, "%s%d",  opsys, opsys_version);
-	opsys_versioned = strdup( tmp_info );
-
-        if (!opsys) {
-                opsys = strdup("Unknown");
-        }
-        if (!opsys_name) {
-                opsys_name = strdup("Unknown");
-        }
-        if (!opsys_short_name) {
-                opsys_short_name = strdup("Unknown");
-        }
-        if (!opsys_long_name) {
-                opsys_long_name = strdup("Unknown");
-        }
-        if (!opsys_versioned) {
-                opsys_versioned = strdup("Unknown");
-        }
-        if (!opsys_legacy) {
-                opsys_legacy = strdup("Unknown");
-        }
-
-	// Print out param values to the logfiles for debugging
-	dprintf(D_FULLDEBUG, "OpSysMajorVersion:  %d \n", opsys_major_version);
-	dprintf(D_FULLDEBUG, "OpSysShortName:  %s \n", opsys_short_name);
-	dprintf(D_FULLDEBUG, "OpSysLongName:  %s \n", opsys_long_name);
-	dprintf(D_FULLDEBUG, "OpSysAndVer:  %s \n", opsys_versioned);
-	dprintf(D_FULLDEBUG, "OpSysLegacy:  %s \n", opsys_legacy);
-	dprintf(D_FULLDEBUG, "OpSysName:  %s \n", opsys_name);
-	dprintf(D_FULLDEBUG, "OpSysVer:  %d \n", opsys_version);
-	dprintf(D_FULLDEBUG, "OpSys:  %s \n", opsys);
-
-	if ( opsys ) {
-		windows_inited = TRUE;
+	} else {
+		sprintf(answer, "ERROR");
 	}
+
+	return answer;
 }
 
 const char *
 sysapi_opsys(void)
 {
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys;
+    if (_sysapi_opsys_is_versioned) {
+        return sysapi_opsys_versioned();
+    }
+    return "WINDOWS";
 }
 
-const char *
-sysapi_opsys_versioned(void)
+int sysapi_opsys_version()
 {
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys_versioned;
-}
-
-int
-sysapi_opsys_version(void)
-{
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys_version;
-}
-
-const char *
-sysapi_opsys_long_name(void)
-{
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys_long_name;
-}
-
-
-const char *
-sysapi_opsys_short_name(void)
-{
-	if( ! windows_inited ) {
-                sysapi_get_windows_info();
-	}
-	return opsys_short_name;
-}
-
-int
-sysapi_opsys_major_version(void)
-{
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys_major_version;
-}
-
-const char *
-sysapi_opsys_name(void)
-{
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys_name;
-}
-
-const char *
-sysapi_opsys_legacy(void)
-{
-        if( ! windows_inited ) {
-                sysapi_get_windows_info();
-        }
-        return opsys_legacy;
+    if ( ! opsys_version) {
+         sysapi_opsys_versioned(); // init opsys_version
+    }
+    return opsys_version;
 }
 
 #else
@@ -293,7 +173,6 @@ static const char* opsys_name = NULL;
 static const char* opsys_long_name = NULL;
 static const char* opsys_short_name = NULL;
 static int opsys_major_version = 0;
-static const char* opsys_legacy = NULL;
 
 // temporary attributes for raw utsname info
 static const char* utsname_sysname = NULL;
@@ -374,32 +253,29 @@ init_arch(void)
 	// Windows params are set earlier in this code 
 
 	// Param Changes 
-	// NAME             OLD  ==> Linux       | BSD          | UNIX    | Windows
-	// ---------------------------------------------------------------------------
-	// OpSys =         LINUX ==> LINUX       | OSX          | AIX     | WINDOWS
-	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX703    | AIX53   | WINDOWS601
-	// OpSysVer =        206 ==> 501         | 703          | 503     | 601
-	// OpSysShortName =  N/A ==> Linux       | MACOSX       | AIX     | Win7 
-	// OpSysLongName =   N/A ==> Red Hat 5.1 | MACOSX 7.3   | AIX 5.3 | Windows 7 SP2
-	// OpSysMajorVer =   N/A ==> 5           | 7            | 5       | 601
-	// OpSysName(dist) = N/A ==> RedHat      | Lion         | AIX     | Windows7
-	// OpSysLegacy	   = N/A ==> LINUX       | OSX          | AIX     | WINNT61
+	// NAME             OLD  ==>  Linux        | BSD          | UNIX
+	// ----------------------------------------------------------
+	// OpSys =       "LINUX" ==> "LINUX"       | OSX          | AIX
+	// OpSysAndVer = "LINUX" ==> "RedHat5"     | MacOS107     | AIX53  // opsys_versioned
+	// OpSysVer =        206 ==> "501"         | 1007         | 503    // opsys_version
+	// OpSysLongName =   N/A ==> "Red Hat 5.1" | MACOS 10.7.2 | AIX 5.3 
+	// OpSysMajorVer =   N/A ==> "5"           | 7            | 5
+	// OpSysName(dist) = N/A ==> "RedHat"      | Lion         | AIX
+
 
 #if defined( Darwin )
 
 	opsys = strdup( "OSX" );
-	opsys_legacy = strdup( opsys );
-	opsys_short_name = strdup( "MacOSX" );
+	opsys_short_name = strdup( "MacOS" );
 	opsys_long_name = sysapi_get_darwin_info();  
 	opsys_major_version = sysapi_find_darwin_major_version( opsys_long_name );
+	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_major_version );
 	opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_version );
 	opsys_name = sysapi_find_darwin_opsys_name( opsys_major_version );
 	
 #elif defined( CONDOR_FREEBSD )
 
 	opsys = strdup( "FREEBSD" );
-	opsys_legacy = strdup( opsys );
 	opsys_name = strdup ( opsys );
  	opsys_short_name = strdup( "FreeBSD" );
 	opsys_long_name = sysapi_get_bsd_info( opsys_short_name, buf.release ); 
@@ -411,7 +287,6 @@ init_arch(void)
 	if( !strcasecmp(uname_opsys, "linux") )
         {
 		opsys = strdup( "LINUX" );
-		opsys_legacy = strdup( opsys );
 		opsys_short_name = strdup( "Linux" );
 		opsys_long_name = sysapi_get_linux_info();
 		opsys_name = sysapi_find_linux_name( opsys_long_name );
@@ -423,7 +298,6 @@ init_arch(void)
         {
 		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
 		opsys = strdup( opsys_long_name );
-		opsys_legacy = strdup( opsys );
 		opsys_major_version = sysapi_find_major_version( opsys_long_name );
 		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
 		opsys_versioned = sysapi_find_opsys_versioned( opsys, opsys_major_version );
@@ -448,16 +322,12 @@ init_arch(void)
         if (!opsys_versioned) {
                 opsys_versioned = strdup("Unknown");
         }
-        if (!opsys_legacy) {
-                opsys_legacy = strdup("Unknown");
-        }
 
 	// Print out param values to the logfiles for debugging
 	dprintf(D_FULLDEBUG, "OpSysMajorVersion:  %d \n", opsys_major_version);
 	dprintf(D_FULLDEBUG, "OpSysShortName:  %s \n", opsys_short_name);
 	dprintf(D_FULLDEBUG, "OpSysLongName:  %s \n", opsys_long_name);
 	dprintf(D_FULLDEBUG, "OpSysAndVer:  %s \n", opsys_versioned);
-	dprintf(D_FULLDEBUG, "OpSysLegacy:  %s \n", opsys_legacy);
 	dprintf(D_FULLDEBUG, "OpSysName:  %s \n", opsys_name);
 	dprintf(D_FULLDEBUG, "OpSysVer:  %d \n", opsys_version);
 	dprintf(D_FULLDEBUG, "OpSys:  %s \n", opsys);
@@ -481,7 +351,7 @@ sysapi_get_darwin_info(void)
 
     char tmp_info[262];
     char *info_str;
-    char *os_name = "MacOSX ";
+    char *os_name = "MACOS ";
  
     if ((output_fp = my_popenv(args, "r", FALSE)) != NULL) {
 	fgets(ver_str, 255, output_fp);
@@ -491,13 +361,7 @@ sysapi_get_darwin_info(void)
 	info_str = strdup( "Unknown" );
     }
 
-    int ten = 0, major = 0, minor = 0;
-    int fields = sscanf(ver_str, "%d.%d.%d", &ten, &major, &minor);
-    if ((fields != 3) || ten != 10) {
-        dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
-    }
-
-    sprintf( tmp_info, "%s%d.%d", os_name, major, minor);
+    sprintf( tmp_info, "%s%s", os_name, ver_str);
     info_str = strdup( tmp_info );
 
     if( !info_str ) {
@@ -522,13 +386,11 @@ sysapi_find_darwin_major_version( const char *tmp_opsys_long_name )
        		++ver_str;
   	}
 
-	// we remove the 10 in the sysapi_get_darwin_info call
-	int major = 0, minor = 0;
-	int fields = sscanf(ver_str, "%d.%d", &major, &minor);
-	if ((fields != 2) ) {
+	int ten = 0, major = 0, minor = 0;
+	int fields = sscanf(ver_str, "%d.%d.%d", &ten, &major, &minor);
+	if ((fields != 3) || ten != 10) {
 		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
 	}
-
 	return major;
 }
 
@@ -1070,24 +932,6 @@ sysapi_opsys_long_name(void)
 		init_arch();
 	}
 	return opsys_long_name;
-}
-
-const char *
-sysapi_opsys_short_name(void)
-{
-	if( ! arch_inited ) {
-		init_arch();
-	}
-	return opsys_short_name;
-}
-
-const char *
-sysapi_opsys_legacy(void)
-{
-	if( ! arch_inited ) {
-		init_arch();
-	}
-	return opsys_legacy;
 }
 
 // temporary attributes for raw utsname info
