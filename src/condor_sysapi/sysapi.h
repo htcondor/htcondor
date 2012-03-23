@@ -91,7 +91,9 @@ const char* sysapi_opsys_versioned(void);
         int sysapi_opsys_version(void);
 const char* sysapi_opsys_name(void);
 const char* sysapi_opsys_long_name(void);
+const char* sysapi_opsys_short_name(void);
         int sysapi_opsys_major_version(void);
+const char* sysapi_opsys_legacy(void);
 
 // temporary attributes for raw utsname info
 const char* sysapi_utsname_sysname(void);
@@ -127,6 +129,7 @@ const char * sysapi_get_bsd_info(const char *opsys_short_name, const char *relea
 const char * sysapi_get_linux_info(void);
 const char * sysapi_find_linux_name( const char *opsys_long_name );
 const char * sysapi_get_unix_info( const char *sysname, const char *release, const char *version, int append_version );
+void sysapi_get_windows_info( void );
 
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );
