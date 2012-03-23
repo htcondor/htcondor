@@ -1079,6 +1079,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Insert(ATTR_MEMORY_USAGE, tree->Copy());
 	}
 
+	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
+		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, float_value);
+	}
+	
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
 		int rss = remote_rusage.ru_maxrss;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {

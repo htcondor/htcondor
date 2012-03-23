@@ -390,6 +390,8 @@ const char * const ATTR_JOB_VM_CHECKPOINT			= "JobVMCheckpoint";
 const char * const ATTR_JOB_VM_NETWORKING			= "JobVMNetworking";
 const char * const ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char * const ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
+/* ATTR_JOB_VM_CPU_UTILIZATION is updated by the starter to the job_ad but is also used in the startd during loadavg calculations */
+const char * const ATTR_JOB_VM_CPU_UTILIZATION		= "JobVMCpuUtilization";
 const char * const  ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
 const char * const  ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
 const char * const  ATTR_JOB_VM_VNC = "JobVMVNCConsole";
