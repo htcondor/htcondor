@@ -171,24 +171,28 @@ END_C_DECLS
 
 class NetworkDeviceInfo {
 public:
-	NetworkDeviceInfo(char const *the_name,char const *the_ip):
+	NetworkDeviceInfo(char const *the_name,char const *the_ip, bool the_up):
 		m_name(the_name),
-		m_ip(the_ip)
+		m_ip(the_ip),
+		m_up(the_up)
 	{
 	}
 
 	NetworkDeviceInfo(NetworkDeviceInfo const &other):
 		m_name(other.m_name),
-		m_ip(other.m_ip)
+		m_ip(other.m_ip),
+		m_up(other.m_up)
 	{
 	}
 
 	char const *name() { return m_name.c_str(); }
 	char const *IP() { return m_ip.c_str(); }
+	bool is_up() const { return m_up; }
 
 private:
 	std::string m_name;
 	std::string m_ip;
+	bool m_up;
 };
 
 bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices);
