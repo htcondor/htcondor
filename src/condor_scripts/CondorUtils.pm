@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
+
 BEGIN {
 	if ($^O =~ /MSWin32/) {
 		require Thread; Thread->import();
@@ -138,7 +139,8 @@ sub runcmd {
 	local(*IN,*OUT,*ERR);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
-	my $date = sprintf("%02d/%02d/%02d %02d:%02d:%02d", $mon, $mday, $year % 100, $hour, $min, $sec);
+        use POSIX qw/strftime/; # putting this at the top of the script doesn't work oddly
+        my $date = strftime("%Y/%m/%d %H:%M:%S", localtime);
 	my $childpid;
 	my $local_expectation = FALSE;
 	my %altoptions;

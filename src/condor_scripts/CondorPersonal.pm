@@ -50,7 +50,7 @@ use warnings;
 
 use Carp;
 use Cwd;
-use POSIX "sys_wait_h";
+use POSIX qw/sys_wait_h strftime/;
 use Socket;
 use Sys::Hostname;
 
@@ -320,14 +320,14 @@ sub StartCondorWithParams
 	return( $config_and_port );
 }
 
-sub debug
-{
+sub debug {
     my $string = shift;
-	my $markedstring = "CP:" . $string;
-	my $level = shift;
+    my $markedstring = "CP:" . $string;
+    my $level = shift;
     if(!(defined $level)) {
         print( "", timestamp(), ": $markedstring" ) if $DEBUG;
-    } elsif($level <= $DEBUGLEVEL) {
+    }
+    elsif($level <= $DEBUGLEVEL) {
         print( "", timestamp(), ": $markedstring" ) if $DEBUG;
     }
 }
@@ -349,7 +349,7 @@ sub DebugOff
 }
 
 sub timestamp {
-    return scalar localtime();
+    return strftime("%Y/%m/%d %H:%M:%S", localtime);
 }
 
 sub Reset
@@ -1471,40 +1471,37 @@ sub IsRunningYet
 	}
 
 	if($daemonlist =~ /STARTD/i) {
-		# lets wait for the collector to know about it
-		# if we have a collector
-		my $havestartd = "";
-		my $done = "no";
-		my $currenthost = CondorTest::getFqdnHost();
-		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
-			print "Waiting for collector to see startd - ";
-			$loopcount = 0;
-			TRY: while( $done eq "no") {
-				$loopcount += 1;
-				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
+            # lets wait for the collector to know about it if we have a collector
+            my $currenthost = CondorTest::getFqdnHost();
+            if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+                print "Waiting for collector to see startd - ";
+                $loopcount = 0;
+                while(1) {
+                    $loopcount += 1;
+                    my $output = `condor_status -startd -format \"%s\\n\" name`;
+                    
+                    my $res = $?;
+                    if ($res != 0) {
+                        print "\ncondor_status returned error code $res\n";
+                        print timestamp(), " The collector probably is not running after all, giving up\n";
+                        print timestamp(), " Output from condor_status:\n";
+                        print $output;
+                        return 0;
+                    }
+                    
+                    if($output =~ /$currenthost/) {
+                        print "ok\n";
+                        last;
+                    }
 
-				my $res = $?;
-				if ($res != 0) {
-					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
-					return 0;
-				}
-
-    			foreach my $line (@cmd)
-    			{
-        			if( $line =~ /^.*$currenthost.*/)
-        			{
-            			$done = "yes";
-						print "ok\n";
-						last TRY;
-        			}
-    			}
-				if($loopcount == $runlimit) { 
-					print "bad\n";
-					last; 
-				}
-				sleep ($loopcount * $backoff);
-			}
-		}
+                    if($loopcount == $runlimit) { 
+                        print "bad\n";
+                        print timestamp(), " Timed out waiting for collector to see startd\n";
+                        last; 
+                    }
+                    sleep ($loopcount * $backoff);
+                }
+            }
 	}
 
 	if($daemonlist =~ /SCHEDD/i) {

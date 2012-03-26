@@ -116,7 +116,7 @@ class UniShadow : public BaseShadow
 
 	struct rusage getRUsage( void );
 
-	int getImageSize( void );
+	int64_t getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss );
 
 	int getDiskUsage( void );
 

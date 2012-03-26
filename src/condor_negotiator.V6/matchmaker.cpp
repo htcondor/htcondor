@@ -2508,6 +2508,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			rejPreemptForPolicy = 0;
 			rejPreemptForRank = 0;
 			rejForSubmitterLimit = 0;
+            rejectedConcurrencyLimit = "";
 
 			// Optimizations: 
 			// If number of idle jobs = 0, don't waste time with negotiate.
@@ -3046,7 +3047,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 	int			result;
 	time_t		currentTime;
 	ClassAd		request;
-	ClassAd		*offer;
+	ClassAd*    offer = NULL;
 	bool		only_consider_startd_rank;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
@@ -3204,8 +3205,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 
 		// 2a.  ask for job information
 		int sleepy = param_integer("NEG_SLEEP", 0);
+			//  This sleep is useful for any testing that calls for a
+			//  long negotiation cycle, please do not remove
+			//  it. Examples of such testing are the async negotiation
+			//  protocol w/ schedds and reconfig delaying until after
+			//  a negotiation cycle. -matt 21 mar 2012
 		if ( sleepy ) {
-			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+			sleep(sleepy);
 		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
@@ -3327,7 +3333,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 				int want_match_diagnostics = 0;
 				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
 									want_match_diagnostics);
-				const char *diagnostic_message = NULL;
+				string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());
@@ -3341,13 +3347,12 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 				if (rejForNetwork) {
 					diagnostic_message = "insufficient bandwidth";
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
-							diagnostic_message);
+							diagnostic_message.c_str());
 				} else {
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
 					} else if (rejForConcurrencyLimit) {
-						diagnostic_message =
-							"concurrency limit reached";
+						diagnostic_message = "concurrency limit " + rejectedConcurrencyLimit + " reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
@@ -3364,7 +3369,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 						diagnostic_message = "no match found";
 					}
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
-							diagnostic_message);
+							diagnostic_message.c_str());
 				}
 				sock->encode();
 				if ((want_match_diagnostics) ? 
@@ -3586,6 +3591,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		// Check resource constraints requested by request
 	rejForConcurrencyLimit = 0;
+    rejectedConcurrencyLimit = "";
 	MyString limits;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
 		limits.lower_case();
@@ -3619,6 +3625,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						limit, count, increment, max);
 
 				rejForConcurrencyLimit++;
+                rejectedConcurrencyLimit = limit;
 				return NULL;
 			}
 		}

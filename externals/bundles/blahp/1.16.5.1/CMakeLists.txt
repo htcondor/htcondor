@@ -17,7 +17,7 @@
  ############################################################### 
 
 # The source tarball for this external was downloaded from this URL:
-#   http://jra1mw.cvs.cern.ch/cgi-bin/jra1mw.cgi/org.glite.ce.blahp.tar.gz?view=tar&pathrev=glite-ce-blahp_R_1_16_3_3
+#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.ce.blahp.tar.gz?view=tar&pathrev=glite-ce-blahp_R_1_16_5_1
 
 if ( LINUX )
 	option(WITH_BLAHP "Compiling with support for BLAHP" ON)
@@ -59,14 +59,14 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.3.3-p2 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.3.3.tar.gz ${CMD_TERM}
+						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
-						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.3.3.tar.gz
+						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&

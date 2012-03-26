@@ -229,31 +229,40 @@ void NordugridResource::DoJobStatus()
 		}
 
 		if ( rc == 0 ) {
-			const char *next_job_id;
-			const char *next_status;
+			const char *next_job_id = NULL;
+			const char *next_status = NULL;
+			const char *next_attr;
 			std::string key;
 
 			results.rewind();
-			while ( (next_job_id = results.next()) &&
-					(next_status = results.next()) ) {
+			do {
+				next_attr = results.next();
 
-				int rc2;
-				BaseJob *base_job = NULL;
-				NordugridJob *job;
-				const char *dummy;
-				ASSERT( !strncmp( next_job_id, "nordugrid-job-globalid: ", 24 ) );
-				ASSERT( !strncmp( next_status, "nordugrid-job-status: ", 22 ) );
-				dummy = results.next();
-				ASSERT( dummy == NULL || *dummy == '\0' );
-				sprintf( key, "nordugrid %s %s", resourceName,
-							 strrchr( next_job_id, '/' ) + 1 );
-				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
-													  base_job );
-				job = dynamic_cast<NordugridJob*>( base_job );
-				if ( rc2 == 0 ) {
-					job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
+				if ( next_attr != NULL && *next_attr != '\0' ) {
+						// Save the attributes we're interested in
+					if ( !strncmp( next_attr, "nordugrid-job-globalid: ", 24 ) ) {
+						next_job_id = next_attr;
+					} else if ( !strncmp( next_attr, "nordugrid-job-status: ", 22 ) ) {
+						next_status = next_attr;
+					}
+					continue;
 				}
-			}
+					// We just reached the end of a record. Process it.
+					// If we don't have the attributes we expect, skip it.
+				if ( next_job_id && next_status ) {
+					int rc2;
+					NordugridJob *job;
+					sprintf( key, "nordugrid %s %s", resourceName,
+							 strrchr( next_job_id, '/' ) + 1 );
+					rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
+														  (BaseJob*&)job );
+					if ( rc2 == 0 ) {
+						job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
+					}
+				}
+				next_job_id = NULL;
+				next_status = NULL;
+			} while ( next_attr );
 
 		}
 

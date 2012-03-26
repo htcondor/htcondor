@@ -75,7 +75,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	exit_value = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
 	disk_usage = 0;
-	image_size = 0;
+	image_size_kb = 0;
+	memory_usage_mb = -1;
+	proportional_set_size_kb = -1;
 	state = RR_PRE;
 	began_execution = false;
 	supports_reconnect = false;
@@ -983,6 +985,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 		// image size hasn't changed at all...
 
 	int int_value;
+	int64_t int64_value;
 	float float_value;
 
 	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
@@ -993,9 +996,22 @@ RemoteResource::setJobAd( ClassAd *jA )
 		remote_rusage.ru_utime.tv_sec = (int) float_value; 
 	}
 
-	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
-		image_size = int_value;
+	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
+		image_size_kb = int64_value;
 	}
+
+	if( jA->LookupInteger(ATTR_MEMORY_USAGE, int64_value) ) {
+		memory_usage_mb = int64_value;
+	}
+
+	if( jA->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
+		remote_rusage.ru_maxrss = int_value;
+	}
+
+	if( jA->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int64_value) ) {
+		proportional_set_size_kb = int64_value;
+	}
+
 			
 	if( jA->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
@@ -1028,6 +1044,7 @@ void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
+	int64_t int64_value;
 	float float_value;
 	MyString string_value;
 
@@ -1050,10 +1067,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, float_value);
 	}
 
-	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int_value) ) {
-		if( int_value > image_size ) {
-			image_size = int_value;
-			jobAd->Assign(ATTR_IMAGE_SIZE, int_value);
+	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
+		if( int64_value > image_size_kb ) {
+			image_size_kb = int64_value;
+			jobAd->Assign(ATTR_IMAGE_SIZE, image_size_kb);
 		}
 	}
 
@@ -1062,17 +1079,23 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Insert(ATTR_MEMORY_USAGE, tree->Copy());
 	}
 
+	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
+		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, float_value);
+	}
+	
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
-		int rss = 0;
+		int rss = remote_rusage.ru_maxrss;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
+			remote_rusage.ru_maxrss = int_value;
 			jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
 		}
 	}
 
-	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int_value) ) {
-		int pss = 0;
-		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < int_value ) {
-			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int_value);
+	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int64_value) ) {
+		int64_t pss = proportional_set_size_kb;
+		if( !jobAd->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE,pss) || pss < int64_value ) {
+			proportional_set_size_kb = int64_value;
+			jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int64_value);
 		}
 	}
 
@@ -1186,6 +1209,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// record the new state
 			setResourceState( new_state );
 		}
+	}
+
+	if (jobAd->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value)) {
+		memory_usage_mb = int64_value;
 	}
 
 	MyString starter_addr;
@@ -2118,6 +2145,51 @@ RemoteResource::checkX509Proxy( void )
 		// No change.
 		return;
 	}
+
+
+	// if the proxy has been modified, attempt to reload various attributes
+	// and update them in the jobAd.  we do this on the submit side regardless
+	// of whether or not the remote side succesfully receives the proxy, since
+	// this allows us to use the attributes in job policy (periodic_hold, etc.)
+
+	// first, do the DN and expiration time, which all proxies have
+	char* proxy_subject = x509_proxy_subject_name(proxy_path.Value());
+	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
+	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
+	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
+	if (proxy_subject) {
+		free(proxy_subject);
+	}
+
+#if defined(HAVE_EXT_VOMS)
+	// second, worry about the VOMS attributes, which may or may not be present
+	char * voname = NULL;
+	char * firstfqan = NULL;
+	char * quoted_DN_and_FQAN = NULL;
+	int vomserr = extract_VOMS_info_from_file(
+			proxy_path.Value(),
+			0 /*do not verify*/,
+			&voname,
+			&firstfqan,
+			&quoted_DN_and_FQAN);
+	if (vomserr == 0) {
+		// VOMS attributes were found
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "VOMS attributes were found\n");
+		}
+		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
+		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
+		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
+		free(voname);
+		free(firstfqan);
+		free(quoted_DN_and_FQAN);
+	} else {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "VOMS attributes were not found\n");
+		}
+	}
+#endif
+	shadow->updateJobInQueue(U_X509);
 
 	// Proxy file updated.  Time to upload
 	last_proxy_timestamp = lastmod;

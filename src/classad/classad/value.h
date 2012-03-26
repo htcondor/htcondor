@@ -24,6 +24,7 @@
 #include "classad/common.h"
 #include "classad/util.h"
 
+
 namespace classad {
 
 class Literal;
@@ -170,8 +171,9 @@ class Value
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
-		inline bool IsIntegerValue(int &i) const; 	
+		inline bool IsIntegerValue(int &i) const;
 		/** Checks if the value is integral.
+			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
 		inline bool IsIntegerValue() const;

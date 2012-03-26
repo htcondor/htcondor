@@ -11,7 +11,7 @@ AuthorizedKeysFile _INSERT_AUTHORIZED_KEYS_FILE_
 # since sshd is running as the job uid, there isn't really a security concern
 AcceptEnv *
 
-Subsystem       sftp    /usr/libexec/openssh/sftp-server
+Subsystem       sftp    @SFTP_SERVER@
 
 # prevent sshd from freaking out about reading files from inside
 # a tmp-like directory

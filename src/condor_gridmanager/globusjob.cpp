@@ -1257,7 +1257,8 @@ void GlobusJob::doEvaluateState()
 										RSL->c_str(),
 										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
 													   false ) ? 0 : 1,
-										gramCallbackContact, &job_contact );
+										gramCallbackContact, &job_contact,
+										false);
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1777,7 +1778,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 										resourceManagerString,
 										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact );
+										gramCallbackContact, &job_contact,
+										true );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -2407,7 +2409,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 										resourceManagerString,
 										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact );
+										gramCallbackContact, &job_contact,
+										true);
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;

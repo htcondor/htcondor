@@ -2301,7 +2301,13 @@ SetImageSize()
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
-	} else {
+	} else if ( (tmp = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY)) ) {
+		fprintf(stderr, "\nNOTE: '%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
+		buffer.sprintf("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
+		free(tmp);
+		InsertJobExpr(buffer);
+	}else {
+		fprintf(stderr, "\nWARNING: '%s' was NOT specified.  Depending on your admin policy your job may not run!\n", ATTR_REQUEST_MEMORY);
 #if 0  // no default expression for RequestMemory
 		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
 					   ATTR_REQUEST_MEMORY,

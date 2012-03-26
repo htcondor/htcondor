@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Enhanced the \Condor{negotiator} to provide the name of 
+concurrency limits that cause negotiation to fail, so that 
+\Condor{q} -analyze can provide more informative failure information.
+\Ticket{2878}
+
 \item Added configuration parameter 
 \Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}, which causes the
 \Condor{negotiator} to re-read the configuration prior to each
@@ -59,12 +64,16 @@ hard linked to multiple file names.
 Now, symbolic links are used; this fixes problems with Debian installations.
 \Ticket{2140}
 
-\item New functions pow and quantize have been added to ClassAds.
+\item New ClassAd functions \Procedure{pow}, \Procedure{quantize},
+\Procedure{splitUserName}, and \Procedure{splitSlotName} are available.
+See section ~\ref{sec:classadFunctions} for definitions of these functions.
 \Ticket{2856}
+\Ticket{2891}
 
-\item New format tags \%v and \%V have been added for use by \Condor{status} -format.
-These tags request that the value of the expression or attribute be printed using
-a format appropriate to its type.
+\item New format tags \%v and \%V have been added for use by the
+\Condor{status} \Opt{-format} option.
+These tags request that the value of the expression or attribute be printed 
+using a format appropriate to its type.
 When using the \%V format tag, string values appear as they would in
 the output of \condor{q -long} or \condor{submit -long}.
 \Ticket{2857}
@@ -91,10 +100,12 @@ it only took effect if \MacroNI{WANT\_VACATE} was \Expr{True}.
 \Ticket{2855}
 
 \item The new configuration variables \Macro{MEMORY\_USAGE\_METRIC} and
-\Macro{MEMORY\_USAGE\_METRIC\_VM} specify the value that the \Condor{starter} will
+\Macro{MEMORY\_USAGE\_METRIC\_VM} specify the value that the 
+\Condor{starter} will
 set into the \Attr{MemoryUsage} attribute for a job.  It is expected that
 this will be a ClassAd expression that defines the job memory usage in terms
 of other job attributes.
+\Ticket{2843}
 
 \item The configuration variable \Macro{DAGMAN\_SUBMIT\_DELAY} can now be any
 non negative integer.  It was formerly limited to values between 0 and 60,
@@ -106,6 +117,9 @@ inclusive.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed path to sftp\_server on Mac OS X and Debian.
+\Ticket{2789}
 
 \item Fixed a rare problem that caused a 20 second timeout to occur in
 the \Condor{collector} when authenticating.
@@ -156,6 +170,11 @@ from the queue.
 
 \item When selecting an IPv4 network interface to use Condor would erroneously prefer private networks over public networks in some cases.  This has been fixed, Condor again prefers public networks over private networks.
 \Ticket{2853}
+
+\item The \condor{gridmanager} is much better at sending commit signals
+to the GRAM job-manager in a timely manner. As a result, the occurrence of
+GRAM errors 111 and 130 should be greatly reduced.
+\Ticket{2859}
 
 \end{itemize}
 

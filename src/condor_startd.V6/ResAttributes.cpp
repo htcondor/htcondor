@@ -42,6 +42,8 @@ MachAttributes::MachAttributes()
 	m_opsys_major_ver = 0;
 	m_opsys_name = NULL;
 	m_opsys_long_name = NULL;
+	m_opsys_short_name = NULL;
+	m_opsys_legacy = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
@@ -124,6 +126,8 @@ MachAttributes::~MachAttributes()
 	if( m_opsys_and_ver ) free( m_opsys_and_ver );
 	if( m_opsys_name ) free( m_opsys_name );
 	if( m_opsys_long_name ) free( m_opsys_long_name );
+	if( m_opsys_short_name ) free( m_opsys_short_name );
+	if( m_opsys_legacy ) free( m_opsys_legacy );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
@@ -360,6 +364,16 @@ MachAttributes::compute( amask_t how_much )
                 } 
 		m_opsys_long_name = param( "OPSYS_LONG_NAME" );
 
+		if( m_opsys_short_name ) {
+			free( m_opsys_short_name );
+                } 
+		m_opsys_short_name = param( "OPSYS_SHORT_NAME" );
+
+		if( m_opsys_legacy ) {
+			free( m_opsys_legacy );
+                } 
+		m_opsys_legacy = param( "OPSYS_LEGACY" );
+
        		// temporary attributes for raw utsname info
 		if( m_utsname_sysname ) {
 			free( m_utsname_sysname );
@@ -545,6 +559,12 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	        }
         	if (m_opsys_long_name) {
 			cp->Assign( ATTR_OPSYS_LONG_NAME, m_opsys_long_name );
+	        }
+        	if (m_opsys_short_name) {
+			cp->Assign( ATTR_OPSYS_SHORT_NAME, m_opsys_short_name );
+	        }
+        	if (m_opsys_legacy) {
+			cp->Assign( ATTR_OPSYS_LEGACY, m_opsys_legacy );
 	        }
 
 		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
@@ -836,14 +856,14 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	map = map_arg;
 	c_type = slot_type;
 	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
-	c_phys_mem = num_phys_mem;
+	c_slot_mem = c_phys_mem = num_phys_mem;
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
 	c_execute_dir = execute_dir;
 	c_execute_partition_id = execute_partition_id;
 	c_idle = -1;
 	c_console_idle = -1;
-	c_disk = 0;
+	c_slot_disk = c_disk = 0;
 	c_total_disk = 0;
 
 	c_condor_load = -1.0;
@@ -870,8 +890,7 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 		cp->Assign( ATTR_TOTAL_DISK, (int)c_total_disk );
 
 		cp->Assign( ATTR_DISK, (int)c_disk );
-
-		cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)c_num_slot_cpus );
+		
 	}
 
 	if( IS_TIMEOUT(how_much) || IS_PUBLIC(how_much) ) {
@@ -894,6 +913,14 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 		cp->Assign( ATTR_MEMORY, c_phys_mem );
 
 		cp->Assign( ATTR_CPUS, c_num_cpus );
+		
+		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
+		
+		cp->Assign( ATTR_TOTAL_SLOT_DISK, (int)c_slot_disk );
+
+		cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
+		
+		
 	}
 }
 
@@ -925,6 +952,11 @@ CpuAttributes::compute( amask_t how_much )
 
 		val = c_total_disk * c_disk_fraction;
 		c_disk = (int)floor( val );
+		if (0 == (int)c_slot_disk)
+		{
+		  // only use the 1st compute ignore subsequent.
+		  c_slot_disk = c_disk; 
+		}
 	}	
 }
 
@@ -1125,7 +1157,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap )
 		if( new_value < 1 ) {
 			return false;
 		}
-		cap->c_phys_mem = new_value;
+		cap->c_slot_mem = cap->c_phys_mem = new_value;
 	}
 
 	if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
