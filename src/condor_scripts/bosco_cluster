@@ -336,6 +336,13 @@ echo "Done!"
 glite_location=`condor_config_val GLITE_LOCATION`
 release_dir=`condor_config_val RELEASE_DIR`
 
+if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
+    echo "Unable to determine condor locations using condor_config_val."
+    echo "There could be a problem in one of your condor config files."
+    echo "Exiting..."
+    exit 1
+fi
+
 echo "Installing BOSCO on $remote_host..."
 
 # Make the necessary remote directories
