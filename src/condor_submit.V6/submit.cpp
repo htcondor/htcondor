@@ -6196,14 +6196,15 @@ check_requirements( char const *orig, MyString &answer )
 	for( aptr = answer.Value(); *aptr; aptr++ ) {
 		if( strncasecmp(ATTR_MEMORY,aptr,5) == MATCH ) {
 				// We found "Memory", but we need to make sure that's
-				// not part of "VirtualMemory"...
-			if( aptr == answer.Value() ) {
-					// We're at the beginning, must be Memory, since
-					// there's nothing before it.
+				// not part of "VirtualMemory" or "requestmemory"				
+			if( aptr == answer.Value() || 
+					// Otherwise, it's safe to go back one position
+				*(aptr-1) == '.' ) {
+					// We're either the beginning with just Memory, or
+					// it was specified as target.memory
 				checks_mem = true;
-				break;
-			}
-				// Otherwise, it's safe to go back one position:
+				continue; 
+			}				
 			if( *(aptr-1) == 'l' || *(aptr-1) == 'L' ) {
 					// Must be VirtualMemory, keep searching...
 				continue;
@@ -6213,9 +6214,8 @@ check_requirements( char const *orig, MyString &answer )
 					// Must be RequestMemory, keep searching...
 				continue;
 			}	
-		
 			checks_mem = true;
-			break;
+			continue;
 		}
 	}
 
