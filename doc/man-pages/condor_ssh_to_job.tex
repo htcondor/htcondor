@@ -193,11 +193,13 @@ arguments to \Condor{ssh\_to\_job}.
 \end{verbatim}
 \normalsize
 
-Note that this command was added in Condor version 7.3.  If  one
-tries to condor\_ssh\_to\_job to an execute machine running a
-version of Condor older than this, the command will fail with the 
-error message
-Failed to send CREATE\_JOB\_OWNER\_SEC\_SESSION to starter.
+Note that \Condor{ssh\_to\_job} was added to Condor in version 7.3.  
+If  one uses \Condor{ssh\_to\_job} to connect to a job
+on an execute machine running a version of Condor older than the 7.3 series,
+the command will fail with the error message
+\begin{verbatim}
+Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter
+\end{verbatim}
 
 \ExitStatus
 
