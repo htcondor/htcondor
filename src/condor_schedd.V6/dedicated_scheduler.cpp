@@ -671,6 +671,15 @@ DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 	if( !jobad ) {
 		return true;
 	}
+
+	if (!m_jobs) {
+		// This is a fast claim of a split dynamic resource
+		dedicated_scheduler.incrementSplitMatchCount();
+		if (dedicated_scheduler.getSplitMatchCount() > dedicated_scheduler.getResourceRequestSize()) {
+			FreeJobAd( jobad );
+			return true;
+		}
+	}
 	FreeJobAd( jobad );
 	return false;
 }
@@ -1914,6 +1923,8 @@ DedicatedScheduler::shadowSpawned( shadow_rec* srec )
 	if( ! srec ) {
 		return false;
 	}
+
+	split_match_count = 0;
 
 	int i; 
 	PROC_ID id;
