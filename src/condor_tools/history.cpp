@@ -55,6 +55,7 @@ void Usage(char* name, int iExitCode)
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-f <file>\t\tRead history data from specified file\n"
 		"\t\t-backwards\t\tList jobs in reverse chronological order\n"
+		"\t\t-forwards\t\tList jobs in chronological order\n"
 		"\t\t-match <number>\t\tLimit the number of jobs displayed\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"		
 		"\t\t-l\t\t\tVerbose output (entire classads)\n"
@@ -89,7 +90,7 @@ static	ClassAdList	quillList;
 static  bool longformat=false;
 static  bool use_xml=false;
 static  bool customFormat=false;
-static  bool backwards=false;
+static  bool backwards=true;
 static  AttrListPrintMask mask;
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
@@ -153,6 +154,10 @@ main(int argc, char* argv[])
     
     else if (match_prefix(argv[i],"-backwards")) {
         backwards=TRUE;
+    }
+
+    else if (match_prefix(argv[i],"-forwards")) {
+        backwards=FALSE;
     }
 
     else if (match_prefix(argv[i],"-match")) {
