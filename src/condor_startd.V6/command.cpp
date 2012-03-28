@@ -1182,6 +1182,28 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		StringList type_list;
 		int cpus, memory, disk;
 
+			// Modify the requested resource attributes as per config file.
+		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
+		for (int i=0; resources[i]; i++) {
+			MyString knob("MODIFY_REQUEST_EXPR_");
+			knob += resources[i];
+			char *tmp = param(knob.Value());
+			if( tmp ) {
+				ExprTree *tree = NULL;
+				EvalResult result;
+				ParseClassAdRvalExpr(tmp, tree);
+				if ( tree &&
+					 EvalExprTree(tree,req_classad,mach_classad,&result) &&
+					 result.type == LX_INTEGER )
+				{
+					req_classad->Assign(resources[i],result.i);
+
+				}
+				if (tree) delete tree;
+				free(tmp);
+			}
+		}
+
 			// Make sure the partitionable slot itself is satisfied by
 			// the job. If not there is no point in trying to
 			// partition it. This check also prevents
