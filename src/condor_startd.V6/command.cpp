@@ -1199,33 +1199,55 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
-			cpus = 1; // reasonable default, for sure
+			// Pull out the requested attribute values.  If specified, we go with whatever
+			// the schedd wants, which is in request attributes prefixed with
+			// "_condor_".  This enables to schedd to request something different than
+			// what the end user specified, and yet still preserve the end-user's
+			// original request. If the schedd does not specify, go with whatever the user
+			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
+			// not exist, we either cons up a default or refuse the claim.
+		MyString schedd_requested_attr;
+
+			// Look to see how many CPUs are being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_CPUS;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, cpus ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+				cpus = 1; // reasonable default, for sure
+			}
 		}
 		type.sprintf_cat( "cpus=%d ", cpus );
 
-		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
-			type.sprintf_cat( "memory=%d ", memory );
-		} else {
-				// some memory size must be available else we cannot
-				// match, plus a job ad without ATTR_MEMORY is sketchy
-			rip->dprintf( D_ALWAYS,
+			// Look to see how much MEMORY is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_MEMORY;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, memory ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
+					// some memory size must be available else we cannot
+					// match, plus a job ad without ATTR_MEMORY is sketchy
+				rip->dprintf( D_ALWAYS,
 						  "No memory request in incoming ad, aborting...\n" );
-			ABORT;
+				ABORT;
+			}
 		}
+		type.sprintf_cat( "memory=%d ", memory );
 
-		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
-				// XXX: HPUX does not appear to have ceilf, and
-				// Solaris doesn't make it readily available
-			type.sprintf_cat( "disk=%d%%",
-							  max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
-		} else {
-				// some disk size must be available else we cannot
-				// match, plus a job ad without ATTR_DISK is sketchy
-			rip->dprintf( D_FULLDEBUG,
+
+			// Look to see how much DISK is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_DISK;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, disk ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
+					// some disk size must be available else we cannot
+					// match, plus a job ad without ATTR_DISK is sketchy
+				rip->dprintf( D_FULLDEBUG,
 						  "No disk request in incoming ad, aborting...\n" );
-			ABORT;
+				ABORT;
+			}
 		}
+		type.sprintf_cat( "disk=%d%%",
+			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
+
 
 		rip->dprintf( D_FULLDEBUG,
 					  "Match requesting resources: %s\n", type.Value() );
