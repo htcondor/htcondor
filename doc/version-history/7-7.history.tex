@@ -176,6 +176,12 @@ to the GRAM job-manager in a timely manner. As a result, the occurrence of
 GRAM errors 111 and 130 should be greatly reduced.
 \Ticket{2859}
 
+\item Fixed a bug that caused \condor{submit} to warn about
+\MacroNI{dag\_status} and \MacroNI{failed\_count} not being used in the
+submit files of most DAG node jobs (DAGMan now automatically defines
+these macros for all node jobs).  This bug was introduced in 7.7.5.
+\Ticket{2814}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -965,7 +971,7 @@ This has been a cause of confusion for DAGMan users.
 %\item Filip Krikava supplied a patch that limits the number of 
 %file descriptors that DAGMan has open at a time.
 %The reason for creating this capability is that
-%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%DAGMan tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
 \item A matchmaking optimization has significantly improved the speed 
@@ -1192,7 +1198,7 @@ See section ~\ref{dagman:SCRIPT} for details.
 %\item Filip Krikava supplied a patch that limits the number of 
 %file descriptors that DAGMan has open at a time.
 %The reason for creating this capability is that
-%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%DAGMan tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
 \end{itemize}
