@@ -353,7 +353,7 @@ pseudo_getrusage(int /*who*/, struct rusage *use_p )
 }
 
 int
-pseudo_report_error( char *msg )
+pseudo_report_error( const char *msg )
 {
 	dprintf(D_ALWAYS,"error: %s\n",msg);
 	return job_report_store_error( msg );

@@ -1339,31 +1339,55 @@ int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
-	int tmp_val;
+	classad::Value val;
 
 	if( target == this || target == NULL ) {
 		getTheMyRef( this );
-		if( EvaluateAttrInt( name, tmp_val ) ) { 
-			value = tmp_val;
+		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
 		releaseTheMyRef( this );
-		return rc;
 	}
+	else 
+	{
+	  getTheMatchAd( this, target );
+	  if( this->Lookup( name ) ) {
+		  if( this->EvaluateAttr( name, val ) ) {
+			  rc = 1;
+		  }
+	  } else if( target->Lookup( name ) ) {
+		  if( target->EvaluateAttr( name, val ) ) {
+			  rc = 1;
+		  }
+	  }
+	  releaseTheMatchAd();
+	}
+	
+	
+	// we have a "val" now cast if needed.
+	if ( 1 == rc ) 
+	{
+	  double doubleVal;
+	  int intVal;
+	  bool boolVal;
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
+	  if( val.IsRealValue( doubleVal ) ) {
+	    value = ( int )doubleVal;
+	  }
+	  else if( val.IsIntegerValue( intVal ) ) {
+	    value = intVal;
+	  }
+	  else if( val.IsBooleanValue( boolVal ) ) {
+	    value = ( int )boolVal;
+	  }
+	  else 
+	  { 
+	    // if we got here there is an issue with evaluation.
+	    rc = 0;
+	  }
+			
 	}
-	releaseTheMatchAd();
+	
 	return rc;
 }
 

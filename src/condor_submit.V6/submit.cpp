@@ -1325,7 +1325,13 @@ main( int argc, char *argv[] )
 			if(0 == hash_iter_used_value(it)) {
 				char *key = hash_iter_key(it),
 					 *val = hash_iter_value(it);
-				fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
+					// Don't warn if DAG_STATUS or FAILED_COUNT is specified
+					// but unused -- these are specified for all DAG node
+					// jobs (see dagman_submit.cpp).  wenger 2012-03-26
+				if ( strcasecmp( key, "DAG_STATUS" ) != MATCH &&
+							strcasecmp( key, "FAILED_COUNT" ) != MATCH ) {
+					fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
+				}
 			}
 		}
 		
