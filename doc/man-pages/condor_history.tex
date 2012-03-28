@@ -6,6 +6,7 @@
 
 \SynProg{\Condor{history}}
 \oOpt{-backwards}
+\oOpt{-forwards}
 \oOptArg{-completedsince}{postgrestimestamp}
 \oOptArg{-constraint}{expr}
 \oOptArg{-f}{filename}
@@ -62,7 +63,10 @@ for details on converting history files to the new format.
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information and exit.}
   \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
-    order. The job most recently added to the history file is first.}
+    order. The job most recently added to the history file is first.
+    This is the default}
+  \OptItem{\Opt{-forwards}}{List jobs in chronological
+    order. The job most recently added to the history file is last.}
   \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{When Quill
     is enabled, display only job
     ads that were in the Completed job state on or after the date and
