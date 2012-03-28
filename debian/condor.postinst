@@ -98,8 +98,8 @@ condor_put_debconf_cfg() {
         ccfg_daemons="STARTD, SCHEDD, COLLECTOR, NEGOTIATOR"
         ccfg_filesystemdomain='$(FULL_HOSTNAME)'
         ccfg_uiddomain='$(FULL_HOSTNAME)'
-        ccfg_centralmanager='localhost'
-        ccfg_allowwrite='localhost'
+        ccfg_centralmanager='127.0.0.1'
+        ccfg_allowwrite='127.0.0.1'
     else
         # do little replacement, otherwise take as is
         ccfg_daemons=${ccfg_daemons/:/, }
