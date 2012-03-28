@@ -644,6 +644,87 @@ bool splitAt_func( const char * name,
 	return true;
 }
 
+// split using arbitrary separator characters
+static
+bool splitArb_func( const char * name,
+	const classad::ArgumentList &arg_list,
+	classad::EvalState &state, 
+	classad::Value &result )
+{
+	classad::Value arg0;
+
+	// Must have one or 2 arguments
+	if ( arg_list.size() != 1 && arg_list.size() != 2) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	// Evaluate the first argument
+	if( !arg_list[0]->Evaluate( state, arg0 )) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// if we have 2 arguments, the second argument is a set of
+	// separator characters, the default set of separators is , and whitespace
+	std::string seps = ", \t";
+	classad::Value arg1;
+	if (arg_list.size() >= 2 && ! arg_list[1]->Evaluate( state, arg1 )) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If either argument isn't a string, then the result is
+	// an error.
+	std::string str;
+	if( !arg0.IsStringValue(str) ) {
+		result.SetErrorValue();
+		return true;
+	}
+	if (arg_list.size() >= 2 && ! arg1.IsStringValue(seps)) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::ExprList *lst = new classad::ExprList();
+	ASSERT(lst);
+
+	// walk the input string, splitting at each instance of a separator
+	// character and discarding empty strings.  Thus leading and trailing
+	// separator characters are ignored, and runs of multiple separator
+	// characters have special treatment, multiple whitespace seps are
+	// treated as a single sep, as are single separators mixed with whitespace.
+	// but runs of a single separator are handled individually, thus
+	// "foo, bar" is the same as "foo ,bar" and "foo,bar".  But not the same as
+	// "foo,,bar", which produces a list of 3 items rather than 2.
+	unsigned int ixLast = 0;
+	classad::Value val;
+	if (seps.length() > 0) {
+		unsigned int ix = str.find_first_of(seps, ixLast);
+		int      ch = -1;
+		while (ix < str.length()) {
+			if (ix - ixLast > 0) {
+				val.SetStringValue(str.substr(ixLast, ix - ixLast));
+				lst->push_back(classad::Literal::MakeLiteral(val));
+			} else if (!isspace(ch) && ch == str[ix]) {
+				val.SetStringValue("");
+				lst->push_back(classad::Literal::MakeLiteral(val));
+			}
+			if (!isspace(str[ix])) ch = str[ix];
+			ixLast = ix+1;
+			ix = str.find_first_of(seps, ixLast);
+		}
+	}
+	if (str.length() > ixLast) {
+		val.SetStringValue(str.substr(ixLast));
+		lst->push_back(classad::Literal::MakeLiteral(val));
+	}
+
+	result.SetListValue(lst);
+
+	return true;
+}
+
 static
 void registerStrlistFunctions()
 {
@@ -678,6 +759,8 @@ void registerStrlistFunctions()
 	classad::FunctionCall::RegisterFunction( name, splitAt_func );
 	name = "splitslotname";
 	classad::FunctionCall::RegisterFunction( name, splitAt_func );
+	name = "split";
+	classad::FunctionCall::RegisterFunction( name, splitArb_func );
 	//name = "splitsinful";
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
 }
