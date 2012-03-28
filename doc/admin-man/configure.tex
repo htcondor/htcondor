@@ -798,12 +798,10 @@ File System Configuration File Entries''.
 
 \label{param:Run}
 \item[\Macro{RUN}]
-  Used by the condor init script to specify the directory where the Condor 
-  master should write its process ID
+  A path and directory name to be used by the \Condor{init} script to 
+  specify the directory where the \Condor{master} should write its process ID
   (PID) file. 
-
-  If no value for \MacroNI{RUN} is provided, the value of \MacroNI{LOG}
-  is used.
+  The default if not defined is \MacroUNI{LOG}.
   
 \label{param:Spool}
 \item[\Macro{SPOOL}]

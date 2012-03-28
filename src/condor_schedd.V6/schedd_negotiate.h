@@ -137,8 +137,9 @@ class ScheddNegotiate: public DCMsg {
 
 		///////// end of virtual functions for scheduler to define  //////////
 
- private:
+ protected:
 	ResourceRequestList *m_jobs;
+ private:
 	std::set<int> m_rejected_auto_clusters;
 
 	std::string m_owner;

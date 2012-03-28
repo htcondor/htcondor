@@ -127,8 +127,10 @@ the \Condor{collector} when authenticating.
 
 \item Fixed a rare bug in which the \Condor{schedd} would sometimes not reuse
 an existing claim to run a new job when an existing job exited.  
-This would result in it waiting for a new negotiation cycle to get a new match,
-and thus a small performance penalty.  
+This would result in the \Condor{schedd} daemon
+waiting for a new negotiation cycle to make a new match,
+and thus producing a small performance penalty due to the
+wasted time during the interval between negotiation cycles.  
 This bug was actually fixed in Condor version 7.7.5.
 \Ticket{2802}
 
