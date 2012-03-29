@@ -6981,13 +6981,16 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:NegotiatorReadConfigBeforeCycle}
 \item[\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}]
-  A boolean configuration parameter that defaults to \Expr{False}.
+  A boolean value that defaults to \Expr{False}.
   When \Expr{True}, the \Condor{negotiator} will re-read the configuration
-  prior to beginning each negotiation cycle.  Note, this operation will update
-  configured behaviors such as concurrency limits, but not data structures
-  constructed during a full reconfiguration such as the group quota hierarchy.
-  A full reconfiguration, e.g. \Condor{reconfig}, remains the best way to 
-  guarantee that all negotiator configuration is completely updated.
+  prior to beginning each negotiation cycle.  
+  Note that this operation will update configured behaviors such as 
+  concurrency limits, but not data structures
+  constructed during a full reconfiguration,
+  such as the group quota hierarchy.
+  A full reconfiguration, for example as accomplished with \Condor{reconfig},
+  remains the best way to 
+  guarantee that all \Condor{negotiator} configuration is completely updated.
 
 \end{description}
 
