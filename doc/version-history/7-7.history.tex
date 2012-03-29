@@ -30,9 +30,10 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Changed the default for \Condor{history} to print out
-items in reverse chronological order.  Added -forwards flag
-to enable the old behavior to print out historical jobs in
-forwards chronological order.
+items in reverse chronological order.  
+The new \Opt{-forwards} option enables the previous behavior of 
+printing historical jobs in chronological order.
+\Ticket{2808}
 
 \item Enhanced the \Condor{negotiator} to provide the name of 
 concurrency limits that cause negotiation to fail, so that 

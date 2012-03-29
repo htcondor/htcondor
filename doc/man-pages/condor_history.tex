@@ -23,7 +23,7 @@ If no history files are specified (with the \Opt{-f} option)
 and Quill is not enabled, the local
 history file as specified in Condor's configuration file
 (\File{\MacroUNI{SPOOL}/history} by default) is read.  
-The default listing summarizes (in chronological order)
+The default listing summarizes in reverse chronological order
 each job on a single line, and  contains the following items:
 
 \index{Condor commands!condor\_history}
@@ -64,7 +64,7 @@ for details on converting history files to the new format.
   \OptItem{\Opt{-help}}{Display usage information and exit.}
   \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
     order. The job most recently added to the history file is first.
-    This is the default}
+    This is the default ordering.}
   \OptItem{\Opt{-forwards}}{List jobs in chronological
     order. The job most recently added to the history file is last.}
   \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{When Quill
