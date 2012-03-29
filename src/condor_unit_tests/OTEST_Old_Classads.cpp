@@ -6941,11 +6941,11 @@ static bool test_stringlist_regexp_member_error_option() {
 
 static bool test_random_different() {
 	emit_test("Test that EvalInteger() sets the correct actual for an "
-		"attribute using random(), in particular check that it generates "
+		"attribute using random(256), in particular check that it generates "
 		"different numbers.");
 	emit_comment("This test will fail if random() generates the same number "
 		"10 times in a row, although this is highly unlikely.");
-	const char* classad_string = "\tA1 = random()";
+	const char* classad_string = "\tA1 = random(256)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -2, i;
