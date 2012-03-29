@@ -40,12 +40,6 @@ concurrency limits that cause negotiation to fail, so that
 \Condor{q} -analyze can provide more informative failure information.
 \Ticket{2878}
 
-\item Added configuration parameter 
-\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}, which causes the
-\Condor{negotiator} to re-read the configuration prior to each
-negotiation cycle when set to \Expr{True}.
-\Ticket{2851}
-
 \item Concurrency limit defaults may now be declared for named groups
 using \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>} so that any
 concurrency limit with a name of the form <group>.<name> will get its
@@ -92,6 +86,12 @@ via the new \Opt{-X} option.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable
+\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE} is a boolean which causes the
+\Condor{negotiator} to re-read the configuration prior to each
+negotiation cycle when set to \Expr{True}.
+\Ticket{2851}
 
 \item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
 specifies how the \Condor{master} will restart,
