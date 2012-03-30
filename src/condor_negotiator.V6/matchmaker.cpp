@@ -2542,7 +2542,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
                     }
 					negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
 					negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-					result=negotiate( scheddName.Value(), schedd, submitterPrio,
+					result=negotiate(groupName, scheddName.Value(), schedd, submitterPrio,
                                   submitterLimit, submitterLimitUnclaimed,
 								  startdAds, claimIds, 
 								  ignore_submitter_limit,
@@ -3035,7 +3035,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 }
 
 int Matchmaker::
-negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
+negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t startTime, 
@@ -3285,6 +3285,11 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 #if !defined(WANT_OLD_CLASSADS)
 		request.AddTargetRefs( TargetMachineAttrs );
 #endif
+
+        // information regarding the negotiating group context:
+        string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
+        request.Assign(ATTR_SUBMITTER_NEGOTIATING_GROUP, negGroupName);
+        request.Assign(ATTR_SUBMITTER_AUTOREGROUP, (autoregroup && (negGroupName == hgq_root_group->name))); 
 
 		// insert the submitter user priority attributes into the request ad
 		// first insert old-style ATTR_SUBMITTOR_PRIO
@@ -4204,6 +4209,12 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	} else {
 		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
 	}
+
+    // these propagate into the slot ad in the schedd match rec, and from there eventually to the claim
+    // structures in the startd:
+    offer->CopyAttribute(ATTR_REMOTE_GROUP, ATTR_SUBMITTER_GROUP, &request);
+    offer->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, ATTR_SUBMITTER_NEGOTIATING_GROUP, &request);
+    offer->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, ATTR_SUBMITTER_AUTOREGROUP, &request);
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 

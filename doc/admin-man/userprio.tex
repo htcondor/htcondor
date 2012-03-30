@@ -212,6 +212,8 @@ definitions of these configuration variables.
   with a defined group quota,
   then this attribute is the integer number of slots currently 
   utilized by the group.
+\item[\index{ClassAd attribute, ephemeral!SubmitterGroup}\AdAttr{SubmitterGroup}:]
+  The accounting group name of the requesting submitter.
 \item[\index{ClassAd attribute, ephemeral!SubmitterGroupQuota}\AdAttr{SubmitterGroupQuota}:]
   If the owner of the candidate job is a member of a valid accounting group,
   with a defined group quota,
@@ -222,12 +224,21 @@ definitions of these configuration variables.
   accounting group, with a defined group quota,
   then this attribute is the integer number of slots currently 
   utilized by the group.
+\item[\index{ClassAd attribute, ephemeral!RemoteGroup}\AdAttr{RemoteGroup}:]
+  The accounting group name of the owner of the currently running job.
 \item[\index{ClassAd attribute, ephemeral!RemoteGroupQuota}\AdAttr{RemoteGroupQuota}:]
   If the owner of the currently running job is a member of a valid 
   accounting group, with a defined group quota,
   then this attribute is the integer number of slots defined as the
   group's quota.
-
+\item[\index{ClassAd attribute, ephemeral!SubmitterNegotiatingGroup}\AdAttr{SubmitterNegotiatingGroup}:]
+  The accounting group name that the candidate job is negotiating under.
+\item[\index{ClassAd attribute, ephemeral!RemoteNegotiatingGroup}\AdAttr{RemoteNegotiatingGroup}:]
+  The accounting group name that the currently running job negotiated under.
+\item[\index{ClassAd attribute, ephemeral!SubmitterAutoregroup}\AdAttr{SubmitterAutoregroup}:]
+  Boolean attribute is \Expr{True} if candidate job is negotiated via autoregoup.
+\item[\index{ClassAd attribute, ephemeral!RemoteAutoregroup}\AdAttr{RemoteAutoregroup}:]
+  Boolean attribute is \Expr{True} if currently running job negotiated via autoregoup.
 \end{description}
 
 
