@@ -1181,51 +1181,122 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		MyString type;
 		StringList type_list;
 		int cpus, memory, disk;
+		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
+		ClassAd *unmodified_req_classad = NULL;
 
-			// Make sure the partitionable slot itself is satisfied by
+			// Modify the requested resource attributes as per config file.
+			// If must_modify_request is false (the default), then we only modify the request _IF_
+			// the result still matches.  So is must_modify_request is false, we first backup
+			// the request classad before making the modification - if after modification matching fails,
+			// fall back on the original backed-up ad.
+		if ( !must_modify_request ) {
+				// save an unmodified backup copy of the req_classad
+			unmodified_req_classad = new ClassAd( *req_classad );  
+		}
+
+			// Now make the modifications.
+		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
+		for (int i=0; resources[i]; i++) {
+			MyString knob("MODIFY_REQUEST_EXPR_");
+			knob += resources[i];
+			char *tmp = param(knob.Value());
+			if( tmp ) {
+				ExprTree *tree = NULL;
+				EvalResult result;
+				ParseClassAdRvalExpr(tmp, tree);
+				if ( tree &&
+					 EvalExprTree(tree,req_classad,mach_classad,&result) &&
+					 result.type == LX_INTEGER )
+				{
+					req_classad->Assign(resources[i],result.i);
+
+				}
+				if (tree) delete tree;
+				free(tmp);
+			}
+		}
+
+			// Now make sure the partitionable slot itself is satisfied by
 			// the job. If not there is no point in trying to
 			// partition it. This check also prevents
 			// over-partitioning. The acceptability of the dynamic
 			// slot and job will be checked later, in the normal
 			// course of accepting the claim.
-		rip->r_reqexp->restore();
-		if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
-			mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
-		}
-		if (mach_requirements == 0) {
-			rip->dprintf(D_ALWAYS, 
-				  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
-			refuse( stream );
-			ABORT;
-		}
+		do {
+			rip->r_reqexp->restore();
+			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+			}
+				// If the pslot cannot support this request, ABORT iff there is not
+				// an unmodified_req_classad backup copy we can try on the next iteration of
+				// the while loop
+			if (mach_requirements == 0) {
+				if (unmodified_req_classad) {
+					// our modified req_classad no longer matches, put back the original
+					// so we can try again.
+					dprintf(D_ALWAYS, 
+						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
+					if ( req_classad ) delete req_classad;	// delete modified ad
+					req_classad = unmodified_req_classad;	// put back original					
+					unmodified_req_classad = NULL;
+				} else {
+					rip->dprintf(D_ALWAYS, 
+					  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
+					refuse( stream );
+					ABORT;
+				}
+			}
+		} while (mach_requirements == 0);
 
-		if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
-			cpus = 1; // reasonable default, for sure
+			// Pull out the requested attribute values.  If specified, we go with whatever
+			// the schedd wants, which is in request attributes prefixed with
+			// "_condor_".  This enables to schedd to request something different than
+			// what the end user specified, and yet still preserve the end-user's
+			// original request. If the schedd does not specify, go with whatever the user
+			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
+			// not exist, we either cons up a default or refuse the claim.
+		MyString schedd_requested_attr;
+
+			// Look to see how many CPUs are being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_CPUS;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, cpus ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+				cpus = 1; // reasonable default, for sure
+			}
 		}
 		type.sprintf_cat( "cpus=%d ", cpus );
 
-		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
-			type.sprintf_cat( "memory=%d ", memory );
-		} else {
-				// some memory size must be available else we cannot
-				// match, plus a job ad without ATTR_MEMORY is sketchy
-			rip->dprintf( D_ALWAYS,
+			// Look to see how much MEMORY is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_MEMORY;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, memory ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
+					// some memory size must be available else we cannot
+					// match, plus a job ad without ATTR_MEMORY is sketchy
+				rip->dprintf( D_ALWAYS,
 						  "No memory request in incoming ad, aborting...\n" );
-			ABORT;
+				ABORT;
+			}
 		}
+		type.sprintf_cat( "memory=%d ", memory );
 
-		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
-				// XXX: HPUX does not appear to have ceilf, and
-				// Solaris doesn't make it readily available
-			type.sprintf_cat( "disk=%d%%",
-							  max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
-		} else {
-				// some disk size must be available else we cannot
-				// match, plus a job ad without ATTR_DISK is sketchy
-			rip->dprintf( D_FULLDEBUG,
+
+			// Look to see how much DISK is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_DISK;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, disk ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
+					// some disk size must be available else we cannot
+					// match, plus a job ad without ATTR_DISK is sketchy
+				rip->dprintf( D_FULLDEBUG,
 						  "No disk request in incoming ad, aborting...\n" );
-			ABORT;
+				ABORT;
+			}
 		}
+		type.sprintf_cat( "disk=%d%%",
+			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
+
 
 		rip->dprintf( D_FULLDEBUG,
 					  "Match requesting resources: %s\n", type.Value() );
