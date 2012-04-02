@@ -141,14 +141,15 @@ main_init(int argc, char* argv[])
 	char	*tmp;
 	tmp = param( "SCHEDD_BACKUP_SPOOL" );
 	if ( tmp ) {
+	        UtcTime now(true);
 		if ( (*tmp == 't') || (*tmp == 'T') ) {
 			char	hostname[128];
 			if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 				strcpy( hostname, "" );
 			}
 			MyString		job_queue_backup;
-			job_queue_backup.sprintf( "%s/job_queue.bak.%s",
-					Spool, hostname );
+			job_queue_backup.sprintf( "%s/job_queue.bak.%s.%d",
+					Spool, hostname, now.seconds());
 			if ( copy_file( job_queue_name.Value(), job_queue_backup.Value() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
 						 job_queue_backup.Value() );
