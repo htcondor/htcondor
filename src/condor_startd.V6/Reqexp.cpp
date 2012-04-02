@@ -132,19 +132,28 @@ Reqexp::compute( amask_t how_much )
 			m_within_resource_limits_expr = strdup( tmp );
 			free(tmp);
 		} else {
+			// In the below, _condor_RequestX attributes may be explicitly set by
+			// the schedd; if they are not set, go with the RequestX that derived from
+			// the user's original submission.
 			tmp = const_cast<char*>(
 				"("
-				 "ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
-				           "MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
-				           "1 <= MY.Cpus)"
+				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
+					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
+					"ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
+						"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
+						"1 <= MY.Cpus))"
 				" && "
-				 "ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
-				           "MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory,"
-				           "FALSE)"
+				 "ifThenElse(TARGET._condor_RequestMemory =!= UNDEFINED,"
+					"MY.Memory > 0 && TARGET._condor_RequestMemory <= MY.Memory,"
+					"ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
+						"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory,"
+						"FALSE))"
 				" && "
-				 "ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
-				           "MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
-				           "FALSE)"
+				 "ifThenElse(TARGET._condor_RequestDisk =!= UNDEFINED,"
+					"MY.Disk > 0 && TARGET._condor_RequestDisk <= MY.Disk,"
+					"ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
+						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
+						"FALSE))"
 				")");
 			m_within_resource_limits_expr = strdup( tmp );
 		}
