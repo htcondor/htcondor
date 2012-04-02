@@ -131,7 +131,7 @@ get_pid() {
 pid_status $pidfile
 running=$?
 
-if [ "$1" != "status" ]; then
+if [ "$1" != "status" -a "$1" != "stop" ]; then
     # Report that $prog does not exist, or is not executable
     if [ ! -x /usr/sbin/$prog ]; then
 	exit 5

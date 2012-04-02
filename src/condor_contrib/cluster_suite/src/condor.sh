@@ -78,8 +78,9 @@ EOT
 
 start() {
     verify_binary
-    if [ $? -ne 0 ]; then
-      return $?
+    RETVAL=$?
+    if [ $RETVAL -ne 0 ]; then
+      return $RETVAL
     fi
 
     ocf_log info "Starting $prog $OCF_RESKEY_name"
@@ -104,11 +105,6 @@ start() {
 }
 
 stop() {
-    verify_binary
-    if [ $? -ne 0 ]; then
-      return $?
-    fi
-
     ocf_log info "Stopping $prog $OCF_RESKEY_name"
     killproc -p $pidfile $prog -QUIT
     RETVAL=$?
