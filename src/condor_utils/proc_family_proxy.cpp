@@ -617,7 +617,7 @@ ProcFamilyProxy::stop_procd()
 void
 ProcFamilyProxy::recover_from_procd_error()
 {
-	if (!param_boolean("RESTART_PROCD_ON_ERROR", false)) {
+	if (!param_boolean("RESTART_PROCD_ON_ERROR", true)) {
 		EXCEPT("ProcD has failed");
 	}
 
