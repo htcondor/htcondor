@@ -1373,6 +1373,9 @@ of the subsystem corresponding to the daemon.
   the log file for a given subsystem.  For example,
   \MacroUNI{STARTD\_LOG} gives the location of the log file for
   \Condor{startd}. The default is \File{\$(LOG)/<SUBSYS>LOG}.
+  If the log file cannot be written to,
+  then the daemon will attempt to log this into a new file of the name
+  \File{\$(LOG)/dprintf\_failure.<SUBSYS>} before the daemon exits.
 
 \label{param:MaxSubsysLog}
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
