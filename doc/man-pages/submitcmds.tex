@@ -906,6 +906,28 @@ Jobs in the Hold state will not run until released by \Condor{release}.
 Defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
+%% keep_claim_idle
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!keep\_claim\_idle}
+\item[keep\_claim\_idle = $<$integer$>$] The process by which the \Condor{schedd}
+claims a \Condor{startd} for running jobs on, is somewhat time-consuming.
+To amortize this cost, the \Condor{schedd} tries to reuses claims
+to run subsequent jobs after the first jobs using a claim is done.  However,
+it can only do this if there is an idle job in the queue at the moment
+the previous job completely.  Sometimes, and especially when using dagman,
+there is a subsequent job about to be submitted, but it hasn't arrived in the
+queue when the previous job completes.  As a result, the \Condor{schedd}
+releases the claim, and the next job must wait an entire negotiation cycle
+to start.  When the parameter keep\_claim\_idle is given a non-negative integer
+argument to a given job, when that job exits, the \Condor{schedd} tries as 
+usual to reuse the claim.  If it cannot, instead of releasing the claim,
+the \Condor{schedd} keeps the claim until either the number of seconds given
+as a parameter, or a new job which matches that claim arrives, whichever comes
+first.  The \Condor{startd} in question will remain in the Claimed/Idle state,
+and the original job will be "charged" (in terms of priority) for the time
+in this state.
+
+%%%%%%%%%%%%%%%%%%%
 %% leave_in_queue
 %%%%%%%%%%%%%%%%%%%
 
