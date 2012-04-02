@@ -52,16 +52,14 @@ our %build_and_test_sets = (
 		'x86_rhas_3',
 		'x86_winnt_5.1',
 		'x86_64_rhap_6.1-updated',
-		'x86_64_macos_10.5-updated',
+		'x86_64_macos_10.6-updated',
 	],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
 	# core builds.	These are those platforms.
 	'nmi_one_offs' => [
-		'x86_64_sol_5.10',
-		'x86_64_sol_5.11',
-		'x86_freebsd_7.4-updated',
 		'x86_64_freebsd_8.2-updated',
+		'x86_64_sol_5.11',
 	],
 	
 	# We will build on a set of machines that we want to be sure continue building
@@ -70,7 +68,6 @@ our %build_and_test_sets = (
 	# release - a build problem on this platform could indicate problems on a future
 	# release of RHEL.
 	'extra_builds' => [
-		'x86_64_rhas_4',
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.4-updated',
 		'x86_64_macos_10.6-updated',
@@ -339,10 +336,10 @@ our %submit_info = (
 	'x86_64_deb_6.0-updated' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [ ],
-			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
+				'-DCLIPPED:BOOL=OFF' => undef,
+			 },
+			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -363,7 +360,7 @@ our %submit_info = (
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ ],
-			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
+			'xtests'	=>	undef,
 		},
 
 		'test' => {
@@ -452,7 +449,6 @@ our %submit_info = (
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_opensuse_11.4-updated',
 				'x86_64_rhap_6.1-updated',
 				],
 		},
@@ -532,6 +528,7 @@ our %submit_info = (
 							 'coreutils-5.2.1',
 							 'libtool-1.5.26',],
 			'xtests'	=> [
+				'x86_64_macos_10.6',
 				'x86_64_macos_10.6-updated',
 				],
 		},
@@ -623,9 +620,7 @@ our %submit_info = (
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 
-				'unmanaged-x86_rhap_5'
-				],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -647,12 +642,10 @@ our %submit_info = (
 			'prereqs'	=> [ 
 				@default_prereqs,
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
-				],
-				'xtests'		=> [ 
-					'x86_rhas_4', 
-					'x86_64_rhas_3',
-					'x86_64_rhas_4',
-				],
+			],
+			'xtests'	=> [ 
+			 	'x86_64_rhas_3',
+			],
 		},
 
 		'test' => {

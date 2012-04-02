@@ -1588,44 +1588,48 @@ sub IsRunningYet
 #
 #################################################################
 
-sub CollectDaemonPids
-{
-	my $daemonlist = `condor_config_val daemon_list`;
-	$daemonlist =~ s/\s*//g;
-	my @daemons = split /,/, $daemonlist;
-	my $savedir = getcwd();
-	my $logdir = `condor_config_val log`;
-	$logdir =~ s/\012+$//;
-	$logdir =~ s/\015+$//;
+sub CollectDaemonPids {
+    my $daemonlist = `condor_config_val daemon_list`;
+    $daemonlist =~ s/\s*//g;
+    my @daemons = split /,/, $daemonlist;
 
+    my $logdir = `condor_config_val log`;
+    CondorUtils::fullchomp($logdir);
 
+    
+    my $logfile = "$logdir/MasterLog";
+    debug("In CollectDaemonPids(), examining log $logfile\n", $debuglevel);
+    open(TA, '<', $logfile) or die "Can not read '$logfile': $!\n";
+    my $master;
+    my %pids = ();
+    while(<TA>) {
+        chomp;
+        if(/PID\s+=\s+(\d+)/) {
+            # Capture the master pid.  At kill time we will suggest with signal 3
+            # that the master and friends go away before we get blunt.
+            $master = $1;
 
-	#print "logs are here:$logdir\n";
-	my $pidfile = $logdir . "/PIDS";
-	open(PD,">$pidfile") or die "Can not create<$pidfile>:$!\n";
+            # Every time we find a new master pid it means that all the previous pids
+            # we had recorded were for a different instance of Condor.  So reset the list.
+            %pids = ();
+        }
+        elsif(/Started DaemonCore process\s\"(.*)\",\s+pid\s+and\s+pgroup\s+=\s+(\d+)/) {
+            # We store these in a hash because if the daemon crashes and restarts
+            # we only want the latest value for its pid.
+            $pids{$1} = $2;
+        }
+    }
+    close(TA);
 
-	my $logfile = "";
-	my $line = "";
-	#print "Checking logs for daemon <$one>\n";
-	$logfile = $logdir . "/MasterLog";
-	#print "Look in $logfile for pid\n";
-	open(TA,"<$logfile") or die "Can not open <$logfile>:$!\n";
-	while(<TA>) {
-		chomp();
-		$line = $_;
-		if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
-			# at kill time we will suggest with signal 3
-			# that the master and friends go away before
-			# we get blunt. This will help us know which
-			# pid is the master.
-			print PD "$1 MASTER\n";
-		} elsif($line =~ /^.*Started DaemonCore process\s\"(.*)\",\s+pid\s+and\s+pgroup\s+=\s+(\d+).*$/) {
-			debug("Saving PID for $1 as $2\n",$debuglevel);
-			print PD "$2\n";
-		}
-	}
-	close(TA);
-	close(PD);
+    my $pidfile = "$logdir/PIDS";
+    open(PIDS, '>', $pidfile) or die "Can not create file '$pidfile': $!\n";
+    debug("Master pid: $master\n");
+    print PIDS "$master MASTER\n";
+    foreach my $daemon (keys %pids) {
+        debug("\t$daemon pid: $pids{$daemon}\n", $debuglevel);
+        print PIDS "$pids{$daemon}\n";
+    }
+    close(PIDS);
 }
 
 #################################################################

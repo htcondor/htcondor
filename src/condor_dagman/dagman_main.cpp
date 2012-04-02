@@ -204,7 +204,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n",
 				debug_cache_enabled?"True":"False" );
 
-	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", submit_delay, 0, 60 );
+	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", submit_delay, 0);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
 				submit_delay );
 

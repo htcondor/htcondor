@@ -478,6 +478,36 @@ Image::SetFd( int f )
 }
 
 void
+Image::SetIwd( const char *iwd )
+{
+    ASSERT( iwd != NULL );
+    /* We can use the safe(r) strncpy because m_iwd is a preallocated
+       fixed-size buffer.  On the other hand, danb went through in 
+       2007 and cleared a bunch of those out the code.  For now, I'm
+       going for this, simpler, method.  If LIGO has problems, I can
+       revisit. */
+    strncpy( m_iwd, iwd, _POSIX_PATH_MAX - 1 );
+    m_iwd[_POSIX_PATH_MAX - 1] = '\0';
+}
+
+void
+Image::SetRelocatable( int truth )
+{
+    /* if this is set to false, then continue to use the previous
+       checkpoint's working directory. If it is true, then use the working
+       directory associated with the new invocation of the resuming
+       program. */
+    m_relocatable = truth;
+}
+
+/* do not free the pointer returned by this function */
+char *
+Image::GetIwd( void )
+{
+    return m_iwd;
+}
+
+void
 Image::SetFileName( const char *ckpt_name )
 {
 	static bool done_once = false;
@@ -857,7 +887,13 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
+    int     save_relocatable = m_relocatable;
+    char    wd[_POSIX_PATH_MAX];
 
+    /* save the initial working directory onto the stack because the one in
+       memory is going to be altered to the previous checkpoint's version
+       of this in the MyImage object */
+    strncpy( wd, m_iwd, _POSIX_PATH_MAX );
 
 #if defined(COMPRESS_CKPT)
 	// If the checkpoint header contains an alt heap pointer, then we must
@@ -905,6 +941,18 @@ Image::Restore()
 		// we are working with has been overwritten too.... restore into the
 		// data segment the value of the fd from this stack segment.
 	fd = save_fd;
+
+        /* if we are performing a relocatable resumption, then reset the
+           working directory in the FileTable to the current working directory
+           of the current invocation of the program, instead of what was
+           previously the invocation of the program that the checkpointed
+           image had embedded within it. */
+    m_relocatable = save_relocatable;
+    if (m_relocatable == TRUE)
+    {
+        _condor_file_set_working_dir(wd);
+    }
+        
 
 		// We want the gettimeofday() cache to be reset up in terms of the
 		// submission machine time, so reinitialize the cache to default
@@ -1324,6 +1372,18 @@ Image::Write( int file_d )
 	}
 
 	return 0;
+}
+
+void
+init_image_with_iwd( char *iwd )
+{
+	MyImage.SetIwd( iwd );
+}
+
+void
+init_image_relocatable( int truth )
+{
+	MyImage.SetRelocatable( truth );
 }
 
 

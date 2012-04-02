@@ -2834,7 +2834,10 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 JobImageSizeEvent::JobImageSizeEvent(void)
 {
 	eventNumber = ULOG_IMAGE_SIZE;
-	size = -1;
+	image_size_kb = -1;
+	resident_set_size_kb = 0;
+	proportional_set_size_kb = -1;
+	memory_usage_mb = -1;
 }
 
 
@@ -2846,7 +2849,20 @@ JobImageSizeEvent::~JobImageSizeEvent(void)
 int
 JobImageSizeEvent::writeEvent (FILE *file)
 {
-	if (fprintf (file, "Image size of job updated: %d\n", size) < 0)
+	if (fprintf (file, "Image size of job updated: %"PRId64"\n", image_size_kb) < 0)
+		return 0;
+
+	// when talking to older starters, memory_usage, rss & pss may not be set
+	if (memory_usage_mb >= 0 && 
+		fprintf (file, "\t%"PRId64"  -  Memory Usage of job (Mb)\n", memory_usage_mb) < 0)
+		return 0;
+
+	if (resident_set_size_kb >= 0 &&
+		fprintf (file, "\t%"PRId64"  -  Resident Set Size of job (Kb)\n", resident_set_size_kb) < 0)
+		return 0;
+
+	if (proportional_set_size_kb >= 0 &&
+		fprintf (file, "\t%"PRId64"  -  Proportional Set Size of job (Kb)\n", proportional_set_size_kb) < 0)
 		return 0;
 
 	return 1;
@@ -2857,8 +2873,38 @@ int
 JobImageSizeEvent::readEvent (FILE *file)
 {
 	int retval;
-	if ((retval=fscanf(file,"Image size of job updated: %d", &size)) != 1)
+	if ((retval=fscanf(file,"Image size of job updated: %"PRId64, &image_size_kb)) != 1)
 		return 0;
+
+	// These fields were added to this event in 2012, so we need to tolerate the
+	// situation when they are not there in the log that we read back.
+	memory_usage_mb = -1;
+	resident_set_size_kb = 0;
+	proportional_set_size_kb = -1;
+
+	for (;;) {
+		char sz[250];
+
+		// if we hit end of file or end of record "..." rewind the file pointer.
+		fpos_t filep;
+		fgetpos( file, &filep );
+		if ( ! fgets(sz, sizeof(sz), file) || 
+			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		int64_t val;
+		if (1 == sscanf(sz, "\t%"PRId64"  -  Memory Usage", &val)) {
+			memory_usage_mb = val;
+		}
+		else if (1 == sscanf(sz, "\t%"PRId64"  -  Resident Set Size", &val)) {
+			resident_set_size_kb = val;
+		}
+		else if (1 == sscanf(sz, "\t%"PRId64"  -  Proportional Set Size", &val)) {
+			proportional_set_size_kb = val;
+		}
+	}
 
 	return 1;
 }
@@ -2868,11 +2914,26 @@ JobImageSizeEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
+	char buf0[250];
 
-	if( size >= 0 ) {
-		snprintf(buf0, 512, "Size = %d", size);
-		buf0[511] = 0;
+	if( image_size_kb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "Size = %"PRId64, image_size_kb);
+		buf0[sizeof(buf0)-1] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( memory_usage_mb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "MemoryUsage = %"PRId64, memory_usage_mb);
+		buf0[sizeof(buf0)-1] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( resident_set_size_kb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "ResidentSetSize = %"PRId64, resident_set_size_kb);
+		buf0[sizeof(buf0)-1] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( proportional_set_size_kb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "ProportionalSetSize = %"PRId64, proportional_set_size_kb);
+		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 
@@ -2886,7 +2947,15 @@ JobImageSizeEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	ad->LookupInteger("Size", size);
+	// default these fields, they were added in 2012.
+	memory_usage_mb = -1;
+	resident_set_size_kb = 0;
+	proportional_set_size_kb = -1;
+
+	ad->LookupInteger("Size", image_size_kb);
+	ad->LookupInteger("MemoryUsage", memory_usage_mb);
+	ad->LookupInteger("ResidentSetSize", resident_set_size_kb);
+	ad->LookupInteger("ProportionalSetSize", proportional_set_size_kb);
 }
 
 ShadowExceptionEvent::ShadowExceptionEvent (void)

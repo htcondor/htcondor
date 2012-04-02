@@ -1650,9 +1650,15 @@ double Accountant::GetLimit(const MyString& limit)
 
 double Accountant::GetLimitMax(const MyString& limit)
 {
-	return param_double((limit + "_LIMIT").Value(),
-						 param_double("CONCURRENCY_LIMIT_DEFAULT",
-									   2308032));
+    double deflim = param_double("CONCURRENCY_LIMIT_DEFAULT", 2308032);
+    string lim(limit.Value());
+    string::size_type pos = lim.find_last_of('.');
+    if (pos != string::npos) {
+        string scopedef("CONCURRENCY_LIMIT_DEFAULT_");
+        scopedef += lim.substr(0,pos);
+        deflim = param_double(scopedef.c_str(), deflim);
+    }
+	return param_double((limit + "_LIMIT").Value(), deflim);
 }
 
 void Accountant::DumpLimits()

@@ -140,6 +140,10 @@ public:
 	/** If aggravation is enabled, virtual fds will never match real fds. */
 	void	set_aggravate_mode( int on_off );
 
+	/** When performing a restricted relocatable resumption of the checkpoint,
+		this is where the new workind directory will be located. */
+	void	set_working_dir( char *dir );
+
 	/** Display debug info */
 	void	dump();
 

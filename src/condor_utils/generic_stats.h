@@ -414,10 +414,12 @@ template <class T>
 inline int ClassAdAssign(ClassAd & ad, const char * pattr, T value) {
    return ad.Assign(pattr, value);
 }
+/*
 template <>
 inline int ClassAdAssign(ClassAd & ad, const char * pattr, int64_t value) {
    return ad.Assign(pattr, (int)value);
 }
+*/
 
 template <class T>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
@@ -553,7 +555,7 @@ public:
       if ( ! flags) flags = PubDefault;
       if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
       if (flags & this->PubValue)
-         ClassAdAssign(ad, pattr, this->value); 
+         ClassAdAssign(ad, pattr, this->value);
       if (flags & this->PubRecent) {
          if (flags & this->PubDecorateAttr)
             ClassAdAssign2(ad, "Recent", pattr, recent);

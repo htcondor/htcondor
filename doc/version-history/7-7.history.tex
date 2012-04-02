@@ -29,6 +29,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Enhanced the \Condor{negotiator} to provide the name of 
+concurrency limits that cause negotiation to fail, so that 
+\Condor{q} -analyze can provide more informative failure information.
+\Ticket{2878}
+
+\item Added configuration parameter 
+\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}, which causes the
+\Condor{negotiator} to re-read the configuration prior to each
+negotiation cycle when set to \Expr{True}.
+\Ticket{2851}
+
+\item Concurrency limit defaults may now be declared for named groups
+using \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>} so that any
+concurrency limit with a name of the form <group>.<name> will get its
+default limit from \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>}.
+\Ticket{2863}
+
 \item Condor binaries will now look for the Condor configuration file in
 \File{\$(HOME)/.condor/condor\_config}, in addition to the locations where
 they already look.
@@ -37,21 +54,32 @@ Within the ordered search,
 \Env{CONDOR\_CONFIG} environment variable.
 \Ticket{2657}
 
-\item The \Condor{hdfs} daemon has been moved to the contrib section, and is 
-available from the source code.
+\item The \Condor{hdfs} daemon is now available with the source code,
+and is no longer distributed as part of the Condor binaries.
+See documentation in section ~\ref{sec:Condor-HDFS}.
 \Ticket{2797}
 
-\item Several of the Condor programs used to be a single executable
-hard linked to multiple filenames. Now, symbolic links are used.
+\item Several of the Condor programs used to be given by a single executable
+hard linked to multiple file names. 
+Now, symbolic links are used; this fixes problems with Debian installations.
 \Ticket{2140}
 
-\item New functions pow and quantize have been added to ClassAds.
+\item New ClassAd functions \Procedure{pow}, \Procedure{quantize},
+\Procedure{splitUserName}, and \Procedure{splitSlotName} are available.
+See section ~\ref{sec:classadFunctions} for definitions of these functions.
 \Ticket{2856}
+\Ticket{2891}
 
-\item New format tags \%v and \%V have been added for use by \Condor{status} -format.
-These tags request that the value of the expression or attribute be printed using
-a format appropriate to it's type.
+\item New format tags \%v and \%V have been added for use by the
+\Condor{status} \Opt{-format} option.
+These tags request that the value of the expression or attribute be printed 
+using a format appropriate to its type.
+When using the \%V format tag, string values appear as they would in
+the output of \condor{q -long} or \condor{submit -long}.
 \Ticket{2857}
+
+\item \Condor{ssh\_to\_job} now provides support for X11 forwarding
+via the new \Opt{-X} option.
 
 \end{itemize}
 
@@ -61,9 +89,9 @@ a format appropriate to it's type.
 
 \item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
 specifies how the \Condor{master} will restart,
-when it notices that the \Condor{master}
-binary has changed. Valid values are GRACEFUL, PEACEFUL and NEVER. 
-The default value is GRACEFUL.
+when it notices that the \Condor{master} binary has changed. 
+Valid values are \Expr{GRACEFUL}, \Expr{PEACEFUL} and \Expr{NEVER}. 
+The default value is \Expr{GRACEFUL}.
 \Ticket{2779}
 
 \item The configuration variable \MacroNI{WANT\_HOLD} now takes effect
@@ -77,11 +105,20 @@ set into the \Attr{MemoryUsage} attribute for a job.  It is expected that
 this will be a ClassAd expression that defines the job memory usage in terms
 of other job attributes.
 
+\item The configuration variable \Macro{DAGMAN\_SUBMIT\_DELAY} can now be any
+non negative integer.  It was formerly limited to values between 0 and 60,
+inclusive.
+\Ticket{2864}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a rare problem that caused a 20 second timeout to occur in
+the \Condor{collector} when authenticating.
+\Ticket{2817}
 
 \item Fixed a rare bug where the schedd would sometimes not reuse
 an existing claim to run a new job when an existing job exited.  This
@@ -90,8 +127,8 @@ and thus a small performance penalty.  This bug was actually fixed
 in Condor version 7.7.5.
 \Ticket{2802}
 
-\item Fixed a bug in condor\_q so that it no longer emits a parse
-error when it times out talking to the schedd.
+\item Fixed a bug in \Condor{q}, such that it no longer emits a parse
+error when it times out attempting to talk to the \Condor{schedd} daemon.
 \Ticket{2854}
 
 \item The shared library \File{libcondor\_utils} now includes the Condor
@@ -100,17 +137,23 @@ using the wrong version of the library, which can result in a crash or
 other bad behavior.
 \Ticket{2613}
 
-\item There was a bug on GRACEFUL and PEACEFUL shutdown, where the daemons 
-were stopped in random order. This resulted in the checkpoint server 
-sometimes being shut down before the \Condor{startd}.  The \Condor{startd}
-is now always shutdown first on GRACEFUL or PEACEFUL shutdown, with other
-daemons being shut down only after the \Condor{startd} has exited.
+\item There was a bug on GRACEFUL and PEACEFUL shutdown, 
+as the daemons were stopped in a random order. 
+This resulted in the checkpoint server 
+sometimes being shut down before the \Condor{startd}.  
+The \Condor{startd} is now always shut down first on GRACEFUL or PEACEFUL 
+shutdown, 
+with other daemons being shut down only after the \Condor{startd} has exited.
 \Ticket{2779}
 
-\item Under some circumstances, a job in the removed ("X") state may ignore the -forcex option to \Condor{rm}.  The \Condor{schedd} is now more aggressive about removing such jobs from the queue.
+\item Under some circumstances, 
+a job in the removed ("X") state may have ignored the \Opt{-forcex} option 
+to \Condor{rm}.
+The \Condor{schedd} is now more aggressive about removing such jobs 
+from the queue.
 \Ticket{2809}
 
-\item Fixed copying of scaling factors on ClassAd literal values.
+\item Fixed the copying of scaling factors on ClassAd literal values.
 \Ticket{2839}
 
 \item When a job is killed and put on hold because of
@@ -119,6 +162,14 @@ daemons being shut down only after the \Condor{startd} has exited.
   gracefully killed, the job is hard-killed.  Previously, no upper
   limit was enforced.
 \Ticket{2855}
+
+\item When selecting an IPv4 network interface to use Condor would erroneously prefer private networks over public networks in some cases.  This has been fixed, Condor again prefers public networks over private networks.
+\Ticket{2853}
+
+\item The \condor{gridmanager} is much better at sending commit signals
+to the GRAM job-manager in a timely manner. As a result, the occurrence of
+GRAM errors 111 and 130 should be greatly reduced.
+\Ticket{2859}
 
 \end{itemize}
 

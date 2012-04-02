@@ -18,9 +18,9 @@
 ##
 ##**************************************************************
 
-# YOU MUST CHANGE THIS TO THE BIN DIR OF OPENMPI
-MPDIR=/u/g/t/gthain/openmpi/bin
-PATH=$MPDIR:.:$PATH
+# YOU MUST CHANGE THIS TO THE PREFIX DIR OF OPENMPI
+MPDIR=/usr/lib64/openmpi
+PATH=$MPDIR/bin:.:$PATH
 export PATH
 
 # This is a script to run openmpi jobs under the Condor parallel universe
@@ -80,7 +80,9 @@ export CONDOR_CONTACT_FILE
 sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
 
 ## run the actual mpijob
-mpirun -v --mca plm_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
+mpirun -v --prefix $MPDIR --mca orte_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
+########## For mpi versions 1.1 & 1.2 use the line below
+#mpirun -v --mca plm_rsh_agent $CONDOR_SSH -n $_CONDOR_NPROCS -hostfile machines $EXECUTABLE $@ 
 
 sshd_cleanup
 rm -f machines

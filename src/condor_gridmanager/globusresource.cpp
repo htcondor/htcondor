@@ -485,7 +485,7 @@ GlobusResource::CheckMonitor()
 		char *job_contact;
 		monitorGahp->setMode( GahpClient::results_only );
 		rc = monitorGahp->globus_gram_client_job_request( NULL, NULL, 0, NULL,
-														  &job_contact );
+														  &job_contact, false );
 		if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 			 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				// do nothing
@@ -820,7 +820,7 @@ GlobusResource::SubmitMonitorJob()
 	rc = monitorGahp->globus_gram_client_job_request( contact.c_str(),
 													  RSL.c_str(), 1,
 													  monitorGahp->getGt2CallbackContact(),
-													  NULL );
+													  NULL, false );
 
 	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "

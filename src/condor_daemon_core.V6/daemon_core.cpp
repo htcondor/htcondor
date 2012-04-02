@@ -3830,10 +3830,11 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// not KEEP_STREAM, then
 		// delete the socket and the socket handler.
 	if ( result != KEEP_STREAM ) {
-			// delete the cedar socket
-		delete (*sockTable)[i].iosock;
+		Stream *iosock = (*sockTable)[i].iosock;
 			// cancel the socket handler
-		Cancel_Socket( (*sockTable)[i].iosock );
+		Cancel_Socket( iosock );
+			// delete the cedar socket
+		delete iosock;
 	} else {
 		// in this case, we are keeping the socket around.
 		// so if this tid has it marked as being serviced,
@@ -4129,9 +4130,53 @@ int DaemonCore::HandleReq(int socki, Stream* asock)
 
 int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
-	classy_counted_ptr<DaemonCommandProtocol> r = new DaemonCommandProtocol(insock,asock);
+	bool is_command_sock = false;
+	bool always_keep_stream = false;
+	Stream *accepted_sock = NULL;
 
-	return r->doProtocol();
+	if( asock ) {
+		if( SocketIsRegistered(asock) ) {
+			is_command_sock = true;
+		}
+	}
+	else {
+		ASSERT( insock );
+		if( insock->type() == Stream::reli_sock && ((ReliSock *)insock)->isListenSock() ) {
+			asock = ((ReliSock *)insock)->accept();
+			accepted_sock = asock;
+
+			if( !asock ) {
+				dprintf(D_ALWAYS, "DaemonCore: accept() failed!\n");
+					// return KEEP_STEAM cuz insock is a listen socket
+				return KEEP_STREAM;
+			}
+			is_command_sock = false;
+			always_keep_stream = true;
+		}
+		else {
+			asock = insock;
+			if( SocketIsRegistered(asock) ) {
+				is_command_sock = true;
+			}
+			if( insock->type() == Stream::safe_sock ) {
+					// currently, UDP sockets are always daemon command sockets
+				always_keep_stream = true;
+			}
+		}
+	}
+
+	classy_counted_ptr<DaemonCommandProtocol> r = new DaemonCommandProtocol(asock,is_command_sock);
+
+	int result = r->doProtocol();
+
+	if( accepted_sock && result != KEEP_STREAM ) {
+		delete accepted_sock;
+	}
+
+	if( always_keep_stream ) {
+		return KEEP_STREAM;
+	}
+	return result;
 }
 
 

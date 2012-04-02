@@ -22,7 +22,7 @@
 
 class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 public:
-	DaemonCommandProtocol(Stream *insock, Stream* asock);
+	DaemonCommandProtocol(Stream* sock,bool is_command_sock);
 	~DaemonCommandProtocol();
 
 	int doProtocol();
@@ -44,8 +44,6 @@ private:
 		CommandProtocolInProgress
 	};
 
-	Stream *m_insock;
-	Stream *m_asock;
 	Sock   *m_sock;
 
 #ifdef HAVE_EXT_GSOAP
@@ -54,6 +52,7 @@ private:
 #endif
 
 	bool m_nonblocking;
+	bool m_delete_sock;
 	bool m_sock_had_no_deadline;
 	int	m_is_tcp;
 	int m_req;            // the command that was sent

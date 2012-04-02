@@ -1836,7 +1836,9 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
+dprintf(D_ALWAYS, "GGTGGTGGT Looking up Prescript in %s\n", attr.Value());
 	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+dprintf(D_ALWAYS, "GGTGGTGGT Found Prescript %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
@@ -2296,6 +2298,7 @@ CStarter::Reaper(int pid, int exit_status)
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
 			// SpawnJob() to launch the main job.
+		pre_script = NULL; // done with pre-script
 		if( ! SpawnJob() ) {
 			dprintf( D_ALWAYS, "Failed to start main job, exiting\n" );
 			main_shutdown_fast();
