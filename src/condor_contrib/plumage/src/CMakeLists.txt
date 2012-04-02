@@ -42,7 +42,7 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	#src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 	#src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-	file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ${ETL_COMMON_SRCS})
+	file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ODSAccountant.cpp ODSProcessors.cpp ${ETL_COMMON_SRCS})
 	condor_plugin( ODSCollectorPlugin-plugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 	############################

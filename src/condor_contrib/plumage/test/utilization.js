@@ -7,7 +7,7 @@
 var start = new Date();
 var end = new Date();
 
-start.setMilliseconds(-60000)
+start.setMilliseconds(-10000)
 print (start);
 print (end);
 
@@ -44,11 +44,14 @@ print ("Total: "+total);
 cur = db.samples.machine.distinct('mn', {st : 'Claimed', ts: {$gte: start, $lt: end}});
 var claimed = cur.length;
 print ("Claimed: "+claimed);
+print ((claimed/total*100).toFixed(2)+"%");
 
 cur = db.samples.machine.distinct('mn', {st : 'Unclaimed', ts: {$gte: start, $lt: end}});
 var unclaimed = cur.length;
 print ("Unclaimed: "+unclaimed);
+print ((unclaimed/total*100).toFixed(2)+"%");
 
 cur = db.samples.machine.distinct('mn', {st : {$nin: ['Owner','Unclaimed']}, ts: {$gte: start, $lt: end}});
 var used = cur.length;
 print ("Used: "+used);
+print ((used/total*100).toFixed(2)+"%");

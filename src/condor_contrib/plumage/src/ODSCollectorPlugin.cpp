@@ -20,6 +20,8 @@
 // local includes
 #include "ODSMongodbOps.h"
 #include "ODSPoolUtils.h"
+#include "ODSAccountant.h"
+#include "ODSProcessors.h"
 
 // seems boost meddles with assert defs
 #include "assert.h"
@@ -35,12 +37,9 @@ using namespace plumage::etl;
 
 int historyInterval;
 int initialDelay;
-int historyTimer;
-
-const char DB_RAW_ADS[] = "condor_raw.ads";
-const char DB_STATS_SAMPLES[] = "condor_stats.samples";
-const char DB_STATS_SAMPLES_SUB[] = "condor_stats.samples.submitter";
-const char DB_STATS_SAMPLES_MACH[] = "condor_stats.samples.machine";
+int statsTimer;
+int acctTimer;
+int acctInterval;
 
 class ODSCollectorPlugin : public Service, CollectorPlugin
 {
@@ -48,101 +47,40 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
 	string m_ip;
 	ODSMongodbOps* m_ads_conn;
 	ODSMongodbOps* m_stats_conn;
-
+    ClassAd* m_acct_ad;
+    
+    // Accountant ad is a special case: we don't get it from the Collector
+    // it needs its own processing and sample interval
     void
-    processSubmitterStats() {
-        dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processSubmitterStats called...\n");
-        DBClientConnection* conn =  m_ads_conn->m_db_conn;
-        conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
-        auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Submitter" ) );
-        while( cursor->more() ) {
-            BSONObj p = cursor->next();
-            const char* name = p.getStringField(ATTR_NAME);
-            int r = p.getIntField(ATTR_RUNNING_JOBS);
-            // TODO: weird...HeldJobs isn't always there in the raw submitter ad
-            int h = p.getIntField(ATTR_HELD_JOBS); h = (h>0) ? h : 0;
-            int i = p.getIntField(ATTR_IDLE_JOBS);
-            dprintf(D_FULLDEBUG, "Submitter %s:\t%s=%d\t%s=%d\t%s=%d\n",
-                    name,
-                    ATTR_RUNNING_JOBS,r,
-                    ATTR_HELD_JOBS,h,
-                    ATTR_IDLE_JOBS,i
-                   );
-
-            // write record to submitter samples
-            conn->ensureIndex(DB_STATS_SAMPLES_SUB, BSON( "ts" << 1 << "sn" << 1 ));
-            BSONObjBuilder bob;
-            bob << "ts" << DATENOW;
-            bob.append("sn",name);
-            bob.append("mn",p.getStringField(ATTR_MACHINE));
-            bob.append("jr",r);
-            bob.append("jh",h);
-            bob.append("ji",i);
-            conn->insert(DB_STATS_SAMPLES_SUB,bob.obj());
+    recordAccountantAd(Date_t& ts) {
+        dprintf(D_FULLDEBUG, "ODSCollectorPlugin::recordAccountantAd() called...\n");
+        ODSAccountant acct;
+        acct.connect();
+        if (m_acct_ad) {
+            delete m_acct_ad;
+            m_acct_ad = NULL;
         }
-    }
-
-    void
-    processMachineStats() {
-        dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processMachineStats() called...\n");
-        DBClientConnection* conn =  m_ads_conn->m_db_conn;
-        conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
-        auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Machine" ) );
-        while( cursor->more() ) {
-            BSONObj p = cursor->next();
-            const char* name = p.getStringField(ATTR_NAME);
-            const char* arch = p.getStringField(ATTR_ARCH);
-            const char* opsys = p.getStringField(ATTR_OPSYS);
-            int ki = p.getIntField(ATTR_KEYBOARD_IDLE);
-            double la = p.getField(ATTR_LOAD_AVG).Double();
-            const char* state = p.getStringField(ATTR_STATE);
-            int cpus = p.getIntField(ATTR_CPUS);
-            int mem = p.getIntField(ATTR_MEMORY);
-            const char* gjid = p.getStringField(ATTR_GLOBAL_JOB_ID);
-            const char* ru = p.getStringField(ATTR_REMOTE_USER);
-            const char* ag = p.getStringField(ATTR_ACCOUNTING_GROUP);
-            dprintf(D_FULLDEBUG, "Machine %s:\t%s=%s\t%s=%s\t%s=%d\t%s=%f\t%s=%s\t%s=%d\t%s=%d\t%s=%s\t%s=%s\t%s=%s\n",
-                    name,
-                    ATTR_ARCH,arch,
-                    ATTR_OPSYS,opsys,
-                    ATTR_KEYBOARD_IDLE,ki,
-                    ATTR_LOAD_AVG,la,
-                    ATTR_STATE,state,
-                    ATTR_CPUS,cpus,
-                    ATTR_MEMORY,mem,
-                    ATTR_GLOBAL_JOB_ID,gjid,
-                    ATTR_REMOTE_USER,ru,
-                    ATTR_ACCOUNTING_GROUP,ag
-                   );
-
-            // write record to machine samples
-            conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "ts" << 1 << "mn" << 1 ));
-            BSONObjBuilder bob;
-            bob << "ts" << DATENOW;
-            bob.append("mn",name);
-            bob.append("ar",arch);
-            bob.append("os",opsys);
-            bob.append("ki",ki);
-            bob.append("la",la);
-            bob.append("st",state);
-            bob.append("cpu",cpus);
-            bob.append("mem",mem);
-            strcmp(gjid,"")?bob.append("gjid",gjid):bob.appendNull("gjid");
-            strcmp(ru,"")?bob.append("ru",ru):bob.appendNull("ru");
-            strcmp(ag,"")?bob.append("ag",ag):bob.appendNull("ag");
-            conn->insert(DB_STATS_SAMPLES_MACH,bob.obj());
+        if (!(m_acct_ad = acct.fetchAd())) {
+            dprintf(D_ALWAYS, "ODSCollectorPlugin: unable to retrieve accountant ad from negotiator\n");
         }
+        Date_t ts_now = jsTime();
+        processAccountantStats(m_acct_ad, m_stats_conn, ts_now);
     }
 
     void
     processStatsTimer() {
         dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processStatsTimer() called\n");
-        processSubmitterStats();
-        processMachineStats();
+        // sync all stat records to the same timestamp
+        Date_t ts_sync = jsTime();
+        processSubmitterStats(m_stats_conn, ts_sync);
+        processMachineStats(m_stats_conn, ts_sync);
+        processSchedulerStats(m_stats_conn, ts_sync);
     }
+    
+    
 
 public:
-    ODSCollectorPlugin(): m_ads_conn(NULL), m_stats_conn(NULL)
+    ODSCollectorPlugin(): m_ads_conn(NULL), m_stats_conn(NULL),m_acct_ad(NULL)
     {
         //
     }
@@ -182,10 +120,10 @@ public:
 		}
 
         historyInterval = param_integer("POOL_HISTORY_SAMPLING_INTERVAL",60);
-        initialDelay=param_integer("UPDATE_INTERVAL",300);
+        initialDelay = param_integer("UPDATE_INTERVAL",300);
 
         // Register timer for writing stats to DB
-        if (-1 == (historyTimer =
+        if (-1 == (statsTimer =
             daemonCore->Register_Timer(
                 initialDelay,
                 historyInterval,
@@ -194,6 +132,19 @@ public:
                 this
             ))) {
             EXCEPT("Failed to register ODS stats timer");
+            }
+        
+        // Register another timer for accountant ad
+        acctInterval = param_integer("ODS_ACCOUNTANT_INTERVAL",60*60);
+        if (-1 == (acctTimer =
+            daemonCore->Register_Timer(
+                30,
+                acctInterval,
+                (TimerHandlercpp)(&ODSCollectorPlugin::recordAccountantAd),
+                "Timer for collecting Accountant ad",
+                this
+            ))) {
+            EXCEPT("Failed to register ODS accountant timer");
             }
 	}
 
@@ -256,7 +207,7 @@ public:
             break;
 		case UPDATE_NEGOTIATOR_AD:
 			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_NEGOTIATOR_AD\n");
-			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", FALSE)) {
+			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", TRUE)) {
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_NEGOTIATOR_AD\n");
 				break;
 			}
