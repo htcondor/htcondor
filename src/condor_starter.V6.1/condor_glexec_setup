@@ -21,7 +21,7 @@ SH=`readlink -f /bin/sh`
 GLEXEC_CLIENT_CERT="$SANDBOX.condor/$PROXY"
 export GLEXEC_CLIENT_CERT
 tar -C "$SANDBOX.condor" -c  . | \
-    "$GLEXEC" "$SH" -c "mkdir \"$SANDBOX\" && tar -C \"$SANDBOX\" -x" || exit 1
+    "$GLEXEC" "$SH" -c "install -m 755 -d \"$SANDBOX\" && tar -C \"$SANDBOX\" -x" || exit 1
 
 # now get rid of everything in the condor-owned sandbox except
 # the proxy
