@@ -1181,8 +1181,20 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		MyString type;
 		StringList type_list;
 		int cpus, memory, disk;
+		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
+		ClassAd *unmodified_req_classad = NULL;
 
 			// Modify the requested resource attributes as per config file.
+			// If must_modify_request is false (the default), then we only modify the request _IF_
+			// the result still matches.  So is must_modify_request is false, we first backup
+			// the request classad before making the modification - if after modification matching fails,
+			// fall back on the original backed-up ad.
+		if ( !must_modify_request ) {
+				// save an unmodified backup copy of the req_classad
+			unmodified_req_classad = new ClassAd( *req_classad );  
+		}
+
+			// Now make the modifications.
 		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
 		for (int i=0; resources[i]; i++) {
 			MyString knob("MODIFY_REQUEST_EXPR_");
@@ -1204,22 +1216,37 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			}
 		}
 
-			// Make sure the partitionable slot itself is satisfied by
+			// Now make sure the partitionable slot itself is satisfied by
 			// the job. If not there is no point in trying to
 			// partition it. This check also prevents
 			// over-partitioning. The acceptability of the dynamic
 			// slot and job will be checked later, in the normal
 			// course of accepting the claim.
-		rip->r_reqexp->restore();
-		if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
-			mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
-		}
-		if (mach_requirements == 0) {
-			rip->dprintf(D_ALWAYS, 
-				  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
-			refuse( stream );
-			ABORT;
-		}
+		do {
+			rip->r_reqexp->restore();
+			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+			}
+				// If the pslot cannot support this request, ABORT iff there is not
+				// an unmodified_req_classad backup copy we can try on the next iteration of
+				// the while loop
+			if (mach_requirements == 0) {
+				if (unmodified_req_classad) {
+					// our modified req_classad no longer matches, put back the original
+					// so we can try again.
+					dprintf(D_ALWAYS, 
+						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
+					if ( req_classad ) delete req_classad;	// delete modified ad
+					req_classad = unmodified_req_classad;	// put back original					
+					unmodified_req_classad = NULL;
+				} else {
+					rip->dprintf(D_ALWAYS, 
+					  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
+					refuse( stream );
+					ABORT;
+				}
+			}
+		} while (mach_requirements == 0);
 
 			// Pull out the requested attribute values.  If specified, we go with whatever
 			// the schedd wants, which is in request attributes prefixed with
