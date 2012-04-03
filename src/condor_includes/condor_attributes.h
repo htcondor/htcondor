@@ -196,6 +196,7 @@ extern const char * const  ATTR_MYPROXY_NEW_PROXY_LIFETIME;
 extern const char * const  ATTR_HARDWARE_ADDRESS;
 extern const char * const  ATTR_HAS_CHECKPOINTING;
 extern const char * const  ATTR_HAS_FILE_TRANSFER;
+extern const char * const  ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS;
 extern const char * const  ATTR_HAS_PER_FILE_ENCRYPTION;
 extern const char * const  ATTR_HAS_IO_PROXY;
 extern const char * const  ATTR_HAS_JAVA;
