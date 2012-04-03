@@ -6039,7 +6039,7 @@ id=370
 
 [RESTART_PROCD_ON_ERROR]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -6228,23 +6228,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=380
-
-[MASTER.USE_PROCD]
-# The master specifically does not want a procd
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Use Procd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,proc_family_interface
-id=555
 
 [USE_PROCD]
 # All daemons want a procd (except for the master, defined above)

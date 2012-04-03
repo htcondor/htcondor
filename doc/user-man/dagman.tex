@@ -1446,8 +1446,9 @@ directly to the already-claimed \Condor{startd}.
 A value of 0 means that claims are not held idle for a running DAG.
 If a DAG node has no children,
 the value of \MacroNI{DAGMAN\_HOLD\_CLAIM\_TIME} will be ignored;
-the \Attr{KeepClaimIdle} attribute will not be defined in the Job ClassAd 
-of the node job. 
+the \Attr{KeepClaimIdle} attribute will not be defined in the job ClassAd 
+of the node job, unless the job requests it using the submit command
+\SubmitCmd{keep\_claim\_idle}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Single Submission of Multiple, Independent DAGs}

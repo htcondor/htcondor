@@ -979,14 +979,14 @@ section~\ref{man-condor-submit-environment} for more details about this command.
 
 The submitter's entire environment can be copied into the job
 ClassAd for the job at job submission.
-The \Opt{getenv} command within the submit description file
+The \SubmitCmd{getenv} command within the submit description file
 does this,
 as described at section~\ref{man-condor-submit-getenv}.
 
-If the environment is set with the \Opt{environment} command \emph{and}
-\Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submitter's environment,
-regardless of the order of the \Opt{environment} and \Opt{getenv}
+If the environment is set with the \SubmitCmd{environment} command \emph{and}
+\SubmitCmd{getenv} is also set to true, values specified with
+\SubmitCmd{environment} override values in the submitter's environment,
+regardless of the order of the \SubmitCmd{environment} and \SubmitCmd{getenv}
 commands.
 
 Commands within the submit description file may reference the
@@ -999,7 +999,7 @@ job that may be useful for the job to reference.
 
 \begin{itemize}
 \item \Env{\_CONDOR\_SCRATCH\_DIR}
-\index{\_CONDOR\_SCRATCH\_DIR}
+\index{\_CONDOR\_SCRATCH\_DIR environment variable}
 \index{environment variables!\_CONDOR\_SCRATCH\_DIR}
  gives the directory
 where the job may place temporary data files. 
@@ -1008,7 +1008,7 @@ and its contents are deleted by Condor
 when the job stops running on a machine, no matter how the job completes.
 
 \item \Env{\_CONDOR\_SLOT}
-\index{\_CONDOR\_SLOT}
+\index{\_CONDOR\_SLOT environment variable}
 \index{environment variables!\_CONDOR\_SLOT}
 gives the name of the slot (for SMP machines), on which the job is run.
 On machines with only a single slot, the value of this variable will be
@@ -1019,7 +1019,7 @@ See section~\ref{sec:Configuring-SMP} for more details about SMP
 machines and their configuration.
 
 \item \Env{CONDOR\_VM}
-\index{CONDOR\_VM}
+\index{CONDOR\_VM environment variable}
 \index{environment variables!CONDOR\_VM}
 equivalent to \Env{\_CONDOR\_SLOT} described above, except that it is
 only available in the standard universe.
@@ -1029,7 +1029,7 @@ It will only be defined if the \Macro{ALLOW\_VM\_CRUFT} configuration
 variable is set to \Expr{True}.
 
 \item \Env{X509\_USER\_PROXY}
-\index{X509\_USER\_PROXY}
+\index{X509\_USER\_PROXY environment variable}
 \index{environment variables!X509\_USER\_PROXY}
 gives the full path to the X.509 user proxy file if one is
 associated with the job.  Typically, a user will specify
@@ -1038,7 +1038,7 @@ This setting is currently available in the
 local, java, and vanilla universes.
 
 \item \Env{\_CONDOR\_JOB\_AD}
-\index{\_CONDOR\_JOB\_AD}
+\index{\_CONDOR\_JOB\_AD environment variable}
 \index{environment variables!\_CONDOR\_JOB\_AD}
 is the path to a file in the job's scratch directory which contains
 the job ad for the currently running job.  The job ad is current
@@ -1046,25 +1046,25 @@ as of the start of the job, but is not updated during the running
 of the job.  The job may read attributes and their values out of
 this file as it runs, but any changes will not be acted on in any
 way by Condor.  The format is the same as the output of the
-condor\_q -l command.  This environment variable may be particularly
+\Condor{q}  \Opt{-l} command.  This environment variable may be particularly
 useful in a USER\_JOB\_WRAPPER.
 
 \item \Env{\_CONDOR\_MACHINE\_AD}
-\index{\_CONDOR\_MACHINE\_AD}
+\index{\_CONDOR\_MACHINE\_AD environment variable}
 \index{environment variables!\_CONDOR\_MACHINE\_AD}
 is the path to a file in the job's scratch directory which contains
 the machine ad for the slot the currently running job is using.  
 The machine ad is current as of the start of the job, but is not updated during the running
 of the job.  The format is the same as the output of the
-condor\_status -l command.
+\Condor{status}  \Opt{-l} command.
 
 \item \Env{\_CONDOR\_JOB\_IWD}
-\index{\_CONDOR\_JOB\_IWD}
+\index{\_CONDOR\_JOB\_IWD environment variable}
 \index{environment variables!\_CONDOR\_JOB\_IWD}
 is the path to the initial working directory the job was born with.
 
 \item \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE}
-\index{\_CONDOR\_WRAPPER\_ERROR\_FILE}
+\index{\_CONDOR\_WRAPPER\_ERROR\_FILE environment variable}
 \index{environment variables!\_CONDOR\_WRAPPER\_ERROR\_FILE}
 is only set when the administrator has installed a USER\_JOB\_WRAPPER.
 If this file exists, Condor assumes that the job wrapper has failed

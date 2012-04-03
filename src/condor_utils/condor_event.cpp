@@ -2854,15 +2854,15 @@ JobImageSizeEvent::writeEvent (FILE *file)
 
 	// when talking to older starters, memory_usage, rss & pss may not be set
 	if (memory_usage_mb >= 0 && 
-		fprintf (file, "\t%"PRId64"  -  Memory Usage of job (Mb)\n", memory_usage_mb) < 0)
+		fprintf (file, "\t%"PRId64"  -  MemoryUsage of job (MB)\n", memory_usage_mb) < 0)
 		return 0;
 
 	if (resident_set_size_kb >= 0 &&
-		fprintf (file, "\t%"PRId64"  -  Resident Set Size of job (Kb)\n", resident_set_size_kb) < 0)
+		fprintf (file, "\t%"PRId64"  -  ResidentSetSize of job (KB)\n", resident_set_size_kb) < 0)
 		return 0;
 
 	if (proportional_set_size_kb >= 0 &&
-		fprintf (file, "\t%"PRId64"  -  Proportional Set Size of job (Kb)\n", proportional_set_size_kb) < 0)
+		fprintf (file, "\t%"PRId64"  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb) < 0)
 		return 0;
 
 	return 1;
@@ -2895,13 +2895,13 @@ JobImageSizeEvent::readEvent (FILE *file)
 		}
 
 		int64_t val;
-		if (1 == sscanf(sz, "\t%"PRId64"  -  Memory Usage", &val)) {
+		if (1 == sscanf(sz, "\t%"PRId64"  -  MemoryUsage", &val)) {
 			memory_usage_mb = val;
 		}
-		else if (1 == sscanf(sz, "\t%"PRId64"  -  Resident Set Size", &val)) {
+		else if (1 == sscanf(sz, "\t%"PRId64"  -  ResidentSetSize", &val)) {
 			resident_set_size_kb = val;
 		}
-		else if (1 == sscanf(sz, "\t%"PRId64"  -  Proportional Set Size", &val)) {
+		else if (1 == sscanf(sz, "\t%"PRId64"  -  ProportionalSetSize", &val)) {
 			proportional_set_size_kb = val;
 		}
 	}

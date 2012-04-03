@@ -236,6 +236,8 @@ VanillaProc::StartJob()
 	}
 #endif
 
+// The chroot stuff really only works on linux
+#ifdef LINUX
 	{
         // Have Condor manage a chroot
        std::string requested_chroot_name;
@@ -272,20 +274,30 @@ VanillaProc::StartJob()
                }
                dprintf(D_FULLDEBUG, "Will attempt to set the chroot to %s.\n", requested_chroot.c_str());
 
-               std::string execute_dir(Starter->GetExecuteDir());
-               const char * full_dir = dirscat(requested_chroot, execute_dir);
-               std::string full_dir_str;
-               if (full_dir) {
-                       full_dir_str = full_dir;
-               } else {
-                       dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", requested_chroot.c_str(), execute_dir.c_str());
-                       return FALSE;
-               }
-               delete [] full_dir;
+               std::stringstream ss;
+               std::stringstream ss2;
+               ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
+               std::string execute_dir = ss2.str();
+               ss << requested_chroot << DIR_DELIM_CHAR << ss2.str();
+               std::string full_dir_str = ss.str();
                if (IsDirectory(execute_dir.c_str())) {
-                       if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
-                               dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+                       {
+                           TemporaryPrivSentry sentry(PRIV_ROOT);
+                           if( mkdir(full_dir_str.c_str(), S_IRWXU) < 0 ) {
+                               dprintf( D_FAILURE|D_ALWAYS,
+                                   "Failed to create sandbox directory in chroot (%s): %s\n",
+                                   full_dir_str.c_str(),
+                                   strerror(errno) );
                                return FALSE;
+                           }
+                           if (chown(full_dir_str.c_str(),
+                                     get_user_uid(),
+                                     get_user_gid()) == -1)
+                           {
+                               EXCEPT("chown error on %s: %s",
+                                      full_dir_str.c_str(),
+                                      strerror(errno));
+                           }
                        }
                        if (!fs_remap) {
                                fs_remap = new FilesystemRemap();
@@ -307,6 +319,9 @@ VanillaProc::StartJob()
                dprintf(D_FULLDEBUG, "Value of RequestedChroot is unset.\n");
        }
 	}
+// End of chroot 
+#endif
+
 
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.

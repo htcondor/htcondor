@@ -87,13 +87,18 @@ on Windows platforms for drives with 1TB or more of free space.
 to be optional.
 \Ticket{2845}
 
-\item Fixed a bug where if \Macro{EVENT\_LOG} was configured but not writable,
-the Userlog would not be written to. This, in particular, broke DAGman.
+\item Fixed a bug in which if the configuration variable \Macro{EVENT\_LOG} was 
+set but the defined file was not writable,
+the user's job log would not be written to. 
+This bug would have been observable with DAGMan.
 \Ticket{2858}
 
 \item NorduGrid ARC LDAP servers that return attributes in an unexpected
 order no longer cause the \condor{gridmanager} to exit.
 \Ticket{2888}
+
+\item Condor failed to execute jobs when using glexec 0.9.0 through 0.9.5.
+\Ticket{2907}
 
 \end{itemize}
 
