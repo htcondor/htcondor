@@ -518,7 +518,16 @@ condor_master_pids() {
   masterpid=
   if [ -f "$PIDFILE" -a -r "$PIDFILE" ] ; then
     masterpid=`cat "$PIDFILE"` 2>/dev/null
-    FORCE_PIDFILE="yes"
+
+    # validate PID
+    `kill -0 $masterpid` > /dev/null
+    if [ $? -eq 0 ] ; then
+      FORCE_PIDFILE="yes"
+    else
+      masterpid=""
+      # Remove the stale pidfile
+      rm -f $PIDFILE
+    fi
   fi
   if [ "$FORCE_PIDFILE" = "yes" ] ; then
     MASTER_PIDS="$masterpid"
