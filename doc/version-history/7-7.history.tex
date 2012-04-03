@@ -29,8 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Made keep\_claim\_idle a real submit description
-file command.
+\item The new \SubmitCmd{keep\_claim\_idle} submit description
+file command requests that the \Condor{schedd} keep a claim for a defined
+number of seconds after the job exits.
+The job ClassAd attribute \Attr{KeepClaimIdle} was introduced in
+Condor version 7.7.1 to implement this functionality.
+See the definition of this command at 
+section ~\ref{condor-submit-keep-claim-idle}.
 \Ticket{2094}
 
 \item Changed the default for \Condor{history} to print out
