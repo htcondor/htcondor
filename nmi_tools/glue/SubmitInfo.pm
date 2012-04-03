@@ -98,9 +98,11 @@ my @default_prereqs = (
 	);
 
 # Hackery to test running in new batlab
+my $isNewBatlab = 0;
 if ((`hostname -f` eq "submit-1.batlab.org\n") ||
 	(`hostname -f` eq "submit-2.batlab.org\n")) {
 @default_prereqs = ();
+$isNewBatlab = 1;
 } 
 
 ###############################################################################
@@ -317,13 +319,13 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
-			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
+			'prereqs'	=> ($isNewBatlab ? [] : [ 'libtool-1.5.26', 'cmake-2.8.3' ]),
+			'xtests'	=> ($isNewBatlab ? [] : [ 'x86_64_ubuntu_10.04', ]),
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05' ],
+			'prereqs'	=> ($isNewBatlab ? [] : [ 'java-1.4.2_05' ]),
 			'testclass' => [ @default_testclass ],
 		},
 	},
