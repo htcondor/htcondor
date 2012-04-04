@@ -646,7 +646,7 @@ bool splitAt_func( const char * name,
 
 // split using arbitrary separator characters
 static
-bool splitArb_func( const char * name,
+bool splitArb_func( const char * /*name*/,
 	const classad::ArgumentList &arg_list,
 	classad::EvalState &state, 
 	classad::Value &result )
