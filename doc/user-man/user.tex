@@ -708,6 +708,11 @@ shows program submission of
 \Prog{mathematica} as a vanilla universe job.
 This may be necessary if the source
 and/or object code to \Prog{mathematica} is not available.
+
+The \SubmitCmd{request\_memory} command is included to insure
+that the \Prog{mathematica} jobs match with and then execute on
+pool machines that provide at least 1 GByte of memory.
+
 \begin{verbatim}
   ####################     
   #                       
@@ -716,18 +721,19 @@ and/or object code to \Prog{mathematica} is not available.
   #                                        
   ####################                    
                                          
-  Executable = mathematica          
-  Universe   = vanilla                   
-  input      = test.data                
-  output     = loop.out                
-  error      = loop.error             
-  Log        = loop.log                                                    
+  executable     = mathematica          
+  universe       = vanilla                   
+  input          = test.data                
+  output         = loop.out                
+  error          = loop.error             
+  log            = loop.log                                                    
+  request_memory = 1 GB
                                   
-  Initialdir = run_1         
-  Queue                         
+  initialdir     = run_1         
+  queue                         
                                
-  Initialdir = run_2      
-  Queue                     
+  initialdir     = run_2      
+  queue                     
 \end{verbatim}
 
 \subsubsection{Example 3}
@@ -737,10 +743,10 @@ The submit description file for Example 3 queues 150
 runs of program \Prog{foo} which has been compiled and linked for
 LINUX running on a 32-bit Intel processor.
 This job requires Condor to run the program on machines which have
-greater than 32 megabytes of physical memory, and expresses a
-preference to run the program on machines with more than 64 megabytes.
-It also advises Condor that it will
-use up to 28 megabytes of memory when running.
+greater than 32 Mbytes of physical memory, and expresses a
+preference to run the program on machines with more than 64 Mbytes.
+It also advises Condor that this standard universe job will
+use up to 28000 Kbytes of memory when running.
 Each of the 150 runs of the program is given its own process number,
 starting with process number 0.
 So, files 
@@ -761,18 +767,19 @@ will be written into the single file \File{foo.log}.
   #
   ####################                                                    
 
-  Executable    = foo                                                    
-  Universe      = standard                                                    
-  Requirements  = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
-  Rank          = Memory >= 64
-  Image_Size    = 28000
+  Executable     = foo                                                    
+  Universe       = standard                                                    
+  requirements   = OpSys == "LINUX" && Arch =="INTEL"     
+  rank           = Memory >= 64
+  image_size     = 28000
+  request_memory = 32
 
-  Error   = err.$(Process)                                                
-  Input   = in.$(Process)                                                 
-  Output  = out.$(Process)                                                
-  Log     = foo.log
+  error   = err.$(Process)                                                
+  input   = in.$(Process)                                                 
+  output  = out.$(Process)                                                
+  log     = foo.log
 
-  Queue 150
+  queue 150
 \end{verbatim}
 
 \index{submit description file!examples|)}

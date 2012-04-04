@@ -743,6 +743,8 @@ class JobEvictedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signal_number;
 
+	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
+
 	const char* getReason(void) const;
 	void setReason( const char* );
 
@@ -826,6 +828,8 @@ class TerminatedEvent : public ULogEvent
 	/// total bytes received by the job over the network for the lifetime
 	/// of the job
 	float total_recvd_bytes;
+
+	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
  private:
 
