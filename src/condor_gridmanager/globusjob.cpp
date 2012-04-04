@@ -1851,6 +1851,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					// this to happen?
 					myResource->JMComplete( this );
 					jmDown = false;
+					if ( job_contact ) {
+						SetRemoteJobId( job_contact );
+						requestScheddUpdate( this, false );
+					}
 					gmState = GM_START;
 					break;
 				}

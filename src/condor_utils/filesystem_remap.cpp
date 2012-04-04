@@ -22,6 +22,8 @@
 #include "MyString.h"
 #include "condor_uid.h"
 #include "filesystem_remap.h"
+#include "condor_config.h"
+#include "directory.h"
 
 #if defined(LINUX)
 #include <sys/mount.h>
@@ -214,5 +216,37 @@ void FilesystemRemap::ParseMountinfo() {
 
 	fclose(fd);
 
+}
+
+pair_strings_vector
+root_dir_list()
+{
+	pair_strings_vector execute_dir_list;
+	execute_dir_list.push_back(pair_strings("root","/"));
+	const char * allowed_root_dirs = param("NAMED_CHROOT");
+	if (allowed_root_dirs) {
+		StringList chroot_list(allowed_root_dirs);
+		chroot_list.rewind();
+		const char * next_chroot;
+		while ( (next_chroot=chroot_list.next()) ) {
+			MyString chroot_spec(next_chroot);
+			chroot_spec.Tokenize();
+			const char * chroot_name = chroot_spec.GetNextToken("=", false);
+			if (chroot_name == NULL) {
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+				continue;
+			}
+			const char * next_dir = chroot_spec.GetNextToken("=", false);
+			if (next_dir == NULL) {
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+				continue;
+			}
+			if (IsDirectory(next_dir)) {
+				pair_strings p(chroot_name, next_dir);
+				execute_dir_list.push_back(p);
+			}
+		}
+	}
+	return execute_dir_list;
 }
 

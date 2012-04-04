@@ -2068,7 +2068,7 @@ SetMachineCount()
 {
 	char	*mach_count;
 	MyString buffer;
-	int		request_cpus = 1;
+	int		request_cpus = 0;
 
 	char *wantParallelString = NULL;
 	bool wantParallel = false;
@@ -2126,9 +2126,15 @@ SetMachineCount()
 	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
 		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
 		free(mach_count);
-	} else {
+	} else 
+	if (request_cpus > 0) {
 		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+	} else 
+	if ((mach_count = param("JOB_DEFAULT_REQUESTCPUS"))) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		free(mach_count);
 	}
+
 	InsertJobExpr(buffer);
 }
 
@@ -2161,6 +2167,7 @@ SetSimpleJobExprs()
 {
 	SimpleExprInfo simple_exprs[] = {
 		{ATTR_NEXT_JOB_START_DELAY, next_job_start_delay, next_job_start_delay2, NULL, false},
+		{ATTR_JOB_KEEP_CLAIM_IDLE, "KeepClaimIdle", "keep_claim_idle", NULL, false},
 		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
 		{NULL,NULL,NULL,NULL,false}
 	};
@@ -2294,6 +2301,7 @@ SetImageSize()
 	buffer.sprintf( "%s = %"PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
+	// set an intial value for RequestMemory
 	tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY);
 	if (tmp) {
 		// if input is an integer followed by K,M,G or T, scale it MB and 
@@ -2312,18 +2320,13 @@ SetImageSize()
 		buffer.sprintf("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
 		free(tmp);
 		InsertJobExpr(buffer);
-	}else {
-		fprintf(stderr, "\nWARNING: '%s' was NOT specified.  Depending on your admin policy your job may not run!\n", ATTR_REQUEST_MEMORY);
-#if 0  // no default expression for RequestMemory
-		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
-					   ATTR_REQUEST_MEMORY,
-					   ATTR_JOB_VM_MEMORY,
-					   ATTR_JOB_VM_MEMORY,
-					   ATTR_IMAGE_SIZE);
+	} else if ( (tmp = param("JOB_DEFAULT_REQUESTMEMORY")) ) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+		free(tmp);
 		InsertJobExpr(buffer);
-#endif
 	}
 
+	// set an initial value for RequestDisk
 	if ((tmp = condor_param(RequestDisk, ATTR_REQUEST_DISK))) {
 		// if input is an integer followed by K,M,G or T, scale it MB and 
 		// insert it into the jobAd, otherwise assume it is an expression
@@ -2335,10 +2338,13 @@ SetImageSize()
 			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
 		}
 		free(tmp);
-	} else {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, ATTR_DISK_USAGE);
+		InsertJobExpr(buffer);
+	} else if ( (tmp = param("JOB_DEFAULT_REQUESTDISK")) ) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		free(tmp);
+		InsertJobExpr(buffer);
 	}
-	InsertJobExpr(buffer);
+	
 }
 
 void SetFileOptions()

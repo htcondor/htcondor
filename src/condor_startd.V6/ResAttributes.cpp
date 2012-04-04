@@ -21,13 +21,14 @@
 #include "condor_common.h"
 #include "startd.h"
 #include <math.h>
+#include "filesystem_remap.h"
 
 #ifdef WIN32
 #include "winreg.windows.h"
 #endif
 
 MachAttributes::MachAttributes()
-   : m_user_specified(NULL, ";"), m_user_settings_init(false)
+   : m_user_specified(NULL, ";"), m_user_settings_init(false), m_named_chroot()
 {
 	m_mips = -1;
 	m_kflops = -1;
@@ -48,7 +49,6 @@ MachAttributes::MachAttributes()
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
 	m_ckptpltfrm = NULL;
-	m_named_chroot = NULL;
 
 	m_clock_day = -1;
 	m_clock_min = -1;
@@ -131,7 +131,6 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
-	if( m_named_chroot ) free( m_named_chroot );
 
 	if( m_utsname_sysname ) free( m_utsname_sysname );
 	if( m_utsname_nodename ) free( m_utsname_nodename );
@@ -419,32 +418,21 @@ MachAttributes::compute( amask_t how_much )
 		}
 		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
 
-		const char * allowed_root_dirs = param("NAMED_CHROOT");
-		if (allowed_root_dirs) {
-			MyString result;
-			bool prev = false;
-			StringList chroot_list(allowed_root_dirs);
-			chroot_list.rewind();
-			const char * next_chroot;
-			std::string requested_chroot;
-			while ( (next_chroot=chroot_list.next()) ) {
-				MyString chroot_spec(next_chroot);
-				chroot_spec.Tokenize();
-				const char * chroot_name = chroot_spec.GetNextToken("=", false);
-				if (chroot_name == NULL) {
-					dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
-				}
-				if (prev) {
-					result += ", ";
-				}
-				prev = true;
-				result += chroot_name;
+		pair_strings_vector root_dirs = root_dir_list();
+		std::stringstream result;
+		unsigned int chroot_count = 0;
+		for (pair_strings_vector::const_iterator it=root_dirs.begin();
+				it != root_dirs.end(); 
+				++it, ++chroot_count) {
+			if (chroot_count) {
+				result << ", ";
 			}
-			if (prev) {
-				dprintf(D_FULLDEBUG, "Named chroots: %s\n", result.Value() );
-				if (m_named_chroot) free(m_named_chroot);
-				m_named_chroot = strdup( result.Value() );
-			}
+			result << it->first;
+		}
+		if (chroot_count > 1) {
+			std::string result_str = result.str();
+			dprintf(D_FULLDEBUG, "Named chroots: %s\n", result_str.c_str() );
+			m_named_chroot = result_str;
 		}
 
     }
@@ -727,8 +715,8 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	cp->Assign( ATTR_UTSNAME_MACHINE, m_utsname_machine );
 
 	// Advertise chroot information
-	if ( m_named_chroot ) {
-		cp->Assign( "NamedChroot", m_named_chroot );
+	if ( m_named_chroot.size() > 0 ) {
+		cp->Assign( "NamedChroot", m_named_chroot.c_str() );
 	}
 }
 

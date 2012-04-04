@@ -6039,7 +6039,7 @@ id=370
 
 [RESTART_PROCD_ON_ERROR]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -6228,23 +6228,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=380
-
-[MASTER.USE_PROCD]
-# The master specifically does not want a procd
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Use Procd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,proc_family_interface
-id=555
 
 [USE_PROCD]
 # All daemons want a procd (except for the master, defined above)
@@ -7474,6 +7457,22 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Use Slot Weights
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Allow Quota Oversubscription
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
@@ -10489,3 +10488,115 @@ usage=
 url=
 tags=starter
 id=603
+
+[JOB_DEFAULT_REQUESTMEMORY]
+aliases=
+default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,1) 
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestMemory expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=604
+
+[JOB_DEFAULT_REQUESTDISK]
+aliases=
+default=DiskUsage
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestDisk expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=605
+
+[JOB_DEFAULT_REQUESTCPUS]
+aliases=
+default=1
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestCpus expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=606
+
+[MUST_MODIFY_REQUEST_EXPRS]
+aliases=
+default=false
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Should startd modify request exprs even if it causes match failure
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=607
+
+[MODIFY_REQUEST_EXPR_REQUESTCPUS]
+aliases=
+default=quantize(RequestCpus,{1})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a cpu resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=608
+
+[MODIFY_REQUEST_EXPR_REQUESTMEMORY]
+aliases=
+default=quantize(RequestMemory,{TotalSlotMemory / TotalSlotCpus / 4})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a memory resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=609
+
+[MODIFY_REQUEST_EXPR_REQUESTDISK]
+aliases=
+default=quantize(RequestDisk,{1024})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a disk resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610

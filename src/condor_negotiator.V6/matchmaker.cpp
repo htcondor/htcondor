@@ -286,6 +286,7 @@ Matchmaker ()
 
     hgq_root_group = NULL;
     autoregroup = false;
+    allow_quota_oversub = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -1657,6 +1658,8 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map.clear();
     group_entry_map[hgq_root_name] = hgq_root_group;
 
+    allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
+
     bool accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
@@ -1805,10 +1808,10 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // static quotas get first dibs on any available quota
     // total static quota assignable is bounded by quota coming from above
-    double sqa = min(sqsum, quota);
+    double sqa = (allow_quota_oversub) ? sqsum : min(sqsum, quota);
 
     // children with dynamic quotas get allocated from the remainder 
-    double dqa = quota - sqa;
+    double dqa = max(0.0, quota - sqa);
 
     dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", group->name.c_str(), sqa, dqa);
 
@@ -1840,7 +1843,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // Current group gets anything remaining after assigning to any children
     // If there are no children (a leaf) then this group gets all the quota
-    group->quota = quota - chq;
+    group->quota = (allow_quota_oversub) ? quota : (quota - chq);
     if (group->quota < 0) group->quota = 0;
     dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
 }
@@ -2542,7 +2545,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
                     }
 					negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
 					negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-					result=negotiate( scheddName.Value(), schedd, submitterPrio,
+					result=negotiate(groupName, scheddName.Value(), schedd, submitterPrio,
                                   submitterLimit, submitterLimitUnclaimed,
 								  startdAds, claimIds, 
 								  ignore_submitter_limit,
@@ -3035,7 +3038,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 }
 
 int Matchmaker::
-negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
+negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t startTime, 
@@ -3285,6 +3288,11 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 #if !defined(WANT_OLD_CLASSADS)
 		request.AddTargetRefs( TargetMachineAttrs );
 #endif
+
+        // information regarding the negotiating group context:
+        string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
+        request.Assign(ATTR_SUBMITTER_NEGOTIATING_GROUP, negGroupName);
+        request.Assign(ATTR_SUBMITTER_AUTOREGROUP, (autoregroup && (negGroupName == hgq_root_group->name))); 
 
 		// insert the submitter user priority attributes into the request ad
 		// first insert old-style ATTR_SUBMITTOR_PRIO
@@ -4204,6 +4212,12 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	} else {
 		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
 	}
+
+    // these propagate into the slot ad in the schedd match rec, and from there eventually to the claim
+    // structures in the startd:
+    offer->CopyAttribute(ATTR_REMOTE_GROUP, ATTR_SUBMITTER_GROUP, &request);
+    offer->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, ATTR_SUBMITTER_NEGOTIATING_GROUP, &request);
+    offer->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, ATTR_SUBMITTER_AUTOREGROUP, &request);
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 

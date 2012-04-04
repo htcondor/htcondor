@@ -900,6 +900,44 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 	return TRUE;
 }
 
+static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd) 
+{
+	std::string resslist;
+	if ( ! jobAd->LookupString("PartitionableResources", resslist))
+		resslist = "Cpus, Disk, Memory";
+
+	StringList reslist(resslist.c_str());
+	if (reslist.number() > 0) {
+		int64_t int64_value = 0;
+		ClassAd * puAd = new ClassAd();
+		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
+
+		reslist.rewind();
+		char * resname = NULL;
+		while ((resname = reslist.next()) != NULL) {
+			MyString attr;
+			int64_value = -1;
+			attr.sprintf("%s", resname); // provisioned value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(resname, int64_value);
+			} 
+			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			int64_value = -2;
+			attr.sprintf("Request%s", resname);	// requested value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			int64_value = -3;
+			attr.sprintf("%sUsage", resname); // usage value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+		}
+		*ppusageAd = puAd;
+	}
+}
+
 // kind defaults to US_NORMAL.
 void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
@@ -1008,6 +1046,45 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	if( exitReason == JOB_COREDUMPED ) {
 		event.setCoreFile( core_file_name );
 	}
+
+#if 1
+	set_usageAd(jobAd, &event.pusageAd);
+#else
+	std::string resslist;
+	if ( ! jobAd->LookupString("PartitionableResources", resslist))
+		resslist = "Cpus, Disk, Memory";
+
+	StringList reslist(resslist.c_str());
+	if (reslist.number() > 0) {
+		int64_t int64_value = 0;
+		ClassAd * puAd = new ClassAd();
+		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
+
+		reslist.rewind();
+		char * resname = NULL;
+		while ((resname = reslist.next()) != NULL) {
+			MyString attr;
+			int64_value = -1;
+			attr.sprintf("%s", resname); // provisioned value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(resname, int64_value);
+			} 
+			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			int64_value = -2;
+			attr.sprintf("Request%s", resname);	// requested value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			int64_value = -3;
+			attr.sprintf("%sUsage", resname); // usage value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+		}
+		event.pusageAd = puAd;
+	}
+#endif
 	
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
@@ -1046,6 +1123,8 @@ BaseShadow::logEvictEvent( int exitReason )
 		// remote rusage
 	event.run_remote_rusage = run_remote_rusage;
 	
+	set_usageAd(jobAd, &event.pusageAd);
+
 		/*
 		  we want to log the events from the perspective of the user
 		  job, so if the shadow *sent* the bytes, then that means the

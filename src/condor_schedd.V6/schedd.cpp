@@ -5439,6 +5439,14 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		return;
 	}
 
+    // some attributes coming out of negotiator's matching process that need to
+    // make a subway transfer from slot/match ad to job/request ad, on their way
+    // to the claim, and then eventually back around to the negotiator for use in
+    // preemption policies:
+    jobAd->CopyAttribute(ATTR_REMOTE_GROUP, mrec->my_match_ad);
+    jobAd->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, mrec->my_match_ad);
+    jobAd->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, mrec->my_match_ad);
+
 		// Setup to claim the slot asynchronously
 
 	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );

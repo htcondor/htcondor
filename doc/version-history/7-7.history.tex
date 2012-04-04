@@ -29,22 +29,33 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Placeholder  for  newer usage of \Attr{RequestMemory}.
+\Ticket{2843}
+
+\item The new \SubmitCmd{keep\_claim\_idle} submit description
+file command requests that the \Condor{schedd} keep a claim for a defined
+number of seconds after the job exits.
+The job ClassAd attribute \Attr{KeepClaimIdle} was introduced in
+Condor version 7.7.1 to implement this functionality.
+See the definition of this command at 
+section ~\ref{condor-submit-keep-claim-idle}.
+\Ticket{2094}
+
 \item Changed the default for \Condor{history} to print out
 items in reverse chronological order.  
 The new \Opt{-forwards} option enables the previous behavior of 
 printing historical jobs in chronological order.
 \Ticket{2808}
 
+\item Advertised new attributes \Attr{RemoteGroup}, \Attr{RemoteNegotiatingGroup},
+\Attr{RemoteAutoregroup} and their Submitter counterparts to support enhanced
+preemption policies with accounting group awareness.
+\Ticket{2885}
+
 \item Enhanced the \Condor{negotiator} to provide the name of 
 concurrency limits that cause negotiation to fail, so that 
 \Condor{q} -analyze can provide more informative failure information.
 \Ticket{2878}
-
-\item Added configuration parameter 
-\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}, which causes the
-\Condor{negotiator} to re-read the configuration prior to each
-negotiation cycle when set to \Expr{True}.
-\Ticket{2851}
 
 \item Concurrency limit defaults may now be declared for named groups
 using \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>} so that any
@@ -93,6 +104,12 @@ via the new \Opt{-X} option.
 
 \begin{itemize}
 
+\item The new configuration variable
+\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE} is a boolean which causes the
+\Condor{negotiator} to re-read the configuration prior to each
+negotiation cycle when set to \Expr{True}.
+\Ticket{2851}
+
 \item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
 specifies how the \Condor{master} will restart,
 when it notices that the \Condor{master} binary has changed. 
@@ -124,7 +141,12 @@ inclusive.
 
 \begin{itemize}
 
-\item Fixed path to sftp\_server on Mac OS X and Debian.
+\item Submit command \Macro{remote\_initialdir} now works for pbs and lsf
+grid universe jobs.
+\Ticket{2913}
+
+\item Fixed the path to \Prog{sftp\_server} on Mac OS X and Debian
+platforms.
 \Ticket{2789}
 
 \item Fixed a rare problem that caused a 20 second timeout to occur in

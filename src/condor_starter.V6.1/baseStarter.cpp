@@ -2859,21 +2859,33 @@ CStarter::removeTempExecuteDir( void )
 	}
 #endif
 
-	Directory execute_dir( Execute, PRIV_ROOT );
-	if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
-
-		// since we chdir()'d to the execute directory, we can't
-		// delete it until we get out (at least on WIN32). So lets
-		// just chdir() to EXECUTE so we're sure we can remove it. 
-		if (chdir(Execute)) {
-			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
+		// Remove the directory from all possible chroots.
+	pair_strings_vector root_dirs = root_dir_list();
+	bool has_failed = false;
+	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
+		const char *full_execute_dir = dirscat(it->second.c_str(), Execute);
+		if (!full_execute_dir) {
+			continue;
 		}
+		Directory execute_dir( full_execute_dir, PRIV_ROOT );
+		if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
 
-		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
-				 DIR_DELIM_CHAR, dir_name.Value() );
-		return execute_dir.Remove_Current_File();
+			// since we chdir()'d to the execute directory, we can't
+			// delete it until we get out (at least on WIN32). So lets
+			// just chdir() to EXECUTE so we're sure we can remove it. 
+			if (chdir(Execute)) {
+				dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
+			}
+
+			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", Execute,
+					 DIR_DELIM_CHAR, dir_name.Value() );
+			if (!execute_dir.Remove_Current_File()) {
+				has_failed = true;
+			}
+		}
+		delete [] full_execute_dir;
 	}
-	return true;
+	return !has_failed;
 }
 
 #if !defined(WIN32)

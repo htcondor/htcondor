@@ -898,7 +898,20 @@ secondPass (int argc, char *argv[])
 		}
 		if (matchPrefix (argv[i], "-format", 2)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
-			projList.AppendArg(argv[i+2]);
+
+			StringList attributes;
+			ClassAd ad;
+			if(!ad.GetExprReferences(argv[i+2],attributes,attributes)){
+				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
+				exit(1);
+			}
+
+			attributes.rewind();
+			char const *s;
+			while( (s=attributes.next()) ) {
+				projList.AppendArg(s);
+			}
+
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
 						i, argv[i+1], argv[i+2]);
