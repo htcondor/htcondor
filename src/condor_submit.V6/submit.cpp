@@ -6690,11 +6690,14 @@ check_requirements( char const *orig, MyString &answer )
 
 					// check output
 					tmp_ptr = condor_param( OutputDestination, "OutputDestination" );
-					if (IsUrl(tmp_ptr)){
-						MyString plugintype = getURLType(tmp_ptr);
-						answer += " && stringListMember(\"";
-						answer += plugintype;
-						answer += "\",HasFileTransferPluginMethods)";
+					if (tmp_ptr) {
+						if (IsUrl(tmp_ptr)){
+							MyString plugintype = getURLType(tmp_ptr);
+							answer += " && stringListMember(\"";
+							answer += plugintype;
+							answer += "\",HasFileTransferPluginMethods)";
+						}
+						free (tmp_ptr);
 					}
 				}
 
