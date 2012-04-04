@@ -36,3 +36,12 @@ bool IsUrl( const char *url )
 	return false;
 }
 
+MyString getURLType( const char *url ) {
+	MyString t;
+	if(IsUrl(url)) {
+		MyString u = url;
+		t = u.Substr(0,u.FindChar(':')-1);
+	}
+	return t;
+}
+
