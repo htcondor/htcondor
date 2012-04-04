@@ -260,6 +260,7 @@ const char * const ATTR_MYPROXY_NEW_PROXY_LIFETIME = "MyProxyNewProxyLifetime";
 const char * const ATTR_HARDWARE_ADDRESS         = "HardwareAddress";
 const char * const ATTR_HAS_CHECKPOINTING        = "HasCheckpointing";
 const char * const ATTR_HAS_FILE_TRANSFER        = "HasFileTransfer";
+const char * const ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS = "HasFileTransferPluginMethods";
 const char * const ATTR_HAS_PER_FILE_ENCRYPTION  = "HasPerFileEncryption";
 const char * const ATTR_HAS_IO_PROXY             = "HasIOProxy";
 const char * const ATTR_HAS_JAVA                 = "HasJava";

@@ -462,6 +462,7 @@ class Matchmaker : public Service
         vector<GroupEntry*> hgq_groups;
         map<string, GroupEntry*> group_entry_map;
         bool autoregroup;
+        bool allow_quota_oversub;
 
         void hgq_construct_tree();
         void hgq_assign_quotas(GroupEntry* group, double quota);

@@ -143,6 +143,19 @@ printClassAd( void )
 		printf( "%s = True\n",ATTR_HAS_VM);		
 	}
 
+	// Advertise which file transfer plugins are supported
+	FileTransfer ft;
+	CondorError e;
+	ft.InitializePlugins(e);
+	if (e.code()) {
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText());
+	}
+
+	MyString method_list = ft.GetSupportedMethods();
+	if (!method_list.IsEmpty()) {
+		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
+	}
+
 #if defined(WIN32)
 		// Advertise our ability to run jobs as the submitting user
 	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);

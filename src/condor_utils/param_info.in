@@ -7479,6 +7479,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=454
 
+[NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Allow Quota Oversubscription
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
 [GROUP_QUOTA_MAX_ALLOCATION_ROUNDS]
 aliases=
 default=3
