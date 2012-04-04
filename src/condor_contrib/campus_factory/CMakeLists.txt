@@ -26,11 +26,25 @@ endif ( LINUX )
 if ( WITH_CAMPUSFACTORY )
 
 	if ( NOT PROPER )
-        add_dependencies( campus_factory ${BLAHP_FOUND} )
+        #add_dependencies( CAMPUSFACTORY ${BLAHP_FOUND} )
 
 		### set the install
+        # CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS
+        get_target_property ( CONDOR_MASTER_LOC condor_master LOCATION )
+        get_target_property ( CONDOR_STARTD_LOC condor_startd LOCATION )
+        get_target_property ( CONDOR_STARTER_LOC condor_starter LOCATION )
+        get_target_property ( CONDOR_PROCD_LOC condor_procd LOCATION )
+        add_custom_target ( CAMPUSFACTORY ALL DEPENDS condor_master condor_starter condor_startd condor_procd SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/glideinExec.tar.gz" )
+        #condor_exe ( cf "${CMAKE_CURRENT_SOURCE_DIR}/glideinExec.tar.gz" "${C_SBIN}" "${BLAHP_FOUND}" OFF)
+        add_custom_command ( OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/glideinExec.tar.gz COMMAND rm -rf glideinExec && 
+        mkdir -p glideinExec && 
+        cp ${CONDOR_MASTER_LOC} ${CONDOR_STARTD_LOC} ${CONDOR_STARTER_LOC}
+        ${CONDOR_PROCD_LOC} glideinExec/ && 
+        tar czf glideinExec.tar.gz glideinExec/ DEPENDS condor_master
+        condor_startd condor_starter condor_procd )
 		install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python-lib DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
         install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
+        install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/glideinExec.tar.gz DESTINATION ${C_LIBEXEC}/campus_factory/share/glidein_jobs/glideinExec.tar.gz )
         install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/cf DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS}) 
 		
 		set(CAMPUSFACTORY_FOUND ON)
