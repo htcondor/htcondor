@@ -49,6 +49,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a potential infinite loop in the \condor{gridmanager} for gt2
+grid universe jobs. If the GRAM jobmanager was listening on a different
+port than the \condor{gridmanager} expected, the \condor{gridmanager}
+would alternate between states GM\_REGISTER and GM\_RESTART (visible in
+the gridmanger daemon log).
+\Ticket{2916}
+
 \item Added logic to the \Condor{negotiator} that enables job \Term{preemption} 
 to properly respect \Term{group quotas}.
 \Ticket{2570}

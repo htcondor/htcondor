@@ -286,6 +286,7 @@ Matchmaker ()
 
     hgq_root_group = NULL;
     autoregroup = false;
+    allow_quota_oversub = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -1657,6 +1658,8 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map.clear();
     group_entry_map[hgq_root_name] = hgq_root_group;
 
+    allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
+
     bool accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
@@ -1805,10 +1808,10 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // static quotas get first dibs on any available quota
     // total static quota assignable is bounded by quota coming from above
-    double sqa = min(sqsum, quota);
+    double sqa = (allow_quota_oversub) ? sqsum : min(sqsum, quota);
 
     // children with dynamic quotas get allocated from the remainder 
-    double dqa = quota - sqa;
+    double dqa = max(0.0, quota - sqa);
 
     dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", group->name.c_str(), sqa, dqa);
 
@@ -1840,7 +1843,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // Current group gets anything remaining after assigning to any children
     // If there are no children (a leaf) then this group gets all the quota
-    group->quota = quota - chq;
+    group->quota = (allow_quota_oversub) ? quota : (quota - chq);
     if (group->quota < 0) group->quota = 0;
     dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
 }
