@@ -339,7 +339,7 @@ class GahpClient : public Service {
 			const char * description,
 			const int limited_deleg,
 			const char * callback_contact,
-			char ** job_contact,
+			std::string & job_contact,
 			bool is_restart);
 
 		///
@@ -371,12 +371,6 @@ class GahpClient : public Service {
 		///
 		int 
 		globus_gram_client_ping(const char * resource_manager_contact);
-
-		///
-		int 
-		globus_gram_client_job_contact_free(char *job_contact) 
-			{ free(job_contact); return 0; }
-
 
 		///
 		int
