@@ -100,7 +100,7 @@ get_min_queue () {
     min_queued=1000
     detected=0
     while read line; do
-        max_queued=`expr "$line" : ".*max_queued=\([0-9]*\)"`
+        max_queued=`expr "$line" : ".*max_queued=\(-*[0-9]*\)"`
         if [ $max_queued -lt $min_queued -a $max_queued -ne -1 ]; then
             detected=1
             min_queued=$max_queued
@@ -343,7 +343,13 @@ if [ ! -e $bosco_key ]; then
     echo $PASSPHRASE > $PASSPHRASE_LOCATION
     chmod go-rwx $PASSPHRASE_LOCATION
     
-    ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
+    # Check if the passphrase is empty
+    if [ "x$PASSPHRASE" == "x" ]; then
+        ssh-keygen -q -t rsa -f $bosco_key > /dev/null
+    else
+        ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
+    fi   
+ 
     if [ $? -ne 0 ]; then
         echo "Error running keygen" >&2
         exit 1
@@ -390,6 +396,13 @@ echo "Done!"
 glite_location=`condor_config_val GLITE_LOCATION`
 release_dir=`condor_config_val RELEASE_DIR`
 remote_base_dir="bosco/cluster/$remote_host/glite"
+
+if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
+    echo "Unable to determine condor locations using condor_config_val."
+    echo "There could be a problem in one of your condor config files."
+    echo "Exiting..."
+    exit 1
+fi
 
 echo "Installing BOSCO on $remote_host..."
 
