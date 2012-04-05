@@ -131,11 +131,15 @@ remove_cluster () {
 
     # Remove bosco from the remote cluster
     start_ssh
-    ssh $1 "rm -rf bosco/cluster/$remote_host"
+    ssh $remote_host "rm -rf bosco/cluster/$remote_host"
+    # TODO: The default cluster will have to be fixed in the future
+    # current behavior removes the default if another cluster shares the same FS
+    # improvement, OK for v0 but should be better for v1
+    ssh $remote_host "rm bosco/cluster/default"    
     # Will remove bosco/cluster only if empty,
     # not if the directory is shared with other clusters
-    ssh $1 "rmdir bosco/cluster" >/dev/null 2>/dev/null
-    ssh $1 "rmdir bosco" >/dev/null 2>/dev/null
+    ssh $remote_host "rmdir bosco/cluster" >/dev/null 2>/dev/null
+    ssh $remote_host "rmdir bosco" >/dev/null 2>/dev/null
     stop_ssh
 
     # Remove the host from the cluster list
@@ -395,7 +399,10 @@ echo "Done!"
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
 release_dir=`condor_config_val RELEASE_DIR`
-remote_base_dir="bosco/cluster/$remote_host/glite"
+remote_base_dir_root="bosco/cluster"
+remote_base_dir_default="$remote_base_dir_root/default"
+remote_base_dir_host="$remote_base_dir_root/$remote_host"
+remote_base_dir="$remote_base_dir_host/glite"
 
 if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
     echo "Unable to determine condor locations using condor_config_val."
@@ -408,6 +415,7 @@ echo "Installing BOSCO on $remote_host..."
 
 # Make the necessary remote directories
 ssh $remote_host "mkdir -p $remote_base_dir/lib"
+ssh $remote_host "ln -sfh $remote_base_dir_host $remote_base_dir_default"
 
 # Copy over blahp
 rsync -aq $glite_location/[^l]* $remote_host:$remote_base_dir/
