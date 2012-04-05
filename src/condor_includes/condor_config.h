@@ -27,6 +27,10 @@
 #include "string_list.h"
 #include "simplelist.h"
 #include "extArray.h"
+
+#include <vector>
+#include <string>
+
 #endif
 
 #include "param_info.h"
@@ -102,6 +106,8 @@ class ParamValue {
 
 	ExtArray<ParamValue>* param_all(void);
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
+    int param_names_matching(Regex& re, std::vector<std::string>& names);
+
     bool param_defined(const char* name);
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value = 0,

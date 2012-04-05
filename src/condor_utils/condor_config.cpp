@@ -323,6 +323,17 @@ int param_names_matching(Regex & re, ExtArray<const char *>& names)
 	return cAdded;	
 }
 
+int param_names_matching(Regex& re, std::vector<std::string>& names) {
+    const int s0 = names.size();
+    HASHITER it = hash_iter_begin(ConfigTab, TABLESIZE);
+    for (;  !hash_iter_done(it);  hash_iter_next(it)) {
+		const char *name = hash_iter_key(it);
+		if (re.match(name)) names.push_back(name);
+	}
+    hash_iter_delete(&it);
+    return names.size() - s0;
+}
+
 
 static int ParamValueNameAscendingSort(const void *l, const void *r)
 {

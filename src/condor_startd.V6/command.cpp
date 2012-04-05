@@ -1304,11 +1304,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 
+        for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+            string reqname;
+            sprintf(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
+            int reqval = 0;
+            if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
+            string attr;
+            sprintf(attr, " %s=%d", j->first.c_str(), reqval);
+            type += attr;
+        }
+
 		rip->dprintf( D_FULLDEBUG,
 					  "Match requesting resources: %s\n", type.Value() );
 
 		type_list.initializeFromString( type.Value() );
-		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );

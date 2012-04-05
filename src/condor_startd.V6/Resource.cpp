@@ -1836,14 +1836,23 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
 
+        // include any attributes set via local resource inventory
+        cap->Update(r_attr->get_mach_attr()->machattr());
+
+        // advertise the slot type id number, as in SLOT_TYPE_<N>
+        cap->Assign(ATTR_SLOT_TYPE_ID, int(r_attr->type()));
+
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
 			cap->AssignExpr(ATTR_SLOT_PARTITIONABLE, "TRUE");
+            cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
 			break;
 		case DYNAMIC_SLOT:
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
+            cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
 			break;
 		default:
+            cap->Assign(ATTR_SLOT_TYPE, "Static");
 			break; // Do nothing
 		}
 	}		

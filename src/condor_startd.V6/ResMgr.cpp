@@ -432,6 +432,8 @@ ResMgr::init_resources( void )
 
     stats.Init();
 
+    m_attr->init_machine_resources();
+
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
 	if (param_boolean("ALLOW_VM_CRUFT", false)) {
@@ -645,7 +647,7 @@ ResMgr::reconfig_resources( void )
 CpuAttributes**
 ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 {
-	int i, j, num;
+	int num;
 	CpuAttributes* cap;
 	CpuAttributes** cap_array;
 
@@ -658,9 +660,9 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	}
 
 	num = 0;
-	for( i=0; i<max_types; i++ ) {
+	for (int i=0; i<max_types; i++) {
 		if( type_num_array[i] ) {
-			for( j=0; j<type_num_array[i]; j++ ) {
+			for (int j=0; j<type_num_array[i]; j++) {
 				cap = buildSlot( num+1, type_strings[i], i, except );
 				if( avail.decrement(cap) && num < total ) {
 					cap_array[num] = cap;
@@ -679,8 +681,8 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 						EXCEPT( "Ran out of system resources" );
 					} else {
 							// Gracefully cleanup and abort
-						for( i=0; i<num; i++ ) {
-							delete cap_array[i];
+						for(int ii=0; ii<num; ii++ ) {
+							delete cap_array[ii];
 						}
 						delete [] cap_array;
 						return NULL;
@@ -691,8 +693,9 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 	}
 
 		// now replace "auto" shares with final value
-	for( i=0; i<num; i++ ) {
+	for (int i=0; i<num; i++) {
 		cap = cap_array[i];
+        cap->show_totals(D_ALWAYS);
 		if( !avail.computeAutoShares(cap) ) {
 
 				// We ran out of system resources.
@@ -708,13 +711,14 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 				EXCEPT( "Ran out of system resources in auto allocation" );
 			} else {
 					// Gracefully cleanup and abort
-				for( i=0; i<num; i++ ) {
-					delete cap_array[i];
+				for (int j=0;  j<num;  j++) {
+					delete cap_array[j];
 				}
 				delete [] cap_array;
 				return NULL;
 			}
 		}
+        cap->show_totals(D_ALWAYS);
 	}
 
 	return cap_array;
@@ -845,9 +849,10 @@ ResMgr::typeNumCmp( int* a, int* b )
 CpuAttributes*
 ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 {
-	char *attr, *val;
+    typedef CpuAttributes::slotres_map_t slotres_map_t;
 	int cpus=0, ram=0;
 	float disk=0, swap=0, share;
+    slotres_map_t slotres;
 	float default_share = AUTO_SHARE;
 
 	MyString execute_dir, partition_id;
@@ -861,7 +866,11 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 	  swap = default_share;
 	  disk = default_share;
 
-	  return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, execute_dir, partition_id );
+      for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
+          slotres[j->first] = default_share;
+      }
+
+	  return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, slotres, execute_dir, partition_id );
 	}
 		// For this parsing code, deal with the following example
 		// string list:
@@ -870,18 +879,24 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 		// the default share for any items not explicitly defined.  Example:
 		// "c=1, 25%"
 
+    for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
+        slotres[j->first] = AUTO_RES;
+    }
+
 	list->rewind();
-	while( (attr = list->next()) ) {
-		if( ! (val = strchr(attr, '=')) ) {
+	while (char* attrp = list->next()) {
+        string attr_expr = attrp;
+        string::size_type eqpos = attr_expr.find('=');
+		if (string::npos == eqpos) {
 				// There's no = in this description, it must be one
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			default_share = parse_value( attr, type, except );
+			default_share = parse_value(attr_expr.c_str(), type, except);
 			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
 						 type );
-				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
+				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr_expr.c_str() );
 				dprintf( D_ALWAYS | D_NOHEADER,
 						 "\tYou must specify a percentage (like \"25%%\"), " );
 				dprintf( D_ALWAYS | D_NOHEADER, "a fraction (like \"1/4\"),\n" );
@@ -904,22 +919,25 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 			// Get the value for this attribute.  It'll either be a
 			// percentage, or it'll be a distinct value (in which
 			// case, parse_value() will return negative.
-		if( ! val[1] ) {
-			dprintf( D_ALWAYS,
-					 "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 attr, type );
+        string val = attr_expr.substr(1+eqpos);
+		if (val.empty()) {
+			dprintf(D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
+					attr_expr.c_str(), type);
 			if( except ) {
 				DC_Exit( 4 );
 			} else {
 				return NULL;
 			}
 		}
-		share = parse_value( &val[1], type, except );
-		if( share < 0.001 ) {
-				// Invalid share.
-		}
+		share = parse_value(val.c_str(), type, except);
 
-			// Figure out what attribute we're dealing with.
+		// Figure out what attribute we're dealing with.
+        string attr = attr_expr.substr(0, eqpos);
+        slotres_map_t::const_iterator f(m_attr->machres().find(attr));
+        if (f != m_attr->machres().end()) {
+            slotres[f->first] = compute_local_resource(share, attr, m_attr->machres());
+            continue;
+        }
 		switch( tolower(attr[0]) ) {
 		case 'c':
 			cpus = compute_cpus( share );
@@ -959,7 +977,7 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 			break;
 		default:
 			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n",
-					 attr, type );
+					 attr.c_str(), type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {
@@ -983,9 +1001,14 @@ ResMgr::buildSlot( int slot_id, StringList* list, int type, bool except )
 	if( disk <= 0.0001 ) {
 		disk = default_share;
 	}
+    for (slotres_map_t::iterator j(slotres.begin());  j != slotres.end();  ++j) {
+        if (int(j->second) == AUTO_RES) {
+            j->second = compute_local_resource(default_share, j->first, m_attr->machres());
+        }
+    }
 
 		// Now create the object.
-	return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, execute_dir, partition_id );
+	return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, slotres, execute_dir, partition_id );
 }
 
 void
@@ -1127,6 +1150,17 @@ ResMgr::compute_phys_mem( float share )
 		phys_mem = 1;
 	}
 	return phys_mem;
+}
+
+
+int ResMgr::compute_local_resource(const float share, const string& rname, const CpuAttributes::slotres_map_t& machres) {
+    CpuAttributes::slotres_map_t::const_iterator f(machres.find(rname));
+    if (f == machres.end()) {
+        EXCEPT("Resource name %s was not defined in local machine resource table\n", rname.c_str());
+    }
+    if (IS_AUTO_SHARE(share)) return int(share);
+    if (share > 0) return int(f->second * share);
+    return int(-share);
 }
 
 

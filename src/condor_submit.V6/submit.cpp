@@ -82,7 +82,9 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 
+#include <algorithm>
 #include <string>
+#include <set>
 
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
@@ -234,6 +236,8 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
+const string  RequestPrefix  = "request_";
+std::set<string> fixedReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -426,6 +430,7 @@ void 	SetExecutable();
 void 	SetUniverse();
 void	SetMachineCount();
 void 	SetImageSize();
+void    SetRequestResources();
 int64_t	calc_image_size_kb( const char *name);
 int 	find_cmd( char *name );
 char *	get_tok();
@@ -1334,6 +1339,7 @@ main( int argc, char *argv[] )
 				}
 			}
 		}
+        hash_iter_delete(&it);
 		
 	}
 
@@ -2392,6 +2398,32 @@ void SetFileOptions()
 	InsertJobExpr(strbuffer.Value());
 	free(tmp);
 }
+
+
+void SetRequestResources() {
+    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    for (;  !hash_iter_done(it);  hash_iter_next(it)) {
+        string key = hash_iter_key(it);
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        // if key is not of form "request_xxx", ignore it:
+        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
+        // those have their own special handling:
+        if (fixedReqRes.count(key) > 0) continue;
+        string rname = key.substr(RequestPrefix.length());
+        // resource name should be nonempty
+        if (rname.size() <= 0) continue;
+        // CamelCase it!
+        *(rname.begin()) = toupper(*(rname.begin()));
+        // could get this from 'it', but this prevents unused-line warnings:
+        string val = condor_param(key.c_str());
+        string assign;
+        sprintf(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        InsertJobExpr(assign.c_str()); 
+    }
+    hash_iter_delete(&it);
+}
+
 
 
 /*
@@ -6238,6 +6270,7 @@ queue(int num)
         SetLoadProfile();
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
+        SetRequestResources();
 
 		SetSimpleJobExprs();
 
@@ -6621,6 +6654,27 @@ check_requirements( char const *orig, MyString &answer )
 		}
 #endif
 	}
+
+    // identify any custom pslot resource reqs and add them in:
+    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    for (;  !hash_iter_done(it);  hash_iter_next(it)) {
+        string key = hash_iter_key(it);
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        // if key is not of form "request_xxx", ignore it:
+        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
+        // those have their own special handling:
+        if (fixedReqRes.count(key) > 0) continue;
+        string rname = key.substr(RequestPrefix.length());
+        // resource name should be nonempty
+        if (rname.size() <= 0) continue;
+        // CamelCase it!
+        *(rname.begin()) = toupper(*(rname.begin()));
+        string clause;
+        sprintf(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+        answer += clause;
+    }
+    hash_iter_delete(&it);
 
 	if( HasTDP && !checks_tdp ) {
 		answer += " && (TARGET.";
@@ -7063,6 +7117,12 @@ init_params()
 	WarnOnUnusedMacros =
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
 							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
+
+    // the special "fixed" request_xxx forms
+    fixedReqRes.clear();
+    fixedReqRes.insert(RequestCpus);
+    fixedReqRes.insert(RequestMemory);
+    fixedReqRes.insert(RequestDisk);
 }
 
 int

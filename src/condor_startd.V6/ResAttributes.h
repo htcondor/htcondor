@@ -31,6 +31,10 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 
+#include <map>
+#include <string>
+using std::string;
+
 class Resource;
 
 typedef int amask_t;
@@ -82,6 +86,7 @@ const float AUTO_SHARE = 123;
 // for a slot.  It is later updated by dividing the remaining resources
 // evenly between slots using AUTO_MEM.
 const int AUTO_MEM = -123;
+const int AUTO_RES = -9999;
 
 // This is used with the AttribValue structure to identify the datatype
 // for the value (selects an entry in the union)
@@ -179,12 +184,15 @@ typedef struct _AttribValue {
 class MachAttributes
 {
 public:
+    typedef std::map<string, double> slotres_map_t;
+
 	MachAttributes();
 	~MachAttributes();
 
 	void init();
     void init_user_settings(); // read STARTD_PUBLISH_WINREG param and parse it
                                // creating data structure needed in compute and publish
+    void init_machine_resources();
 
 	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
 	void compute( amask_t );			  // Actually recompute desired stats
@@ -213,6 +221,8 @@ public:
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
 	time_t		console_idle()	{ return m_console_idle; };
+    const slotres_map_t& machres() const { return m_machres_map; }
+    const ClassAd& machattr() const { return m_machres_attr; }
 
 private:
 
@@ -239,6 +249,9 @@ private:
 	int				m_num_cpus;
 	int				m_num_real_cpus;
 	int				m_phys_mem;
+    slotres_map_t   m_machres_map;
+    ClassAd         m_machres_attr;
+
 	char*			m_arch;
 	char*			m_opsys;
 	int 			m_opsysver;
@@ -284,11 +297,14 @@ private:
 class CpuAttributes
 {
 public:
+    typedef MachAttributes::slotres_map_t slotres_map_t;
+
 	friend class AvailAttributes;
 
 	CpuAttributes( MachAttributes*, int slot_type, int num_cpus, 
 				   int num_phys_mem, float virt_mem_fraction,
 				   float disk_fraction,
+                   const slotres_map_t& slotres_map,
 				   MyString &execute_dir, MyString &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
@@ -320,6 +336,8 @@ public:
 	unsigned long get_total_disk() { return c_total_disk; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
+    const slotres_map_t& get_slotres_map() { return c_slotres_map; }
+    const MachAttributes* get_mach_attr() { return map; }
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
@@ -342,11 +360,15 @@ private:
 		// data structure.
 	unsigned long   c_total_disk;
 
-		// Static info
 	int				c_phys_mem;
 	int				c_slot_mem;
-	int				c_num_cpus;
-	int				c_num_slot_cpus;
+	int				c_num_cpus;    
+    // custom slot resources
+    slotres_map_t c_slotres_map;
+    slotres_map_t c_slottot_map;
+
+    // totals
+	int			  c_num_slot_cpus;
 
 		// These hold the fractions of shared, dynamic resources
 		// that are allocated to this CPU.
@@ -375,6 +397,8 @@ class AvailDiskPartition
 class AvailAttributes
 {
 public:
+    typedef MachAttributes::slotres_map_t slotres_map_t;
+
 	AvailAttributes( MachAttributes* map );
 
 	bool decrement( CpuAttributes* cap );
@@ -387,6 +411,9 @@ private:
 	int             a_phys_mem_auto_count; // number of slots specifying "auto"
 	float			a_virt_mem_fraction;
 	int             a_virt_mem_auto_count; // number of slots specifying "auto"
+
+    slotres_map_t a_slotres_map;
+    slotres_map_t a_autocnt_map;
 
 		// number of slots using "auto" for disk share in each partition
 	HashTable<MyString,AvailDiskPartition> m_execute_partitions;

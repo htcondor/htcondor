@@ -479,6 +479,8 @@ extern const char * const  ATTR_REMOVE_KILL_SIG;
 extern const char * const  ATTR_REMOVE_REASON;
 extern const char * const  ATTR_REQUEUE_REASON;
 extern const char * const  ATTR_REQUIREMENTS;
+extern const char * const  ATTR_SLOT_TYPE;
+extern const char * const  ATTR_SLOT_TYPE_ID;
 extern const char * const  ATTR_SLOT_WEIGHT;
 extern const char * const  ATTR_RESULT;
 extern const char * const  ATTR_RSC_BYTES_SENT;
@@ -837,6 +839,13 @@ extern const char * const ATTR_EC2_TAG_PREFIX;
 extern const char * const ATTR_REQUEST_CPUS;
 extern const char * const ATTR_REQUEST_MEMORY;
 extern const char * const ATTR_REQUEST_DISK;
+
+// machine resource prefixes
+extern const char * const ATTR_REQUEST_PREFIX;
+extern const char * const ATTR_DETECTED_PREFIX;
+extern const char * const ATTR_TOTAL_PREFIX;
+extern const char * const ATTR_TOTAL_SLOT_PREFIX;
+extern const char * const ATTR_MACHINE_RESOURCES;
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

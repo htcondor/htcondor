@@ -284,7 +284,7 @@ private:
 		// physical memory out of a fractional share.   
 	int			compute_cpus( float share );
 	int			compute_phys_mem( float share );
-
+    int         compute_local_resource(const float share, const string& rname, const CpuAttributes::slotres_map_t& machres);
 		/* 
 		  Return a pointer to a newly-allocated array of CpuAttributes
 		  objects of the number and types specified in the config
