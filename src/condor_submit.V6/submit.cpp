@@ -6401,6 +6401,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
+	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
@@ -6497,6 +6498,8 @@ check_requirements( char const *orig, MyString &answer )
 		case STF_YES:
 			checks_file_transfer = machine_refs.contains_anycase(
 											   ATTR_HAS_FILE_TRANSFER );
+			checks_file_transfer_plugin_methods = machine_refs.contains_anycase(
+											   ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS );
 			checks_per_file_encryption = machine_refs.contains_anycase(
 										   ATTR_HAS_PER_FILE_ENCRYPTION );
 			break;
@@ -6666,6 +6669,39 @@ check_requirements( char const *orig, MyString &answer )
 					answer += " && TARGET.";
 					answer += ATTR_HAS_PER_FILE_ENCRYPTION;
 				}
+
+				if( (!checks_file_transfer_plugin_methods) ) {
+					// check input
+					char* file_list = condor_param( TransferInputFiles, "TransferInputFiles" );
+					char* tmp_ptr;
+					if(file_list) {
+						StringList files(file_list, ",");
+						files.rewind();
+						while ( (tmp_ptr=files.next()) ) {
+							if (IsUrl(tmp_ptr)){
+								MyString plugintype = getURLType(tmp_ptr);
+								answer += " && stringListMember(\"";
+								answer += plugintype;
+								answer += "\",HasFileTransferPluginMethods)";
+							}
+						}
+						free(file_list);
+					}
+
+					// check output
+					tmp_ptr = condor_param( OutputDestination, "OutputDestination" );
+					if (tmp_ptr) {
+						if (IsUrl(tmp_ptr)){
+							MyString plugintype = getURLType(tmp_ptr);
+							answer += " && stringListMember(\"";
+							answer += plugintype;
+							answer += "\",HasFileTransferPluginMethods)";
+						}
+						free (tmp_ptr);
+					}
+				}
+
+				// close of the file transfer requirements
 				answer += ")";
 			}
 			break;

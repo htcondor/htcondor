@@ -29,6 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Placeholder  for  newer usage of \Attr{RequestMemory}.
+\Ticket{2843}
+
 \item The new \SubmitCmd{keep\_claim\_idle} submit description
 file command requests that the \Condor{schedd} keep a claim for a defined
 number of seconds after the job exits.
@@ -137,6 +140,10 @@ inclusive.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in \Condor{vm-gahp} that caused 64-bit guest OSes that
+need network access to fail on start-up when run under VMWare.
+\Ticket{2922}
 
 \item Submit command \Macro{remote\_initialdir} now works for pbs and lsf
 grid universe jobs.
