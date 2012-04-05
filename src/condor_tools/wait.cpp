@@ -58,6 +58,8 @@ static void usage( char *cmd )
 	fprintf(stderr,"    -help             Display options\n");
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
+	fprintf(stderr,"    -status           Show job start and terminate info\n");
+	fprintf(stderr,"    -echo             Echo log events relevant to [job-number]\n");
 	fprintf(stderr,"    -num <number>     Wait for this many jobs to end\n");
 	fprintf(stderr,"                       (default is all jobs)\n");
 	fprintf(stderr,"    -wait <seconds>   Wait no more than this time\n");
@@ -97,6 +99,9 @@ int main( int argc, char *argv[] )
 	char *job_name = 0;
 	time_t waittime=0, stoptime=0;
 	int minjobs = 0;
+	int print_status = false;
+	int echo_events = false;
+	int debug_print_rescue = false;
 	param_functions *p_funcs = NULL;
 
 	myDistro->Init( argc, argv );
@@ -114,6 +119,15 @@ int main( int argc, char *argv[] )
 			Termlog = 1;
 			p_funcs = get_param_functions();
 			dprintf_config ("TOOL", p_funcs);
+			print_status = false;
+		} else if(!strcmp(argv[i],"-status")) {
+			if (Termlog) {
+				fprintf(stderr,"-status is implied by -debug\n");
+			} else {
+				print_status = true;
+			}
+		} else if(!strcmp(argv[i],"-echo")) {
+			echo_events = true;
 		} else if(!strcmp(argv[i],"-wait")) {
 			i++;
 			if(i>=argc) {
@@ -189,8 +203,10 @@ rescue :
 		sec_fp = safe_fopen_wrapper_follow(log_file_name, "r", 0644);
 		fseek (sec_fp, 0, SEEK_END);
 		pos = ftell(sec_fp); 
-		nPos = pos;
+		nPos = pos;	if (debug_print_rescue) printf("begin:%d ", nPos);
 		while(1) {
+			fseek(sec_fp, 0, SEEK_END);
+			int tmp_pos = ftell(sec_fp);
 			
 			ULogEventOutcome outcome;
 			ULogEvent *event;
@@ -198,22 +214,38 @@ rescue :
 			
 			if(outcome==ULOG_OK) {
 				flagged = 0;
+				pos = nPos = tmp_pos;
+				if (debug_print_rescue) printf("top:%d ", nPos);
+
 				char key[1024];
 				sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
 				MyString str(key);
 				if( jobnum_matches( event, cluster, process, subproc ) ) {
+
+					if (echo_events) {
+						event->putEvent(stdout);
+						printf("...\n");
+					}
+
 					if(event->eventNumber==ULOG_SUBMIT) {
 						dprintf(D_FULLDEBUG,"%s submitted\n",key);
+						if (print_status) printf("%s submitted\n", key);
 						table.insert(str,str);
 						submitted++;
 					} else if(event->eventNumber==ULOG_JOB_TERMINATED) {
 						dprintf(D_FULLDEBUG,"%s completed\n",key);
+						if (print_status) printf("%s completed\n", key);
 						table.remove(str);
 						completed++;
 					} else if(event->eventNumber==ULOG_JOB_ABORTED) {
 						dprintf(D_FULLDEBUG,"%s aborted\n",key);
+						if (print_status) printf("%s aborted\n", key);
 						table.remove(str);
 						aborted++;
+					} else if (event->eventNumber==ULOG_EXECUTE) {
+						if (print_status) {
+							printf("%s executing on host %s\n", key, ((ExecuteEvent*)event)->getExecuteHost());
+						}
 					} else {
 						/* nothing to do */
 					}
@@ -230,10 +262,13 @@ rescue :
 				if (flagged == 1) {
 					fclose(sec_fp);
 					dprintf(D_FULLDEBUG, "INFO: File %s changed but userLog reader could not read another event. We are reinitializing userLog reader. \n", log_file_name);
+					if (debug_print_rescue) printf("rescue:%d ", nPos);
+					if (print_status) printf("<reinitializing userLog reader>\n");
 					// reinitialize the user log, we ended up here a second time 
 					goto rescue;
 				}
 				if ( nPos != pos ){
+					if (debug_print_rescue) printf("lagging:%d!=%d ", nPos, pos);
 					pos = nPos;
 					// we do not want to retry every time we are in a waiting sleep cycle, therefore flag a change
 					flagged = 1;
