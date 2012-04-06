@@ -372,7 +372,7 @@ if [ ! -e $bosco_passwd_file ]; then
     random_string=`echo $RANDOM | md5sum | awk '{print $1}'` 
     condor_store_cred -p $random_string -f $bosco_passwd_file 
 fi
-scp $bosco_passwd_file $remote_host:bosco/campus_factory/share/glidein_jobs
+rsync -aq $bosco_passwd_file $remote_host:bosco/campus_factory/share/glidein_jobs
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued
