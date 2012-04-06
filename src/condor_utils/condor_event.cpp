@@ -586,7 +586,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 			fprintf(file, "\t%s = %s\n", iter->first.c_str(), val.c_str());
 		}
 	}
-	if (useMap.count() <= 0)
+	if (useMap.empty())
 		return;
 
 	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
