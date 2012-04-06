@@ -9,14 +9,14 @@ import os
 import sys
 import shutil
 import tempfile
-from campus_factory.ClusterStatus import CondorConfig
+from campus_factory.util.CampusConfig import get_option
 
 
 DEFAULT_GLIDEIN_DAEMONS = [ 'condor_master', 'condor_procd', 'condor_startd', \
                             'condor_starter' ]
 
 class DaemonWrangler:
-    def __init__(self, config, daemons=None):
+    def __init__(self, daemons=None):
         """
         @param daemons: A list of daemons that will be included in the package
         """
@@ -25,7 +25,6 @@ class DaemonWrangler:
         else:
             self.daemons = daemons
             
-        self.config = config
         self.campus_dir = os.environ['CAMPUSFACTORY_DIR']
             
     def Package(self, name=""): 
@@ -71,8 +70,8 @@ class DaemonWrangler:
         Make sure that the daemons that are supposed to be packaged are
         available and readable.
         """
-        condor_config = CondorConfig()
-        condor_sbin = condor_config.get("SBIN")
+        
+        condor_sbin = get_option("SBIN")
         logging.debug("Found SBIN directory = %s" % condor_sbin)
         daemon_paths = []
         for daemon in self.daemons:

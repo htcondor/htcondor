@@ -8,11 +8,12 @@ import os
 import signal
 
 from campus_factory.ClusterStatus import ClusterStatus
-from campus_factory.ClusterStatus import CondorConfig
 from campus_factory.util.ExternalCommands import RunExternal
 from campus_factory.OfflineAds.OfflineAds import OfflineAds
 from campus_factory.util.DaemonWrangler import DaemonWrangler
 from campus_factory.Cluster import *
+from campus_factory.util.StreamToLogger import StreamToLogger
+from campus_factory.util.CampusConfig import get_option, set_config_file
 
 BOSCO_CLUSTERLIST = "~/.bosco/.clusterlist"
 
@@ -46,8 +47,7 @@ class Factory:
         
         # Read in the configuration file
         self.config_file = self.options.config
-        self.config = ConfigParser.ConfigParser()
-        files_read = self.config.read([self.config_file])
+        files_read = set_config_file(self.config_file)
 
         # check if no files read in
         if len(files_read) < 1:
@@ -56,23 +56,17 @@ class Factory:
             
         self._SetLogging()
        
-        if  self.config.has_option("general", "useoffline") and (self.config.get("general", "useoffline").lower() == "true"):
+        if  get_option("useoffline", "false").lower() == "true":
             self.UseOffline = True
         else:
             self.UseOffline = False
         
-        try:
-            self.condor_config = CondorConfig()
-        except EnvironmentError, inst:
-            logging.exception(str(inst))
-            raise inst
-        
         self.cluster_list = []
         # Get the cluster lists
-        if self.config.has_option("general", "clusterlist"):
+        if get_option("clusterlist", "") is not "":
             logging.debug("Using the cluster list in the campus factory configuration.")
-            for cluster_id in self.config.get("general", "clusterlist").split(','):
-                self.cluster_list.append(Cluster(cluster_id, self.config, useOffline = self.UseOffline))
+            for cluster_id in get_option("clusterlist").split(','):
+                self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
         else:
             # Check for the bosco cluster command
             (stdout, stderr) = RunExternal("bosco_cluster -l")
@@ -80,13 +74,13 @@ class Factory:
                 logging.debug("Using the cluster list installed with BOSCO")
                 for cluster_id in stdout.split("\n"):
                     if len(cluster_id) > 0 and cluster_id != "":
-                        self.cluster_list.append(Cluster(cluster_id, self.config, useOffline = self.UseOffline))
+                        self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
             else:
                 # Initialize as emtpy, which infers to submit 'here'
-                self.cluster_list = [ self.condor_config.get("CONDOR_HOST") ]
+                self.cluster_list = [ get_option("CONDOR_HOST") ]
         
         # Tar up the executables
-        wrangler = DaemonWrangler(self.config)
+        wrangler = DaemonWrangler()
         wrangler.Package()
             
         
@@ -100,8 +94,8 @@ class Factory:
                           'error': logging.ERROR,
                           'critical': logging.CRITICAL}
 
-        level = logging_levels.get(self.config.get("general", "loglevel"))
-        logdirectory = self.config.get("general", "logdirectory")
+        level = logging_levels.get(get_option("loglevel"))
+        logdirectory = get_option("logdirectory")
         handler = logging.handlers.RotatingFileHandler(os.path.join(logdirectory, "campus_factory.log"),
                         maxBytes=10000000, backupCount=5)
         root_logger = logging.getLogger()
@@ -109,6 +103,16 @@ class Factory:
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         root_logger.addHandler(handler)
+        
+        # Send stdout to the log
+        stdout_logger = logging.getLogger()
+        sl = StreamToLogger(stdout_logger, logging.INFO)
+        sys.stdout = sl
+ 
+        stderr_logger = logging.getLogger()
+        sl = StreamToLogger(stderr_logger, logging.ERROR)
+        sys.stderr = sl
+        
         
         
     def Restart(self):
@@ -210,7 +214,7 @@ class Factory:
 
 
     def SleepFactory(self):
-        sleeptime = int(self.config.get("general", "iterationtime"))
+        sleeptime = int(get_option("iterationtime"))
         logging.info("Sleeping for %i seconds" % sleeptime)
         time.sleep(sleeptime)
         
@@ -245,9 +249,9 @@ class Factory:
             return 0
         
         # Ok, so now submit until we can't submit any more, or there are less user jobs
-        return min([int(self.config.get("general", "maxqueuedjobs")) - idlejobs, \
+        return min([int(get_option("maxqueuedjobs")) - idlejobs, \
                     idleuserjobs,\
-                    int(self.config.get("general", "MaxIdleGlideins")) - idleslots])
+                    int(get_option("MaxIdleGlideins")) - idleslots])
         
            
         
@@ -262,16 +266,11 @@ class Factory:
 
             schedds = []
             # Get schedd's to query
-            if self.config.has_option("general", "FLOCK_FROM"):
-                schedds = self.config.get("general", "FLOCK_FROM").split(",")
-                logging.debug("Using FLOCK_FROM from the factory config.")
-            else:
-                schedds_config = self.condor_config.get('FLOCK_FROM')
-                if len(schedds_config) >= 0 and schedds_config != '':
-                    schedds = schedds_config.strip().split(",")
-                    logging.debug("Using FLOCK_FROM from the condor configuration")
+            if get_option("FLOCK_FROM"):
+                schedds = get_option("FLOCK_FROM").strip().split(",")
             
-            schedds.append(self.condor_config.get("CONDOR_HOST"))
+            # Add the local host to query
+            schedds.append(get_option("CONDOR_HOST"))
                             
             logging.debug("Schedds to query: %s" % str(schedds))
             

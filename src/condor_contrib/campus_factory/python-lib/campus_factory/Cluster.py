@@ -5,6 +5,7 @@ from campus_factory.ClusterStatus import ClusterStatus
 from campus_factory.OfflineAds.OfflineAds import OfflineAds
 from campus_factory.ClusterStatus import CondorConfig
 from campus_factory.util.ExternalCommands import RunExternal
+from campus_factory.util.CampusConfig import get_option, get_option_section
 
 class ClusterPreferenceException(Exception):
     def __init__(self, value):
@@ -15,14 +16,13 @@ class ClusterPreferenceException(Exception):
 
 class Cluster:
     
-    def __init__(self, cluster_unique, config, useOffline = False):
+    def __init__(self, cluster_unique, useOffline = False):
         self.cluster_unique = cluster_unique
         
         self.status = ClusterStatus(status_constraint="IsUndefined(Offline) && BOSCOCluster =?= \"%s\"" % self.cluster_unique, queue_constraint = "BOSCOCluster =?= \"%s\"" % self.cluster_unique)
         self.useOffline = useOffline
         if useOffline:
-             self.offline = OfflineAds()
-        self.config = config
+            self.offline = OfflineAds()
         
     def ClusterMeetPreferences(self):
         idleslots = self.status.GetIdleGlideins()
@@ -30,7 +30,7 @@ class Cluster:
             logging.info("Received None from idle glideins, going to try later")
             raise ClusterPreferenceException("Received None from idle glideins")
         logging.debug("Idle glideins = %i" % idleslots)
-        if idleslots >= int(self.config.get("general", "MAXIDLEGLIDEINS")):
+        if idleslots >= int(get_option("MAXIDLEGLIDEINS", "5")):
             logging.info("Too many idle glideins")
             raise ClusterPreferenceException("Too many idle glideins")
 
@@ -40,7 +40,7 @@ class Cluster:
             logging.info("Received None from idle glidein jobs, going to try later")
             raise ClusterPreferenceException("Received None from idle glidein jobs")
         logging.debug("Queued jobs = %i" % idlejobs)
-        if idlejobs >= int(self.config.get("general", "maxqueuedjobs")):
+        if idlejobs >= int(get_option("maxqueuedjobs", "5")):
             logging.info("Too many queued jobs")
             raise ClusterPreferenceException("Too many queued jobs")
 
@@ -70,11 +70,11 @@ class Cluster:
         
         return toSubmit
     
-    def _GetClusterSpecificConfig(self, option, default=None):
-        if self.config.has_option(self.cluster_unique, option):
-            return self.config.get(self.cluster_unique, option)
-        elif self.config.has_option("general", option):
-            return self.config.get("general", option)
+    def _GetClusterSpecificConfig(self, option, default):
+        if get_option_section(self.cluster_unique, option):
+            return  get_option_section(self.cluster_unique, option)
+        elif get_option(option):
+            return get_option(option)
         else:
             return default
     
@@ -107,15 +107,14 @@ class Cluster:
         remote_factory_location = self._GetClusterSpecificConfig("remote_factory", "~/bosco/campus-factory")
         
         # If we are submtiting to ourselves, then don't need remote cluster
-        condor_config = CondorConfig()
-        if condor_config.get("CONDOR_HOST") == self.cluster_unique:
+        if get_option("CONDOR_HOST") == self.cluster_unique:
             remote_cluster = ""
         else:
             remote_cluster = self.cluster_unique
         
         # TODO: These options should be moved to a better location
         options = {"WN_TMP": cluster_tmp, \
-                   "GLIDEIN_HOST": condor_config.get("COLLECTOR_HOST"), \
+                   "GLIDEIN_HOST": get_option("COLLECTOR_HOST"), \
                    "GLIDEIN_Site": self.cluster_unique, \
                    "BOSCOCluster": self.cluster_unique, \
                    "REMOTE_FACTORY": remote_factory_location, \
