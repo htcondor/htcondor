@@ -23,6 +23,31 @@
 #ifdef __cplusplus
 extern "C"
 #endif /* __cplusplus */
+// returns 1 if N characters of s1 and s2 match, where N is
+// the length of the shortest string.  note that this will permit
+// garbage at the end of argument names, use is_arg_prefix() to prevent this.
+// 
 int match_prefix (const char *s1, const char *s2);
 
 #endif
+
+// return true if parg is at least must_match_length characters long
+// and matches pval up to the length of parg. 
+// if must_match_length is -1, then parg and pval must match exactly
+// if must_match_length is 0, then parg must match at least 1 char of pval.
+//
+// is_arg_prefix("poolboy","pool") returns false. because all of parg doesn't match pval
+// is_arg_prefix("poo","pool") returns true 
+// but is_arg_prefix("p","pool",2) returns false because "p" is not at last 2 characters long 
+bool is_arg_prefix(const char * parg, const char * pval, int must_match_length = 0);
+
+// same as is_arg_prefix, but treats a : as the end of the argument and returns a pointer to the :
+// so is_arg_colon_prefix("pool:boy", "pool", &pc, -1) returns true and pc points to ":boy"
+// use this when you want to tack qualifiers onto arguments rather than supplying them as separate arguments.
+bool is_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length = 0);
+
+// return true of parg begins with '-' and is_arg_prefix(parg,pval,mml) is true
+bool is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length = 0);
+
+
+

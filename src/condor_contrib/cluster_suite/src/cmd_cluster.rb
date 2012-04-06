@@ -22,13 +22,14 @@ module Mrg
           end
 
           def self.gen_params(name, spool)
-            {name=>"$(SCHEDD)", "#{name}.USE_PROCD"=>"False",
+            {name=>"$(SCHEDD)",
              "SCHEDD.#{name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "SCHEDD.#{name}.SPOOL"=>spool,
              "SCHEDD.#{name}.HISTORY"=>"$(SCHEDD.#{name}.SPOOL)/history",
              "SCHEDD.#{name}.SCHEDD_LOG"=>"$(LOG)/SchedLog-#{name}.log",
              "SCHEDD.#{name}.SCHEDD_ADDRESS_FILE"=>"$(LOG)/.schedd-#{name}_address",
-             "SCHEDD.#{name}.SCHEDD_DAEMON_AD_FILE"=>"$(LOG)/.schedd-#{name}_classad"
+             "SCHEDD.#{name}.SCHEDD_DAEMON_AD_FILE"=>"$(LOG)/.schedd-#{name}_classad",
+             "MASTER.USE_PROCD"=>"TRUE", "RESTART_PROCD_ON_ERROR"=>"TRUE"
             }
           end
         end
@@ -39,12 +40,14 @@ module Mrg
           end
 
           def self.gen_params(name, spool)
-            {name=>"$(QUERY_SERVER)",
-             "QUERY_SERVER.#{name}.SPOOL"=>spool,
-             "QUERY_SERVER.#{name}.HISTORY"=>"$(QUERY_SERVER.#{name}.SPOOL)/history",
-             "QUERY_SERVER.#{name}.QUERY_SERVER_LOG"=>"$(LOG)/QueryServerLog-#{name}",
-             "QUERY_SERVER.#{name}.QUERY_SERVER_ADDRESS_FILE"=>"$(LOG)/.query_server_address-#{name}",
-             "QUERY_SERVER.#{name}.QUERY_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.query_server_classad-#{name}"
+            qs_name = "#{name}_query_server"
+            {qs_name=>"$(QUERY_SERVER)",
+             "QUERY_SERVER.#{qs_name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
+             "QUERY_SERVER.#{qs_name}.SPOOL"=>"$(SCHEDD.#{name}.SPOOL)",
+             "QUERY_SERVER.#{qs_name}.HISTORY"=>"$(QUERY_SERVER.#{qs_name}.SPOOL)/history",
+             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_LOG"=>"$(LOG)/QueryServerLog-#{qs_name}",
+             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_ADDRESS_FILE"=>"$(LOG)/.query_server_address-#{qs_name}",
+             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.query_server_classad-#{qs_name}"
             }
           end
         end
@@ -55,80 +58,15 @@ module Mrg
           end
 
           def self.gen_params(name, spool)
-            {name=>"$(JOB_SERVER)",
-             "JOB_SERVER.#{name}.SPOOL"=>spool,
-             "JOB_SERVER.#{name}.HISTORY"=>"$(JOB_SERVER.#{name}.SPOOL)/history",
-             "JOB_SERVER.#{name}.JOB_SERVER_LOG"=>"$(LOG)/JobServerLog-#{name}",
-             "JOB_SERVER.#{name}.JOB_SERVER_ADDRESS_FILE"=>"$(LOG)/.job_server_address-#{name}",
-             "JOB_SERVER.#{name}.JOB_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.job_server_classad-#{name}"
+            js_name = "#{name}_job_server"
+            {js_name=>"$(JOB_SERVER)",
+             "JOB_SERVER.#{js_name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
+             "JOB_SERVER.#{js_name}.SPOOL"=>"$(SCHEDD.#{name}.SPOOL)",
+             "JOB_SERVER.#{js_name}.HISTORY"=>"$(JOB_SERVER.#{js_name}.SPOOL)/history",
+             "JOB_SERVER.#{js_name}.JOB_SERVER_LOG"=>"$(LOG)/JobServerLog-#{js_name}",
+             "JOB_SERVER.#{js_name}.JOB_SERVER_ADDRESS_FILE"=>"$(LOG)/.job_server_address-#{js_name}",
+             "JOB_SERVER.#{js_name}.JOB_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.job_server_classad-#{js_name}"
             }
-          end
-        end
-
-        module ClusterAddOps
-          def act
-            if not @options.has_key?(:wallaby_only)
-              # Cluster Suite config
-              restarts = @options[:max_restarts] ? @options[:max_restarts] : 3
-              expire = @options[:expire] ? @options[:expire] : 300
-
-              if @options.has_key?(:new_cluster)
-                `#{@ccs} --stopall`
-                `#{@ccs} --createcluster "HACondorCluster" #{@password}`
-                if $?.exitstatus != 0
-                  puts "Failed to create the cluster.  Try supplying a ricci password with --riccipassword"
-                  exit!(1)
-                end
-              end
-
-              # Handle nodes
-              `#{@ccs} --addfailoverdomain "#{@domain}" restricted #{@password}`
-              exit!(1, "Failed to add cluster failover domain.  Does it already exist?") if $?.exitstatus != 0
-              modify_ccs_nodes
-
-              # Handle service
-              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=restart max_restarts=#{restarts} restart_expire_time=#{expire} #{@password}`
-              exit!(1, "Failed to add cluster service.  Does it already exist?") if $?.exitstatus != 0
-
-              # Handle subservices
-              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on" #{@password}`
-              `#{@ccs} --addsubservice "#{@service}" condor name="#{@options[:name]}" type="#{@subsys}" #{@password}`
-            end
-
-            if not @options.has_key?(:cluster_only)
-              # Store config
-
-              # If --new-cluster is used, remove all existing groups
-              remove_store_groups if @options.has_key?(:new_cluster)
-
-              update_store
-            end
-
-            activate_changes
-            return 0
-          end
-        end
-
-        module ClusterDeleteOps
-          def act
-            if @options.has_key?(:nodes)
-              puts "Warning: nodes are ignored for delete operations"
-            end
-
-            if not @options.has_key?(:wallaby_only)
-              # Cluster Suite config
-              remove_ccs_entries
-            end
-
-            if not @options.has_key?(:cluster_only)
-              # Store config
-
-              # Remove the Group if it exists
-              delete_group
-            end
-
-            activate_changes
-            return 0
           end
         end
 
@@ -149,12 +87,41 @@ module Mrg
           end
         end
 
+        module ClusterServerOps
+          def act
+            if not @options.has_key?(:wallaby_only)
+              num = -1
+              if @action.to_s.include?("remove")
+                services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys}
+                `#{@ccs} --rmsubservice "#{@service}" netfs:condor[#{num}]`
+              else
+                services[@name][:condor].each {|n| exit!(1, "There is already a #{@subsys} configured for HA Schedd #{@name}") if n.type == @subsys}
+                `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1" #{@password}`
+              end
+            end
+
+            if not @options.has_key?(:cluster_only)
+              # Store config
+
+              add_params_to_store
+              modify_params_on_group
+            end
+
+            activate_changes
+            return 0
+          end
+        end
+
         module ClusterCommonOps
           def cmd_args
             {:create=>[:name, :spool, :server, :export, :nodes],
              :delete=>[:name],
              :add_node=>[:name, :nodes],
              :remove_node=>[:name, :nodes],
+             :add_jobserver=>[:name],
+             :remove_jobserver=>[:name],
+             :add_queryserver=>[:name],
+             :remove_queryserver=>[:name],
              :sync_to_store=>[]}
           end
 
@@ -166,7 +133,7 @@ module Mrg
             prefix = @action.to_s.include?("remove") ? "RemoveNode" : "AddNode"
 
             if store.checkGroupValidity([group_name]) != []
-              exit!(1, "No group in store for #{print_subsys} #{@name}")
+              exit!(1, "No group in store for Schedd #{@name}")
             end
 
             if not prefix.include?("Remove")
@@ -241,21 +208,41 @@ module Mrg
               @options[:new_cluster] = true
             end
           end
-        
-          def prepositions
-            ["to", "from"]
+
+          def get_services
+            # Get current services from ccs
+            s = Hash.new {|h,k| h[k] = Hash.new {|h1,k1| h1[k1] = {}}}
+            cservice = Struct.new(:name, :type)
+            cl = []
+            domain, spool, name = nil, nil, nil
+            `#{@ccs} --lsservices`.each do |line|
+              if (not line.scan(/^service:.*/).empty?) || (not line.scan(/^resources:.*/).empty?)
+                if domain && spool && name && (not cl.empty?)
+                  s[name][:domain] = domain
+                  s[name][:spool] = spool
+                  s[name][:condor] = cl
+                end
+                domain, spool, name = nil, nil, nil
+                cl = []
+              end
+              line.scan(/domain=([^,]+),/) {|d| domain = d[0]}
+              line.scan(/mountpoint=([^,]+),/) {|m| spool = m[0]}
+              line.scan(/condor:\s*name=([^,]+).*type=([^,]+)/) {|c| cl << cservice.new(c[0], c[1])}
+              line.scan(/condor:\s*name=([^,]+).*type=schedd/) {|n| name = n[0]}
+            end
+            s
           end
 
+          def services
+            @services ||= get_services
+          end
+        
           def action
-            (self.class.opname.split("-") - prepositions - [subsys.delete("_")])[1..-1].join('_').to_sym
+            self.class.opname.split("-", 2).last.gsub(/-/, '_').to_sym
           end
 
           def subsys
             self.class.opname.split("-").last.gsub(/(server)/, '_\1')
-          end
-
-          def print_subsys
-            @subsys.split('_').collect{|n| n.capitalize}.join(" ")
           end
 
           def parse_args(*args)
@@ -283,15 +270,15 @@ module Mrg
             ignore = "-i" if $?.exitstatus == 0
             @ccs = "ccs #{ignore} -h localhost"
 
-            @domain = "#{print_subsys} #{@options[:name]} Failover Domain"
+            @domain = "Schedd #{@options[:name]} Failover Domain"
             @password = "--password #{@options[:password]}" if @options.has_key?(:password)
-            @service = "HA #{print_subsys} #{@options[:name]}"
             @name = @options[:name]
+            @service = "HA Schedd #{@name}"
             @tag = "CLUSTER_NAMES"
           end
 
           def group_name
-            "Automatically generated High-Availability configuration for #{print_subsys} #{@name}"
+            "Automatically generated High-Availability configuration for Schedd #{@name}"
           end
 
           def self.included(receiver)
@@ -341,7 +328,7 @@ module Mrg
           end
 
           def get_const_name
-            Mrg::Grid::Config::Shell.constants.grep(/^Cluster#{@subsys.split('_').collect {|n| n.capitalize}}Params/)[0].to_sym
+            Mrg::Grid::Config::Shell.constants.grep(/^Cluster#{@subsys.split('_').collect{|n| n.capitalize}}Params/)[0].to_sym
           end
 
           def get_params
@@ -357,22 +344,19 @@ module Mrg
             store.checkParameterValidity(get_params.keys).each do |pname|
 
             # Add missing params
-              pargs = ["--needs-restart", "yes", "--kind", get_kind(pname), "--description", "Created for HA #{print_subsys} #{@name}", pname]
+              pargs = ["--needs-restart", "yes", "--kind", "String", "--description", "Created for HA Schedd #{@name}", pname]
               Mrg::Grid::Config::Shell::AddParam.new(store, "").main(pargs)
             end
           end
 
-          def get_kind(n)
-            n.upcase.include?("USE_PROCD") ? "Boolean" : "String"
-          end
-
-          def add_params_to_group
+          def modify_params_on_group
             param_list = []
+            cmd = (@action.to_s.include?("remove") ? @action.to_s.split('_', 2).first.capitalize : "Add")
             get_params.each_pair do |n, v|
-              param_list << "#{n}=#{v}"
+              cmd.include?("Add") ? param_list << "#{n}=#{v}" : param_list << "#{n}"
             end
-            Mrg::Grid::Config::Shell::ReplaceGroupParam.new(store, "").main([group_name] + param_list)
-            Mrg::Grid::Config::Shell::ReplaceGroupFeature.new(store, "").main([group_name] + [get_store_feature])
+            Mrg::Grid::Config::Shell.const_get("#{cmd}GroupParam").new(store, "").main([group_name] + param_list)
+            Mrg::Grid::Config::Shell::const_get("#{cmd}GroupFeature").new(store, "").main([group_name] + [get_store_feature])
             mark_group
           end
 
@@ -384,7 +368,7 @@ module Mrg
             add_params_to_store
 
             # Add params to the group
-            add_params_to_group
+            modify_params_on_group
 
             # Add nodes to the group
             modify_group_membership
@@ -392,12 +376,11 @@ module Mrg
         end
 
         # Schedd related commands
-        class ClusterCreateSchedd < ::Mrg::Grid::Config::Shell::Command
+        class ClusterCreate < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
-          include ClusterAddOps
 
           def self.opname
-            "cluster-create-schedd"
+            "cluster-create"
           end
         
           def self.description
@@ -407,27 +390,97 @@ module Mrg
           def supports_add
             true
           end
+
+          def subsys
+            "schedd"
+          end
+
+          def act
+            if not @options.has_key?(:wallaby_only)
+              restarts = @options.has_key?(:max_restarts) ? @options[:max_restarts] : 3
+              expire = @options.has_key?(:expire) ? @options[:expire] : 300
+
+              # Cluster Suite config
+              if @options.has_key?(:new_cluster)
+                `#{@ccs} --stopall`
+                `#{@ccs} --createcluster "HACondorCluster" #{@password}`
+                if $?.exitstatus != 0
+                  puts "Failed to create the cluster.  Try supplying a ricci password with --riccipassword"
+                  exit!(1)
+                end
+              end
+
+              # Handle nodes
+              `#{@ccs} --addfailoverdomain "#{@domain}" restricted #{@password}`
+              exit!(1, "Failed to add cluster failover domain.  Does it already exist?") if $?.exitstatus != 0
+              modify_ccs_nodes
+
+              # Handle service
+              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=relocate #{@password}`
+              exit!(1, "Failed to add cluster service.  Does it already exist?") if $?.exitstatus != 0
+
+              # Handle subservices
+              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on" #{@password}`
+              `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}" type="#{@subsys}" __independent_subtree="1" __max_restarts=#{restarts} __restart_expire_time=#{expire} #{@password}`
+            end
+
+            if not @options.has_key?(:cluster_only)
+              # Store config
+
+              # If --new-cluster is used, remove all existing groups
+              remove_store_groups if @options.has_key?(:new_cluster)
+
+              update_store
+            end
+
+            activate_changes
+            return 0
+          end
         end
 
-        class ClusterDeleteSchedd < ::Mrg::Grid::Config::Shell::Command
+        class ClusterDelete < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
-          include ClusterDeleteOps
 
           def self.opname
-            "cluster-delete-schedd"
+            "cluster-delete"
           end
         
           def self.description
             "Delete an HA Schedd cluster configuration"
           end
+
+          def subsys
+            "schedd"
+          end
+
+          def act
+            if @options.has_key?(:nodes)
+              puts "Warning: nodes are ignored for delete operations"
+            end
+
+            if not @options.has_key?(:wallaby_only)
+              # Cluster Suite config
+              remove_ccs_entries
+            end
+
+            if not @options.has_key?(:cluster_only)
+              # Store config
+
+              # Remove the Group if it exists
+              delete_group
+            end
+
+            activate_changes
+            return 0
+          end
         end
 
-        class ClusterAddNodeToSchedd < ::Mrg::Grid::Config::Shell::Command
+        class ClusterAddNode < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
           include ClusterNodeOps
 
           def self.opname
-            "cluster-add-node-to-schedd"
+            "cluster-add-node"
           end
         
           def self.description
@@ -435,12 +488,12 @@ module Mrg
           end
         end
 
-        class ClusterRemoveNodeFromSchedd < ::Mrg::Grid::Config::Shell::Command
+        class ClusterRemoveNode < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
           include ClusterNodeOps
 
           def self.opname
-            "cluster-remove-node-from-schedd"
+            "cluster-remove-node"
           end
         
           def self.description
@@ -448,115 +501,55 @@ module Mrg
           end
         end
 
-        class ClusterCreateJobServer < ::Mrg::Grid::Config::Shell::Command
+        class ClusterAddJobServer < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
-          include ClusterAddOps
+          include ClusterServerOps
 
           def self.opname
-            "cluster-create-jobserver"
+            "cluster-add-jobserver"
           end
         
           def self.description
-            "Create an HA JobServer cluster configuration"
-          end
-        
-          def supports_add
-            true
+            "Add a JobServer to an existing HA Schedd cluster configuration"
           end
         end
 
-        class ClusterDeleteJobServer < ::Mrg::Grid::Config::Shell::Command
+        class ClusterRemoveJobServer < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
-          include ClusterDeleteOps
+          include ClusterServerOps
 
           def self.opname
-            "cluster-delete-jobserver"
+            "cluster-remove-jobserver"
           end
         
           def self.description
-            "Delete an HA JobServer cluster configuration"
+            "Remove a JobServer from an existing HA Schedd cluster configuration"
           end
         end
 
-        class ClusterAddNodeToJobServer < ::Mrg::Grid::Config::Shell::Command
+        class ClusterAddQueryServer < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
-          include ClusterNodeOps
+          include ClusterServerOps
 
           def self.opname
-            "cluster-add-node-to-jobserver"
+            "cluster-add-queryserver"
           end
         
           def self.description
-            "Add a node to an existing HA JobServer cluster configuration"
+            "Add a QueryServer to an existing HA Schedd cluster configuration"
           end
         end
 
-        class ClusterRemoveNodeFromJobServer < ::Mrg::Grid::Config::Shell::Command
+        class ClusterRemoveQueryServer < ::Mrg::Grid::Config::Shell::Command
           include ClusterCommonOps
-          include ClusterNodeOps
+          include ClusterServerOps
 
           def self.opname
-            "cluster-remove-node-from-jobserver"
+            "cluster-remove-queryserver"
           end
         
           def self.description
-            "Remove a node from an existing HA JobServer cluster configuration"
-          end
-        end
-
-        class ClusterCreateQueryServer < ::Mrg::Grid::Config::Shell::Command
-          include ClusterCommonOps
-          include ClusterAddOps
-
-          def self.opname
-            "cluster-create-queryserver"
-          end
-        
-          def self.description
-            "Create an HA QueryServer cluster configuration"
-          end
-        
-          def supports_add
-            true
-          end
-        end
-
-        class ClusterDeleteQueryServer < ::Mrg::Grid::Config::Shell::Command
-          include ClusterCommonOps
-          include ClusterDeleteOps
-
-          def self.opname
-            "cluster-delete-queryserver"
-          end
-        
-          def self.description
-            "Delete an HA QueryServer cluster configuration"
-          end
-        end
-
-        class ClusterAddNodeToQueryServer < ::Mrg::Grid::Config::Shell::Command
-          include ClusterCommonOps
-          include ClusterNodeOps
-
-          def self.opname
-            "cluster-add-node-to-queryserver"
-          end
-        
-          def self.description
-            "Add a node to an existing HA QueryServer cluster configuration"
-          end
-        end
-
-        class ClusterRemoveNodeFromQueryServer < ::Mrg::Grid::Config::Shell::Command
-          include ClusterCommonOps
-          include ClusterNodeOps
-
-          def self.opname
-            "cluster-remove-node-from-queryserver"
-          end
-        
-          def self.description
-            "Remove a node from an existing HA QueryServer cluster configuration"
+            "Remove a QueryServer from an existing HA Schedd cluster configuration"
           end
         end
 
@@ -575,32 +568,11 @@ module Mrg
             false
           end
 
-          def action
-            self.class.opname.split("-", 2).last.gsub(/-/, '_').to_sym
-          end
-
           def act
             domain, spool, name, type = nil, nil, nil, nil
 
             # Remove all groups in the store
             remove_store_groups
-
-            # Get current services from ccs
-            services = Hash.new {|h,k| h[k] = Hash.new {|h1,k1| h1[k1] = {}}}
-            `#{@ccs} --lsservices`.each do |line|
-              if (not line.scan(/^service:.*/).empty?) || (not line.scan(/^resources:.*/).empty?)
-                domain, spool, name, type = nil, nil, nil, nil
-              end
-              line.scan(/domain=([^,]+),/) {|d| domain = d[0]}
-              line.scan(/mountpoint=([^,]+),/) {|m| spool = m[0]}
-              line.scan(/condor:\s*name=([^,]+),\s*type=(\S+)/) {|c| name, type = c[0], c[1]}
-              if domain && spool && name && type
-                services[name.to_sym][:domain] = domain
-                services[name.to_sym][:spool] = spool
-                services[name.to_sym][:type] = type
-                domain, spool, name, type = nil, nil, nil, nil
-              end
-            end
 
             # Get current failover domains from ccs
             name = ""
@@ -611,11 +583,13 @@ module Mrg
             end
 
             services.keys.each do |n|
-              @name = n.to_s
+              @name = n
               @options[:spool] = services[n][:spool]
               @options[:nodes] = domains[services[n][:domain]]
-              @subsys = services[n][:type]
-              update_store
+              services[n][:condor].each do |service|
+                @subsys = service.type
+                update_store
+              end
             end
 
             activate_changes

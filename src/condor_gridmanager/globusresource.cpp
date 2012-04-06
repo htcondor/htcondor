@@ -482,16 +482,16 @@ GlobusResource::CheckMonitor()
 
 	if ( monitorSubmitActive ) {
 		int rc;
-		char *job_contact;
+		std::string job_contact;
 		monitorGahp->setMode( GahpClient::results_only );
 		rc = monitorGahp->globus_gram_client_job_request( NULL, NULL, 0, NULL,
-														  &job_contact, false );
+														  job_contact, false );
 		if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 			 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				// do nothing
 		} else if ( rc == 0 ) {
 				// successful submit
-			monitorGramJobId = job_contact;
+			monitorGramJobId = strdup( job_contact.c_str() );
 			monitorSubmitActive = false;
 		} else {
 				// submit failed
@@ -817,10 +817,11 @@ GlobusResource::SubmitMonitorJob()
 
 	sprintf( contact, "%s/jobmanager-fork", resourceName );
 
+	std::string job_contact;
 	rc = monitorGahp->globus_gram_client_job_request( contact.c_str(),
 													  RSL.c_str(), 1,
 													  monitorGahp->getGt2CallbackContact(),
-													  NULL, false );
+													  job_contact, false );
 
 	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
