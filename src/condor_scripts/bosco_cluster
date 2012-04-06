@@ -368,7 +368,7 @@ rsync -aq  $release_dir/libexec/campus_factory/share $remote_host:bosco/campus_f
 
 # Generate the password file, if it doesn't already exist 
 bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
-if [ ! -e $bosco_passwd ]; then  
+if [ ! -e $bosco_passwd_file ]; then  
     random_string=`echo $RANDOM | md5sum | awk '{print $1}'` 
     condor_store_cred -p $random_string -f $bosco_passwd_file 
 fi
