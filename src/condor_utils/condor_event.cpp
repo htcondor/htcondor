@@ -529,6 +529,9 @@ public:
 //
 static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 {
+	if ( ! pusageAd)
+		return;
+
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
 
@@ -583,6 +586,8 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 			fprintf(file, "\t%s = %s\n", iter->first.c_str(), val.c_str());
 		}
 	}
+	if (useMap.count() <= 0)
+		return;
 
 	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
