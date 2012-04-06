@@ -1,5 +1,6 @@
 
 import logging
+import os
 
 from campus_factory.ClusterStatus import ClusterStatus
 from campus_factory.OfflineAds.OfflineAds import OfflineAds
@@ -85,7 +86,7 @@ class Cluster:
         @param numSubmit: The number of glideins to submit.
         """
         # Substitute values in submit file
-        file = "share/glidein_jobs/job.submit.template"
+        file = os.path.join(get_option("GLIDEIN_DIRECTORY"), "job.submit.template")
 
         # Submit jobs
         for i in range(numSubmit):
@@ -104,7 +105,7 @@ class Cluster:
         # Get the cluster specific information
         # First, the cluster tmp directory
         cluster_tmp = self._GetClusterSpecificConfig("worker_tmp", "/tmp")
-        remote_factory_location = self._GetClusterSpecificConfig("remote_factory", "~/bosco/campus-factory")
+        remote_factory_location = self._GetClusterSpecificConfig("remote_factory", "~/bosco/campus_factory")
         
         # If we are submtiting to ourselves, then don't need remote cluster
         if get_option("CONDOR_HOST") == self.cluster_unique:
