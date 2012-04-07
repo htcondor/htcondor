@@ -3,7 +3,7 @@
 #
 
 ##  What machine is your central manager?
-CONDOR_HOST = $(HOSTNAME)
+CONDOR_HOST = $(FULL_HOSTNAME)
 COLLECTOR_HOST = $(CONDOR_HOST)
 
 
@@ -22,7 +22,7 @@ FLOCK_TO =
 
 CAMPUSFACTORY = $(SBIN)/runfactory
 CAMPUSFACTORY_ARGS = -c $(LIBEXEC)/campus_factory/etc/campus_factory.conf
-CAMPUSFACTORY_ENVIRONMENT = "PYTHONPATH=$(LIBEXEC)/campus_factory/python-lib CAMPUSFACTORY_DIR=$(LIBEXEC)/campus_factory"
+CAMPUSFACTORY_ENVIRONMENT = "PYTHONPATH=$(LIBEXEC)/campus_factory/python-lib CAMPUSFACTORY_DIR=$(LIBEXEC)/campus_factory _campusfactory_GLIDEIN_DIRECTORY=$CAMPUSFACTORY_DIR/share/glidein_jobs"
 
 # What daemons should I run?
 DAEMON_LIST = COLLECTOR, SCHEDD, NEGOTIATOR, MASTER, CAMPUSFACTORY

@@ -25,8 +25,8 @@ Environment = 	_condor_CONDOR_HOST=$(GLIDEIN_HOST); \
 				_condor_MAIL=/bin/mail; \
 				_condor_STARTD_NOCLAIM_SHUTDOWN=1200; \
 				_campusfactory_wntmp=$(WN_TMP); \
-				_condor_GLIDEIN_Site="$(GLIDEIN_Site)"; \
-				_condor_BOSCOCluster="$(BOSCOCluster)"
+				_condor_GLIDEIN_Site=\"$(GLIDEIN_Site)\"; \
+				_condor_BOSCOCluster=\"$(BOSCOCluster)\"
 
 transfer_executable = false
 #transfer_input_files = share/glidein_jobs/glideinExec.tar.gz, share/glidein_jobs/glidein_condor_config, share/glidein_jobs/user_job_wrapper.sh
