@@ -21,8 +21,8 @@
 # LSB init part (Used by Debian package)
 ### BEGIN INIT INFO
 # Provides:          condor
-# Required-Start:    $network $local_fs
-# Required-Stop:     $local_fs $network
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $remote_fs $local_fs $network
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Manage condor daemons
@@ -518,7 +518,16 @@ condor_master_pids() {
   masterpid=
   if [ -f "$PIDFILE" -a -r "$PIDFILE" ] ; then
     masterpid=`cat "$PIDFILE"` 2>/dev/null
-    FORCE_PIDFILE="yes"
+
+    # validate PID
+    `kill -0 $masterpid` > /dev/null
+    if [ $? -eq 0 ] ; then
+      FORCE_PIDFILE="yes"
+    else
+      masterpid=""
+      # Remove the stale pidfile
+      rm -f $PIDFILE
+    fi
   fi
   if [ "$FORCE_PIDFILE" = "yes" ] ; then
     MASTER_PIDS="$masterpid"

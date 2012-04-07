@@ -169,6 +169,7 @@ SharedPortEndpoint::StopListener()
 			if(tried)
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Failed to cleanly terminate pipe listener\n");
+				MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
 				TerminateThread(thread_handle, 0);
 				break;
 			}
@@ -184,6 +185,7 @@ SharedPortEndpoint::StopListener()
 			if(child_pipe == INVALID_HANDLE_VALUE)
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Named pipe does not exist.\n");
+				MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
 				TerminateThread(thread_handle, 0);
 				break;
 			}
@@ -193,6 +195,7 @@ SharedPortEndpoint::StopListener()
 				if (!WaitNamedPipe(m_full_name.Value(), 20000))
 				{
 					dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
+					MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
 					TerminateThread(thread_handle, 0);
 					break;
 				}

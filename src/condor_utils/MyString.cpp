@@ -319,6 +319,8 @@ MyString operator+(const MyString& S1, const MyString& S2)
     return S;
 }
 
+// the buffers below are all sufficiently large that this is no danger of non-null termination.
+MSC_DISABLE_WARNING(6053) // call to snprintf might not null terminate string.
 
 MyString& 
 MyString::operator+=( int i )
@@ -371,6 +373,7 @@ MyString::operator+=( double d )
     return *this;
 }
 
+MSC_RESTORE_WARNING(6052) // call to snprintf might not null terminate string.
 
 /*--------------------------------------------------------------------
  *

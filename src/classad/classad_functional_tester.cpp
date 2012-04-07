@@ -735,6 +735,7 @@ void handle_print(
     if (tree) {
         print_expr(tree, state, parameters);
     }
+	delete tree;
     return;
 }
 

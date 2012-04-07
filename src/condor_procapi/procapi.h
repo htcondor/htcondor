@@ -549,6 +549,18 @@ class ProcAPI {
 	  */
   static int confirmProcessId(ProcessId& procId, int& status);
   
+#if HAVE_PSS
+  /**
+    * Calculate the Proportional Set Size, a Linux-specific metric
+    * for memory usage taking into account memory sharing.
+    *
+    * This will operate directly on the procInfo reference; if this
+    * function isn't called, PSS information will not be available through
+    * the "normal" means.
+    */
+  static int getPSSInfo( pid_t pid, procInfo& procInfo, int &status );
+#endif
+
  private:
 
   /** Default constructor.  It's private so that no one really
@@ -583,10 +595,6 @@ class ProcAPI {
   static void initProcInfoRaw(procInfoRaw& procRaw);
 
   
-#if HAVE_PSS
-  static int getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status );
-#endif
-
 	  /**
 		 Generates a control time by which a process birthday can be
 		 shifted in case of time shifting due to ntpd or the admin.

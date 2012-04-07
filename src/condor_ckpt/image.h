@@ -93,6 +93,9 @@ public:
 	void RestoreSeg( const char *seg_name );
 	void RestoreAllSegsExceptStack();
 	void SetFd( int fd );
+	void SetRelocatable( int truth );
+	void SetIwd( const char *iwd );
+	char *GetIwd( void );
 	void SetFileName( const char *ckpt_name );
 	void SetMode( int syscall_mode );
 	void MSync();
@@ -113,6 +116,8 @@ protected:
 	ExecutionMode	mode;	// executing in standalone/remote mode
 	BOOL	valid;		// initialized and ready to write ckpt file or restore
 	int		fd;		// descriptor pointing to ckpt file
+	char m_iwd[_POSIX_PATH_MAX]; // the initial working directory of the program
+	int m_relocatable;	// should I use the previous or current working dir?
 	ssize_t	pos;	// position in ckpt file of seg currently reading/writing
 	size_t	len;	// size of our ckpt file
 };
@@ -129,6 +134,8 @@ extern "C" {
 	void restart();
 	void init_image_with_file_name( const char *ckpt_name );
 	void init_image_with_file_descriptor( int ckpt_fd );
+	void init_image_with_iwd( char *iwd );
+	void init_image_relocatable( int truth );
 	void _condor_prestart( int syscall_mode );
 	void Suicide();
 }

@@ -26,6 +26,7 @@
 #include "dc_collector.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
+#include <vector>
 
 DaemonList::DaemonList()
 {
@@ -283,40 +284,28 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 		return Q_NO_COLLECTOR_HOST;
 	}
 
-	SimpleList<DCCollector *> sorted_collectors;
+	std::vector<DCCollector *> vCollectors;
 	DCCollector * daemon;
 	QueryResult result;
-	int pass = 0;
 
 	bool problems_resolving = false;
 
-	for( pass = 1; pass <= 2; pass++ ) {
-		this->rewind();
-		while (this->next(daemon)) {
-				// Only try blacklisted collectors on the second pass
-			if( daemon->isBlacklisted() ) {
-				if( pass == 1 ) {
-					if( num_collectors > 1 ) {
-						dprintf( D_ALWAYS,
-								 "Collector %s %s is still being avoided if "
-								 "an alternative succeeds.\n",
-								 daemon->name() ? daemon->name() : "unknown",
-								 daemon->addr() ? daemon->addr() : "unknown");
-					}
-					continue;
-				}
-			}
-			else {
-				if( pass == 2 ) {
-					continue;
-				}
-			}
-			sorted_collectors.Append( daemon );
-		}
+	
+	// switch containers for easier random access.
+	this->rewind();
+	while (this->next(daemon)) {
+		vCollectors.push_back(daemon);
 	}
+	
 
-	sorted_collectors.Rewind();
-	while( sorted_collectors.Next( daemon ) ) {
+        while ( vCollectors.size() ) 
+        {
+            // choose a random collector in the list to query.
+            unsigned int idx = get_random_int() % vCollectors.size() ;
+            daemon = vCollectors[idx];
+
+	    if ( !daemon->isBlacklisted() )
+	    {
 		if ( ! daemon->addr() ) {
 			if ( daemon->name() ) {
 				dprintf( D_ALWAYS,
@@ -327,26 +316,38 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 						 "Can't resolve nameless collector; skipping\n" );
 			}
 			problems_resolving = true;
-			continue;
+			
 		}
-		dprintf (D_FULLDEBUG, 
-				 "Trying to query collector %s\n", 
-				 daemon->addr());
+		else
+                {
 
-		if( num_collectors > 1 ) {
-			daemon->blacklistMonitorQueryStarted();
-		}
+                    dprintf (D_FULLDEBUG, 
+                                    "Trying to query collector %s\n", 
+                                    daemon->addr());
 
-		result = 
-			cQuery.fetchAds (adList, daemon->addr(), errstack);
+                    if( num_collectors > 1 ) {
+                            daemon->blacklistMonitorQueryStarted();
+                    }
 
-		if( num_collectors > 1 ) {
-			daemon->blacklistMonitorQueryFinished( result == Q_OK );
-		}
+                    result = 
+                            cQuery.fetchAds (adList, daemon->addr(), errstack);
 
-		if (result == Q_OK) {
-			return result;
-		}
+                    if( num_collectors > 1 ) {
+                            daemon->blacklistMonitorQueryFinished( result == Q_OK );
+                    }
+
+                    if (result == Q_OK) {
+                            return result;
+                    }
+                }
+	    }
+	    else
+	    {
+	      dprintf( D_ALWAYS,"Collector %s blacklisted; skipping\n", daemon->name() );
+	    }
+
+	    // if you got here remove it from the list of potential candidates.
+	    vCollectors.erase( vCollectors.begin()+idx );
 	}
 			
 	// only push an error if the error stack exists and is currently empty

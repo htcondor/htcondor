@@ -103,6 +103,7 @@ char** string_compare_helper(StringList* sl, int start) {
 		return NULL;
 
 	char** list = (char**)calloc(sl->number() - start, sizeof(char *));
+	ASSERT( list );
 	char* str;
 	int i;
 	
@@ -136,6 +137,7 @@ void make_big_string(
 	char **quoted_string) // OUT: the string in quotes
 {
 	*string = (char *) malloc(length + 1);
+	ASSERT( string );
 
 	for (int i = 0; i < length; i++) {
 		(*string)[i] = (rand() % 26) + 97;
@@ -143,7 +145,8 @@ void make_big_string(
 	(*string)[length] = 0;
 
 	if (quoted_string != NULL) {
-		*quoted_string = (char *) malloc(length	+ 3);
+		*quoted_string = (char *) malloc(length + 3);
+		ASSERT( quoted_string );
 		sprintf(*quoted_string,	"\"%s\"", *string);
 		}
 	return;
@@ -446,7 +449,7 @@ void create_empty_file(const char *file)
 }
 
 #ifdef WIN32
-int gettimeofday(struct timeval *tv, struct timezone *tz)
+int gettimeofday(struct timeval *tv, struct ttimezone *tz)
 {
 	FILETIME ft;
 	unsigned __int64 tmpres = 0;

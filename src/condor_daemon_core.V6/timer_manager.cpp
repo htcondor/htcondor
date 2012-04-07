@@ -41,6 +41,9 @@ const int MAX_FIRES_PER_TIMEOUT = 3;
 extern void **curr_dataptr;
 extern void **curr_regdataptr;
 
+// disable warning about memory leaks due to exception. all memory freed on exit anyway
+MSC_DISABLE_WARNING(6211)
+
 
 TimerManager::TimerManager()
 {

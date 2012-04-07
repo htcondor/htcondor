@@ -278,7 +278,7 @@ int writeGlobusResourceDownEvent()
 int writeJobImageSizeEvent()
 {
 	JobImageSizeEvent jobimagesizeevent;
-	jobimagesizeevent.size = 128;
+	jobimagesizeevent.image_size_kb = 128;
 	if ( !logFile.writeEvent(&jobimagesizeevent) ) {
 		printf("Complain about bad jobimagesizeevent write\n");
 		exit(1);

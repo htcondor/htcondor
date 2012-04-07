@@ -59,7 +59,7 @@ static int starter_stdin_fd = -1;
 static int starter_stdout_fd = -1;
 static int starter_stderr_fd = -1;
 
-static void
+static void PREFAST_NORETURN
 usage()
 {
 	dprintf(D_ALWAYS, "argc = %d\n", my_argc);
@@ -141,6 +141,19 @@ printClassAd( void )
 		//  done by vmuniverse manager in startd.
 		// ATTR_HAS_VM may be overwritten by vmuniverse manager in startd
 		printf( "%s = True\n",ATTR_HAS_VM);		
+	}
+
+	// Advertise which file transfer plugins are supported
+	FileTransfer ft;
+	CondorError e;
+	ft.InitializePlugins(e);
+	if (e.code()) {
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText());
+	}
+
+	MyString method_list = ft.GetSupportedMethods();
+	if (!method_list.IsEmpty()) {
+		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
 	}
 
 #if defined(WIN32)
@@ -295,7 +308,7 @@ ambiguous( char* opt )
 }
 
 
-void
+void PREFAST_NORETURN
 another( char* opt )
 {
 	dprintf( D_ALWAYS, 

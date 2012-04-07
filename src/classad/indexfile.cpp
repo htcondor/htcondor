@@ -77,6 +77,7 @@ TruncateStorageFile()
 		m=m+'\n';
 		if (m[0]!='*'){
 			if (write(new_filed,(void *)(m.c_str()),m.size())<0){
+				close(new_filed);
 				return false;
 			} else {
 				fsync(filed);

@@ -1819,10 +1819,10 @@ sub StartPersonal {
     $handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
-    my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
-    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
@@ -1830,10 +1830,10 @@ sub StartPersonal {
     my $collector_port = shift @condor_info;
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 
-    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
-    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
@@ -2071,27 +2071,16 @@ sub AddFileTrace
 	my $time = shift;
 	my $entry = shift;
 
-	my $tracefile = $coredir . "/core_error_trace";
-	my $newtracefile = $coredir . "/core_error_trace.new";
-
-	# make sure the trace file exists
-	if(!(-f $tracefile)) {
-		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
-		close(TF);
-	}
-	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
-	while(<TF>) {
-		print NTF "$_";
-	}
-	close(TF);
 	my $buildentry = "$time	$file	$entry\n";
-	print NTF "$buildentry";
-	debug("\n$buildentry",2);
-	close(NTF);
-	runcmd("mv $newtracefile $tracefile");
 
+	my $tracefile = $coredir . "/core_error_trace";
+	local *TF;
+	open(TF, '>>', $tracefile)
+		or die qq(Unable to open "$tracefile" for writing: $!);
+	print TF $buildentry;
+	close TF;
+
+	debug("\n$buildentry",2);
 }
 
 sub MoveCoreFile
@@ -2117,10 +2106,8 @@ sub CountFileTrace
 	my $tracefile = $coredir . "/core_error_trace";
 	my $count = 0;
 
-	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
-	while(<CT>) {
-		$count += 1;
-	}
+	open(CT, "<", $tracefile) or return 0;
+	while(<CT>) { $count ++; }
 	close(CT);
 	return($count);
 }

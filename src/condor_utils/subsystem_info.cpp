@@ -232,7 +232,7 @@ SubsystemInfoTable::addEntry( const SubsystemInfoLookup *entry )
 const SubsystemInfoLookup *
 SubsystemInfoTable::getEntry( int num ) const
 {
-	if ( num >= m_Count ) {
+	if ( num < 0 || num >= m_Count ) {
 		return NULL;
 	}
 	return m_Table[num];

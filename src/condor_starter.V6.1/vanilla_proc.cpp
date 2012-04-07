@@ -116,7 +116,11 @@ VanillaProc::StartJob()
 					CONDOR_EXEC, 
 					condor_basename ( jobname.Value () ) ) ) {
 				filename.sprintf ( "condor_exec%s", extension );
-				rename ( CONDOR_EXEC, filename.Value () );					
+				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
+					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
+							"failed to rename executable from %s to %s\n", 
+							CONDOR_EXEC, filename.Value() );
+				}
 			} else {
 				filename = jobname;
 			}
@@ -256,7 +260,7 @@ VanillaProc::StartJob()
                                dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
                        }
                        dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.Value());
-                       if (IsDirectory(next_dir) && (strcmp(requested_chroot_name.c_str(), chroot_name) == 0)) {
+                       if (IsDirectory(next_dir) && chroot_name && (strcmp(requested_chroot_name.c_str(), chroot_name) == 0)) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;
                        }
@@ -316,7 +320,9 @@ VanillaProc::StartJob()
 			free(mount_under_scratch);
 
 			mount_list.rewind();
-			fs_remap = new FilesystemRemap();
+			if (!fs_remap) {
+				fs_remap = new FilesystemRemap();
+			}
 			char * next_dir;
 			while ( (next_dir=mount_list.next()) ) {
 				if (!*next_dir) {
@@ -402,6 +408,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
 
+	std::string memory_usage;
+	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
+		ad->AssignExpr(ATTR_MEMORY_USAGE, memory_usage.c_str());
+	}
+
 #if HAVE_PSS
 	if( usage->total_proportional_set_size_available ) {
 		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
@@ -472,7 +483,7 @@ VanillaProc::Continue()
 	dprintf(D_FULLDEBUG,"in VanillaProc::Continue()\n");
 	
 	// resume user job
-	if (JobPid != -1) {
+	if (JobPid != -1 && is_suspended ) {
 		if (daemonCore->Continue_Family(JobPid) == FALSE) {
 			dprintf(D_ALWAYS,
 			        "error continuing family in VanillaProc::Continue()\n");

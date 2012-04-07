@@ -67,7 +67,11 @@ if (NOT CLIPPED)
 			set (GLIBC_MAKE make -j2 -r 'CFLAGS=-march=i386 -mtune=generic -mno-tls-direct-seg-refs -DNDEBUG=1 -g -O3 ' PARALLELMFLAGS=-s )
 		endif()
 
-		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch)
+		set (GLIBC_PATCH patch --binary -p1 <
+${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary
+-p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch && patch --binary
+-p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch &&
+patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch)
 
 	elseif(${GLIBC_VERSION} STREQUAL "27")
 
@@ -140,7 +144,7 @@ if (NOT CLIPPED)
 		endif()
 
 		# The enable-static-nss patch works, and disable link warning about dynamic nss
-		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch)
+		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch)
 
 	else()
 		message(STATUS "Condor can not build standard universe for glibc version:${GLIBC_VERSION}")

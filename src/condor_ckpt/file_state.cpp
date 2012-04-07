@@ -65,7 +65,7 @@ to this module.
 
 class CondorFileInfo {
 public:
-	CondorFileInfo( char *n ) {
+	CondorFileInfo( const char *n ) {
 		info_name = strdup(n);
 		open_count = 0;
 		read_count = read_bytes = 0;
@@ -217,6 +217,17 @@ void CondorFileTable::close_all()
 void CondorFileTable::set_aggravate_mode( int on_off )
 {
 	aggravate_mode = on_off;
+}
+
+/* This function presumes that init() has been called.  A proper class
+   initializer could force working_dir to be NULL (or a valid pointer),
+   but I'm loathe to make random changes this deep in the standard
+   universe code. */
+void CondorFileTable::set_working_dir( char * dir )
+{
+    ASSERT( dir != NULL );
+    free( working_dir );
+    working_dir = strdup( dir );
 }
 
 void CondorFileTable::dump()
@@ -527,11 +538,11 @@ CondorFile * CondorFileTable::open_url_retry( char const *url, int flags, int mo
 	if(f) return f;
 
 	if( RemoteSysCalls() ) {
-		char *path;
+		const char *path;
 
 		if( strstr(url,"remote:") ) return 0;
 
-		path = (char*)strrchr(url,':');
+		path = strrchr(url,':');
 		if(!path) return 0;
 
 		path++;
@@ -824,7 +835,7 @@ ssize_t CondorFileTable::read( int fd, void *data, size_t nbyte )
 		return -1;
 	}
 	
-	if( (!data) || (nbyte<0) ) {
+	if (!data) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -863,7 +874,7 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 		return -1;
 	}
 
-	if( (!data) || (nbyte<0) ) {
+	if (!data) {
 		errno = EINVAL;
 		return -1;
 	}

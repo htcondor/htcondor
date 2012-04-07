@@ -169,6 +169,7 @@
 #define BAD_SERVICE_TYPE                    112
 #define INSUFFICIENT_PERMISSIONS            113
 #define CANNOT_LOCATE_SERVER                120
+#define READWRITE_ERROR                     121
 #define CONNECT_ERROR                       -121
 
 

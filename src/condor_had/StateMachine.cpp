@@ -155,6 +155,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 	else {
 		strncpy( controllee, daemonString(DT_NEGOTIATOR), sizeof(controllee) - 1 );
 	}
+	controllee[COUNTOF(controllee)-1] = 0; // make sure it's null terminated.
 	if ( strcasecmp(controllee, m_controlleeName) ) {
 		return true;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 Red Hat, Inc.
+ * Copyright 2009-2012 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,10 @@
      #include <AviaryQuery_GetJobSummary.h>
 
      #include <AviaryQuery_GetJobSummaryResponse.h>
+     
+     #include <AviaryQuery_GetSubmissionID.h>
+    
+     #include <AviaryQuery_GetSubmissionIDResponse.h>
     
     
 namespace AviaryQuery {
@@ -162,6 +166,23 @@ class AviaryQueryServiceSkeleton
 
          virtual
         AviaryQuery::GetJobSummaryResponse* getJobSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobSummary* _getJobSummary);
+
+
+
+         /**
+         * Auto generated method declaration
+         * for "getSubmissionID|http://grid.redhat.com/aviary-query/" operation.
+         * 
+         * @param _getSubmissionID of the AviaryQuery::GetSubmissionID
+         *
+         * @return AviaryQuery::GetSubmissionIDResponse*
+         */
+        
+
+         virtual 
+        AviaryQuery::GetSubmissionIDResponse* getSubmissionID(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetSubmissionID* _getSubmissionID);
+
+
 
 
 };

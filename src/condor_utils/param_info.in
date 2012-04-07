@@ -115,6 +115,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
+[MASTER_NEW_BINARY_RESTART]
+aliases=
+default=GRACEFUL
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Master New Binary Restart Mode
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=572
+
 [MASTER_CHECK_NEW_EXEC_INTERVAL]
 aliases=
 default=300
@@ -4036,6 +4052,38 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=219
 
+[BATCH_GAHP]
+aliases=
+default=$(GLITE_LOCATION)/bin/batch_gahp
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Batch Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
+id=220
+
+[REMOTE_GAHP]
+aliases=
+default=$(SBIN)/remote_gahp
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Batch Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
+id=220
+
 [NORDUGRID_GAHP]
 aliases=
 default=$(SBIN)/nordugrid_gahp
@@ -7431,6 +7479,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=454
 
+[NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Allow Quota Oversubscription
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
 [GROUP_QUOTA_MAX_ALLOCATION_ROUNDS]
 aliases=
 default=3
@@ -9609,6 +9673,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
+[NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Read Config Before Cycle
+usage=When true, negotiator will re-read the configuration prior to each negotiation cycle
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator
+id=555
+
 [SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY]
 aliases=
 default=5
@@ -10348,7 +10428,7 @@ id=666
 
 [CLAIM_PARTITIONABLE_LEFTOVERS]
 aliases=
-default=true
+default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 range=.*
 state=default
@@ -10362,3 +10442,178 @@ url=
 tags=schedd,startd,claim
 id=603
 
+[MOUNT_UNDER_SCRATCH]
+aliases=
+default=
+version=7.7.5
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Mount Under Scratch
+usage=
+url=
+tags=starter
+id=603
+
+[NAMED_CHROOT]
+aliases=
+default=
+version=7.7.5
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Named Chroot
+usage=
+url=
+tags=starter
+id=603
+
+[MEMORY_USAGE_METRIC]
+aliases=
+default=((ResidentSetSize+1023)/1024)
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=MemoryUsage metric
+usage=
+url=
+tags=starter
+id=603
+
+[MEMORY_USAGE_METRIC_VM]
+aliases=
+default=VM_Memory
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=MemoryUsage metric for VM Universe jobs
+usage=
+url=
+tags=starter
+id=603
+
+[JOB_DEFAULT_REQUESTMEMORY]
+aliases=
+default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,1) 
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestMemory expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=604
+
+[JOB_DEFAULT_REQUESTDISK]
+aliases=
+default=DiskUsage
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestDisk expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=605
+
+[JOB_DEFAULT_REQUESTCPUS]
+aliases=
+default=1
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestCpus expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=606
+
+[MUST_MODIFY_REQUEST_EXPRS]
+aliases=
+default=false
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Should startd modify request exprs even if it causes match failure
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=607
+
+[MODIFY_REQUEST_EXPR_REQUESTCPUS]
+aliases=
+default=quantize(RequestCpus,{1})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a cpu resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=608
+
+[MODIFY_REQUEST_EXPR_REQUESTMEMORY]
+aliases=
+default=quantize(RequestMemory,{TotalSlotMemory / TotalSlotCpus / 4})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a memory resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=609
+
+[MODIFY_REQUEST_EXPR_REQUESTDISK]
+aliases=
+default=quantize(RequestDisk,{1024})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a disk resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610

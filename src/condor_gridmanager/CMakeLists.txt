@@ -23,7 +23,7 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	if ( LINUX )
 		file( GLOB RmvSrcs *_gahp_wrapper* )
 	else()
-		file( GLOB RmvSrcs *_gahp_wrapper* *dcloud* )
+		file( GLOB RmvSrcs *_gahp_wrapper* *dcloud* *ec2* )
 	endif()
 	condor_glob( GMHDRS GMSRCS "${RmvSrcs}" )
 
@@ -64,6 +64,8 @@ if(NOT WIN_EXEC_NODE_ONLY)
                 DESTINATION ${C_LIBEXEC}/glite/bin
                 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         endif()
+
+	install (FILES remote_gahp DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	endif()
 

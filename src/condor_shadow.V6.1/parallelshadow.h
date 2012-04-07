@@ -81,7 +81,7 @@ class ParallelShadow : public BaseShadow
 
 	struct rusage getRUsage( void );
 
-	int getImageSize( void );
+	int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss );
 
 	int getDiskUsage( void );
 

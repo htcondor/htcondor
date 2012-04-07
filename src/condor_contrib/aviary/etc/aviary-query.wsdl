@@ -52,6 +52,12 @@
 	<wsdl:message name="GetSubmissionSummaryResponse">
 		<wsdl:part name="parameters" element="qry:GetSubmissionSummaryResponse"/>
 	</wsdl:message>
+	<wsdl:message name="GetSubmissionIDRequest">
+		<wsdl:part name="parameters" element="qry:GetSubmissionID"/>
+	</wsdl:message>
+	<wsdl:message name="GetSubmissionIDResponse">
+		<wsdl:part name="parameters" element="qry:GetSubmissionIDResponse"/>
+	</wsdl:message>
 	<wsdl:portType name="AviaryQuery">
 		<wsdl:operation name="getJobSummary">
 			<wsdl:input message="tns:GetJobSummaryRequest"/>
@@ -72,6 +78,10 @@
 		<wsdl:operation name="getSubmissionSummary">
 			<wsdl:input message="tns:GetSubmissionSummaryRequest"/>
 			<wsdl:output message="tns:GetSubmissionSummaryResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getSubmissionID">
+			<wsdl:input message="tns:GetSubmissionIDRequest"/>
+			<wsdl:output message="tns:GetSubmissionIDResponse"/>
 		</wsdl:operation>
 	</wsdl:portType>
 	<wsdl:binding name="AviaryQuerySOAPBinding" type="tns:AviaryQuery">
@@ -114,6 +124,15 @@
 		</wsdl:operation>
 		<wsdl:operation name="getSubmissionSummary">
 			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/submission"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getSubmissionID">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/submission/id"/>
 			<wsdl:input>
 				<soap:body use="literal"/>
 			</wsdl:input>

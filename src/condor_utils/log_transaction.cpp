@@ -126,6 +126,7 @@ remove_backup_file(backup_info_t* bi)
   if (bi->fn != NULL) {
     // it's OK if this unlink fails, that's why we
     // don't check the return value....
+    MSC_SUPPRESS_WARNING(6031) // warning: return value ignored
     unlink(bi->fn); 
   }
 }

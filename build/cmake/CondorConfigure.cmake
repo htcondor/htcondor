@@ -454,6 +454,15 @@ endif(NOT HPUX)
 if (NOT WINDOWS) 
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
+if ( HAVE_SSH_TO_JOB )
+    if ( DARWIN )
+        set( SFTP_SERVER "/usr/libexec/sftp-server" )
+    elseif ( DEB_SYSTEM_NAME )
+        set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
+    else()
+	set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+    endif()
+endif()
 
 if (BUILD_TESTS)
 	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
@@ -524,7 +533,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+#add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
@@ -546,7 +555,7 @@ if (NOT WINDOWS)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
@@ -664,10 +673,17 @@ endif()
 
 if(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")      # use full paths names in errors and warnings
+	if(MSVC_ANALYZE)
+		# turn on code analysis. 
+		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /analyze /wd6211") # turn on code analysis (level 6 warnings)
+	endif(MSVC_ANALYZE)
+
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251")  #
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275")  #
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273")  # inconsistent dll linkage
+
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 

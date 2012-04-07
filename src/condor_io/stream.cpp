@@ -49,7 +49,10 @@ static int shipcount =0;
 #define BIN_NULL_CHAR	"\255"
 #define INT_SIZE		8			/* number of integer bytes sent on wire */
 
-
+#ifdef WIN32
+# pragma warning(disable : 6285) // (<non-zero constant> || <non-zero constant>) is always true
+# pragma warning(disable : 6294) // for loop body will never be executed. 
+#endif
 
 /*
 **	CODE ROUTINES

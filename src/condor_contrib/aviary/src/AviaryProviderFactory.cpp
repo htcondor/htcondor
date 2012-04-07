@@ -16,11 +16,8 @@
  *
  ***************************************************************/
 
-#include <condor_common.h>
-#include <condor_config.h>
-#include <condor_debug.h>
-
 #include "AviaryProvider.h"
+#include "EndpointPublisher.h"
 #include "Axis2SoapProvider.h"
 #include "Axis2SslProvider.h"
 #include "AviaryUtils.h"
@@ -30,15 +27,20 @@ using namespace aviary;
 using namespace aviary::transport;
 using namespace aviary::soap;
 using namespace aviary::util;
+using namespace aviary::locator;
 
 AviaryProvider* 
-AviaryProviderFactory::create(const string& log_file)
+AviaryProviderFactory::create(const string& log_file, 
+							  const string& service_name, const string& major_type,
+							  const string& minor_type,
+							  const string& uri_suffix)
 {
     AviaryProvider* provider = NULL;
     string repo_path;
     int port;
     string axis_error;
     char *tmp = NULL;
+	EndpointPublisher* ep = NULL;
 
     // config then env for our all-important axis2 repo dir
     if ((tmp = param("WSFCPP_HOME"))) {
@@ -58,8 +60,25 @@ AviaryProviderFactory::create(const string& log_file)
     
     // which flavor of transport
     bool have_ssl = param_boolean("AVIARY_SSL",FALSE);
+	if (!have_ssl) {
+		port = param_integer("HTTP_PORT",9000);
+	}
+	else {
+		port = param_integer("HTTP_PORT",9443);
+	}
+
+	// see if we are using locator to publish our endpoint
+	bool use_locator = param_boolean("AVIARY_PUBLISH_LOCATION",FALSE) && minor_type != LOCATOR;
+	if (use_locator) {
+		ep = new EndpointPublisher(service_name, major_type, minor_type);
+		if (!ep->init(uri_suffix,have_ssl)) {
+			dprintf(D_ALWAYS,"Aviary location endpoint config failed\n");
+			return NULL;
+		}
+		port = ep->getPort();
+	}
+
     if (!have_ssl) {
-        port = param_integer("HTTP_PORT",9000);
         Axis2SoapProvider* http = new Axis2SoapProvider(level,log_file.c_str(),repo_path.c_str());
         if (!http->init(port,read_timeout,axis_error)) {
             dprintf(D_ALWAYS,"Axis2 HTTP configuration failed\n");
@@ -71,7 +90,6 @@ AviaryProviderFactory::create(const string& log_file)
     }
 #ifdef HAVE_EXT_OPENSSL
     else {
-        port = param_integer("HTTP_PORT",9443);
         Axis2SslProvider* https = new Axis2SslProvider(level,log_file.c_str(),repo_path.c_str());
         if (!https->init(port,read_timeout,axis_error)) {
             dprintf(D_ALWAYS,"SSL/TLS requested but configuration failed\n");
@@ -82,6 +100,13 @@ AviaryProviderFactory::create(const string& log_file)
         provider = https;
     }
 #endif
+
+    // ready to publish our endpoint
+    if (ep) {
+        // provider owns this now
+        provider->setPublisher(ep);
+        ep->start(param_integer("AVIARY_PUBLISH_INTERVAL", 10));
+    }
 
     return provider;
 }

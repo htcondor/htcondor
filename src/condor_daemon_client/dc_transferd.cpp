@@ -103,7 +103,8 @@ DCTransferD::setup_treq_channel(ReliSock **treq_sock_ptr,
 	// so it is ready for use.
 	/////////////////////////////////////////////////////////////////////////
 
-	*treq_sock_ptr = rsock;
+	if (treq_sock_ptr)
+		*treq_sock_ptr = rsock;
 
 	return true;
 }

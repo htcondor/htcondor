@@ -68,7 +68,7 @@ public:
 	bool	suspend( void );
 	bool	resume( void );
 
-	bool    holdJob(char const *hold_reason,int hold_code,int hold_subcode);
+	bool    holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft);
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).

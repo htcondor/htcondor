@@ -378,7 +378,7 @@ char * get_windows_reg_value(
 		{
 			// we got a value, now have to turn it into a string.
 			//
-			char sz[10] = "";
+			char sz[20] = "";
 			switch (vtype)
 			{
 			case REG_LINK:
@@ -399,7 +399,7 @@ char * get_windows_reg_value(
 				break;
 
 			case REG_QWORD:
-				wsprintf(sz, "%lu", uli.QuadPart);
+				wsprintf(sz, "%I64u", uli.QuadPart);
 				break;
 
 			case REG_BINARY:
@@ -424,12 +424,12 @@ char * get_windows_reg_value(
 				for (ii = 0; ii < 10000; ++ii)
 				{
 					TCHAR szName[MAX_PATH];
-					DWORD cchName = NUM_ELEMENTS(szName), vt, cbData = 0;
-					lres = RegEnumValue(hkey, ii, szName, &cchName, 0, &vt, NULL, &cbData);
+					DWORD cchName = NUM_ELEMENTS(szName), vt, cb = 0;
+					lres = RegEnumValue(hkey, ii, szName, &cchName, 0, &vt, NULL, &cb);
 					if (ERROR_NO_MORE_ITEMS == lres)
 						break;
 					if ( ! ii) dprintf ( D_NORMAL | D_FULLDEBUG, " Named values:\n");
-					dprintf( D_FULLDEBUG, "  \"%s\" = %d bytes\n", szName, cbData);
+					dprintf( D_FULLDEBUG, "  \"%s\" = %d bytes\n", szName, cb);
 				}
 				if ( ! ii) dprintf ( D_NORMAL | D_FULLDEBUG, " No Named values\n");
 			}
@@ -480,6 +480,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	{
 		int    cch = (psz - pszKeyName);
 		char * pszAttr = (char*)malloc(cchPrefix + cch +1);
+		if ( ! pszAttr) return NULL;
 		if (pszPrefix)
 			strcpy(pszAttr, pszPrefix);
 		memcpy(pszAttr + cchPrefix, pszKeyName, cch);
@@ -487,7 +488,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 		while (cch > 0 && isspace(pszAttr[cchPrefix+cch-1]))
 		{
 			pszAttr[cchPrefix+cch-1] = 0;
-		    --cch;
+			--cch;
 		}
 		return pszAttr;
 	}
@@ -525,7 +526,8 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	}
 
 	char * pszAttr = (char *)malloc(cchPrefix + cch + 1);
-    if (pszPrefix)
+	if ( ! pszAttr) return NULL;
+	if (pszPrefix)
 		strcpy(pszAttr, pszPrefix);
 
 	// a bit of a special case, if the keyname ends in a "\"
@@ -884,7 +886,7 @@ static bool init_windows_performance_hashtable()
 		if (rl.pPerfTable)
 		{
 			char * psz = rl.pszzNames;
-			while (*psz)
+			while (psz && *psz)
 			{
 				char * pszIndex = psz;
 				char * pszName = psz + lstrlen(psz)+1;

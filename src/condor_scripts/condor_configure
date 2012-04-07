@@ -96,6 +96,12 @@ Creates a personal Stork, using the credential manager daemon.
 END_OPT_MAKE_PERSONAL_STORK
  },
  {
+	 short => "--bosco",
+	 long => <<END_OPT_BOSCO,
+Install BOSCO, a personal Condor that submits jobs to remote batch systems.
+END_OPT_BOSCO
+ },
+ {
 	 short => "--type=<[submit],[execute],[manager]> ",
 	 long => <<END_OPT_TYPE,
 Determines which role(s) the machine will perform in a pool (which
@@ -232,6 +238,7 @@ my (
 	$opt_local_dir,
 	$opt_make_personal_condor,
 	$opt_make_personal_stork,
+	$opt_bosco,
 	$opt_type,
 	$opt_central_manager,
 	$opt_stork,
@@ -330,6 +337,19 @@ my @pwuid=getpwuid ($owner);
 debug ("Condor will be run as user: " . $pwuid[0]);
 
 # Install if necessary
+if ($opt_bosco && !defined($opt_prefix_dir)) {
+	my $home;
+	if ( $ENV{HOME} ne "" ) {
+		$home = $ENV{HOME};
+	} else {
+		my @pwuid = getpwuid( $< );
+		$home = $pwuid[7];
+	}
+	if ( $home eq "" ) {
+		die "Option --bosco can't find user's home directory!\n";
+	}
+	$opt_prefix_dir = $home . "/bosco";
+}
 if (defined($opt_release_dir)) {
     # Install
     if ($opt_prefix_dir) {
@@ -420,7 +440,17 @@ if ($opt_central_manager) {
 #  --install
 #  --make-personal_condor
 
-if ($opt_make_personal_condor ||
+if ($opt_bosco) {
+    $local_config{START}="";
+    $local_config{PREEMPT}="";
+    $local_config{SUSPEND}="";
+    $local_config{KILL}="";
+    
+    $local_config{COLLECTOR_NAME}="";
+
+	$daemon_list{SCHEDD} = 1;
+}
+elsif ($opt_make_personal_condor ||
     (defined($opt_release_dir) && !$opt_type)) {
 
 	$daemon_list{COLLECTOR} = 1;
@@ -660,6 +690,7 @@ sub parse_command_line() {
 				 "local-dir=s"				=>	\$opt_local_dir,
 				 "make-personal-condor!"	=>	\$opt_make_personal_condor,
 				 "make-personal-stork!"		=>	\$opt_make_personal_stork,
+				 "bosco!"					=>	\$opt_bosco,
 				 "type=s"					=>	\$opt_type,
 				 "central-manager=s"		=>	\$opt_central_manager,
 				 "stork!"					=>	\$opt_stork,

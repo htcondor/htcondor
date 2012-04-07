@@ -48,6 +48,7 @@
 #define AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS "EC2_VM_ASSOCIATE_ADDRESS"
 //#define AMAZON_COMMAND_VM_DISASSOCIATE_ADDRESS   "EC2_VM_DISASSOCIATE_ADDRESS"
 #define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC_VM_ATTACH_VOLUME"
+#define AMAZON_COMMAND_VM_CREATE_TAGS		"EC2_VM_CREATE_TAGS"
 
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
@@ -200,6 +201,15 @@ class AmazonAssociateAddress : public AmazonRequest {
     public:
         AmazonAssociateAddress();
         virtual ~AmazonAssociateAddress();
+
+        static bool ioCheck(char **argv, int argc);
+        static bool workerFunction(char **argv, int argc, std::string &result_string);
+};
+
+class AmazonCreateTags : public AmazonRequest {
+    public:
+        AmazonCreateTags();
+        virtual ~AmazonCreateTags();
 
         static bool ioCheck(char **argv, int argc);
         static bool workerFunction(char **argv, int argc, std::string &result_string);

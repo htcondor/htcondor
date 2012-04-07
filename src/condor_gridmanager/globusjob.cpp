@@ -986,6 +986,8 @@ void GlobusJob::doEvaluateState()
 		old_gm_state = gmState;
 		old_globus_state = globusState;
 
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
+
 		switch ( gmState ) {
 		case GM_INIT: {
 			// This is the state all jobs start in when the GlobusJob object
@@ -1214,7 +1216,7 @@ void GlobusJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT: {
 			// Start a new gram submission for this job.
-			char *job_contact = NULL;
+			std::string job_contact;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				myResource->CancelSubmit(this);
 				myResource->JMComplete(this);
@@ -1255,7 +1257,8 @@ void GlobusJob::doEvaluateState()
 										RSL->c_str(),
 										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
 													   false ) ? 0 : 1,
-										gramCallbackContact, &job_contact );
+										gramCallbackContact, job_contact,
+										false);
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1286,8 +1289,7 @@ void GlobusJob::doEvaluateState()
 					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					callbackRegistered = true;
-					SetRemoteJobId( job_contact );
-					gahp->globus_gram_client_job_contact_free( job_contact );
+					SetRemoteJobId( job_contact.c_str() );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -1755,7 +1757,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) JEF: delaying restart for %d seconds\n",procID.clus
 else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",procID.cluster,procID.proc);}
 				}
 
-				char *job_contact = NULL;
+				std::string job_contact;
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
@@ -1775,7 +1777,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 										resourceManagerString,
 										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact );
+										gramCallbackContact, job_contact,
+										true );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1847,6 +1850,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					// this to happen?
 					myResource->JMComplete( this );
 					jmDown = false;
+					if ( !job_contact.empty() ) {
+						SetRemoteJobId( job_contact.c_str() );
+						requestScheddUpdate( this, false );
+					}
 					gmState = GM_START;
 					break;
 				}
@@ -1860,8 +1867,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
 								   (int)jmProxyExpireTime );
 					jmDown = false;
-					SetRemoteJobId( job_contact );
-					gahp->globus_gram_client_job_contact_free( job_contact );
+					SetRemoteJobId( job_contact.c_str() );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
 					}
@@ -2388,7 +2394,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
-				char *job_contact = NULL;
+				std::string job_contact = NULL;
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
@@ -2405,7 +2411,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 										resourceManagerString,
 										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact );
+										gramCallbackContact, job_contact,
+										true);
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -2436,8 +2443,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
 								   (int)jmProxyExpireTime );
 					jmDown = false;
-					SetRemoteJobId( job_contact );
-					gahp->globus_gram_client_job_contact_free( job_contact );
+					SetRemoteJobId( job_contact.c_str() );
 					gmState = GM_CLEANUP_COMMIT;
 				} else {
 					// unhandled error

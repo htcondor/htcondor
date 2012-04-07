@@ -91,6 +91,9 @@ public:
 	char*	addr() 	{return c_addr;};
 	char*   proxyFile() {return c_proxyfile; };
 	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
+    char*   rmtgrp() {return c_rmtgrp;}
+    char*   neggrp() {return c_neggrp;}
+    bool    autorg() {return c_autorg;}
 	int     numPids() {return c_numPids;};
 
 	void	setuser(const char* user);
@@ -100,6 +103,9 @@ public:
 	void	sethost(const char* host);
 	void    setProxyFile(const char* pf);
 	void    setConcurrencyLimits(const char* limits);
+    void    setrmtgrp(const char* rmtgrp);
+    void    setneggrp(const char* neggrp);
+    void    setautorg(const bool autorg);
 	void    setNumPids(int numJobPids);
 
 		// send a message to the client and accountant that the claim
@@ -114,6 +120,9 @@ private:
 	char	*c_proxyfile;   // file holding delegated proxy
 		                // (used when using GLEXEC_STARTER)
 	char	*c_concurrencyLimits; // limits, if any
+    char*   c_rmtgrp;   // the submitter's accounting group
+    char*   c_neggrp;   // the negotiating accounting group
+    bool    c_autorg;   // true if negotiated via autoregroup policy
 	int     c_numPids;
 
 };
@@ -245,7 +254,7 @@ public:
 	bool starterKillPg( int sig );
 	bool starterKillSoft( bool state_change = false );
 	bool starterKillHard( void );
-	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode );
+	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad );

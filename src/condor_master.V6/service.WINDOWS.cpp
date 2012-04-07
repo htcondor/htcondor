@@ -444,7 +444,7 @@ DWORD start_as_service()
     DWORD err = NO_ERROR;
     BOOL success = StartServiceCtrlDispatcher(serviceTable);
     if ( ! success) {
-        DWORD err = GetLastError();
+        err = GetLastError();
         // If "The service process could not connect to the service controller."
         // it's probably because the service controller didn't start us so
         // return a special error code to tell the caller it should start us as

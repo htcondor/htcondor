@@ -80,6 +80,15 @@ int sprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, .
  */
 int vsprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, va_list args);
 
+/* strcpy_len
+ * Truncating strcpy. will not go past the end of the output buffer (specifed by len)
+ * but unlike strncpy, it gurantees that the output is null terminated.
+ *
+ * returns the number of characters copied (not including the terminating null) unless
+ * the input did not fit in the output buffer, in that case it returns the size of the output buffer.
+ */
+
+int strcpy_len(char * out, const char * in, int len);
 
 END_C_DECLS
 

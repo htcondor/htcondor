@@ -61,20 +61,23 @@ AttrGetName( CONDOR_ATTR which )
     case ATTR_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->Get() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->Get() );
 		break;
     case ATTR_FLAG_DISTRO_UC:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetUc() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->GetUc() );
 		break;
     case ATTR_FLAG_DISTRO_CAP:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetCap() );
+		tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+		if (tmps)
+			sprintf( tmps, local->string, myDistro->GetCap() );
 		break;
     }
 
@@ -257,6 +260,7 @@ const char * const ATTR_MYPROXY_NEW_PROXY_LIFETIME = "MyProxyNewProxyLifetime";
 const char * const ATTR_HARDWARE_ADDRESS         = "HardwareAddress";
 const char * const ATTR_HAS_CHECKPOINTING        = "HasCheckpointing";
 const char * const ATTR_HAS_FILE_TRANSFER        = "HasFileTransfer";
+const char * const ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS = "HasFileTransferPluginMethods";
 const char * const ATTR_HAS_PER_FILE_ENCRYPTION  = "HasPerFileEncryption";
 const char * const ATTR_HAS_IO_PROXY             = "HasIOProxy";
 const char * const ATTR_HAS_JAVA                 = "HasJava";
@@ -387,8 +391,11 @@ const char * const ATTR_JOB_VM_CHECKPOINT			= "JobVMCheckpoint";
 const char * const ATTR_JOB_VM_NETWORKING			= "JobVMNetworking";
 const char * const ATTR_JOB_VM_NETWORKING_TYPE		= "JobVMNetworkingType";
 const char * const ATTR_JOB_VM_HARDWARE_VT			= "JobVMHardwareVT";
+/* ATTR_JOB_VM_CPU_UTILIZATION is updated by the starter to the job_ad but is also used in the startd during loadavg calculations */
+const char * const ATTR_JOB_VM_CPU_UTILIZATION		= "JobVMCpuUtilization";
 const char * const  ATTR_JOB_VM_VCPUS = "JobVM_VCPUS";
 const char * const  ATTR_JOB_VM_MACADDR = "JobVM_MACADDR";
+const char * const  ATTR_JOB_VM_VNC = "JobVMVNCConsole";
 // End VM universe
 const char * const ATTR_KEYBOARD_IDLE            = "KeyboardIdle";
 const char * const ATTR_KEYSTORE_FILE            = "KeystoreFile";
@@ -435,6 +442,7 @@ const char * const ATTR_MAX_HOSTS				 = "MaxHosts";
 const char * const ATTR_MAX_JOB_RETIREMENT_TIME  = "MaxJobRetirementTime";
 const char * const ATTR_MAX_JOBS_RUNNING         = "MaxJobsRunning";
 const char * const ATTR_MEMORY                   = "Memory";
+const char * const ATTR_MEMORY_USAGE             = "MemoryUsage";
 const char * const ATTR_DETECTED_MEMORY          = "DetectedMemory";
 const char * const ATTR_DETECTED_CPUS            = "DetectedCpus";
 const char * const ATTR_MIN_HOSTS				 = "MinHosts";
@@ -485,7 +493,9 @@ const char * const ATTR_OPSYSVER                 = "OpSysVer";
 const char * const ATTR_OPSYS_AND_VER            = "OpSysAndVer";
 const char * const ATTR_OPSYS_MAJOR_VER            = "OpSysMajorVer";
 const char * const ATTR_OPSYS_NAME            = "OpSysName";
-const char * const ATTR_OPSYS_DISTRO            = "OpSysDistro";
+const char * const ATTR_OPSYS_LONG_NAME            = "OpSysLongName";
+const char * const ATTR_OPSYS_SHORT_NAME            = "OpSysShortName";
+const char * const ATTR_OPSYS_LEGACY            = "OpSysLegacy";
 const char * const ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
 const char * const ATTR_OTHER_JOB_REMOVE_REQUIREMENTS    = "OtherJobRemoveRequirements"; 
 const char * const ATTR_OWNER                    = "Owner"; 
@@ -498,6 +508,7 @@ const char * const ATTR_PREEMPTING_ACCOUNTING_GROUP = "PreemptingAccountingGroup
 const char * const ATTR_PREEMPTING_RANK			 = "PreemptingRank";
 const char * const ATTR_PREEMPTING_OWNER		 = "PreemptingOwner";
 const char * const ATTR_PREEMPTING_USER          = "PreemptingUser";
+const char * const ATTR_PREEMPT_STATE_          = "PreemptState";
 const char * const ATTR_PREFERENCES				 = "Preferences";
 const char * const ATTR_PREFER_PARALLEL_SCHEDULING_GROUP	 = "PreferParallelSchedulingGroup";
 const char * const ATTR_PREV_SEND_ESTIMATE		 = "PrevSendEstimate";
@@ -510,10 +521,13 @@ const char * const ATTR_Q_DATE                   = "QDate";
 const char * const ATTR_RANK					 = "Rank";
 const char * const ATTR_REAL_UID				 = "RealUid";
 const char * const ATTR_RELEASE_REASON			 = "ReleaseReason";
+const char * const ATTR_REMOTE_AUTOREGROUP       = "RemoteAutoregroup";
+const char * const ATTR_REMOTE_GROUP                     = "RemoteGroup";
 const char * const ATTR_REMOTE_GROUP_RESOURCES_IN_USE = "RemoteGroupResourcesInUse";
 const char * const ATTR_REMOTE_GROUP_QUOTA		 = "RemoteGroupQuota";
 const char * const ATTR_REMOTE_HOST				 = "RemoteHost";
 const char * const ATTR_REMOTE_HOSTS			 = "RemoteHosts";
+const char * const ATTR_REMOTE_NEGOTIATING_GROUP = "RemoteNegotiatingGroup";
 const char * const ATTR_REMOTE_OWNER			 = "RemoteOwner";
 const char * const ATTR_REMOTE_POOL				 = "RemotePool";
 const char * const ATTR_REMOTE_SLOT_ID          = "RemoteSlotID";
@@ -569,9 +583,12 @@ const char * const ATTR_STREAM_OUTPUT			 = "StreamOut";
 const char * const ATTR_STREAM_ERROR			 = "StreamErr";
 const char * const ATTR_SUBMIT_EVENT_NOTES		 = "SubmitEventNotes";
 const char * const ATTR_SUBMIT_EVENT_USER_NOTES	 = "SubmitEventUserNotes";
+const char * const ATTR_SUBMITTER_AUTOREGROUP    = "SubmitterAutoregroup";
+const char * const ATTR_SUBMITTER_GROUP          = "SubmitterGroup";
 const char * const ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE = "SubmitterGroupResourcesInUse";
 const char * const ATTR_SUBMITTER_GROUP_QUOTA	 = "SubmitterGroupQuota";
 const char * const ATTR_SUBMITTER_ID			 = "SubmitterId";
+const char * const ATTR_SUBMITTER_NEGOTIATING_GROUP = "SubmitterNegotiatingGroup";
 const char * const ATTR_SUBMITTER_TAG            = "SubmitterTag";
 const char * const ATTR_SUBMITTOR_PRIO           = "SubmittorPrio";   // old-style for ATTR_SUBMITTER_USER_PRIO
 const char * const ATTR_SUBMITTER_USER_PRIO	  = "SubmitterUserPrio";
@@ -595,7 +612,9 @@ const char * const ATTR_TOOL_DAEMON_INPUT        = "ToolDaemonInput";
 const char * const ATTR_TOOL_DAEMON_OUTPUT       = "ToolDaemonOutput";
 
 const char * const ATTR_TOTAL_CPUS				 = "TotalCpus";
+const char * const ATTR_TOTAL_SLOT_CPUS				 = "TotalSlotCpus";
 const char * const ATTR_TOTAL_DISK				 = "TotalDisk";
+const char * const ATTR_TOTAL_SLOT_DISK				 = "TotalSlotDisk";
 const char * const ATTR_TOTAL_FLOCKED_JOBS		 = "TotalFlockedJobs";
 const char * const ATTR_TOTAL_REMOVED_JOBS		 = "TotalRemovedJobs";
 const char * const ATTR_TOTAL_HELD_JOBS			 = "TotalHeldJobs";
@@ -605,6 +624,7 @@ const char * const ATTR_TOTAL_JOB_RUN_TIME       = "TotalJobRunTime";
 const char * const ATTR_TOTAL_JOB_SUSPEND_TIME   = "TotalJobSuspendTime";
 const char * const ATTR_TOTAL_LOAD_AVG			 = "TotalLoadAvg";
 const char * const ATTR_TOTAL_MEMORY			 = "TotalMemory";
+const char * const ATTR_TOTAL_SLOT_MEMORY			 = "TotalSlotMemory";
 const char * const ATTR_TOTAL_RUNNING_JOBS		 = "TotalRunningJobs";
 const char * const ATTR_TOTAL_LOCAL_RUNNING_JOBS = "TotalLocalJobsRunning";
 const char * const ATTR_TOTAL_LOCAL_IDLE_JOBS	 = "TotalLocalJobsIdle";
@@ -885,6 +905,7 @@ const char * const ATTR_EC2_ACCESS_KEY_ID = "EC2AccessKeyId";
 const char * const ATTR_EC2_SECRET_ACCESS_KEY = "EC2SecretAccessKey";
 const char * const ATTR_EC2_AMI_ID = "EC2AmiID";
 const char * const ATTR_EC2_SECURITY_GROUPS = "EC2SecurityGroups";
+const char * const ATTR_EC2_KEY_PAIR = "EC2KeyPair";
 const char * const ATTR_EC2_KEY_PAIR_FILE = "EC2KeyPairFile";
 const char * const ATTR_EC2_USER_DATA = "EC2UserData";
 const char * const ATTR_EC2_USER_DATA_FILE = "EC2UserDataFile";
@@ -896,6 +917,8 @@ const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
 const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailabilityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
+const char * const ATTR_EC2_TAG_NAMES = "EC2TagNames";
+const char * const ATTR_EC2_TAG_PREFIX = "EC2Tag";
 
 //************* End of changes for EC2 Jobs *****************//
 

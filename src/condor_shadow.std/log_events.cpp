@@ -303,7 +303,7 @@ log_image_size (int size)
 
 	// log the event
 	JobImageSizeEvent event;
-	event.size = size;
+	event.image_size_kb = size;
 	if (!ULog.writeEvent (&event))
 	{
 		dprintf (D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");

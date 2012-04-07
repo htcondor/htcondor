@@ -48,10 +48,6 @@ namespace AviaryCommon
 
                 
                 bool isValidStatus;
-            int property_Qdate;
-
-                
-                bool isValidQdate;
             int property_Completed;
 
                 
@@ -95,10 +91,6 @@ namespace AviaryCommon
 
         bool WSF_CALL
         setStatusNil();
-            
-
-        bool WSF_CALL
-        setQdateNil();
             
 
         bool WSF_CALL
@@ -158,7 +150,6 @@ namespace AviaryCommon
          * @param 
          * @param Id AviaryCommon::SubmissionID*
          * @param Status AviaryCommon::Status*
-         * @param Qdate int
          * @param Completed int
          * @param Held int
          * @param Idle int
@@ -170,6 +161,7 @@ namespace AviaryCommon
          * @return newly created SubmissionSummary object
          */
         SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
+
         
         
         /********************************** Class get set methods **************************************/
@@ -221,30 +213,6 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetStatus();
-        
-        
-
-        /**
-         * Getter for qdate. 
-         * @return int*
-         */
-        WSF_EXTERN int WSF_CALL
-        getQdate();
-
-        /**
-         * Setter for qdate.
-         * @param arg_Qdate int*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setQdate(const int  arg_Qdate);
-
-        /**
-         * Re setter for qdate
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetQdate();
         
         
 
@@ -541,16 +509,6 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether qdate is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isQdateNil();
-
-
-        
-
-        /**
          * Check whether completed is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -735,7 +693,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for qdate by property number (3)
+         * Getter for completed by property number (3)
          * @return int
          */
 
@@ -746,7 +704,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for completed by property number (4)
+         * Getter for held by property number (4)
          * @return int
          */
 
@@ -757,7 +715,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for held by property number (5)
+         * Getter for idle by property number (5)
          * @return int
          */
 
@@ -768,7 +726,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for idle by property number (6)
+         * Getter for removed by property number (6)
          * @return int
          */
 
@@ -779,7 +737,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for removed by property number (7)
+         * Getter for running by property number (7)
          * @return int
          */
 
@@ -829,7 +787,6 @@ namespace AviaryCommon
 
         std::vector<AviaryCommon::JobSummary*>* WSF_CALL
         getProperty11();
-
     
 
 };

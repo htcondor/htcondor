@@ -97,7 +97,13 @@ END {
 
     print "<devices>" ;
     print "<console type='pty'><source path='/dev/ptmx'/></console>" ;
-    
+
+    # Check VNC settings 
+    if(attrs["JobVMVNCConsole"] == "true")
+    {
+      print "<graphics type='vnc' port='-1' autoport='yes' keymap='en-us'/>" ;
+    }
+
     # To see full input ad to script set D_FULLDEBUG
     if(attrs["JobVMNetworking"] == "true")
     {

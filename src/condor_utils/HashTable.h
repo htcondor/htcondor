@@ -211,6 +211,7 @@ void HashTable<Index,Value>::copy_deep( const HashTable<Index,Value>& copy ) {
   if (!(ht = new HashBucket<Index, Value>* [tableSize])) {
     EXCEPT("Insufficient memory for hash table");
   }
+  currentItem = 0; // Ensure set, even if unset/invalid in source copy.
   for(int i = 0; i < tableSize; i++) {
     // duplicate this chain
     HashBucket<Index, Value> **our_next = &ht[i];

@@ -35,15 +35,11 @@ namespace AviaryCommon
         typedef enum {
             ResourceType_ANY,
             ResourceType_COLLECTOR,
-            ResourceType_EXECUTOR,
-            ResourceType_EVENT_SERVER,
-            ResourceType_JOB_SERVER,
-            ResourceType_AMQP_SCHEDULER,
+            ResourceType_CUSTOM,
             ResourceType_MASTER,
             ResourceType_NEGOTIATOR,
-            ResourceType_QUERY_SERVER,
             ResourceType_SCHEDULER,
-            ResourceType_CUSTOM
+            ResourceType_SLOT
         } ADBResourceTypeEnum;
         
         

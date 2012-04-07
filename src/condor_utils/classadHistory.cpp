@@ -483,6 +483,7 @@ static int findHistoryOffset(FILE *LogFile)
     } else {
         bool found = false;
         char *buffer = (char *) malloc(JUMP + 1);
+        ASSERT( buffer )
         int current_offset; 
 
         // We need to skip the last newline

@@ -26,7 +26,7 @@ If only the job \Arg{cluster} id is given,
 then the job \Arg{process} id defaults to the value 0.
 
 It is available in Unix Condor distributions, 
-and it works for vanilla, java, local, and parallel universe jobs.
+and it works for vanilla, vm, java, local, and parallel universe jobs.
 The user must be the owner of the job or must be a queue super user, 
 and both the \Condor{schedd} and \Condor{starter} daemons
 must allow \Condor{ssh\_to\_job} access.
@@ -142,6 +142,7 @@ used by the \Condor{starter} to set up \Prog{sshd}.
   \OptItem{\Opt{-auto-retry}}{Specifies that if the job is not yet running,
     \Condor{ssh\_to\_job} should keep trying periodically until it succeeds 
     or encounters some other error.}
+  \OptItem{\Opt{-X}}{Enable X11 forwarding.}
 \end{Options}
 
 \Examples
@@ -191,6 +192,14 @@ arguments to \Condor{ssh\_to\_job}.
 % rsync -v -e "condor_ssh_to_job" 32.0:outputfile.dat .
 \end{verbatim}
 \normalsize
+
+Note that \Condor{ssh\_to\_job} was added to Condor in version 7.3.  
+If  one uses \Condor{ssh\_to\_job} to connect to a job
+on an execute machine running a version of Condor older than the 7.3 series,
+the command will fail with the error message
+\begin{verbatim}
+Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter
+\end{verbatim}
 
 \ExitStatus
 

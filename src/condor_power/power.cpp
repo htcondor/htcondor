@@ -116,7 +116,7 @@ enable_debug( void )
 	dprintf_config ( "TOOL", p_funcs );
 }
 
-static void
+static void PREFAST_NORETURN
 error( int code, ... )
 {
 	va_list	args;
@@ -135,6 +135,7 @@ error( int code, ... )
 		if ( !msg ) {
 			msg = errmsgs[-E_UNKNOWN];
 		}
+		ASSERT( msg != NULL );
 
 		fprintf ( stderr, "%s: ", name );
 		va_start ( args, code );

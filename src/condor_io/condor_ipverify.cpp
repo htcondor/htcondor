@@ -252,6 +252,7 @@ char * IpVerify :: merge(char * pNewList, char * pOldList)
     if (pOldList) {
         if (pNewList) {
             pList = (char *)malloc(strlen(pOldList) + strlen(pNewList) + 2);
+            ASSERT( pList );
             sprintf(pList, "%s,%s", pNewList, pOldList);
         }
         else {
@@ -696,7 +697,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
         who = TotallyWild;
     }
 
-	if ( !PermTypeArray[perm] ) {
+	if ( perm >= LAST_PERM || !PermTypeArray[perm] ) {
 		EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
 	}
 

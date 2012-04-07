@@ -130,9 +130,11 @@ Job::abort(CondorError & /* errstack */)
 	while (declaredFiles.iterate(currentKey, jobFile)) {
 		close(jobFile.file);
 		declaredFiles.remove(currentKey);
+		MSC_SUPPRESS_WARNING_FIXME(6031);
 		remove(jobFile.name.Value());
 	}
 
+	MSC_SUPPRESS_WARNING_FIXME(6031);
 	remove(spoolDirectory.Value());
 
 	return 0;

@@ -58,7 +58,7 @@ public:
 			cleanup code we always need, then call DC_Exit() with the
 			given exit code.
 		*/
-	virtual void StarterExit( int code );
+	virtual void PREFAST_NORETURN StarterExit( int code );
 
 		/** Do any potential cleanup before exiting. Used both in 
 		    successful exits (StarterExit()) and EXCEPT()ions.
@@ -243,6 +243,7 @@ public:
 			running on a slot at all.
 		*/
 	int getMySlotNumber( void );
+	MyString getMySlotName( void );
 
 	bool isGridshell( void ) {return is_gridshell;};
 	const char* origCwd( void ) {return (const char*) orig_cwd;};

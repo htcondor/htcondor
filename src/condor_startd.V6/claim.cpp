@@ -221,6 +221,14 @@ Claim::publish( ClassAd* cad, amask_t how_much )
 		}
 		line.sprintf("%s=%d", ATTR_NUM_PIDS, numJobPids);
 		cad->Insert( line.Value() );
+
+        if ((tmp = c_client->rmtgrp())) {
+            cad->Assign(ATTR_REMOTE_GROUP, tmp);
+        }
+        if ((tmp = c_client->neggrp())) {
+            cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, tmp);
+            cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->autorg());
+        }
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -705,6 +713,19 @@ Claim::loadRequestInfo()
 		c_client->setConcurrencyLimits(limits);
 		free(limits); limits = NULL;
 	}
+
+    // stash information about what accounting group match was negotiated under
+    string strval;
+    if (c_ad->LookupString(ATTR_REMOTE_GROUP, strval)) {
+        c_client->setrmtgrp(strval.c_str());
+    }
+    if (c_ad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, strval)) {
+        c_client->setneggrp(strval.c_str());
+    }
+    bool boolval=false;
+    if (c_ad->LookupBool(ATTR_REMOTE_AUTOREGROUP, boolval)) {
+        c_client->setautorg(boolval);
+    }
 }
 
 void
@@ -1591,16 +1612,21 @@ Claim::starterKillHard( void )
 
 
 void
-Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode )
+Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft )
 {
 	if( c_starter ) {
-		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode) ) {
+		if( c_starter->holdJob(hold_reason,hold_code,hold_subcode,soft) ) {
 			return;
 		}
 		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");
 	}
 
-	starterKillSoft();
+	if( soft ) {
+		starterKillSoft();
+	}
+	else {
+		starterKillHard();
+	}
 }
 
 void
@@ -2016,6 +2042,9 @@ Client::Client()
 	c_host = NULL;
 	c_proxyfile = NULL;
 	c_concurrencyLimits = NULL;
+    c_rmtgrp = NULL;
+    c_neggrp = NULL;
+    c_autorg = false;
 	c_numPids = 0;
 }
 
@@ -2027,6 +2056,8 @@ Client::~Client()
 	if( c_acctgrp) free( c_acctgrp );
 	if( c_addr) free( c_addr );
 	if( c_host) free( c_host );
+    if (c_rmtgrp) free(c_rmtgrp);
+    if (c_neggrp) free(c_neggrp);
 }
 
 
@@ -2071,6 +2102,25 @@ Client::setAccountingGroup( const char* grp )
 	}
 }
 
+void Client::setrmtgrp(const char* rmtgrp_) {
+    if (c_rmtgrp) {
+        free(c_rmtgrp);
+        c_rmtgrp = NULL;
+    }
+    if (rmtgrp_) c_rmtgrp = strdup(rmtgrp_);
+}
+
+void Client::setneggrp(const char* neggrp_) {
+    if (c_neggrp) {
+        free(c_neggrp);
+        c_neggrp = NULL;
+    }
+    if (neggrp_) c_neggrp = strdup(neggrp_);
+}
+
+void Client::setautorg(const bool autorg_) {
+    c_autorg = autorg_;
+}
 
 void
 Client::setaddr( const char* updated_addr )
@@ -2218,6 +2268,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_COD ) { 
 		char buf[64];
 		snprintf( buf, 64, "COD%d", num );
+		buf[COUNTOF(buf)-1] = 0; // snprintf doesn't necessarly null terminate.
 		c_cod_id = strdup( buf );
 	} else {
 		c_cod_id = NULL;
@@ -2337,7 +2388,9 @@ ClaimId::dropFile( int slot_id )
 	if( rotate_file(filename_new.Value(), filename_old.Value()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
 				 filename_new.Value() );
-		unlink( filename_new.Value() );
+		if (unlink(filename_new.Value()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_new.Value() );
+		}
 	}
 }
 

@@ -44,7 +44,7 @@ bool All = false;
 
 SandboxTransferMethod st_method = STM_USE_SCHEDD_ONLY;
 
-void usage(int iExitCode=1);
+void PREFAST_NORETURN usage(int iExitCode=1);
 void procArg(const char*);
 void addConstraint(const char *);
 void handleAll();

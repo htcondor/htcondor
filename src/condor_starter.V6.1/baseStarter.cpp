@@ -1243,11 +1243,13 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 	MyString hold_reason;
 	int hold_code;
 	int hold_subcode;
+	int soft;
 
 	s->decode();
 	if( !s->get(hold_reason) ||
 		!s->get(hold_code) ||
 		!s->get(hold_subcode) ||
+		!s->get(soft) ||
 		!s->end_of_message() )
 	{
 		dprintf(D_ALWAYS,"Failed to read message from %s in CStarter::remoteHoldCommand()\n", s->peer_description());
@@ -1263,6 +1265,10 @@ CStarter::remoteHoldCommand( int /*cmd*/, Stream* s )
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
 		dprintf(D_ALWAYS,"Failed to send response to startd in CStarter::remoteHoldCommand()\n");
+	}
+
+	if( !soft ) {
+		return this->ShutdownFast();
 	}
 
 		//
@@ -1436,18 +1442,19 @@ CStarter::createTempExecuteDir( void )
 			if ( !advapi ) {
 				dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
 				efs_support = false;
-			}
-			FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
-				GetProcAddress(advapi,"EncryptionDisable");
-			if ( !EncryptionDisable ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
-				efs_support = false;
-			}
-			FPEncryptFileA EncryptFile = (FPEncryptFileA) 
-				GetProcAddress(advapi,"EncryptFileA");
-			if ( !EncryptFile ) {
-				dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
-				efs_support = false;
+			} else {
+				FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
+					GetProcAddress(advapi,"EncryptionDisable");
+				if ( !EncryptionDisable ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+					efs_support = false;
+				}
+				FPEncryptFileA EncryptFile = (FPEncryptFileA) 
+					GetProcAddress(advapi,"EncryptFileA");
+				if ( !EncryptFile ) {
+					dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+					efs_support = false;
+				}
 			}
 
 			if ( efs_support ) {
@@ -1829,7 +1836,9 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
+dprintf(D_ALWAYS, "GGTGGTGGT Looking up Prescript in %s\n", attr.Value());
 	if( jobAd->LookupString(attr.Value(), &tmp) ) {
+dprintf(D_ALWAYS, "GGTGGTGGT Found Prescript %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
@@ -2039,12 +2048,14 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 
 	if ( fclose( tmp_fp ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed close recovery file\n" );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( tmp_file.Value() );
 		return;
 	}
 
 	if ( rotate_file( tmp_file.Value(), m_recoveryFile.Value() ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed to rename recovery file\n" );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( tmp_file.Value() );
 	}
 }
@@ -2053,6 +2064,7 @@ void
 CStarter::RemoveRecoveryFile()
 {
 	if ( m_recoveryFile.Length() > 0 ) {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 		unlink( m_recoveryFile.Value() );
 		m_recoveryFile = "";
 	}
@@ -2157,7 +2169,10 @@ CStarter::Continue( void )
 	UserProc *job;
 	m_job_list.Rewind();
 	while ((job = m_job_list.Next()) != NULL) {
-		job->Continue();
+		if (this->suspended)
+		{
+		  job->Continue();
+		}
 	}
 	
 		//
@@ -2283,6 +2298,7 @@ CStarter::Reaper(int pid, int exit_status)
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
 			// SpawnJob() to launch the main job.
+		pre_script = NULL; // done with pre-script
 		if( ! SpawnJob() ) {
 			dprintf( D_ALWAYS, "Failed to start main job, exiting\n" );
 			main_shutdown_fast();
@@ -2638,11 +2654,8 @@ CStarter::PublishToEnv( Env* proc_env )
 		// slot identifier
 	env_name = base.Value();
 	env_name += "SLOT";
-	int slot = getMySlotNumber();
-	if (!slot) {
-		slot = 1;
-	}
-	proc_env->SetEnv(env_name.Value(), slot);
+	
+	proc_env->SetEnv(env_name.Value(), getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -2711,6 +2724,40 @@ CStarter::getMySlotNumber( void )
 	}
 
 	return slot_number;
+}
+
+MyString
+CStarter::getMySlotName(void) {
+	
+	char *logappend = param("STARTER_LOG");		
+	const char *tmp = NULL;
+		
+	MyString slotName = "";
+			
+	if ( logappend ) {
+			// We currently use the extension of the starter log file
+			// name to determine which slot we are.  Strange.
+		char const *log_basename = condor_basename(logappend);
+		MyString prefix;
+
+		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
+		if( resource_prefix ) {
+			prefix.sprintf(".%s",resource_prefix);
+			free( resource_prefix );
+		}
+		else {
+			prefix = ".slot";
+		}
+
+		tmp = strstr(log_basename, prefix.Value());
+		if ( tmp ) {				
+			slotName = (tmp + 1); // skip the .
+		} 
+
+		free(logappend);
+	}
+
+	return slotName;
 }
 
 

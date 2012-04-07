@@ -166,11 +166,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 
 	/* ctime adds a newline at the end of the ascii conversion.... */
 	str = ctime(&start_time);
-	if (str == NULL) {
-		/* This should never happen, but in case it does. */
-		str = "Unknown\n";
-	}
-	sprintf(line, "CkptServerIntervalStart = \"%s\"", str);
+	sprintf(line, "CkptServerIntervalStart = \"%s\"", str ? str : "Unknown\n");
 	tmp = strchr( line, '\n' );
 	if (tmp != NULL) {
 		/* delete the newline */
@@ -182,11 +178,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 
 	/* ctime adds a newline at the end of the ascii conversion.... */
 	str = ctime(&now);
-	if (str == NULL) {
-		/* This should never happen, but in case it does. */
-		str = "Unknown\n";
-	}
-	sprintf(line, "CkptServerIntervalEnd = \"%s\"", str);
+	sprintf(line, "CkptServerIntervalEnd = \"%s\"", str ? str : "Unknown\n");
 	tmp = strchr( line, '\n' );
 	if (tmp != NULL) {
 		/* delete the newline */

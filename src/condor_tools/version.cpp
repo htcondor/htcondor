@@ -26,7 +26,7 @@
 #include "condor_ver_info.h"
 #include "condor_distribution.h"
 
-void
+void PREFAST_NORETURN
 usage( char name[], int rval )
 {
 	fprintf( stderr, "Usage: %s [options]\n", name );
@@ -96,6 +96,7 @@ main(int argc, char *argv[])
 			usage( argv[0], 1 );
 		}
 		fullpath = (char *)malloc(strlen(path) + 24);
+		ASSERT( fullpath != NULL );
 		strcpy(fullpath, path);
 		strcat(fullpath, "/libcondorsyscall.a");
 				

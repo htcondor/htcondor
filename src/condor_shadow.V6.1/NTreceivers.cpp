@@ -435,7 +435,8 @@ do_REMOTE_syscall()
 
 
 		bool access_ok;
-		if ( flags & O_RDONLY ) {
+		// O_RDONLY, O_WRONLY, and O_RDWR are an enum, not flags. O_RDONLY==0
+		if ( (flags & (O_RDONLY  | O_WRONLY | O_RDWR)) == O_RDONLY ) {
 			access_ok = read_access(path);
 		} else {
 			access_ok = write_access(path);
@@ -500,6 +501,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
 		buf = (void *)malloc( (unsigned)len );
+		ASSERT( buf );
 		memset( buf, 0, (unsigned)len );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -537,6 +539,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		dprintf( D_SYSCALLS, "  len = %ld\n", (long)len );
 		buf = (void *)malloc( (unsigned)len );
+		ASSERT( buf );
 		memset( buf, 0, (unsigned)len );
 		result = ( syscall_sock->code_bytes_bool(buf, len) );
 		ASSERT( result );
@@ -1238,6 +1241,7 @@ case CONDOR_getfile:
 			stat(path, &info);
 			length = info.st_size;
 			buf = (void *)malloc( (unsigned)length );
+			ASSERT( buf );
 			memset( buf, 0, (unsigned)length );
 
 			errno = 0;
@@ -1299,6 +1303,7 @@ case CONDOR_putfile:
 		if(fd >= 0) {
 			syscall_sock->decode();
 			buffer = (char*)malloc( (unsigned)length );
+			ASSERT( buffer );
 			memset( buffer, 0, (unsigned)length );
 			result = ( syscall_sock->code_bytes_bool(buffer, length) );
 			ASSERT( result );
@@ -1432,6 +1437,7 @@ case CONDOR_getdir:
 		
 		errno = 0;
 		buffer = (char*)malloc( (unsigned)length );
+		ASSERT( buffer );
 		int size = 6;
 		if(length < size) {
 			rval = -1;
@@ -1475,6 +1481,7 @@ case CONDOR_getdir:
 
 		errno = 0;
 		buffer = (char*)malloc( (unsigned)length );
+		ASSERT( buffer );
 		int size = 7;
 		if(length < size) {
 			rval = -1;

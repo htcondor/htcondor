@@ -45,7 +45,7 @@ private:
 	{
 		BirdIcon() { bIconActive = false; }
 		NOTIFYICONDATA nid;
-		WCHAR strTooltip[256];
+		TCHAR strTooltip[256];
 		bool bIconActive;
 		bool bRunningJob;
 	};
@@ -55,7 +55,7 @@ private:
 	void setIcon(BirdIconVector::size_type iCpuId, HICON hToSet);
 	void removeIcon(BirdIconVector::size_type iCpuId);
 	
-	void onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam);
+	LRESULT onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam);
 	void reloadStatus();
 	WindowsMessageReceiver wmr;
 

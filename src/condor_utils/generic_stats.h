@@ -20,6 +20,7 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
+
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
 //     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
@@ -205,7 +206,9 @@ public:
    T*  pbuf;   // allocated buffer for the ring.
 
    T& operator[](int ix) { 
-      if ( ! pbuf || ! cMax) return pbuf[0]; // yes, we do want to segfault if pbuf==NULL
+      // yes, we do want to segfault if pbuf==NULL
+      MSC_SUPPRESS_WARNING_FOREVER(6011) // dereferencing null pointer.
+      if ( ! pbuf || ! cMax) return pbuf[0];
       return pbuf[(ixHead+ix+cMax) % cMax];
    }
 
@@ -411,10 +414,12 @@ template <class T>
 inline int ClassAdAssign(ClassAd & ad, const char * pattr, T value) {
    return ad.Assign(pattr, value);
 }
+/*
 template <>
 inline int ClassAdAssign(ClassAd & ad, const char * pattr, int64_t value) {
    return ad.Assign(pattr, (int)value);
 }
+*/
 
 template <class T>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
@@ -550,7 +555,7 @@ public:
       if ( ! flags) flags = PubDefault;
       if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
       if (flags & this->PubValue)
-         ClassAdAssign(ad, pattr, this->value); 
+         ClassAdAssign(ad, pattr, this->value);
       if (flags & this->PubRecent) {
          if (flags & this->PubDecorateAttr)
             ClassAdAssign2(ad, "Recent", pattr, recent);
@@ -1369,6 +1374,7 @@ public:
    void SetRecentMax(int window, int quantum);
    int  Advance(int cAdvance);
    void Publish(ClassAd & ad, int flags) const;
+   void Publish(ClassAd & ad, const char * prefix, int flags) const;
    void Unpublish(ClassAd & ad) const;
 
 private:

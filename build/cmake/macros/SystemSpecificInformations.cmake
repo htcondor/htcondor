@@ -177,8 +177,16 @@ if(UNIX)
 		string(REPLACE "/" "_" LINUX_VER ${LINUX_VER})        
 	endif()
       endif()
-      # Mandriva case
-      # TODO      
+      # Guess at the name for other Linux distros
+      if(NOT SYSTEM_NAME)
+	string(REGEX MATCH "([^ ]+) [^0-9]*([0-9.]+)" DISTRO "${LINUX_ISSUE}")
+        set(LINUX_NAME "${CMAKE_MATCH_1}")
+	set(LINUX_VER "${CMAKE_MATCH_2}")
+	set(SYSTEM_NAME "${LINUX_NAME}")
+	if(EXISTS "/etc/debian_version")
+	  set(DEB_SYSTEM_NAME "${LINUX_NAME}")
+	endif()
+      endif()
 
 	#Find CPU Arch
 	if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")

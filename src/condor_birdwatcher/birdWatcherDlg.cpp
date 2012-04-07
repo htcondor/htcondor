@@ -43,10 +43,10 @@ INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 		if(!SetTimer(hwndDlg, 1000, 1000, NULL))
 		{
-			DWORD temp = GetLastError();
-			WCHAR buffer[256];
-			_ltow(temp, buffer, 10);
-			OutputDebugString((LPCSTR)buffer);
+			DWORD err = GetLastError();
+			TCHAR sz[256];
+			wsprintf(sz, TEXT("SetTimer failed err=%d"), err);
+			OutputDebugString(sz);
 		}
 		
 		return true;
@@ -77,98 +77,105 @@ void OnTimer(UINT nIDEvent)
 	if (!IsWindowVisible(birdwatcherDLG))
 		return;
 
-	HANDLE hBirdq_Rd;
-	HANDLE hBirdq_Wr;
-	HANDLE hBirdst_Rd;
-	HANDLE hBirdst_Wr;
-
-	BOOL bSuccess;
-
-	DWORD dwRead;
-	DWORD bufSize = 1024;
+	const int bufSize = 4096;
 
 	SECURITY_ATTRIBUTES saAttr;
-
 	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
 	saAttr.bInheritHandle = TRUE;
 	saAttr.lpSecurityDescriptor = NULL;
 
-	if(!CreatePipe(&hBirdq_Rd, &hBirdq_Wr, &saAttr, 0))
+	HANDLE hRd = NULL;
+	HANDLE hWr = NULL;
+	if(!CreatePipe(&hRd, &hWr, &saAttr, 0))
 	{
 		return;
 	}
 
-	if(!SetHandleInformation(hBirdq_Rd, HANDLE_FLAG_INHERIT, 0))
+	if(!SetHandleInformation(hRd, HANDLE_FLAG_INHERIT, 0))
 	{
+		CloseHandle(hRd); hRd = NULL;
+		CloseHandle(hWr); hWr = NULL;
 		return;
 	}
 
-	STARTUPINFO si[2];
-	PROCESS_INFORMATION pi[2];
+	STARTUPINFO si;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	si.dwFlags |= STARTF_USESTDHANDLES;
+	si.hStdOutput = hWr;
 
-	ZeroMemory(&si[0], sizeof(STARTUPINFO));
-	ZeroMemory(&si[1], sizeof(STARTUPINFO));
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(pi));
 
-	ZeroMemory(&pi[0], sizeof(PROCESS_INFORMATION));
-	ZeroMemory(&pi[1], sizeof(PROCESS_INFORMATION));
-
-	si[0].dwFlags |= STARTF_USESTDHANDLES;
-	si[0].hStdOutput = hBirdq_Wr;
-	si[0].cb = sizeof(si[0]);
-
-	bSuccess = CreateProcess((LPCSTR)L"condor_q.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[0], &pi[0]);
+	BOOL bSuccess = CreateProcess(TEXT("condor_q.exe"), 
+		                          NULL, NULL, NULL, true, 
+								  CREATE_NO_WINDOW, NULL, NULL, 
+								  &si, &pi);
 	if(bSuccess)
 	{
-		if(WaitForSingleObject(pi[0].hProcess, 2000) == WAIT_TIMEOUT)
-				TerminateProcess(pi[0].hProcess, 1);
+		CloseHandle(pi.hThread); // don't need this.
 
-		if(CloseHandle(hBirdq_Wr))
+		if(WaitForSingleObject(pi.hProcess, 2000) == WAIT_TIMEOUT)
+			TerminateProcess(pi.hProcess, 1);
+
+		char szBuf[bufSize+1];
+		ZeroMemory(szBuf, bufSize+1);
+
+		DWORD cbRead = 0;
+		if (ReadFile(hRd, szBuf, sizeof(szBuf)-sizeof(szBuf[0]), &cbRead, NULL))
 		{
-			char *psBuf = new char[bufSize];
-			ZeroMemory(psBuf, bufSize);
-			ReadFile(hBirdq_Rd, psBuf, bufSize, &dwRead, NULL);
-
-			SetDlgItemTextA(birdwatcherDLG, IDC_EDIT_TOP_PANE, psBuf);
-			delete [] psBuf;
-			CloseHandle(hBirdq_Rd);
+			SetDlgItemTextA(birdwatcherDLG, IDC_EDIT_TOP_PANE, szBuf);
+			szBuf[cbRead/sizeof(szBuf[0])] = 0;
 		}
+
+
+		CloseHandle(pi.hProcess);
 	}
+	CloseHandle(hRd); hRd = NULL;
+	CloseHandle(hWr); hWr = NULL;
 
-	CloseHandle(pi[0].hProcess);
-	CloseHandle(pi[0].hThread);
+	ZeroMemory(&pi, sizeof(pi));
 
-	if(!CreatePipe(&hBirdst_Rd, &hBirdst_Wr, &saAttr, 0))
+	if(!CreatePipe(&hRd, &hWr, &saAttr, 0))
 	{
 		return;
 	}
 
-	if(!SetHandleInformation(hBirdst_Rd, HANDLE_FLAG_INHERIT, 0))
+	if(!SetHandleInformation(hRd, HANDLE_FLAG_INHERIT, 0))
 	{
+		CloseHandle(hRd); hRd = NULL;
+		CloseHandle(hWr); hWr = NULL;
 		return;
 	}
 
-	si[1].dwFlags |= STARTF_USESTDHANDLES;
-	si[1].hStdOutput = hBirdst_Wr;
-	si[1].cb = sizeof(si[1]);
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	si.dwFlags |= STARTF_USESTDHANDLES;
+	si.hStdOutput = hWr;
 
-	bSuccess = CreateProcess((LPCSTR)L"condor_status.exe", NULL, NULL, NULL, true, CREATE_NO_WINDOW, NULL, NULL, &si[1], &pi[1]);
+	bSuccess = CreateProcess(TEXT("condor_status.exe"), 
+		                     NULL, NULL, NULL, true, 
+							 CREATE_NO_WINDOW, NULL, NULL, 
+							 &si, &pi);
 	if(bSuccess)
 	{
-		if(WaitForSingleObject(pi[1].hProcess, 2000) == WAIT_TIMEOUT)
-				TerminateProcess(pi[1].hProcess, 1);
+		CloseHandle(pi.hThread); // don't need this.
 
-		if(CloseHandle(hBirdst_Wr))
+		if(WaitForSingleObject(pi.hProcess, 2000) == WAIT_TIMEOUT)
+			TerminateProcess(pi.hProcess, 1);
+
+		char szBuf[bufSize+1];
+		ZeroMemory(szBuf, bufSize+1);
+
+		DWORD cbRead = 0;
+		if (ReadFile(hRd, szBuf, sizeof(szBuf)-sizeof(szBuf[0]), &cbRead, NULL))
 		{
-			char *psBuf = new char[bufSize];
-			ZeroMemory(psBuf, bufSize);
-			ReadFile(hBirdst_Rd, psBuf, bufSize, &dwRead, NULL);
-
-			SetDlgItemTextA(birdwatcherDLG, IDC_EDIT_BOTTOM_PANE, psBuf);
-			delete [] psBuf;
-			CloseHandle(hBirdst_Rd);
+			SetDlgItemTextA(birdwatcherDLG, IDC_EDIT_BOTTOM_PANE, szBuf);
+			szBuf[cbRead/sizeof(szBuf[0])] = 0;
 		}
-	}
 
-	CloseHandle(pi[1].hProcess);
-	CloseHandle(pi[1].hThread);
+		CloseHandle(pi.hProcess);
+	}
+	CloseHandle(hRd); hRd = NULL;
+	CloseHandle(hWr); hWr = NULL;
 }

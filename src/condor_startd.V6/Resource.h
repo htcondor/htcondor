@@ -62,7 +62,7 @@ public:
 	int		deactivate_claim_forcibly( void );
 
 		// Tell the starter to put the job on hold
-	void hold_job();
+	void hold_job(bool soft);
 
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();

@@ -336,8 +336,8 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		// printf("Result is %lS\n", str);
 
 		len = wcslen(str);
-		tmp = (char*) malloc(len+1 * sizeof(char));
-
+		tmp = (char*) malloc(len*2+1 * sizeof(char));
+		ASSERT(tmp);
 		sprintf(tmp, "%S", str);
 
 		bn = condor_basename(tmp);
@@ -395,26 +395,17 @@ WindowsFirewallHelper::removeTrusted( const char *app_path ) {
 BSTR
 WindowsFirewallHelper::charToBstr(const char* str) {
 
-	LPWSTR wstr;
 	BSTR the_bstr;
 	HRESULT hr = S_OK;
 
-	    // Allocate a BSTR for the process image file name.
-	wstr = (LPWSTR)malloc((strlen(str)+1)*sizeof(WCHAR));
-	swprintf(wstr, L"%S", str);
-
-    the_bstr = SysAllocString(wstr);
-	
-	// get rid of this dumb string right away so we don't leak it.
-	free(wstr);
-	wstr = NULL;
-    
-	if (SysStringLen(the_bstr) == 0) {
+	int cch = MultiByteToWideChar(CP_ACP, 0, str, strlen(str), NULL, 0);
+	the_bstr = SysAllocStringLen(NULL, cch); // SysAllocateString adds +1 to allocation size
+	if ( ! the_bstr) {
         hr = E_OUTOFMEMORY;
         dprintf(D_ALWAYS, "WinFirewall: SysAllocString failed: 0x%08lx\n", hr);
         return NULL;
-    }
-
+	}
+	MultiByteToWideChar(CP_ACP, 0, str, -1, (WCHAR*)the_bstr, cch+1);
 	return the_bstr;
 }
 

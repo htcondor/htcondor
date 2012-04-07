@@ -1921,7 +1921,7 @@ static int local_system_posix(const char *command)
 	int status = -1;
 	struct sigaction ignore, saveintr, savequit;
 	sigset_t chldmask, savemask;
-	char *argv[4];
+	const char *argv[4];
 	extern char **environ;
 
 	if (command == NULL) {
@@ -1968,7 +1968,7 @@ static int local_system_posix(const char *command)
 
 		argv[0] = "sh";
 		argv[1] = "-c";
-		argv[2] = (char*)command;
+		argv[2] = command;
 		argv[3] = NULL;
 		syscall(SYS_execve, "/bin/sh", argv, environ);
 

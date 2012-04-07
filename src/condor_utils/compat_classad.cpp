@@ -586,6 +586,64 @@ bool stringListRegexpMember_func( const char * /*name*/,
 	return true;
 }
 
+// split user@domain or slot@machine, result is always a list of 2 strings
+// if there is no @ in the input, then for user@domain the domain is empty
+// for slot@machine the slot is empty
+static
+bool splitAt_func( const char * name,
+	const classad::ArgumentList &arg_list,
+	classad::EvalState &state, 
+	classad::Value &result )
+{
+	classad::Value arg0;
+
+	// Must have one argument
+	if ( arg_list.size() != 1) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	// Evaluate the argument
+	if( !arg_list[0]->Evaluate( state, arg0 )) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If either argument isn't a string, then the result is
+	// an error.
+	std::string str;
+	if( !arg0.IsStringValue(str) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::Value first;
+	classad::Value second;
+
+	unsigned int ix = str.find_first_of('@');
+	if (ix >= str.size()) {
+		if (0 == strcasecmp(name, "splitslotname")) {
+			first.SetStringValue("");
+			second.SetStringValue(str);
+		} else {
+			first.SetStringValue(str);
+			second.SetStringValue("");
+		}
+	} else {
+		first.SetStringValue(str.substr(0, ix));
+		second.SetStringValue(str.substr(ix+1));
+	}
+
+	classad::ExprList *lst = new classad::ExprList();
+	ASSERT(lst);
+	lst->push_back(classad::Literal::MakeLiteral(first));
+	lst->push_back(classad::Literal::MakeLiteral(second));
+
+	result.SetListValue(lst);
+
+	return true;
+}
+
 static
 void registerStrlistFunctions()
 {
@@ -614,6 +672,14 @@ void registerStrlistFunctions()
 	name = "stringList_regexpMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
+
+	// user@domain, slot@machine & sinful string crackers.
+	name = "splitusername";
+	classad::FunctionCall::RegisterFunction( name, splitAt_func );
+	name = "splitslotname";
+	classad::FunctionCall::RegisterFunction( name, splitAt_func );
+	//name = "splitsinful";
+	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
 }
 
 void
@@ -995,6 +1061,26 @@ LookupInteger( const char *name, int &value ) const
 }
 
 int ClassAd::
+LookupInteger( const char *name, int64_t &value ) const
+{
+	bool    boolVal;
+	int     haveInteger;
+	string  sName(name);
+	int		tmp_val;
+
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
+		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
+	}
+	return haveInteger;
+}
+
+int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
@@ -1170,36 +1256,60 @@ int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
-	int tmp_val;
+	classad::Value val;
 
 	if( target == this || target == NULL ) {
 		getTheMyRef( this );
-		if( EvaluateAttrInt( name, tmp_val ) ) { 
-			value = tmp_val;
+		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
 		releaseTheMyRef( this );
-		return rc;
 	}
+	else 
+	{
+	  getTheMatchAd( this, target );
+	  if( this->Lookup( name ) ) {
+		  if( this->EvaluateAttr( name, val ) ) {
+			  rc = 1;
+		  }
+	  } else if( target->Lookup( name ) ) {
+		  if( target->EvaluateAttr( name, val ) ) {
+			  rc = 1;
+		  }
+	  }
+	  releaseTheMatchAd();
+	}
+	
+	
+	// we have a "val" now cast if needed.
+	if ( 1 == rc ) 
+	{
+	  double doubleVal;
+	  int intVal;
+	  bool boolVal;
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
+	  if( val.IsRealValue( doubleVal ) ) {
+	    value = ( int )doubleVal;
+	  }
+	  else if( val.IsIntegerValue( intVal ) ) {
+	    value = intVal;
+	  }
+	  else if( val.IsBooleanValue( boolVal ) ) {
+	    value = ( int )boolVal;
+	  }
+	  else 
+	  { 
+	    // if we got here there is an issue with evaluation.
+	    rc = 0;
+	  }
+			
 	}
-	releaseTheMatchAd();
+	
 	return rc;
 }
 
 int ClassAd::
-EvalFloat (const char *name, classad::ClassAd *target, float &value)
+EvalFloat (const char *name, classad::ClassAd *target, double &value)
 {
 	int rc = 0;
 	classad::Value val;
@@ -1211,15 +1321,15 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
-				value = ( float )doubleVal;
+				value = doubleVal;
 				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
-				value = ( float )intVal;
+				value = intVal;
 				rc = 1;
 			}
 			if( val.IsBooleanValue( boolVal ) ) {
-				value = ( float )boolVal;
+				value = boolVal;
 				rc = 1;
 			}
 		}
@@ -1231,30 +1341,30 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
-				value = ( float )doubleVal;
+				value = doubleVal;
 				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
-				value = ( float )intVal;
+				value = intVal;
 				rc = 1;
 			}
 			if( val.IsBooleanValue( boolVal ) ) {
-				value = ( float )boolVal;
+				value = boolVal;
 				rc = 1;
 			}
 		}
 	} else if( target->Lookup( name ) ) {
 		if( target->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
-				value = ( float )doubleVal;
+				value = doubleVal;
 				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
-				value = ( float )intVal;
+				value = intVal;
 				rc = 1;
 			}
 			if( val.IsBooleanValue( boolVal ) ) {
-				value = ( float )boolVal;
+				value = boolVal;
 				rc = 1;
 			}
 		}
@@ -1544,7 +1654,7 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
                         3 +     // " = "
                         1;      // null termination
         buffer = (char*) malloc(buffersize);
-        
+        ASSERT( buffer != NULL );
     } 
 
     snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
@@ -1627,6 +1737,7 @@ NextNameOriginal()
 		m_nameItrState = ItrInChain;
 	}
 	if ( ( m_nameItrState!=ItrInChain && m_nameItr == end() ) ||
+		 ( m_nameItrState==ItrInChain && chained_ad == NULL ) ||
 		 ( m_nameItrState==ItrInChain && m_nameItr == chained_ad->end() ) ) {
 		return NULL;
 	}
@@ -1935,6 +2046,7 @@ bool ClassAd::NextExpr( const char *&name, ExprTree *&value )
 		m_exprItrState = ItrInChain;
 	}
 	if ( ( m_exprItrState!=ItrInChain && m_exprItr == end() ) ||
+		 ( m_exprItrState==ItrInChain && chained_ad == NULL ) ||
 		 ( m_exprItrState==ItrInChain && m_exprItr == chained_ad->end() ) ) {
 		return false;
 	}
@@ -2489,6 +2601,7 @@ static const char *machine_attrs_list[] = {
 	ATTR_VM_NETWORKING_TYPES,
 	ATTR_HAS_RECONNECT,
 	ATTR_HAS_FILE_TRANSFER,
+	ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS,
 	ATTR_HAS_PER_FILE_ENCRYPTION,
 	ATTR_HAS_MPI,
 	ATTR_HAS_TDP,

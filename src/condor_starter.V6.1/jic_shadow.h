@@ -418,6 +418,9 @@ private:
 		// The shadow is feeding us a new proxy. Override from parent
 	bool updateX509Proxy(int cmd, ReliSock * s);
 
+		// The proxy is about to expire, do something!
+	int proxyExpiring();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -426,6 +429,9 @@ private:
 
 		/** The version of the shadow if known; otherwise NULL */
 	CondorVersionInfo* shadow_version;
+
+		/// timer id of the proxy expiration timer
+	int m_proxy_expiration_tid;
 
 		/// hostname (or whatever the startd gave us) of our shadow 
 	char* m_shadow_name;

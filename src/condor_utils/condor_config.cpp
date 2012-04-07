@@ -34,10 +34,11 @@
   "CONDOR_CONFIG" environment variable to find its location.  If that
   doesn't exist, we look in the following locations:
 
-      1) /etc/condor/
-      2) /usr/local/etc/
-      3) ~condor/
-      4) ${GLOBUS_LOCATION}/etc/
+      1) ~/.condor/     # if not started as root
+      2) /etc/condor/
+      3) /usr/local/etc/
+      4) ~condor/
+      5) ${GLOBUS_LOCATION}/etc/
 
   If none of the above locations contain a config source, config()
   prints an error message and exits.
@@ -303,6 +304,25 @@ param_all(void)
 
 	return pvs;
 }
+
+// return a list of param names that match the given regex, this list is in hashtable order (i.e. no order)	
+int param_names_matching(Regex & re, ExtArray<const char *>& names)	
+{	
+	int cAdded = 0;	
+	HASHITER it = hash_iter_begin(ConfigTab, TABLESIZE);	
+	while( ! hash_iter_done(it)) {	
+		const char *name = hash_iter_key(it);	
+		if (re.match(name)) {	
+			names.add(name);	
+			++cAdded;	
+		}	
+		hash_iter_next(it);	
+	}	
+	hash_iter_delete(&it);	
+
+	return cAdded;	
+}
+
 
 static int ParamValueNameAscendingSort(const void *l, const void *r)
 {
@@ -1077,20 +1097,26 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 4;
+		int locations_length = 5;
 		MyString locations[locations_length];
-			// 1) /etc/condor/condor_config
-		locations[0].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
-			// 2) /usr/local/etc/condor_config (FreeBSD)
-		locations[1].sprintf( "/usr/local/etc/%s", file_name );
-		if (tilde) {
-				// 3) ~condor/condor_config
-			locations[2].sprintf( "%s/%s", tilde, file_name );
+			// 1) $HOME/.condor/condor_config
+		struct passwd *pw = getpwuid( geteuid() );
+		if ( !can_switch_ids() && pw && pw->pw_dir ) {
+			sprintf( locations[0], "%s/.%s/%s", pw->pw_dir, myDistro->Get(),
+					 file_name );
 		}
-			// 4) ${GLOBUS_LOCATION}/etc/condor_config
+			// 2) /etc/condor/condor_config
+		locations[1].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
+			// 3) /usr/local/etc/condor_config (FreeBSD)
+		locations[2].sprintf( "/usr/local/etc/%s", file_name );
+		if (tilde) {
+				// 4) ~condor/condor_config
+			locations[3].sprintf( "%s/%s", tilde, file_name );
+		}
+			// 5) ${GLOBUS_LOCATION}/etc/condor_config
 		char *globus_location;
 		if ((globus_location = getenv("GLOBUS_LOCATION"))) {
-			locations[3].sprintf( "%s/etc/%s", globus_location, file_name );
+			locations[4].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
 
 		int ctr;	
@@ -1266,9 +1292,19 @@ fill_attributes()
 		extra_info->AddInternalParam("OPSYS_NAME");
 	}
 	
-	if( (tmp = sysapi_opsys_distro()) != NULL ) {
-		insert( "OPSYS_DISTRO", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_DISTRO");
+	if( (tmp = sysapi_opsys_long_name()) != NULL ) {
+		insert( "OPSYS_LONG_NAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_LONG_NAME");
+	}
+
+	if( (tmp = sysapi_opsys_short_name()) != NULL ) {
+		insert( "OPSYS_SHORT_NAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_SHORT_NAME");
+	}
+
+	if( (tmp = sysapi_opsys_legacy()) != NULL ) {
+		insert( "OPSYS_LEGACY", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_LEGACY");
 	}
 
         // temporary attributes for raw utsname info
@@ -2296,6 +2332,7 @@ set_persistent_config(char *admin, char *config)
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
 		do {
+			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( tmp_filename.Value() );
 			fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 		} while (fd == -1 && errno == EEXIST);
@@ -2308,6 +2345,7 @@ set_persistent_config(char *admin, char *config)
 		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
+			close(fd);
 			ABORT;
 		}
 		if (close(fd) < 0) {
@@ -2348,6 +2386,7 @@ set_persistent_config(char *admin, char *config)
 	// update admin list on disk
 	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
 	do {
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( tmp_filename.Value() );
 		fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 	} while (fd == -1 && errno == EEXIST);
@@ -2361,6 +2400,7 @@ set_persistent_config(char *admin, char *config)
 	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
 		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 				 "set_persistent_config()\n", strerror(errno), errno );
+		close(fd);
 		ABORT;
 	}
 	PersistAdminList.rewind();
@@ -2370,6 +2410,7 @@ set_persistent_config(char *admin, char *config)
 			if (write(fd, ", ", 2) != 2) {
 				dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 						 "set_persistent_config()\n", strerror(errno), errno );
+				close(fd);
 				ABORT;
 			}
 		} else {
@@ -2378,12 +2419,14 @@ set_persistent_config(char *admin, char *config)
 		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
+			close(fd);
 			ABORT;
 		}
 	}
 	if (write(fd, "\n", 1) != 1) {
 		dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 				 "set_persistent_config()\n", strerror(errno), errno );
+		close(fd);
 		ABORT;
 	}
 	if (close(fd) < 0) {
@@ -2404,8 +2447,10 @@ set_persistent_config(char *admin, char *config)
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
 		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
+			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( toplevel_persistent_config.Value() );
 		}
 	}
@@ -2550,6 +2595,7 @@ process_runtime_configs()
 					 ConfigLineNo, tmp_file, rArray[i].admin );
 			exit(1);
 		}
+		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink(tmp_file);
 		free(tmp_file);
 	}

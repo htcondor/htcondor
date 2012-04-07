@@ -314,6 +314,11 @@ parsePrintfFormat( const char **fmt_p, struct printf_fmt_info *info )
 		info->is_long = 1;
 		break;
 		
+    case 'V':
+    case 'v':
+		info->type = PFT_VALUE;
+		break;
+
     case '%':
 			/* literal '%' char!  in this case, we just want to
 			   recursively call ourselves and keep parsing, since we

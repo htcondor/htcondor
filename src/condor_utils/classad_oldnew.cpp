@@ -372,6 +372,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
                                         + 3     //for " = "
                                         + 12    // for integer
                                         +1);    //for null termination
+        ASSERT( serverTimeStr );
         sprintf(serverTimeStr, "%s = %ld", ATTR_SERVER_TIME, (long)time(NULL) );
         if(!sock->put(serverTimeStr)){
             free(serverTimeStr);

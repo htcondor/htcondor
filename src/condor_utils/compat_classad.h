@@ -26,6 +26,20 @@
 class StringList;
 class Stream;
 
+// hopefully this can go away when classads has native support for 64bit int
+// in the mean time, we want to do the conversion as close to the classad api
+// as possible.
+#ifndef classad_int64
+# ifdef WIN32
+# define classad_int64 __int64
+# elif defined(__x86_64__) && ! defined(Darwin)
+# define classad_int64_is_long
+# define classad_int64 long
+# else
+# define classad_int64 long long
+# endif
+#endif
+
 #ifndef TRUE
 #define TRUE  1
 #endif
@@ -191,7 +205,12 @@ class ClassAd : public classad::ClassAd
 	int Assign(char const *name,unsigned int value)
 	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
 
-	int Assign(char const *name,long value)
+#if ! defined classad_int64_is_long
+	int Assign(char const *name,long value) // TJ: fix for int64 classad
+	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+#endif
+
+	int Assign(char const *name,classad_int64 value) // TJ: fix for int64 classad
 	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long value)
@@ -263,6 +282,13 @@ class ClassAd : public classad::ClassAd
 		 *  @return true if the attribute exists and is a float, false otherwise
 		 */
 
+	int LookupInteger(const char *name, int64_t &value) const;
+		/** Lookup (don't evaluate) an attribute that is a float.
+		 *  @param name The attribute
+		 *  @param value The integer
+		 *  @return true if the attribute exists and is a float, false otherwise
+		 */
+
 	int LookupFloat(const char *name, float &value) const;
 
 		/** Lookup (don't evaluate) an attribute that can be considered a boolean
@@ -324,6 +350,12 @@ class ClassAd : public classad::ClassAd
 		 *  but is not an integer
 		 */
 	int EvalInteger (const char *name, classad::ClassAd *target, int &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, classad_int64 & value) {
+		int ival;
+		int result = EvalInteger(name, target, ival);  // TJ: fix for int64 classad
+		value = ival;
+		return result;
+	}
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute
@@ -333,7 +365,13 @@ class ClassAd : public classad::ClassAd
 		 *  but is not a float.
 		 */
 
-	int EvalFloat (const char *name, classad::ClassAd *target, float &value);
+	int EvalFloat (const char *name, classad::ClassAd *target, double &value);
+	int EvalFloat (const char *name, classad::ClassAd *target, float &value) {
+		double dval;
+		int result = EvalFloat(name, target, dval);
+		value = dval;
+		return result;
+	}
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a boolean
 		 *  @param name The name of the attribute

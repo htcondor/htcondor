@@ -291,6 +291,7 @@ class DaemonCore : public Service
   friend unsigned pidWatcherThread(void*);
 #endif
   friend int dc_main(int, char**);
+  friend class DaemonCommandProtocol;
     
   public:
     
@@ -2005,7 +2006,7 @@ public:
 		   a normal "exit".  If the exec() fails, the normal exit() will
 		   occur.
 */
-extern void DC_Exit( int status, const char *shutdown_program = NULL );
+extern PREFAST_NORETURN void DC_Exit( int status, const char *shutdown_program = NULL );
 
 /** Call this function (inside your main_pre_dc_init() function) to
     bypass the authorization initialization in daemoncore.  This is for

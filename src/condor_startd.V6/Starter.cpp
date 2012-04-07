@@ -1135,6 +1135,24 @@ Starter::percentCpuUsage( void )
 	// Otherwise, s_usage will not change.
 	if ( resmgr ) {
 		resmgr->m_vmuniverse_mgr.getUsageForVM(s_pid, s_usage);
+		
+		// Now try to tack on details posted in the job ad because 
+		// hypervisors such as libvirt will spawn processes outside 
+		// of condor's perview. 
+		float fPercentCPU=0.0;
+		int iNumCPUs=0;
+		ClassAd * jobAd = s_claim->ad();
+		
+		jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
+		jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, iNumCPUs);
+		
+		// computations outside take cores into account.
+		fPercentCPU = fPercentCPU * iNumCPUs;
+		
+		dprintf( D_LOAD, "Starter::percentCpuUsage() adding VM Utilization %f\n",fPercentCPU);
+		
+		s_usage.percent_cpu += fPercentCPU;
+		
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
@@ -1387,7 +1405,7 @@ Starter::softkillTimeout( void )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft)
 {
 	if( !s_is_dc ) {
 		return false;  // this starter does not support putting jobs on hold
@@ -1398,13 +1416,20 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode)
 	}
 
 	classy_counted_ptr<DCStarter> starter = new DCStarter(getIpAddr());
-	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode);
+	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
 	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
 
 	msg->setCallback( m_hold_job_cb );
 
 	starter->sendMsg(msg.get());
+
+	if( soft ) {
+		startSoftkillTimeout();
+	}
+	else {
+		startKillTimer();
+	}
 
 	return true;
 }

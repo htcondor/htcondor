@@ -50,7 +50,7 @@ use warnings;
 
 use Carp;
 use Cwd;
-use POSIX "sys_wait_h";
+use POSIX qw/sys_wait_h strftime/;
 use Socket;
 use Sys::Hostname;
 
@@ -320,14 +320,14 @@ sub StartCondorWithParams
 	return( $config_and_port );
 }
 
-sub debug
-{
+sub debug {
     my $string = shift;
-	my $markedstring = "CP:" . $string;
-	my $level = shift;
+    my $markedstring = "CP:" . $string;
+    my $level = shift;
     if(!(defined $level)) {
         print( "", timestamp(), ": $markedstring" ) if $DEBUG;
-    } elsif($level <= $DEBUGLEVEL) {
+    }
+    elsif($level <= $DEBUGLEVEL) {
         print( "", timestamp(), ": $markedstring" ) if $DEBUG;
     }
 }
@@ -349,7 +349,7 @@ sub DebugOff
 }
 
 sub timestamp {
-    return scalar localtime();
+    return strftime("%Y/%m/%d %H:%M:%S", localtime);
 }
 
 sub Reset
@@ -1471,40 +1471,37 @@ sub IsRunningYet
 	}
 
 	if($daemonlist =~ /STARTD/i) {
-		# lets wait for the collector to know about it
-		# if we have a collector
-		my $havestartd = "";
-		my $done = "no";
-		my $currenthost = CondorTest::getFqdnHost();
-		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
-			print "Waiting for collector to see startd - ";
-			$loopcount = 0;
-			TRY: while( $done eq "no") {
-				$loopcount += 1;
-				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
+            # lets wait for the collector to know about it if we have a collector
+            my $currenthost = CondorTest::getFqdnHost();
+            if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+                print "Waiting for collector to see startd - ";
+                $loopcount = 0;
+                while(1) {
+                    $loopcount += 1;
+                    my $output = `condor_status -startd -format \"%s\\n\" name`;
+                    
+                    my $res = $?;
+                    if ($res != 0) {
+                        print "\ncondor_status returned error code $res\n";
+                        print timestamp(), " The collector probably is not running after all, giving up\n";
+                        print timestamp(), " Output from condor_status:\n";
+                        print $output;
+                        return 0;
+                    }
+                    
+                    if($output =~ /$currenthost/) {
+                        print "ok\n";
+                        last;
+                    }
 
-				my $res = $?;
-				if ($res != 0) {
-					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
-					return 0;
-				}
-
-    			foreach my $line (@cmd)
-    			{
-        			if( $line =~ /^.*$currenthost.*/)
-        			{
-            			$done = "yes";
-						print "ok\n";
-						last TRY;
-        			}
-    			}
-				if($loopcount == $runlimit) { 
-					print "bad\n";
-					last; 
-				}
-				sleep ($loopcount * $backoff);
-			}
-		}
+                    if($loopcount == $runlimit) { 
+                        print "bad\n";
+                        print timestamp(), " Timed out waiting for collector to see startd\n";
+                        last; 
+                    }
+                    sleep ($loopcount * $backoff);
+                }
+            }
 	}
 
 	if($daemonlist =~ /SCHEDD/i) {
@@ -1588,44 +1585,48 @@ sub IsRunningYet
 #
 #################################################################
 
-sub CollectDaemonPids
-{
-	my $daemonlist = `condor_config_val daemon_list`;
-	$daemonlist =~ s/\s*//g;
-	my @daemons = split /,/, $daemonlist;
-	my $savedir = getcwd();
-	my $logdir = `condor_config_val log`;
-	$logdir =~ s/\012+$//;
-	$logdir =~ s/\015+$//;
+sub CollectDaemonPids {
+    my $daemonlist = `condor_config_val daemon_list`;
+    $daemonlist =~ s/\s*//g;
+    my @daemons = split /,/, $daemonlist;
 
+    my $logdir = `condor_config_val log`;
+    CondorUtils::fullchomp($logdir);
 
+    
+    my $logfile = "$logdir/MasterLog";
+    debug("In CollectDaemonPids(), examining log $logfile\n", $debuglevel);
+    open(TA, '<', $logfile) or die "Can not read '$logfile': $!\n";
+    my $master;
+    my %pids = ();
+    while(<TA>) {
+        chomp;
+        if(/PID\s+=\s+(\d+)/) {
+            # Capture the master pid.  At kill time we will suggest with signal 3
+            # that the master and friends go away before we get blunt.
+            $master = $1;
 
-	#print "logs are here:$logdir\n";
-	my $pidfile = $logdir . "/PIDS";
-	open(PD,">$pidfile") or die "Can not create<$pidfile>:$!\n";
+            # Every time we find a new master pid it means that all the previous pids
+            # we had recorded were for a different instance of Condor.  So reset the list.
+            %pids = ();
+        }
+        elsif(/Started DaemonCore process\s\"(.*)\",\s+pid\s+and\s+pgroup\s+=\s+(\d+)/) {
+            # We store these in a hash because if the daemon crashes and restarts
+            # we only want the latest value for its pid.
+            $pids{$1} = $2;
+        }
+    }
+    close(TA);
 
-	my $logfile = "";
-	my $line = "";
-	#print "Checking logs for daemon <$one>\n";
-	$logfile = $logdir . "/MasterLog";
-	#print "Look in $logfile for pid\n";
-	open(TA,"<$logfile") or die "Can not open <$logfile>:$!\n";
-	while(<TA>) {
-		chomp();
-		$line = $_;
-		if($line =~ /^.*PID\s+=\s+(\d+).*$/) {
-			# at kill time we will suggest with signal 3
-			# that the master and friends go away before
-			# we get blunt. This will help us know which
-			# pid is the master.
-			print PD "$1 MASTER\n";
-		} elsif($line =~ /^.*Started DaemonCore process\s\"(.*)\",\s+pid\s+and\s+pgroup\s+=\s+(\d+).*$/) {
-			debug("Saving PID for $1 as $2\n",$debuglevel);
-			print PD "$2\n";
-		}
-	}
-	close(TA);
-	close(PD);
+    my $pidfile = "$logdir/PIDS";
+    open(PIDS, '>', $pidfile) or die "Can not create file '$pidfile': $!\n";
+    debug("Master pid: $master\n");
+    print PIDS "$master MASTER\n";
+    foreach my $daemon (keys %pids) {
+        debug("\t$daemon pid: $pids{$daemon}\n", $debuglevel);
+        print PIDS "$pids{$daemon}\n";
+    }
+    close(PIDS);
 }
 
 #################################################################

@@ -874,6 +874,7 @@ VMGahpServer::read_argv(Gahp_Args &g_args)
 
 	if( buf == NULL ) {
 		buf = (char*)malloc(buf_size);
+		ASSERT( buf != NULL );
 	}
 
 	ibuf = 0;

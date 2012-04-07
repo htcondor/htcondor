@@ -23,4 +23,8 @@
 <messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
 <parameter name="wsamapping">query#submission</parameter>
 </operation>
+<operation name="getSubmissionID" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">query#submission#id</parameter>
+</operation>
 </service>

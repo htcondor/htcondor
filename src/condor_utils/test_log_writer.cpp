@@ -1567,7 +1567,8 @@ EventInfo::GenEventImageSize( void )
 {
 	SetName( "Job Image Size" );
 	JobImageSizeEvent *e = new JobImageSizeEvent;
-	e->size = GetSize( );
+	e->image_size_kb = GetSize( );
+	e->memory_usage_mb = (GetSize() + 1023) / 1024;
 
 	return SetEvent( e );
 }

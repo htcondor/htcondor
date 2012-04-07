@@ -29,7 +29,7 @@ using namespace std;
 const int CONDOR_SYSTRAY_INTERNAL_EVENTS = WM_USER + 4001;
 HWND birdwatcherDLG;
 HWND parentHwnd;
-WCHAR *zCondorDir;
+TCHAR *zCondorDir;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 SystrayManager::SystrayManager()
@@ -40,21 +40,21 @@ SystrayManager::SystrayManager()
 	
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened;
-	RegCreateKeyEx(HKEY_LOCAL_MACHINE, (LPCSTR)L"SOFTWARE\\condor", 0, (LPSTR)L"REG_DWORD", 
+	RegCreateKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\condor"), 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 	
 	DWORD dwValue = (unsigned) wmr.getHWnd();
-	RegSetValueEx(hNotifyHandle, (LPCSTR)L"systray_notify_handle", 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
+	RegSetValueEx(hNotifyHandle, TEXT("systray_notify_handle"), 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
 	
 	DWORD dwType;
 	DWORD dwData = 1; // assume one-bird mode
 	DWORD dwDataLen = 4;
-	RegQueryValueEx(hNotifyHandle, (LPCSTR)L"systray_one_bird", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+	RegQueryValueEx(hNotifyHandle, TEXT("systray_one_bird"), 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
 	bUseSingleIcon = dwData == 1;
 
-	WCHAR *psBuf = new WCHAR[MAX_PATH];
-	dwDataLen = MAX_PATH * sizeof(WCHAR);
-	RegQueryValueExW(hNotifyHandle, (LPCWSTR)L"RELEASE_DIR", 0, &dwType, (unsigned char *) psBuf, &dwDataLen);
+	TCHAR *psBuf = new TCHAR[MAX_PATH];
+	dwDataLen = MAX_PATH * sizeof(TCHAR);
+	RegQueryValueEx(hNotifyHandle, TEXT("RELEASE_DIR"), 0, &dwType, (unsigned char *) psBuf, &dwDataLen);
 	
 	vecIconsForEachCpu.resize(1);
 	hPopupMenu = NULL;
@@ -65,10 +65,10 @@ SystrayManager::SystrayManager()
 	birdwatcherDLG = CreateDialog(hInst, MAKEINTRESOURCE(IDD_BIRDWATCHER_DIALOG), notifyWnd, DialogProc);
 	if(!birdwatcherDLG)
 	{
-		DWORD temp = GetLastError();
-		WCHAR buffer[256];
-		_ltow(temp, buffer, 10);
-		OutputDebugString((LPCSTR)buffer);
+		DWORD err = GetLastError();
+		TCHAR sz[256];
+		wsprintf(sz, TEXT("CreateDialog failed err=%d"), err);
+		OutputDebugString(sz);
 	}
 	zCondorDir = psBuf;
 	//pDlg->Create(IDD_BIRDWATCHER_DIALOG);
@@ -129,11 +129,10 @@ void SystrayManager::setIcon(BirdIconVector::size_type iCpuId, HICON hToSet)
 	
 	icon.nid.hIcon = hToSet;
 	icon.nid.hWnd = wmr.getHWnd();
-	wcscpy_s((wchar_t *)icon.nid.szTip, _countof(icon.nid.szTip), icon.strTooltip);
-	//strcpy(icon.nid.szTip, icon.strTooltip.c_str());
+	lstrcpyn(icon.nid.szTip, icon.strTooltip, _countof(icon.nid.szTip));
 	icon.nid.uCallbackMessage = CONDOR_SYSTRAY_INTERNAL_EVENTS;
 	icon.nid.uFlags = NIF_MESSAGE | NIF_ICON;
-	if (wcslen(icon.strTooltip))	// if the tooltip string isn't empty
+	if (lstrlen(icon.strTooltip))	// if the tooltip string isn't empty
 		icon.nid.uFlags |= NIF_TIP;  // enable the tooltip
 	icon.nid.cbSize = sizeof(icon.nid);
 	
@@ -151,23 +150,19 @@ void SystrayManager::setIcon(BirdIconVector::size_type iCpuId, HICON hToSet)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static int iTimerNum = 0;
+	LRESULT lRet = 0;
 	
 	string strLogMsg;
-	/*
-	WCHAR temp[256];
-	_itow_s(message, temp, 256, 10);
-	OutputDebugString(temp);
-	*/
 	switch (message)
 	{
 	case CONDOR_SYSTRAY_NOTIFY_CHANGED:
 			strLogMsg = "Got notify changed msg";
 			reloadStatus();
 			break;
-	case (WM_COMMAND) :
+	case WM_COMMAND :
 		{
 			//Debug output, uncomment and fix if you need it
 			//TRACE("got command lparam %d, wparam %d\n", (int) lParam, (int) wParam);
@@ -179,17 +174,20 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 			else if (wParam == 2) // condor on
 			{
 				strLogMsg = "Got condor on command";
-				system("condor on");
+				int err = system("condor on");
+				if (err == -1) lRet = (LRESULT)GetLastError();
 			}
 			else if (wParam == 3) // condor off
 			{
 				strLogMsg = "Got condor off command";
-				system("condor off");
+				int err = system("condor off");
+				if (err == -1) lRet = (LRESULT)GetLastError();
 			}
 			else if (wParam == 5) // vacate all
 			{
 				strLogMsg = "Got vacate command";
-				system("condor_vacate");
+				int err = system("condor_vacate");
+				if (err == -1) lRet = (LRESULT)GetLastError();
 			}
 			else if (wParam == 6)
 			{
@@ -199,17 +197,17 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 				
 				HKEY hNotifyHandle;
 				DWORD dwCreatedOrOpened;
-				RegCreateKeyEx(HKEY_LOCAL_MACHINE, (LPCSTR)L"SOFTWARE\\condor", 0, (LPSTR)L"REG_DWORD", 
+				RegCreateKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\condor"), 0, NULL, 
 					REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 				
 				DWORD dwValue = bUseSingleIcon ? 1 : 0;
-				RegSetValueEx(hNotifyHandle, (LPCSTR)L"systray_one_bird", 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
+				RegSetValueEx(hNotifyHandle, TEXT("systray_one_bird"), 0, REG_DWORD, (BYTE*)&dwValue, sizeof(DWORD));
 				
 				reloadStatus();
 			}
 			break;
 		}
-	case (WM_TIMER) :
+	case WM_TIMER:
 		{
 			iTimerNum++;
 			
@@ -233,7 +231,7 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 			
 			break;
 		}
-	case (CONDOR_SYSTRAY_INTERNAL_EVENTS) :
+	case CONDOR_SYSTRAY_INTERNAL_EVENTS:
 		{
 			if (lParam == WM_LBUTTONDOWN || lParam == WM_RBUTTONDOWN)
 			{
@@ -244,35 +242,42 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 				
 				
 				hPopupMenu = CreatePopupMenu();
-				AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 1, (LPCSTR)L"Hide Birdwatcher (this icon)");
+				AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 1, TEXT("Hide Birdwatcher (this icon)"));
 				if (bMultipleCpusAvailable)
 				{
 					if (!bUseSingleIcon)
-						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, (LPCSTR)L"Show one bird only");
+						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, TEXT("Show one bird only"));
 					else
-						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, (LPCSTR)L"Show one bird per cpu");
+						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, TEXT("Show one bird per cpu"));
 				}
 				AppendMenu(hPopupMenu, MF_SEPARATOR, 4, NULL);
 				if (vecIconsForEachCpu.size() == 1 && vecIconsForEachCpu[0].nid.hIcon == hCondorOff)
 				{
-					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 2, (LPCSTR)L"Turn Condor on");
+					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 2, TEXT("Turn Condor on"));
 				}
 				else
 				{
-					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 3, (LPCSTR)L"Turn Condor off");
-					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 5, (LPCSTR)L"Vacate all local jobs");
+					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 3, TEXT("Turn Condor off"));
+					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 5, TEXT("Vacate all local jobs"));
 				}
 				
 				SetForegroundWindow(wmr.getHWnd());
+
 				POINT pos;
 				GetCursorPos(&pos);
-				if (!TrackPopupMenuEx(hPopupMenu, TPM_RIGHTALIGN | TPM_BOTTOMALIGN, pos.x, pos.y, wmr.getHWnd(), NULL))
+				int idCmd = (int)TrackPopupMenuEx(hPopupMenu, 
+					                              TPM_RIGHTALIGN | TPM_BOTTOMALIGN | TPM_RETURNCMD, 
+												  pos.x, pos.y, wmr.getHWnd(), NULL);
+				if (idCmd)
 				{
-					WCHAR szBuf[256]; 
-					DWORD dw = GetLastError(); 
-					FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dw, 0, (LPSTR)szBuf, 256, NULL);
-					MessageBox(parentHwnd, (LPCSTR)szBuf, (LPCSTR)szBuf, 0);
-					//AfxMessageBox(szBuf);			
+					DWORD err = SendMessage(wmr.getHWnd(), WM_COMMAND, idCmd, 0);
+					if (err)
+					{
+						TCHAR sz[256];
+						OutputDebugString(sz);
+						FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0, sz, _countof(sz), NULL);
+						MessageBox(parentHwnd, sz, TEXT("Command Failed"), 0);
+					}
 				}
 			}				
 			else if (lParam == WM_LBUTTONDBLCLK)
@@ -294,6 +299,8 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 		outfile.Close();
 	}
 #endif
+
+	return lRet;
 }
 
 std::string makeString(int iVal)
@@ -310,13 +317,13 @@ void SystrayManager::reloadStatus()
 {
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened;
-	RegCreateKeyEx(HKEY_LOCAL_MACHINE, (LPCSTR)L"SOFTWARE\\condor", 0, (LPSTR)L"REG_DWORD", 
+	RegCreateKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\condor"), 0, NULL, 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 	
 	DWORD dwType;
 	DWORD dwData = 0;
-	DWORD dwDataLen = 4;
-	RegQueryValueEx(hNotifyHandle, (LPCSTR)L"systray_num_cpus", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+	DWORD dwDataLen = sizeof(dwData);
+	RegQueryValueEx(hNotifyHandle, TEXT("systray_num_cpus"), 0, &dwType, (BYTE *)&dwData, &dwDataLen);
 	int iCpus = (int) dwData;
 	
 	if (!iCpus)
@@ -328,7 +335,7 @@ void SystrayManager::reloadStatus()
 		
 		vecIconsForEachCpu.resize(1);
 		vecIconsForEachCpu[0].bRunningJob = false;
-		wcscpy_s(vecIconsForEachCpu[0].strTooltip, _countof(vecIconsForEachCpu[0].strTooltip), L"Birdwatcher: Condor is off");
+		lstrcpyn(vecIconsForEachCpu[0].strTooltip, TEXT("Birdwatcher: Condor is off"), _countof(vecIconsForEachCpu[0].strTooltip));
 		setIcon(0, hCondorOff);
 		
 #ifdef GENERATE_BIRD_LOG
@@ -358,11 +365,13 @@ void SystrayManager::reloadStatus()
 	bool bAnyRunning = false;
 	
 	string strLogMsg = "Reloading " + makeString(iCpus) + " cpus: ";
-	for (int i = 0; i < iCpus; i++)
+	for (int ii = 0; ii < iCpus; ++ii)
 	{
-		WCHAR psBuf[] = L"systray_cpu_%d_state";
+		TCHAR szKey[50];
+		wsprintf(szKey, TEXT("systray_cpu_%d_state"), ii);
 		dwData = (int) kSystrayStatusIdle; // assume idle
-		RegQueryValueEx(hNotifyHandle, (LPCSTR)psBuf, 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+		dwDataLen = sizeof(dwData);
+		RegQueryValueEx(hNotifyHandle, szKey, 0, &dwType, (BYTE *) &dwData, &dwDataLen);
 		
 		ECpuStatus eStatus = (ECpuStatus) ((int) dwData);
 		
@@ -377,36 +386,36 @@ void SystrayManager::reloadStatus()
 		}
 		else
 		{
-			BirdIcon &icon = vecIconsForEachCpu[i];
+			BirdIcon &icon = vecIconsForEachCpu[ii];
 			if (eStatus == kSystrayStatusIdle)
 			{
 				icon.bRunningJob = false;
-				wcscpy_s(icon.strTooltip, _countof(icon.strTooltip), L"Birdwatcher: This cpu is idle");
-				setIcon(i, hIdle);
+				lstrcpyn(icon.strTooltip, TEXT("Birdwatcher: This cpu is idle"), _countof(icon.strTooltip));
+				setIcon(ii, hIdle);
 			}
 			else if (eStatus == kSystrayStatusJobRunning)
 			{
 				icon.bRunningJob = true;
-				wcscpy_s(icon.strTooltip, _countof(icon.strTooltip), L"Birdwatcher: This cpu is running a Condor job");
-				setIcon(i, hRunningJob1);
+				lstrcpyn(icon.strTooltip, TEXT("Birdwatcher: This cpu is running a Condor job"), _countof(icon.strTooltip));
+				setIcon(ii, hRunningJob1);
 			}
 			else if (eStatus == kSystrayStatusJobSuspended)
 			{
 				icon.bRunningJob = false;
-				wcscpy_s(icon.strTooltip, _countof(icon.strTooltip), L"Birdwatcher: The job on this cpu is suspended");
-				setIcon(i, hSuspended);
+				lstrcpyn(icon.strTooltip, TEXT("Birdwatcher: The job on this cpu is suspended"), _countof(icon.strTooltip));
+				setIcon(ii, hSuspended);
 			}
 			else if (eStatus == kSystrayStatusJobPreempting)
 			{
 				icon.bRunningJob = false;
-				wcscpy_s(icon.strTooltip, _countof(icon.strTooltip), L"Birdwatcher: The job on this cpu is preempting");
-				setIcon(i, hPreempting);
+				lstrcpyn(icon.strTooltip, TEXT("Birdwatcher: The job on this cpu is preempting"), _countof(icon.strTooltip));
+				setIcon(ii, hPreempting);
 			}
 			else
 			{
 				icon.bRunningJob = false;
-				wcscpy_s(icon.strTooltip, _countof(icon.strTooltip), L"Birdwatcher: This cpu is claimed for a Condor job");
-				setIcon(i, hClaimed);
+				lstrcpyn(icon.strTooltip, TEXT("Birdwatcher: This cpu is claimed for a Condor job"), _countof(icon.strTooltip));
+				setIcon(ii, hClaimed);
 			}
 		}
 	}
@@ -432,19 +441,19 @@ void SystrayManager::reloadStatus()
 		if (bAllIdle)
 		{
 			vecIconsForEachCpu[0].bRunningJob = false;
-			wcscpy_s(vecIconsForEachCpu[0].strTooltip, _countof(vecIconsForEachCpu[0].strTooltip), L"Birdwatcher: Condor is idle");
+			lstrcpyn(vecIconsForEachCpu[0].strTooltip, TEXT("Birdwatcher: Condor is idle"), _countof(vecIconsForEachCpu[0].strTooltip));
 			setIcon(0, hIdle);
 		}
 		else if (!bAnyRunning)
 		{
 			vecIconsForEachCpu[0].bRunningJob = false;
-			wcscpy_s(vecIconsForEachCpu[0].strTooltip, _countof(vecIconsForEachCpu[0].strTooltip), L"Birdwatcher: claimed for a Condor job...");
+			lstrcpyn(vecIconsForEachCpu[0].strTooltip,  TEXT("Birdwatcher: claimed for a Condor job..."), _countof(vecIconsForEachCpu[0].strTooltip));
 			setIcon(0, hClaimed);
 		}
 		else
 		{
 			vecIconsForEachCpu[0].bRunningJob = true;
-			wcscpy_s(vecIconsForEachCpu[0].strTooltip, _countof(vecIconsForEachCpu[0].strTooltip), L"Birdwatcher: running a Condor job");
+			lstrcpyn(vecIconsForEachCpu[0].strTooltip, TEXT("Birdwatcher: running a Condor job"), _countof(vecIconsForEachCpu[0].strTooltip));
 			setIcon(0, hRunningJob1);
 		}
 	}

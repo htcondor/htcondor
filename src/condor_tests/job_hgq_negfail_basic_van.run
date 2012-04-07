@@ -1,0 +1,182 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+
+# trip whitespace from beginning and end of a string
+sub trimws($) {
+    my $string = shift;
+    $string =~ s/^\s+//;
+    $string =~ s/\s+$//;
+    return $string;
+}
+
+
+my $testname = "job_hgq_negfail_basic_van";
+my $test_passed = 0;
+my $pre_execution = 1;
+
+
+sub timed_callback {
+    if ($test_passed || $pre_execution) {
+        # if we already detected that the test passed, or if 
+        # jobs aren't running yet, we can skip this callback.
+        return;
+    }
+
+    my $stat = `condor_q -format "%s\n" AccountingGroup -constraint "JobStatus == 2" | sort | uniq -c`;
+    my @slines = split /\n/, $stat;
+
+    my $tst = "";
+    foreach my $line (@slines) {
+        my $t = trimws($line);
+        $tst = $tst." ".$t;
+    }
+
+    if ($tst == " 20 a.a.user 5 b.a.user 5 b.b.user") {
+        # we detected the expected pattern of running jobs
+        $test_passed = 1;
+        # we found what we were looking for: now we want to clear the que
+        # so the test can finish, because some of the submitted jobs will
+        # never run by design.
+        runcmd("condor_rm -all");
+    } else {
+        print "Haven't seen expected output yet.  What I saw was:\n";
+        print $stat;
+        # if this check failed, wait a little:
+        sleep(5);
+    }
+}
+
+sub execute_callback {
+    if ($pre_execution) {
+        # only do this once, to let all jobs have a chance to spin up
+        sleep(10);
+    }
+    # flag that jobs have started
+    $pre_execution = 0;
+}
+
+sub exit_callback {
+    # by this time we had better have seen the running job pattern we were looking for
+    unless ($test_passed) {
+        die "Failed to find expected pattern of running jobs";
+    }
+}
+
+
+my $append_condor_config = '
+# This was a hack to allow the test pool and harness pool to
+# coexist peacefully on my sandbox.  I dont think they are needed
+# in a "real" testing environment:
+#COLLECTOR_ARGS = -p 42424
+#COLLECTOR_HOST = $(CONDOR_HOST):0
+#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+
+SCHEDD_INTERVAL	= 30
+NEGOTIATOR_INTERVAL = 20
+
+# turn off preemption
+MAXJOBRETIREMENTTIME = 3600 * 24
+PREEMPT = False
+PREEMPTION_REQUIREMENTS = False
+RANK = 0
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+
+# no slot weights
+NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
+
+NUM_CPUS = 40
+
+# turn on round-robin for this test, since we are testing
+# an overlapping-effective-pool scenario
+HFS_ROUND_ROBIN_RATE = 1.0
+
+# turn on multiple allocation rounds, since we are testing
+# slot rejection scenario as well
+HFS_MAX_ALLOCATION_ROUNDS = 3
+
+GROUP_NAMES = a, b, a.a, a.b, b.a, b.b
+
+GROUP_QUOTA_DYNAMIC_a = 0.5
+GROUP_QUOTA_DYNAMIC_b = 0.5
+GROUP_QUOTA_DYNAMIC_a.a = 0.5
+GROUP_QUOTA_DYNAMIC_a.b = 0.5
+GROUP_QUOTA_DYNAMIC_b.a = 0.5
+GROUP_QUOTA_DYNAMIC_b.b = 0.5
+
+# Have "a" and "b" subtrees manage their quota independently
+GROUP_ACCEPT_SURPLUS = TRUE
+GROUP_ACCEPT_SURPLUS_a = FALSE
+GROUP_ACCEPT_SURPLUS_b = FALSE
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+
+# submit jobs
+my $submit_body = "
+universe = vanilla
+executable = x_sleep.pl
+log = $testname.log
+output = $testname.out
+error = $testname.err
+notification = never
+arguments = 60
+# group 'a.a' should be able to use slots unused by 'a.b'
+# set up requirements to stay out of lower slots (used by b.a and b.b)
+Requirements = (SlotID > 10)
++AccountingGroup = \"a.a.user\"
+queue 20
+# set up jobs for 'a.b' to fail:
+Requirements = False
++AccountingGroup = \"a.b.user\"
+queue 10
+# set up 'b.a' and 'b.b' to compete
+Requirements = (SlotID <= 10)
++AccountingGroup = \"b.a.user\"
+queue 10
++AccountingGroup = \"b.b.user\"
+queue 10
+";
+
+my $submit_filename = CondorTest::TempFileName("$testname.submit");
+open(SUBMIT, ">$submit_filename") || die "Failed to open $submit_filename\n";
+print SUBMIT $submit_body;
+close(SUBMIT);
+
+
+CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+CondorTest::RegisterExecute($testname, \&execute_callback);
+
+CondorTest::RegisterExited($testname, \&exit_callback);
+CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
+CondorTest::RegisterAbort($testname, \&exit_callback);
+
+if (CondorTest::RunTest($testname, $submit_filename, 0)) {
+    CondorTest::debug("$testname: SUCCESS\n",1);
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}

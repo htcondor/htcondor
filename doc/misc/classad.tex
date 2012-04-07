@@ -450,6 +450,57 @@ Optional parameters are given within square brackets.
     This function returns \Expr{ERROR} if other than exactly 1
     argument is given.
 
+  \index{ClassAd functions!pow()}
+  \item[\Code{Integer pow(Integer base, Integer exponent)}]
+  \item[OR \Code{Real pow(Integer base, Integer exponent)}]
+  \item[OR \Code{Real pow(Real base, Real exponent)}]
+    Calculates \Code{base} raised to the power of \Code{exponent}.
+    If \Code{exponent} is an integer value greater than or equal to 0,
+    and \Code{base} is an integer, then an integer value is returned.
+    If \Code{exponent} is an integer value less than 0, or if either
+    \Code{base} or \Code{exponent} is a real, then a real value is
+    returned.
+    An invocation with \Expr{exponent=0} or \Expr{exponent=0.0},
+    for any value of \Code{base}, including 0 or 0.0, returns the value 1
+    or 1.0, type appropriate. 
+
+  \index{ClassAd functions!quantize()}
+  \item[\Code{Integer quantize(AnyType a, Integer b)}]
+  \item[OR \Code{Real quantize(AnyType a, Real b)}]
+  \item[OR \Code{AnyType quantize(AnyType a, AnyType list b)}]
+    \Code{quantize()} computes the quotient of \Expr{a/b}, 
+    in order to further compute \Expr{ ceiling(quotient) * b}.
+    This computes and returns an integral multiple of \Code{b} that is 
+    at least as large as \Code{a}.
+    So, when \Expr{b >= a}, the return value will be \Code{b}.
+    The return type is the same as that of \Code{b}, where \Code{b} 
+    is an Integer or Real.
+
+    When \Code{b} is a list, \Code{quantize()} returns the first value
+    in the list that is greater than or equal to \Code{a}.
+    When no value in the list is greater than or equal to \Code{a},
+    this computes and returns an integral multiple of 
+    the last member in the list that is at least as large as \Code{a}.
+
+    This function returns \Expr{ERROR} if \Code{a} or \Code{b}, 
+    or a member of the list that must be considered is not an Integer or Real.
+
+    Here are examples:
+\begin{verbatim}
+     8     = quantize(3, 8)
+     4     = quantize(3, 2)
+     0     = quantize(0, 4)
+     6.8   = quantize(1.5, 6.8)
+     7.2   = quantize(6.8, 1.2)
+     10.2  = quantize(10, 5.1)
+
+     4     = quantize(0, {4})
+     2     = quantize(2, {1, 2, "A"})
+     3.0   = quantize(3, {1, 2, 0.5})
+     3.0   = quantize(2.7, {1, 2, 0.5})
+     ERROR = quantize(3, {1, 2, "A"})
+\end{verbatim}
+
   \index{ClassAd functions!round()}
   \item[\Code{Integer round(AnyType Expr)}]
     Returns the integer that results from the evaluation of \Expr{Expr},
@@ -562,6 +613,36 @@ Optional parameters are given within square brackets.
 
     This function returns \Expr{ERROR} if other than exactly 1
     argument is given.
+
+  \index{ClassAd functions!splitUserName()}
+  \item[\Code{String list splitUserName(String Name)}]
+    Returns a list of two strings.
+    Where \Code{Name} includes an \Expr{@} character,
+    the first string in the list will be the substring that comes before
+    the \Expr{@} character, 
+    and the second string in the list will be the substring that comes after.
+    Thus, if \Code{Name} is \AdStr{user@domain}, 
+    then the returned list will be \verb|{"user", "domain"}|.
+    If there is no \Expr{@} character in \Code{Name},
+    then the first string in the list will be \Code{Name}, and the
+    second string in the list will be the empty string.
+    Thus, if \Code{Name} is \AdStr{username}, then the returned list
+    will be \verb|{"username", ""}|.
+
+  \index{ClassAd functions!splitSlotName()}
+  \item[\Code{String list splitSlotName(String Name)}]
+    Returns a list of two strings.
+    Where \Code{Name} includes an \Expr{@} character,
+    the first string in the list will be the substring that comes before
+    the \Expr{@} character, 
+    and the second string in the list will be the substring that comes after.
+    Thus, if \Code{Name} is \AdStr{slot1@machine}, then the returned list
+    will be \verb|{"slot1", "machine"}|.
+    If there is no \Expr{@} character in \Code{Name},
+    then the first string in the list will be the empty string,
+    and the second string in the list will be \Code{Name}, 
+    Thus, if \Code{Name} is \AdStr{machinename}, then the returned list
+    will be \verb|{"", "machinename"}|.
 
   \index{ClassAd functions!time()}
   \item[\Code{Integer time()}]

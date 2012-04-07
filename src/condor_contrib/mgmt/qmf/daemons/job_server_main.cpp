@@ -78,6 +78,10 @@ void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
+    if (param_boolean("QMF_PUBLISH_SUBMISSIONS", false)) {
+        EXCEPT("Schedd QMF plug-in is configured to publish submissions!");
+    }
+
 	consumer = new JobServerJobLogConsumer();
 
 	mirror = new JobLogMirror(consumer);

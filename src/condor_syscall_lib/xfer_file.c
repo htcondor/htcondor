@@ -75,6 +75,7 @@ send_a_file( const char *local, const char *remote, int perm )
 	if( remote_fd < 0 ) {
 		dprintf( D_ALWAYS, "Failed to open \"%s\" remotely, errno = %d\n",
 															remote, errno );
+		(void)close(local_fd);
 		return -1;
 	}
 
@@ -140,6 +141,7 @@ int get_file( const char *remote, const char *local, int mode )
 	{
 		dprintf( D_FULLDEBUG, "Failed to open \"%s\" locally, errno = %d\n",
 														local, errno);
+		(void)close(remote_fd);
 		return -1;
 	}
 

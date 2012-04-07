@@ -69,6 +69,7 @@ void ViewServer::Init()
 	// We can't do this check at compile time, but we'll except if
 	// the startd states has changed and we haven't been updated
 	// to match
+	MSC_SUPPRESS_WARNING(6326) // warning comparing a constant to a constant.
 	if ( (int)VIEW_STATE_MAX != (int)_machine_max_state ) {
 		EXCEPT( "_max_state=%d (from condor_state.h) doesn't match "
 				" VIEW_STATE_MAX=%d (from view_server.h)",

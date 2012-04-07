@@ -24,7 +24,8 @@ namespace query {
 JobCollectionType g_jobs;
 SubmissionCollectionType g_submissions;
 OwnerlessClusterType g_ownerless_clusters;
-OwnerlessSubmissionType g_ownerless_submissions;
+SubmissionIndexType g_ownerless_submissions;
+SubmissionIndexType g_qdate_submissions;
 
 // when it absolutely, positively has to be right...
 void global_reset() {
@@ -49,7 +50,7 @@ void global_reset() {
 			  g_ownerless_clusters.erase(i);
 	}
 
-	for (OwnerlessSubmissionType::iterator i = g_ownerless_submissions.begin();
+	for (SubmissionIndexType::iterator i = g_ownerless_submissions.begin();
 		       g_ownerless_submissions.end() != i; i++) {
 			  g_ownerless_submissions.erase(i);
 	}
@@ -59,6 +60,8 @@ void global_reset() {
 			  delete (*i).second;
 			  g_submissions.erase(i);
 	}
+
+	g_qdate_submissions.clear();
 }
 
 }}

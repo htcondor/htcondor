@@ -673,6 +673,8 @@ GenerateMaximalTrueBVList( List< BoolVector > &result )
 		}
 		if( addBV ) {
 			result.Append( newBV );
+		} else {
+			delete newBV;
 		}
 	}
 	return true;

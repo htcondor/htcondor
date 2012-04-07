@@ -69,7 +69,8 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 
 		// Save the current image size, so that if it changes as a
 		// result of this update, we can log an event to the userlog.
-	int prev_image = getImageSize();
+	int64_t prev_usage = 0, prev_rss = 0, prev_pss = -1;
+	int64_t prev_image = getImageSize(prev_usage, prev_rss, prev_pss);
 
 		// Stick everything we care about into our RemoteResource.
 		// For the UniShadow (with only 1 RemoteResource) it has a
@@ -77,10 +78,18 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 		// it updates its copy, it's really updating ours, too.
 	remRes->updateFromStarter(update_ad);
 
-	int cur_image = getImageSize();
-	if (cur_image != prev_image) {
+	int64_t cur_usage = 0, cur_rss = 0, cur_pss = -1;
+	int64_t cur_image = getImageSize(cur_usage, cur_rss, cur_pss);
+	if (cur_image != prev_image || 
+		cur_usage != prev_usage ||
+		cur_rss != prev_rss ||
+		cur_pss != prev_pss) {
 		JobImageSizeEvent event;
-		event.size = cur_image;
+		event.image_size_kb = cur_image;
+		event.memory_usage_mb = cur_usage;
+		event.resident_set_size_kb = cur_rss;
+		event.proportional_set_size_kb = cur_pss;
+
 			// for performance, do not bother fsyncing this event
 		if (!uLog.writeEventNoFsync(&event, job_ad)) {
 			dprintf(D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
@@ -335,10 +344,10 @@ UniShadow::getRUsage( void )
 }
 
 
-int
-UniShadow::getImageSize( void )
+int64_t
+UniShadow::getImageSize( int64_t & mem_usage, int64_t & rss, int64_t & pss )
 {
-	return remRes->getImageSize();
+	return remRes->getImageSize(mem_usage, rss, pss);
 }
 
 

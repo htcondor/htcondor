@@ -135,7 +135,7 @@ JobServerJobLogConsumer::DestroyClassAd(const char *_key)
 
     if (g_jobs.end() == g_element) {
         dprintf(D_ALWAYS,
-                "error reading %s: no such job found for key '%s'\n",
+                "error reading job queue log: no such job found for key '%s'\n",
                 _key);
         return false;
     }

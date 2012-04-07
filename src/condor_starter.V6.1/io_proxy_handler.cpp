@@ -92,6 +92,7 @@ Otherwise, return a not-authenticated-error.
 void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 {
 	char check_cookie[CHIRP_LINE_MAX];
+	check_cookie[0] = 0;
 
 	if(sscanf(line,"cookie %s",check_cookie)==1) {
 		if(!strcmp(check_cookie,cookie)) {
@@ -209,6 +210,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
+	flags_string[0] = 0;
 	if(sscanf_chirp(line,"open %s %s %d",path,flags_string,&mode)==3) {
 
 		/*
@@ -262,6 +264,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		// Stat stuff
 		if(result>=0) {
 			char *buffer = (char*) malloc(1024);
+			ASSERT( buffer != NULL );
 			REMOTE_CONDOR_stat(path, buffer);
 			r->put_bytes_raw(buffer,strlen(buffer));
 			free( buffer );

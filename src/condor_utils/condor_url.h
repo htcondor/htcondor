@@ -22,8 +22,9 @@
 #define CONDOR_URL_H
 
 #include "condor_common.h"
-
+#include "MyString.h"
 
 bool IsUrl( const char *url );
+MyString getURLType( const char *url );
 
 #endif

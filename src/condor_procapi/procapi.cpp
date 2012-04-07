@@ -465,7 +465,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 
 #if HAVE_PSS
 int
-ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status ) 
+ProcAPI::getPSSInfo( pid_t pid, procInfo& procRaw, int &status ) 
 {
 	char path[64];
 	FILE *fp;
@@ -726,13 +726,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// close the file
 	fclose( fp );
-
-#if HAVE_PSS
-	getPSSInfo(pid,procRaw,status);
-	if( status != PROCAPI_OK ) {
-		return PROCAPI_FAILURE;
-	}
-#endif
 
 		// only one value for times
 	procRaw.user_time_2 = 0;
@@ -1703,7 +1696,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
     if( !offsets ) {      // If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
-	}    
+        ASSERT( offsets );
+    }
         // at this point we're all set to march through the data block to find
         // the instance with the pid we want.  
 
@@ -1790,6 +1784,7 @@ ProcAPI::buildProcInfoList()
 	PPERF_OBJECT_TYPE pThisObject = firstObject(pDataBlock);
     if( !offsets ) {
         grabOffsets( pThisObject );
+        ASSERT( offsets );
 	}
 	PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
 
@@ -2822,44 +2817,45 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     PPERF_COUNTER_DEFINITION pThisCounter;
   
     offsets = (struct Offset*) malloc ( sizeof ( struct Offset ));
+	ASSERT( offsets );
 
-    pThisCounter = firstCounter(pThisObject);
+    pThisCounter = firstCounter(pThisObject);	   // "% Processor Time"
 //    printcounter ( stdout, pThisCounter );
     offsets->pctcpu = pThisCounter->CounterOffset; // % cpu
 	if (pThisCounter->CounterSize != 8) {
 		unexpected_counter_size("total CPU", pThisCounter->CounterSize, "8");
 	}
     
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter); // "% User Time"
 //    printcounter ( stdout, pThisCounter );
     offsets->utime = pThisCounter->CounterOffset;  // % user time
 	if (pThisCounter->CounterSize != 8) {
 		unexpected_counter_size("user CPU", pThisCounter->CounterSize, "8");
 	}
   
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter); // "% Privileged Time"
 //    printcounter ( stdout, pThisCounter );
     offsets->stime = pThisCounter->CounterOffset;  // % sys time
 	if (pThisCounter->CounterSize != 8) {
 		unexpected_counter_size("system CPU", pThisCounter->CounterSize, "8");
 	}
   
-    pThisCounter = nextCounter(pThisCounter);
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);  // "Virtual Bytes Peak"
+    pThisCounter = nextCounter(pThisCounter);  // "Virtual Bytes"
 //    printcounter ( stdout, pThisCounter );
     offsets->imgsize = pThisCounter->CounterOffset;  // image size
 	if (pThisCounter->CounterSize != 8) {
 		unexpected_counter_size("image size", pThisCounter->CounterSize, "8");
 	}
   
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);  // "Page Faults/Sec"
 //    printcounter ( stdout, pThisCounter );
     offsets->faults = pThisCounter->CounterOffset;   // page faults
 	if (pThisCounter->CounterSize != 4) {
 		unexpected_counter_size("page faults", pThisCounter->CounterSize, "4");
 	}
     
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);  // "Working Set Peak"
     offsets->rssize = pThisCounter->CounterOffset;   // working set peak 
 	offsets->rssize_width = pThisCounter->CounterSize;
 	if ((offsets->rssize_width != 4) && (offsets->rssize_width != 8)) {
@@ -2869,15 +2865,15 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
 	}
 
 //    printcounter ( stdout, pThisCounter );
-	pThisCounter = nextCounter(pThisCounter);		 // working set
-	pThisCounter = nextCounter(pThisCounter);
+	pThisCounter = nextCounter(pThisCounter); // "Working Set"
+	pThisCounter = nextCounter(pThisCounter); // "Page File Bytes Peak"
 
     
-    pThisCounter = nextCounter(pThisCounter);
-    pThisCounter = nextCounter(pThisCounter);
-    pThisCounter = nextCounter(pThisCounter);
-    pThisCounter = nextCounter(pThisCounter);
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter); // "Page File Bytes"
+    pThisCounter = nextCounter(pThisCounter); // "Private Bytes"
+    pThisCounter = nextCounter(pThisCounter); // "Thread Count"
+    pThisCounter = nextCounter(pThisCounter); // "Priority Base"
+    pThisCounter = nextCounter(pThisCounter); // "Elapsed Time"
 //    printcounter ( stdout, pThisCounter );
     offsets->elapsed = pThisCounter->CounterOffset;  // elapsed time (age)
 	if (pThisCounter->CounterSize != 8) {
@@ -2886,7 +2882,7 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
 		                        "8");
 	}
     
-    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);  // "ID Process"
 //    printcounter ( stdout, pThisCounter );
     offsets->procid = pThisCounter->CounterOffset;   // process id
 		if (pThisCounter->CounterSize != 4) {
@@ -2990,11 +2986,10 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
     // if buffer not big enough, reallocate and try again.
     
     if ( lError == ERROR_MORE_DATA ) {
-      pDataBlock = (PPERF_DATA_BLOCK) realloc ( pDataBlock, 
-                                                _msize (pDataBlock ) + 
-                                                EXTEND_SIZE );
-      if ( !pDataBlock)
+      void * pvNew = realloc ( pDataBlock, _msize (pDataBlock ) + EXTEND_SIZE );
+      if ( ! pvNew) 
         return lError;
+      pDataBlock = (PPERF_DATA_BLOCK) pvNew;
       ++cReallocs;
     }
     else

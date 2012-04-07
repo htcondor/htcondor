@@ -903,6 +903,12 @@ ValueRange::
 ValueRange( )
 {
 	initialized = false;
+	multiIndexed = false;
+	numIndeces = 0;
+	undefined = false;
+	anyOtherString = false;
+	type = classad::Value::BOOLEAN_VALUE;
+	
 }
 
 ValueRange::
@@ -1022,6 +1028,8 @@ Init2( Interval *i1, Interval *i2, bool undef )
 			i_new = new Interval;
 			Copy( i1, i_new );		
 			iList.Append( i_new );
+		} else {
+			delete i_new;
 		}			
 		initialized = true;
 		iList.Rewind( );
@@ -2134,10 +2142,14 @@ BuildHyperRects( ExtArray< ValueRange * > &vrs, int dimensions,
 		}
 		else {
 			if( !currVR->multiIndexed ) {
+				delete oldHRs;
+				delete tempHRs;
 				return false;
 			}
 			if( numContexts != currVR->numIndeces ) {
 					// IndexSets are not compatible
+				delete oldHRs;
+				delete tempHRs;
 				return false;
 			}
 			if( i == 0 ) {
@@ -2204,6 +2216,7 @@ BuildHyperRects( ExtArray< ValueRange * > &vrs, int dimensions,
 		( *hrs )[i] = oldHRs->Next( );
 	}
 	hrLists.Append( hrs );
+	delete oldHRs;
 	return true;
 }
 
@@ -2385,6 +2398,7 @@ ValueTable( )
 	numRows = 0;
 	table = NULL;
 	bounds = NULL;
+	inequality = false;
 }
 
 ValueTable::
@@ -2644,6 +2658,7 @@ HyperRect::
 HyperRect( )
 {
 	initialized = false;
+	ivals = 0;
 }
 
 HyperRect::

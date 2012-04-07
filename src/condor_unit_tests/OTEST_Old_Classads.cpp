@@ -968,10 +968,11 @@ static bool test_lookup_string_long() {
 		"problem with that, this test may fail.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
-	char *attribute_name, *expectString, *expression;
+	char *expression = (char *) malloc(50000);
+	if ( ! expression) { FAIL; }
+	char *attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	expression = (char *) malloc(50000);
 	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
 	compat_classad::ClassAd classad;
 	classad.Insert(expression);
@@ -1355,12 +1356,14 @@ static bool test_expr_tree_to_string_big() {
 		"classad.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
+	char* expect = (char *) malloc(25000 + 2 + 1);
+	if ( ! expect) { FAIL; }
 	char* attribute_name, *expectString, *expression;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
 	expression = (char *) malloc(50000);
+	if ( ! expression) { FAIL; }
 	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
-	char* expect = (char *) malloc(25000 + 2 + 1);
 	sprintf(expect, "\"%s\"", expectString);
 	compat_classad::ClassAd classad;
 	classad.Insert(expression);
@@ -6938,11 +6941,11 @@ static bool test_stringlist_regexp_member_error_option() {
 
 static bool test_random_different() {
 	emit_test("Test that EvalInteger() sets the correct actual for an "
-		"attribute using random(), in particular check that it generates "
+		"attribute using random(256), in particular check that it generates "
 		"different numbers.");
 	emit_comment("This test will fail if random() generates the same number "
 		"10 times in a row, although this is highly unlikely.");
-	const char* classad_string = "\tA1 = random()";
+	const char* classad_string = "\tA1 = random(256)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = -2, i;

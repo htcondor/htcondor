@@ -151,6 +151,7 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 	_expiration = copy._expiration;
 	_lease_interval = copy._lease_interval;
 	_lease_expiration = copy._lease_expiration;
+	_lingering = copy._lingering;
 }
 
 

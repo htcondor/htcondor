@@ -22,7 +22,7 @@ REN=mv.exe
 #	and use -ly with yacc
 #LIBS=-lfl
 #COFLAGS=-O1
-CWFLAGS=
+CWFLAGS=/wd6287 /wd6054 /wd6246 /wd6031	 /wd6011 /wd6386
 CIFLAGS=
 #	use -DWITH_BISON or -DWITH_YACC
 #	use -DWITH_FLEX or -DWITH_LEX

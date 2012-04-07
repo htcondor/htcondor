@@ -243,6 +243,41 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					}
 					break;
 
+				case PFT_VALUE:
+					{
+						// copy the printf format so we can change %v to some other format specifier.
+						char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
+						char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
+						bool fQuote = (*ptag == 'V');
+						if (*ptag == 'v' || *ptag == 'V')
+							*ptag = 's'; // convert printf format to %s
+						if( EvalExprTree(tree, al, target, &result) ) {
+							// Only strings are formatted differently for
+							// %v vs %V
+							if ( fQuote && result.type == LX_STRING ) {
+								classad::Value val;
+								classad::ClassAdUnParser unparser;
+								std::string buff;
+								val.SetStringValue( result.s );
+								unparser.SetOldClassAd( true );
+								unparser.Unparse( buff, val );
+								stringValue.sprintf( tfmt, buff.c_str() );
+							} else {
+								result.toString(true);
+								stringValue.sprintf( tfmt, result.s );
+							}
+							retval += stringValue;
+						} else {
+								// couldn't eval
+							if( alt ) {
+								stringValue.sprintf( tfmt, alt );
+								retval += stringValue;
+							}
+						}
+						free(tfmt);
+					}
+					break;
+
 				case PFT_INT:
 				case PFT_FLOAT:
 					if( EvalExprTree(tree, al, target, &result) ) {

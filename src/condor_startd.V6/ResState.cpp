@@ -815,7 +815,10 @@ ResState::enter_action( State s, Activity a,
 		switch( a ) {
 		case killing_act:
 			if( rip->claimIsActive() ) {
-				if( ! rip->r_cur->starterKillHard() ) {
+				if( rip->preemptWasTrue() && rip->wants_hold() ) {
+					rip->hold_job(false);
+				}
+				else if( ! rip->r_cur->starterKillHard() ) {
 						// starterKillHard returns FALSE if there was
 						// an error in kill and we had to send SIGKILL
 						// to the starter's process group.
@@ -833,7 +836,7 @@ ResState::enter_action( State s, Activity a,
 		case vacating_act:
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
-					rip->hold_job();
+					rip->hold_job(true);
 				}
 				else if( ! rip->r_cur->starterKillSoft(true) ) {
 					rip->r_cur->starterKillPg( SIGKILL );

@@ -40,7 +40,7 @@ $|=1;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $logsize = "50000000"; # size for logs of personal Condor
-my $no_cygwin = 0; # don't force a switch to cygwin perl before running batch test.
+my $force_cygwin = 1; # force a switch to cygwin perl before running batch test.
 
 # Hard-coded filename, defined in test_platform_pre
 my $tarball_file = "CONDOR-TARBALL-NAME";
@@ -182,10 +182,10 @@ else {
     my $Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
    
     if ($^O =~ /MSWin32/) {
-	my $which_master = `\@for \%I in (condor_master.exe) do \@echo(%~\$PATH:I`;
+        my $which_master = `\@for \%I in (condor_master.exe) do \@echo(%~\$PATH:I`;
         print "which condor_master is $which_master\n";
-        if ($which_master = /^[a-z]:\\condor\\bin\\/i) {
-	    print "removing base condor from the path and trying again\n";
+        if ($which_master =~ /^[a-z]:\\condor\\bin\\/i) {
+            print "removing base condor from the path and trying again\n";
             my $tpath = $ENV{PATH};
             $tpath =~ s/^[a-z]:\\condor\\bin[\\]?;//ig;
             $ENV{PATH} = $tpath;
@@ -197,12 +197,11 @@ else {
     }
     
 	# must use cygwin perl on Windows for batch_test.pl in old batlab
-	my $perlver = `perl -version`;
-	print $perlver;
-	if (!($perlver =~ /cygwin/i)) {
-		if ($no_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) {
-			print "attempting to run tests using ActiveState perl\n";
-			$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
+	print "Currently running $^O Perl\n";
+	if (!($^O =~ /cygwin/)) {
+		if ( ! $force_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) {
+			print "attempting to run tests using current perl\n";
+			#$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
 			print "PATH=$ENV{PATH}\n";
 		} else {
 			print "adding cygwin to the front of the path\n";
@@ -211,14 +210,14 @@ else {
 
 			#$perl_exe = "c:\\cygwin\\bin\\perl";
 			#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
-			$perlver = `perl -version`;
+			my $perlver = `perl -version`;
+			print "----------------------------------\n";
 			print $perlver;
+			print "----------------------------------\n";
 			if (!($perlver =~ /cygwin/i)) {
 				die "cygwin perl not found!\n";
 			}
 		}
-	} else {
-	   print "cygwin perl is the first perl\n";
 	}
 }
 

@@ -77,6 +77,7 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 		if( kind != classad::ExprTree::OP_NODE ) {
 			cerr << "error: bad form" << endl;
 				// error: bad form
+			delete currentProfile;
 			return false;
 		}
 
@@ -106,6 +107,7 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 		if( !ExprToProfile( right, currentProfile ) ) {
 			cerr << "error: problem with ExprToProfile" << endl;
 				// error: problem with ExprToProfile
+			delete currentProfile;
 			return false;
 		}
 		else {
@@ -184,6 +186,7 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 		if( kind != classad::ExprTree::OP_NODE ) {
 			cerr << "error: bad form" << endl;
 				// error: bad form
+			delete currentCondition;
 			return false;
 		}
 

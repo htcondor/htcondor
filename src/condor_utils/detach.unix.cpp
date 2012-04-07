@@ -39,6 +39,7 @@ detach( void )
 		dprintf( D_ALWAYS, 
 				 "ioctl(%d, TIOCNOTTY) to detach from /dev/tty failed, errno: %d\n",
 				 fd, errno );
+		close(fd);
 		return;
 	}
 	(void)close( fd );

@@ -184,6 +184,25 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		dprintf(D_FULLDEBUG, "SharedPortClient: Read PID: %d\n", child_pid);
 	}
 
+#if 1  // tj:2012 kill the else block later
+	#pragma pack(push, 4)
+	struct {
+		int id; // condor commmand id
+		WSAPROTOCOL_INFO wsa; // payload.
+	} protocol_command;
+	#pragma pack(pop)
+	ZeroMemory(&protocol_command, sizeof(protocol_command));
+
+	int dup_result = WSADuplicateSocket(sock_to_pass->get_file_desc(), child_pid, &protocol_command.wsa);
+	if(dup_result == SOCKET_ERROR)
+	{
+		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
+		CloseHandle(child_pipe);
+		return false;
+	}
+	protocol_command.id = SHARED_PORT_PASS_SOCK;
+	BOOL write_result = WriteFile(child_pipe, &protocol_command, sizeof(protocol_command), &read_bytes, 0);
+#else
 	WSAPROTOCOL_INFO protocol_info;
 	int dup_result = WSADuplicateSocket(sock_to_pass->get_file_desc(), child_pid, &protocol_info);
 	if(dup_result == SOCKET_ERROR)
@@ -192,8 +211,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		CloseHandle(child_pipe);
 		return false;
 	}
-
-	int bufferSize = sizeof(protocol_info) + sizeof(int);
+	int bufferSize = (sizeof(int) + sizeof(protocol_info));
 	char *buffer = new char[bufferSize];
 	ASSERT( buffer );
 	int cmd = SHARED_PORT_PASS_SOCK;
@@ -202,6 +220,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	BOOL write_result = WriteFile(child_pipe, buffer, bufferSize, &read_bytes, 0);
 
 	delete [] buffer;
+#endif
 	if(!write_result)
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to send WSAPROTOCOL_INFO struct: %d\n", GetLastError());

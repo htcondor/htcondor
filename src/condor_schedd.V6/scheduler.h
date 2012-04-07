@@ -554,6 +554,7 @@ private:
 
     // generic statistics pool for scheduler, in schedd_stats.h
     ScheddStatistics stats;
+	ScheddOtherStatsMgr OtherPoolStats;
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;

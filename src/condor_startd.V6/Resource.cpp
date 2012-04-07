@@ -1193,7 +1193,7 @@ Resource::update_with_ack( void )
 }
 
 void
-Resource::hold_job( )
+Resource::hold_job( bool soft )
 {
 	MyString hold_reason;
 	int hold_subcode = 0;
@@ -1216,7 +1216,7 @@ Resource::hold_job( )
 
 	r_classad->EvalInteger("WANT_HOLD_SUBCODE",r_cur->ad(),hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.Value(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode);
+	r_cur->starterHoldJob(hold_reason.Value(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode,soft);
 }
 
 int

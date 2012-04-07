@@ -36,20 +36,25 @@ install (FILES
 		condor.boot.rpm
 		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
-		lamscript
 		condor_config.generic
 		condor_config.local.dedicated.resource
 		condor_config.local.view_server
-		mp1script
 		#condor_config.generic.debian.patch
 		condor_config.local.dedicated.submit
 		condor_config.submit.generic
-		mp2script
 		#condor_config.generic.rpm.patch
 		#condor_config.local.generic
 		condor.init
-		openmpiscript
 		DESTINATION ${C_ETC_EXAMPLES})
+
+install (FILES
+	  openmpiscript
+	  mp2script
+	  mp1script
+	  lamscript
+	 DESTINATION ${C_ETC_EXAMPLES}
+	 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
 
 install (FILES condor_limits_wrapper.sh condor_schedd.init DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 
@@ -105,7 +110,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 			RENAME		condor)
 
-elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
+elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

@@ -557,6 +557,7 @@ ResMgr::reconfig_resources( void )
 
 		// Allocate and initialize our arrays.
 	sorted_resources = new Resource** [max_types];
+	ASSERT( sorted_resources != NULL );
 	for( i=0; i<max_types; i++ ) {
 		sorted_resources[i] = new Resource* [max_num];
 		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
@@ -661,7 +662,7 @@ ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
 		if( type_num_array[i] ) {
 			for( j=0; j<type_num_array[i]; j++ ) {
 				cap = buildSlot( num+1, type_strings[i], i, except );
-				if( avail.decrement(cap) ) {
+				if( avail.decrement(cap) && num < total ) {
 					cap_array[num] = cap;
 					num++;
 				} else {

@@ -72,7 +72,7 @@ needsUrlEncodeEscape(char ch)
 {
 	// The following is more conservative than it needs to be.
 	// At the very least, we need to escape "&;> ,"
-	if( isalnum(ch) || ch == '.' || ch == '_' || ch == '-' || ch == ':' || ch == '#' ) {
+	if( isalnum((unsigned char)ch) || ch == '.' || ch == '_' || ch == '-' || ch == ':' || ch == '#' ) {
 		return false;
 	}
 	return true;

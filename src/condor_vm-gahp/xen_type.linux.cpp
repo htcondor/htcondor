@@ -128,7 +128,6 @@ VirshType::Start()
 			vmprintf(D_ALWAYS, "Succeeded to restart with checkpointed files\n");
 
 			// Here we manually update timestamp of all writable disk files
-			updateAllWriteDiskTimestamp(time(NULL));
 			m_start_time.getTime();
 			return true;
 		}else {
@@ -175,7 +174,6 @@ VirshType::Start()
 	m_cpu_time = 0;
 
 	// Here we manually update timestamp of all writable disk files
-	updateAllWriteDiskTimestamp(time(NULL));
 	return true;
 }
 
@@ -700,11 +698,37 @@ VirshType::Status()
 	    return false;
 	  }
 	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
-	  {
+	  { 
+	    static unsigned long long LastCpuTime = 0; 
+	    static time_t LastStamp = time(0); 
+	    
+	    time_t CurrentStamp = time(0);
+	    unsigned long long CurrentCpuTime= info->cpuTime;
+	    double percentUtilization=1.0;
+	    
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
+	    
+	    // Here is where we tack on utilization we only cate about the 
+	    m_result_msg += " ";
+	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
+	    m_result_msg += "=";
+	    
+	    if ( (CurrentStamp - LastStamp) > 0 )
+	    {
+	      // Old calc method because of libvirt version mismatches. 
+	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
+	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
+	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
+	    }
+
+	    m_result_msg += percentUtilization;
+	    
+	    LastCpuTime = CurrentCpuTime; 
+	    LastStamp = CurrentStamp;
+	    
 	    virDomainFree(dom);
 	    return true;
 	  }
@@ -1127,23 +1151,6 @@ VirshType::updateLocalWriteDiskTimestamp(time_t timestamp)
 	}
 }
 
-void
-VirshType::updateAllWriteDiskTimestamp(time_t timestamp)
-{
-	struct utimbuf timewrap;
-
-	XenDisk *vdisk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(vdisk) ) {
-		if( !strcasecmp(vdisk->permission.Value(), "w") ||
-				!strcasecmp(vdisk->permission.Value(), "rw")) {
-			// This is a writable disk
-			timewrap.actime = timestamp;
-			timewrap.modtime = timestamp;
-			utime(vdisk->filename.Value(), &timewrap);
-		}
-	}
-}
 
 bool
 VirshType::createCkptFiles(void)
@@ -1185,7 +1192,6 @@ VirshType::createCkptFiles(void)
 			return false;
 		}
 		fclose(fp);
-		updateAllWriteDiskTimestamp(current_time);
 
 		// checkpoint succeeds
 		m_is_checkpointed = true;

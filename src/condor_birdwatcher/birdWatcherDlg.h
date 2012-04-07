@@ -31,7 +31,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // CBirdWatcherDlg dialog
 extern HWND parentHwnd;
-extern WCHAR *zCondorDir;
+extern TCHAR *zCondorDir;
 INT_PTR CALLBACK DialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void OnTimer(UINT nIDEvent);
 

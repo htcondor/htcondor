@@ -35,5 +35,6 @@ endif()
 
 if (HAVE_SSH_TO_JOB)
 	install ( FILES condor_ssh_to_job_sshd_setup condor_ssh_to_job_shell_setup DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	install ( FILES condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} )
+	configure_file( condor_ssh_to_job_sshd_config_template.in condor_ssh_to_job_sshd_config_template @ONLY )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} )
 endif(HAVE_SSH_TO_JOB)

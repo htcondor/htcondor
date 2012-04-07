@@ -793,6 +793,7 @@ printAnyNormal(ClassAd *ad)
 		name = 0;
 		if(!ad->LookupString(ATTR_NAME,&name)) {
 			name = (char *) malloc(strlen("[???]") + 1);
+			ASSERT( name != NULL );
 			strcpy(name,"[???]");
 		}
 

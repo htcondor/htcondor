@@ -652,8 +652,11 @@ susp_all()
 		the new choice.  -psilord 2/1/2001 */
 
 	sprintf(msg, "%s%d\n", susp_msg, sum);
-	/* Hmm... maybe I should write a loop that checks to see if this is ok */
-	write(CLIENT_LOG, msg, strlen(msg));
+	int result = write(CLIENT_LOG, msg, strlen(msg));
+	if (result == -1) {
+		// Now what?  At least log the fact
+		dprintf(D_ALWAYS, "Error writing suspend event to user log: %d\n", errno);
+	}
 
 	susp_self();
 
@@ -663,7 +666,10 @@ susp_all()
 		-psilord 2/1/2001 */
 	sprintf(msg, "%s\n", unsusp_msg);
 	/* Hmm... maybe I should write a loop that checks to see if this is ok */
-	write(CLIENT_LOG, msg, strlen(msg));
+	result = write(CLIENT_LOG, msg, strlen(msg));
+	if (result == -1) {
+		dprintf(D_ALWAYS, "Error writing unsuspend event to user log: %d\n", errno);
+	}
 
 	resume_all();
 

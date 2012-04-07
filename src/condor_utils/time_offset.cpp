@@ -363,7 +363,7 @@ time_offset_calculate( TimeOffsetPacket &packet, TimeOffsetPacket &rPacket,
  **/
 TimeOffsetPacket
 time_offset_initPacket() {
-	TimeOffsetPacket packet;
+	TimeOffsetPacket packet = { 0, 0, 0, 0 };
 	packet.localDepart = time( NULL );	
 	return ( packet );
 }

@@ -2959,7 +2959,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 			dprintf(D_ALWAYS, "SECMAN: failed to create session %s%s.\n",
 					sesid,
 					existing ? " (key already exists)" : "");
-			ClassAd *existing_policy = existing->policy();
+			ClassAd *existing_policy = existing ? existing->policy() : NULL;
 			if( existing_policy ) {
 				dprintf(D_ALWAYS,"SECMAN: existing session %s:\n", sesid);
 				existing_policy->dPrint(D_SECURITY);

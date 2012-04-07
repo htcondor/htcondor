@@ -316,15 +316,33 @@ a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_instance\_type}.
 Specifies a service-specific instance type.
 
-%%% ClassAd attribute: EC2KeyPairFile
-\index{ClassAd job attribute!EC2KeyPairFile}
-\index{EC2KeyPairFile!job ClassAd attribute}
-\item[\AdAttr{EC2KeyPairFile}:] 
+%%% ClassAd attribute: EC2KeyPair
+\index{ClassAd job attribute!EC2KeyPair}
+\index{EC2KeyPair!job ClassAd attribute}
+\item[\AdAttr{EC2KeyPair}:] 
 Used for grid type ec2 jobs;
 a string taken from the definition of the submit description file command
-\SubmitCmd{ec2\_key\_pair\_file}.
-Defines that path and file name of the file 
-into which to write the SSH key used to access the image, once it is running. 
+\SubmitCmd{ec2\_key\_pair}.
+Defines the key pair associated with the EC2 instance. 
+
+%%% ClassAd attribute: EC2TagNames
+\index{ClassAd job attribute!EC2TagNames}
+\index{EC2TagNames!job ClassAd attribute}
+\item[\AdAttr{EC2TagNames}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_tag\_names}.
+Defines the set, and case, of tags associated with the EC2 instance. 
+
+%%%% ClassAd attribute: EC2KeyPairFile
+%\index{ClassAd job attribute!EC2KeyPairFile}
+%\index{EC2KeyPairFile!job ClassAd attribute}
+%\item[\AdAttr{EC2KeyPairFile}:] 
+%Used for grid type ec2 jobs;
+%a string taken from the definition of the submit description file command
+%\SubmitCmd{ec2\_key\_pair\_file}.
+%Defines that path and file name of the file 
+%into which to write the SSH key used to access the image, once it is running. 
 
 %%% ClassAd attribute: EC2RemoteVirtualMachineName
 \index{ClassAd job attribute!EC2RemoteVirtualMachineName}
@@ -545,7 +563,7 @@ attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
-How quickly this updated information becomes visibile to \Condor{q} is
+How quickly this updated information becomes visible to \Condor{q} is
 controlled by \MacroNI{SHADOW\_QUEUE\_UPDATE\_INTERVAL} and
 \MacroNI{STARTER\_UPDATE\_INTERVAL}.
 
@@ -802,6 +820,15 @@ like to claim. As long as \AdAttr{CurrentHosts} is the same as
 job run uninterrupted before kicking it off when it is being preempted.
 This can only decrease the amount of time from what the corresponding
 startd expression allows.
+
+%%% ClassAd attribute: MemoryUsage
+\index{ClassAd job attribute!MemoryUsage}
+\index{MemoryUsage!job ClassAd attribute}
+\item[\AdAttr{MemoryUsage}:]  An integer expression in units of Mbytes that
+represents the peak memory usage for the job.
+Its purpose is to be compared with the value defined by a job with the
+\SubmitCmd{request\_memory} submit command,
+for purposes of policy evaluation.
 
 %%% ClassAd attribute: MinHosts
 \index{ClassAd job attribute!MinHosts}

@@ -871,8 +871,9 @@ ReliSock::serialize(char *buf)
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
     int itmp;
-    sscanf(ptmp,"%d*",&itmp);
-    _special_state = relisock_state(itmp);
+    int citems = sscanf(ptmp,"%d*",&itmp);
+	if (citems == 1)
+       _special_state = relisock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
     if(ptmp) ptmp++;
@@ -889,9 +890,9 @@ ReliSock::serialize(char *buf)
         // Followed by Md
         ptmp = serializeMdInfo(ptmp);
 
-        sscanf(ptmp, "%d*", &len);
-        
-        if (len > 0) {
+        citems = sscanf(ptmp, "%d*", &len);
+
+        if (1 == citems && len > 0) {
             ptmp = strchr(ptmp, '*');
             ptmp++;
             memcpy(fqu, ptmp, len);
@@ -905,7 +906,8 @@ ReliSock::serialize(char *buf)
         // we are 6.2, this is the end of it.
 		size_t sinful_len = strlen(ptmp);
 		sinful_string = new char [1 + sinful_len];
-        sscanf(ptmp,"%s",sinful_string);
+        citems = sscanf(ptmp,"%s",sinful_string);
+		if (1 != citems) sinful_string[0] = 0;
 		sinful_string[sinful_len] = 0;
     }
 

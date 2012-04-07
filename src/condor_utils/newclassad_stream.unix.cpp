@@ -62,6 +62,7 @@ int StreamGet( Stream *stream, list<classad::ClassAd *> &ad_list )
 	for( int ad_num = 0;  ad_num < num_ads;  ad_num++ ) {
 		classad::ClassAd	*ad = new classad::ClassAd;
 		if ( !StreamGet( stream, *ad ) ) {
+			delete ad;
 			return 0;
 		}
 		ad_list.push_back( ad );

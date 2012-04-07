@@ -684,7 +684,13 @@ firstPass (int argc, char *argv[])
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i],"-attributes", 3)){
-			// we don't do anything right here ... see prefix check in secondPass
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -attributes requires one additional argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			i++;
 		} else	
 		if (matchPrefix (argv[i], "-run", 2) || matchPrefix(argv[i], "-claimed", 3)) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
@@ -898,7 +904,20 @@ secondPass (int argc, char *argv[])
 		}
 		if (matchPrefix (argv[i], "-format", 2)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
-			projList.AppendArg(argv[i+2]);
+
+			StringList attributes;
+			ClassAd ad;
+			if(!ad.GetExprReferences(argv[i+2],attributes,attributes)){
+				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
+				exit(1);
+			}
+
+			attributes.rewind();
+			char const *s;
+			while( (s=attributes.next()) ) {
+				projList.AppendArg(s);
+			}
+
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
 						i, argv[i+1], argv[i+2]);
@@ -907,7 +926,7 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (matchPrefix (argv[i], "-target", 2)) {
-			i += 2;
+			i++;
 			continue;
 		}
 		if( matchPrefix(argv[i], "-sort", 3) ) {
@@ -935,7 +954,7 @@ secondPass (int argc, char *argv[])
 			while( (s=more_attrs.next()) ) {
 				projList.AppendArg(s);
 			}
-			i += 2;
+			i++;
 			continue;
 		}
 		

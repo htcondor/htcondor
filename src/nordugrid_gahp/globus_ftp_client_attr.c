@@ -2571,6 +2571,10 @@ globus_ftp_client_operationattr_set_authorization(
     {
 	i_attr->auth_info.password = GLOBUS_NULL;
     }
+    if(i_attr->auth_info.account)
+    {
+	i_attr->auth_info.account = GLOBUS_NULL;
+    }
     if(i_attr->auth_info.auth_gssapi_subject)
     {
 	i_attr->auth_info.auth_gssapi_subject = GLOBUS_NULL;

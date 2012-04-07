@@ -512,6 +512,207 @@ ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
 }
 
 
+// class is used to build up Usage/Request/Allocated table for each 
+// Partitionable resource before we print out the table.
+class  SlotResTermSumy {
+public:
+	std::string use;
+	std::string req;
+	std::string alloc;
+};
+
+// class to write the usage ClassAd to the userlog
+// The usage ClassAd should contain attrbutes that match the pattern
+// "<RES>", "Request<RES>", or "<RES>Usage", where <RES> can be
+// Cpus, Disk, Memory, or others as defined for use by the ProvisionedResources
+// attribute.
+//
+static void writeUsageAd(FILE * file, ClassAd * pusageAd)
+{
+	if ( ! pusageAd)
+		return;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
+
+	std::map<std::string, SlotResTermSumy*> useMap;
+
+	for (classad::ClassAd::iterator iter = pusageAd->begin();
+		 iter != pusageAd->end();
+		 iter++) {
+		int ixu = (int)iter->first.size() - 5; // size "Usage" == 5
+		std::string key = "";
+		int efld = -1;
+		if (0 == iter->first.find("Request")) {
+			key = iter->first.substr(7); // size "Request" == 7
+			efld = 1;
+		} else if (ixu > 0 && 0 == iter->first.substr(ixu).compare("Usage")) {
+			efld = 0;
+			key = iter->first.substr(0,ixu);
+		} 
+		else /*if (useMap[iter->first])*/ { // Allocated
+			efld = 2;
+			key = iter->first;
+		}
+		if (key.size() != 0) {
+			SlotResTermSumy * psumy = useMap[key];
+			if ( ! psumy) {
+				psumy = new SlotResTermSumy();
+				useMap[key] = psumy;
+				//fprintf(file, "\tadded %x for key %s\n", psumy, key.c_str());
+			} else {
+				//fprintf(file, "\tfound %x for key %s\n", psumy, key.c_str());
+			}
+			std::string val = "";
+			unp.Unparse(val, iter->second);
+
+			//fprintf(file, "\t%-8s \t= %4s\t(efld%d, key = %s)\n", iter->first.c_str(), val.c_str(), efld, key.c_str());
+
+			switch (efld)
+			{
+				case 0: // Usage
+					psumy->use = val;
+					break;
+				case 1: // Request
+					psumy->req = val;
+					break;
+				case 2:	// Allocated
+					psumy->alloc = val;
+					break;
+			}
+		} else {
+			std::string val = "";
+			unp.Unparse(val, iter->second);
+			fprintf(file, "\t%s = %s\n", iter->first.c_str(), val.c_str());
+		}
+	}
+	if (useMap.empty())
+		return;
+
+	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
+	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
+		 it != useMap.end();
+		 ++it) {
+		SlotResTermSumy * psumy = it->second;
+		if ( ! psumy->alloc.size()) {
+			classad::ExprTree * tree = pusageAd->Lookup(it->first);
+			if (tree) {
+				unp.Unparse(psumy->alloc, tree);
+			}
+		}
+		//fprintf(file, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+		cchRes = MAX(cchRes, (int)it->first.size());
+		cchUse = MAX(cchUse, (int)psumy->use.size());
+		cchReq = MAX(cchReq, (int)psumy->req.size());
+		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
+	}
+
+	MyString fmt;
+	fmt.sprintf("\tPartitionable Resources : %%%ds %%%ds %%%ds\n", cchUse, cchReq, MAX(cchAlloc,9));
+	fprintf(file, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "");
+	fmt.sprintf("\t   %%-%ds : %%%ds %%%ds %%%ds\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
+	//fputs(fmt.Value(), file);
+	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
+		 it != useMap.end();
+		 ++it) {
+		SlotResTermSumy * psumy = it->second;
+		std::string lbl = it->first.c_str(); 
+		if (lbl.compare("Memory") == 0) lbl += " (MB)";
+		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
+		fprintf(file, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+	}
+	//fprintf(file, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
+}
+
+static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
+{
+	ClassAd * puAd = *ppusageAd;
+	if ( ! puAd) {
+		puAd = new ClassAd();
+		if ( ! puAd)
+			return;
+	}
+	puAd->Clear();
+
+	int ixColon = -1;
+	int ixUse = -1;
+	int ixReq = -1;
+	int ixAlloc = -1;
+
+	for (;;) {
+		char sz[250];
+
+		// if we hit end of file or end of record "..." rewind the file pointer.
+		fpos_t filep;
+		fgetpos( file, &filep );
+		if ( ! fgets(sz, sizeof(sz), file) || 
+			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		// lines for reading the usageAd must be of the form "\tlabel : data\n"
+		// the ':' characters in each line will line up vertically, so we can find
+		// the colon in the first line, and use it as a quick to validate subsequent
+		// lines.
+		if (ixColon < 0) {
+			const char * pszColon = strchr(sz, ':');
+			if ( ! pszColon) 
+				ixColon = 0;
+			else
+				ixColon = (int)(pszColon - sz);
+		}
+		int cchLine = strlen(sz);
+		if (sz[0] != '\t' || ixColon <= 0 || ixColon+1 >= cchLine || 
+			sz[ixColon] != ':' || sz[ixColon-1] != ' ' || sz[ixColon+1] != ' ') {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		sz[ixColon] = 0; // separate sz into 2 strings
+		// parse out label
+		char * pszLbl = sz;
+		while (*pszLbl == '\t' || *pszLbl == ' ') ++pszLbl;
+		char * psz = pszLbl;
+		while (*psz && *psz != ' ') ++psz;
+		*psz = 0;
+
+		char * pszTbl = &sz[ixColon+1]; // pointer to the usage table
+
+		// 
+		if (MATCH == strcmp(pszLbl, "Partitionable")) {
+			psz = pszTbl;
+			while (*psz == ' ') ++psz;         // skip spaces
+			while (*psz && *psz != ' ') ++psz; // skip "Usage"
+			ixUse = (int)(psz - pszTbl)+1;     // save right edge of Usage
+			while (*psz == ' ') ++psz;         // skip spaces
+			while (*psz && *psz != ' ') ++psz; // skip "Request"
+			ixReq = (int)(psz - pszTbl)+1;     // save right edge of Request
+			while (*psz == ' ') ++psz;         // skip spaces
+			if (*psz) {                        // if there is an "Allocated"
+				while (*psz && *psz != ' ') ++psz; // skip "Allocated"
+				ixAlloc = (int)(psz - pszTbl)+1;
+			}
+		} else if (ixUse > 0) {
+			pszTbl[ixUse] = 0;
+			pszTbl[ixReq] = 0;
+			std::string exprstr;
+			sprintf(exprstr, "%sUsage = %s", pszLbl, pszTbl);
+			puAd->Insert(exprstr.c_str());
+			sprintf(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
+			puAd->Insert(exprstr.c_str());
+			if (ixAlloc > 0) {
+				pszTbl[ixAlloc] = 0;
+				sprintf(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
+				puAd->Insert(exprstr.c_str());
+			}
+		}
+	}
+
+	*ppusageAd = puAd;
+}
+
+
 // ----- the SubmitEvent class
 SubmitEvent::SubmitEvent(void)
 {
@@ -1931,11 +2132,13 @@ JobEvictedEvent::JobEvictedEvent(void)
 	signal_number = -1;
 	reason = NULL;
 	core_file = NULL;
+	pusageAd = NULL;
 }
 
 
 JobEvictedEvent::~JobEvictedEvent(void)
 {
+	if ( pusageAd ) delete pusageAd;
 	delete[] reason;
 	delete[] core_file;
 }
@@ -2190,6 +2393,12 @@ JobEvictedEvent::writeEvent( FILE *file )
     }
 
   }
+
+	// print out resource request/useage values.
+	//
+	if (pusageAd) {
+		writeUsageAd(file, pusageAd);
+	}
 
   scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
@@ -2478,6 +2687,7 @@ TerminatedEvent::TerminatedEvent(void)
 	normal = false;
 	core_file = NULL;
 	returnValue = signalNumber = -1;
+	pusageAd = NULL;
 
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
 	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
@@ -2487,6 +2697,7 @@ TerminatedEvent::TerminatedEvent(void)
 
 TerminatedEvent::~TerminatedEvent(void)
 {
+	if ( pusageAd ) delete pusageAd;
 	delete[] core_file;
 }
 
@@ -2510,6 +2721,7 @@ TerminatedEvent::getCoreFile( void )
 {
 	return core_file;
 }
+
 
 int
 TerminatedEvent::writeEvent( FILE *file, const char* header )
@@ -2574,6 +2786,12 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 				total_recvd_bytes, header) < 0)
 		return 1;				// backwards compatibility
 
+	// print out resource request/useage values.
+	//
+	if (pusageAd) {
+		writeUsageAd(file, pusageAd);
+	}
+
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	tmpCl1.Assign("endmessage", messagestr);
@@ -2603,6 +2821,10 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 	int  normalTerm;
 	int  gotCore;
 	int  retval;
+
+	if (pusageAd) {
+		pusageAd->Clear();
+	}
 
 	if( (retval = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
 		return 0;
@@ -2640,6 +2862,52 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
 
+#if 1
+	for (;;) {
+		char sz[250];
+		char srun[sizeof("Total")];
+		char sdir[sizeof("Recieved")];
+		char sjob[22];
+
+		// if we hit end of file or end of record "..." rewind the file pointer.
+		fpos_t filep;
+		fgetpos( file, &filep );
+		if ( ! fgets(sz, sizeof(sz), file) || 
+			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		// expect for strings of the form "\t%f  -  Run Bytes Sent By Job"
+		// where "Run" "Sent" and "Job" can all vary. 
+		float val; srun[0] = sdir[0] = sjob[0] = 0;
+		bool fOK = false;
+		if (4 == sscanf(sz, "\t%f  -  %5s Bytes %8s By %21s", &val, srun, sdir, sjob)) {
+			if (!strcmp(sjob,header)) {
+				if (!strcmp(srun,"Run")) {
+					if (!strcmp(sdir,"Sent")) {
+						sent_bytes = val; fOK = true;
+					} else if (!strcmp(sdir,"Received")) {
+						recvd_bytes = val; fOK = true;
+					}
+				} else if (!strcmp(srun,"Total")) {
+					if (!strcmp(sdir,"Sent")) {
+						total_sent_bytes = val; fOK = true;
+					} else if (!strcmp(sdir,"Received")) {
+						total_recvd_bytes = val; fOK = true;
+					}
+				}
+			}
+		}
+		if ( ! fOK) {
+			fsetpos(file, &filep);
+			break;
+		}
+	}
+	// the useage ad is optional
+	readUsageAd(file, &pusageAd);
+#else
+
 		// THIS CODE IS TOTALLY BROKEN.  Please fix me.
 		// In particular: fscanf() when you don't convert anything to
 		// a local variable returns 0, but we think that's failure.
@@ -2660,6 +2928,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		fscanf (file, "\n") == 0 ) {
 		return 1;		// backwards compatibility
 	}
+#endif
 	return 1;
 }
 
@@ -2834,7 +3103,10 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 JobImageSizeEvent::JobImageSizeEvent(void)
 {
 	eventNumber = ULOG_IMAGE_SIZE;
-	size = -1;
+	image_size_kb = -1;
+	resident_set_size_kb = 0;
+	proportional_set_size_kb = -1;
+	memory_usage_mb = -1;
 }
 
 
@@ -2846,7 +3118,20 @@ JobImageSizeEvent::~JobImageSizeEvent(void)
 int
 JobImageSizeEvent::writeEvent (FILE *file)
 {
-	if (fprintf (file, "Image size of job updated: %d\n", size) < 0)
+	if (fprintf (file, "Image size of job updated: %"PRId64"\n", image_size_kb) < 0)
+		return 0;
+
+	// when talking to older starters, memory_usage, rss & pss may not be set
+	if (memory_usage_mb >= 0 && 
+		fprintf (file, "\t%"PRId64"  -  MemoryUsage of job (MB)\n", memory_usage_mb) < 0)
+		return 0;
+
+	if (resident_set_size_kb >= 0 &&
+		fprintf (file, "\t%"PRId64"  -  ResidentSetSize of job (KB)\n", resident_set_size_kb) < 0)
+		return 0;
+
+	if (proportional_set_size_kb >= 0 &&
+		fprintf (file, "\t%"PRId64"  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb) < 0)
 		return 0;
 
 	return 1;
@@ -2857,8 +3142,43 @@ int
 JobImageSizeEvent::readEvent (FILE *file)
 {
 	int retval;
-	if ((retval=fscanf(file,"Image size of job updated: %d", &size)) != 1)
+	if ((retval=fscanf(file,"Image size of job updated: %"PRId64, &image_size_kb)) != 1)
 		return 0;
+
+	// These fields were added to this event in 2012, so we need to tolerate the
+	// situation when they are not there in the log that we read back.
+	memory_usage_mb = -1;
+	resident_set_size_kb = 0;
+	proportional_set_size_kb = -1;
+
+	for (;;) {
+		char sz[250];
+		char lbl[48+1];
+
+		// if we hit end of file or end of record "..." rewind the file pointer.
+		fpos_t filep;
+		fgetpos(file, &filep);
+		if ( ! fgets(sz, sizeof(sz), file) || 
+			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
+			fsetpos(file, &filep);
+			break;
+		}
+
+		int64_t val; lbl[0] = 0;
+		if (2 == sscanf(sz, "\t%"PRId64"  -  %48s", &val, lbl)) {
+			if (!strcmp(lbl,"MemoryUsage")) {
+				memory_usage_mb = val;
+			} else if (!strcmp(lbl, "ResidentSetSize")) {
+				resident_set_size_kb = val;
+			} else if (!strcmp(lbl, "ProportionalSetSize")) {
+				proportional_set_size_kb = val;
+			} else {
+				// rewind the file pointer so we don't consume what we can't parse.
+				fsetpos(file, &filep);
+				break;
+			}
+		}
+	}
 
 	return 1;
 }
@@ -2868,11 +3188,26 @@ JobImageSizeEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
+	char buf0[250];
 
-	if( size >= 0 ) {
-		snprintf(buf0, 512, "Size = %d", size);
-		buf0[511] = 0;
+	if( image_size_kb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "Size = %"PRId64, image_size_kb);
+		buf0[sizeof(buf0)-1] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( memory_usage_mb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "MemoryUsage = %"PRId64, memory_usage_mb);
+		buf0[sizeof(buf0)-1] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( resident_set_size_kb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "ResidentSetSize = %"PRId64, resident_set_size_kb);
+		buf0[sizeof(buf0)-1] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( proportional_set_size_kb >= 0 ) {
+		snprintf(buf0, sizeof(buf0), "ProportionalSetSize = %"PRId64, proportional_set_size_kb);
+		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 
@@ -2886,7 +3221,15 @@ JobImageSizeEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	ad->LookupInteger("Size", size);
+	// default these fields, they were added in 2012.
+	memory_usage_mb = -1;
+	resident_set_size_kb = 0;
+	proportional_set_size_kb = -1;
+
+	ad->LookupInteger("Size", image_size_kb);
+	ad->LookupInteger("MemoryUsage", memory_usage_mb);
+	ad->LookupInteger("ResidentSetSize", resident_set_size_kb);
+	ad->LookupInteger("ProportionalSetSize", proportional_set_size_kb);
 }
 
 ShadowExceptionEvent::ShadowExceptionEvent (void)
@@ -2933,6 +3276,7 @@ ShadowExceptionEvent::writeEvent (FILE *file)
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	snprintf(messagestr, 512, "Shadow exception: %s", message);
+	messagestr[COUNTOF(messagestr)-1] = 0;
 
 		// remove the new line in the end if any
 	if  (messagestr[strlen(messagestr)-1] == '\n')
@@ -3581,6 +3925,7 @@ char*
 ULogEvent::rusageToStr (rusage usage)
 {
 	char* result = (char*) malloc(128);
+	ASSERT( result != NULL );
 
 	int usr_secs = usage.ru_utime.tv_sec;
 	int sys_secs = usage.ru_stime.tv_sec;

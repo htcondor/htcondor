@@ -417,7 +417,7 @@ _condor_itoa(long quantity, char *out, int base)
 			*p ^= *q;
 			*q ^= *p;
 			*p ^= *q;
-			*p++; *q--;
+			p++; q--;
 		}
 		return numchars;
 		break;

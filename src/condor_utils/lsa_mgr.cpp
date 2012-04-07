@@ -538,61 +538,108 @@ lsa_mgr::wcsstri(wchar_t* haystack, wchar_t* needle) {
 
 void 
 doAdd() {
+	lsa_mgr* foo = new lsa_mgr();
+#if 1 // just read directly into wchar buffers
+	wchar_t wszLogin[1024];
+	wchar_t wszPassw[1024];
+	wszLogin[0] = wszPassw[0] = 0;
+
+	printf("Enter Login: ");
+	_getws_s(wszLogin, COUNTOF(wszLogin));
+
+	printf("Enter Password: ");
+	_getws_s(wszPassw, COUNTOF(wszPassw));
+
+	foo->add( wszLogin, wszPassw );
+
+	SecureZeroMemory(wszPassw, sizeof(wszPassw));
+	SecureZeroMemory(wszLogin, sizeof(wszLogin));
+#else
 	char inBuf[1024];
 	wchar_t *Login=NULL, *Passw=NULL;
 	
-	lsa_mgr* foo = new lsa_mgr();
-	
 	printf("Enter Login: ");
-	gets(inBuf);
+	gets_s(inBuf, COUNTOF(inBuf));
 	Login = foo->charToUnicode( inBuf );
 	
 	printf("Enter Password: ");
-	gets(inBuf);
+	gets_s(inBuf, COUNTOF(inBuf));
 	Passw = foo->charToUnicode( inBuf );
 
 	foo->add( Login, Passw );
 
-	ZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw)+1);
+	SecureZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw)+1);
 	delete[] Passw;
 	Passw = NULL;
 
-	ZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
+	SecureZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
 	delete[] Login;
 	Login = NULL;
-
+#endif
 	// cleanup 
 	delete foo;
 }
 
 void doRemove() {
-	char inBuf[1024];
-	wchar_t *Login=NULL;
 	
 	lsa_mgr* foo = new lsa_mgr();
 	
 	printf("Enter Login: ");
-	gets(inBuf);
+#if 1 // just read directly into wchar buffer
+	wchar_t wszLogin[1024];
+	_getws_s(wszLogin, COUNTOF(wszLogin));
+
+	foo->remove( wszLogin );
+
+	SecureZeroMemory(wszLogin, sizeof(wszLogin));
+#else
+	char inBuf[1024];
+	wchar_t *Login=NULL;
+	gets_s(inBuf);
 	Login = foo->charToUnicode( inBuf );
 	
 	foo->remove( Login );
 
-	// cleanup 
-	delete foo;
-
 	ZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
 	delete[] Login;
 	Login = NULL;
+#endif
+	// cleanup 
+	delete foo;
+
 }
 
 void doQuery() {
-	char inBuf[1024];
-	wchar_t *Login=NULL, *Passw=NULL;
 	
 	lsa_mgr* foo = new lsa_mgr();
 	
+#if 1 // just read directly into wchar buffer
+	wchar_t wszLogin[1024];
+	wszLogin[0] = 0;
 	printf("Enter Login: ");
-	gets(inBuf);
+	_getws_s(wszLogin, COUNTOF(wszLogin));
+
+	wchar_t * pszPassw = foo->query( wszLogin );
+
+	printf("Password is %S\n", pszPassw ? pszPassw : L"Not Found");
+
+	// cleanup 
+
+	if ( pszPassw ) {
+		SecureZeroMemory(pszPassw, sizeof(WCHAR)*wcslen(pszPassw));
+		delete[] pszPassw;
+		pszPassw = NULL;
+	}
+
+	SecureZeroMemory(wszLogin, sizeof(wszLogin));
+
+#else
+
+	char inBuf[1024];
+	wchar_t *Login=NULL, *Passw=NULL;
+
+	printf("Enter Login: ");
+	gets_s(inBuf);
 	Login = foo->charToUnicode( inBuf );
 	
 	
@@ -611,7 +658,9 @@ void doQuery() {
 	ZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
 	delete[] Login;
 	Login = NULL;
-		
+
+#endif
+
 	delete foo;
 }
 
@@ -644,7 +693,7 @@ int interactive() {
 
 	while (1) {
 		printMenu();
-		gets(inBuf);
+		gets_s(inBuf, COUNTOF(inBuf));
 		switch( inBuf[0] ) {
 			case '1' : doAdd(); break;
 			case '2' : doRemove(); break;

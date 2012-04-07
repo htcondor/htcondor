@@ -58,12 +58,12 @@ windows_soft_kill(DWORD pid)
 	// construct the command line for the call to CreateProcess
 	//
 	char command_line[1024];
-	command_line[1023] = '\0';
 	int ret = _snprintf(command_line,
 	                    1024,
 	                    "\"%s\" %u debug.txt",
 	                    soft_kill_binary,
-					    pid);
+	                    pid);
+	command_line[1023] = 0;
 	if (ret < 0) {
 		dprintf(D_ALWAYS,
 		        "windows:soft_kill: snprintf error: %s (%d)\n",

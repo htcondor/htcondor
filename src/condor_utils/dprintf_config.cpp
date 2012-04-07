@@ -34,6 +34,9 @@
 #include "sig_install.h"
 #endif
 
+#include <string>
+using std::string;
+
 int		Termlog = 0;
 
 extern int		DebugFlags;
@@ -315,7 +318,9 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
                     // because there is nothing like param_long_long() or param_off_t()
                     bool r = lex_cast(pval, maxlog);
                     if (!r || (maxlog < 0)) {
-                        EXCEPT("Invalid config: %s = %s", pname, pval);
+                        string m;
+                        sprintf(m, "Invalid config %s = %s: %s must be an integer literal >= 0\n", pname, pval, pname);
+                        _condor_dprintf_exit(EINVAL, m.c_str());
                     }
                     it->maxLog = maxlog;
 					free(pval);

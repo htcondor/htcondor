@@ -74,6 +74,12 @@ void _condor_file_table_aggravate( int on_off )
 	FileTab->set_aggravate_mode( on_off );
 }
 
+void _condor_file_set_working_dir( char *dir )
+{
+	_condor_file_table_init();
+	FileTab->set_working_dir( dir );
+}
+
 void _condor_file_table_checkpoint()
 {
 	_condor_file_table_init();

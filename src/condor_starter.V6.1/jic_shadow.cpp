@@ -41,6 +41,8 @@
 #include "condor_vm_universe_types.h"
 #include "authentication.h"
 #include "condor_mkstemp.h"
+#include "globus_utils.h"
+
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -100,6 +102,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 	syscall_sock = (ReliSock *)socks[0];
 	socks++;
 
+	m_proxy_expiration_tid = -1;
+
 		/* Set a timeout on remote system calls.  This is needed in
 		   case the user job exits in the middle of a remote system
 		   call, leaving the shadow blocked.  -Jim B. */
@@ -111,6 +115,9 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 
 JICShadow::~JICShadow()
 {
+	if( m_proxy_expiration_tid != -1 ){
+		daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+	}
 	if( shadow ) {
 		delete shadow;
 	}
@@ -843,24 +850,24 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	size = strlen(uid_domain) + strlen(ATTR_UID_DOMAIN) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, uid_domain );
 	ad->Insert( tmp );
 	free( tmp );
 
 	size = strlen(fs_domain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, fs_domain ); 
 	ad->Insert( tmp );
 	free( tmp );
 
-	int slot = Starter->getMySlotNumber();
+	MyString slotName = Starter->getMySlotName();
 	MyString line = ATTR_NAME;
 	line += "=\"";
-	if( slot ) { 
-		line += "slot";
-		line += slot;
-		line += '@';
-	}
+	line += slotName;
+	line += '@';
+	
 	line += my_full_hostname();
 	line += '"';
 	ad->Insert( line.Value() );
@@ -870,6 +877,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	tmp_val = param( "ARCH" );
 	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
 	ad->Insert( tmp );
 	free( tmp );
@@ -878,6 +886,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	tmp_val = param( "OPSYS" );
 	size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
 	ad->Insert( tmp );
 	free( tmp );
@@ -887,6 +896,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	if( tmp_val ) {
 		size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
 		tmp = (char*) malloc( size * sizeof(char) );
+		ASSERT( tmp != NULL );
 		sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
 		ad->Insert( tmp );
 		free( tmp );
@@ -895,6 +905,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	size = strlen(ATTR_HAS_RECONNECT) + 6;
 	tmp = (char*) malloc( size * sizeof(char) );
+	ASSERT( tmp != NULL );
 	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
 	ad->Insert( tmp );
 	free( tmp );
@@ -1120,10 +1131,13 @@ JICShadow::initUserPriv( void )
         char *nobody_user = NULL;
 			// 20 is the longest param: len(VM_UNIV_NOBODY_USER) + 1
         char nobody_param[20];
-		int slot = Starter->getMySlotNumber();
-		if( ! slot ) {
-			slot = 1;
+		MyString slotName = Starter->getMySlotName();
+		if (slotName.Length() > 4) {
+			// We have a real slot of the form slotX or slotX_Y
+		} else {
+			slotName = "slot1";
 		}
+		slotName.upper_case();
 
 		if( job_universe == CONDOR_UNIVERSE_VM ) {
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
@@ -1133,15 +1147,15 @@ JICShadow::initUserPriv( void )
 			if( nobody_user == NULL ) {
 				// "VM_UNIV_NOBODY_USER" is NOT defined.
 				// Next, we will try to use SLOTx_VMUSER
-				snprintf( nobody_param, 20, "SLOT%d_VMUSER", slot );
+				snprintf( nobody_param, 20, "%s_VMUSER", slotName.Value() );
 				nobody_user = param(nobody_param);
 			}
 		}
 		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "SLOT%d_USER", slot );
+			snprintf( nobody_param, 20, "SLOT%s_USER", slotName.Value() );
 			nobody_user = param(nobody_param);
 			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
-				snprintf( nobody_param, 20, "VM%d_USER", slot );
+				snprintf( nobody_param, 20, "VM%s_USER", slotName.Value() );
 				nobody_user = param(nobody_param);
 			}
 		}
@@ -1694,8 +1708,32 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		dprintf(D_ALWAYS,
 		        "Attempt to refresh X509 proxy FAILED.\n");
 	}
-	
+
 	return reply;
+}
+
+int
+JICShadow::proxyExpiring()
+{
+	// we log the return value, but even if it failed we still try to clean up
+	// because we are about to lose control of the job otherwise.
+	bool rv = holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
+	dprintf(D_ALWAYS, "ZKM: ABOUT TO HOLD, rv == %i\n", rv);
+
+	// this will actually clean up the job
+	if ( Starter->Hold( ) ) {
+		dprintf( D_FULLDEBUG, "ZKM: Hold() returns true\n" );
+		this->allJobsDone();
+	} else {
+		dprintf( D_FULLDEBUG, "ZKM: Hold() returns false\n" );
+	}
+
+	// and this causes us to exit relatively cleanly.  it tries to communicate
+	// with the shadow, which fails, but i'm not sure what to do about that.
+	bool sd = Starter->ShutdownFast();
+	dprintf(D_ALWAYS, "ZKM: STILL HERE, sd == %i\n", sd);
+
+	return 0;
 }
 
 bool
@@ -1715,7 +1753,47 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		return false;
 	}
 	const char * proxyfilename = condor_basename(path.Value());
-	return ::updateX509Proxy(cmd, s, proxyfilename);
+
+	bool retval = ::updateX509Proxy(cmd, s, proxyfilename);
+
+	// now, if the update was successful, and we are using glexec, make sure we
+	// set a timer to put the job on hold before the proxy expires and we lose
+	// control of it.
+#if defined(LINUX)
+	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
+#else
+	// dummy for non-linux platforms.
+	int* gpsh = NULL;
+#endif
+	if(retval && gpsh) {
+		// if there was a timer registered, cancel it
+		if( m_proxy_expiration_tid != -1 ) {
+			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
+			m_proxy_expiration_tid = -1;
+		}
+
+		// for the new timer, start with the payload proxy expiration time
+		time_t expiration = x509_proxy_expiration_time(path.Value());
+		time_t now = time(NULL);
+
+		// now subtract the configurable time allowed for eviction
+		// years of careful research show the default should be one minute.
+		int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
+		time_t expiration_delta = (expiration - now) - evict_window;
+
+		m_proxy_expiration_tid = daemonCore->Register_Timer(
+			expiration_delta,
+			(TimerHandlercpp)&JICShadow::proxyExpiring,
+			"proxy expiring",
+			this );
+		if (m_proxy_expiration_tid > 0) {
+			dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %i\n", m_proxy_expiration_tid, (int)expiration);
+		} else {
+			dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
+		}
+	}
+
+	return retval;
 }
 
 

@@ -137,8 +137,9 @@ class ScheddNegotiate: public DCMsg {
 
 		///////// end of virtual functions for scheduler to define  //////////
 
- private:
+ protected:
 	ResourceRequestList *m_jobs;
+ private:
 	std::set<int> m_rejected_auto_clusters;
 
 	std::string m_owner;
@@ -180,6 +181,34 @@ class ScheddNegotiate: public DCMsg {
 	virtual MessageClosureEnum messageReceived( DCMessenger *, Sock *);
 
 		/////////// End of DCMsg hooks ////////////
+};
+
+/* DedicatedScheddNegotiate is a class that overrides virtual methods
+   called by ScheddNegotiate when it requires actions to be taken by
+   the schedd during negotiation.  See the definition of
+   ScheddNegotiate for a description of these functions.
+*/
+class DedicatedScheddNegotiate: public ScheddNegotiate {
+public:
+	DedicatedScheddNegotiate(
+		int cmd,
+		ResourceRequestList *jobs,
+		char const *owner,
+		char const *remote_pool
+	): ScheddNegotiate(cmd,jobs,owner,remote_pool) {}
+
+		// Define the virtual functions required by ScheddNegotiate //
+
+	virtual bool scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad );
+
+	virtual bool scheduler_skipJob(PROC_ID job_id);
+
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
+
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name);
+
+	virtual void scheduler_handleNegotiationFinished( Sock *sock );
+
 };
 
 #endif

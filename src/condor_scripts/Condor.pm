@@ -1113,7 +1113,7 @@ sub ParseSubmitFile
 }
 
 sub timestamp {
-    return strftime("%y/%m/%d %H:%M:%S", localtime);
+    return strftime("%Y/%m/%d %H:%M:%S", localtime);
 }
 
 sub safe_WIFEXITED {

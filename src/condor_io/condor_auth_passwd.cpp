@@ -1420,7 +1420,7 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 	unsigned char *buffer;
 	int prefix_len, buffer_len;
 
-	if(t_buf && t_buf->a && t_buf->b)
+	if(t_buf->a && t_buf->b)
 		dprintf(D_SECURITY, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
 			t_buf->a, (unsigned long)strlen(t_buf->a),
 			t_buf->b, (unsigned long)strlen(t_buf->b));

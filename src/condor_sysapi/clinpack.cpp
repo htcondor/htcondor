@@ -40,6 +40,7 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 #ifdef WIN32
 /* Get rid of warnings; we cannot change this code */
 # pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
+# pragma warning( disable: 6386 6385) // Buffer overrun & Invalid data: accessing st[0]. linpack is standard, we can't fix it.
 #endif
 
 /* #define SP     */

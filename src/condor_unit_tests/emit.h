@@ -20,17 +20,24 @@
 #ifndef EMIT_H
 #define EMIT_H
 
+// Why wrap these in do{}while? http://c-faq.com/cpp/multistmt.html
 #define FAIL \
-	e.emit_result_failure(__LINE__); \
-	return false
+	do { \
+		e.emit_result_failure(__LINE__); \
+		return false; \
+	} while(0)
 
 #define PASS \
-	e.emit_result_success(__LINE__); \
-	return true
+	do { \
+		e.emit_result_success(__LINE__); \
+		return true; \
+	} while(0)
 
 #define ABORT \
-	e.emit_result_abort(__LINE__); \
-	return false
+	do { \
+		e.emit_result_abort(__LINE__); \
+		return false; \
+	} while(0)
 
 #include "condor_common.h"
 

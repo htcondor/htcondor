@@ -67,7 +67,9 @@ Gahp_Args::add_arg( char *new_arg )
 	}
 	if ( argc >= argv_size ) {
 		argv_size += 60;
-		argv = (char **)realloc( argv, argv_size * sizeof(char *) );
+		void * pv = realloc( argv, argv_size * sizeof(char *) );
+		if (pv) argv = (char **)pv;
+		else return; // FIXME: should do something better here than just return. but ASSERT is unavail in this scope
 	}
 	argv[argc] = new_arg;
 	argc++;

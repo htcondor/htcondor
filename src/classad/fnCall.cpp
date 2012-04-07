@@ -158,10 +158,13 @@ FunctionCall( )
 		functionTable["unparse"		] =	(void*)unparse;
 
 			// mathematical functions
-		functionTable["floor"		] =	(void*)doMath;
-		functionTable["ceil"		] =	(void*)doMath;
-		functionTable["ceiling"		] =	(void*)doMath;
-		functionTable["round"		] =	(void*)doMath;
+		functionTable["floor"		] =	(void*)doRound;
+		functionTable["ceil"		] =	(void*)doRound;
+		functionTable["ceiling"		] =	(void*)doRound;
+		functionTable["round"		] =	(void*)doRound;
+		functionTable["pow" 		] =	(void*)doMath2;
+		//functionTable["log" 		] =	(void*)doMath2;
+		functionTable["quantize"	] =	(void*)doMath2;
         functionTable["random"      ] = (void*)random;
 
 			// for compatibility with old classads:
@@ -2109,7 +2112,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 
 bool FunctionCall::
-doMath( const char* name,const ArgumentList &argList,EvalState &state,
+doRound( const char* name,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;
@@ -2146,6 +2149,126 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
         }
     }
     return true;
+}
+
+// 2 argument math functions.
+bool FunctionCall::
+doMath2( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg, arg2;
+
+		// takes 2 arguments  pow(val,base)
+	if( argList.size() != 2) {
+		result.SetErrorValue( );
+		return( true );
+	}
+	if( !argList[0]->Evaluate( state, arg ) ||
+		!argList[1]->Evaluate( state, arg2 )) {
+		result.SetErrorValue( );
+		return( false );
+	}
+
+	if (strcasecmp("pow", name) == 0) {
+		// take arg2 to the power of arg2
+		int ival, ibase;
+		if (arg.IsIntegerValue(ival) && arg2.IsIntegerValue(ibase) && ibase >= 0) {
+			ival = (int) (pow((double)ival, ibase) + 0.5);
+			result.SetIntegerValue(ival);
+		} else {
+			Value	realValue, realBase;
+			if ( ! convertValueToRealValue(arg, realValue) ||
+			     ! convertValueToRealValue(arg2, realBase)) {
+			result.SetErrorValue();
+			} else {
+				double rvalue = 0, rbase = 1;
+				realValue.IsRealValue(rvalue);
+				realBase.IsRealValue(rbase);
+				result.SetRealValue( pow(rvalue, rbase) );
+			}
+		}
+	} else if (strcasecmp("quantize", name) == 0) {
+		// quantize arg1 to the next integral multiple of arg2
+		// if arg2 is a list, choose the first item from the list that is larger than arg1
+		// if arg1 is larger than all of the items in the list, the result is an error.
+
+		Value val, base;
+		if ( ! convertValueToRealValue(arg, val)) {
+			result.SetErrorValue();
+		} else {
+			// get the value to quantize into rval.
+			double rval, rbase;
+			val.IsRealValue(rval);
+
+			if (arg2.IsListValue()) {
+				const ExprList *list;
+				arg2.IsListValue(list);
+				base.SetRealValue(0.0), rbase = 0.0; // treat an empty list as 'don't quantize'
+				for (ExprListIterator itr(list); !itr.IsAfterLast(); itr.NextExpr()) {
+					const ExprTree *expr = itr.CurrentExpr();
+					if ( ! expr->Evaluate(base)) {
+						result.SetErrorValue();
+						return false; // eval should not fail
+					}
+					if (convertValueToRealValue(base, val)) {
+						val.IsRealValue(rbase);
+						if (rbase >= rval) {
+							result = base;
+							return true;
+						}
+					} else {
+						//TJ: should we ignore values that can't be converted?
+						result.SetErrorValue();
+						return true;
+					}
+				}
+				// at this point base is the value of the last expression in the list.
+				// and rbase is the real value of it and rval > rbase.
+				// when this happens we want to quantize on multiples of the last
+				// list value, as if on a single value were passed rather than a list.
+				arg2 = base;
+			} else {
+				// if arg2 is not a list, then it must evaluate to a real value
+				// or we can't use it. (note that if it's an int, we still want
+				// to return an int, but we assume that all ints can be converted to real)
+				if ( ! convertValueToRealValue(arg2, base)) {
+					result.SetErrorValue();
+					return true;
+				}
+				base.IsRealValue(rbase);
+			}
+
+			// at this point rbase should contain the real value of either arg2 or the
+			// last entry in the list. and rval should contain the value to be quantized.
+
+			int ival, ibase;
+			if (arg2.IsIntegerValue(ibase)) {
+				// quantize to an integer base,
+				if ( ! ibase)
+					result = arg;
+				else if (arg.IsIntegerValue(ival)) {
+					ival = ((ival + ibase-1) / ibase) * ibase;
+					result.SetIntegerValue(ival);
+				} else {
+					rval = ceil(rval / ibase) * ibase;
+					result.SetRealValue(rval);
+				}
+			} else {
+				const double epsilon = 1e-8;
+				if (rbase >= -epsilon && rbase <= epsilon) {
+					result = arg;
+				} else {
+					// we already have the real-valued base in rbase so just use it here.
+					rval = ceil(rval / rbase) * rbase;
+					result.SetRealValue(rval);
+				}
+			}
+		}
+	} else {
+		// unknown 2 argument math function
+		result.SetErrorValue( );
+	}
+	return true;
 }
 
 bool FunctionCall::

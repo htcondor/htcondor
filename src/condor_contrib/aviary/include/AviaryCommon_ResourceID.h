@@ -48,10 +48,10 @@ namespace AviaryCommon
 
                 
                 bool isValidName;
-            std::string property_Custom_type;
+            std::string property_Sub_type;
 
                 
-                bool isValidCustom_type;
+                bool isValidSub_type;
             
 
         /*** Private methods ***/
@@ -70,7 +70,7 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setCustom_typeNil();
+        setSub_typeNil();
             
 
 
@@ -99,10 +99,10 @@ namespace AviaryCommon
          * @param Resource AviaryCommon::ResourceType*
          * @param Pool std::string
          * @param Name std::string
-         * @param Custom_type std::string
+         * @param Sub_type std::string
          * @return newly created ResourceID object
          */
-        ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_type);
+        ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Sub_type);
         
         
         /********************************** Class get set methods **************************************/
@@ -182,26 +182,26 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for custom_type. 
+         * Getter for sub_type. 
          * @return std::string*
          */
         WSF_EXTERN std::string WSF_CALL
-        getCustom_type();
+        getSub_type();
 
         /**
-         * Setter for custom_type.
-         * @param arg_Custom_type std::string*
+         * Setter for sub_type.
+         * @param arg_Sub_type std::string*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setCustom_type(const std::string  arg_Custom_type);
+        setSub_type(const std::string  arg_Sub_type);
 
         /**
-         * Re setter for custom_type
+         * Re setter for sub_type
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetCustom_type();
+        resetSub_type();
         
 
 
@@ -245,11 +245,11 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether custom_type is Nill
+         * Check whether sub_type is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isCustom_typeNil();
+        isSub_typeNil();
 
 
         
@@ -344,7 +344,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for custom_type by property number (4)
+         * Getter for sub_type by property number (4)
          * @return std::string
          */
 

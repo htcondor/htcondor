@@ -29,6 +29,10 @@ Profile( )
 Profile::
 ~Profile( )
 {
+	Condition *c;
+	while (conditions.Next(c)) {
+		delete c;
+	}
 }
 
 bool Profile::

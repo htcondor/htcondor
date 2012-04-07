@@ -23,13 +23,6 @@ use CondorUtils;
 use strict;
 use warnings;
 
-# truly const variables in perl
-sub IDLE{1};
-sub HELD{5};
-sub RUNNING{2};
-
-my $testdesc =  'cmd_status_shows-help';
-my $testname = "cmd_status_shows-help";
 my $corename = "cmd_status_shows-help";
 my $debuglevel = 2;
 
@@ -40,60 +33,51 @@ my $mysaveme = $corename . ".saveme";
 runcmd("mkdir -p $mysaveme");
 
 if($mypid == 0) {
-	die "Saveme setup for test failed\n";
+    die "Saveme setup for test failed\n";
 }
 
-my $count = 0;
-my $done = 0;
-my $nattempts = 1;
+my $found_usage = 0;
 my @adarray;
 
 print "Looking for Usage lines from condor_status -help - ";
-while($count < $nattempts) {
-	my $masterlocal = 0;
-	my $mastersched = 0;
-	my $found1 = 0;
-	my $cmd = "condor_status -help";
-	# forth arg places stderr into passed array
-	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-    if(!$cmdstatus)
-    {
-        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-        exit(1)
+
+my $cmd = "condor_status -help";
+my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+if(!$cmdstatus) {
+    CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n", $debuglevel);
+    exit(1)
+}
+
+CondorTest::debug("Looking at condor_status -help \n", $debuglevel);
+
+# looking for.....  <Usage: condor_status>
+foreach (@adarray) {
+    if(/^\s*Usage:\s+condor_status/) {
+        CondorTest::debug("found usage: $_\n", $debuglevel);
+        $found_usage = 1;
+        print "ok\n";
+        last;
     }
-
-	CondorTest::debug("Looking at condor_status -help \n",$debuglevel);
-
-	# looking for.....  <Usage: condor_status>
-	foreach my $line (@adarray) {
-		if($line =~ /^\s*Usage:\s+condor_status.*$/) {
-			CondorTest::debug("found usage: $line\n",$debuglevel);
-			$done = 1;
-			print "ok\n";
-		} else {
-			CondorTest::debug("usage: $line\n",$debuglevel);
-		}
-	}
-
-	$count = $count + 1;
-	sleep($count * 5);
-}
-if($done == 0) {
-	print "bad\n";
+    else {
+        CondorTest::debug("no match: $_\n", $debuglevel);
+    }
 }
 
-CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
+if($found_usage == 0) {
+    print "bad\n";
+}
+
+CondorTest::debug("Saving things and cleaning up....\n", $debuglevel);
 
 # Fails due to directory of same name.
 runcmd("cp *cmd_status_shows-help* $mysaveme", {expect_result=>\&ANY});
 
 print scalar localtime() . "\n";
 
-if( $done == 0 )
-{
-	# actual test failed but we allowed cleanup
-	exit(1);
+if($found_usage == 0) {
+    # actual test failed but we allowed cleanup
+    exit(1);
 }
 
-CondorTest::debug("cmd_status_shows-help SUCCESS\n",$debuglevel);
+CondorTest::debug("cmd_status_shows-help SUCCESS\n", $debuglevel);
 exit(0);

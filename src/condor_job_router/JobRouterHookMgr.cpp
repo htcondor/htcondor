@@ -233,6 +233,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
 				"failed to spawn HOOK_TRANSLATE_JOB (%s)\n", hook_translate);
+		delete translate_client;
 		return -1;
 	}
 	uninit_user_ids();
@@ -302,6 +303,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n", hook_update_job_info);
+		delete status_client;
 		return -1;
 
 	}
@@ -381,6 +383,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", hook_job_exit);
+		delete exit_client;
 		return -1;
 
 	}
@@ -455,6 +458,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::JobCleanup: "
 				"failed to spawn HOOK_JOB_CLEANUP (%s)\n", hook_cleanup);
+		delete cleanup_client;
 		return -1;
 
 	}
@@ -482,6 +486,7 @@ JobRouterHookMgr::addKnownHook(const char* key, HookType hook)
 		return false;
 	}
 	HOOK_RUN_INFO *hook_info = (HOOK_RUN_INFO*) malloc(sizeof(HOOK_RUN_INFO));
+	ASSERT( hook_info != NULL );
 	hook_info->hook_type = hook;
 	hook_info->key = strdup(key);
 	return(m_job_hook_list.Append(hook_info));

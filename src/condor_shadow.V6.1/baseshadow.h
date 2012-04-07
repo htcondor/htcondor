@@ -330,7 +330,7 @@ class BaseShadow : public Service
 		 */
 	virtual int updateFromStarterClassAd(ClassAd* update_ad) = 0;
 
-	virtual int getImageSize( void ) = 0;
+	virtual int64_t getImageSize( int64_t & memory_usage, int64_t & rss, int64_t & pss ) = 0;
 
 	virtual int getDiskUsage( void ) = 0;
 

@@ -29,6 +29,9 @@ Condition( )
 	myTree = NULL;
 	pos = ATTR_POS_LEFT;
 	op = classad::Operation::__NO_OP__;
+	multiAttr = false;
+	isComplex = false;
+	op2 = op;
 }
 
 Condition::

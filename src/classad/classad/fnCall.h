@@ -195,9 +195,11 @@ class FunctionCall : public ExprTree
 	
 	static bool unparse(const char*,const ArgumentList&,EvalState&,Value&);
 	
-	// math (floor, ceil, round)
-	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
+	// (floor, ceil, round)
+	static bool doRound(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool random(const char*,const ArgumentList&,EvalState&,Value&);
+	// 2 argument math functions (pow, log, quantize)
+	static bool doMath2(const char*,const ArgumentList&,EvalState&,Value&);
 
 	static bool ifThenElse( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
 	

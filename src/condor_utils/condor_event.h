@@ -743,6 +743,8 @@ class JobEvictedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signal_number;
 
+	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
+
 	const char* getReason(void) const;
 	void setReason( const char* );
 
@@ -826,6 +828,8 @@ class TerminatedEvent : public ULogEvent
 	/// total bytes received by the job over the network for the lifetime
 	/// of the job
 	float total_recvd_bytes;
+
+	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
  private:
 
@@ -1156,8 +1160,11 @@ class JobImageSizeEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// The new size of the image
-    int size;
+	/// The new size of the image
+	int64_t image_size_kb;
+	int64_t resident_set_size_kb;
+	int64_t proportional_set_size_kb;
+	int64_t memory_usage_mb;
 };
 
 //----------------------------------------------------------------------------

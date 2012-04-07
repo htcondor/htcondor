@@ -804,8 +804,12 @@ OsProc::Suspend()
 void
 OsProc::Continue()
 {
-	daemonCore->Send_Signal(JobPid, SIGCONT);
-	is_suspended = false;
+	if (is_suspended)
+	{
+	  
+	  daemonCore->Send_Signal(JobPid, SIGCONT);
+	  is_suspended = false;
+	}
 }
 
 bool
@@ -911,6 +915,7 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 		dprintf(D_FULLDEBUG, "Setting cpu affinity to %d\n", slotId - 1);	
 		int *mask = (int *) malloc(sizeof(int) * 2);
+		ASSERT( mask != NULL );
 		mask[0] = 2;
 		mask[1] = slotId - 1; // slots start at 1, cpus at 0
 		return mask;
@@ -925,6 +930,9 @@ OsProc::makeCpuAffinityMask(int slotId) {
 	}
 
 	int *mask = (int *) malloc(sizeof(int) * (cpus.number() + 1));
+	if ( ! mask)
+		return mask;
+
 	mask[0] = cpus.number() + 1;
 	cpus.rewind();
 	char *cpu;

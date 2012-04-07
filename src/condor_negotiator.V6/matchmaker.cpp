@@ -221,7 +221,8 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 
 	float group_quota = 0;
 	float group_usage = 0;
-	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_quota,group_usage) ) {
+    string group_name;
+	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_name,group_quota,group_usage) ) {
 		result.SetErrorValue();
 		return true;
 	}
@@ -285,6 +286,7 @@ Matchmaker ()
 
     hgq_root_group = NULL;
     autoregroup = false;
+    allow_quota_oversub = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -1048,10 +1050,11 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 
 
 bool Matchmaker::
-getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage )
+getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage)
 {
 	ASSERT(groupQuotasHash);
 
+    groupName = "";
 	groupQuota = 0.0;
 	groupUsage = 0.0;
 
@@ -1059,17 +1062,17 @@ getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage
 
     GroupEntry* group = accountant.GetAssignedGroup(user);
 
-    // If it is the root group, we interpret here as "not a group" for backward compatability
-    if (hgq_root_group == group) return false;
+    // if group quotas not in effect, return here for backward compatability
+    if (hgq_groups.size() <= 1) return false;
 
-    MyString groupname = group->name.c_str();
+    groupName = group->name;
 
-	if (groupQuotasHash->lookup(groupname, groupQuota) == -1) {
+	if (groupQuotasHash->lookup(groupName, groupQuota) == -1) {
 		// hash lookup failed, must not be a group name
 		return false;
 	}
 
-	groupUsage = accountant.GetWeightedResourcesUsed(groupname);
+	groupUsage = accountant.GetWeightedResourcesUsed(groupName);
 
 	return true;
 }
@@ -1172,6 +1175,16 @@ negotiationTime ()
 			cycle_delay - elapsed);
 		return;
 	}
+
+    if (param_boolean("NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE", false)) {
+        // All things being equal, it would be preferable to invoke a full neg reconfig here
+        // instead of just config(), however frequent reconfigs apparently create new nonblocking 
+        // sockets to the collector that the collector waits in vain for, which ties it up, thus
+        // also blocking other daemons trying to talk to the collector, and so forth.  That seems
+        // like it should be fixed as well.
+        dprintf(D_ALWAYS, "Re-reading config.\n");
+        config(0);
+    }
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
@@ -1645,6 +1658,8 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map.clear();
     group_entry_map[hgq_root_name] = hgq_root_group;
 
+    allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
+
     bool accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
@@ -1793,10 +1808,10 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // static quotas get first dibs on any available quota
     // total static quota assignable is bounded by quota coming from above
-    double sqa = min(sqsum, quota);
+    double sqa = (allow_quota_oversub) ? sqsum : min(sqsum, quota);
 
     // children with dynamic quotas get allocated from the remainder 
-    double dqa = quota - sqa;
+    double dqa = max(0.0, quota - sqa);
 
     dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", group->name.c_str(), sqa, dqa);
 
@@ -1828,7 +1843,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // Current group gets anything remaining after assigning to any children
     // If there are no children (a leaf) then this group gets all the quota
-    group->quota = quota - chq;
+    group->quota = (allow_quota_oversub) ? quota : (quota - chq);
     if (group->quota < 0) group->quota = 0;
     dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
 }
@@ -2432,6 +2447,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			schedd_ver_string = NULL;
 
 			double submitterLimit = 0.0;
+            double submitterLimitUnclaimed = 0.0;
 			double submitterUsage = 0.0;
 
 			calculateSubmitterLimit(
@@ -2446,6 +2462,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				slotWeightTotal,
 					/* result parameters: */
 				submitterLimit,
+                submitterLimitUnclaimed,
 				submitterUsage,
 				submitterShare,
 				submitterAbsShare,
@@ -2494,6 +2511,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			rejPreemptForPolicy = 0;
 			rejPreemptForRank = 0;
 			rejForSubmitterLimit = 0;
+            rejectedConcurrencyLimit = "";
 
 			// Optimizations: 
 			// If number of idle jobs = 0, don't waste time with negotiate.
@@ -2522,17 +2540,16 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				} else {
 					int numMatched = 0;
 					startTime = time(NULL);
-					double limitUsed = 0.0;
                     if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
                         negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
                     }
 					negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
 					negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-					result=negotiate( scheddName.Value(),schedd,submitterPrio,
-								  submitterAbsShare, submitterLimit,
+					result=negotiate(groupName, scheddName.Value(), schedd, submitterPrio,
+                                  submitterLimit, submitterLimitUnclaimed,
 								  startdAds, claimIds, 
 								  ignore_submitter_limit,
-								  startTime, numMatched, limitUsed, pieLeft);
+                                  startTime, numMatched, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
 			}
@@ -2778,6 +2795,7 @@ obtainAdsFromCollector (
 				subReqs = ExprTreeToString(reqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);
+				ASSERT( newReqs != NULL );
 				snprintf(newReqs, length+15, "Saved%s = %s", 
 							ATTR_REQUIREMENTS, subReqs); 
 				ad->InsertOrUpdate(newReqs);
@@ -2790,6 +2808,7 @@ obtainAdsFromCollector (
 				subReqs = ExprTreeToString(negReqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
 				newReqs = (char *)malloc(length+16);
+				ASSERT( newReqs != NULL );
 
 				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, 
 							subReqs); 
@@ -3019,11 +3038,11 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 }
 
 int Matchmaker::
-negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, double share,
-		   double submitterLimit,
+negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, double priority,
+		   double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   bool ignore_schedd_limit, time_t startTime, 
-		   int &numMatched, double &limitUsed, double &pieLeft)
+		   int& numMatched, double &pieLeft)
 {
 	ReliSock	*sock;
 	int			reply;
@@ -3031,11 +3050,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 	int			result;
 	time_t		currentTime;
 	ClassAd		request;
-	ClassAd		*offer;
+	ClassAd*    offer = NULL;
 	bool		only_consider_startd_rank;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
-	char		remoteUser[128];
+    string remoteUser;
+    double limitUsed = 0.0;
+    double limitUsedUnclaimed = 0.0;
 
 	numMatched = 0;
 
@@ -3187,8 +3208,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 		// 2a.  ask for job information
 		int sleepy = param_integer("NEG_SLEEP", 0);
+			//  This sleep is useful for any testing that calls for a
+			//  long negotiation cycle, please do not remove
+			//  it. Examples of such testing are the async negotiation
+			//  protocol w/ schedds and reconfig delaying until after
+			//  a negotiation cycle. -matt 21 mar 2012
 		if ( sleepy ) {
-			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+			sleep(sleepy);
 		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
@@ -3263,6 +3289,11 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		request.AddTargetRefs( TargetMachineAttrs );
 #endif
 
+        // information regarding the negotiating group context:
+        string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
+        request.Assign(ATTR_SUBMITTER_NEGOTIATING_GROUP, negGroupName);
+        request.Assign(ATTR_SUBMITTER_AUTOREGROUP, (autoregroup && (negGroupName == hgq_root_group->name))); 
+
 		// insert the submitter user priority attributes into the request ad
 		// first insert old-style ATTR_SUBMITTOR_PRIO
 		request.Assign(ATTR_SUBMITTOR_PRIO , (float)priority );  
@@ -3271,11 +3302,12 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE, 
 					   accountant.GetWeightedResourcesUsed ( scheddName ));
+        string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
 		bool is_group = false;
-		if (getGroupInfoFromUserId(scheddName,temp_groupQuota,temp_groupUsage))
-		{
+		if (getGroupInfoFromUserId(scheddName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
+            request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
 			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
 			is_group = true;
@@ -3295,11 +3327,12 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		result = MM_BAD_MATCH;
 		while (result == MM_BAD_MATCH) 
 		{
+            remoteUser = "";
 			// 2e(i).  find a compatible offer
 			offer=matchmakingAlgorithm(scheddName, scheddAddr.Value(), request,
-											 startdAds, priority,
-											 share, 
-											 limitUsed, submitterLimit,
+                                             startdAds, priority,
+                                             limitUsed, limitUsedUnclaimed, 
+                                             submitterLimit, submitterLimitUnclaimed,
 											 pieLeft,
 											 only_consider_startd_rank);
 
@@ -3308,7 +3341,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				int want_match_diagnostics = 0;
 				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
 									want_match_diagnostics);
-				const char *diagnostic_message = NULL;
+				string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, scheddName, scheddAddr.Value());
@@ -3322,13 +3355,12 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				if (rejForNetwork) {
 					diagnostic_message = "insufficient bandwidth";
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
-							diagnostic_message);
+							diagnostic_message.c_str());
 				} else {
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
 					} else if (rejForConcurrencyLimit) {
-						diagnostic_message =
-							"concurrency limit reached";
+						diagnostic_message = "concurrency limit " + rejectedConcurrencyLimit + " reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
@@ -3345,7 +3377,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 						diagnostic_message = "no match found";
 					}
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
-							diagnostic_message);
+							diagnostic_message.c_str());
 				}
 				sock->encode();
 				if ((want_match_diagnostics) ? 
@@ -3385,7 +3417,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 				// got a candidate preemption --- print a helpful message
 				dprintf( D_ALWAYS, "      Preempting %s (user prio=%.2f, startd rank=%.2f) on %s "
-						 "for %s (user prio=%.2f, startd rank=%.2f)\n", remoteUser,
+						 "for %s (user prio=%.2f, startd rank=%.2f)\n", remoteUser.c_str(),
 						 remotePriority, oldStartdRank, remoteHost, scheddName,
 						 priority, newStartdRank );
                 free(remoteHost);
@@ -3447,6 +3479,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 		double SlotWeight = accountant.GetSlotWeight(offer);
 		limitUsed += SlotWeight;
+        if (remoteUser == "") limitUsedUnclaimed += SlotWeight;
 		pieLeft -= SlotWeight;
 		negotiation_cycle_stats[0]->matches++;
 	}
@@ -3533,8 +3566,9 @@ display to the user, or for calls to sockCache->invalidateSock.
 ClassAd *Matchmaker::
 matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &request,
 					 ClassAdListDoesNotDeleteAds &startdAds,
-					 double preemptPrio, double    /*share*/,
-					 double limitUsed, double submitterLimit,
+					 double preemptPrio,
+					 double limitUsed, double limitUsedUnclaimed,
+                     double submitterLimit, double submitterLimitUnclaimed,
 					 double pieLeft,
 					 bool only_for_startdrank)
 {
@@ -3555,7 +3589,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	PreemptState	bestPreemptState = (PreemptState)-1;
 	bool			newBestFound;
 		// to store results of evaluations
-	char			remoteUser[256];
+	string remoteUser;
 	EvalResult		result;
 	float			tmp;
 		// request attributes
@@ -3565,6 +3599,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		// Check resource constraints requested by request
 	rejForConcurrencyLimit = 0;
+    rejectedConcurrencyLimit = "";
 	MyString limits;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
 		limits.lower_case();
@@ -3598,6 +3633,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						limit, count, increment, max);
 
 				rejForConcurrencyLimit++;
+                rejectedConcurrencyLimit = limit;
 				return NULL;
 			}
 		}
@@ -3624,9 +3660,14 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
 		while( (cached_bestSoFar = MatchList->pop_candidate()) ) {
-			if( SubmitterLimitPermits(cached_bestSoFar, limitUsed, submitterLimit, pieLeft) ) {
+            int t = 0;
+            cached_bestSoFar->LookupInteger(ATTR_PREEMPT_STATE_, t);
+            PreemptState pstate = PreemptState(t);
+			if ((pstate != NO_PREEMPTION) && SubmitterLimitPermits(cached_bestSoFar, limitUsed, submitterLimit, pieLeft)) {
 				break;
-			}
+			} else if (SubmitterLimitPermits(cached_bestSoFar, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
+				break;
+            }
 			MatchList->increment_rejForSubmitterLimit();
 		}
 		dprintf(D_FULLDEBUG,"Attempting to use cached MatchList: %s (MatchList length: %d, Autocluster: %d, Schedd Name: %s, Schedd Address: %s)\n",
@@ -3714,7 +3755,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		candidatePreemptState = NO_PREEMPTION;
 
-		remoteUser[0] = '\0';
+		remoteUser = "";
 			// If there is already a preempting user, we need to preempt that user.
 			// Otherwise, we need to preempt the user who is running the job.
 		if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
@@ -3731,7 +3772,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// not prefer it, just continue with the next offer ad....  we can
 		// skip all the below logic about preempt for user-priority, etc.
 		if ( only_for_startdrank ) {
-			if ( remoteUser[0] == '\0' ) {
+			if ( remoteUser == "" ) {
 					// offer does not have a remote user, thus we cannot eval
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
@@ -3761,7 +3802,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// if there is a remote user, consider preemption ....
 		// Note: we skip this if only_for_startdrank is true since we already
 		//       tested above for the only condition we care about.
-		if ( (remoteUser[0] != '\0') &&
+		if ( (remoteUser != "") &&
 			 (!only_for_startdrank) ) {
 			if( EvalExprTree(rankCondStd, candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE ) {
@@ -3800,7 +3841,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			} else {
 					// don't have better priority *and* offer doesn't prefer
 					// request --- find another machine
-				if (strcmp(remoteUser, scheddName)) {
+				if (remoteUser != scheddName) {
 						// only set rejPreemptForPrio if we aren't trying to
 						// preempt one of our own jobs!
 					rejPreemptForPrio++;
@@ -3817,15 +3858,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		   check if we are negotiating only for startd rank, since startd rank
 		   preemptions should be allowed regardless of user priorities. 
 	    */
-		if( (candidatePreemptState != RANK_PREEMPTION) &&
-			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
-		{
-			rejForSubmitterLimit++;
-			dprintf(D_MACHINE,
-					"User's share of the pool is too small for job %d.%d to claim %s.\n",
-					cluster_id, proc_id, machine_name.Value());
-			continue;
-		}
+        if ((candidatePreemptState == PRIO_PREEMPTION) && !SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) {
+            rejForSubmitterLimit++;
+            continue;
+        } else if ((candidatePreemptState == NO_PREEMPTION) && !SubmitterLimitPermits(candidate, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
+            rejForSubmitterLimit++;
+            continue;
+        }
 
 		candidatePreJobRankValue = EvalNegotiatorMatchRank(
 		  "NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
@@ -4072,6 +4111,7 @@ Warning: scheddAddr may not be the actual address we'll use to contact the
 schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
+MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
@@ -4079,7 +4119,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 {
 	int  cluster, proc;
 	MyString startdAddr;
-	char remoteUser[512];
+	string remoteUser;
 	char accountingGroup[256];
 	char remoteOwner[256];
     MyString startdName;
@@ -4141,6 +4181,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	savedRequirements = NULL;
 	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;
 	tmp = (char *)malloc(length);
+	ASSERT( tmp != NULL );
 	snprintf(tmp, length, "Saved%s", ATTR_REQUIREMENTS);
 	savedRequirements = offer->LookupExpr(tmp);
 	free(tmp);
@@ -4171,6 +4212,12 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	} else {
 		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
 	}
+
+    // these propagate into the slot ad in the schedd match rec, and from there eventually to the claim
+    // structures in the startd:
+    offer->CopyAttribute(ATTR_REMOTE_GROUP, ATTR_SUBMITTER_GROUP, &request);
+    offer->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, ATTR_SUBMITTER_NEGOTIATING_GROUP, &request);
+    offer->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, ATTR_SUBMITTER_AUTOREGROUP, &request);
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
@@ -4217,16 +4264,16 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		strcpy(remoteOwner, "none");
 	}
 	if (offer->LookupString(ATTR_ACCOUNTING_GROUP, accountingGroup)) {
-		snprintf(remoteUser,sizeof(remoteUser),"%s (%s=%s)",
+		sprintf(remoteUser,"%s (%s=%s)",
 			remoteOwner,ATTR_ACCOUNTING_GROUP,accountingGroup);
 	} else {
-		strcpy(remoteUser,remoteOwner);
+		remoteUser = remoteOwner;
 	}
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		startdAddr = "<0.0.0.0:0>";
 	}
 	dprintf(D_ALWAYS|D_MATCH, "      Matched %d.%d %s %s preempting %s %s %s%s\n",
-			cluster, proc, scheddName, scheddAddr, remoteUser,
+			cluster, proc, scheddName, scheddAddr, remoteUser.c_str(),
 			startdAddr.Value(), startdName.Value(),
 			offline ? " (offline)" : "");
 
@@ -4243,6 +4290,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			 offline ? " (offline)" : "");
 	return MM_GOOD_MATCH;
 }
+MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
 void
 Matchmaker::calculateSubmitterLimit(
@@ -4257,6 +4305,7 @@ Matchmaker::calculateSubmitterLimit(
 	double slotWeightTotal,
 		/* result parameters: */
 	double &submitterLimit,
+    double& submitterLimitUnclaimed,
 	double &submitterUsage,
 	double &submitterShare,
 	double &submitterAbsShare,
@@ -4277,13 +4326,13 @@ Matchmaker::calculateSubmitterLimit(
 		submitterLimit = 0.0;
 	}
 
-	if ( groupAccountingName ) {
+    submitterLimitUnclaimed = submitterLimit;
+	if (groupAccountingName) {
 		float maxAllowed = groupQuota - groupusage;
-			dprintf (D_FULLDEBUG, "   maxAllowed  = %f groupQuota  = %f groupusage  = %f\n",
-					maxAllowed,groupQuota,groupusage);
-		if ( maxAllowed < 0 ) maxAllowed = 0.0;
-		if ( submitterLimit > maxAllowed ) {
-			submitterLimit = maxAllowed;
+		dprintf(D_FULLDEBUG, "   maxAllowed= %g   groupQuota= %g   groupusage=  %g\n", maxAllowed, groupQuota, groupusage);
+		if (maxAllowed < 0) maxAllowed = 0.0;
+		if (submitterLimitUnclaimed > maxAllowed) {
+			submitterLimitUnclaimed = maxAllowed;
 		}
 	}
 
@@ -4316,19 +4365,13 @@ Matchmaker::calculatePieLeft(
 	scheddAds.Open();
 	while ((schedd = scheddAds.Next()))
 	{
-        // Don't allow pie to exceed limits imposed by group quotas
-        if ((NULL != groupAccountingName) && (groupusage >= groupQuota)) {
-            double over = groupusage - groupQuota;
-            pieLeft -= min(over, pieLeft);
-            break;
-        }
-
 		double submitterShare = 0.0;
 		double submitterAbsShare = 0.0;
 		double submitterPrio = 0.0;
 		double submitterPrioFactor = 0.0;
 		MyString scheddName;
 		double submitterLimit = 0.0;
+        double submitterLimitUnclaimed = 0.0;
 		double submitterUsage = 0.0;
 
 		schedd->LookupString( ATTR_NAME, scheddName );
@@ -4345,6 +4388,7 @@ Matchmaker::calculatePieLeft(
 			slotWeightTotal,
 				/* result parameters: */
 			submitterLimit,
+            submitterLimitUnclaimed,
 			submitterUsage,
 			submitterShare,
 			submitterAbsShare,
@@ -4354,8 +4398,6 @@ Matchmaker::calculatePieLeft(
         schedd->Assign("SubmitterStarvation", starvation_ratio(submitterUsage, submitterUsage+submitterLimit));
 			
 		pieLeft += submitterLimit;
-        // account for expected group usage increases as we accumulate pie
-        if (NULL != groupAccountingName) groupusage += submitterLimit;
 	}
 	scheddAds.Close();
 }
@@ -4436,6 +4478,7 @@ addRemoteUserPrios( ClassAd	*ad )
 	int     total_slots, i;
 	float     preemptingRank;
 	float temp_groupQuota, temp_groupUsage;
+    string temp_groupName;
 
 	if ( !ConsiderPreemption ) {
 			// Hueristic - no need to take the time to populate ad with 
@@ -4454,10 +4497,9 @@ addRemoteUserPrios( ClassAd	*ad )
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
 		expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
-		if (getGroupInfoFromUserId(remoteUser.Value(),
-									temp_groupQuota,temp_groupUsage))
-		{
+		if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
+            ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
 			expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
@@ -4507,16 +4549,14 @@ addRemoteUserPrios( ClassAd	*ad )
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
 			expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(buffer.Value(),expr.Value());
-			if (getGroupInfoFromUserId(remoteUser.Value(),
-										temp_groupQuota,temp_groupUsage))
-			{
-					// this is a group, so enter group usage info
-				buffer.sprintf("%s%s", slot_prefix.Value(), 
-					ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
+			if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
+				// this is a group, so enter group usage info
+				buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
+				ad->Assign( buffer.Value(), temp_groupName );
+				buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
 				expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 				ad->AssignExpr( buffer.Value(), expr.Value() );
-				buffer.sprintf("%s%s", slot_prefix.Value(),
-					ATTR_REMOTE_GROUP_QUOTA);
+				buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );
 			}
 		}	
@@ -4738,6 +4778,12 @@ add_candidate(ClassAd * candidate,
 	AdListArray[adListLen].PostJobRankValue = candidatePostJobRankValue;
 	AdListArray[adListLen].PreemptRankValue = candidatePreemptRankValue;
 	AdListArray[adListLen].PreemptStateValue = candidatePreemptState;
+
+    // This hack allows me to avoid mucking with the pseudo-que-like semantics of MatchListType, 
+    // which ought to be replaced with something cleaner like std::deque<AdListEntry>
+    if (NULL != AdListArray[adListLen].ad) {
+        AdListArray[adListLen].ad->Assign(ATTR_PREEMPT_STATE_, int(candidatePreemptState));
+    }
 
 	adListLen++;
 }

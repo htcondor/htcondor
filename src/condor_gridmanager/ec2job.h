@@ -50,7 +50,8 @@ public:
 	BaseResource *GetResource();
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );
-	void SetRemoteJobId( const char *keypair_id, const char *instance_id );
+	void SetClientToken( const char *client_token );
+	void SetRemoteJobId( const char *client_token, const char *instance_id );
 	void SetRemoteVMName(const char * name);
 	
 	static int probeInterval;
@@ -73,7 +74,7 @@ public:
 	int numSubmitAttempts;
 
 	std::string errorString;
-	char *remoteJobId;
+	std::string m_remoteJobId;
 	std::string remoteJobState;
 
 	EC2Resource *myResource;
@@ -82,28 +83,31 @@ public:
 private:
 	// create dynamic input parameters
 	std::string build_ami_id();
+	std::string build_client_token();
 	std::string build_keypair();
 	StringList* build_groupnames();
 
 	std::string m_serviceUrl;
 	
-	char * m_public_key_file;
-	char * m_private_key_file;
-	char * m_user_data;
-	char * m_user_data_file;
-	char * m_instance_type;
-    char * m_elastic_ip;
-	char * m_availability_zone;
-	char * m_ebs_volumes;
-	char * m_vpc_subnet;
-	char * m_vpc_ip;
-	
-	int m_vm_check_times;
-	int m_keypair_check_times;
-	
-	std::string m_ami_id;
+	std::string m_public_key_file;
+	std::string m_private_key_file;
+	std::string m_user_data;
+	std::string m_user_data_file;
+	std::string m_instance_type;
+	std::string m_elastic_ip;
+	std::string m_availability_zone;
+	std::string m_ebs_volumes;
+	std::string m_vpc_subnet;
+	std::string m_vpc_ip;
 	std::string m_key_pair;
 	std::string m_key_pair_file;
+	bool m_should_gen_key_pair;
+	bool m_keypair_created;
+
+	int m_vm_check_times;
+	
+	std::string m_ami_id;
+	std::string m_client_token;
 	StringList* m_group_names;
 	
 	// remove created temporary keypair file
