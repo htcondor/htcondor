@@ -8,9 +8,9 @@ index b13f72f..32d5253 100644
   libcgroup-dev (>= 0.37~), uuid-dev, chrpath, libldap2-dev | libldap-dev,
 - help2man, gsoap (>= 2.7.17-1~)
 + help2man
- Standards-Version: 3.9.2
- 
- 
+ Standards-Version: 3.9.3
+ Homepage: http://research.cs.wisc.edu/condor
+ Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/condor.git
 diff --git a/debian/rules b/debian/rules
 index 133172c..f9f327a 100755
 --- a/debian/rules
