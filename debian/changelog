@@ -1,3 +1,10 @@
+condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
+
+  * New upstream development release. Last one before the 7.8 stable series.
+  * Majority of patches has been merged upstream or made obsolete.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 08 Apr 2012 20:25:05 +0200
+
 condor (7.7.5~dfsg.1-2) experimental; urgency=low
 
   * New primary Debian maintainer contact is Condor upstream. Previous

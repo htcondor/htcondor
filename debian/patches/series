@@ -1,16 +1,6 @@
 # in order of upstream compatibility and invasiveness
 
-# cherry-picked upstream patches
-treat_all_debian_derived_identical
-bump_classad_so_version
-# forwarded to upstream
-tolerate_stale_pid_file
-# should be obsolete in condor 7.7.6+
-lsb_compliance
-# should be obsolete in condor 7.7.6+
-use_symlinks_for_install_clones
 no_java_for_now
 no_compress
-ssh_to_job_setup
-# should be obsolete in condor 7.7.6+
+# should be obsolete in condor 7.7.6+, but cannot confirm
 fix_condor_run
