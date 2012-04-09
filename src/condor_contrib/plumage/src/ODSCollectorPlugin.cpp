@@ -48,6 +48,7 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
 	ODSMongodbOps* m_ads_conn;
 	ODSMongodbOps* m_stats_conn;
     ClassAd* m_acct_ad;
+    bool  m_settled;
     
     // Accountant ad is a special case: we don't get it from the Collector
     // it needs its own processing and sample interval
@@ -69,6 +70,7 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
 
     void
     processStatsTimer() {
+        m_settled = true;
         dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processStatsTimer() called\n");
         // sync all stat records to the same timestamp
         Date_t ts_sync = jsTime();
@@ -80,7 +82,7 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
     
 
 public:
-    ODSCollectorPlugin(): m_ads_conn(NULL), m_stats_conn(NULL),m_acct_ad(NULL)
+    ODSCollectorPlugin(): m_ads_conn(NULL), m_stats_conn(NULL),m_acct_ad(NULL),m_settled(FALSE)
     {
         //
     }
@@ -135,10 +137,10 @@ public:
             }
         
         // Register another timer for accountant ad
-        acctInterval = param_integer("ODS_ACCOUNTANT_INTERVAL",60*60);
+        acctInterval = param_integer("ODS_ACCOUNTANT_INTERVAL",initialDelay*2);
         if (-1 == (acctTimer =
             daemonCore->Register_Timer(
-                30,
+                initialDelay,
                 acctInterval,
                 (TimerHandlercpp)(&ODSCollectorPlugin::recordAccountantAd),
                 "Timer for collecting Accountant ad",
@@ -161,6 +163,12 @@ public:
 	void
 	update(int command, const ClassAd &ad)
 	{
+        // don't record anything yet in case the whole pool
+        // is going through wallaby reconfig
+        if (!m_settled) {
+            return;
+        }
+
 		MyString name,machine;
 		AdNameHashKey hashKey;
 
@@ -275,6 +283,12 @@ public:
 	void
 	invalidate(int command, const ClassAd &ad)
 	{
+        // don't record anything yet in case the whole pool
+        // is going through wallaby reconfig
+        if (!m_settled) {
+            return;
+        }
+
 		MyString name,machine;
 		AdNameHashKey hashKey;
 

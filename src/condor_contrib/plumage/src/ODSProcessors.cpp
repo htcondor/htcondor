@@ -29,10 +29,30 @@ using namespace mongo;
 using namespace plumage::etl;
 
 // helpers, note expected bob & p vars
-#define STRING(X,Y) bob.append(X,p.getStringField(Y));
-#define INTEGER(X,Y) bob.append(X,p.getIntField(Y));
-#define DOUBLE(X,Y) bob.append(X,p.getField(Y).Double());
-#define DATE(X,Y) bob.appendDate(X,Y);
+#define STRING(X,Y) \
+const char* X = p.getStringField(Y); \
+if (strcmp(X,"")) bob.append(#X,X);
+
+#define INTEGER(X,Y) bob.append(#X,p.getIntField(Y));
+#define DOUBLE(X,Y) bob.append(#X,p.getField(Y).Double());
+#define DATE(X,Y) bob.appendDate(#X,Y);
+
+// TODO: for now, insert accountant quota, etc. with 
+// the precision we appear to see from userprio
+// TODO: needs a common home
+// utility to manage float precision to
+// ClassAd serialization standard
+inline
+string formatReal(float real) {
+    string str;
+    if (real == 0.0) {
+        sprintf(str, "%.1G", real);
+    }
+    else {
+        sprintf(str, "%.6G", real);
+    }
+    return str;
+}
 
 void
 plumage::etl::processSubmitterStats(ODSMongodbOps* ops, Date_t& ts) {
@@ -45,14 +65,14 @@ plumage::etl::processSubmitterStats(ODSMongodbOps* ops, Date_t& ts) {
         // write record to submitter samples
         conn->ensureIndex(DB_STATS_SAMPLES_SUB, BSON( "ts" << 1 << "sn" << 1 ));
         BSONObjBuilder bob;
-        DATE("ts",ts);
-        STRING("sn",ATTR_NAME);
-        STRING("ma",ATTR_MACHINE);
-        INTEGER("jr",ATTR_RUNNING_JOBS);
+        DATE(ts,ts);
+        STRING(sn,ATTR_NAME);
+        STRING(ma,ATTR_MACHINE);
+        INTEGER(jr,ATTR_RUNNING_JOBS);
         // TODO: weird...HeldJobs isn't always there in the raw submitter ad
         int h = p.getIntField(ATTR_HELD_JOBS); h = (h>0) ? h : 0;
         bob.append("jh",h);
-        INTEGER("ji",ATTR_IDLE_JOBS);
+        INTEGER(ji,ATTR_IDLE_JOBS);
         conn->insert(DB_STATS_SAMPLES_SUB,bob.obj());
     }
 }
@@ -68,23 +88,20 @@ plumage::etl::processMachineStats(ODSMongodbOps* ops, Date_t& ts) {
         // write record to machine samples
         conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "ts" << 1 << "m" << 1 ));
         BSONObjBuilder bob;
-        DATE("ts",ts);
-        STRING("m",ATTR_MACHINE);
-        STRING("n",ATTR_NAME);
-        STRING("ar",ATTR_ARCH);
-        STRING("os",ATTR_OPSYS);
-        STRING("req",ATTR_REQUIREMENTS);
-        INTEGER("ki",ATTR_KEYBOARD_IDLE);
-        DOUBLE("la",ATTR_LOAD_AVG);
-        STRING("st",ATTR_STATE);
-        INTEGER("cpu",ATTR_CPUS);
-        INTEGER("mem",ATTR_MEMORY);
-        const char* gjid = p.getStringField(ATTR_GLOBAL_JOB_ID);
-        const char* ru = p.getStringField(ATTR_REMOTE_USER);
-        const char* ag = p.getStringField(ATTR_ACCOUNTING_GROUP);
-        strcmp(gjid,"")?bob.append("gjid",gjid):bob.appendNull("gjid");
-        strcmp(ru,"")?bob.append("ru",ru):bob.appendNull("ru");
-        strcmp(ag,"")?bob.append("ag",ag):bob.appendNull("ag");
+        DATE(ts,ts);
+        STRING(m,ATTR_MACHINE);
+        STRING(n,ATTR_NAME);
+        STRING(ar,ATTR_ARCH);
+        STRING(os,ATTR_OPSYS);
+        STRING(req,ATTR_REQUIREMENTS);
+        INTEGER(ki,ATTR_KEYBOARD_IDLE);
+        DOUBLE(la,ATTR_LOAD_AVG);
+        STRING(st,ATTR_STATE);
+        INTEGER(cpu,ATTR_CPUS);
+        INTEGER(mem,ATTR_MEMORY);
+        STRING(gjid,ATTR_GLOBAL_JOB_ID);
+        STRING(ru,ATTR_REMOTE_USER);
+        STRING(ag,ATTR_ACCOUNTING_GROUP);
         conn->insert(DB_STATS_SAMPLES_MACH,bob.obj());
     }
 }
@@ -100,19 +117,20 @@ plumage::etl::processSchedulerStats(ODSMongodbOps* ops, Date_t& ts) {
         // write record to scheduler samples
         conn->ensureIndex(DB_STATS_SAMPLES_SCHED, BSON( "ts" << 1 << "n" << 1 ));
         BSONObjBuilder bob;
-        STRING("n",ATTR_NAME);
-        INTEGER("mjr",ATTR_MAX_JOBS_RUNNING);
-        INTEGER("nu",ATTR_NUM_USERS);
-        INTEGER("tja",ATTR_TOTAL_JOB_ADS);
-        INTEGER("trun",ATTR_TOTAL_RUNNING_JOBS);
-        INTEGER("thj",ATTR_TOTAL_HELD_JOBS);
-        INTEGER("thi",ATTR_TOTAL_IDLE_JOBS);
-        INTEGER("trem",ATTR_TOTAL_REMOVED_JOBS);
-        INTEGER("tsr",ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
-        INTEGER("tsi",ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
-        INTEGER("tlr",ATTR_TOTAL_LOCAL_RUNNING_JOBS);
-        INTEGER("tli",ATTR_TOTAL_LOCAL_IDLE_JOBS);
-        INTEGER("tfj",ATTR_TOTAL_FLOCKED_JOBS);
+        DATE(ts,ts);
+        STRING(n,ATTR_NAME);
+        INTEGER(mjr,ATTR_MAX_JOBS_RUNNING);
+        INTEGER(nu,ATTR_NUM_USERS);
+        INTEGER(tja,ATTR_TOTAL_JOB_ADS);
+        INTEGER(trun,ATTR_TOTAL_RUNNING_JOBS);
+        INTEGER(thj,ATTR_TOTAL_HELD_JOBS);
+        INTEGER(thi,ATTR_TOTAL_IDLE_JOBS);
+        INTEGER(trem,ATTR_TOTAL_REMOVED_JOBS);
+        INTEGER(tsr,ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
+        INTEGER(tsi,ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
+        INTEGER(tlr,ATTR_TOTAL_LOCAL_RUNNING_JOBS);
+        INTEGER(tli,ATTR_TOTAL_LOCAL_IDLE_JOBS);
+        INTEGER(tfj,ATTR_TOTAL_FLOCKED_JOBS);
         conn->insert(DB_STATS_SAMPLES_SCHED,bob.obj());
     }
 }
@@ -127,8 +145,8 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
     string attrConfigQuota, attrEffectiveQuota, attrSubtreeQuota, attrSurplusPolicy;
     
     // values
-    string  name, acctGroup, configQuota, effectiveQuota, subtreeQuota, surplusPolicy;
-    float priority, factor, wtResUsed, accUsage = -1;
+    string  name, acctGroup, surplusPolicy;
+    float priority, factor, wtResUsed, configQuota, effectiveQuota, subtreeQuota, accUsage = -1;
     int   resUsed, beginUsage, lastUsage;
     resUsed = beginUsage = lastUsage = 0;
     bool isAcctGroup;
@@ -169,6 +187,10 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         ad->LookupInteger  ( attrLastUsage.c_str(), lastUsage );
         ad->LookupInteger  ( attrResUsed.c_str(), resUsed );
         ad->LookupBool     ( attrIsAcctGroup.c_str(), isAcctGroup);
+        ad->LookupFloat    ( attrConfigQuota.c_str(), configQuota );
+        ad->LookupFloat    ( attrEffectiveQuota.c_str(), effectiveQuota );
+        ad->LookupFloat    ( attrSubtreeQuota.c_str(), subtreeQuota );
+        ad->LookupString   ( attrSurplusPolicy.c_str(), surplusPolicy );
         
         if( !ad->LookupFloat( attrWtResUsed.c_str(), wtResUsed ) ) {
             wtResUsed = resUsed;
@@ -176,22 +198,23 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         if (!ad->LookupString(attrAcctGroup.c_str(), acctGroup)) {
             acctGroup = "<none>";
         }
-        
+
         BSONObjBuilder bob;
         bob.appendDate("ts",ts);
         bob.append("n",name);
         bob.append("ag",acctGroup);
-        bob.append("prio",priority);
-        bob.append("fac",factor);
+        bob.appendAsNumber("prio",formatReal(priority));
+        bob.appendAsNumber("fac",formatReal(factor));
         bob.append("ru",resUsed);
         bob.append("wru",wtResUsed);
-        bob.appendDate("bu",beginUsage);
-        bob.appendDate("lu",lastUsage);
-        bob.append("au",accUsage);
-        bob.append("cq",configQuota);
-        bob.append("eq",effectiveQuota);
-        bob.append("sq",subtreeQuota);
-        bob.append("sp",surplusPolicy);
+        // condor timestamps need massaging when going in the db
+        bob.appendDate("bu",static_cast<unsigned long long>(beginUsage)*1000);
+        bob.appendDate("lu",static_cast<unsigned long long>(lastUsage)*1000);
+        bob.appendAsNumber("au",formatReal(accUsage));
+        bob.appendAsNumber("cq",formatReal(configQuota));
+        bob.appendAsNumber("eq",formatReal(effectiveQuota));
+        bob.appendAsNumber("sq",formatReal(subtreeQuota));
+        if (!surplusPolicy.empty()) bob.append("sp",surplusPolicy);
         
         conn->insert(DB_STATS_SAMPLES_ACCOUNTANT,bob.obj());
     }
