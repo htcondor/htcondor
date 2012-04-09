@@ -1,7 +1,8 @@
 @echo off
 if "~%1"=="~EXTERNALS" (
-   @echo TODO: separate EXTERNALS build target from ALL_BUILD
-   exit /B 0
+   ::@echo TODO: separate EXTERNALS build target from ALL_BUILD
+   ::exit /B 0
+   @echo target=%1
 ) else if NOT "~%1"=="~" (
    @echo target=%1
 )
@@ -200,8 +201,8 @@ devenv CONDOR.sln /Build RelWithDebInfo /project PACKAGE
 goto finis
 
 :EXTERNALS
-@echo devenv CONDOR_EXTERNALS.sln /Build RelWithDebInfo /project ALL_BUILD
-devenv CONDOR_EXTERNALS.sln /Build RelWithDebInfo /project ALL_BUILD
+@echo devenv CONDOR_EXTERNALS.sln /Build RelWithDebInfo /project ALL_EXTERN
+devenv CONDOR.sln /Build RelWithDebInfo /project ALL_EXTERN
 goto finis
 
 REM common exit
