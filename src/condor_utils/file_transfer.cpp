@@ -3750,6 +3750,27 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 }
 
 
+MyString FileTransfer::GetSupportedMethods() {
+	MyString method_list;
+
+	// iterate plugin_table if it exists
+	if (plugin_table) {
+		MyString junk;
+		MyString method;
+
+		plugin_table->startIterations();
+		while(plugin_table->iterate(method, junk)) {
+			// add comma if needed
+			if (!(method_list.IsEmpty())) {
+				method_list += ",";
+			}
+			method_list += method;
+		}
+	}
+	return method_list;
+}
+
+
 int FileTransfer::InitializePlugins(CondorError &e) {
 
 	// see if this is explicitly disabled

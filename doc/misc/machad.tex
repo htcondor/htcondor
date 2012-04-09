@@ -548,6 +548,22 @@ Claimed state:
 \item[\AdAttr{ClientMachine}:] The host name of the machine that has
 claimed this resource
 
+\index{ClassAd machine attribute (in Claimed State)!RemoteAutoregroup}
+\item[\AdAttr{RemoteAutoregroup}:]  Boolean attribute is \Expr{True} if
+this resource was claimed via negotiation under autoregroup, \Expr{False}
+otherwise.
+
+\index{ClassAd machine attribute (in Claimed State)!RemoteGroup}
+\item[\AdAttr{RemoteGroup}:]  The accounting group name corresponding to
+the submitter that claimed this resource.
+
+\index{ClassAd machine attribute (in Claimed State)!RemoteNegotiatingGroup}
+\item[\AdAttr{RemoteNegotiatingGroup}:]  The accounting group name under
+which this resource negotiated when it was claimed.  This attribute will
+frequently be the same as \AdAttr{RemoteGroup}, but may differ in cases such
+as negotiation under autoregroup, in which case it will have the name of the
+root group ``<none>''.
+
 \index{ClassAd machine attribute (in Claimed State)!RemoteOwner}
 \item[\AdAttr{RemoteOwner}:] The name of the user who originally
 claimed this resource.

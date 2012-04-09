@@ -1135,6 +1135,24 @@ Starter::percentCpuUsage( void )
 	// Otherwise, s_usage will not change.
 	if ( resmgr ) {
 		resmgr->m_vmuniverse_mgr.getUsageForVM(s_pid, s_usage);
+		
+		// Now try to tack on details posted in the job ad because 
+		// hypervisors such as libvirt will spawn processes outside 
+		// of condor's perview. 
+		float fPercentCPU=0.0;
+		int iNumCPUs=0;
+		ClassAd * jobAd = s_claim->ad();
+		
+		jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
+		jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, iNumCPUs);
+		
+		// computations outside take cores into account.
+		fPercentCPU = fPercentCPU * iNumCPUs;
+		
+		dprintf( D_LOAD, "Starter::percentCpuUsage() adding VM Utilization %f\n",fPercentCPU);
+		
+		s_usage.percent_cpu += fPercentCPU;
+		
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {

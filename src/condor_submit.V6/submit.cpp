@@ -1325,7 +1325,13 @@ main( int argc, char *argv[] )
 			if(0 == hash_iter_used_value(it)) {
 				char *key = hash_iter_key(it),
 					 *val = hash_iter_value(it);
-				fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
+					// Don't warn if DAG_STATUS or FAILED_COUNT is specified
+					// but unused -- these are specified for all DAG node
+					// jobs (see dagman_submit.cpp).  wenger 2012-03-26
+				if ( strcasecmp( key, "DAG_STATUS" ) != MATCH &&
+							strcasecmp( key, "FAILED_COUNT" ) != MATCH ) {
+					fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
+				}
 			}
 		}
 		
@@ -2062,7 +2068,7 @@ SetMachineCount()
 {
 	char	*mach_count;
 	MyString buffer;
-	int		request_cpus = 1;
+	int		request_cpus = 0;
 
 	char *wantParallelString = NULL;
 	bool wantParallel = false;
@@ -2120,9 +2126,15 @@ SetMachineCount()
 	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
 		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
 		free(mach_count);
-	} else {
+	} else 
+	if (request_cpus > 0) {
 		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+	} else 
+	if ((mach_count = param("JOB_DEFAULT_REQUESTCPUS"))) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		free(mach_count);
 	}
+
 	InsertJobExpr(buffer);
 }
 
@@ -2155,6 +2167,7 @@ SetSimpleJobExprs()
 {
 	SimpleExprInfo simple_exprs[] = {
 		{ATTR_NEXT_JOB_START_DELAY, next_job_start_delay, next_job_start_delay2, NULL, false},
+		{ATTR_JOB_KEEP_CLAIM_IDLE, "KeepClaimIdle", "keep_claim_idle", NULL, false},
 		{ATTR_JOB_AD_INFORMATION_ATTRS, "JobAdInformationAttrs", "job_ad_information_attrs", NULL, true},
 		{NULL,NULL,NULL,NULL,false}
 	};
@@ -2288,6 +2301,7 @@ SetImageSize()
 	buffer.sprintf( "%s = %"PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
+	// set an intial value for RequestMemory
 	tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY);
 	if (tmp) {
 		// if input is an integer followed by K,M,G or T, scale it MB and 
@@ -2301,17 +2315,18 @@ SetImageSize()
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
-	} else {
-#if 0  // no default expression for RequestMemory
-		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
-					   ATTR_REQUEST_MEMORY,
-					   ATTR_JOB_VM_MEMORY,
-					   ATTR_JOB_VM_MEMORY,
-					   ATTR_IMAGE_SIZE);
+	} else if ( (tmp = condor_param(VM_Memory, ATTR_JOB_VM_MEMORY)) ) {
+		fprintf(stderr, "\nNOTE: '%s' was NOT specified.  Using %s = %s. \n", ATTR_REQUEST_MEMORY,ATTR_JOB_VM_MEMORY, tmp );
+		buffer.sprintf("%s = MY.%s", ATTR_REQUEST_MEMORY, ATTR_JOB_VM_MEMORY);
+		free(tmp);
 		InsertJobExpr(buffer);
-#endif
+	} else if ( (tmp = param("JOB_DEFAULT_REQUESTMEMORY")) ) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+		free(tmp);
+		InsertJobExpr(buffer);
 	}
 
+	// set an initial value for RequestDisk
 	if ((tmp = condor_param(RequestDisk, ATTR_REQUEST_DISK))) {
 		// if input is an integer followed by K,M,G or T, scale it MB and 
 		// insert it into the jobAd, otherwise assume it is an expression
@@ -2323,10 +2338,13 @@ SetImageSize()
 			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
 		}
 		free(tmp);
-	} else {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, ATTR_DISK_USAGE);
+		InsertJobExpr(buffer);
+	} else if ( (tmp = param("JOB_DEFAULT_REQUESTDISK")) ) {
+		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		free(tmp);
+		InsertJobExpr(buffer);
 	}
-	InsertJobExpr(buffer);
+	
 }
 
 void SetFileOptions()
@@ -6383,6 +6401,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_fsdomain = false;
 	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
+	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
@@ -6479,6 +6498,8 @@ check_requirements( char const *orig, MyString &answer )
 		case STF_YES:
 			checks_file_transfer = machine_refs.contains_anycase(
 											   ATTR_HAS_FILE_TRANSFER );
+			checks_file_transfer_plugin_methods = machine_refs.contains_anycase(
+											   ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS );
 			checks_per_file_encryption = machine_refs.contains_anycase(
 										   ATTR_HAS_PER_FILE_ENCRYPTION );
 			break;
@@ -6648,6 +6669,39 @@ check_requirements( char const *orig, MyString &answer )
 					answer += " && TARGET.";
 					answer += ATTR_HAS_PER_FILE_ENCRYPTION;
 				}
+
+				if( (!checks_file_transfer_plugin_methods) ) {
+					// check input
+					char* file_list = condor_param( TransferInputFiles, "TransferInputFiles" );
+					char* tmp_ptr;
+					if(file_list) {
+						StringList files(file_list, ",");
+						files.rewind();
+						while ( (tmp_ptr=files.next()) ) {
+							if (IsUrl(tmp_ptr)){
+								MyString plugintype = getURLType(tmp_ptr);
+								answer += " && stringListMember(\"";
+								answer += plugintype;
+								answer += "\",HasFileTransferPluginMethods)";
+							}
+						}
+						free(file_list);
+					}
+
+					// check output
+					tmp_ptr = condor_param( OutputDestination, "OutputDestination" );
+					if (tmp_ptr) {
+						if (IsUrl(tmp_ptr)){
+							MyString plugintype = getURLType(tmp_ptr);
+							answer += " && stringListMember(\"";
+							answer += plugintype;
+							answer += "\",HasFileTransferPluginMethods)";
+						}
+						free (tmp_ptr);
+					}
+				}
+
+				// close of the file transfer requirements
 				answer += ")";
 			}
 			break;

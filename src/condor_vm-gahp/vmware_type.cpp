@@ -902,6 +902,8 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 			}
 
 			m_configVars.append(line);
+		} else if( !strncasecmp(line, "ethernet0.virtualDev", strlen("ethernet0.virtualDev")) ) {
+			m_configVars.append(line);
 		}
 	}
 

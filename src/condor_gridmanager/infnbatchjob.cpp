@@ -883,12 +883,18 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
+	expr = "";
+	jobAd->LookupString( ATTR_JOB_REMOTE_IWD, expr );
+	if ( !expr.IsEmpty() ) {
+		submit_ad->Assign( ATTR_JOB_IWD, expr );
+	}
+
 	// The blahp expects the Cmd attribute to contain the full pathname
 	// of the job executable.
 	jobAd->LookupString( ATTR_JOB_CMD, expr );
 	if ( expr.FindChar( '/' ) < 0 ) {
 		std::string fullpath;
-		jobAd->LookupString( ATTR_JOB_IWD, fullpath );
+		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
 		sprintf_cat( fullpath, "/%s", expr.Value() );
 		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
 	} else {

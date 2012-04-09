@@ -563,7 +563,7 @@ attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
-How quickly this updated information becomes visibile to \Condor{q} is
+How quickly this updated information becomes visible to \Condor{q} is
 controlled by \MacroNI{SHADOW\_QUEUE\_UPDATE\_INTERVAL} and
 \MacroNI{STARTER\_UPDATE\_INTERVAL}.
 
@@ -820,6 +820,15 @@ like to claim. As long as \AdAttr{CurrentHosts} is the same as
 job run uninterrupted before kicking it off when it is being preempted.
 This can only decrease the amount of time from what the corresponding
 startd expression allows.
+
+%%% ClassAd attribute: MemoryUsage
+\index{ClassAd job attribute!MemoryUsage}
+\index{MemoryUsage!job ClassAd attribute}
+\item[\AdAttr{MemoryUsage}:]  An integer expression in units of Mbytes that
+represents the peak memory usage for the job.
+Its purpose is to be compared with the value defined by a job with the
+\SubmitCmd{request\_memory} submit command,
+for purposes of policy evaluation.
 
 %%% ClassAd attribute: MinHosts
 \index{ClassAd job attribute!MinHosts}
