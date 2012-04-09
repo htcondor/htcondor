@@ -206,7 +206,6 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {
-			// TODO: this currently claims all interfaces are up!  Correctly detect and set
 			bool is_up = true;
 			NetworkDeviceInfo inf(name,ip,is_up);
 			devices.push_back(inf);
