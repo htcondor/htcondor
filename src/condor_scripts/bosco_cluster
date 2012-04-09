@@ -24,7 +24,6 @@ commands:
  -l|--list          List the installed clusters
  -a|--add host      Install and add a cluster
  -r|--remove host   Remove the installed cluster
- -s|--status host   Get status of installed cluster
  -t|--test host     Test the installed cluster
  -h|--help          Show this help message
 
@@ -124,24 +123,24 @@ remove_cluster () {
     # $1 = cluster to remove
     remote_host=$1
 
-    # First, check if the cluster is in the cluster list, exit if not
-    check_cluster_list2 $remote_host "ve"
+    # First, check if the cluster is in the cluster list
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
+    if [ $? -eq 0 ]; then
 
-    # If here cluster is in cluster list
+        # Remove bosco from the remote cluster
+        start_ssh
+        ssh $1 "rm -rf bosco"
+        stop_ssh
 
-    # Remove bosco from the remote cluster
-    start_ssh
-    ssh $1 "rm -rf bosco/cluster/$remote_host"
-    # Will remove bosco/cluster only if empty,
-    # not if the directory is shared with other clusters
-    ssh $1 "rmdir bosco/cluster" >/dev/null 2>/dev/null
-    ssh $1 "rmdir bosco" >/dev/null 2>/dev/null
-    stop_ssh
+        # Remove the host from the cluster list
+        tmpfile=`mktemp`
+        sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
+        mv $tmpfile $CLUSTERLIST_LOCATION
 
-    # Remove the host from the cluster list
-    tmpfile=`mktemp`
-    sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
-    mv $tmpfile $CLUSTERLIST_LOCATION
+    else
+        echo "Unable to find cluster $remote_host in cluster list"
+        exit 1
+    fi
 }
 
 
@@ -208,7 +207,7 @@ End_of_Submit
     else
         echo "Passed!"
     fi
-    echo "Submission and log files for this job are in $root_submit_dir"
+    echo "Submission files for these jobs are in $root_submit_dir"
 
     # Check if there is anything in the user log
     echo -n "Checking for submission to remote pbs cluster (could take ~30 seconds)..."
@@ -241,62 +240,10 @@ End_of_Submit
 
 }
 
-check_cluster_list2 () {
-    # $1 = cluster to check for
-    remote_host=$1
-    # $2 = action v|e|ve v=verbose e=exit
-    case "x$2" in 
-     xve|xev) action=2;;
-     xv) action=1;;
-     xe) action=3;;
-     *) action=0;;
-    esac
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-        return 0
-    else
-        if [ $action -eq 0 ]; then
-            return 1
-        fi
-        if [ $action -le 2 ]; then
-            echo "Unable to find $remote_host in list of installed clusters."
-            echo "Available clusters:"
-            list
-        fi
-        if [ $action -ge 2 ]; then
-            exit 1
-        fi
-        return 1
-    fi
-}
-
-
-get_status () {
-    remote_host=$1
-
-    # First, check if the cluster is in the clusterlist
-    check_cluster_list2 $remote_host "ve" 
-
-    # Print queue status
-    tmpfile=`mktemp`
-    start_ssh
-    for i in "qstat -q" "showq" "condor_q"
-    do 
-        # Show the result only if successful
-        test_out=`ssh $1 "$i" 2>&1 `
-        if [ $? -eq 0 ]; then
-            echo "Showing output of $i on $remote_host"
-            echo $test_out
-        else
-            echo "No $i on $remote_host"
-        fi
-    done
-    stop_ssh   
-}
 
 
 # The getopt command line.  Using -a for alternate (allow options with only 1 '-')
-TEMP=`getopt -a -o a:ls:t:r:h --longoptions add:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
+TEMP=`getopt -a -o a:lt:r:h --longoptions add:,list,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
 
 if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 
@@ -307,7 +254,6 @@ while true; do
         -h|--help) usage; exit 1; shift ;;
         -a|--add) remote_host=$2; shift 2; break ;;
         -l|--list) list; exit 0 ;;
-        -s|--status) get_status $2;  shift 2; exit 0 ;;
         -t|--test) test_cluster $2;  shift 2; exit 0 ;;
         -r|--remove) remove_cluster $2; shift 2; exit 0;;
         
@@ -339,7 +285,7 @@ if [ ! -e $bosco_key ]; then
     stty echo
 
     # Output the password to a specially crafted file
-    mkdir -p `dirname $PASSPHRASE_LOCATION`
+    mkdir -p $HOME/.bosco
     echo $PASSPHRASE > $PASSPHRASE_LOCATION
     chmod go-rwx $PASSPHRASE_LOCATION
     
@@ -395,7 +341,6 @@ echo "Done!"
 # First, find the blahp
 glite_location=`condor_config_val GLITE_LOCATION`
 release_dir=`condor_config_val RELEASE_DIR`
-remote_base_dir="bosco/cluster/$remote_host/glite"
 
 if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
     echo "Unable to determine condor locations using condor_config_val."
@@ -407,17 +352,17 @@ fi
 echo "Installing BOSCO on $remote_host..."
 
 # Make the necessary remote directories
-ssh $remote_host "mkdir -p $remote_base_dir/lib"
+ssh $remote_host "mkdir -p bosco/glite/lib"
 
 # Copy over blahp
-rsync -aq $glite_location/[^l]* $remote_host:$remote_base_dir/
+rsync -aq $glite_location/[^l]* $remote_host:bosco/glite/
 if [ -d $release_dir/lib64 ] ; then
     libdir=lib64
 else
     libdir=lib
 fi
-rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:$remote_base_dir/lib/
-rsync -aq  $release_dir/$libdir/condor $remote_host:$remote_base_dir/lib/
+rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
+rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued
