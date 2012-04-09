@@ -6102,7 +6102,14 @@ Configuration File Entries}
 
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
-  This definition has not yet been written.
+  The amount of memory in Mbytes to acquire for a job, 
+  if the job does not specify how much it needs using the 
+  \SubmitCmd{request\_memory} submit command.
+  If this variable is not defined, then the default is defined by
+  the expression
+\begin{verbatim}
+  ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,1)
+\end{verbatim}
 
 \end{description}
 
