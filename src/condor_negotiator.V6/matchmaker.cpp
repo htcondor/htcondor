@@ -421,7 +421,6 @@ initialize ()
 #endif
 }
 
-static bool delayReinit;
 
 int Matchmaker::
 reinitialize ()
