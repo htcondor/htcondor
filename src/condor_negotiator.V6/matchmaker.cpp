@@ -39,6 +39,7 @@
 #include "misc_utils.h"
 #include "ConcurrencyLimitUtils.h"
 #include "MyString.h"
+#include "condor_daemon_core.h"
 
 #include <vector>
 #include <string>
@@ -330,16 +331,6 @@ reinitialize ()
 	char *tmp;
 	static bool first_time = true;
 	ExprTree *tmp_expr;
-
-	// If we got reconfig'ed in the middle of the negotiation cycle,
-	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
-
-	if (daemonCore->InServiceCommandSocket()) {
-		delayReinit = true;
-		return true;
-	} else {
-		delayReinit = false;
-	}
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -1049,6 +1040,11 @@ negotiationTime ()
 		return;
 	}
 
+    // From here we are committed to the main negotiator cycle, which is non
+    // reentrant wrt reconfig. Set any reconfig to delay until end of this cycle
+    // to protect HGQ structures and also to prevent blocking of other commands
+    daemonCore->SetDelayReconfig(true);
+
 		// allocate stat object here, now that we know we are not going
 		// to abort the cycle
 	StartNewNegotiationCycleStat();
@@ -1440,9 +1436,13 @@ negotiationTime ()
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
 
-	if (delayReinit) {
-		this->reinitialize();
-	}
+    // if we got any reconfig requests during the cycle it is safe to service them now:
+    if (daemonCore->GetNeedReconfig()) {
+        daemonCore->SetNeedReconfig(false);
+        dprintf(D_FULLDEBUG,"Running delayed reconfig\n");
+        dc_reconfig();
+    }
+    daemonCore->SetDelayReconfig(false);
 
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
@@ -3036,7 +3036,9 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 		// 2a.  ask for job information
 		int sleepy = param_integer("NEG_SLEEP", 0);
 		if ( sleepy ) {
+            dprintf(D_ALWAYS, "begin sleep: %d seconds\n", sleepy);
 			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+            dprintf(D_ALWAYS, "end sleep: %d seconds\n", sleepy);
 		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();

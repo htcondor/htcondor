@@ -432,6 +432,22 @@ class DaemonCore : public Service
     int InServiceCommandSocket() {
         return inServiceCommandSocket_flag;
     }
+    
+    void SetDelayReconfig(bool value) {
+        m_delay_reconfig = value;
+    }
+
+    bool GetDelayReconfig() const {
+        return m_delay_reconfig;
+    }
+
+    void SetNeedReconfig(bool value) {
+        m_need_reconfig = value;
+    }
+
+    bool GetNeedReconfig() const {
+        return m_need_reconfig;
+    }   
 	//@}
     
 
@@ -1791,7 +1807,8 @@ class DaemonCore : public Service
 	int GetRegisteredSocketIndex( Stream *sock );
 
     int inServiceCommandSocket_flag;
-        
+    bool m_need_reconfig;
+    bool m_delay_reconfig;
 #ifndef WIN32
     static char **ParseArgsString(const char *env);
 #endif
@@ -1889,11 +1906,15 @@ extern void DC_Skip_Auth_Init();
 */
 extern void DC_Skip_Core_Init();
 
+
+extern void dc_reconfig();
+
 /** The main DaemonCore object.  This pointer will be automatically instatiated
     for you.  A perfect place to use it would be in your main_init, to access
     Daemon Core's wonderful services, like <tt>Register_Signal()</tt> or
     <tt>Register_Timer()</tt>.
 */
+
 extern DaemonCore* daemonCore;
 #endif
 

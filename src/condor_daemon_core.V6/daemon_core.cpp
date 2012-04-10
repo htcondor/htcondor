@@ -416,7 +416,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
-
+	m_need_reconfig = false;
+	m_delay_reconfig = false;
 		// Initialize our array of StringLists used to authorize
 		// condor_config_val -set and friends.
 	int i;
