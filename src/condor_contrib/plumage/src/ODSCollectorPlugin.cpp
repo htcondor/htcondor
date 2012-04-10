@@ -283,7 +283,7 @@ public:
 	void
 	invalidate(int command, const ClassAd &ad)
 	{
-        // don't record anything yet in case the whole pool
+        // don't do anything yet in case the whole pool
         // is going through wallaby reconfig
         if (!m_settled) {
             return;

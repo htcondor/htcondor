@@ -16,6 +16,7 @@
 
 // condor includes
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "stl_string_utils.h"
@@ -34,7 +35,7 @@ const char* X = p.getStringField(Y); \
 if (strcmp(X,"")) bob.append(#X,X);
 
 #define INTEGER(X,Y) bob.append(#X,p.getIntField(Y));
-#define DOUBLE(X,Y) bob.append(#X,p.getField(Y).Double());
+#define DOUBLE(X,Y) bob.appendAsNumber(#X,formatReal(p.getField(Y).Double()));
 #define DATE(X,Y) bob.appendDate(#X,Y);
 
 // TODO: for now, insert accountant quota, etc. with 
@@ -42,16 +43,16 @@ if (strcmp(X,"")) bob.append(#X,X);
 // TODO: needs a common home
 // utility to manage float precision to
 // ClassAd serialization standard
-inline
-string formatReal(float real) {
-    string str;
-    if (real == 0.0) {
-        sprintf(str, "%.1G", real);
+string formatter;
+template<typename T>
+const char* formatReal(T real) {
+    if (real == 0.0 || real == 1.0) {
+        sprintf(formatter, "%.1G", real);
     }
     else {
-        sprintf(str, "%.6G", real);
+        sprintf(formatter, "%.6G", real);
     }
-    return str;
+    return formatter.c_str();
 }
 
 void
@@ -60,10 +61,11 @@ plumage::etl::processSubmitterStats(ODSMongodbOps* ops, Date_t& ts) {
     DBClientConnection* conn =  ops->m_db_conn;
     conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
     auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Submitter" ) );
+    conn->ensureIndex(DB_STATS_SAMPLES_SUB, BSON( "ts" << -1 ));
+    conn->ensureIndex(DB_STATS_SAMPLES_SUB, BSON( "sn" << 1 ));
     while( cursor->more() ) {
         BSONObj p = cursor->next();
         // write record to submitter samples
-        conn->ensureIndex(DB_STATS_SAMPLES_SUB, BSON( "ts" << 1 << "sn" << 1 ));
         BSONObjBuilder bob;
         DATE(ts,ts);
         STRING(sn,ATTR_NAME);
@@ -83,10 +85,12 @@ plumage::etl::processMachineStats(ODSMongodbOps* ops, Date_t& ts) {
     DBClientConnection* conn =  ops->m_db_conn;
     conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
     auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Machine" ) );
+    conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "ts" << -1 ));
+    conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "m" << 1 ));
+    conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "n" << 1 ));
     while( cursor->more() ) {
         BSONObj p = cursor->next();
         // write record to machine samples
-        conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "ts" << 1 << "m" << 1 ));
         BSONObjBuilder bob;
         DATE(ts,ts);
         STRING(m,ATTR_MACHINE);
@@ -99,9 +103,10 @@ plumage::etl::processMachineStats(ODSMongodbOps* ops, Date_t& ts) {
         STRING(st,ATTR_STATE);
         INTEGER(cpu,ATTR_CPUS);
         INTEGER(mem,ATTR_MEMORY);
-        STRING(gjid,ATTR_GLOBAL_JOB_ID);
-        STRING(ru,ATTR_REMOTE_USER);
-        STRING(ag,ATTR_ACCOUNTING_GROUP);
+        // TODO: these might be moved to another collection
+//         STRING(gjid,ATTR_GLOBAL_JOB_ID);
+//         STRING(ru,ATTR_REMOTE_USER);
+//         STRING(ag,ATTR_ACCOUNTING_GROUP);
         conn->insert(DB_STATS_SAMPLES_MACH,bob.obj());
     }
 }
@@ -112,10 +117,11 @@ plumage::etl::processSchedulerStats(ODSMongodbOps* ops, Date_t& ts) {
     DBClientConnection* conn =  ops->m_db_conn;
     conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
     auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Scheduler" ) );
+    conn->ensureIndex(DB_STATS_SAMPLES_SCHED, BSON( "ts" << -1 ));
+    conn->ensureIndex(DB_STATS_SAMPLES_SCHED, BSON( "n" << 1 ));
     while( cursor->more() ) {
         BSONObj p = cursor->next();
         // write record to scheduler samples
-        conn->ensureIndex(DB_STATS_SAMPLES_SCHED, BSON( "ts" << 1 << "n" << 1 ));
         BSONObjBuilder bob;
         DATE(ts,ts);
         STRING(n,ATTR_NAME);
@@ -124,7 +130,7 @@ plumage::etl::processSchedulerStats(ODSMongodbOps* ops, Date_t& ts) {
         INTEGER(tja,ATTR_TOTAL_JOB_ADS);
         INTEGER(trun,ATTR_TOTAL_RUNNING_JOBS);
         INTEGER(thj,ATTR_TOTAL_HELD_JOBS);
-        INTEGER(thi,ATTR_TOTAL_IDLE_JOBS);
+        INTEGER(tij,ATTR_TOTAL_IDLE_JOBS);
         INTEGER(trem,ATTR_TOTAL_REMOVED_JOBS);
         INTEGER(tsr,ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
         INTEGER(tsi,ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
@@ -142,7 +148,7 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
     // attr%d holders
     string  attrName, attrPrio, attrResUsed, attrWtResUsed, attrFactor, attrBeginUsage, attrAccUsage;
     string  attrLastUsage, attrAcctGroup, attrIsAcctGroup;
-    string attrConfigQuota, attrEffectiveQuota, attrSubtreeQuota, attrSurplusPolicy;
+    string  attrConfigQuota, attrEffectiveQuota, attrSubtreeQuota, attrSurplusPolicy;
     
     // values
     string  name, acctGroup, surplusPolicy;
@@ -151,17 +157,27 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
     resUsed = beginUsage = lastUsage = 0;
     bool isAcctGroup;
 
-    int MinLastUsageTime = time(0)-60*60*24;
+    DBClientConnection* conn = ops->m_db_conn;
+    conn->ensureIndex(DB_STATS_SAMPLES_ACCOUNTANT, BSON( "ts" << -1 ));
+    conn->ensureIndex(DB_STATS_SAMPLES_ACCOUNTANT, BSON( "n" << 1 ));
+    unsigned long long acct_count = conn->count(DB_STATS_SAMPLES_ACCOUNTANT);
+
+    // eventhough the Accountant doesn't forget
+    // we don't care about stale submitters (default: last 24 hours)
+    int cfg_last_usage = param_integer("ODS_ACCOUNTANT_LAST_USAGE", 60*60*24);
+    int minLastUsageTime = time(0)-cfg_last_usage;
     int numElem = -1;
     ad->LookupInteger( "NumSubmittors", numElem );
-    
-    DBClientConnection* conn = ops->m_db_conn;
-    conn->ensureIndex(DB_STATS_SAMPLES_SCHED, BSON( "ts" << 1 << "n" << 1 ));
 
     for( int i=1; i<=numElem; i++) {
         priority=0;
-        lastUsage=MinLastUsageTime;
         isAcctGroup = false;
+
+        // skip stale records unless we have none
+        sprintf( attrLastUsage , "LastUsageTime%d", i );
+        ad->LookupInteger  ( attrLastUsage.c_str(), lastUsage );
+        if (lastUsage < minLastUsageTime && acct_count > 0)
+            continue;
 
         // parse the horrid classad
         sprintf( attrName , "Name%d", i );
@@ -170,7 +186,6 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         sprintf( attrWtResUsed , "WeightedResourcesUsed%d", i );
         sprintf( attrFactor , "PriorityFactor%d", i );
         sprintf( attrBeginUsage , "BeginUsageTime%d", i );
-        sprintf( attrLastUsage , "LastUsageTime%d", i );
         sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
         sprintf( attrAcctGroup, "AccountingGroup%d", i);
         sprintf( attrIsAcctGroup, "IsAccountingGroup%d", i);
@@ -184,7 +199,6 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         ad->LookupFloat    ( attrFactor.c_str(), factor );
         ad->LookupFloat    ( attrAccUsage.c_str(), accUsage );
         ad->LookupInteger  ( attrBeginUsage.c_str(), beginUsage );
-        ad->LookupInteger  ( attrLastUsage.c_str(), lastUsage );
         ad->LookupInteger  ( attrResUsed.c_str(), resUsed );
         ad->LookupBool     ( attrIsAcctGroup.c_str(), isAcctGroup);
         ad->LookupFloat    ( attrConfigQuota.c_str(), configQuota );

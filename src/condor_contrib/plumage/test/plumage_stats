@@ -46,8 +46,8 @@ def print_user(user,start,end):
 
 def print_resource(resource,start,end):
     print "MACHINE".ljust(40),"TIMESTAMP".ljust(30),"ARCH/OS".ljust(15),"IDLE".ljust(8),"LOAD".ljust(5),"STATE"
-    for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
-        print item['mn'].ljust(40),str(item['ts']-UTC_DIFF).ljust(30), str("%s/%s" % (item['ar'],item['os'])).ljust(15),str(item['ki']).ljust(8),\
+    for item in db['samples.machine'].find({"n":{'$regex':resource}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
+        print item['n'].ljust(40),str(item['ts']-UTC_DIFF).ljust(30), str("%s/%s" % (item['ar'],item['os'])).ljust(15),str(item['ki']).ljust(8),\
         str(item['la'])[:5].ljust(5),item['st']
 
 def print_users(start,end):
@@ -62,15 +62,15 @@ def print_usergroups(start,end):
     #for ug in usergroups:
         #print '%s/%s' % (ug['sn'],ug['mn'])
     print "SUBMITTER / MACHINE"
-    mnlist = db['samples.submitter'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('mn')
+    mnlist = db['samples.submitter'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('ma')
     for mn in mnlist:
-        snlist = db['samples.submitter'].find({'mn': mn, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('sn')
+        snlist = db['samples.submitter'].find({'ma': mn, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('sn')
         for sn in snlist:
             print '%s / %s' % (sn,mn)
 
 def print_resourcelist(start,end):
     print "MACHINE"
-    for item in db['samples.machine'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('mn'):
+    for item in db['samples.machine'].find({'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}).distinct('n'):
         print item
 
 parser = OptionParser(description='Query Condor ODS for statistics')
