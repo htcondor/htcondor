@@ -85,8 +85,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
 		}
 		if( ip ) {
-			// TODO: this currently claims all interfaces are up!  Correctly detect and set
-			bool is_up = true;
+			bool is_up = interfaces[i].iiFlags & IFF_UP;
 			NetworkDeviceInfo inf("",ip, is_up);
 			devices.push_back(inf);
 		}
