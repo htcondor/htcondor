@@ -549,9 +549,10 @@ Claimed state:
 claimed this resource
 
 \index{ClassAd machine attribute (in Claimed State)!RemoteAutoregroup}
-\item[\AdAttr{RemoteAutoregroup}:]  Boolean attribute is \Expr{True} if
-this resource was claimed via negotiation under autoregroup, \Expr{False}
-otherwise.
+\item[\AdAttr{RemoteAutoregroup}:]  A boolean attribute which is \Expr{True}
+if this resource was claimed via negotiation 
+when the configuration variable \Macro{GROUP\_AUTOREGROUP} is \Expr{True}.
+It is \Expr{False} otherwise.
 
 \index{ClassAd machine attribute (in Claimed State)!RemoteGroup}
 \item[\AdAttr{RemoteGroup}:]  The accounting group name corresponding to
@@ -560,9 +561,11 @@ the submitter that claimed this resource.
 \index{ClassAd machine attribute (in Claimed State)!RemoteNegotiatingGroup}
 \item[\AdAttr{RemoteNegotiatingGroup}:]  The accounting group name under
 which this resource negotiated when it was claimed.  This attribute will
-frequently be the same as \AdAttr{RemoteGroup}, but may differ in cases such
-as negotiation under autoregroup, in which case it will have the name of the
-root group ``<none>''.
+frequently be the same as attribute \Attr{RemoteGroup},
+but it may differ in cases such
+as when configuration variable \Macro{GROUP\_AUTOREGROUP} is \Expr{True},
+in which case it will have the name of the root group, 
+identified as \Expr{<none>}.
 
 \index{ClassAd machine attribute (in Claimed State)!RemoteOwner}
 \item[\AdAttr{RemoteOwner}:] The name of the user who originally
