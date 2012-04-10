@@ -520,34 +520,34 @@ ReadUserLogState::ScoreFile( const StatStructType &statbuf, int rot ) const
 	// Check inode match
 	if ( m_stat_buf.st_ino == statbuf.st_ino ) {
 		score += m_score_fact_inode;
-		if ( DebugFlags & D_FULLDEBUG ) MatchList += "inode ";
+		if ( IsFulldebug(D_FULLDEBUG) ) MatchList += "inode ";
 	}
 
 	// Check ctime match
 	if ( m_stat_buf.st_ctime == statbuf.st_ctime ) {
 		score += m_score_fact_ctime;
-		if ( DebugFlags & D_FULLDEBUG ) MatchList += "ctime ";
+		if ( IsFulldebug(D_FULLDEBUG) ) MatchList += "ctime ";
 	}
 
 	// If it's the same size, it's a good sign..
 	if ( same_size ) {
 		score += m_score_fact_same_size;
-		if ( DebugFlags & D_FULLDEBUG ) MatchList += "same-size ";
+		if ( IsFulldebug(D_FULLDEBUG) ) MatchList += "same-size ";
 	}
 	// If it's the current file and recently stat()ed, if it's grown
 	// we're OK with that, too
 	else if ( is_recent && is_current && has_grown ) {
 		score += m_score_fact_grown;
-		if ( DebugFlags & D_FULLDEBUG ) MatchList += "grown ";
+		if ( IsFulldebug(D_FULLDEBUG) ) MatchList += "grown ";
 	}
 
 	// If the file has shrunk, that doesn't bode well, though, in *any* case
 	if ( m_stat_buf.st_size > statbuf.st_size ) {
 		score += m_score_fact_shrunk;
-		if ( DebugFlags & D_FULLDEBUG ) MatchList += "shrunk ";
+		if ( IsFulldebug(D_FULLDEBUG) ) MatchList += "shrunk ";
 	}
 
-	if ( DebugFlags & D_FULLDEBUG ) {
+	if ( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf( D_FULLDEBUG, "ScoreFile: match list: %s\n",
 				 MatchList.Value() );
 	}

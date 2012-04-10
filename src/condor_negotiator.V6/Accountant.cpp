@@ -1412,7 +1412,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   if (CustomerName!=MyString(RemoteUser)) {
-    if(DebugFlags & D_ACCOUNTANT) {
+    if(IsDebugLevel(D_ACCOUNTANT)) {
       char *PreemptingUser = NULL;
       if(ResourceAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, &PreemptingUser) ||
          ResourceAd->LookupString(ATTR_PREEMPTING_USER, &PreemptingUser))

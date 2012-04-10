@@ -1725,7 +1725,7 @@ ResMgr::assign_load( void )
 	}
 	if( is_smp() ) {
 			// Print out the totals we already know.
-		if( DebugFlags & D_LOAD ) {
+		if( IsDebugLevel( D_LOAD ) ) {
 			dprintf( D_FULLDEBUG,
 					 "%s %.3f\t%s %.3f\t%s %.3f\n",
 					 "SystemLoad:", m_attr->load(),

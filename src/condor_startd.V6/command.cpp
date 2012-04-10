@@ -1773,12 +1773,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
-	if( DebugFlags & D_JOB ) {
+	if( IsDebugLevel( D_JOB ) ) {
 		req_classad->dPrint( D_JOB );
 	}
 	  
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
-	if( DebugFlags & D_MACHINE ) {
+	if( IsDebugLevel( D_MACHINE ) ) {
 		mach_classad->dPrint( D_MACHINE );
 	}
 

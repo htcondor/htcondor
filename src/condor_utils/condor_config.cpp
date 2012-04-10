@@ -1502,7 +1502,7 @@ param_without_default( const char *name )
 		return NULL;
 	}
 
-	if( DebugFlags & D_CONFIG ) {
+	if( IsDebugLevel( D_CONFIG ) ) {
 		if( strlen(name) < strlen(param_name) ) {
 			param_name[strlen(param_name)-strlen(name)] = '\0';
 			dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",

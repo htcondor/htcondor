@@ -36,7 +36,8 @@
    actually request them somewhere, either in dprintf_config(), or the
    equivalent inside the user job.
 */
-int		DebugFlags			= 0;		
+int		DebugFlags			= 0;
+int		DebugVerbose		= 0;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -47,14 +48,25 @@ int		DebugFlags			= 0;
 int		_condor_dprintf_works = 0;
 
 const char *_condor_DebugFlagNames[] = {
+#if !defined D_CATEGORY_COUNT
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_CONFIG", "D_UNUSED2", "D_UNUSED3", "D_PROTOCOL",	"D_PRIV",
 	"D_SECURITY", "D_DAEMONCORE", "D_COMMAND", "D_MATCH", "D_NETWORK",
 	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
 	"D_FAILURE", "D_PID", "D_FDS", "D_UNUSED3", "D_NOHEADER",
+#else
+	"D_ALWAYS", "D_FAILURE", "D_STATUS", "D_GENERAL",
+	"D_JOB", "D_MACHINE", "D_CONFIG", "D_PROTOCOL",
+	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
+	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
+	"D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
+	"D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE",
+	"D_LOAD", "D_PROC", "D_NFS",
+// these are flags rather than categories
+// "D_EXPR", "D_FULLDEBUG", "D_FAILURE", "D_PID", "D_FDS", "D_NOHEADER",
+#endif
 };
-
 
 /*
    The real dprintf(), called by both the user job and all the daemons
@@ -87,6 +99,9 @@ _condor_set_debug_flags( const char *strflags )
 	char *tmp;
 	char *flag;
 	int notflag, bit, i;
+#ifdef D_CATEGORY_COUNT
+	bool fulldebug = false;
+#endif
 
 		// Always set D_ALWAYS
 	DebugFlags |= D_ALWAYS;
@@ -107,9 +122,24 @@ _condor_set_debug_flags( const char *strflags )
 		}
 
 		bit = 0;
+#ifdef D_CATEGORY_COUNT
+		if( strcasecmp(flag, "D_ALL") == 0 ) {
+			bit = (1 << D_CATEGORY_COUNT)-1;
+		} else if( strcasecmp(flag, "D_PID") == 0 ) {
+			bit = D_PID;
+		} else if( strcasecmp(flag, "D_FDS") == 0 ) {
+			bit = D_FDS;
+		} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
+			bit = D_EXPR;
+		} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
+			fulldebug = !notflag;
+			bit = D_GENERIC_VERBOSE;
+		} else for( i = 0; i < COUNTOF(_condor_DebugFlagNames); i++ ) {
+#else
 		if( strcasecmp(flag, "D_ALL") == 0 ) {
 			bit = D_ALL;
 		} else for( i = 0; i < D_MAXFLAGS; i++ ) {
+#endif
 			if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
 				bit = (1 << i);
 				break;
@@ -125,6 +155,9 @@ _condor_set_debug_flags( const char *strflags )
 		flag = strtok( NULL, ", " );
 	}
 
+#ifdef D_CATEGORY_COUNT
+	DebugVerbose = (fulldebug) ? DebugFlags : 0;
+#endif
 	free( tmp );
 }
 

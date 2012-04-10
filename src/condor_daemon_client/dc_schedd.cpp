@@ -1729,7 +1729,7 @@ bool DCSchedd::getJobConnectInfo(
 		return false;
 	}
 
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		MyString adstr;
 		output.SetPrivateAttributesInvisible(true);
 		output.sPrint(adstr);

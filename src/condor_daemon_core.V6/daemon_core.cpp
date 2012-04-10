@@ -2426,7 +2426,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2484,7 +2484,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2519,7 +2519,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2555,7 +2555,7 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2910,7 +2910,7 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 			InitDCCommandSocket(1);
 		}
 	}
-	else if( DebugFlags & D_FULLDEBUG ) {
+	else if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
 	}
 }
@@ -2929,7 +2929,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
 	MyString allow_reason_buf;
-	if( (DebugFlags & D_SECURITY) ) {
+	if( IsDebugLevel( D_SECURITY ) ) {
 			// only get 'allow' reason if doing verbose debugging
 		allow_reason = &allow_reason_buf;
 	}
@@ -3279,7 +3279,7 @@ void DaemonCore::Driver()
 			// Performance around select is of high importance for all
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
-		if (DebugFlags & D_PERF_TRACE) {
+		if (IsDebugLevel(D_PERF_TRACE)) {
 			dprintf(D_ALWAYS, "PERF: entering select\n");
 		}
 
@@ -3350,7 +3350,7 @@ void DaemonCore::Driver()
 			// Performance around select is of high importance for all
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
-		if (DebugFlags & D_PERF_TRACE) {
+		if (IsDebugLevel(D_PERF_TRACE)) {
 			dprintf(D_ALWAYS, "PERF: leaving select\n");
 			selector.display();
 		}
@@ -4631,7 +4631,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 		pidHandle = pidinfo->hProcess;
 	}
 
-	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose(D_PROCFAMILY) ) {
 			char check_name[MAX_PATH];
 			CSysinfo sysinfo;
 			sysinfo.GetProcessName(pid,check_name, sizeof(check_name));
@@ -5674,7 +5674,7 @@ void CreateProcessForkit::exec() {
 		m_unix_args = tmpargs.GetStringArray();
 	}
 	else {
-		if(DebugFlags & D_DAEMONCORE) {
+		if(IsDebugLevel(D_DAEMONCORE)) {
 			MyString arg_string;
 			m_args.GetArgsStringForDisplay(&arg_string);
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.Value());
@@ -5935,7 +5935,7 @@ void CreateProcessForkit::exec() {
 	}
 #endif
 
-	if( DebugFlags & D_DAEMONCORE ) {
+	if( IsDebugLevel( D_DAEMONCORE ) ) {
 			// This MyString is scoped to free itself before the call to
 			// exec().  Otherwise, it would be a leak.
 		MyString msg = "Printing fds to inherit: ";

@@ -3315,7 +3315,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		OptimizeJobAdForMatchmaking( &request );
 
-		if( DebugFlags & D_JOB ) {
+		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
 			request.dPrint(D_JOB);
 		}
@@ -3727,7 +3727,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
-		if( (DebugFlags & D_MACHINE) && (DebugFlags & D_FULLDEBUG) ) {
+		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
 			candidate->dPrint(D_MACHINE);
 		}
@@ -3737,7 +3737,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		int cluster_id=-1,proc_id=-1;
 		MyString machine_name;
-		if( DebugFlags & D_MACHINE ) {
+		if( IsDebugLevel( D_MACHINE ) ) {
 			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
 			request.LookupInteger(ATTR_PROC_ID,proc_id);
 			candidate->LookupString(ATTR_NAME,machine_name);
@@ -5100,7 +5100,7 @@ static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname 
 
 void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad )
 {
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		MyString name;
 		startd_ad->LookupString(ATTR_NAME,name);
 		MyString owner;

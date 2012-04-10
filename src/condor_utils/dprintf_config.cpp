@@ -40,10 +40,18 @@ using std::string;
 int		Termlog = 0;
 
 extern int		DebugFlags;
-extern FILE		*DebugFPs[D_NUMLEVELS+1];
+#ifdef D_CATEGORY_COUNT
+extern int		DebugVerbose;
+#else
+//extern FILE		*DebugFPs[D_NUMLEVELS+1];
+#endif
 extern std::vector<DebugFileInfo> *DebugLogs;
 extern char		*DebugLock;
-extern const char		*_condor_DebugFlagNames[];
+#ifdef D_CATEGORY_COUNT
+extern const char		*_condor_DebugFlagNames[D_CATEGORY_COUNT];
+#else
+extern const char		*_condor_DebugFlagNames[D_NUMLEVELS];
+#endif
 extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
 extern int		DebugUseTimestamps;
@@ -168,7 +176,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	*/
 	if( !( Termlog) ) {
 		std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
-		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+		for (debug_level = 0; debug_level <= (int)COUNTOF(_condor_DebugFlagNames); debug_level++) {
 			std::string logPath;
 			want_truncate = 0;
 			if (debug_level == 0) {

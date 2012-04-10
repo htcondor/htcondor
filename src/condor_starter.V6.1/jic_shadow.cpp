@@ -791,7 +791,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 	else {
 		dprintf(D_FULLDEBUG,"Sent job ClassAd update to startd.\n");
 	}
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsDebugVerbose(D_JOB) ) {
 		ad->dPrint(D_JOB);
 	}
 

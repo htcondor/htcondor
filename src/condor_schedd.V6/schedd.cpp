@@ -221,7 +221,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	num_exceptions = 0;
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
-		if( DebugFlags & D_MACHINE ) {
+		if( IsDebugLevel(D_MACHINE) ) {
 			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n" );
 			my_match_ad->dPrint( D_MACHINE );
 			dprintf( D_MACHINE | D_NOHEADER, "*** End of ClassAd ***\n" );
@@ -314,7 +314,7 @@ match_rec::makeDescription() {
 	if( m_description.Length() ) {
 		m_description += " ";
 	}
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		m_description += publicClaimId();
 	}
 	else if( peer ) {
@@ -7347,7 +7347,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_args.AppendArg("-schedd-addr");
 	starter_args.AppendArg(MyShadowSockName);
 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString argstring;
 		starter_args.GetArgsStringForDisplay(&argstring);
 		dprintf( D_FULLDEBUG, "About to spawn %s %s\n", 
@@ -7833,7 +7833,7 @@ Scheduler::display_shadow_recs()
 {
 	struct shadow_rec *r;
 
-	if( !(DebugFlags & D_FULLDEBUG) ) {
+	if( !IsFulldebug(D_FULLDEBUG) ) {
 		return; // avoid needless work below
 	}
 

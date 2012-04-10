@@ -175,7 +175,7 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 void
 UserLogHeader::dprint( int level, MyString &buf ) const
 {
-	if ( 0 == ( level & DebugFlags ) ) {
+	if ( ! IsDebugCatAndVerbosity(level) ) {
 		return;
 	}
 
@@ -187,7 +187,7 @@ UserLogHeader::dprint( int level, MyString &buf ) const
 void
 UserLogHeader::dprint( int level, const char *label ) const
 {
-	if ( 0 == ( level & DebugFlags ) ) {
+	if ( ! IsDebugCatAndVerbosity(level) ) {
 		return;
 	}
 

@@ -331,7 +331,7 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
 
     perm->insert(user_key, old_mask | new_mask);
 
-	if( DebugFlags & (D_FULLDEBUG|D_SECURITY) ) {
+	if( IsFulldebug(D_FULLDEBUG) || IsDebugLevel(D_SECURITY) ) {
 		MyString auth_str;
 		AuthEntryToString(sin6_addr,user,new_mask, auth_str);
 		dprintf(D_FULLDEBUG|D_SECURITY,

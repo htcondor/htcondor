@@ -250,7 +250,7 @@ Daemon::deepCopy( const Daemon &copy )
 
 Daemon::~Daemon() 
 {
-	if( DebugFlags & D_HOSTNAME ) {
+	if( IsDebugLevel( D_HOSTNAME ) ) {
 		dprintf( D_HOSTNAME, "Destroying Daemon object:\n" );
 		display( D_HOSTNAME );
 		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );

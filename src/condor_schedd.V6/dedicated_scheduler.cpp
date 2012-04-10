@@ -122,8 +122,8 @@ AllocationNode::setClaimId( const char* new_id )
 void
 AllocationNode::display( void )
 {
-	int level = D_FULLDEBUG;
-	if( ! (DebugFlags & level) ) {
+	const int level = D_FULLDEBUG;
+	if( ! IsFulldebug(D_FULLDEBUG) ) {
 		return;
 	}
 	dprintf( level, "Allocation for job %d.0, nprocs: %d\n",
@@ -859,7 +859,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 	sock->put( m_rec->claimId() );
 	sock->end_of_message();
 
-	if( DebugFlags & D_FULLDEBUG ) { 
+	if( IsFulldebug(D_FULLDEBUG) ) { 
 		char name_buf[256];
 		name_buf[0] = '\0';
 		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
@@ -1628,7 +1628,7 @@ DedicatedScheduler::sortResources( void )
 
     duplicate_partitionable_res(unclaimed_resources);
 
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf(D_FULLDEBUG, "idle resource list\n");
 		idle_resources->display( D_FULLDEBUG );
 

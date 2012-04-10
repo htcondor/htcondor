@@ -915,7 +915,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		reaper_id = main_reaper;
 	}
 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString args_string;
 		final_args->GetArgsStringForDisplay(&args_string);
 		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
@@ -1155,8 +1155,8 @@ Starter::percentCpuUsage( void )
 		
 	}
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG,
+	if( IsDebugVerbose(D_LOAD) ) {
+		dprintf(D_LOAD,
 		        "Starter::percentCpuUsage(): Percent CPU usage "
 		        "for the family of starter with pid %u is: %f\n",
 		        s_pid,

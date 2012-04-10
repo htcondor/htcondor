@@ -662,7 +662,7 @@ Resource::hackLoadForCOD( void )
 	MyString c_load;
 	c_load.sprintf( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
 
-	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_LOAD ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
 			dprintf( D_LOAD, "COD job current running, using "
 					 "'%s', '%s' for internal policy evaluation\n",
@@ -2158,7 +2158,7 @@ Resource::compute_condor_load( void )
 		cpu_usage = 0.0;
 	}
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n",
 				 num_since_last, cpu_usage );
 	}
@@ -2166,7 +2166,7 @@ Resource::compute_condor_load( void )
 
 	avg = (r_load_queue->avg() / numcpus);
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		r_load_queue->display( this );
 		dprintf( D_FULLDEBUG,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
@@ -2408,11 +2408,11 @@ Resource::willingToRun(ClassAd* request_ad)
 		}
 
 			// Possibly print out the ads we just got to the logs.
-		if (DebugFlags & D_JOB) {
+		if (IsDebugLevel(D_JOB)) {
 			dprintf(D_JOB, "REQ_CLASSAD:\n");
 			request_ad->dPrint(D_JOB);
 		}
-		if (DebugFlags & D_MACHINE) {
+		if (IsDebugLevel(D_MACHINE)) {
 			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
 			r_classad->dPrint(D_MACHINE);
 		}

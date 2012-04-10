@@ -196,7 +196,7 @@ void clean_files()
 					 "DaemonCore: ERROR: Can't delete pid file %s\n",
 					 pidFile );
 		} else {
-			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+			if( IsDebugVerbose( D_DAEMONCORE ) ) {
 				dprintf( D_DAEMONCORE, "Removed pid file %s\n", pidFile );
 			}
 		}
@@ -208,7 +208,7 @@ void clean_files()
 					 "DaemonCore: ERROR: Can't delete address file %s\n",
 					 addrFile );
 		} else {
-			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+			if( IsDebugVerbose( D_DAEMONCORE ) ) {
 				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
 						 addrFile );
 			}
@@ -224,7 +224,7 @@ void clean_files()
 						 "DaemonCore: ERROR: Can't delete classad file %s\n",
 						 daemonCore->localAdFile );
 			} else {
-				if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+				if( IsDebugVerbose( D_DAEMONCORE ) ) {
 					dprintf( D_DAEMONCORE, "Removed local classad file %s\n", 
 							 daemonCore->localAdFile );
 				}

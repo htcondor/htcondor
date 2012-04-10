@@ -548,7 +548,7 @@ InitQmgmt()
 		i++;
 	}
 
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
 		for( i=0; i<num_super_users; i++ ) {
 			dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );

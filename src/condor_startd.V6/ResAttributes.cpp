@@ -963,14 +963,14 @@ CpuAttributes::display( amask_t how_much )
 				 "CondorLoad:", c_condor_load,
 				 "OwnerLoad:", c_owner_load );
 	} else {
-		if( DebugFlags & D_LOAD ) {
+		if( IsDebugLevel( D_LOAD ) ) {
 			dprintf( D_FULLDEBUG, 
 					 "%s %.2f  %s %.2f  %s %.2f\n",  
 					 "SystemLoad:", c_condor_load + c_owner_load,
 					 "CondorLoad:", c_condor_load,
 					 "OwnerLoad:", c_owner_load );
 		}
-		if( DebugFlags & D_KEYBOARD ) {
+		if( IsDebugLevel( D_KEYBOARD ) ) {
 			dprintf( D_FULLDEBUG, 
 					 "Idle time: %s %-8d %s %d\n",  
 					 "Keyboard:", (int)c_idle, 

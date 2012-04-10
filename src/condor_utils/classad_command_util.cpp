@@ -115,7 +115,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 		return FALSE;
 	}
 
-	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_COMMAND ) {
+	if( IsDebugVerbose( D_COMMAND ) ) {
 		dprintf( D_COMMAND, "Command ClassAd:\n" );
 		ad->dPrint( D_COMMAND );
 		dprintf( D_COMMAND, "*** End of Command ClassAd***\n" );

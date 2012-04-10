@@ -404,7 +404,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	}
 
 		// Grab the full environment back out of the Env object 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_string;
 		job_env.getDelimitedStringForDisplay(&env_string);
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.Value());

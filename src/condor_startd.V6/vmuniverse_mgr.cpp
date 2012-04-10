@@ -71,10 +71,10 @@ VMStarterInfo::updateUsageOfVM(void)
 	if( ProcAPI::getProcInfo(m_vm_pid, pi, proc_status) == 
 			PROCAPI_SUCCESS ) {
 		memcpy(&m_vm_alive_pinfo, pi, sizeof(struct procInfo));
-		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			dprintf(D_FULLDEBUG,"Usage of process[%d] for a VM is updated\n", 
+		if( IsDebugVerbose(D_LOAD) ) {
+			dprintf(D_LOAD,"Usage of process[%d] for a VM is updated\n", 
 					m_vm_pid);
-			dprintf(D_FULLDEBUG,"sys_time=%lu, user_time=%lu, image_size=%lu\n", 
+			dprintf(D_LOAD,"sys_time=%lu, user_time=%lu, image_size=%lu\n", 
 					pi->sys_time, pi->user_time, get_image_size(*pi));
 		}
 		delete pi;
@@ -119,8 +119,8 @@ VMStarterInfo::getUsageOfVM(ProcFamilyUsage &usage)
 #endif
 	}
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG,
+	if( IsDebugVerbose(D_LOAD) ) {
+		dprintf( D_LOAD,
 				"VMStarterInfo::getUsageOfVM(): Percent CPU usage "
 				"for VM process with pid %u is: %f\n",
 				m_vm_pid,
