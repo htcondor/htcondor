@@ -1836,9 +1836,7 @@ CStarter::SpawnPreScript( void )
 
 	attr = "Pre";
 	attr += ATTR_JOB_CMD;
-dprintf(D_ALWAYS, "GGTGGTGGT Looking up Prescript in %s\n", attr.Value());
 	if( jobAd->LookupString(attr.Value(), &tmp) ) {
-dprintf(D_ALWAYS, "GGTGGTGGT Found Prescript %s\n", tmp);
 		free( tmp );
 		tmp = NULL;
 		pre_script = new ScriptProc( jobAd, "Pre" );
