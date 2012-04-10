@@ -1173,6 +1173,28 @@ job output is transferred back to the submit machine
 (as a whole) after the job completes.
 If \Attr{TransferOut} is \Expr{False}, then this job attribute is ignored.
 
+%%% ClassAd attribute: SubmitterAutoregroup
+\index{ClassAd job attribute!SubmitterAutoregroup}
+\index{SubmitterAutoregroup!job ClassAd attribute}
+\item[\AdAttr{SubmitterAutoregroup}:]  A boolean attribute defined
+by the \Condor{negotiator} when it makes a match. 
+It will be \Expr{True} if the resource was claimed via negotiation
+when the configuration variable \Macro{GROUP\_AUTOREGROUP} was \Expr{True}.
+It will be \Expr{False} otherwise.
+
+%%% ClassAd attribute: SubmitterGroup 
+\index{ClassAd job attribute!SubmitterGroup}
+\index{SubmitterGroup!job ClassAd attribute}
+\item[\AdAttr{SubmitterGroup}:]  The accounting group name defined
+by the \Condor{negotiator} when it makes a match. 
+
+%%% ClassAd attribute: SubmitterNegotiatingGroup 
+\index{ClassAd job attribute!SubmitterNegotiatingGroup}
+\index{SubmitterNegotiatingGroup!job ClassAd attribute}
+\item[\AdAttr{SubmitterNegotiatingGroup}:]  The accounting group name under
+which the resource negotiated when it was claimed, 
+as set by the \Condor{negotiator}. 
+ 
 %%% ClassAd attribute: TotalSuspensions
 \index{ClassAd job attribute!TotalSuspensions}
 \index{TotalSuspensions!job ClassAd attribute}
