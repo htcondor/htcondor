@@ -902,7 +902,12 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
 		return FALSE;
 	}
-	dc_reconfig();
+	if (!daemonCore->GetDelayReconfig()) {
+		dc_reconfig();
+	} else {
+        dprintf(D_FULLDEBUG, "Delaying reconfig.\n");
+ 		daemonCore->SetNeedReconfig(true);
+	}
 	return TRUE;
 }
 
