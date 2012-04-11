@@ -22,6 +22,13 @@ The details of each version are described below.
 \item Condor version 7.7.6 not yet released.
 %\item Condor version 7.7.6 released on Month Date, 2012.
 
+\item In the Condor sbin directory, \File{condor\_vm\_vmware.pl} was
+renamed to \File{condor\_vm\_vmware} and \File{grid\_monitor.sh} was
+renamed to \File{grid\_monitor}.
+This makes Condor more compliant with Linux native packaging rules.
+Symbolic links to the old locations are included to ease upgrading.
+\Ticket{2940}
+
 \end{itemize}
 
 
