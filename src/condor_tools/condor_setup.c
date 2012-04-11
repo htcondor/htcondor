@@ -208,7 +208,7 @@ set_vmgahpoptions() {
 	}
 
 	if ( Opt.release_dir ) {
-		char *control_script = "bin\\condor_vm_vmware.pl";
+		char *control_script = "bin\\condor_vm_vmware";
  
 		char *tmp = malloc(strlen(Opt.release_dir) 
 				   + strlen(control_script) + 2); 

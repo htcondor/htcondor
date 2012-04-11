@@ -491,12 +491,12 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 
 			if( can_switch_ids() ) {
 				// Condor runs as root
-				err_msg += "### - The script program like 'condor_vm_vmware.pl'";
+				err_msg += "### - The script program like 'condor_vm_vmware'";
 				err_msg += " must be readable for anybody.\n";
 			}
 
 			err_msg += "### - Check the path of vmware-cmd, vmrun, and mkisofs ";
-			err_msg += "in 'condor_vm_vmware.pl\n'";
+			err_msg += "in 'condor_vm_vmware\n'";
 			err_msg += "#########################################################\n";
 			dprintf( D_ALWAYS, "%s", err_msg.Value());
 		}

@@ -4502,7 +4502,7 @@ id=256
 
 [GRID_MONITOR]
 aliases=
-default=$(SBIN)/grid_monitor.sh
+default=$(SBIN)/grid_monitor
 version=0.0.0
 range=.*
 state=default
