@@ -9,11 +9,15 @@ import os
 import sys
 import shutil
 import tempfile
+import glob
 from campus_factory.util.CampusConfig import get_option
 
 
 DEFAULT_GLIDEIN_DAEMONS = [ 'condor_master', 'condor_procd', 'condor_startd', \
                             'condor_starter' ]
+
+# Glidein Librairies, can be globs
+DEFAULT_GLIDEIN_LIBRARIES = [ 'libclassad.so*', 'libcondor_utils_*.so' ]
 
 class DaemonWrangler:
     def __init__(self, daemons=None):
@@ -24,6 +28,8 @@ class DaemonWrangler:
             self.daemons = DEFAULT_GLIDEIN_DAEMONS
         else:
             self.daemons = daemons
+            
+        self.libraries = DEFAULT_GLIDEIN_LIBRARIES
             
         self.campus_dir = os.environ['CAMPUSFACTORY_DIR']
             
@@ -36,6 +42,13 @@ class DaemonWrangler:
         if daemon_paths == None:
             logging.error("Unable to read all daemons, not packaging...")
             raise Exception("Unable to check all daemons")
+        
+        # And now libraries
+        library_paths = self._CheckLibraries()
+        if library_paths == None:
+            logging.error("Unable to read all libraries, not packaging libraries...")
+        else:
+            daemon_paths.extend(library_paths)
         
         # Copy the daemons to a special directory to tar them
         tmpdir = tempfile.mkdtemp()
@@ -96,5 +109,51 @@ class DaemonWrangler:
         
         # Done checking all the daemons
         return daemon_paths
+
+
+    def _CheckLibraries(self):
+        """
+        Make sure that the libraries that are supposed to be packaged are
+        available and readable.
+        """
+        condor_lib = get_option("LIB")
+        logging.debug("Found SBIN directory = %s" % condor_lib)
+        library_paths = []
+        for library in self.libraries:
+            library_file_paths = glob.glob(os.path.join(condor_lib, library))
+            for library_file in library_file_paths:
+                if self._CheckFile(library_file):
+                    library_paths.append(library_file)
+            
+
+        
+        # Done checking all the daemons
+        return library_paths
+
+
+    def _CheckFile(self, path):
+        logging.debug("Looking for file at: %s" % path)
+            
+        # Look for the daemons in the condor sbin directory.
+        if os.path.exists(path):
+            # Try opening the file
+            fp = None
+            try:
+                fp = open(path)
+                fp.close()
+            except IOError, e:
+                logging.error("Unable to open file: %s" % path)
+                logging.error(str(e))
+                return None
+        else:
+            # If the file doesn't exist
+            return None
+        
+        return path
+
+
+
+
+
 
 

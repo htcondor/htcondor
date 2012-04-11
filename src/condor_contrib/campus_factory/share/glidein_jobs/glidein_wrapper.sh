@@ -23,8 +23,9 @@ tar xzf $campus_factory_dir/glideinExec.tar.gz
 export CONDOR_CONFIG=$campus_factory_dir/glidein_condor_config
 export _condor_LOCAL_DIR=$local_dir
 export _condor_SBIN=$local_dir/glideinExec
+export _condor_LIB=$local_dir/glideinExec
 
-export LD_LIBRARY_PATH=~/bosco/glite/lib
+export LD_LIBRARY_PATH=$_condor_LIB
 
 if [ -e `pwd`/user_job_wrapper.sh ]
 then
