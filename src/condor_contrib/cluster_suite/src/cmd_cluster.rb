@@ -96,7 +96,7 @@ module Mrg
                 `#{@ccs} --rmsubservice "#{@service}" netfs:condor[#{num}]`
               else
                 services[@name][:condor].each {|n| exit!(1, "There is already a #{@subsys} configured for HA Schedd #{@name}") if n.type == @subsys}
-                `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1" #{@password}`
+                `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1"`
               end
             end
 
@@ -268,10 +268,10 @@ module Mrg
             # Determine if -i is needed
             `ccs -h localhost -i`
             ignore = "-i" if $?.exitstatus == 0
-            @ccs = "ccs #{ignore} -h localhost"
 
             @domain = "Schedd #{@options[:name]} Failover Domain"
-            @password = "--password #{@options[:password]}" if @options.has_key?(:password)
+            password = "--password #{@options[:password]}" if @options.has_key?(:password)
+            @ccs = "ccs #{ignore} -h localhost #{password}"
             @name = @options[:name]
             @service = "HA Schedd #{@name}"
             @tag = "CLUSTER_NAMES"
@@ -290,16 +290,16 @@ module Mrg
           def modify_ccs_nodes
             cmd = (@action.to_s.include?("remove") ? "rm" : "add")
             @options[:nodes].each do |node|
-              `#{@ccs} --#{cmd}node #{node} #{@password}` if cmd == "add"
-              `#{@ccs} --#{cmd}failoverdomainnode '#{@domain}' #{node} #{@password}`
+              `#{@ccs} --#{cmd}node #{node}` if cmd == "add"
+              `#{@ccs} --#{cmd}failoverdomainnode '#{@domain}' #{node}`
             end
           end
 
           def remove_ccs_entries
-            `#{@ccs} --rmsubservice "#{@service}" condor #{@password}`
-            `#{@ccs} --rmsubservice "#{@service}" netfs #{@password}`
-            `#{@ccs} --rmservice "#{@service}" #{@password}`
-            `#{@ccs} --rmfailoverdomain "#{@domain}" #{@password}`
+            `#{@ccs} --rmsubservice "#{@service}" condor`
+            `#{@ccs} --rmsubservice "#{@service}" netfs`
+            `#{@ccs} --rmservice "#{@service}"`
+            `#{@ccs} --rmfailoverdomain "#{@domain}"`
           end
 
           def remove_store_groups
@@ -403,7 +403,7 @@ module Mrg
               # Cluster Suite config
               if @options.has_key?(:new_cluster)
                 `#{@ccs} --stopall`
-                `#{@ccs} --createcluster "HACondorCluster" #{@password}`
+                `#{@ccs} --createcluster "HACondorCluster"`
                 if $?.exitstatus != 0
                   puts "Failed to create the cluster.  Try supplying a ricci password with --riccipassword"
                   exit!(1)
@@ -411,17 +411,17 @@ module Mrg
               end
 
               # Handle nodes
-              `#{@ccs} --addfailoverdomain "#{@domain}" restricted #{@password}`
+              `#{@ccs} --addfailoverdomain "#{@domain}" restricted`
               exit!(1, "Failed to add cluster failover domain.  Does it already exist?") if $?.exitstatus != 0
               modify_ccs_nodes
 
               # Handle service
-              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=relocate #{@password}`
+              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=relocate`
               exit!(1, "Failed to add cluster service.  Does it already exist?") if $?.exitstatus != 0
 
               # Handle subservices
-              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on" #{@password}`
-              `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}" type="#{@subsys}" __independent_subtree="1" __max_restarts=#{restarts} __restart_expire_time=#{expire} #{@password}`
+              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on"`
+              `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}" type="#{@subsys}" __independent_subtree="1" __max_restarts=#{restarts} __restart_expire_time=#{expire}`
             end
 
             if not @options.has_key?(:cluster_only)
