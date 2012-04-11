@@ -11,19 +11,10 @@ condor_debconf_cfg=/etc/condor/config.d/00debconf
 remove_condor_dirs() {
 	# make an attempt to remove runtime data from the "standard" location
 	# this cannot deal with non-standard LOCALDIR settings
-	for dlabel in lib/condor/cred_dir spool/condor/local_univ_execute \
-	              lib/condor/execute lock/condor log/condor run/condor \
-	              spool/condor; do
+	for dlabel in lib/condor spool/condor lock/condor log/condor run/condor; do
 		dname="/var/$dlabel"
 		if [ -d "$dname" ]; then
-			# should we rely on the configuration to be sane?
-			#rm -rf $dname
-			# better have some safety-net and only delete what belongs to condor
-			# if we have a condor user at all
-			id -u condor > /dev/null 2>&1 && find $dname -type f -user condor -group condor -delete || true
-			# try getting rid of the directory as well, but do not fail if there
-			# were left-overs
-			rmdir $dname || true
+			rm -rf $dname
 		fi
 	done
 }
