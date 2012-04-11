@@ -14,4 +14,4 @@ VM_NETWORKING = TRUE
 VM_NETWORKING_TYPE = NAT
 
 VMWARE_PERL = perl
-VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware.pl
+VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware

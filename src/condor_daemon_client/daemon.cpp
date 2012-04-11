@@ -941,19 +941,8 @@ Daemon::locate( void )
 		} while (rval == false && nextValidCm() == true);
 		break;
 	case DT_NEGOTIATOR:
-		if( !_pool && (tmp = getCmHostFromConfig( "NEGOTIATOR" )) ) {
-				// if NEGOTIATOR_HOST (or equiv) is in the config
-				// file, we have to use the old getCmInfo() code to
-				// honor what it says... 
-			rval = getCmInfo( "NEGOTIATOR" );
-			free( tmp );
-			tmp = NULL;
-		} else {
-				// cool, no NEGOTIATOR_HOST, we can treat it just like
-				// any other daemon 
-	  		setSubsystem( "NEGOTIATOR" );
-			rval = getDaemonInfo ( NEGOTIATOR_AD );
-		}
+	  	setSubsystem( "NEGOTIATOR" );
+		rval = getDaemonInfo ( NEGOTIATOR_AD );
 		break;
 	case DT_CREDD:
 	  setSubsystem( "CREDD" );
