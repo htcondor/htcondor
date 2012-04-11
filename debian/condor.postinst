@@ -74,8 +74,6 @@ condor_put_debconf_cfg() {
     ccfg_personal="$RET"
     db_get condor/reservedmemory
     ccfg_reservedmemory="$RET"
-    db_get condor/localdir
-    ccfg_localdir="$RET"
     db_get condor/admin
     ccfg_admin="$RET"
     db_get condor/phonehome
@@ -116,8 +114,6 @@ condor_put_debconf_cfg() {
 # /etc/condor/condor_config.local or another file in /etc/condor/config.d Use
 # the latter location if you need to overwrite/complement settings in the
 # DebConf-generated configuration.
-# where Condor puts its runtime data
-LOCAL_DIR = $ccfg_localdir
 # which Condor daemons to run on this machine
 DAEMON_LIST = $ccfg_daemons
 # who receives emails when something goes wrong

@@ -2,17 +2,6 @@ Template: condor/title
 Type: title
 _Description: Condor configuration
 
-Template: condor/localdir
-Type: string
-Default: /var
-_Description: Location for Condor's runtime data:
- Condor's runtime data include logfiles, job queues, and binaries for all
- jobs that are submitted to this machine, as well as core dumps
- that may be created when a job crashes. By default Condor will use
- /var/{lib,lock,run,spool}/condor for this data. If there are concerns that
- Condor might exhaust the space on the partition that contains these
- directories, please indicate an alternative root directory.
-
 Template: condor/wantdebconf
 Type: boolean
 Default: false

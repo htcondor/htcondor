@@ -7,6 +7,28 @@ condor_user=condor
 condor_local_cfg=/etc/condor/condor_config.local
 condor_debconf_cfg=/etc/condor/config.d/00debconf
 
+
+remove_condor_dirs() {
+	# make an attempt to remove runtime data from the "standard" location
+	# this cannot deal with non-standard LOCALDIR settings
+	for dlabel in lib/condor/cred_dir spool/condor/local_univ_execute \
+	              lib/condor/execute lock/condor log/condor run/condor \
+	              spool/condor; do
+		dname="/var/$dlabel"
+		if [ -d "$dname" ]; then
+			# should we rely on the configuration to be sane?
+			#rm -rf $dname
+			# better have some safety-net and only delete what belongs to condor
+			# if we have a condor user at all
+			id -u condor > /dev/null 2>&1 && find $dname -type f -user condor -group condor -delete || true
+			# try getting rid of the directory as well, but do not fail if there
+			# were left-overs
+			rmdir $dname || true
+		fi
+	done
+}
+
+
 # XXX Shouldn't we also remove the user (if possible, since sometimes it might
 #     come from LDAP or similar)
 
@@ -14,6 +36,8 @@ case "$1" in
     remove|abort-install|disappear)
     ;;
     purge)
+        # wipe out runtime data (logs, ...)
+        remove_condor_dirs
         [ -f $condor_debconf_cfg ] && rm $condor_debconf_cfg
         # unless the file has any non-comment purge it too
         [ -f $condor_local_cfg ] \

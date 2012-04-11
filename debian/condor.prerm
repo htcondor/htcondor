@@ -3,22 +3,6 @@
 
 set -e
 
-condor_remove_homedir() {
-	for dlabel in CRED_STORE_DIR LOCAL_UNIV_EXECUTE EXECUTE LOCK LOG RUN SPOOL; do
-		dname=$(condor_config_val $dlabel)
-		if [ $? -eq 0 ]; then
-			# should we rely on the configuration to be sane?
-			#rm -rf $dname
-			# better have some safety-net and only delete what belongs to condor
-			# if we have a condor user at all
-			id -u condor > /dev/null 2>&1 && [ -d "$dname" ] && find $dname -type f -user condor -group condor -delete || true
-			# try getting rid of the directory as well, but do not fail if there
-			# were left-overs
-			rmdir $dname || true
-		fi
-	done
-}
-
 # handle stopping condor seperately to prevent jobs from being killed
 # without reason, but we cannot avoid stopping condor during removal
 # or upgrade -- in the former it is desired and in the latter case condor
@@ -34,25 +18,6 @@ case "$1" in
 			fi
 		fi
 	;;
-	*)
-		echo "prerm called with unknown argument \`$1'" >&2
-		exit 1
-	;;
-esac
-
-case "$1" in
-	remove)
-		# need to do this here and not in postinst, because it relies on
-		# condor's own knowledge about where it is installed
-		condor_remove_homedir
-	;;
-
-	upgrade|deconfigure)
-	;;
-
-	failed-upgrade)
-	;;
-
 	*)
 		echo "prerm called with unknown argument \`$1'" >&2
 		exit 1
