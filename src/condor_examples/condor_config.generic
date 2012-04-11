@@ -1822,7 +1822,7 @@ JAVA_EXTRA_ARGUMENTS =
 
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
 GT2_GAHP			= $(SBIN)/gahp_server
-GRID_MONITOR			= $(SBIN)/grid_monitor.sh
+GRID_MONITOR			= $(SBIN)/grid_monitor
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
@@ -2325,7 +2325,7 @@ MAX_VM_GAHP_LOG	= 1000000
 VMWARE_PERL = perl
 
 ## Where is the Condor script program to control VMware? (Required)
-VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware.pl
+VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 
 ## Networking parameters for VMware
 ##
