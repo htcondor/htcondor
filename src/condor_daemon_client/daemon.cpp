@@ -892,7 +892,6 @@ bool
 Daemon::locate( void )
 {
 	bool rval=false;
-	char* tmp = NULL;
 
 		// Make sure we only call locate() once.
 	if( _tried_locate ) {
