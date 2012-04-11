@@ -43,7 +43,6 @@ How to configure condor_master:
         MAIL                Mailer program pathname.
         LOG                 Pathname of the log directory.
         COLLECTOR_HOST      Name of the host on which condor_collector runs.
-        NEGOTIATOR_HOST     Name of the host on which condor_negotiator runs.
         CONDOR_ADMIN        Email address of condor administrator.
 
     The following variables are not required.
