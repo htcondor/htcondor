@@ -319,7 +319,7 @@ BEGIN_C_DECLS
 	*/
 	char * macro_expand ( const char *name );
 	void clear_config ( void );
-	void set_debug_flags( const char * strFlags);
+	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );
 	int  param_boolean_int_with_default( const char* name );

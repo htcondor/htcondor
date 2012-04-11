@@ -253,8 +253,8 @@ int store_cred_service(const char *user, const char *pw, int mode)
 
 #include <conio.h>
 
-extern "C" FILE *DebugFP;
-extern "C" int DebugFlags;
+//extern "C" FILE *DebugFP;
+//extern "C" int DebugFlags;
 
 char* getStoredCredential(const char *username, const char *domain)
 {

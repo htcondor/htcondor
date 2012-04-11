@@ -29,7 +29,7 @@
 extern "C" {
 	int SetSyscalls( int );
 	void InitStaticFile( int, int );
-	void set_debug_flags( const char * );
+	void set_debug_flags( const char *, int );
 	StdUnivSock *RSC_Init( int rscsock, int errsock );
 	int get_file( char *remote, char *local, int mode );
 	int send_a_file( const char *local_name, const char *remote_name, int mode );

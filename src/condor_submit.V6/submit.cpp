@@ -885,7 +885,7 @@ main( int argc, char *argv[] )
 		// condor.
 	check_umask();
 
-	DebugFlags |= D_EXPR;
+	set_debug_flags(NULL, D_EXPR);
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );

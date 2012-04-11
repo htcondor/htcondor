@@ -115,7 +115,7 @@ BaseCodec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
 	}
 
 // //debug
-//        if (DebugFlags & D_FULLDEBUG) {
+//        if (IsFulldebug(D_FULLDEBUG)) {
 //            ad.dPrint(D_FULLDEBUG|D_NOHEADER);
 //        }
 
@@ -156,7 +156,7 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad, string& text)
     }
 
 //     // debug
-//     if (DebugFlags & D_FULLDEBUG) {
+//     if (IsFulldebug(D_FULLDEBUG)) {
 //           ad.dPrint(D_FULLDEBUG|D_NOHEADER);
 //     }
 

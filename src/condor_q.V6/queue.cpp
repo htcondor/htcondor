@@ -1051,7 +1051,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 			Termlog = 1;
-			set_debug_flags( argv[i] );
+			set_debug_flags( argv[i], 0 );
 		} 
 		else
 		if (match_prefix (arg, "name")) {

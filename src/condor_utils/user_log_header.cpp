@@ -128,7 +128,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 			m_max_rotation = -1;
 		}
 
-		if ( DebugFlags & D_FULLDEBUG ) {
+		if (IsFulldebug(D_FULLDEBUG)) {
 			dprint( D_FULLDEBUG, "UserLogHeader::ExtractEvent(): parsed ->" );
 		}
 		return ULOG_OK;

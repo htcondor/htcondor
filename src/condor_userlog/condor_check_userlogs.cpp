@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	Termlog = true;
 	p_funcs = get_param_functions();
 	dprintf_config("condor_check_userlogs", p_funcs);
-	DebugFlags = D_ALWAYS;
+	set_debug_flags(NULL, D_ALWAYS);
 
 	StringList	logFiles;
 	for ( int argnum = 1; argnum < argc; ++argnum ) {
