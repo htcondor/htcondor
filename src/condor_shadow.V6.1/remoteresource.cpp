@@ -1079,6 +1079,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Insert(ATTR_MEMORY_USAGE, tree->Copy());
 	}
 
+	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
+		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, float_value);
+	}
+	
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
 		int rss = remote_rusage.ru_maxrss;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
@@ -1207,12 +1211,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	classad::Value val;
-	if (jobAd->EvaluateAttr(ATTR_MEMORY_USAGE, val)) {
-		classad_int64 cint64_value;
-		if (val.IsIntegerValue(cint64_value)) { // TJ: fix for int64 classad
-			memory_usage_mb = cint64_value;
-		}
+	if (jobAd->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value)) {
+		memory_usage_mb = int64_value;
 	}
 
 	MyString starter_addr;

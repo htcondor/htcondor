@@ -46,7 +46,7 @@ int pseudo_reallyexit( int *status, struct rusage *use_p );
 int pseudo_free_fs_blocks( const char *path );
 int pseudo_image_size( int size );
 int pseudo_send_rusage( struct rusage *use_p );
-int pseudo_report_error( char *msg );
+int pseudo_report_error( const char *msg );
 int pseudo_report_file_info( char *kind, char *name, int open_count, int read_count, int write_count, int seek_count, int read_bytes, int write_bytes );
 int pseudo_report_file_info_new( char *name, long long open_count, long long read_count, long long write_count, long long seek_count, long long read_bytes, long long write_bytes );
 int pseudo_getwd_special( char *&path );

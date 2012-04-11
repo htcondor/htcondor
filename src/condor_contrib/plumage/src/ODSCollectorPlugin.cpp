@@ -96,13 +96,24 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
             int ki = p.getIntField(ATTR_KEYBOARD_IDLE);
             double la = p.getField(ATTR_LOAD_AVG).Double();
             const char* state = p.getStringField(ATTR_STATE);
-            dprintf(D_FULLDEBUG, "Machine %s:\t%s=%s\t%s=%s\t%s=%d\t%s=%f\t%s=%s\n",
+            int cpus = p.getIntField(ATTR_CPUS);
+            int mem = p.getIntField(ATTR_MEMORY);
+            const char* gjid = p.getStringField(ATTR_GLOBAL_JOB_ID);
+            const char* ru = p.getStringField(ATTR_REMOTE_USER);
+            const char* ag = p.getStringField(ATTR_ACCOUNTING_GROUP);
+            dprintf(D_FULLDEBUG, "Machine %s:\t%s=%s\t%s=%s\t%s=%d\t%s=%f\t%s=%s\t%s=%d\t%s=%d\t%s=%s\t%s=%s\t%s=%s\n",
                     name,
                     ATTR_ARCH,arch,
                     ATTR_OPSYS,opsys,
                     ATTR_KEYBOARD_IDLE,ki,
                     ATTR_LOAD_AVG,la,
-                    ATTR_STATE,state);
+                    ATTR_STATE,state,
+                    ATTR_CPUS,cpus,
+                    ATTR_MEMORY,mem,
+                    ATTR_GLOBAL_JOB_ID,gjid,
+                    ATTR_REMOTE_USER,ru,
+                    ATTR_ACCOUNTING_GROUP,ag
+                   );
 
             // write record to machine samples
             conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "ts" << 1 << "mn" << 1 ));
@@ -114,6 +125,11 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
             bob.append("ki",ki);
             bob.append("la",la);
             bob.append("st",state);
+            bob.append("cpu",cpus);
+            bob.append("mem",mem);
+            strcmp(gjid,"")?bob.append("gjid",gjid):bob.appendNull("gjid");
+            strcmp(ru,"")?bob.append("ru",ru):bob.appendNull("ru");
+            strcmp(ag,"")?bob.append("ag",ag):bob.appendNull("ag");
             conn->insert(DB_STATS_SAMPLES_MACH,bob.obj());
         }
     }
@@ -240,7 +256,7 @@ public:
             break;
 		case UPDATE_NEGOTIATOR_AD:
 			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_NEGOTIATOR_AD\n");
-			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", TRUE)) {
+			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", FALSE)) {
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_NEGOTIATOR_AD\n");
 				break;
 			}
@@ -254,7 +270,7 @@ public:
 			break;
 		case UPDATE_SCHEDD_AD:
 			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_SCHEDD_AD\n");
-			if (param_boolean("ODS_IGNORE_UPDATE_SCHEDD_AD", TRUE)) {
+			if (param_boolean("ODS_IGNORE_UPDATE_SCHEDD_AD", FALSE)) {
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_SCHEDD_AD\n");
 				break;
 			}

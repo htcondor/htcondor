@@ -157,6 +157,7 @@ class Matchmaker : public Service
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
+            @param groupName name of group negotiating under (or NULL)
 			@param scheddName Name attribute from the submitter ad.
 			@param scheddAddr Sinful string of schedd for this submitter.
 			@param priority Priority of this user from the accountant.
@@ -174,7 +175,7 @@ class Matchmaker : public Service
 					MM_DONE if schedd got all the resources it wanted,
 					MM_ERROR if problem negotiating w/ this schedd.
 		**/
-		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
+		int negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, 
 		   double priority,
            double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
@@ -461,6 +462,7 @@ class Matchmaker : public Service
         vector<GroupEntry*> hgq_groups;
         map<string, GroupEntry*> group_entry_map;
         bool autoregroup;
+        bool allow_quota_oversub;
 
         void hgq_construct_tree();
         void hgq_assign_quotas(GroupEntry* group, double quota);

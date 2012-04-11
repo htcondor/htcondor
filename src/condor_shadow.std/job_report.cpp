@@ -67,7 +67,7 @@ static struct error_node *error_head=0;
 
 /* Record a line of error information about the job */
 
-int job_report_store_error( char *format, ... )
+int job_report_store_error( const char *format, ... )
 {
 	struct error_node *e;
 	char *text;

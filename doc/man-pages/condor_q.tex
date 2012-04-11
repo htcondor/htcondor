@@ -27,6 +27,7 @@
 \oOptArg{-machineads}{file} 
 \oOptArg{-direct}{rdbms \Bar schedd} 
 \oOpt{-stream-results}
+\oOpt{-wide}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
@@ -91,7 +92,8 @@ a one line summary of information as follows:
         > = transferring output. 
 \item[PRI] User specified priority of the job, ranges from -20 to +20, with 
 	higher numbers corresponding to greater priority. 
-\item[SIZE] The virtual image size of the executable in megabytes. 
+\item[SIZE] The value of job ClassAd attribute \Attr{MemoryUsage} (in Mbytes),
+when the attribute is defined, and \Attr{ImageSize} (in Kbytes), otherwise. 
 \item[CMD] The name of the executable. 
 \end{description}
 
@@ -232,34 +234,37 @@ per machine basis.
   attributes (by name, and in a comma separated list)
   which should be displayed when using the \Opt{-xml} or \Opt{-long} options.
   Limiting the number of attributes increases the efficiency of the query.}
-  \OptItem{\OptArg{-format}{fmt attr}}{Display attribute or expression \Arg{attr}
-    in format \Arg{fmt}.
+  \OptItem{\OptArg{-format}{fmt attr}}{Display attribute or 
+    expression \Arg{attr} in format \Arg{fmt}.
     To display the attribute or expression the format must contain a single
-    \Code{printf(3)} style conversion specifier.
+    \Code{printf(3)}-style conversion specifier.
     Attributes must be from the job ClassAd.
-	Expressions are ClassAd expressions and may 
-	refer to attributes in the job ClassAd.
-	If the
-    attribute is not present in a given ClassAd and cannot
-	be parsed as an expression,
+    Expressions are ClassAd expressions and may 
+    refer to attributes in the job ClassAd.
+    If the attribute is not present in a given ClassAd and cannot
+    be parsed as an expression,
     then the format option will be silently skipped.
     The conversion specifier must match the type of the
     attribute or expression.
     \%s is suitable for strings such as \Attr{Owner},
     \%d for integers such as \Attr{ClusterId},
-    and \%f for floating point numbers such as
-    \Attr{RemoteWallClockTime}.  An incorrect format
-    will result in undefined behavior.
+    and \%f for floating point numbers such as \Attr{RemoteWallClockTime}.  
+    \%v identifies the type of the attribute,
+    and then prints the value in an appropriate format.
+    \%V identifies the type of the attribute,
+    and then prints the value in an appropriate format as it would
+    appear in the \Opt{-long} format.
+    As an example, strings used with \%V will have quote marks.
+    An incorrect format will result in undefined behavior.
     Do not use more than one conversion specifier in a given
     format.  More than one conversion specifier will result
     in undefined behavior.  To output multiple attributes
-    repeat the \Opt{-format} option once for each desired
-    attribute.
-    Like {\Code{printf(3)}} style formats, you can include other
-    text that will be reproduced directly.   You can specify
-    a format without any conversion specifiers but you must
-    still give attribute.
-    You can include \Bs n to specify a line break. }
+    repeat the \Opt{-format} option once for each desired attribute.
+    Like {\Code{printf(3)}} style formats, one may include other
+    text that will be reproduced directly.   
+    A format without any conversion specifiers may be specified,
+    but an attribute is still required.
+    Include \Bs n to specify a line break. }
   \OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
     display remote CPU time accumulated by the job to date in days,
     hours, minutes, and seconds.  (If the job is currently running, time
@@ -297,6 +302,9 @@ per machine basis.
     large numbers of jobs, but if \Condor{q} is paused while displaying
     results, this could result in a timeout in communication with
     \Condor{schedd}.}
+  \OptItem{\Opt{-wide}}{If this option is specified, and the command portion
+    of the output would cause the output to extend beyond 80 columns,
+    display beyond the 80 columns. }
   \OptItem{Restriction list}{The restriction list may have zero or more items,
     each of which may be:
         \begin{description}
