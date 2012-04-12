@@ -34,11 +34,9 @@ case "$1" in
         [ -f $condor_local_cfg ] \
             && [ "$(grep -v '^[#]' < $condor_local_cfg | wc -w)" = "0" ] \
                 && rm $condor_local_cfg
-        # try removing the condor user, but do not fail if it doesn't work
-        # maybe it is not a local user
-        if id ${condor_user} >/dev/null 2>&1; then
-            deluser --system --remove-home condor
-        fi
+        # not removing the condor system user; see http://bugs.debian.org/621833
+        # for a discussion. also not trying to lock the condor user as it was
+        # configured with --disabled-login --disabled-password already
     ;;
     upgrade|failed-upgrade|abort-upgrade)
     ;;

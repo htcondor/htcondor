@@ -8,7 +8,6 @@ set -e
 db_version 2.0
 
 condor_user=condor
-condor_group=condor
 condor_gecos="Condor Daemons"
 # make this one fixed because 'condor_config_val -tilde' relies on the user
 # home dir to exist
@@ -17,22 +16,12 @@ condor_local_cfg=/etc/condor/condor_config.local
 condor_debconf_cfg=/etc/condor/config.d/00debconf
 
 
-condor_add_user() {
-    if ! id ${condor_user} >/dev/null 2>&1; then
-        # don't fail on this one if for whatever reason the group already exists
-        addgroup --system $condor_group || true
-        adduser --system --ingroup $condor_group --gecos "$condor_gecos" \
-                --no-create-home --home $condor_home --disabled-password \
-                --disabled-login $condor_user
-    fi
-}
-
 condor_make_homedir() {
     for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG SPOOL; do
         dname=$(condor_config_val $dlabel)
         if [ $? -eq 0 ]; then
             mkdir -p $dname
-            chown -R $condor_user:$condor_group $dname
+            chown -R $condor_user: $dname
         else
             echo "Condor's configuration doesn't define $dlabel. This might be an indication of a problem."
         fi
@@ -174,7 +163,10 @@ EOT
 
 case "$1" in
     configure)
-        condor_add_user
+        # according to http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=621833#119
+        # this should always work
+        adduser --system --group --gecos "$condor_gecos" --home $condor_home \
+                --disabled-password --disabled-login $condor_user --quiet
         condor_local_cfg_template
         condor_put_debconf_cfg
         condor_make_homedir
