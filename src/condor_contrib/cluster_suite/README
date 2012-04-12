@@ -27,6 +27,10 @@ configuration is appropriately represented in wallaby and nodes in the
 cluster have the proper condor configuration.  Currently, only the schedd,
 job_server, and query_server are supported with these tools.
 
+In order for the query_server to fail over cleanly, the Aviary Locator feature
+needs to be enabled on the pool.  Query servers configured with the wallaby
+shell commands will be configured with locator support enabled.
+
 Dependencies
 ============
 wallaby shell
