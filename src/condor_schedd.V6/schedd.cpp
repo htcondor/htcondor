@@ -10387,15 +10387,57 @@ Scheduler::Init()
 				ExtArray<MyString> groups(2);
 				if (re.match(name, &groups)) {
 					MyString other = groups[1]; // this will be lowercase
-					other.setChar(0, toupper(other[0])); // capitalize it.
+					if (isdigit(other[0])) {
+						// can't start atributes with a digit, start with _ instead
+						other.sprintf("_%s", groups[1].Value());
+					} else {
+						other.setChar(0, toupper(other[0])); // capitalize it.
+					}
 
 					dprintf(D_FULLDEBUG, "Collecting stats for '%s' trigger is %s\n", other.Value(), filter);
 					OtherPoolStats.Enable(other.Value(), filter);
 				}
 				free(filter);
 			}
-			OtherPoolStats.RemoveDisabled();
 		}
+		names.truncate(0);
+
+#if 0 // separate stats for each unique result from the filter expression. not yet finished.
+		ASSERT(re.compile("schedd_collect_stats_by_(.+)", &pszMsg, &err, PCRE_CASELESS));
+		if (param_names_matching(re, names)) {
+
+			for (int ii = 0; ii < names.length(); ++ii) {
+
+				//dprintf(D_FULLDEBUG, "Found %s\n", names[ii]);
+				const MyString name = names[ii];
+				char * filter = param(names[ii]);
+				if ( ! filter) {
+					dprintf(D_ALWAYS, "Ignoring param '%s' : value is empty\n", names[ii]);
+					continue;
+				}
+
+				// the pool prefix will be the first submatch of the regex of the param name.
+				// unfortunately it's been lowercased by the time we get here, so we can't
+				// let the user choose the case, just capitalize it and use it as the prefix
+				ExtArray<MyString> groups(2);
+				if (re.match(name, &groups)) {
+					MyString other = groups[1]; // this will be lowercase
+					if (isdigit(other[0])) {
+						// can't start atributes with a digit, start with _ instead
+						other.sprintf("_%s", groups[1].Value());
+					} else {
+						other.setChar(0, toupper(other[0])); // capitalize it.
+					}
+
+					dprintf(D_FULLDEBUG, "Collecting stats by '%s' trigger is %s\n", other.Value(), filter);
+					OtherPoolStats.Enable(other.Value(), filter, true);
+				}
+				free(filter);
+			}
+		}
+#endif
+
+		OtherPoolStats.RemoveDisabled();
 	}
 
 	/* default 5 megabytes */
