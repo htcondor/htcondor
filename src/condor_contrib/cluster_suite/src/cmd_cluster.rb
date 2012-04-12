@@ -29,7 +29,9 @@ module Mrg
              "SCHEDD.#{name}.SCHEDD_LOG"=>"$(LOG)/SchedLog-#{name}.log",
              "SCHEDD.#{name}.SCHEDD_ADDRESS_FILE"=>"$(LOG)/.schedd-#{name}_address",
              "SCHEDD.#{name}.SCHEDD_DAEMON_AD_FILE"=>"$(LOG)/.schedd-#{name}_classad",
-             "MASTER.USE_PROCD"=>"TRUE", "RESTART_PROCD_ON_ERROR"=>"TRUE"
+             "SCHEDD.#{name}.USE_PROCD"=>"TRUE",
+             "#{name}_ENVIRONMENT"=>"_CONDOR_PROCD_ADDRESS=$(PROCD_ADDRESS).#{name}",
+             "SCHEDD.#{name}.RESTART_PROCD_ON_ERROR"=>"TRUE"
             }
           end
         end
@@ -47,7 +49,9 @@ module Mrg
              "QUERY_SERVER.#{qs_name}.HISTORY"=>"$(QUERY_SERVER.#{qs_name}.SPOOL)/history",
              "QUERY_SERVER.#{qs_name}.QUERY_SERVER_LOG"=>"$(LOG)/QueryServerLog-#{qs_name}",
              "QUERY_SERVER.#{qs_name}.QUERY_SERVER_ADDRESS_FILE"=>"$(LOG)/.query_server_address-#{qs_name}",
-             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.query_server_classad-#{qs_name}"
+             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.query_server_classad-#{qs_name}",
+             "QUERY_SERVER.#{qs_name}.AVIARY_PUBLISH_INTERVAL"=>"10",
+             "QUERY_SERVER.#{qs_name}.AVIARY_PUBLISH_LOCATION"=>"True"
             }
           end
         end
@@ -344,9 +348,17 @@ module Mrg
             store.checkParameterValidity(get_params.keys).each do |pname|
 
             # Add missing params
-              pargs = ["--needs-restart", "yes", "--kind", "String", "--description", "Created for HA Schedd #{@name}", pname]
+              pargs = ["--needs-restart", get_restart(pname), "--kind", get_kind(pname), "--description", "Created for HA Schedd #{@name}", pname]
               Mrg::Grid::Config::Shell::AddParam.new(store, "").main(pargs)
             end
+          end
+
+          def get_kind(n)
+            n.upcase.include?("PROCD") ? "Boolean" : "String"
+          end
+
+          def get_restart(n)
+            n.upcase.include?("RESTART_PROCD") ? "no" : "yes"
           end
 
           def modify_params_on_group
