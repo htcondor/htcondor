@@ -36,7 +36,14 @@ Symbolic links to the old locations are included to ease upgrading.
 
 \begin{itemize}
 
-\item Placeholder  for  newer usage of \Attr{RequestMemory}.
+\item The values of \SubmitCmd{request\_memory}, \SubmitCmd{request\_disk} and
+\SubmitCmd{request\_cpus} submit description file commands will now be
+automatically included in the job \Attr{Requirements} expression by
+\Condor{submit}.  This is part of several changes
+in code and policy intended to make partitionable slots easier to deploy
+and use.  The requested values for memory, disk and cpus, as well as the
+amount of these resources that a job actually uses are now printed in the
+user log when the job exits.
 \Ticket{2843}
 
 \item The new \SubmitCmd{keep\_claim\_idle} submit description
