@@ -2,8 +2,18 @@ condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
 
   * New upstream development release. Last one before the 7.8 stable series.
   * Majority of patches has been merged upstream or made obsolete.
+  * Stop supporting alternative LOCAL_DIR settings via Debconf. In addition
+    the pre/postrm scripts no longer support non-standard (aka /var) LOCAL_DIR
+    settings. This was done to be able to keep runtime data (logs, etc.) when
+    the package gets removed, but not purged (Closes: #668088). Previously the
+    package relied on Condor's own configuration facilities to deduce LOCAL_DIR,
+    which is impossible to perform in 'postrm'.
+  * Do not remove the condor user during package purge (Closes: #667533).
+    Along the lines of the discussion in #621833 the user is kept in a locked
+    state (condor user has login disabled by default).
+  * Simplify logic of adding the condor system user in maintainer scripts.
 
- -- Michael Hanke <mih@debian.org>  Sun, 08 Apr 2012 20:25:05 +0200
+ -- Michael Hanke <mih@debian.org>  Thu, 12 Apr 2012 12:51:15 +0200
 
 condor (7.7.5~dfsg.1-2) experimental; urgency=low
 
