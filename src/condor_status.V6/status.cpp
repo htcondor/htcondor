@@ -631,8 +631,8 @@ firstPass (int argc, char *argv[])
 			i += 2;			
 		} else
 		if (*argv[i] == '-' &&
-			is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
-			is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2) ) {
+			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
+			 is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2)) ) {
 				// make sure we have at least one more argument
 			if ( !argv[i+1] || *(argv[i+1]) == '-') {
 				fprintf( stderr, "Error: Argument %s requires "
@@ -946,8 +946,8 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (*argv[i] == '-' &&
-			is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
-			is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2) ) {
+			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
+			 is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2)) ) {
 				// make sure we have at least one more argument
 			if ( !argv[i+1] || *(argv[i+1]) == '-') {
 				fprintf( stderr, "Error: Argument %s requires "
@@ -1006,7 +1006,7 @@ secondPass (int argc, char *argv[])
 				lbl += fCapV ? "%V" : "%v";
 				if (diagnose) {
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
-							i, wid, opts, lbl.Value(), argv[i]);
+							i, lbl.Value(), wid, opts,  argv[i]);
 				}
 				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
