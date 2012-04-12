@@ -146,7 +146,7 @@ cluster-delete
 This command deletes an HA Schedd cluster configuration.  It takes the common
 options and requires the name of the schedd configuration to delete.
 
-example: cluster-delete name=schedd1
+example: wallaby cluster-delete name=schedd1
 
 
 cluster-remove-node
