@@ -22,6 +22,13 @@ The details of each version are described below.
 \item Condor version 7.7.6 not yet released.
 %\item Condor version 7.7.6 released on Month Date, 2012.
 
+\item In the Condor sbin directory, \File{condor\_vm\_vmware.pl} was
+renamed to \File{condor\_vm\_vmware} and \File{grid\_monitor.sh} was
+renamed to \File{grid\_monitor}.
+This makes Condor more compliant with Linux native packaging rules.
+Symbolic links to the old locations are included to ease upgrading.
+\Ticket{2940}
+
 \end{itemize}
 
 
@@ -29,7 +36,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Placeholder  for  newer usage of \Attr{RequestMemory}.
+\item The values of \SubmitCmd{request\_memory}, \SubmitCmd{request\_disk} and
+\SubmitCmd{request\_cpus} submit description file commands will now be
+automatically included in the job \Attr{Requirements} expression by
+\Condor{submit}.  This is part of several changes
+in code and policy intended to make partitionable slots easier to deploy
+and use.  The requested values for memory, disk and cpus, as well as the
+amount of these resources that a job actually uses are now printed in the
+user log when the job exits.
 \Ticket{2843}
 
 \item The new \SubmitCmd{keep\_claim\_idle} submit description
@@ -46,11 +60,6 @@ items in reverse chronological order.
 The new \Opt{-forwards} option enables the previous behavior of 
 printing historical jobs in chronological order.
 \Ticket{2808}
-
-\item Advertised new attributes \Attr{RemoteGroup}, \Attr{RemoteNegotiatingGroup},
-\Attr{RemoteAutoregroup} and their Submitter counterparts to support enhanced
-preemption policies with accounting group awareness.
-\Ticket{2885}
 
 \item Enhanced the \Condor{negotiator} to provide the name of 
 concurrency limits that cause negotiation to fail, so that 
@@ -103,6 +112,13 @@ via the new \Opt{-X} option.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new machine ClassAd attributes \Attr{RemoteGroup}, 
+\Attr{RemoteNegotiatingGroup}, and \Attr{RemoteAutoregroup},
+and the new job ClassAd attributes \Attr{SubmitterGroup}, 
+\Attr{SubmitterNegotiatingGroup}, and \Attr{SubmitterAutoregroup}
+enhance support for preemption policies with accounting group awareness.
+\Ticket{2885}
 
 \item The new configuration variable
 \Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE} is a boolean which causes the
