@@ -47,14 +47,6 @@
 #include "classad_hashtable.h"
 #include "log_transaction.h"
 
-#define CondorLogOp_NewClassAd			101
-#define CondorLogOp_DestroyClassAd		102
-#define CondorLogOp_SetAttribute		103
-#define CondorLogOp_DeleteAttribute		104
-#define CondorLogOp_BeginTransaction	105
-#define CondorLogOp_EndTransaction		106
-#define CondorLogOp_LogHistoricalSequenceNumber 107
-
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 extern const char *EMPTY_CLASSAD_TYPE_NAME;
@@ -217,6 +209,7 @@ public:
 	virtual char const *get_key() { return key; }
 	char const *get_name() { return name; }
 	char const *get_value() { return value; }
+    ExprTree* get_expr() { return value_expr; }
 
 private:
 	virtual int WriteBody(FILE* fp);
@@ -225,7 +218,8 @@ private:
 	char *key;
 	char *name;
 	char *value;
-        bool is_dirty;
+	bool is_dirty;
+    ExprTree* value_expr;    
 };
 
 class LogDeleteAttribute : public LogRecord {
@@ -267,6 +261,6 @@ private:
 	virtual char const *get_key() {return NULL;}
 };
 
-LogRecord *InstantiateLogEntry(FILE* fp, int type);
+LogRecord* InstantiateLogEntry(FILE* fp, unsigned long recnum, int type);
 
 #endif
