@@ -117,7 +117,7 @@ class DaemonWrangler:
         available and readable.
         """
         condor_lib = get_option("LIB")
-        logging.debug("Found SBIN directory = %s" % condor_lib)
+        logging.debug("Found LIB directory = %s" % condor_lib)
         library_paths = []
         for library in self.libraries:
             library_file_paths = glob.glob(os.path.join(condor_lib, library))
