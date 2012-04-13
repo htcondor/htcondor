@@ -89,17 +89,11 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	unsigned long count = 0;
 	bool is_clean = true; // was cleanly closed (until we find out otherwise)
 	bool requires_successful_cleaning = false;
-	long long next_log_entry_pos = 0;
-    long long curr_log_entry_pos = 0;
-	while ((log_rec = ReadLogEntry(log_fp, 1+count, InstantiateLogEntry)) != 0) {
-        curr_log_entry_pos = next_log_entry_pos;
+	long next_log_entry_pos = 0;
+	while ((log_rec = ReadLogEntry(log_fp, InstantiateLogEntry)) != 0) {
 		next_log_entry_pos = ftell(log_fp);
 		count++;
 		switch (log_rec->get_op_type()) {
-        case CondorLogOp_Error:
-            // this is defensive, ought to be caught in InstantiateLogEntry()
-            EXCEPT("ERROR: transaction record %lu was bad (byte offset %lld)\n", count, curr_log_entry_pos);
-            break;
 		case CondorLogOp_BeginTransaction:
 			// this file contains transactions, so it must not
 			// have been cleanly shut down
@@ -140,7 +134,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			}
 		}
 	}
-	long long final_log_entry_pos = ftell(log_fp);
+	long final_log_entry_pos = ftell(log_fp);
 	if( next_log_entry_pos != final_log_entry_pos ) {
 		// The log file has a broken line at the end so we _must_
 		// _not_ write anything more into this log.
@@ -534,13 +528,8 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 					free(val);
 					val = NULL;
 				}
-                ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
-                if (expr) {
-                    ad->Insert(lname, expr->Copy());
-                } else {
-                    val = strdup(((LogSetAttribute *)log)->get_value());
-                    ad->AssignExpr(lname, val);
-                }
+				val = strdup(((LogSetAttribute *)log)->get_value());
+				ad->AssignExpr(lname,val);
 				attrsAdded++;
 			}
 			break;
@@ -855,7 +844,6 @@ LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val, 
 		value = strdup("UNDEFINED");
 	}
 	is_dirty = dirty;
-    value_expr = NULL;
 }
 
 
@@ -864,7 +852,6 @@ LogSetAttribute::~LogSetAttribute()
 	free(key);
 	free(name);
 	free(value);
-    if (value_expr != NULL) delete value_expr;
 }
 
 
@@ -876,11 +863,7 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAd *ad = 0;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
-    if (value_expr) {
-        rval = ad->Insert(name, value_expr->Copy());
-    } else {
-        rval = ad->AssignExpr(name, value);
-    }
+	rval = ad->AssignExpr(name, value);
 	ad->SetDirtyFlag(name, is_dirty);
 
 #if defined(HAVE_DLOPEN)
@@ -953,15 +936,6 @@ LogSetAttribute::ReadBody(FILE* fp)
 	if (rval < 0) {
 		return rval;
 	}
-
-    if (value_expr) delete value_expr;
-    value_expr = NULL;
-    classad::ClassAdParser parser;
-    if (!parser.ParseExpression(value, value_expr, true)) {
-        if (value_expr) delete value_expr;
-        value_expr = NULL;
-        return -1;
-    }
 	return rval + rval1;
 }
 
@@ -1061,14 +1035,11 @@ LogDeleteAttribute::ReadBody(FILE* fp)
 }
 
 LogRecord	*
-InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
+InstantiateLogEntry(FILE *fp, int type)
 {
 	LogRecord	*log_rec;
 
 	switch(type) {
-        case CondorLogOp_Error:
-            log_rec = new LogRecordError();
-            break;
 	    case CondorLogOp_NewClassAd:
 		    log_rec = new LogNewClassAd("", "", "");
 			break;
@@ -1091,54 +1062,41 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
 			log_rec = new LogHistoricalSequenceNumber(0,0);
 			break;
 	    default:
-		    return NULL;
+		    return 0;
 			break;
 	}
 
-	long long pos = ftell(fp);
+	long pos = ftell(fp);
 
-	// Check if we got a bogus record indicating a bad log file.  There are two basic
-    // failure modes.  The first mode is some kind of parse failure that occurs at the
-    // end of the log, not followed by an end-of-transaction operation.  In this case, the
-    // incomplete transaction at the end is skipped and ignored with a warning.  The second
-    // mode is a failure that occurs inside a complete transaction (one with an end-of-
-    // transaction op).  A complete transaction with corruption is unrecoverable, and 
-    // causes a fatal exception.
-	if (log_rec->ReadBody(fp) < 0  ||  log_rec->get_op_type() == CondorLogOp_Error) {
-        dprintf(D_ALWAYS, "WARNING: Encountered corrupt log record %lu (byte offset %lld)\n", recnum, pos);
+		// check if we got a bogus record indicating a bad log file
+	if( log_rec->ReadBody(fp) < 0 ) {
+
+			// check if this bogus record is in the midst of a transaction
+			// (try to find a CloseTransaction log record)
+
 
 		char	line[ATTRLIST_MAX_EXPRESSION + 64];
 		int		op;
 
 		delete log_rec;
 		if( !fp ) {
-			EXCEPT("Error: failed fdopen() while recovering from corrupt log record %lu", recnum);
+			EXCEPT("Error: failed fdopen() when recovering corrpupt log file");
 		}
 
-        // check if this bogus record is in the midst of a transaction
-	    // (try to find a CloseTransaction log record)
-        const unsigned long maxfollow = 3;
-        dprintf(D_ALWAYS, "Lines following corrupt log record %lu (up to %lu):\n", recnum, maxfollow);
-        unsigned long nlines = 0;
 		while( fgets( line, ATTRLIST_MAX_EXPRESSION+64, fp ) ) {
-            nlines += 1;
-            if (nlines <= maxfollow) {
-                dprintf(D_ALWAYS, "    %s", line);
-                int ll = strlen(line);
-                if (ll <= 0  ||  line[ll-1] != '\n') dprintf(D_ALWAYS, "\n");
-            }
-			if (sscanf( line, "%d ", &op ) != 1  ||  !valid_record_optype(op)) {
-				// no op field in line; more bad log records...
+			if( sscanf( line, "%d ", &op ) != 1 ) {
+					// no op field in line; more bad log records...
 				continue;
 			}
 			if( op == CondorLogOp_EndTransaction ) {
 					// aargh!  bad record in transaction.  abort!
-				EXCEPT("Error: corrupt log record %lu (byte offset %lld) occurred inside closed transaction, recovery failed", recnum, pos);
+				EXCEPT("Error: bad record with op=%d (at byte offset %ld) in corrupt logfile",type,pos);
 			}
 		}
 
 		if( !feof( fp ) ) {
-			EXCEPT("Error: failed recovering from corrupt log record %lu, errno=%d", recnum, errno);
+			EXCEPT("Error: failed recovering from corrupt file, errno=%d",
+				errno );
 		}
 
 			// there wasn't an error in reading the file, and the bad log 
