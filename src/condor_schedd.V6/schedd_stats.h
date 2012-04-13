@@ -99,7 +99,7 @@ typedef struct ScheddStatistics {
 
    // methods
    //
-   void Init(const char * prefix = NULL);
+   void Init(int fOtherPool);
    void Clear();
    time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
    void Reconfig();
