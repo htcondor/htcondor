@@ -335,6 +335,10 @@ main (int argc, char *argv[])
 		projList.AppendArg("ActvtyTime");
 		projList.AppendArg("MyCurrentTime");
 		projList.AppendArg("EnteredCurrentActivity");
+	} else if( ppStyle == PP_VERBOSE ) {
+	    // Remove everything from the projection list if we're displaying
+	    // the "long form" of the ads.
+	    projList.Clear();
 	}
 
 	if( projList.Count() > 0 ) {
