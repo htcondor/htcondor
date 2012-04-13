@@ -58,9 +58,8 @@ static const char default_lifes_set[] = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3
 
 //
 //
-void ScheddStatistics::Init(const char * prefix)
+void ScheddStatistics::Init(int fOtherPool)
 {
-   const bool fOtherPool = prefix && prefix[0];
    static const int64_t sizes[] = {
       (int64_t)0x10000 * 0x1,        (int64_t)0x10000 * 0x4,      // 64Kb, 256Kb
       (int64_t)0x10000 * 0x10,       (int64_t)0x10000 * 0x40,     //  1Mb,   4Mb
@@ -92,12 +91,12 @@ void ScheddStatistics::Init(const char * prefix)
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
+   if ( ! fOtherPool) { SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB); }
    SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        IF_BASICPUB);
 
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteTime, IF_BASICPUB);
@@ -123,24 +122,26 @@ void ScheddStatistics::Init(const char * prefix)
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, IF_BASICPUB | IF_NONZERO);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         IF_BASICPUB | IF_NONZERO);
 
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
-
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedSizes,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputSizes,           IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedRuntimes,     IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputRuntimes,        IF_BASICPUB);
 
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             IF_BASICPUB);
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          IF_BASICPUB);
-   if ( ! fOtherPool) SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
-   if ( ! fOtherPool) SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
+   if ( ! fOtherPool){
+      SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
+      SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
+      SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
+
+      SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             IF_BASICPUB);
+      SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          IF_BASICPUB);
+      SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
+      SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
 
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompleted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompletedSizes,  IF_BASICPUB);
+   }
 }
 
 void ScheddStatistics::Clear()
@@ -292,7 +293,7 @@ bool ScheddOtherStatsMgr::Enable(const char * pre, const char * trig)
 		po->prefix = pre;
 		po->trigger = trig;
 		po->trigger_expr = tree;
-		po->stats.Init(pre);
+		po->stats.Init(true);
 		po->enabled = true;
 		pools.insert(pre, po);
 	} else {
