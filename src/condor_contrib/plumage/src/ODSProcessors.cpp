@@ -159,6 +159,7 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
 
     DBClientConnection* conn = ops->m_db_conn;
     conn->ensureIndex(DB_STATS_SAMPLES_ACCOUNTANT, BSON( "ts" << -1 ));
+    conn->ensureIndex(DB_STATS_SAMPLES_ACCOUNTANT, BSON( "lu" << -1 ));
     conn->ensureIndex(DB_STATS_SAMPLES_ACCOUNTANT, BSON( "n" << 1 ));
     unsigned long long acct_count = conn->count(DB_STATS_SAMPLES_ACCOUNTANT);
 

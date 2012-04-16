@@ -8,7 +8,7 @@ var start = new Date();
 var end = new Date();
 
 // look back
-start.setMilliseconds(-30000)
+start.setMilliseconds(-60000)
 print (start);
 print (end);
 
@@ -38,13 +38,13 @@ print (end);
 //print (cur.length);
 
 // find each ts in the specified range
-cur = db.samples.machine.distinct('ts');
-var tstamp = cur.length;
-print ("Timestamps: "+tstamp);
-for (var i in cur)
-    var slots = db.samples.machine.distinct('n', {ts: cur[i]});
-    for (var j in slots)
-        print (slots[j]);
+// cur = db.samples.machine.distinct('ts');
+// var tstamp = cur.length;
+// print ("Timestamps: "+tstamp);
+// for (var i in cur)
+//     var slots = db.samples.machine.distinct('n', {ts: cur[i]});
+//     for (var j in slots)
+//         print (slots[j]);
 
 cur = db.samples.machine.distinct('n', {ts: {$gte: start, $lt: end}});
 var total = cur.length;

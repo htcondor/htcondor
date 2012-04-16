@@ -34,7 +34,7 @@ from dateutil.parser import *
 # ARE already stored in localtime in 1.6.4 mongodb
 # mongodb 1.7+ uses ISODate to address this
 UTC_DIFF = datetime.utcnow() - datetime.now()
-DEFAULT_START_DT = str(datetime.utcnow()-UTC_DIFF-timedelta(hours=1))
+DEFAULT_START_DT = str(datetime.utcnow()-UTC_DIFF-timedelta(minutes=15))
 DEFAULT_END_DT = str(datetime.utcnow()-UTC_DIFF)
 
 verbose = False
