@@ -97,7 +97,7 @@ class Value
 		/** Sets an integer value; previous value discarded.
 			@param i The integer value.
 		*/
-		void SetIntegerValue(int i);
+		void SetIntegerValue(long long i);
 
 		/** Sets the undefined value; previous value discarded.
 		*/
@@ -169,11 +169,14 @@ class Value
 
 		/** Checks if the value is integral.
 			@param i The integer value if the value is integer.
+			If the type of i is smaller than a long long, the value
+			may be truncated.
 			@return true iff the value is an integer.
 		*/
 		inline bool IsIntegerValue(int &i) const;
+		inline bool IsIntegerValue(long &i) const;
+		inline bool IsIntegerValue(long long &i) const;
 		/** Checks if the value is integral.
-			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
 		inline bool IsIntegerValue() const;
@@ -267,9 +270,13 @@ class Value
 		/** Checks if the value is numerical. If the value is a real, it is 
 				converted to an integer through truncation.
 			@param i The integer value of the value if the value is a number.
+			If the type of i is smaller than a long long, the value
+			may be truncated.
 			@return true iff the value is a number
 		*/
 		bool IsNumber (int &i) const;
+		bool IsNumber (long &i) const;
+		bool IsNumber (long long &i) const;
 		/** Checks if the value is numerical. If the value is an integer, it 
 				is promoted to a real.
 			@param r The real value of the value if the value is a number.
@@ -312,7 +319,7 @@ class Value
 
 		union {
 			bool			booleanValue;
-			int				integerValue;
+			long long		integerValue;
 			double 			realValue;
 			ExprList        *listValue;
 			ClassAd			*classadValue;
@@ -343,6 +350,20 @@ IsBooleanValue() const
 
 inline bool Value::
 IsIntegerValue (int &i) const
+{
+    i = (int)integerValue;
+    return (valueType == INTEGER_VALUE);
+}  
+
+inline bool Value::
+IsIntegerValue (long &i) const
+{
+    i = (long)integerValue;
+    return (valueType == INTEGER_VALUE);
+}  
+
+inline bool Value::
+IsIntegerValue (long long &i) const
 {
     i = integerValue;
     return (valueType == INTEGER_VALUE);

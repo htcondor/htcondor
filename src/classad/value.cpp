@@ -104,13 +104,39 @@ Clear()
 bool Value::
 IsNumber (int &i) const
 {
+	long long i2;
+	if ( IsNumber( i2 ) ) {
+		i = (int)i2;		// truncation
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+bool Value::
+IsNumber (long &i) const
+{
+	long long i2;
+	if ( IsNumber( i2 ) ) {
+		i = (long)i2;		// possible truncation
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+bool Value::
+IsNumber (long long &i) const
+{
 	switch (valueType) {
 		case INTEGER_VALUE:
 			i = integerValue;
 			return true;
 
 		case REAL_VALUE:
-			i = (int) realValue;	// truncation	
+			i = (long long) realValue;	// truncation	
 			return true;
 
 		default:
@@ -223,7 +249,7 @@ SetBooleanValue( bool b )
 }
 
 void Value::
-SetIntegerValue (int i)
+SetIntegerValue (long long i)
 {
     valueType=INTEGER_VALUE;
     integerValue = i;
@@ -389,7 +415,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 	const char	        *start;
 	const char          *end;
 	char                *end_tmp;
-	int		            ivalue;
+	long long           ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
@@ -487,7 +513,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
     bool                could_convert;
 	string	            buf;
     char                *end;
-	int		            ivalue;
+	long long           ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
@@ -509,7 +535,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::STRING_VALUE:
 			value.IsStringValue( buf );
-			ivalue = (int) strtod( buf.c_str( ), (char**) &end);
+			ivalue = (long long) strtod( buf.c_str( ), (char**) &end);
 			if( end == buf && ivalue == 0 ) {
 				// strtol() returned an error
 				integerValue.SetErrorValue( );
@@ -530,7 +556,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
                     break;
                 }
                 if (could_convert) {
-                    integerValue.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
+                    integerValue.SetIntegerValue((long long) (ivalue*Value::ScaleFactor[nf]));
                 }
             }
             break;
@@ -548,7 +574,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::REAL_VALUE:
             value.IsRealValue(rvalue);
-            integerValue.SetIntegerValue((int) rvalue);
+            integerValue.SetIntegerValue((long long) rvalue);
             could_convert = true;
             break;
 
@@ -560,7 +586,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::RELATIVE_TIME_VALUE:
 			value.IsRelativeTimeValue(rtvalue);
-			integerValue.SetIntegerValue((int) rtvalue);
+			integerValue.SetIntegerValue((long long) rtvalue);
 			could_convert = true;
             break;
 
