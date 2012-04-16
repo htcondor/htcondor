@@ -437,7 +437,7 @@ Scheduler::Scheduler() :
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
 
-    stats.Init();
+	stats.Init(0);
 
 		//
 		// ClassAd attribute for evaluating whether to start
@@ -1266,7 +1266,10 @@ int Scheduler::make_ad_list(
    stats.ShadowsRunning = numShadows;
 
    OtherPoolStats.Tick(now);
-   int flags = generic_stats_ParseConfigString(stats_config.Value(), "SCHEDD", "SCHEDULER", IF_BASICPUB | IF_RECENTPUB);
+   int flags = stats.PublishFlags;
+   if ( ! stats_config.IsEmpty()) {
+      flags = generic_stats_ParseConfigString(stats_config.Value(), "SCHEDD", "SCHEDULER", flags);
+   }
    OtherPoolStats.Publish(*cad, flags);
 
    // publish scheduler generic statistics
@@ -1500,6 +1503,14 @@ count( ClassAd *job )
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
+	// we don't actually need this for the current set of other_stats
+	//
+	//ScheddOtherStats * other_stats = NULL;
+	//if (scheduler.OtherPoolStats.AnyEnabled()) {
+	//	other_stats = OtherPoolStats.Matches(*job);
+	//}
+	//#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
 	int OwnerNum = scheduler.insert_owner( owner );
@@ -1615,11 +1626,14 @@ count( ClassAd *job )
 		int job_image_size = 0;
 		job->LookupInteger("ImageSize_RAW", job_image_size);
 		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
+		//OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+
 		int job_start_date = 0;
 		int job_running_time = 0;
 		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
 			job_running_time = (time(NULL) - job_start_date);
 		scheduler.stats.JobsRunningRuntimes += job_running_time;
+		//OTHER.JobsRunningRuntimes += job_running_time;
 	} else if (status == HELD) {
 		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
@@ -1627,6 +1641,7 @@ count( ClassAd *job )
 		scheduler.JobsRemoved++;
 	}
 
+	#undef OTHER
 	return 0;
 }
 
@@ -7926,11 +7941,24 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
         int qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
 
-        scheduler.stats.Tick();
-        scheduler.stats.JobsStarted += 1;
-        scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
+		scheduler.stats.Tick();
+		scheduler.stats.JobsStarted += 1;
+		scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
 
-		scheduler.OtherPoolStats.Tick();
+		if (scheduler.OtherPoolStats.AnyEnabled()) {
+			scheduler.OtherPoolStats.Tick();
+
+			ScheddOtherStats * other_stats = NULL;
+			ClassAd * job_ad = GetJobAd(cluster, proc);
+			if (job_ad) {
+				other_stats = scheduler.OtherPoolStats.Matches(*job_ad);
+				FreeJobAd(job_ad);
+			}
+			for (ScheddOtherStats * po = other_stats; po; po = po->next) {
+				po->stats.JobsStarted += 1;
+				po->stats.JobsAccumTimeToStart += (current_time - qdate);
+			}
+		}
 	}
 
 	// If we're reconnecting, the old ATTR_JOB_CURRENT_START_DATE is still
@@ -9314,7 +9342,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// update exit code statistics
 	time_t updateTime = time(NULL);
 	stats.Tick(updateTime);
-	stats.JobsExited += 1;
 	stats.JobsSubmitted = GetJobQueuedCount();
 
 	MyString other;
@@ -9328,6 +9355,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		}
 	}
 	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+
+	stats.JobsExited += 1;
+	OTHER.JobsExited += 1;
 
 		// get attributes that we will need to update goodput & badput statistics.
 		//
@@ -10364,7 +10394,7 @@ Scheduler::Init()
 	//
 	{
 		Regex re; int err = 0; const char * pszMsg = 0;
-		ASSERT(re.compile("schedd_collect_stats_for_(.+)", &pszMsg, &err, PCRE_CASELESS));
+		ASSERT(re.compile("schedd_collect_stats_(for)_(.+)", &pszMsg, &err, PCRE_CASELESS));
 		
 		OtherPoolStats.DisableAll();
 
@@ -10384,18 +10414,28 @@ Scheduler::Init()
 				// the pool prefix will be the first submatch of the regex of the param name.
 				// unfortunately it's been lowercased by the time we get here, so we can't
 				// let the user choose the case, just capitalize it and use it as the prefix
-				ExtArray<MyString> groups(2);
+				ExtArray<MyString> groups(3);
 				if (re.match(name, &groups)) {
-					MyString other = groups[1]; // this will be lowercase
-					other.setChar(0, toupper(other[0])); // capitalize it.
+					MyString byorfor = groups[1]; // this will by "by" or "for"
+					MyString other = groups[2]; // this will be lowercase
+					if (isdigit(other[0])) {
+						// can't start atributes with a digit, start with _ instead
+						other.sprintf("_%s", groups[2].Value());
+					} else {
+						other.setChar(0, toupper(other[0])); // capitalize it.
+					}
+					//bool by = (MATCH == strcasecmp(byorfor.Value(), "by"));
 
-					dprintf(D_FULLDEBUG, "Collecting stats for '%s' trigger is %s\n", other.Value(), filter);
+					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' trigger is %s\n", 
+					        byorfor.Value(), other.Value(), filter);
 					OtherPoolStats.Enable(other.Value(), filter);
 				}
 				free(filter);
 			}
-			OtherPoolStats.RemoveDisabled();
 		}
+		names.truncate(0);
+
+		OtherPoolStats.RemoveDisabled();
 	}
 
 	/* default 5 megabytes */
