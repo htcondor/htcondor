@@ -161,6 +161,18 @@ such as \Attr{XXXXJobsStarted} which would be the count of jobs that have
 started that satisfy the expression.
 \Ticket{2862}
 
+\item Several OpSys related attributes were added or updated to assist with selection of execute resources.
+\begin{description}
+\item [\AdAttr{OpSysAndVer}:] A string containing the value of the \Attr{OpSysName} attribute with the \Attr{OpSysMajorVersion} attribute appended.
+\item [\AdAttr{OpSysLegacy}:] A string that holds the long-standing values for the \Attr{OpSys} attribute.
+\item [\AdAttr{OpSysLongName}:] A string containing a full description of the operating system.
+\item [\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+\item [\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
+\item [\AdAttr{OpSysShortName}:] A string containing a short description of the operating system.
+\item [\AdAttr{OpSysVer}:] An integer value representing the operating system version number.
+\end{description}
+\Ticket{2366}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

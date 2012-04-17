@@ -266,7 +266,11 @@ definitions:
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
 	LINUX 2.4.x, or LINUX 2.6.x kernel systems
 	\item[\AdStr{OSX}:] for Darwin
+	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
+	\item[\AdStr{FREEBSD8}:] for FreeBSD 8
 	\item[\AdStr{WINDOWS}:] for all versions of Windows
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
 	\end{description}
 These strings show definitions for operating systems no longer supported:
 	\begin{description}
@@ -275,23 +279,185 @@ These strings show definitions for operating systems no longer supported:
 	\end{description}
 %
 \index{ClassAd machine attribute!OpSysAndVer}
-\item[\AdAttr{OpSysAndVer}:] A string with previously implemented values
-for the \Attr{OpSys} attribute.
-String definitions for operating systems have the following values:
+\item[\AdAttr{OpSysAndVer}:] A string containing the value of the \Attr{OpSysName} attribute with the \Attr{OpSysMajorVersion} attribute appended.
+String definitions for Linux operating systems use the following patterns:
 	\begin{description}
-	\item[\AdStr{WINNT50}:] for Windows 2000
-	\item[\AdStr{WINNT51}:] for Windows XP
-	\item[\AdStr{WINNT52}:] for Windows Server 2003
-	\item[\AdStr{WINNT60}:] for Windows Vista
-	\item[\AdStr{WINNT61}:] for Windows 7
+	\item[\AdStr{RedHat6}:] for RedHat Linux version 6
+	\item[\AdStr{Fedora16}:] for Fedora Linux version 16
+	\end{description}
+String definitions for MacOS operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{MacOSX605}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{MacOSX703}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+String definitions for BSD operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
+	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
+	\end{description}
+String definitions for Unix operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\end{description}
+String definitions for Windows operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{WINNT500}:] for Windows 2000
+	\item[\AdStr{WINNT501}:] for Windows XP
+	\item[\AdStr{WINNT502}:] for Windows Server 2003
+	\item[\AdStr{WINNT600}:] for Windows Vista
+	\item[\AdStr{WINNT601}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysLegacy}
+\item[\AdAttr{OpSysLegacy}:] A string that holds the long-standing values for the \Attr{OpSys} attribute.
+Currently supported operating systems have the following string
+definitions:
+	\begin{description}
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems
+	\item[\AdStr{OSX}:] for Darwin
+	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
+	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{WINDOWS}:] for all versions of Windows
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysLongName}
+\item[\AdAttr{OpSysLongName}:] A string containing a full description of the operating system.
+String definitions for Linux operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{Red Hat Enterprise Linux Server release 6.2 (Santiago)}:] for RedHat Linux version 6
+	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
+	\end{description}
+String definitions for MacOS operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{MacOSX 7.3}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+String definitions for BSD operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{FreeBSD8.2-RELEASE-p3}:] for FreeBSD version 8
+	\end{description}
+String definitions for Unix operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\end{description}
+String definitions for Windows operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{Windows XP SP3}:] for Windows XP
+	\item[\AdStr{Windows 7 SP2}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysMajorVersion}
+\item[\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+Integer definitions for Linux operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{6}:] for RedHat Linux version 6
+	\item[\AdStr{16}:] for Fedora Linux version 16
+	\end{description}
+Integer definitions for MacOS operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{6}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{7}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+Integer definitions for BSD operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{7}:] for FreeBSD version 7
+	\item[\AdStr{8}:] for FreeBSD version 8
+	\end{description}
+Integer definitions for Unix operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{5}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{5}:] for Solaris 2.11 or 5.11
+	\end{description}
+Integer definitions for Windows operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{501}:] for Windows XP
+	\item[\AdStr{600}:] for Windows Vista
+	\item[\AdStr{601}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysName}
+\item[\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
+String definitions for Linux operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{RedHat}:] for RedHat Linux version 6
+	\item[\AdStr{Fedora}:] for Fedora Linux version 16
+	\end{description}
+String definitions for MacOS operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{Lion}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+String definitions for BSD operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{FREEBSD}:] for FreeBSD version 7
+	\item[\AdStr{FREEBSD}:] for FreeBSD version 8
+	\end{description}
+String definitions for Unix operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\end{description}
+String definitions for Windows operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{WindowsXP}:] for Windows XP
+	\item[\AdStr{WindowsVista}:] for Windows Vista
+	\item[\AdStr{Windows7}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysShortName}
+\item[\AdAttr{OpSysShortName}:] A string containing a short description of the operating system.
+String definitions for Linux operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{Linux}:] for RedHat Linux version 6
+	\item[\AdStr{Linux}:] for Fedora Linux version 16
+	\end{description}
+String definitions for MacOS operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{MacOSX}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{MacOSX}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+String definitions for BSD operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{FreeBSD}:] for FreeBSD version 7
+	\item[\AdStr{FreeBSD}:] for FreeBSD version 8
+	\end{description}
+String definitions for Unix operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\end{description}
+String definitions for Windows operating systems have the following values:
+	\begin{description}
+	\item[\AdStr{XP}:] for Windows XP
+	\item[\AdStr{Vista}:] for Windows Vista
+	\item[\AdStr{7}:] for Windows 7
 	\end{description}
 %
 \index{ClassAd machine attribute!OpSysVer}
 \item[\AdAttr{OpSysVer}:] An integer value representing the operating system
 version number.
-Currently supported operating systems have the following values:
+Integer definitions for Linux operating systems use the following patterns:
 	\begin{description}
-	\item[\Expr{500}:] for Windows 2000 
+	\item[\AdStr{602}:] for RedHat Linux version 6.2
+	\item[\AdStr{1600}:] for Fedora Linux version 16.0
+	\end{description}
+Integer definitions for Unix/BSD operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{704}:] for FreeBSD version 7.4
+	\item[\AdStr{802}:] for FreeBSD version 8.2
+	\end{description}
+Integer definitions for MacOS operating systems use the following patterns:
+	\begin{description}
+	\item[\AdStr{605}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{703}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+Integer definitions for Windows operating systems have the following values:
+	\begin{description}
+	\item[\Expr{500}:] for Windows 2000
 	\item[\Expr{501}:] for Windows XP
 	\item[\Expr{502}:] for Windows Server 2003
 	\item[\Expr{600}:] for Windows Vista or Windows Server 2008
