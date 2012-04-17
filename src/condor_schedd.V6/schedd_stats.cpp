@@ -490,8 +490,6 @@ bool ScheddOtherStatsMgr::DisableAll()
 
 bool ScheddOtherStatsMgr::RemoveDisabled()
 {
-	time_t now = time(NULL);
-
 	bool any_removed = false;
 	ScheddOtherStats* po = NULL;
 	pools.startIterations();
