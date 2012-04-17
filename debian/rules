@@ -89,6 +89,9 @@ override_dh_auto_install:
 	dh_auto_install
 	# things we do not need in Debian
 	rm debian/tmp/usr/sbin/condor_install*
+	# remove compat symlinks
+	rm debian/tmp/usr/sbin/condor_vm_vmware.pl
+	rm debian/tmp/usr/sbin/grid_monitor.sh
 
 
 override_dh_install:
