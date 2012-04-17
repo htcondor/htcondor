@@ -107,22 +107,33 @@ typedef struct ScheddStatistics {
    void Publish(ClassAd & ad) const;
    void Publish(ClassAd & ad, int flags) const;
    void Publish(ClassAd & ad, const char * config) const;
-   void Unpublish(ClassAd & ad) const;
+   //void Unpublish(ClassAd & ad) const;
 
    } ScheddStatistics;
 
-typedef struct ScheddOtherStats {
-   struct ScheddOtherStats * next;
+// this class is used by ScheddOtherStatsMgr to hold a schedd statistics set
+class ScheddOtherStats {
+public:
+   ScheddOtherStats();
+   ~ScheddOtherStats();
+
+   ScheddOtherStats * next;	// used to temporarily build a linked list of stats matching a ClassAd
    ScheddStatistics stats;
    MyString     prefix;
    MyString     trigger;
    ExprTree *   trigger_expr;
    bool         enabled;
-} ScheddOtherStats;
+   bool         by; // when true, there is a set of stats for each unique value of trigger_expr
+   time_t       last_match_time; // last time this stats Matched a jobad (seconds)
+   time_t       lifetime;        // how long to keep stats after last match (seconds)
+   std::map<std::string, ScheddOtherStats*> sets;  // when by==true, holds sets of stats by trigger value
+};
 
 class ScheddOtherStatsMgr {
 public:
-   ScheddOtherStatsMgr() : pools(10, MyStringHash, updateDuplicateKeys) {};
+   ScheddOtherStatsMgr() 
+     : pools(10, MyStringHash, updateDuplicateKeys)
+   {};
 
    void Clear();
    time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
@@ -131,16 +142,22 @@ public:
    void Publish(ClassAd & ad);
    void Publish(ClassAd & ad, int flags);
    void Publish(ClassAd & ad, const char * config);
+   void UnpublishDisabled(ClassAd & ad);
 
-   bool Enable(const char * pre, const char * trig);
+   // add an entry in the pools hash (by pre), if by==true, also add an entry in the by hash
+   bool Enable(const char * pre, const char * trig, bool stats_by_trig_value=false, time_t lifetime=0);
    bool DisableAll();
    bool RemoveDisabled();
    bool AnyEnabled();
+   void DeferJobsSubmitted(int cluster, int proc);
+   void CountJobsSubmitted(); // finish deferred counting of submitted jobs.
 
-   ScheddOtherStats * Matches(ClassAd & ad); // returns a linked list of matches.
+   // returns a linked list of matches, and sets the last_incr_time of each to updateTime
+   ScheddOtherStats * Matches(ClassAd & ad, time_t updateTime);
 
 private:
-	HashTable<MyString, ScheddOtherStats*> pools;
+   HashTable<MyString, ScheddOtherStats*> pools; // pools of stats and triggers (for Enable)
+   std::map<int,int> deferred_jobs_submitted; // key=cluster, value=max_proc.
 };
 
 #endif /* _SCHEDD_STATS_H */

@@ -1731,6 +1731,9 @@ NewProc(int cluster_id)
 	IncrementClusterSize(cluster_id);
     job_queued_count += 1;
 
+	// can't increment the JobsSubmitted count for other pools yet
+	scheduler.OtherPoolStats.DeferJobsSubmitted(cluster_id, proc_id);
+
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
 	MyString gjid = "\"";

@@ -948,6 +948,10 @@ Scheduler::count_jobs()
 	stats.JobsSubmitted = GetJobQueuedCount();
 
 	OtherPoolStats.Tick();
+	// because cad is really m_adSchedd which is persistent, we have to 
+	// actively delete expired statistics atributes.
+	OtherPoolStats.UnpublishDisabled(*cad);
+	OtherPoolStats.RemoveDisabled();
 	OtherPoolStats.Publish(*cad);
 
 	// publish scheduler generic statistics
@@ -1266,6 +1270,11 @@ int Scheduler::make_ad_list(
    stats.ShadowsRunning = numShadows;
 
    OtherPoolStats.Tick(now);
+   // because cad is a copy of m_adSchedd which is persistent, we have to 
+   // actively delete expired statistics atributes.
+   OtherPoolStats.UnpublishDisabled(*cad);
+   OtherPoolStats.RemoveDisabled();
+
    int flags = stats.PublishFlags;
    if ( ! stats_config.IsEmpty()) {
       flags = generic_stats_ParseConfigString(stats_config.Value(), "SCHEDD", "SCHEDULER", flags);
@@ -7946,18 +7955,18 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
 
 		if (scheduler.OtherPoolStats.AnyEnabled()) {
-			scheduler.OtherPoolStats.Tick();
 
 			ScheddOtherStats * other_stats = NULL;
 			ClassAd * job_ad = GetJobAd(cluster, proc);
 			if (job_ad) {
-				other_stats = scheduler.OtherPoolStats.Matches(*job_ad);
+				other_stats = scheduler.OtherPoolStats.Matches(*job_ad, now);
 				FreeJobAd(job_ad);
 			}
 			for (ScheddOtherStats * po = other_stats; po; po = po->next) {
 				po->stats.JobsStarted += 1;
 				po->stats.JobsAccumTimeToStart += (current_time - qdate);
 			}
+			scheduler.OtherPoolStats.Tick();
 		}
 	}
 
@@ -9347,12 +9356,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	MyString other;
 	ScheddOtherStats * other_stats = NULL;
 	if (OtherPoolStats.AnyEnabled()) {
-		OtherPoolStats.Tick(updateTime);
 		ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		if (job_ad) {
-			other_stats = OtherPoolStats.Matches(*job_ad);
+			other_stats = OtherPoolStats.Matches(*job_ad, updateTime);
 			FreeJobAd(job_ad);
 		}
+		OtherPoolStats.Tick(updateTime);
 	}
 	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
@@ -10394,7 +10403,7 @@ Scheduler::Init()
 	//
 	{
 		Regex re; int err = 0; const char * pszMsg = 0;
-		ASSERT(re.compile("schedd_collect_stats_(for)_(.+)", &pszMsg, &err, PCRE_CASELESS));
+		ASSERT(re.compile("schedd_collect_stats_(by|for)_(.+)", &pszMsg, &err, PCRE_CASELESS));
 		
 		OtherPoolStats.DisableAll();
 
@@ -10424,11 +10433,20 @@ Scheduler::Init()
 					} else {
 						other.setChar(0, toupper(other[0])); // capitalize it.
 					}
-					//bool by = (MATCH == strcasecmp(byorfor.Value(), "by"));
 
-					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' trigger is %s\n", 
-					        byorfor.Value(), other.Value(), filter);
-					OtherPoolStats.Enable(other.Value(), filter);
+					// for 'by' type stats, we also allow an expiration.
+					time_t lifetime = 0;
+					const int one_week = 60*60*24*7; // 60sec*60min*24hr*7day
+					bool by = (MATCH == strcasecmp(byorfor.Value(), "by"));
+					if (by) {
+						MyString expires_name;
+						expires_name.sprintf("schedd_expire_stats_by_%s", other.Value());
+						lifetime = (time_t)param_integer(expires_name.Value(), one_week);
+					}
+
+					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' life=%"PRId64 " trigger is %s\n", 
+					        byorfor.Value(), other.Value(), lifetime, filter);
+					OtherPoolStats.Enable(other.Value(), filter, by, lifetime);
 				}
 				free(filter);
 			}

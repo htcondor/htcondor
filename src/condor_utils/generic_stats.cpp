@@ -1087,6 +1087,30 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
       }
 }
 
+void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
+{
+   pubitem item;
+   MyString name;
+
+   // boo! HashTable doesn't support const, so I have to remove const from this
+   // to make the compiler happy.
+   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(name,item)) 
+      {
+      MyString attr(prefix);
+      attr += (item.pattr ? item.pattr : name.Value());
+      if (item.Unpublish) 
+         {
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Unpublish))(ad, attr.Value());
+         }
+      else
+         ad.Delete(attr.Value());
+      }
+}
+
+
 // this function isn't called, its just here to force instantiation 
 // of template methods that aren't in the header file.
 //
