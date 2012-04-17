@@ -167,17 +167,24 @@ case "$1" in
         # this should always work
         adduser --system --group --gecos "$condor_gecos" --home $condor_home \
                 --disabled-password --disabled-login $condor_user --quiet
+        # make sure the config and home dir are complete
         condor_local_cfg_template
         condor_put_debconf_cfg
         condor_make_homedir
+        # take care of starting condor if it is not yet running -- if it is
+        # already running this command should have no effect
         if [ -x "/etc/init.d/condor" ]; then
             if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
-                invoke-rc.d condor restart || exit $?
+                invoke-rc.d condor start || exit $?
             else
-                /etc/init.d/condor restart || exit $?
+                /etc/init.d/condor start || exit $?
             fi
             update-rc.d condor defaults 30 70 >/dev/null || exit 0
         fi
+        # send the restart command to condor, as we know that the installation
+        # is finished. condor_master should figure this out on its own within
+        # 5 minutes, but there is no need to wait
+        condor_restart
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

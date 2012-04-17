@@ -20,9 +20,6 @@ remove_condor_dirs() {
 }
 
 
-# XXX Shouldn't we also remove the user (if possible, since sometimes it might
-#     come from LDAP or similar)
-
 case "$1" in
     remove|abort-install|disappear)
     ;;

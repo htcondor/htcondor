@@ -3,12 +3,8 @@
 
 set -e
 
-# handle stopping condor seperately to prevent jobs from being killed
-# without reason, but we cannot avoid stopping condor during removal
-# or upgrade -- in the former it is desired and in the latter case condor
-# would also do it by itself
 case "$1" in
-	upgrade|remove)
+	remove)
 		# init script fails of RUN is not there (i.e. broken install)
 		if [ -x "/etc/init.d/condor" ]; then
 			if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
@@ -17,6 +13,11 @@ case "$1" in
 			/etc/init.d/condor stop || exit $?
 			fi
 		fi
+	;;
+	upgrade)
+		# do nothing as condor will keep working until the upgrade is
+		# finished, and could restart itself automatically when it
+		# detected a change in its binaries (confirmed by upstream)
 	;;
 	*)
 		echo "prerm called with unknown argument \`$1'" >&2

@@ -1,7 +1,7 @@
 condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
 
   * New upstream development release. Last one before the 7.8 stable series.
-  * Majority of patches has been merged upstream or made obsolete.
+  * Majority of patches has been merged upstream or have been made obsolete.
   * Stop supporting alternative LOCAL_DIR settings via Debconf. In addition
     the pre/postrm scripts no longer support non-standard (aka /var) LOCAL_DIR
     settings. This was done to be able to keep runtime data (logs, etc.) when
@@ -12,6 +12,14 @@ condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
     Along the lines of the discussion in #621833 the user is kept in a locked
     state (condor user has login disabled by default).
   * Simplify logic of adding the condor system user in maintainer scripts.
+  * Change daemon restart behavior on package upgrade -- confirmed with
+    upstream. Condor is now kept running during package upgrade (was
+    unconditionally stopped in prerm before). Upon finishing installtion of
+    the new version, Condor is just started (if not already running) and a
+    'condor_restart' command is issued. Before a complete stop-start cycle was
+    performed. The new behavior should allow for a more graceful upgrade of
+    Condor pools, by safely shutting down all running jobs and jobs submitted
+    from the localhost.
 
  -- Michael Hanke <mih@debian.org>  Thu, 12 Apr 2012 12:51:15 +0200
 
