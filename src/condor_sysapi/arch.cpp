@@ -408,13 +408,13 @@ init_arch(void)
 	opsys_version = sysapi_translate_opsys_version( buf.release );
 #else
 
-	if( !strcasecmp(uname_opsys, "linux") )
+	if(MATCH == strcasecmp(uname_opsys, "linux") )
         {
 		opsys = strdup( "LINUX" );
 		opsys_legacy = strdup( opsys );
-		opsys_short_name = strdup( "Linux" );
 		opsys_long_name = sysapi_get_linux_info();
 		opsys_name = sysapi_find_linux_name( opsys_long_name );
+		opsys_short_name = strdup( opsys_name );
 		opsys_major_version = sysapi_find_major_version( opsys_long_name );
 		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
 		opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
