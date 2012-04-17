@@ -120,7 +120,6 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 	rr->setStartdInfo( job_ad );
 
-	job_ad->Assign( ATTR_JOB_STATUS, RUNNING );
     ResourceList[ResourceList.getlast()+1] = rr;
 
 }
