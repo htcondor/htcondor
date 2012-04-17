@@ -29,7 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added -autoformat option to \Condor{status}, behavior is the same as -autoformat option
+added to \Condor{q} in 7.7.6.
+\Ticket{2941}
 
 \end{itemize}
 
@@ -37,7 +39,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item New configuration variables were added to to the \Condor{schedd} to
+define statistics that count subsets of jobs. These variables
+have the form \Macro{SCHEDD\_COLLECT\_STATS\_BY\_XXXX} and should contain
+a ClassAd expression that evaluates to a string.
+XXXX_value_ will be prefixed to the names of attributes in the \Condor{schedd} ad
+such as \Attr{XXXX_string_JobsStarted} which would be the count of jobs that have
+started that evaluate to "value".  An optional variable of the form
+\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_XXXX} can be used to set an expiration time in seconds
+for each set of statistics.
+\Ticket{2862}
 
 \end{itemize}
 
