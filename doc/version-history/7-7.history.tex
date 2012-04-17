@@ -152,6 +152,15 @@ non negative integer.  It was formerly limited to values between 0 and 60,
 inclusive.
 \Ticket{2864}
 
+\item New configuration variables were added to to the \Condor{schedd} to
+define statistics that count subsets of jobs. These variables
+have the form \Macro{SCHEDD\_COLLECT\_STATS\_FOR\_XXXX} and should contain
+a ClassAd expression.
+XXXX will be prefixed to the names of attributes in the \Condor{schedd} ad
+such as \Attr{XXXXJobsStarted} which would be the count of jobs that have
+started that satisfy the expression.
+\Ticket{2862}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
