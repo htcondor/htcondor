@@ -104,8 +104,6 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 
 	rr->setStartdInfo( job_ad );
 
-	job_ad->Assign( ATTR_JOB_STATUS, RUNNING );
-
     ResourceList[ResourceList.getlast()+1] = rr;
 
 	shutdownPolicy = ParallelShadow::WAIT_FOR_NODE0;
