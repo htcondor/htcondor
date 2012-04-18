@@ -164,3 +164,16 @@ respectively:
 
 NOTE: After the plumage collector plugin has been activated, it can take a default of 5 minutes for statistics 
 to become available to the tool.
+
+Additional sample tools
+-----------------------
+plumage_accounting: Query Condor ODS for accounting group data
+plumage_scheduler: Query Condor ODS for scheduler job totals
+plumage_utilization: Query Condor ODS for utilization efficency
+
+Please the consult the help info (--help) for details on using each of these.
+
+Sampled data schema
+-------------------
+An additional file called SCHEMA shows the name mapping between terse key 
+fields in the samples collections and their ClassAd counterparts.

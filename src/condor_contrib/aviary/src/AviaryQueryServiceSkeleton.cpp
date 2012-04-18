@@ -487,6 +487,10 @@ SubmissionID* makeSubmissionID(SubmissionObject* obj) {
   return sub_id;
 }
 
+bool qdateCompare(SubmissionIndexType::value_type& x, SubmissionIndexType::value_type& y) {
+  return x.first <= y.first;
+}
+
 GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::MessageContext* /*outCtx*/ ,GetSubmissionID* _getSubmissionID)
 {
     GetSubmissionIDResponse* response = new GetSubmissionIDResponse;
@@ -495,7 +499,6 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
     
     int size = _getSubmissionID->getSize();
     bool scan_back = false;
-    int age = 0;
 
     if (!_getSubmissionID->isOffsetNil()) {
         offset = _getSubmissionID->getOffset();
@@ -507,17 +510,32 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
 
     // see if we are scanning using a qdate index
     if (!_getSubmissionID->isModeNil()) {
-        SubmissionIndexType::iterator it, start;
+        SubmissionIndexType::iterator it, start, last;
+        int i=0;
 
         scan_back = mode->getScanModeEnum() == ScanMode_BEFORE;
 
         if (scan_back) {
             if (offset) {
-                start = g_qdate_submissions.lower_bound(offset->getQdate());
+                start = max_element(
+                            g_qdate_submissions.begin(),
+                            g_qdate_submissions.upper_bound(
+                                offset->getQdate()
+                            ),
+                            qdateCompare
+                        );
             }
             else {
-                start = --g_qdate_submissions.end();
+                start = g_qdate_submissions.end();
             }
+            it=start;
+            do {
+                response->addIds(makeSubmissionID((*it).second));
+                i++;
+                last = it;
+            }
+            while (g_qdate_submissions.begin()!=it-- && i<size);
+            response->setRemaining(distance(g_qdate_submissions.begin(),last));
         }
         else {
             if (offset) {
@@ -526,40 +544,28 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
             else {
                 start = g_qdate_submissions.begin();
             }
-        }
-        
-        it = start;
-        int i=0;
-        if (scan_back) {
-            for (it; it!=g_qdate_submissions.begin() && i<size; it--) {
-                response->addIds(makeSubmissionID((*it).second));
-                i++;
-            }
-            response->setRemaining(distance(g_qdate_submissions.begin(),it)+1);
-        }
-        else {
-            for (it; it!=g_qdate_submissions.end() && i<size; it++) {
+            for (it=start; it!=g_qdate_submissions.end() && i<size; it++) {
                 response->addIds(makeSubmissionID((*it).second));
                 i++;
             }
             response->setRemaining(distance(it,g_qdate_submissions.end()));
         }
-        
+
         return response;
     }
     
     // otherwise it is a lexical scan of the submissions
-    SubmissionCollectionType::iterator it;
+    SubmissionCollectionType::iterator it,start;
     if (offset) {
-        it = g_submissions.find(offset->getName().c_str());
+        start = g_submissions.find(offset->getName().c_str());
     }
     else {
-        it = g_submissions.begin();
+        start = g_submissions.begin();
     }
     
     // bi-directional iterator
     int i=0;
-    for (it; it!=g_submissions.end() && i<size; it++)
+    for (it=start; it!=g_submissions.end() && i<size; it++)
     {
         response->addIds(makeSubmissionID((*it).second));
         i++;
