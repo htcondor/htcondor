@@ -1040,6 +1040,20 @@ message about why the job was released from hold.
 \item[\AdAttr{RemoteIwd}:]  The path to the directory in which
 a job is to be executed on a remote machine.
 
+%%% ClassAd attribute: RemotePool
+\index{ClassAd job attribute!RemotePool}
+\index{RemotePool!job ClassAd attribute}
+\item[\AdAttr{RemotePool}:]  The name of the collector of the pool in which
+a job is running via flocking.  This attribute is not defined if the job
+is not running via flocking.
+
+%%% ClassAd attribute: LastRemotePool
+\index{ClassAd job attribute!LastRemotePool}
+\index{LastRemotePool!job ClassAd attribute}
+\item[\AdAttr{LastRemotePool}:]  The name of the collector of the pool in which
+a job ran via flocking in the most recent run attempt.  This attribute is not
+defined if the job did not run via flocking.
+
 %%% ClassAd attribute: RemoteSysCpu
 \index{ClassAd job attribute!RemoteSysCpu}
 \index{RemoteSysCpu!job ClassAd attribute}
