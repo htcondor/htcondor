@@ -152,14 +152,29 @@ non negative integer.  It was formerly limited to values between 0 and 60,
 inclusive.
 \Ticket{2864}
 
-\item New configuration variables were added to to the \Condor{schedd} to
-define statistics that count subsets of jobs. These variables
-have the form \Macro{SCHEDD\_COLLECT\_STATS\_FOR\_XXXX} and should contain
-a ClassAd expression.
-XXXX will be prefixed to the names of attributes in the \Condor{schedd} ad
-such as \Attr{XXXXJobsStarted} which would be the count of jobs that have
-started that satisfy the expression.
+\item New configuration variables have been added, 
+such that the \Condor{schedd} may
+define statistics that count subsets of jobs. 
+These variables
+have the form \Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<name>} and 
+are defined by a boolean ClassAd expression.
+<name> will be prefixed to the names of attributes in the \Condor{schedd} 
+ClassAd, such as \Attr{physicsJobsStarted}
+where \MacroNI{SCHEDD\_COLLECT\_STATS\_FOR\_physics} evaluates to \Expr{True},
+and this attribute would be the count of jobs that have started.
 \Ticket{2862}
+
+\item Several OpSys related attributes were added or updated to assist with selection of execute resources.
+\begin{description}
+\item [\AdAttr{OpSysAndVer}:] A string containing the value of the \Attr{OpSysName} attribute with the \Attr{OpSysMajorVersion} attribute appended.
+\item [\AdAttr{OpSysLegacy}:] A string that holds the long-standing values for the \Attr{OpSys} attribute.
+\item [\AdAttr{OpSysLongName}:] A string containing a full description of the operating system.
+\item [\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+\item [\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
+\item [\AdAttr{OpSysShortName}:] A string containing a short description of the operating system.
+\item [\AdAttr{OpSysVer}:] An integer value representing the operating system version number.
+\end{description}
+\Ticket{2366}
 
 \end{itemize}
 
@@ -168,7 +183,7 @@ started that satisfy the expression.
 \begin{itemize}
 
 \item Fixed a bug in \Condor{vm-gahp} that caused 64-bit guest OSes that
-need network access to fail on start-up when run under VMWare.
+need network access to fail on start-up when run under VMware.
 \Ticket{2922}
 
 \item Submit command \Macro{remote\_initialdir} now works for pbs and lsf

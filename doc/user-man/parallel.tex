@@ -91,7 +91,39 @@ starting the job.  When all the machines are ready, it invokes the
 \Prog{/bin/sleep} command, with a command line argument of 30
 on all eight machines more or less simultaneously.
 
+The addition of several related OpSys attributes means that you may specify versions of Linux operating systems to run on in a heterogeneous pool.
+
+If your pool consists of Linux machines installed with the RedHat and Ubuntu operating systems, and you'd like to run on only the RedHat machines, use the following example.
+
+\begin{verbatim}
+#############################################
+##   submit description file for a parallel program targeting RedHat machines
+#############################################
+universe = parallel
+executable = /bin/sleep
+arguments = 30
+machine_count = 8
+requirements = (OpSysName == "RedHat")
+queue
+\end{verbatim}
+
+
+In addition, you may narrow down your machine selection to the version you'd like to run on using the OpSysAndVer attribute.
+
+\begin{verbatim}
+#############################################
+##   submit description file for a parallel program targeting RedHat 6 machines
+#############################################
+universe = parallel
+executable = /bin/sleep
+arguments = 30
+machine_count = 8
+requirements = (OpSysAndVer == "RedHat6")
+queue
+\end{verbatim}
+
 A more realistic example of a parallel job utilizes other features.
+
 \begin{verbatim}
 ######################################
 ## Parallel example submit description file
@@ -198,6 +230,8 @@ the scheduler may be unable to schedule the job.
 The ordering within the submit description file may preclude
 the scheduler considering the specific allocation that
 could satisfy the requirements.
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-mpi-submit}MPI Applications Within Condor's Parallel Universe}
