@@ -430,6 +430,7 @@ const char * const ATTR_LAST_REJ_MATCH_REASON	 = "LastRejMatchReason";
 const char * const ATTR_LAST_PERIODIC_CHECKPOINT = "LastPeriodicCheckpoint";
 const char * const ATTR_LAST_RELEASE_REASON      = "LastReleaseReason";
 const char * const ATTR_LAST_REMOTE_HOST		 = "LastRemoteHost";
+const char * const ATTR_LAST_REMOTE_POOL		 = "LastRemotePool";
 const char * const ATTR_LAST_REMOTE_STATUS_UPDATE = "LastRemoteStatusUpdate";
 const char * const ATTR_LAST_UPDATE				 = "LastUpdate";
 const char * const ATTR_LOCAL_CREDD              = "LocalCredd";

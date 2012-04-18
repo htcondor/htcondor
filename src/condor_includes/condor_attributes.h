@@ -364,6 +364,7 @@ extern const char * const  ATTR_LAST_REJ_MATCH_REASON;
 extern const char * const  ATTR_LAST_PERIODIC_CHECKPOINT;
 extern const char * const  ATTR_LAST_RELEASE_REASON;
 extern const char * const  ATTR_LAST_REMOTE_HOST;
+extern const char * const  ATTR_LAST_REMOTE_POOL;
 extern const char * const  ATTR_LAST_REMOTE_STATUS_UPDATE;
 extern const char * const  ATTR_LAST_UPDATE;
 extern const char * const  ATTR_LOCAL_CREDD;

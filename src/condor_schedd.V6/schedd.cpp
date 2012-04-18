@@ -8444,6 +8444,19 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 			free( last_host );
 			last_host = NULL;
 		}
+
+        char* last_pool = NULL;
+		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_POOL, &last_pool );
+		if( last_pool ) {
+			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_POOL,
+								last_pool );
+			free( last_pool );
+			last_pool = NULL;
+		} else {
+            // If RemotePool is not defined, be sure to remove the last remote pool (if it exists)
+             DeleteAttribute( cluster, proc, ATTR_LAST_REMOTE_POOL );
+        }
+
 	}
 
 	if( pid ) {
