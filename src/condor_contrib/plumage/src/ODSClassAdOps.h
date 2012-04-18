@@ -23,7 +23,7 @@
 #include <compat_classad.h>
 #include <classad/value.h>
 
-// attribute and classad operations - not all subclassers will need every CRUD op
+// attribute and classad operations - not all derivations will need every CRUD op
 
 namespace plumage {
 namespace etl {
