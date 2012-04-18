@@ -132,10 +132,10 @@ Print the stats for resource 'milo' over a given datetime range.
 $ ./plumage_stats --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
 slot1@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	205 	0.24 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	533 	0.00 	Claimed
-slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12 		0.33 	Claimed
+slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12  	0.33 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	603 	0.00 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:04:19.470000 	INTEL/LINUX 	653 	0.00 	Unclaimed
-slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30 		0.28 	Unclaimed
+slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30  	0.28 	Unclaimed
 
 Database Layout
 ---------------

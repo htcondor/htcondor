@@ -225,9 +225,10 @@ in this cluster will be written into file \File{foo.log}.
                                                                           
       Executable     = foo                                                    
       Universe       = standard
-      Requirements   = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
+      Requirements   = OpSys == "LINUX" && Arch =="INTEL"
       Rank           = Memory >= 64
-      Image_Size     = 28 Meg                                                 
+      Request_Memory = 32 Mb
+      Image_Size     = 28 Mb
                                                                           
       Error   = err.$(Process)                                                
       Input   = in.$(Process)                                                 

@@ -2558,3 +2558,11 @@ HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 
 ## In case an old name for hdfs configuration files is required.
 #HDFS_SITE_FILE = hdfs-site.xml
+
+
+##
+##--------------------------------------------------------------------
+##  file transfer plugin defaults
+##--------------------------------------------------------------------
+FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+
