@@ -58,9 +58,10 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
 
 Axis2SoapProvider::~Axis2SoapProvider()
 {
-    if (m_http_server) {
-        axis2_transport_receiver_free(m_http_server, m_env);
-    }
+    // TODO: SEGV to investigate
+//     if (m_http_server) {
+//         axis2_transport_receiver_free(m_http_server, m_env);
+//     }
 
     if (m_svr_thread) {
         axis2_http_svr_thread_free(m_svr_thread, m_env);
