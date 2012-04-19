@@ -52,6 +52,8 @@
 #include "log_rotate.h"
 #include "dprintf_internal.h"
 
+extern const char *_condor_DebugFlagNames[];
+
 FILE *debug_lock(int debug_flags, const char *mode, int force_lock);
 void debug_unlock(int debug_flags);
 
@@ -309,6 +311,27 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 				sprintf_errno = errno;
 			}
 		}
+
+        if ((mask_flags | flags) & D_LEVEL) {
+            rc = sprintf_realloc(&buf, &bufpos, &buflen, "(");
+            if (rc < 0) sprintf_errno = errno;
+
+            int flagswritten = 0;
+            for (int j = 0;  j < D_NUMLEVELS;  ++j) {
+                int b = 1 << j;
+                if (0 == ((flags) & b)) continue;
+                if (flagswritten > 0) {
+                    rc = sprintf_realloc(&buf, &bufpos, &buflen, "|");
+                    if (rc < 0) sprintf_errno = errno;
+                }
+                rc = sprintf_realloc(&buf, &bufpos, &buflen, "%s", _condor_DebugFlagNames[j]);
+                if (rc < 0) sprintf_errno = errno;
+                flagswritten += 1;
+            }
+
+            rc = sprintf_realloc(&buf, &bufpos, &buflen, ") ");
+            if (rc < 0) sprintf_errno = errno;
+        }
 
 		if( DebugId ) {
 			rc = (*DebugId)( &buf, &bufpos, &buflen );
