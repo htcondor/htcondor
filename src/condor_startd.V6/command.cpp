@@ -1248,6 +1248,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			}
 		} while (mach_requirements == 0);
 
+			// No longer need this, make sure to free the memory.
+		if (unmodified_req_classad) {
+			delete unmodified_req_classad;
+			unmodified_req_classad = NULL;
+		}
+
 			// Pull out the requested attribute values.  If specified, we go with whatever
 			// the schedd wants, which is in request attributes prefixed with
 			// "_condor_".  This enables to schedd to request something different than
