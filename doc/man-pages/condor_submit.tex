@@ -234,30 +234,33 @@ in this cluster will be written into file \File{foo.log}.
       Input   = in.$(Process)                                                 
       Output  = out.$(Process)                                                
       Log = foo.log                                                                       
-                                                                          
       Queue 150
 \end{verbatim}
 \normalsize
 
-\item{Submit Description File Example 3:}  The addition of several related OpSys attributes means that you may specify versions of Linux operating systems to run on in a heterogeneous pool.
+\item{Submit Description File Example 3:}  This example targets the 
+\Prog{/bin/sleep} program to run only on a platform running a 
+RHEL 6 operating system.
+The example presumes that the pool contains machines running more than one
+version of Linux, 
+and this job needs the particular operating system to run correctly.
 
 \footnotesize
 \begin{verbatim}
       ####################                                                    
       #                                                                       
-      # Example 3: Simple submit description file for targeting RedHat 6 machines in a heterogeneous Linux pool
+      # Example 3: Run on a RedHat 6 machine
       #                                                                       
       ####################                                                    
-      Universe = vanilla
-      Executable = /bin/sleep
-      Arguments = 30
+      Universe     = vanilla
+      Executable   = /bin/sleep
+      Arguments    = 30
       Requirements = (OpSysAndVer == "RedHat6")
                                                                           
       Error   = err.$(Process)                                                
       Input   = in.$(Process)                                                 
       Output  = out.$(Process)                                                
-      Log = foo.log                                                                       
-                                                                          
+      Log     = sleep.log                                                                       
       Queue
 \end{verbatim}
 \normalsize
