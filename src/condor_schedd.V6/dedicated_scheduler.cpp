@@ -1299,6 +1299,30 @@ DedicatedScheduler::sortJobs( void )
 	verified_clusters= new ExtArray<int>( last_cluster );
 	verified_clusters->fill(0);
 	next_cluster = 0;
+
+
+	// Ded scheduler usually runs jobs in strict FIFO.  If remote submitting, though,
+	// jobs are put on hold until spooling finishes.  If a later-submitting job finished
+	// spooling first, it will run before a held jobs still spooling, breaking FIFO.  Some
+	// sites don't like this.  Enforce strict FIFO in this case:
+
+	int cluster_causing_skippage = INT_MAX;
+	bool waitForSpoolers = false;
+	waitForSpoolers = param_boolean("DEDICATED_SCHEDULER_WAIT_FOR_SPOOLER", false);
+
+	if (waitForSpoolers) {
+		std::string fifoConstraint;
+		// "JobUniverse == PARALLEL_UNIVERSE && JobStatus == HELD && HoldReasonCode == HOLD_SpoolingInput
+
+		sprintf(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
+																ATTR_JOB_STATUS, HELD, 
+																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		ClassAd *spoolingInJob = GetJobByConstraint(fifoConstraint.c_str());
+		if (spoolingInJob) {
+			spoolingInJob->LookupInteger(ATTR_CLUSTER_ID, cluster_causing_skippage);
+		}
+	}
+
 	for( i=0; i<last_cluster; i++ ) {
 		cluster = (*idle_clusters)[i];
 		job = GetJobAd( cluster, 0 );
@@ -1317,6 +1341,12 @@ DedicatedScheduler::sortJobs( void )
 			continue;
 
 		}
+
+		if (cluster > cluster_causing_skippage) {
+			dprintf(D_ALWAYS, "Job %d.0 is spooling input files, will block all %d.0 until spooling completes\n", cluster_causing_skippage, cluster);
+			continue;
+		}
+
 		if( status != IDLE ) {
 			dprintf( D_FULLDEBUG, "Job %d.0 has non idle status (%d).  "
 					 "Ignoring\n", cluster, status );
