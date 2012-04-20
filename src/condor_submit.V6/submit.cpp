@@ -396,6 +396,7 @@ const char* EC2TagNames = "ec2_tag_names";
 const char* DeltacloudUsername = "deltacloud_username";
 const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
+const char* DeltacloudInstanceName = "deltacloud_instance_name";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
 const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
@@ -5437,12 +5438,20 @@ SetGridParams()
 		exit( 1 );
 	}
 
+	bool bInstanceName=false;
+	if( (tmp = condor_param( DeltacloudInstanceName, ATTR_DELTACLOUD_INSTANCE_NAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_INSTANCE_NAME, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		bInstanceName = true;
+	}
+	
 	if ( (tmp = condor_param( DeltacloudImageId, ATTR_DELTACLOUD_IMAGE_ID )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_IMAGE_ID, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudImageId );
+	} else if ( JobGridType && !bInstanceName && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" or \"%s\" parameters\n", DeltacloudImageId, DeltacloudInstanceName );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}

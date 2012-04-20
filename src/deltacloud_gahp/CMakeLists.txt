@@ -17,13 +17,13 @@
  ############################################################### 
 
 
-if (HAVE_EXT_LIBDELTACLOUD)
+if (LINUX AND HAVE_EXT_LIBDELTACLOUD)
 
 	condor_exe( deltacloud_gahp "dcloudgahp_main.cpp;dcloudgahp_commands.cpp;PipeBuffer.cpp;dcloudgahp_common.cpp" ${C_SBIN}
 	"${LIBDELTACLOUD_FOUND};${LIBXML2_FOUND};${CURL_FOUND};${OPENSSL_FOUND};${LDAP_FOUND};${ZLIB_FOUND}" OFF )
 
 else()
 
-	message(STATUS "NOTE: *deltacloud* targets will not be built HAVE_EXT_LIBDELTACLOUD=${HAVE_EXT_LIBDELTACLOUD}")
+	message(STATUS "NOTE: *deltacloud* targets will not be built")
 
-endif (HAVE_EXT_LIBDELTACLOUD)
+endif ()
