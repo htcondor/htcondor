@@ -897,7 +897,7 @@ sub createSubmitFilesNew
     } else {
 
         print CMDFILE "run_type = test\n";
-	 	print CMDFILE "platform_job_timeout = 8h\n";
+	 	print CMDFILE "platform_job_timeout = 16h\n";
 		# allow tests on changing systems like unmanaged-x86_rhap_5.1"
 		print CMDFILE "++unmanaged = true \n";
 
