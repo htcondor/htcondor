@@ -5,3 +5,6 @@
 * Security: ALLOW_ADVERTISE_SCHEDD
 * Have a test suite that can run at package build time
 * Think about an rcondor package (see src/condor_contrib/rcondor)
+* Enable priviledge separation for Condor daemons
+  Jaime Frey says: Not before 7.9, because right now it doesn't work for the
+   SCHEDD
