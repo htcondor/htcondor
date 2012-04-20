@@ -34,6 +34,8 @@
 #include "classad_helpers.h"
 #include "filesystem_remap.h"
 #include "directory.h"
+#include "subsystem_info.h"
+#include "cgroup_limits.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -217,23 +219,28 @@ VanillaProc::StartJob()
 
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Determine the cgroup
-	char* cgroup_base = param("BASE_CGROUP"), *cgroup = NULL;
-	int cluster, proc, bufpos=0, buflen=0;
-	if (cgroup_base && JobAd->LookupInteger(ATTR_CLUSTER_ID, cluster) &&
-			JobAd->LookupInteger(ATTR_PROC_ID, proc)) {
-		cgroup = (char *)malloc(sizeof(char)*80);
+	std::string cgroup_base;
+	param(cgroup_base, "BASE_CGROUP", "");
+	MyString cgroup_str;
+	const char *cgroup = NULL;
+	if (cgroup_base.length()) {
+		MyString cgroup_uniq;
+		std::string starter_name, execute_str;
+		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
+			// Note: Starter is a global variable from os_proc.cpp
+		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
+		ASSERT (starter_name.size());
+		cgroup_uniq.sprintf("%s_%s", execute_str.c_str(), starter_name.c_str());
+		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
+		cgroup_uniq.replaceString(dir_delim, "_");
+		cgroup_str.sprintf("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
+			cgroup_uniq.Value());
+		cgroup = cgroup_str.Value();
 		ASSERT (cgroup != NULL);
-		int rc = sprintf_realloc(&cgroup,&bufpos,&buflen,"%s%c%s%d%c%d",
-			cgroup_base, DIR_DELIM_CHAR, "job_",
-			cluster, '_', proc);
-		if (rc < 0) {
-			EXCEPT("Unable to determine the cgroup to use.");
-		} else {
-			fi.cgroup = cgroup;
-			dprintf(D_FULLDEBUG, "Requesting cgroup %s for job %d.%d.\n",
-				cgroup, cluster, proc);
-		}
+		fi.cgroup = cgroup;
+		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job.\n", cgroup);
 	}
+
 #endif
 
 // The chroot stuff really only works on linux
@@ -384,8 +391,40 @@ VanillaProc::StartJob()
 	}
 
 #if defined(HAVE_EXT_LIBCGROUP)
-	if (cgroup != NULL)
-		free(cgroup);
+
+	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
+	if (cgroup && retval) {
+		std::string mem_limit;
+		param(mem_limit, "MEMORY_LIMIT", "soft");
+		bool mem_is_soft = mem_limit == "soft";
+		std::string cgroup_string = cgroup;
+		CgroupLimits climits(cgroup_string);
+		if (mem_is_soft || (mem_limit == "hard")) {
+			ClassAd * MachineAd = Starter->jic->machClassAd();
+			int MemMb;
+			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
+				uint64_t MemMb_big = MemMb;
+				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
+			} else {
+				dprintf(D_ALWAYS, "Not setting memory soft limit in cgroup because "
+					"Memory attribute missing in machine ad.\n");
+			}
+		} else if (mem_limit == "none") {
+			dprintf(D_FULLDEBUG, "Not enforcing memory soft limit.\n");
+		} else {
+			dprintf(D_ALWAYS, "Invalid value of MEMORY_LIMIT: %s.  Ignoring.\n", mem_limit.c_str());
+		}
+
+		// Now, set the CPU shares
+		ClassAd * MachineAd = Starter->jic->machClassAd();
+		int slotWeight;
+		if (MachineAd->LookupInteger(ATTR_SLOT_WEIGHT, slotWeight)) {
+			climits.set_cpu_shares(slotWeight*100);
+		} else {
+			dprintf(D_FULLDEBUG, "Invalid value of SlotWeight in machine ClassAd; ignoring.\n");
+		}
+	}
+
 #endif
 
 	return retval;

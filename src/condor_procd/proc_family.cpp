@@ -29,21 +29,11 @@
 
 #if defined(HAVE_EXT_LIBCGROUP)
 #include "libcgroup.h"
-#define MEMORY_CONTROLLER "memory"
-#define CPUACCT_CONTROLLER "cpuacct"
-#define FREEZE_CONTROLLER "freezer"
-#define BLOCK_CONTROLLER "blkio"
 
 #define FROZEN "FROZEN"
 #define THAWED "THAWED"
-
 #define BLOCK_STATS_LINE_MAX 64
 
-bool ProcFamily::m_cgroup_initialized = false;
-bool ProcFamily::m_cgroup_freezer_mounted = false;
-bool ProcFamily::m_cgroup_cpuacct_mounted = false;
-bool ProcFamily::m_cgroup_memory_mounted = false;
-bool ProcFamily::m_cgroup_block_mounted = false;
 #include <unistd.h>
 long ProcFamily::clock_tick = sysconf( _SC_CLK_TCK );
 #endif
@@ -62,14 +52,13 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	m_exited_sys_cpu_time(0),
 	m_max_image_size(0),
 	m_member_list(NULL)
+#if defined(HAVE_EXT_LIBCGROUP)
+	, m_cgroup_string(""),
+	m_cm(CgroupManager::getInstance())
+#endif
 {
 #if !defined(WIN32)
 	m_proxy = NULL;
-#endif
-#if defined(HAVE_EXT_LIBCGROUP)
-	m_cgroup_string = NULL;
-	m_cgroup = NULL;
-	m_created_cgroup = false;
 #endif
 }
 
@@ -96,45 +85,9 @@ ProcFamily::~ProcFamily()
 		free(m_proxy);
 	}
 #endif
-#if defined(HAVE_EXT_LIBCGROUP)
-	if (m_cgroup && m_created_cgroup) {
-		delete_cgroup(m_cgroup_string);
-	}
-	if (m_cgroup != NULL) {
-		cgroup_free(&m_cgroup);
-	}
-	if (m_cgroup_string != NULL) {
-		free(m_cgroup_string);
-	}
-#endif
 }
 
 #if defined(HAVE_EXT_LIBCGROUP)
-
-void
-ProcFamily::delete_cgroup(const char * cg_string)
-{
-	int err;
-
-	struct cgroup* dcg = cgroup_new_cgroup(m_cgroup_string);
-	ASSERT (dcg != NULL);
-	if ((err = cgroup_get_cgroup(dcg))) {
-		dprintf(D_PROCFAMILY,
-			"Unable to read cgroup %s for deletion (ProcFamily %u): %u %s\n",
-			cg_string, m_root_pid, err, cgroup_strerror(err));
-	}
-	else if ((err = cgroup_delete_cgroup(dcg, CGFLAG_DELETE_RECURSIVE | CGFLAG_DELETE_IGNORE_MIGRATION))) {
-		dprintf(D_ALWAYS,
-			"Unable to completely remove cgroup %s for ProcFamily %u. %u %s\n",
-			cg_string, m_root_pid, err, cgroup_strerror(err)
-			);
-	} else {
-		dprintf(D_PROCFAMILY,
-			"Deleted cgroup %s for ProcFamily %u\n",
-			cg_string, m_root_pid);
-	}
-	cgroup_free(&dcg);
-}
 
 int
 ProcFamily::migrate_to_cgroup(pid_t pid)
@@ -142,6 +95,9 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 	// Attempt to migrate a given process to a cgroup.
 	// This can be done without regards to whether the
 	// process is already in the cgroup
+	if (!m_cgroup.isValid()) {
+		return 1;
+	}
 
 	// We want to make sure task migration is turned on for the
 	// associated memory controller.  So, we get to look up the original cgroup.
@@ -153,7 +109,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 	char * orig_cgroup_string = NULL;
 	struct cgroup * orig_cgroup;
 	struct cgroup_controller * memory_controller;
-	if (m_cgroup_memory_mounted && (err = cgroup_get_current_controller_path(pid, MEMORY_CONTROLLER, &orig_cgroup_string))) {
+	if (m_cm.isMounted(CgroupManager::MEMORY_CONTROLLER) && (err = cgroup_get_current_controller_path(pid, MEMORY_CONTROLLER_STR, &orig_cgroup_string))) {
 		dprintf(D_PROCFAMILY,
 			"Unable to determine current memory cgroup for PID %u (ProcFamily %u): %u %s\n",
 			pid, m_root_pid, err, cgroup_strerror(err));
@@ -161,7 +117,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 	}
 	// We will migrate the PID to the new cgroup even if it is in the proper memory controller cgroup
 	// It is possible for the task to be in multiple cgroups.
-	if (m_cgroup_memory_mounted && (orig_cgroup_string != NULL) && (strcmp(m_cgroup_string, orig_cgroup_string))) {
+	if (m_cm.isMounted(CgroupManager::MEMORY_CONTROLLER) && (orig_cgroup_string != NULL) && (strcmp(m_cgroup_string.c_str(), orig_cgroup_string))) {
 		// Yes, there are race conditions here - can't really avoid this.
 		// Throughout this block, we can assume memory controller exists.
 		// Get original value of migrate.
@@ -173,7 +129,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 				orig_cgroup_string, m_root_pid, err, cgroup_strerror(err));
 			goto after_migrate;
 		}
-		if ((memory_controller = cgroup_get_controller(orig_cgroup, MEMORY_CONTROLLER)) == NULL) {
+		if ((memory_controller = cgroup_get_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) == NULL) {
 			cgroup_free(&orig_cgroup);
 			goto after_migrate;
 		}
@@ -183,7 +139,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 				dprintf(D_PROCFAMILY,
 					"This kernel does not support memory usage migration; cgroup %s memory statistics"
 					" will be slightly incorrect (ProcFamily %u)\n",
-					m_cgroup_string, m_root_pid);
+					m_cgroup_string.c_str(), m_root_pid);
 			} else {
 				dprintf(D_PROCFAMILY,
 					"Unable to read cgroup %s memory controller settings for "
@@ -195,7 +151,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 		}
 		if (orig_migrate != 3) {
 			orig_cgroup = cgroup_new_cgroup(orig_cgroup_string);
-			memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER);
+			memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR);
 			ASSERT (memory_controller != NULL); // Memory controller must already exist
 			cgroup_add_value_uint64(memory_controller, "memory.move_charge_at_immigrate", 3);
 			if ((err = cgroup_modify_cgroup(orig_cgroup))) {
@@ -214,19 +170,18 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 after_migrate:
 
 	orig_cgroup = NULL;
-	ASSERT (m_cgroup_string != NULL)
-	err = cgroup_attach_task_pid(m_cgroup, pid);
+	err = cgroup_attach_task_pid(& const_cast<struct cgroup &>(m_cgroup.getCgroup()), pid);
 	if (err) {
 		dprintf(D_PROCFAMILY,
 			"Cannot attach pid %u to cgroup %s for ProcFamily %u: %u %s\n",
-			pid, m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+			pid, m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 	}
 
 	if (changed_orig) {
 		if ((orig_cgroup = cgroup_new_cgroup(orig_cgroup_string))) {
 			goto after_restore;
 		}
-		if (((memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER)) != NULL) &&
+		if (((memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) != NULL) &&
 			(!cgroup_add_value_uint64(memory_controller, "memory.move_charge_at_immigrate", orig_migrate))) {
 			cgroup_modify_cgroup(orig_cgroup);
 		}
@@ -241,153 +196,32 @@ after_restore:
 }
 
 int
-ProcFamily::set_cgroup(const char * cgroup)
+ProcFamily::set_cgroup(const std::string &cgroup_string)
 {
-	int err;
-	bool has_cgroup = true, changed_cgroup = false;
-
-	if (!strcmp(cgroup, "/")) {
+	if (cgroup_string == "/") {
 		dprintf(D_ALWAYS,
 			"Cowardly refusing to monitor the root cgroup out "
 			"of security concerns.\n");
 		return 1;
 	}
 
-	// Initialize library and data structures
-	if (m_cgroup_initialized == false) {
-		dprintf(D_PROCFAMILY, "Initializing cgroup library.\n");
-		cgroup_init();
-		void *handle;
-		controller_data info;
-		int ret = cgroup_get_all_controller_begin(&handle, &info);
-		while (ret == 0) {
-			if (strcmp(info.name, MEMORY_CONTROLLER) == 0) {
-				m_cgroup_memory_mounted = (info.hierarchy != 0);
-			} else if (strcmp(info.name, CPUACCT_CONTROLLER) == 0) {
-				m_cgroup_cpuacct_mounted = (info.hierarchy != 0);
-			} else if (strcmp(info.name, FREEZE_CONTROLLER) == 0) {
-				m_cgroup_freezer_mounted = (info.hierarchy != 0);
-			} else if (strcmp(info.name, BLOCK_CONTROLLER) == 0) {
-				m_cgroup_block_mounted = (info.hierarchy != 0);
-			}
-			ret = cgroup_get_all_controller_next(&handle, &info);
-		}
-		cgroup_get_all_controller_end(&handle);
-		if (!m_cgroup_block_mounted) {
-			dprintf(D_ALWAYS, "Cgroup controller for I/O statistics is not mounted; accounting will be inaccurate.\n");
-		}
-		if (!m_cgroup_freezer_mounted) {
-			dprintf(D_ALWAYS, "Cgroup controller for process management is not mounted; process termination will be inaccurate.\n");
-		}
-		if (!m_cgroup_cpuacct_mounted) {
-			dprintf(D_ALWAYS, "Cgroup controller for CPU accounting is not mounted; cpu accounting will be inaccurate.\n");
-		}
-		if (!m_cgroup_memory_mounted) {
-			dprintf(D_ALWAYS, "Cgroup controller for memory accounting is not mounted; memory accounting will be inaccurate.\n");
-		}
-		if (ret != ECGEOF) {
-			dprintf(D_ALWAYS, "Error iterating through cgroups mount information: %s\n", cgroup_strerror(ret));
-		}
-
-	}
-
 	// Ignore this command if we've done this before.
-	if ((m_cgroup_string != NULL) && !strcmp(m_cgroup_string, cgroup)) {
-		return 0;
+	if (m_cgroup.isValid()) {
+		if (cgroup_string == m_cgroup.getCgroupString()) {
+			return 0;
+		} else {
+			m_cgroup.destroy();
+		}
 	}
 
 	dprintf(D_PROCFAMILY, "Setting cgroup to %s for ProcFamily %u.\n",
-		cgroup, m_root_pid);
+		cgroup_string.c_str(), m_root_pid);
 
-	if (m_cgroup_string) {
-		if (m_created_cgroup)
-			delete_cgroup(m_cgroup_string);
-		m_created_cgroup = false;
-		free(m_cgroup_string);
-	}
-	if (m_cgroup)
-		cgroup_free(&m_cgroup);
+	m_cm.create(cgroup_string, m_cgroup, CgroupManager::ALL_CONTROLLERS, CgroupManager::NO_CONTROLLERS);
+	m_cgroup_string = m_cgroup.getCgroupString();
 
-	size_t cgroup_len = strlen(cgroup);
-	m_cgroup_string = (char *)malloc(sizeof(char)*(cgroup_len+1));
-	strcpy(m_cgroup_string, cgroup);
-	m_cgroup = cgroup_new_cgroup(m_cgroup_string);
-	ASSERT(m_cgroup != NULL);
-
-	if (ECGROUPNOTEXIST == cgroup_get_cgroup(m_cgroup)) {
-		has_cgroup = false;
-	}
-
-	// Record if we don't have a particular subsystem, but it's not fatal.
-	// Add the controller if the cgroup didn't exist or it is not yet present.
-	if (m_cgroup_cpuacct_mounted && ((has_cgroup == false) || (cgroup_get_controller(m_cgroup, CPUACCT_CONTROLLER) == NULL))) {
-		changed_cgroup = true;
-		if (cgroup_add_controller(m_cgroup, CPUACCT_CONTROLLER) == NULL) {
-			dprintf(D_PROCFAMILY,
-				"Unable to initialize cgroup CPU accounting subsystem"
-				" for %s.\n",
-				m_cgroup_string);
-		}
-	}
-	if (m_cgroup_memory_mounted && ((has_cgroup == false) || (cgroup_get_controller(m_cgroup, MEMORY_CONTROLLER) == NULL))) {
-		changed_cgroup = true;
-		if (cgroup_add_controller(m_cgroup, MEMORY_CONTROLLER) == NULL) {
-			dprintf(D_PROCFAMILY,
-				"Unable to initialize cgroup memory accounting subsystem"
-				" for %s.\n",
-				cgroup);
-		}
-	}
-	if (m_cgroup_freezer_mounted && ((has_cgroup == false) || (cgroup_get_controller(m_cgroup, FREEZE_CONTROLLER) == NULL))) {
-		changed_cgroup = true;
-		if (cgroup_add_controller(m_cgroup, FREEZE_CONTROLLER) == NULL) {
-			dprintf(D_PROCFAMILY,
-				"Unable to initialize cgroup subsystem for killing "
-				"processes for %s.\n",
-				m_cgroup_string);
-		}
-	}
-	if (m_cgroup_block_mounted && ((has_cgroup == false) || (cgroup_get_controller(m_cgroup, BLOCK_CONTROLLER) == NULL))) {
-		changed_cgroup = true;
-		if (cgroup_add_controller(m_cgroup, BLOCK_CONTROLLER) == NULL) {
-			dprintf(D_PROCFAMILY,
-			"Unable to initialize cgroup subsystem for bloock "
-			"statistics for %s.\n",
-			m_cgroup_string);
-		}
-	}
-	// We don't consider failures fatal, as anything is better than nothing.
-	if (has_cgroup == false) {
-		if ((err = cgroup_create_cgroup(m_cgroup, 0))) {
-			dprintf(D_PROCFAMILY,
-				"Unable to create cgroup %s for ProcFamily %u."
-				"  Cgroup functionality will not work: %s\n",
-				m_cgroup_string, m_root_pid, cgroup_strerror(err));
-		} else {
-			m_created_cgroup = true;
-		}
-	} else if ((has_cgroup == true) && (changed_cgroup == true) && (err = cgroup_modify_cgroup(m_cgroup))) {
-		dprintf(D_PROCFAMILY,
-			"Unable to modify cgroup %s for ProcFamily %u."
-			"  Some cgroup functionality may not work: %u %s\n",
-			m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
-	}
-
-	// Make sure hierarchical memory accounting is turned on.
-	struct cgroup_controller * mem_controller = cgroup_get_controller(m_cgroup, MEMORY_CONTROLLER);
-	if (m_cgroup_memory_mounted && m_created_cgroup && (mem_controller != NULL)) {
-		if ((err = cgroup_add_value_bool(mem_controller, "memory.use_hierarchy", true))) {
-			dprintf(D_PROCFAMILY,
-				"Unable to set hierarchical memory settings for %s (ProcFamily) %u: %u %s\n",
-				m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
-		} else {
-			if ((err = cgroup_modify_cgroup(m_cgroup))) {
-				dprintf(D_PROCFAMILY,
-					"Unable to enable hierarchical memory accounting for %s "
-					"(ProcFamily %u): %u %s\n",
-					m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
-			}
-		}
+	if (!m_cgroup.isValid()) {
+		return 1;
 	}
 
 	// Now that we have a cgroup, let's move all the existing processes to it
@@ -410,20 +244,20 @@ ProcFamily::freezer_cgroup(const char * state)
 	// or -EBUSY.
 	int err = 0;
 	struct cgroup_controller* freezer;
-	struct cgroup *cgroup = cgroup_new_cgroup(m_cgroup_string);
+	struct cgroup *cgroup = cgroup_new_cgroup(m_cgroup_string.c_str());
 	ASSERT (cgroup != NULL);
 
-	if (!m_cgroup_freezer_mounted) {
+	if (!m_cm.isMounted(CgroupManager::FREEZE_CONTROLLER)) {
 		err = 1;
 		goto ret;
 	}
 
-	freezer = cgroup_add_controller(cgroup, FREEZE_CONTROLLER);
+	freezer = cgroup_add_controller(cgroup, FREEZE_CONTROLLER_STR);
 	if (NULL == freezer) {
 		dprintf(D_ALWAYS,
 			"Unable to access the freezer subsystem for ProcFamily %u "
 			"for cgroup %s\n",
-			m_root_pid, m_cgroup_string);
+			m_root_pid, m_cgroup_string.c_str());
 		err = 2;
 		goto ret;
 	}
@@ -431,7 +265,7 @@ ProcFamily::freezer_cgroup(const char * state)
 	if ((err = cgroup_add_value_string(freezer, "freezer.state", state))) {
 		dprintf(D_ALWAYS,
 			"Unable to write %s to freezer for cgroup %s (ProcFamily %u). %u %s\n",
-			state, m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+			state, m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 		err = 3;
 		goto ret;
 	}
@@ -440,16 +274,16 @@ ProcFamily::freezer_cgroup(const char * state)
 			dprintf(D_ALWAYS,
 				"Does not appear condor_procd is allowed to freeze"
 				" cgroup %s (ProcFamily %u).\n",
-				m_cgroup_string, m_root_pid);
+				m_cgroup_string.c_str(), m_root_pid);
 		} else if ((ECGOTHER == err) && (EBUSY == cgroup_get_last_errno())) {
 			dprintf(D_ALWAYS, "Kernel was unable to freeze cgroup %s "
 				"(ProcFamily %u) due to process state; signal delivery "
-				"won't be atomic\n", m_cgroup_string, m_root_pid);
+				"won't be atomic\n", m_cgroup_string.c_str(), m_root_pid);
 			err = -EBUSY;
 		} else {
 			dprintf(D_ALWAYS,
 				"Unable to commit freezer change %s for cgroup %s (ProcFamily %u). %u %s\n",
-				state, m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+				state, m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 		}
 		err = 4;
 		goto ret;
@@ -474,21 +308,20 @@ ProcFamily::spree_cgroup(int sig)
 		return err;
 	}
 
-	ASSERT (m_cgroup != NULL);
-	cgroup_get_cgroup(m_cgroup);
+	ASSERT (m_cgroup.isValid());
+	cgroup_get_cgroup(&const_cast<struct cgroup&>(m_cgroup.getCgroup()));
 
 	void **handle = (void **)malloc(sizeof(void*));
 	ASSERT (handle != NULL);
 	pid_t pid;
-	ASSERT (m_cgroup_string != NULL);
-	err = cgroup_get_task_begin(m_cgroup_string, FREEZE_CONTROLLER, handle, &pid);
+	err = cgroup_get_task_begin(m_cgroup_string.c_str(), FREEZE_CONTROLLER_STR, handle, &pid);
 	if ((err > 0) && (err != ECGEOF))
 		handle = NULL;
 	while (err != ECGEOF) {
 		if (err > 0) {
 			dprintf(D_ALWAYS,
 				"Unable to iterate through cgroup %s (ProcFamily %u): %u %s\n",
-				m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 			goto release;
 		}
 		send_signal(pid, sig);
@@ -510,8 +343,9 @@ ProcFamily::spree_cgroup(int sig)
 int
 ProcFamily::count_tasks_cgroup()
 {
-	if (!m_cgroup_cpuacct_mounted)
+	if (!m_cm.isMounted(CgroupManager::CPUACCT_CONTROLLER) || !m_cgroup.isValid()) {
 		return -1;
+	}
 
 	int tasks = 0, err = 0;
 	pid_t pid;
@@ -519,13 +353,12 @@ ProcFamily::count_tasks_cgroup()
 	ASSERT (handle != NULL)
 	*handle = NULL;
 
-	ASSERT (m_cgroup_string != NULL);
-	err = cgroup_get_task_begin(m_cgroup_string, CPUACCT_CONTROLLER, handle, &pid);
+	err = cgroup_get_task_begin(m_cgroup_string.c_str(), CPUACCT_CONTROLLER_STR, handle, &pid);
 	while (err != ECGEOF) {
 		if (err > 0) {
 			dprintf(D_PROCFAMILY,
 				"Unable to read cgroup %s memory stats (ProcFamily %u): %u %s.\n",
-				m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 			break;
 		}
 		tasks ++;
@@ -570,50 +403,41 @@ _check_stat_uint64(const struct cgroup_stat &stats, const char* name, u_int64_t*
 void
 ProcFamily::update_max_image_size_cgroup()
 {
-	if (!m_cgroup_memory_mounted) {
+	if (!m_cm.isMounted(CgroupManager::MEMORY_CONTROLLER) || !m_cgroup.isValid()) {
 		return;
 	}
 
 	int err;
 	u_int64_t max_image;
-	struct cgroup *memcg;
 	struct cgroup_controller *memct;
-	if ((memcg = cgroup_new_cgroup(m_cgroup_string)) == NULL) {
+	Cgroup memcg;
+	if (m_cm.create(m_cgroup_string, memcg, CgroupManager::MEMORY_CONTROLLER, CgroupManager::MEMORY_CONTROLLER) ||
+			!memcg.isValid()) {
 		dprintf(D_PROCFAMILY,
-			"Unable to allocate cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string, m_root_pid);
+			"Unable to create cgroup %s (ProcFamily %u).\n",
+			m_cgroup_string.c_str(), m_root_pid);
 		return;
 	}
-	if ((err = cgroup_get_cgroup(memcg))) {
-		dprintf(D_PROCFAMILY,
-			"Unable to load cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string, m_root_pid);
-		cgroup_free(&memcg);
-		return;
-	}
-	if ((memct = cgroup_get_controller(memcg, MEMORY_CONTROLLER)) == NULL) {
+	if ((memct = cgroup_get_controller(&const_cast<struct cgroup &>(memcg.getCgroup()), MEMORY_CONTROLLER_STR)) == NULL) {
 		dprintf(D_PROCFAMILY,
 			"Unable to load memory controller for cgroup %s (ProcFamily %u).\n",
-			m_cgroup_string, m_root_pid);
-		cgroup_free(&memcg);
+			m_cgroup_string.c_str(), m_root_pid);
 		return;
 	}
 	if ((err = cgroup_get_value_uint64(memct, "memory.memsw.max_usage_in_bytes", &max_image))) {
 		dprintf(D_PROCFAMILY,
 			"Unable to load max memory usage for cgroup %s (ProcFamily %u): %u %s\n",
-			m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
-		cgroup_free(&memcg);
+			m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 		return;
 	}
 	m_max_image_size = max_image/1024;
-	cgroup_free(&memcg);
 }
 
 int
 ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 {
 
-	if (!m_cgroup_block_mounted)
+	if (!m_cm.isMounted(CgroupManager::BLOCK_CONTROLLER) || !m_cgroup.isValid())
 		return 1;
 
 	int ret;
@@ -622,7 +446,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 	char blkio_stats_name[] = "blkio.io_service_bytes";
 	short ctr;
 	long int read_bytes=0, write_bytes=0;
-	ret = cgroup_read_value_begin(BLOCK_CONTROLLER, m_cgroup_string,
+	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
 	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
 	while (ret == 0) {
 		ctr = 0;
@@ -665,7 +489,8 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 int
 ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 {
-	if (!m_cgroup_memory_mounted || !m_cgroup_cpuacct_mounted) {
+	if (!m_cm.isMounted(CgroupManager::MEMORY_CONTROLLER) || !m_cm.isMounted(CgroupManager::CPUACCT_CONTROLLER) 
+			|| !m_cgroup.isValid()) {
 		return -1;
 	}
 
@@ -680,12 +505,12 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	ASSERT (handle != NULL);
 	*handle = NULL;
 
-	err = cgroup_read_stats_begin(MEMORY_CONTROLLER, m_cgroup_string, handle, &stats);
+	err = cgroup_read_stats_begin(MEMORY_CONTROLLER_STR, m_cgroup_string.c_str(), handle, &stats);
 	while (err != ECGEOF) {
 		if (err > 0) {
 			dprintf(D_PROCFAMILY,
 				"Unable to read cgroup %s memory stats (ProcFamily %u): %u %s.\n",
-				m_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 			break;
 		}
 		if (_check_stat_uint64(stats, "total_rss", &tmp)) {
@@ -708,7 +533,7 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 		dprintf(D_PROCFAMILY,
 			"Unable to find all necesary memory structures for cgroup %s"
 			" (ProcFamily %u)\n",
-			m_cgroup_string, m_root_pid);
+			m_cgroup_string.c_str(), m_root_pid);
 	}
 	// The poor man's way of updating the max image size.
 	if (image > m_max_image_size) {
@@ -719,12 +544,12 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 
 	// Update CPU
 	*handle = NULL;
-	err = cgroup_read_stats_begin(CPUACCT_CONTROLLER, m_cgroup_string, handle, &stats);
+	err = cgroup_read_stats_begin(CPUACCT_CONTROLLER_STR, m_cgroup_string.c_str(), handle, &stats);
 	while (err != ECGEOF) {
 		if (err > 0) {
 			dprintf(D_PROCFAMILY,
 				"Unable to read cgroup %s cpuacct stats (ProcFamily %u): %s.\n",
-				m_cgroup_string, m_root_pid, cgroup_strerror(err));
+				m_cgroup_string.c_str(), m_root_pid, cgroup_strerror(err));
 			break;
 		}
 		if (_check_stat_uint64(stats, "user", &tmp)) {
@@ -832,9 +657,7 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 	usage->sys_cpu_time += m_exited_sys_cpu_time;
 
 #if defined(HAVE_EXT_LIBCGROUP)
-        if (m_cgroup != NULL) {
-		aggregate_usage_cgroup(usage);
-	}
+	aggregate_usage_cgroup(usage);
 #endif
 
 }
@@ -855,7 +678,7 @@ void
 ProcFamily::spree(int sig)
 {
 #if defined(HAVE_EXT_LIBCGROUP)
-	if ((NULL != m_cgroup_string) && (0 == spree_cgroup(sig))) {
+	if ((m_cgroup.isValid()) && (0 == spree_cgroup(sig))) {
 		return;
 	}
 #endif
@@ -893,9 +716,7 @@ ProcFamily::add_member(procInfo* pi)
 
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Add to the associated cgroup
-	if (m_cgroup_string != NULL) {
-		migrate_to_cgroup(pi->pid);
-	}
+	migrate_to_cgroup(pi->pid);
 #endif
 
 	// keep our monitor's hash table up to date!
