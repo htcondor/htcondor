@@ -114,6 +114,8 @@ extern const char * const  ATTR_DEFERRAL_OFFSET;
 extern const char * const  ATTR_DEFERRAL_PREP_TIME;
 extern const char * const  ATTR_DEFERRAL_TIME;
 extern const char * const  ATTR_DEFERRAL_WINDOW;
+//--------------------------------------------------------------------
+// Deltacloud attributes
 extern const char * const  ATTR_DELTACLOUD_AVAILABLE_ACTIONS;
 extern const char * const  ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES;
 extern const char * const  ATTR_DELTACLOUD_PROVIDER_ID;
@@ -122,6 +124,7 @@ extern const char * const  ATTR_DELTACLOUD_RETRY_TIMEOUT;
 extern const char * const  ATTR_DELTACLOUD_USERNAME;
 extern const char * const  ATTR_DELTACLOUD_PASSWORD_FILE;
 extern const char * const  ATTR_DELTACLOUD_IMAGE_ID;
+extern const char * const  ATTR_DELTACLOUD_INSTANCE_NAME;
 extern const char * const  ATTR_DELTACLOUD_REALM_ID;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU;
@@ -130,6 +133,7 @@ extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE;
 extern const char * const  ATTR_DELTACLOUD_KEYNAME;
 extern const char * const  ATTR_DELTACLOUD_USER_DATA;
 extern const char * const  ATTR_DELTACLOUD_NEEDS_START;
+//--------------------------------------------------------------------
 extern const char * const  ATTR_DESTINATION;
 extern const char * const  ATTR_DISK;
 extern const char * const  ATTR_DISK_USAGE;

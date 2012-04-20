@@ -182,6 +182,7 @@ const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
 const char * const ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
 const char * const ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
 const char * const ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
+const char * const ATTR_DELTACLOUD_INSTANCE_NAME	 = "DeltacloudInstanceName";
 const char * const ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
 const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
 const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
