@@ -22,8 +22,11 @@ condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
     from the localhost.
   * Add patch to allow building on MIPS. Rename variable name 'mips' to
     'mips_' to avoid name clash (Closes: #669689).
+  * Fix a bug in the debconf script that caused the default start policy
+    setting for a personal Condor installation to have no effect, i.e. it
+    would not run jobs regardless of machine activity by default.
 
- -- Michael Hanke <mih@debian.org>  Sun, 22 Apr 2012 14:51:34 +0200
+ -- Michael Hanke <mih@debian.org>  Sun, 22 Apr 2012 15:30:16 +0200
 
 condor (7.7.5~dfsg.1-2) experimental; urgency=low
 
