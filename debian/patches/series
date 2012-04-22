@@ -1,5 +1,5 @@
 # in order of upstream compatibility and invasiveness
-
+no_mips_on_mips
 no_java_for_now
 no_compress
 # should be obsolete in condor 7.7.6+, but cannot confirm
