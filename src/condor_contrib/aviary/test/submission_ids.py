@@ -28,6 +28,7 @@ modes = ['AFTER', 'BEFORE']
 
 parser = build_basic_parser('Query submission IDs remotely via SOAP.','http://localhost:9091/services/query/getSubmissionID')
 parser.add_option('--size', action="store", dest='size', help='page size')
+parser.add_option('--name', action="store", dest='name', help='a name index')
 parser.add_option('--qdate', action="store", dest='qdate', help='a qdate index')
 parser.add_option('--mode', action="store", choices=(modes), dest='mode', help=str(modes)+ \
     ' relative from the given qdate')
@@ -38,20 +39,29 @@ if opts.size is None:
     parser.print_help()
     exit(1)
 
+if opts.name and opts.qdate:
+    print 'Either name (lexical) OR qdate (time) can be specified for index, not both'
+    parser.print_help()
+    exit(1)
+
 client = create_suds_client(opts,wsdl,None)
 client.set_options(location=opts.url)
 
 scanMode = None
-# set up our scan mode
-if opts.mode:
+subId = None
+if opts.name:
+    subId = client.factory.create("ns0:SubmissionID")
+    subId.name = opts.name
+# set up our ID and scanMode
+elif opts.mode and opts.qdate:
     scanMode = client.factory.create("ns0:ScanMode")
     scanMode = opts.mode
-
-subId = None
-# set up our ID
-if opts.qdate:
     subId = client.factory.create("ns0:SubmissionID")
     subId.qdate = opts.qdate
+else:
+    print "Mode must be specified with qdate arg"
+    parser.print_help()
+    exit(1)
 
 try:
     submissions = client.service.getSubmissionID(opts.size,scanMode,subId)
