@@ -41,6 +41,10 @@ added to \Condor{q} in 7.7.6.
 and improved its ability to detect parse failures closer to the point of corruption.
 \Ticket{2934}
 
+\item Added an \Opt{-evaluate} option to \Condor{config\_val}, which causes the configured value queried from
+a given daemon to be evaluated with respect to that daemon's ClassAd.
+\Ticket{856}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
