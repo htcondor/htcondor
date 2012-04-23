@@ -1,0 +1,19 @@
+#!/bin/sh
+
+IS_BOSCO=`condor_config_val IS_BOSCO`
+echo "$IS_BOSCO" | grep -q -i true 
+if [ $? != 0 ] ; then
+    echo "Please source the bosco.[sh|csh] script first."
+fi
+
+address_file=`condor_config_val MASTER_ADDRESS_FILE`
+if [ x$address_file != x -a -r $address_file ] ; then
+    echo "Sending off command to condor_master."
+    condor_off -master
+    if [ $? != 0 ] ; then
+        echo "Failed to stop Condor."
+        exit 1
+    fi
+fi
+
+echo "Condor is now off."
