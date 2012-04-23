@@ -218,16 +218,37 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 		// fast track...client has supplied ids to scan
 		SubmissionIdCollection* id_list = _getSubmissionSummary->getIds();
 		for (SubmissionIdCollection::iterator sic_it = id_list->begin(); id_list->end() != sic_it; sic_it++) {
-			const char* sid_str = (*sic_it)->getName().c_str();
-			SubmissionCollectionType::iterator sct_it = g_submissions.find(sid_str);
-			if (sct_it != g_submissions.end()) {
-				sub_map[(*sct_it).first] = (*sct_it).second;
-			}
-			else {
-				// mark this as not matched when returning our results
-				sub_map[(*sct_it).first] = NULL;
-			}
-		}
+            string sid_name;
+            string sid_owner;
+            if (!(*sic_it)->isNameNil()) {
+                sid_name = (*sic_it)->getName();
+            }
+            if (!(*sic_it)->isOwnerNil()) {
+                sid_owner = (*sic_it)->getOwner();
+            }
+            // kind of xor, doesn't make sense to look for owner if we know the name
+            if (!sid_name.empty()) {
+                SubmissionCollectionType::iterator sct_it = g_submissions.find(sid_name.c_str());
+                if (sct_it != g_submissions.end()) {
+                    sub_map[(*sct_it).first] = (*sct_it).second;
+                }
+                else {
+                    // mark this as not matched when returning our results
+                    sub_map[(*sct_it).first] = NULL;
+                }
+            }
+            else if (!sid_owner.empty()) {
+                for (SubmissionCollectionType::iterator i = g_submissions.begin(); g_submissions.end() != i; i++) {
+                    if (0==strcmp(sid_owner.c_str(),(*i).second->getOwner())) {
+                        sub_map[(*i).first] = (*i).second;
+                    }
+                }
+                if (sub_map.empty()) {
+                    // no results for that owner
+                    sub_map[sid_owner.c_str()] = NULL;
+                }
+            }
+        }
 	}
 
 	for (SubmissionCollectionType::iterator i = sub_map.begin(); sub_map.end() != i; i++) {
