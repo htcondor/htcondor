@@ -71,6 +71,9 @@ for each set of statistics.
 \item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
 \Ticket{2893}
 
+\item Made \Condor{negotiator} logic for computing submitter limits properly aware of \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
+\Ticket{2952}
+
 \end{itemize}
 
 \noindent Known Bugs:

@@ -2533,7 +2533,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				negotiation_cycle_stats[0]->submitters_out_of_time.insert(scheddName.Value());
 				result = MM_DONE;
 			} else {
-				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
+				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 					result = MM_RESUME;
 				} else {
 					int numMatched = 0;
@@ -3049,7 +3049,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	time_t		currentTime;
 	ClassAd		request;
 	ClassAd*    offer = NULL;
-	bool		only_consider_startd_rank;
+	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
     string remoteUser;
@@ -3304,13 +3304,11 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 					   accountant.GetWeightedResourcesUsed ( scheddName ));
         string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
-		bool is_group = false;
 		if (getGroupInfoFromUserId(scheddName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
 			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
-			is_group = true;
 		}
 
 		OptimizeJobAdForMatchmaking( &request );
@@ -3366,13 +3364,8 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 							"PREEMPTION_REQUIREMENTS == False";
 					} else if (rejPreemptForPrio) {
 						diagnostic_message = "insufficient priority";
-					} else if (rejForSubmitterLimit) {
-						if( is_group ) {
-							diagnostic_message = "group quota exceeded";
-						}
-						else {
-							diagnostic_message = "fair share exceeded";
-						}
+					} else if (rejForSubmitterLimit && !ignore_schedd_limit) {
+                        diagnostic_message = "submitter limit exceeded";
 					} else {
 						diagnostic_message = "no match found";
 					}
@@ -4335,6 +4328,7 @@ Matchmaker::calculateSubmitterLimit(
 			submitterLimitUnclaimed = maxAllowed;
 		}
 	}
+    if (!ConsiderPreemption) submitterLimit = submitterLimitUnclaimed;
 
 		// calculate this schedd's absolute fair-share for allocating
 		// resources other than CPUs (like network capacity and licenses)
