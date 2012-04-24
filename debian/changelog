@@ -1,4 +1,4 @@
-condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
+condor (7.7.6~dfsg.1-1) unstable; urgency=low
 
   * New upstream development release. Last one before the 7.8 stable series.
   * Majority of patches has been merged upstream or have been made obsolete.
@@ -26,7 +26,7 @@ condor (7.7.6~dfsg.1-1) UNRELEASED; urgency=low
     setting for a personal Condor installation to have no effect, i.e. it
     would not run jobs regardless of machine activity by default.
 
- -- Michael Hanke <mih@debian.org>  Sun, 22 Apr 2012 15:30:16 +0200
+ -- Michael Hanke <mih@debian.org>  Tue, 24 Apr 2012 20:15:31 +0200
 
 condor (7.7.5~dfsg.1-2) experimental; urgency=low
 
