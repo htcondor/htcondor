@@ -37,8 +37,8 @@ set(VERSION "7.7.6")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-set(PRE_RELEASE "PRE-RELEASE-UWCS")
-#set(PRE_RELEASE OFF)
+#set(PRE_RELEASE "PRE-RELEASE-UWCS")
+set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
 #   PRE_RELEASE to be forced into a build.
