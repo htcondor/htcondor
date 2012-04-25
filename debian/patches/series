@@ -1,4 +1,5 @@
 # in order of upstream compatibility and invasiveness
+classad64
 no_mips_on_mips
 no_java_for_now
 no_compress

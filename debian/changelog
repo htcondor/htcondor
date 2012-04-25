@@ -1,3 +1,9 @@
+condor (7.7.6~dfsg.1-2) unstable; urgency=low
+
+  * Add upstream patch to address FTBFS on ia64 and s390x (Closes: #670393).
+
+ -- Michael Hanke <mih@debian.org>  Wed, 25 Apr 2012 18:18:08 +0200
+
 condor (7.7.6~dfsg.1-1) unstable; urgency=low
 
   * New upstream development release. Last one before the 7.8 stable series.
