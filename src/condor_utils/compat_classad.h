@@ -356,6 +356,14 @@ class ClassAd : public classad::ClassAd
 		value = ival;
 		return result;
 	}
+#if ! defined classad_int64_is_long
+	int EvalInteger (const char *name, classad::ClassAd *target, long & value) {
+		int ival;
+		int result = EvalInteger(name, target, ival);  // TJ: fix for int64 classad
+		value = ival;
+		return result;
+	}
+#endif
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute
