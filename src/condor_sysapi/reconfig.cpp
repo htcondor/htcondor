@@ -55,7 +55,7 @@ int _sysapi_reserve_disk = 0;
 int _sysapi_startd_has_bad_utmp = FALSE;
 #endif
 
-#ifdef LINUX
+#if defined LINUX || WIN32
 int _sysapi_count_hyperthread_cpus = FALSE;
 #endif
 
@@ -169,7 +169,7 @@ sysapi_reconfig(void)
 
 	_sysapi_getload = param_boolean_int("SYSAPI_GET_LOADAVG",1);
 
-#ifdef LINUX
+#if defined LINUX || WIN32
 	/* Should we count hyper threads? */
 	_sysapi_count_hyperthread_cpus = 
 		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
