@@ -35,7 +35,7 @@ override_dh_auto_configure:
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
-		-DWITH_LIBCGROUP:BOOL=ON
+		-DWITH_LIBCGROUP:BOOL=OFF
 		# upstream says: tests aren't reliablei enough yet
 		#-DBUILD_TESTS:BOOL=OFF \
 		# upstream says: contrib is to unstable for initial packaging
