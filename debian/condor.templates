@@ -39,7 +39,7 @@ Template: condor/daemons
 Type: multiselect
 Choices-C: SCHEDD, STARTD, COLLECTOR:NEGOTIATOR
 __Choices: Job submission, Job execution, Central manager
-__Default: Job submission, Job execution
+Default: SCHEDD, STARTD
 _Description: Role of this machine in the Condor pool:
  Please specify the intended role or roles of this machine, for which the
  corresponding daemons will be started automatically.
