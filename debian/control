@@ -24,44 +24,43 @@ Depends: ${misc:Depends}, ${shlibs:Depends}, ${python:Depends}, ${perl:Depends},
  debconf (>= 0.5) | debconf-2.0, adduser, libdate-manip-perl
 Recommends: dmtcp
 Suggests: coop-computing-tools
-Description: workload management system
+Description: distributed workload management system
  Like other full-featured batch systems, Condor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to Condor,
+ resource management. Users submit their serial or parallel jobs to Condor;
  Condor places them into a queue. It chooses when and where to run the jobs
  based upon a policy, carefully monitors their progress, and ultimately
  informs the user upon completion.
  .
- Unlike more traditional batch queueing system, Condor can also effectively
+ Unlike more traditional batch queueing systems, Condor can also effectively
  harness wasted CPU power from otherwise idle desktop workstations. Condor
  does not require a shared file system across machines - if no shared file
  system is available, Condor can transfer the job's data files on behalf of
  the user.
  .
- The Debian package uses Debconf to determine an appropriate initial
- configuration for a machine that shall join an existing Condor pool, and
- moreover, allows creating a "Personal" (single machine) Condor pool
- automatically.
+ This package can set up an appropriate initial configuration at install
+ time for a machine intended either as a member of an existing Condor pool
+ or as a "personal" (single machine) Condor pool.
 
 
 #Package: condor-tests
 #Architecture: any
 #Depends: ${misc:Depends}, ${shlibs:Depends}
-#Description: test suite for Condor
+#Description: distributed workload management system - test suite
 # Like other full-featured batch systems, Condor provides a job queueing
 # mechanism, scheduling policy, priority scheme, resource monitoring, and
-# resource management. Users submit their serial or parallel jobs to Condor,
+# resource management. Users submit their serial or parallel jobs to Condor;
 # Condor places them into a queue. It chooses when and where to run the jobs
 # based upon a policy, carefully monitors their progress, and ultimately
 # informs the user upon completion.
 # .
-# Unlike more traditional batch queueing system, Condor can also effectively
+# Unlike more traditional batch queueing systems, Condor can also effectively
 # harness wasted CPU power from otherwise idle desktop workstations. Condor
 # does not require a shared file system across machines - if no shared file
 # system is available, Condor can transfer the job's data files on behalf of
 # the user.
 # .
-# This package provides Condor's test-suite that can be used to verify
+# This package provides Condor's test-suite, which can be used to verify
 # proper functioning of a Condor installation.
 
 
@@ -69,15 +68,15 @@ Package: condor-dev
 Section: devel
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Description: development files for Condor
+Description: distributed workload management system - development files
  Like other full-featured batch systems, Condor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to Condor,
+ resource management. Users submit their serial or parallel jobs to Condor;
  Condor places them into a queue. It chooses when and where to run the jobs
  based upon a policy, carefully monitors their progress, and ultimately
  informs the user upon completion.
  .
- Unlike more traditional batch queueing system, Condor can also effectively
+ Unlike more traditional batch queueing systems, Condor can also effectively
  harness wasted CPU power from otherwise idle desktop workstations. Condor
  does not require a shared file system across machines - if no shared file
  system is available, Condor can transfer the job's data files on behalf of
@@ -90,15 +89,15 @@ Package: condor-doc
 Section: doc
 Architecture: all
 Depends: ${misc:Depends}
-Description: documentation for Condor
+Description: distributed workload management system - documentation
  Like other full-featured batch systems, Condor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to Condor,
+ resource management. Users submit their serial or parallel jobs to Condor;
  Condor places them into a queue. It chooses when and where to run the jobs
  based upon a policy, carefully monitors their progress, and ultimately
  informs the user upon completion.
  .
- Unlike more traditional batch queueing system, Condor can also effectively
+ Unlike more traditional batch queueing systems, Condor can also effectively
  harness wasted CPU power from otherwise idle desktop workstations. Condor
  does not require a shared file system across machines - if no shared file
  system is available, Condor can transfer the job's data files on behalf of
@@ -112,15 +111,15 @@ Package: condor-dbg
 Section: debug
 Architecture: any
 Depends: ${misc:Depends}, condor (= ${binary:Version})
-Description: debugging symbols for Condor
+Description: distributed workload management system - debugging symbols
  Like other full-featured batch systems, Condor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to Condor,
+ resource management. Users submit their serial or parallel jobs to Condor;
  Condor places them into a queue. It chooses when and where to run the jobs
  based upon a policy, carefully monitors their progress, and ultimately
  informs the user upon completion.
  .
- Unlike more traditional batch queueing system, Condor can also effectively
+ Unlike more traditional batch queueing systems, Condor can also effectively
  harness wasted CPU power from otherwise idle desktop workstations. Condor
  does not require a shared file system across machines - if no shared file
  system is available, Condor can transfer the job's data files on behalf of
@@ -135,15 +134,12 @@ Conflicts: libclassad0-dev
 Section: libdevel
 Architecture: any
 Depends: libclassad3 (= ${binary:Version}), ${misc:Depends}
-Description: library for Condor's classads expression language (development)
- A classad (classified ad) is a mapping from attribute names to expressions. In
- the simplest cases, the expressions are simple constants (integer, floating
- point, or string), thus a form of property list. Attribute expressions
- can also be more complicated. There is a protocol for evaluating an attribute
- expression of a classad vis a vis another ad. Two classads match if each ad has
- attribute requirements that evaluate to true in the context of the other ad.
- Classad  matching is used by the Condor central manager to determine the
- compatibility of jobs and workstations where they may be run.
+Description: Condor classads expression language - development library
+ Classified Advertisements (classads) are the lingua franca of Condor, used for
+ describing jobs, workstations, and other resources. There is a protocol for
+ evaluating whether two classads match, which is is used by the Condor central
+ manager to determine the compatibility of jobs, and workstations where they
+ may be run.
  .
  This package provides the static library and header files.
 
@@ -151,15 +147,12 @@ Description: library for Condor's classads expression language (development)
 Package: libclassad3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: library for Condor's classads expression language
- A classad (classified ad) is a mapping from attribute names to expressions. In
- the simplest cases, the expressions are simple constants (integer, floating
- point, or string), thus a form of property list. Attribute expressions
- can also be more complicated. There is a protocol for evaluating an attribute
- expression of a classad vis a vis another ad. Two classads match if each ad has
- attribute requirements that evaluate to true in the context of the other ad.
- Classad  matching is used by the Condor central manager to determine the
- compatibility of jobs and workstations where they may be run.
+Description: Condor classads expression language - runtime library
+ Classified Advertisements (classads) are the lingua franca of Condor, used for
+ describing jobs, workstations, and other resources. There is a protocol for
+ evaluating whether two classads match, which is is used by the Condor central
+ manager to determine the compatibility of jobs, and workstations where they
+ may be run.
  .
  This package provides the runtime library.
 
