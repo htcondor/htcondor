@@ -101,4 +101,9 @@ private:
  */
 pair_strings_vector root_dir_list();
 
+/**
+ * Given a chroot directory, make sure it isn't equivalent to "/"
+ */
+bool is_trivial_rootdir(const std::string &root_dir);
+
 #endif

@@ -198,6 +198,37 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 }
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
+				  compat_classad::ClassAd *target, classad::Value &result )
+{
+	int rc = TRUE;
+	if ( !expr || !source ) {
+		return FALSE;
+	}
+
+	const classad::ClassAd *old_scope = expr->GetParentScope();
+	classad::MatchClassAd *mad = NULL;
+
+	expr->SetParentScope( source );
+	if ( target && target != source ) {
+		mad = compat_classad::getTheMatchAd( source, target );
+	} else {
+		compat_classad::getTheMyRef( source );
+	}
+	if ( !source->EvaluateExpr( expr, result ) ) {
+		rc = FALSE;
+	}
+
+	if ( mad ) {
+		compat_classad::releaseTheMatchAd();
+	} else {
+		compat_classad::releaseTheMyRef( source );
+	}
+	expr->SetParentScope( old_scope );
+
+	return rc;
+}
+
+int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 				  compat_classad::ClassAd *target, compat_classad::EvalResult *result )
 {
 	int rc = TRUE;

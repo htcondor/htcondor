@@ -250,3 +250,13 @@ root_dir_list()
 	return execute_dir_list;
 }
 
+bool
+is_trivial_rootdir(const std::string &root_dir)
+{
+	for (std::string::const_iterator it=root_dir.begin(); it!=root_dir.end(); it++) {
+		if (*it != '/')
+			return false;
+	}
+	return true;
+}
+

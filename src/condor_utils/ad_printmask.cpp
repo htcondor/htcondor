@@ -642,23 +642,20 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
 						char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
 						bool fQuote = (*ptag == 'V');
+						classad::Value val;
+						std::string buff;
 						if (*ptag == 'v' || *ptag == 'V')
 							*ptag = 's'; // convert printf format to %s
-						if( EvalExprTree(tree, al, target, &result) ) {
+						if( EvalExprTree(tree, al, target, val) ) {
 							// Only strings are formatted differently for
 							// %v vs %V
-							if ( fQuote && result.type == LX_STRING ) {
-								classad::Value val;
+							if ( fQuote || !val.IsStringValue( buff ) ) {
 								classad::ClassAdUnParser unparser;
-								std::string buff;
-								val.SetStringValue( result.s );
 								unparser.SetOldClassAd( true );
 								unparser.Unparse( buff, val );
 								stringValue.sprintf( tfmt, buff.c_str() );
-							} else {
-								result.toString(true);
-								stringValue.sprintf( tfmt, result.s );
 							}
+							stringValue.sprintf( tfmt, buff.c_str() );
 							retval += stringValue;
 						} else {
 								// couldn't eval
