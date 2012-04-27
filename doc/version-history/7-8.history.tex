@@ -56,6 +56,12 @@ were printed as integers, and new ClassAd types like lists and nested
 ads couldn't be printed.
 \Ticket{2960}
 
+\item Restored RCS keyword strings CondorVersion and CondorPlatform to
+the Condor binaries. These strings are found and printed by the 
+\Opt{ident} program on unix. They were missing in Condor versions 7.7.3
+and later.
+\Ticket{2932}
+
 \end{itemize}
 
 \noindent Known Bugs:
