@@ -280,7 +280,9 @@ VanillaProc::StartJob()
                std::string execute_dir = ss2.str();
                ss << requested_chroot << DIR_DELIM_CHAR << ss2.str();
                std::string full_dir_str = ss.str();
-               if (IsDirectory(execute_dir.c_str())) {
+               if (is_trivial_rootdir(requested_chroot)) {
+                   dprintf(D_FULLDEBUG, "Requested a trivial chroot %s; this is a no-op.\n", requested_chroot.c_str());
+               } else if (IsDirectory(execute_dir.c_str())) {
                        {
                            TemporaryPrivSentry sentry(PRIV_ROOT);
                            if( mkdir(full_dir_str.c_str(), S_IRWXU) < 0 ) {
