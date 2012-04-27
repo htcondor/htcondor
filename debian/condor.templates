@@ -5,29 +5,31 @@ _Description: Condor configuration
 Template: condor/wantdebconf
 Type: boolean
 Default: false
-_Description: Manage initial configuration with Debconf?
- This package can create an appropriate initial configuration for a machine
- that shall join an existing Condor pool, or configure a fully functional
- "personal condor" installation by asking a few questions. The generated initial
- configuration can be further extended later on. If this configuration
- helper is undesired, Condor will be installed with a default configuration
- that needs to be customized manually.
+_Description: Manage initial Condor configuration automatically?
+ The setup for Condor can be handled automatically, asking a few questions
+ to create an initial configuration appropriate for a machine that is either
+ a member of an existing pool or a fully functional "personal Condor
+ installation". This generated initial configuration can be further extended
+ later on.
+ .
+ Otherwise, Condor will be installed with a default configuration that needs
+ to be customized manually.
 
 Template: condor/phonehome
 Type: boolean
 Default: false
-_Description: Enabled submission of usage statistics?
- The Condor authors kindly ask that each Condor pool sends them periodic updates
- with basic information about the status of the pool. Updates include only the
- number of total machines, the number of jobs submitted, the number of machines
- running jobs, the host name of the central manager, and the name of the pool.
- These updates help the Condor Team see how Condor is being used around the
- world.
+_Description: Enable submission of usage statistics?
+ The Condor authors politely request that each Condor pool sends them periodic
+ updates with basic information about the status of the pool. Updates include
+ only the total number of machines, the number of jobs submitted, the number
+ of machines running jobs, the host name of the central manager, and the name
+ of the pool. These updates help the Condor Team see how Condor is being used
+ around the world.
 
 Template: condor/centralmanager
 Type: string
 _Description: Address of the central manager:
- If this machine is supposed to join an existing Condor pool, the address of the
+ If this machine is intended to join an existing Condor pool, the address of the
  central manager machine has to be specified. Any address format supported
  by Condor can be used, including macro expressions.
  .
@@ -39,12 +41,13 @@ Choices-C: SCHEDD, STARTD, COLLECTOR:NEGOTIATOR
 __Choices: Job submission, Job execution, Central manager
 __Default: Job submission, Job execution
 _Description: Role of this machine in the Condor pool:
+ Please specify the intended role or roles of this machine, for which the
+ corresponding daemons will be started automatically.
+ .
  A machine in a Condor pool can have multiple roles. In general there is one
  central manager and multiple nodes that run jobs. Often the central manager
  is also the machine from which users submit jobs. However, it is also
  possible to have multiple machines available for job submission.
- By indicating the intended roles of this machine the Debian package will
- enable the corresponding daemons to be started automatically.
 
 Template: condor/admin
 Type: string
@@ -55,13 +58,14 @@ _Description: Email address of the local Condor administrator:
 
 Template: condor/uiddomain
 Type: string
-_Description: User id domain:
+_Description: User ID domain:
+# FIXME
  Condor uses this label to decide under which user account to run a particular
- job. If the UID domain on the submitting machine is different than the
+ job. If the UID domain on the submitting machine is different from the
  UID domain on the machine that runs your job, then Condor will automatically
  run the job as a user 'nobody'. If the UID domain is identical, Condor will
  run a job as the user that submitted the job. The UID domain needs to be
- a real domain name. When Condor sends e-mail about a job, it sends the
+ a real domain name. When Condor sends email about a job, it sends the
  e-mail to user@UID_DOMAIN. If this is left blank Condor will run all
  job on this machine as 'nobody'.
  .
@@ -71,27 +75,27 @@ _Description: User id domain:
 Template: condor/filesystemdomain
 Type: string
 _Description: File system domain label:
- This label is an arbitrary string that is used to decide if two machines (a
- submitting machine and an execute machine) share the same file system. Note
- that if you leave this parameter blank, Condor will automatically set the
- value to be the fully qualified hostname of the local machine, and consequently
- assume that any two machines don't share a file system. In a dedicated cluster
- all machines will most likely use a shared file system and hence should carry
- the same label.
+# FIXME
+ This label is an arbitrary string that is used to decide if a submitting
+ machine and an execute machine share the same file system. In a dedicated
+ cluster all machines will most likely use a shared file system and hence
+ should use the same label. If left blank, it will automatically be set to
+ the fully qualified hostname of the local machine, which will prevent
+ Condor assuming that any two machines share a file system.
  .
  Example: my_super_computer
 
 Template: condor/personal
 Type: boolean
 Default: true
-_Description: Perform a "Personal Condor" installation?
- A personal condor installation is a fully functional Condor pool on a single
+_Description: Perform a "personal Condor installation"?
+ A personal Condor installation is a fully functional Condor pool on a single
  machine. Condor will automatically configure and advertise as many slots as
  it detects CPU cores on this machine. Condor daemons will not be available
  through external network interfaces.
  .
- If this machine is supposed to join an existing pool or a new pool with more
- than one machine shall be created, a personal installation is not desired.
+ This configuration is not appropriate if this machine is intended to be a
+ member of a pool.
 
 Template: condor/reservedmemory
 Type: string
@@ -100,14 +104,14 @@ _Description: Amount of physical memory to withhold from Condor (in MB):
  available to be used by Condor jobs. If this value is defined,
  Condor subtracts it from the amount of memory it advertises as available.
  .
- Example setting to reserve 1GB: 1024
+ Example (to reserve 1 GB): 1024
 
 Template: condor/allowwrite
 Type: string
 _Description: Machines with write access to this host:
- All machines that shall participate in the Condor pool need to be listed here.
- This setting can be a plain list, a domain with wildcards or a macro
- expression. By default only the localhost is allows to access Condor daemons
+ All machines that are to participate in the Condor pool need to be listed
+ here. This setting can be a plain list, a domain with wildcards, or a macro
+ expression. By default only localhost is allowed to access Condor daemons
  on this machine.
  .
  Example: *.condor-pool.example.org
@@ -119,10 +123,10 @@ _Description: Run Condor jobs regardless of other machine activity?
  By default Condor only starts jobs when a machine is idle, i.e. no keyboard
  activity or CPU load for some time. Moreover, it also suspends jobs whenever
  there is console activity and doesn't continue them until the machine becomes
- idle again. However, for a dedicated compute node or a Personal Condor
+ idle again. However, for a dedicated compute node or a personal Condor
  installation it might be desirable to always start jobs as soon as they are
  submitted (given that resources are still available), and to run them
  continuously regardless of other activity on this machine.
  .
- If it is planned to compose a custom policy it is best to keep Condor's
- default here.
+ If you plan to compose a custom policy it is best to keep Condor's default
+ here.
