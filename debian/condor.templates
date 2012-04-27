@@ -8,7 +8,7 @@ Default: false
 _Description: Manage initial Condor configuration automatically?
  The setup for Condor can be handled automatically, asking a few questions
  to create an initial configuration appropriate for a machine that is either
- a member of an existing pool or a fully functional "personal Condor
+ a member of an existing pool or a fully functional "Personal Condor
  installation". This generated initial configuration can be further extended
  later on.
  .
@@ -53,7 +53,7 @@ Template: condor/admin
 Type: string
 Default: root@localhost
 _Description: Email address of the local Condor administrator:
- The condor administrator will receive error messages when something goes wrong
+ The condor administrator will receive error messages if something goes wrong
  with Condor on this machine.
 
 Template: condor/uiddomain
@@ -75,7 +75,6 @@ _Description: User ID domain:
 Template: condor/filesystemdomain
 Type: string
 _Description: File system domain label:
-# FIXME
  This label is an arbitrary string that is used to decide if a submitting
  machine and an execute machine share the same file system. In a dedicated
  cluster all machines will most likely use a shared file system and hence
@@ -83,13 +82,13 @@ _Description: File system domain label:
  the fully qualified hostname of the local machine, which will prevent
  Condor assuming that any two machines share a file system.
  .
- Example: my_super_computer
+ Example: my_shared_volume
 
 Template: condor/personal
 Type: boolean
 Default: true
-_Description: Perform a "personal Condor installation"?
- A personal Condor installation is a fully functional Condor pool on a single
+_Description: Perform a "Personal Condor installation"?
+ A Personal Condor installation is a fully functional Condor pool on a single
  machine. Condor will automatically configure and advertise as many slots as
  it detects CPU cores on this machine. Condor daemons will not be available
  through external network interfaces.
@@ -110,9 +109,9 @@ Template: condor/allowwrite
 Type: string
 _Description: Machines with write access to this host:
  All machines that are to participate in the Condor pool need to be listed
- here. This setting can be a plain list, a domain with wildcards, or a macro
- expression. By default only localhost is allowed to access Condor daemons
- on this machine.
+ here. This setting can be a plain comma-separated list, a domain with
+ wildcards, or a macro expression. By default only localhost is allowed to
+ access Condor daemons on this machine.
  .
  Example: *.condor-pool.example.org
 
@@ -123,7 +122,7 @@ _Description: Run Condor jobs regardless of other machine activity?
  By default Condor only starts jobs when a machine is idle, i.e. no keyboard
  activity or CPU load for some time. Moreover, it also suspends jobs whenever
  there is console activity and doesn't continue them until the machine becomes
- idle again. However, for a dedicated compute node or a personal Condor
+ idle again. However, for a dedicated compute node or a Personal Condor
  installation it might be desirable to always start jobs as soon as they are
  submitted (given that resources are still available), and to run them
  continuously regardless of other activity on this machine.
