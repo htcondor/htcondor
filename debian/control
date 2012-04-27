@@ -40,7 +40,7 @@ Description: distributed workload management system
  .
  This package can set up an appropriate initial configuration at install
  time for a machine intended either as a member of an existing Condor pool
- or as a "personal" (single machine) Condor pool.
+ or as a "Personal" (single machine) Condor pool.
 
 
 #Package: condor-tests
