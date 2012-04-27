@@ -1094,7 +1094,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += " )";
 
 	//Add on basic requirements to keep things sane.
-	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
+	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && (target.StageInStart is undefined || target.StageInFinish isnt undefined) && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
 	umbrella_constraint += JR_ATTR_ROUTED_BY;
 	umbrella_constraint += " isnt \"";
 	umbrella_constraint += m_job_router_name;
