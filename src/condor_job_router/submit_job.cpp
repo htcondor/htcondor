@@ -37,6 +37,7 @@
 #include "set_user_from_ad.h"
 #include "file_transfer.h"
 #include "exit.h"
+#include "spooled_job_files.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -248,20 +249,35 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	return res;
 }
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity, bool target_is_sandboxed)
 {
 	priv_state priv = set_user_priv_from_ad(ad);
 
 	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity,ad);
 
 	set_priv(priv);
+
+		// chown the src job sandbox to the user if appropriate
+	if( result == CJR_OK && !target_is_sandboxed ) {
+		ClassAd old_job_ad(ad); // TODO: get rid of this copy
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
+			if( !SpooledJobFiles::createJobSpoolDirectory(&old_job_ad,PRIV_USER) ) {
+				if( error_details ) {
+					error_details->sprintf("Failed to create/chown source job spool directory to the user.");
+				}
+				yield_job(ad,pool_name,schedd_name,true,cluster,proc,error_details,my_identity,false);
+				return CJR_ERROR;
+			}
+		}
+	}
+
 	return result;
 }
 
 
 
 
-bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool release_on_hold, bool *keep_trying) {
+bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, MyString * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -296,6 +312,14 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 				return false;
 			}
 			free(manager);
+		}
+	}
+
+		// chown the src job sandbox back to condor is appropriate
+	if( !target_is_sandboxed ) {
+		ClassAd old_job_ad(job_ad); // TODO: get rid of this copy
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
+			SpooledJobFiles::chownSpoolDirectoryToCondor(&old_job_ad);
 		}
 	}
 
@@ -344,7 +368,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 static bool yield_job_with_current_privs(
 	const char * pool_name, const char * schedd_name,
 	bool done, int cluster, int proc, MyString * error_details,
-	const char * my_identity, bool release_on_hold, bool *keep_trying,
+	const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying,
 	classad::ClassAd const &job)
 {
 	// Open a qmgr
@@ -362,7 +386,7 @@ static bool yield_job_with_current_privs(
 
 	//-------
 	// Do the actual yield
-	bool res = yield_job(done, cluster, proc, error_details, my_identity, release_on_hold, keep_trying);
+	bool res = yield_job(done, cluster, proc, job, error_details, my_identity, target_is_sandboxed, release_on_hold, keep_trying);
 	//-------
 
 
@@ -384,13 +408,13 @@ static bool yield_job_with_current_privs(
 
 bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
-	MyString * error_details, const char * my_identity, 
+	MyString * error_details, const char * my_identity, bool target_is_sandboxed,
         bool release_on_hold, bool *keep_trying)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,release_on_hold,keep_trying,ad);
+	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
 
 	set_priv(priv);
 
