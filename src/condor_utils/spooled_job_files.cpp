@@ -390,6 +390,8 @@ bool
 SpooledJobFiles::chownSpoolDirectoryToCondor(ClassAd const *job_ad)
 {
 	bool result = true;
+
+#ifndef WIN32
 	std::string sandbox;
 	int cluster=-1,proc=-1;
 
@@ -425,6 +427,8 @@ SpooledJobFiles::chownSpoolDirectoryToCondor(ClassAd const *job_ad)
 				 sandbox.c_str() );
 		result = false;
 	}
+
+#endif
 
 	return result;
 }
