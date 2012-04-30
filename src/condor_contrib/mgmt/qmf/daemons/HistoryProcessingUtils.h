@@ -25,7 +25,7 @@ using namespace qpid::types;
 void process_history_files();
 void ProcessHistoryDirectory();
 void ProcessOrphanedIndices();
-void ProcessCurrentHistory(bool do_reset = false);
+void ProcessCurrentHistory();
 bool PopulateVariantMapFromJob ( ClassAd& ad, Variant::Map& _map );
 
 #endif /* _HISTORYPROCESSINGUTILS_H */
