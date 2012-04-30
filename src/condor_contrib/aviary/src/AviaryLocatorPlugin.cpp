@@ -88,7 +88,7 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 	}
 
 	void invalidate_all() {
-		locator.invalidate_all();
+		locator.invalidateAll();
 	}
 
 	void

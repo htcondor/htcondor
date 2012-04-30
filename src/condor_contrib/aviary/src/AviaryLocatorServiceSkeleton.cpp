@@ -37,7 +37,7 @@ using namespace aviary::locator;
 LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*outCtx*/ , Locate* _locate)
 {
 	string error;
-	EndpointVectorType endpoints;
+	EndpointSetType endpoints;
 	LocateResponse* response = new LocateResponse;
 
     if (!locator.isPublishing()) {
@@ -54,7 +54,7 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
 		response->setStatus(new AviaryCommon::Status(new StatusCodeType("NO_MATCH"),""));
 	}
 	else {
-		for (EndpointVectorType::iterator it = endpoints.begin(); it != endpoints.end(); it++) {
+		for (EndpointSetType::iterator it = endpoints.begin(); it != endpoints.end(); it++) {
 			ResourceLocation* resLoc = new ResourceLocation;
 			ResourceID* resId = new ResourceID;
 			resId->setName((*it).Name.c_str());
