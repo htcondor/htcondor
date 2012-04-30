@@ -160,6 +160,8 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 
 		if( num_cpus ) *num_cpus = coreCount;
 		if( num_hyperthread_cpus ) *num_hyperthread_cpus = logicalCoreCount;
+
+		free(buffer);
 	}
 	else
 	{
