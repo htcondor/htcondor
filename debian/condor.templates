@@ -53,7 +53,7 @@ Template: condor/admin
 Type: string
 Default: root@localhost
 _Description: Email address of the local Condor administrator:
- The condor administrator will receive error messages if something goes wrong
+ The Condor administrator will receive error messages if something goes wrong
  with Condor on this machine.
 
 Template: condor/uiddomain
