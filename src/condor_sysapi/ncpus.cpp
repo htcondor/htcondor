@@ -114,7 +114,7 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
                             "GetLogicalProcessorInformation");
 		if(glpi == NULL)
 		{
-			EXCEPT("Error: To count physical processors while taking into account hyperthreading requires Windows XP SP3 or Windows Server 2003 SP1 or higher.\n");
+			EXCEPT("Error: COUNT_HYPERTHREAD_CPUS can only be set to false on Windows XP SP3 or Windows 2003 SP1 or higher.\n");
 		}
 		while(!done)
 		{
@@ -160,6 +160,8 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 
 		if( num_cpus ) *num_cpus = coreCount;
 		if( num_hyperthread_cpus ) *num_hyperthread_cpus = logicalCoreCount;
+
+		free(buffer);
 	}
 	else
 	{
