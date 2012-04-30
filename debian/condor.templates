@@ -58,19 +58,18 @@ _Description: Email address of the local Condor administrator:
 
 Template: condor/uiddomain
 Type: string
-_Description: User ID domain:
-# FIXME
- Condor uses this label to decide under which user account to run a particular
- job. If the UID domain on the submitting machine is different from the
- UID domain on the machine that runs your job, then Condor will automatically
- run the job as a user 'nobody'. If the UID domain is identical, Condor will
- run a job as the user that submitted the job. The UID domain needs to be
- a real domain name. When Condor sends email about a job, it sends the
- e-mail to user@UID_DOMAIN. If this is left blank Condor will run all
- job on this machine as 'nobody'.
+_Description: user directory domain label:
+ This label is a string that Condor uses to decide if a submitting
+ machine and an execute machine share the same directory of user accounts
+ (that is, whether UID 1000 on one machine is the same person as UID 1000
+ on the other). If the labels on the two machines match, Condor will run
+ each job under the UID that submitted the job, and send emails about
+ them to user@DOMAIN (using this label as the value of DOMAIN). If not,
+ Condor will run all jobs as user "nobody". Leaving it blank will cause
+ Condor to run all jobs on this machine as user "nobody".
  .
- Any domain format supported by Condor can be used, including macro expressions.
- Example: $(FULL_HOSTNAME)
+ Any domain format supported by Condor can be used, including macro
+ expressions. Example: $(FULL_HOSTNAME)
 
 Template: condor/filesystemdomain
 Type: string
