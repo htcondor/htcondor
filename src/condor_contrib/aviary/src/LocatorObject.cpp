@@ -64,17 +64,17 @@ LocatorObject::getPool() {
 
 void
 LocatorObject::locate(const string& name, const string& major, const string& minor, bool partials, 
-					  EndpointVectorType& matches)
+					  EndpointSetType& matches)
 {
 	dprintf(D_FULLDEBUG,"LocatorObject::locate: %s/%s/%s\n",name.c_str(),major.c_str(),minor.c_str());
 	for (EndpointMapType::iterator it = m_endpoints.begin(); it != m_endpoints.end(); it++) {
 		if (major == (*it).second.MajorType || major == "ANY") {
 			if (minor == (*it).second.MinorType || minor.empty()) {
 				if (!partials && name == (*it).second.Name) {
-					matches.push_back((*it).second);
+					matches.insert((*it).second);
 				}
 				else if (string::npos != (*it).second.Name.find(name)) {
-					matches.push_back((*it).second);
+					matches.insert((*it).second);
 				}
 			}
 		}
@@ -84,23 +84,30 @@ LocatorObject::locate(const string& name, const string& major, const string& min
 void
 LocatorObject::update (const ClassAd& ad)
 {
-	string uri;
-
-	if (!ad.LookupString(ENDPOINT_URI,uri)){
-		dprintf(D_ALWAYS,"LocatorObject: update ad doesn't contain %s attribute!\n",ENDPOINT_URI);
-		return;
-	}
-
-	EndpointMapType::iterator it = m_endpoints.find(uri.c_str());
+	Endpoint ep_new = createEndpoint(ad);
+	EndpointMapType::iterator it = m_endpoints.find(ep_new.Name);
 	if (it == m_endpoints.end()) {
-		m_endpoints[uri] = createEndpoint(ad);
-		dprintf(D_FULLDEBUG,"LocatorObject: added endpoint '%s'\n",uri.c_str());
-	}
-	else {
-		// found it so reset its heartbeat flag
-		(*it).second.missed_updates = 0;
-	}
-	
+		m_endpoints[ep_new.Name] = ep_new;
+		dprintf(D_FULLDEBUG,"LocatorObject: added endpoint '%s'\n",ep_new.EndpointUri.c_str());
+    }
+    else {
+        Endpoint& ep_old = (*it).second;
+        if (DebugFlags & D_FULLDEBUG) {
+            stringstream sold,snew; sold << ep_old; snew << ep_new;
+            dprintf(D_FULLDEBUG,"LocatorObject: comparing endpoint '%s' to '%s'\n",sold.str().c_str(),snew.str().c_str());
+        }
+        if (ep_new == ep_old) {
+            // found it so reset its heartbeat flag
+            ep_old.missed_updates = 0;
+        }
+        else {
+            // assume a new process has taken over this endpoint
+            m_endpoints.erase(it);
+            m_endpoints[ep_new.Name] = ep_new;
+            dprintf(D_FULLDEBUG,"LocatorObject: replaced endpoint for '%s'\n",ep_new.Name.c_str());
+        }
+    }
+
 	// debug
 	if (DebugFlags & D_FULLDEBUG) {
 		const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
@@ -110,14 +117,14 @@ LocatorObject::update (const ClassAd& ad)
 void
 LocatorObject::invalidate(const ClassAd& ad)
 {
-	string uri;
+	string name;
 
-	if (!ad.LookupString(ENDPOINT_URI,uri)){
-		dprintf(D_ALWAYS,"LocatorObject: invalidate ad doesn't contain %s attribute!\n",ENDPOINT_URI);
+	if (!ad.LookupString(ATTR_NAME,name)){
+		dprintf(D_ALWAYS,"LocatorObject: invalidate ad doesn't contain %s attribute!\n",ATTR_NAME);
 		return;
 	}
 
-	EndpointMapType::iterator it = m_endpoints.find(uri);
+	EndpointMapType::iterator it = m_endpoints.find(name);
 	if (it != m_endpoints.end()) {
 		dprintf(D_FULLDEBUG,"LocatorObject: removing endpoint '%s'\n",(*it).first.c_str());
 		m_endpoints.erase(it);
@@ -125,7 +132,7 @@ LocatorObject::invalidate(const ClassAd& ad)
 }
 
 void
-LocatorObject::invalidate_all() {
+LocatorObject::invalidateAll() {
 	m_endpoints.clear();
 }
 
@@ -137,6 +144,7 @@ LocatorObject::createEndpoint(const compat_classad::ClassAd& ad) {
 
 	STRING(MyAddress);
 	STRING(Name);
+    STRING(Machine);
 	STRING(EndpointUri);
 	STRING(MajorType);
 	STRING(MinorType);
