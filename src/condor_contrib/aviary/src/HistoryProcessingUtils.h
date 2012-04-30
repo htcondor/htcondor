@@ -26,7 +26,7 @@ namespace history {
 void process_history_files();
 void processHistoryDirectory();
 void processOrphanedIndices();
-void processCurrentHistory(bool do_reset = false);
+void processCurrentHistory();
 bool populateMapFromClassAd ( ClassAd& ad, AttributeMapType& _map );
 
 }}
