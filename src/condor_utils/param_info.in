@@ -10508,7 +10508,7 @@ id=603
 
 [JOB_DEFAULT_REQUESTMEMORY]
 aliases=
-default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,1) 
+default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 version=7.7.6
 range=.*
 state=default
