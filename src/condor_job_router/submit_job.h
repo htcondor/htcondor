@@ -45,8 +45,8 @@ enum ClaimJobResult {
 	arbitrary string, but should as uniquely as possible identify
 	this process.  "$(SUBSYS) /path/to/condor_config" is recommended.
 */
-ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0,
-	const char * my_identity = 0);
+ClaimJobResult claim_job(int cluster, int proc, MyString * error_details,
+	const char * my_identity, bool target_is_sandboxed);
 
 /*
 	As the above claim_job, but will attempt to create the qmgr connection
@@ -61,7 +61,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details = 0,
     The ClassAd is used to set priv state appropriately for manipulating
     the job through qmgmt.
 */
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0);
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity, bool target_is_sandboxed);
 
 
 /*
@@ -78,10 +78,10 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 		job, the yield attempt fails.  See claim_job for details
 		on suggested identity strings.
 */
-bool yield_job(bool done, int cluster, int proc, MyString * error_details = 0, const char * my_identity = 0, bool release_on_hold = true, bool *keep_trying = 0);
+bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, MyString * error_details = 0, const char * my_identity = 0, bool target_is_sandboxed=true, bool release_on_hold = true, bool *keep_trying = 0);
 bool yield_job(classad::ClassAd const &ad, const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
-	MyString * error_details = 0, const char * my_identity = 0,
+	MyString * error_details = 0, const char * my_identity = 0, bool target_is_sandboxed = true,
 	bool release_on_hold = true, bool *keep_trying = 0);
 
 /* 

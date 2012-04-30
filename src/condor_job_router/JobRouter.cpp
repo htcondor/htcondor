@@ -1009,7 +1009,7 @@ JobRouter::AdoptOrphans() {
 
 		MyString error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
-		if(!yield_job(*src_ad,NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(), m_release_on_hold)) {
+		if(!yield_job(*src_ad,NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(),true,m_release_on_hold)) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
@@ -1094,7 +1094,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += " )";
 
 	//Add on basic requirements to keep things sane.
-	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
+	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && (target.StageInStart is undefined || target.StageInFinish isnt undefined) && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
 	umbrella_constraint += JR_ATTR_ROUTED_BY;
 	umbrella_constraint += " isnt \"";
 	umbrella_constraint += m_job_router_name;
@@ -1267,7 +1267,7 @@ JobRouter::TakeOverJob(RoutedJob *job) {
 	if(job->state != RoutedJob::UNCLAIMED) return;
 
 	MyString error_details;
-	ClaimJobResult cjr = claim_job(job->src_ad,NULL,NULL,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str());
+	ClaimJobResult cjr = claim_job(job->src_ad,NULL,NULL,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str(), job->is_sandboxed);
 
 	switch(cjr) {
 	case CJR_ERROR: {
@@ -1988,7 +1988,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
-		if(!yield_job(job->src_ad,NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),m_release_on_hold,&keep_trying))
+		if(!yield_job(job->src_ad,NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),

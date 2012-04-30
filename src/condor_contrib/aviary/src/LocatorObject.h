@@ -32,12 +32,32 @@ struct Endpoint {
 	string      Name;
 	string		MajorType;
 	string		MinorType;
+    string      Machine;
     string      MyAddress;
 	string		EndpointUri;
 	int 		missed_updates;
+
+    // this is how we decided what is replaceable
+    bool operator==(const Endpoint& ep) {
+        return  (this->MyAddress == ep.MyAddress) && 
+                (this->Name == ep.Name);
+    };
+
+    friend std::stringstream& operator<< (std::stringstream &out, Endpoint& ep)
+    {
+        out << ep.Name << "/" << ep.MyAddress;
+        return out;
+    };
+
 };
 
-typedef vector<Endpoint> EndpointVectorType;
+struct CompEndpoints {
+    bool operator()(const Endpoint& a, const Endpoint& b) const {
+        return a.Name < b.Name;
+    }
+};
+
+typedef set<Endpoint,CompEndpoints> EndpointSetType;
 typedef map<string, Endpoint> EndpointMapType;
 
 class LocatorObject
@@ -46,12 +66,12 @@ public:
 
 	// SOAP-facing method
 	void locate(const string& name, const string& major, const string& minor, bool partials, 
-				EndpointVectorType& matches);
+				EndpointSetType& matches);
 
 	// daemonCore-facing methods
 	void update(const ClassAd& ad);
 	void invalidate(const ClassAd& ad);
-	void invalidate_all();
+	void invalidateAll();
 	void pruneMissingEndpoints(int max_misses);
     bool isPublishing();
 
