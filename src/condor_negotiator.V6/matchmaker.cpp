@@ -286,6 +286,7 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+    accept_surplus = false;
     autoregroup = false;
     allow_quota_oversub = false;
 
@@ -1442,7 +1443,8 @@ negotiationTime ()
                 allocated_total += group->allocated;
                 if (group->allocated > 0) served_groups += 1;
                 else if (group->requested > 0) unserved_groups += 1;
-                maxdelta = max(maxdelta, max(0.0, group->allocated - group->usage));
+                double target = (accept_surplus) ? group->allocated : group->quota;
+                maxdelta = max(maxdelta, max(0.0, target - group->usage));
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
@@ -1516,12 +1518,15 @@ negotiationTime ()
 		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
-                    double delta = max(0.0, group->allocated - group->usage);
+                    // if allocating surplus, use allocated, otherwise just use the group's quota directly
+                    double target = (accept_surplus) ? group->allocated : group->quota;
+
+                    double delta = max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
                     // we just got allocated, so just negotiate for what we were allocated.
-                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : group->allocated;
+                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
                     // Defensive -- do not exceed allocated slots
-                    slots = min(slots, group->allocated);
+                    slots = min(slots, target);
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
@@ -1658,7 +1663,7 @@ void Matchmaker::hgq_construct_tree() {
 
     allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
 
-    bool accept_surplus = false;
+    accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
     const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
@@ -1738,10 +1743,6 @@ void Matchmaker::hgq_construct_tree() {
         group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
         if (group->autoregroup) autoregroup = true;
         if (group->accept_surplus) accept_surplus = true;
-    }
-
-    if (autoregroup && accept_surplus) {
-        EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
     // Set the root group's autoregroup state to match the effective global value for autoregroup
@@ -1952,12 +1953,6 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
 
     // Nothing to allocate
     if (surplus <= 0) return 0;
-
-    // If we are in autoregroup mode, proportional surplus allocation is disabled
-    if (autoregroup) {
-        dprintf(D_ALWAYS, "group quotas: autoregroup mode: proportional surplus allocation disabled\n");
-        return surplus;
-    }
 
     // If entire subtree requests nothing, halt now
     if (group->subtree_requested <= 0) return surplus;
