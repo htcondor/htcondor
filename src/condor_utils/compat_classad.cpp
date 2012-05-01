@@ -1392,7 +1392,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 0 : 1;
 				rc = 1;
 			}
 		}
