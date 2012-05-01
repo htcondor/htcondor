@@ -1202,13 +1202,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			char *tmp = param(knob.Value());
 			if( tmp ) {
 				ExprTree *tree = NULL;
-				EvalResult result;
+				classad::Value result;
+				int val;
 				ParseClassAdRvalExpr(tmp, tree);
 				if ( tree &&
-					 EvalExprTree(tree,req_classad,mach_classad,&result) &&
-					 result.type == LX_INTEGER )
+					 EvalExprTree(tree,req_classad,mach_classad,result) &&
+					 result.IsIntegerValue(val) )
 				{
-					req_classad->Assign(resources[i],result.i);
+					req_classad->Assign(resources[i],val);
 
 				}
 				if (tree) delete tree;

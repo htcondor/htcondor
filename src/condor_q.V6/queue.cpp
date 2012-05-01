@@ -3416,7 +3416,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-	EvalResult	eval_result;
+	classad::Value	eval_result;
+	bool	val;
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
@@ -3550,8 +3551,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-			if( EvalExprTree( stdRankCondition, offer, request, &eval_result ) &&
-					eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
+			if( EvalExprTree( stdRankCondition, offer, request, eval_result ) &&
+				eval_result.IsBooleanValue(val) && val ) {
 				// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
 					return_buff );
@@ -3581,12 +3582,12 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		}
 
 		// 4. Satisfies preemption priority condition?
-		if( EvalExprTree( preemptPrioCondition, offer, request, &eval_result ) &&
-			eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
+		if( EvalExprTree( preemptPrioCondition, offer, request, eval_result ) &&
+			eval_result.IsBooleanValue(val) && val ) {
 
 			// 5. Satisfies standard rank condition?
-			if( EvalExprTree( stdRankCondition, offer , request , &eval_result ) &&
-				eval_result.type == LX_INTEGER && eval_result.i == TRUE )  
+			if( EvalExprTree( stdRankCondition, offer , request , eval_result ) &&
+				eval_result.IsBooleanValue(val) && val )  
 			{
 				if( verbose )
 					sprintf( return_buff, "%sAvailable\n", return_buff );
@@ -3594,12 +3595,12 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if( EvalExprTree( preemptRankCondition, offer, request, &eval_result ) &&
-					eval_result.type == LX_INTEGER && eval_result.i == TRUE )
+				if( EvalExprTree( preemptRankCondition, offer, request, eval_result ) &&
+					eval_result.IsBooleanValue(val) && val )
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if( EvalExprTree( preemptionReq, offer , request , &eval_result ) &&
-						eval_result.type == LX_INTEGER && eval_result.i == FALSE ) 
+					if( EvalExprTree( preemptionReq, offer , request , eval_result ) &&
+						eval_result.IsBooleanValue(val) && !val ) 
 					{
 						fPreemptReqTest++;
 						if (fPreemptReqTest != 1) {

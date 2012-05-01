@@ -192,11 +192,12 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 	m_auxid("")
 {
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
-	EvalResult val;
+	classad::Value val;
+	const char *str;
 	if ( ad && tree && 
-		 EvalExprTree(tree,ad,NULL,&val) && val.type==LX_STRING && val.s )
+		 EvalExprTree(tree,ad,NULL,val) && val.IsStringValue(str) )
 	{
-		m_auxid = val.s;
+		m_auxid = str;
 	}
 }
 

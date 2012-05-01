@@ -2332,30 +2332,31 @@ DedicatedScheduler::computeSchedule( void )
 
 				busy_resources->Rewind();
 				while (ClassAd *machine = busy_resources->Next()) {
-					EvalResult result;
+					classad::Value result;
 					bool requirement = false;
 
 						// See if this machine has a true
 						// SCHEDD_PREEMPTION_REQUIREMENT
 					requirement = EvalExprTree( preemption_req, machine, job,
-												&result );
+												result );
 					if (requirement) {
-						if (result.type == LX_INTEGER) {
-							requirement = result.i;
+						bool val;
+						if (result.IsBooleanValue(val)) {
+							requirement = val;
 						}
 					}
 
 						// If it does
 					if (requirement) {
-						float rank = 0.0;
+						double rank = 0.0;
 
 							// Evaluate its SCHEDD_PREEMPTION_RANK in
 							// the context of this job
 						int rval;
 						rval = EvalExprTree( preemption_rank, machine, job,
-											 &result );
-						if( !rval || result.type != LX_FLOAT) {
-								// The result better be a float
+											 result );
+						if( !rval || !result.IsNumber(rank) ) {
+								// The result better be a number
 							const char *s = ExprTreeToString( preemption_rank );
 							char *m = NULL;
 							machine->LookupString( ATTR_NAME, &m );
@@ -2365,7 +2366,6 @@ DedicatedScheduler::computeSchedule( void )
 							free(m);
 							continue;
 						}
-						rank = result.f;
 						preempt_candidate_array[num_candidates].rank = rank;
 						preempt_candidate_array[num_candidates].cluster_id = cluster;
 						preempt_candidate_array[num_candidates].machine_ad = machine;

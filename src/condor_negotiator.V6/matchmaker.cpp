@@ -2835,7 +2835,7 @@ obtainAdsFromCollector (
 				ExprTree *expr = NULL;
 				::ParseClassAdRvalExpr(exprStr, expr); // expr will be null on error
 
-				int replace = true;
+				bool replace = true;
 				if (expr == NULL) {
 					// error evaluating expression
 					dprintf(D_ALWAYS, "Can't compile STARTD_AD_REEVAL_EXPR %s, treating as TRUE\n", exprStr);
@@ -2844,16 +2844,13 @@ obtainAdsFromCollector (
 
 						// Expression is valid, now evaluate it
 						// old ad is "my", new one is "target"
-					EvalResult er;
-					int evalRet = EvalExprTree(expr, oldAd, ad, &er);
+					classad::Value er;
+					int evalRet = EvalExprTree(expr, oldAd, ad, er);
 
-					if( !evalRet || (er.type != LX_BOOL && er.type != LX_INTEGER)) {
+					if( !evalRet || !er.IsBooleanValueEquiv(replace) ) {
 							// Something went wrong
 						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
 						replace = true;
-					} else {
-							// evaluation OK, result type bool
-						replace = er.i;
 					}
 
 						// But, if oldAd was null (i.e.. the first time), always replace
@@ -3502,14 +3499,13 @@ float Matchmaker::
 EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
                         ClassAd &request,ClassAd *resource)
 {
-	EvalResult result;
+	classad::Value result;
 	float rank = -(FLT_MAX);
 
-	if(expr && EvalExprTree(expr,resource,&request,&result)) {
-		if( result.type == LX_FLOAT ) {
-			rank = result.f;
-		} else if( result.type == LX_INTEGER ) {
-			rank = result.i;
+	if(expr && EvalExprTree(expr,resource,&request,result)) {
+		double val;
+		if( result.IsNumber(val) ) {
+			rank = (float)val;
 		} else {
 			dprintf(D_ALWAYS, "Failed to evaluate %s "
 			                  "expression to a float.\n",expr_name);
@@ -3578,7 +3574,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	bool			newBestFound;
 		// to store results of evaluations
 	string remoteUser;
-	EvalResult		result;
+	classad::Value	result;
+	bool			val;
 	float			tmp;
 		// request attributes
 	int				requestAutoCluster = -1;
@@ -3771,8 +3768,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						machine_name.Value(), cluster_id, proc_id);
 				continue;
 			}
-			if ( !(EvalExprTree(rankCondStd, candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE) ) {
+			if ( !(EvalExprTree(rankCondStd, candidate, &request, result) && 
+				   result.IsBooleanValue(val) && val) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 
@@ -3792,8 +3789,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		//       tested above for the only condition we care about.
 		if ( (remoteUser != "") &&
 			 (!only_for_startdrank) ) {
-			if( EvalExprTree(rankCondStd, candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE ) {
+			if( EvalExprTree(rankCondStd, candidate, &request, result) && 
+				result.IsBooleanValue(val) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -3806,8 +3803,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) {
+					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					  result.IsBooleanValue(val) && val) ) {
 					rejPreemptForPolicy++;
 					dprintf(D_MACHINE,
 							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
@@ -3817,8 +3814,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,&result)&&
-						result.type == LX_INTEGER && result.i == TRUE ) ) {
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
 					dprintf(D_MACHINE,
@@ -4680,10 +4677,11 @@ cache_still_valid(ClassAd &request, ExprTree *preemption_req, ExprTree *preempti
 		}
 		
 		if ( next_entry->PreemptStateValue == PRIO_PREEMPTION ) {
-			EvalResult result;
+			classad::Value result;
+			bool val;
 			if (preemption_req && 
-				!(EvalExprTree(preemption_req,next_entry->ad,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) 
+				!(EvalExprTree(preemption_req,next_entry->ad,&request,result) &&
+				  result.IsBooleanValue(val) && val) ) 
 			{
 				dprintf(D_FULLDEBUG,
 					"Cache invalidated due to preemption_requirements\n");
