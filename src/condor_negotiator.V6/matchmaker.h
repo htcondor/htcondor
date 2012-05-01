@@ -454,6 +454,7 @@ class Matchmaker : public Service
         string hgq_root_name;
         vector<GroupEntry*> hgq_groups;
         map<string, GroupEntry*> group_entry_map;
+        bool accept_surplus;
         bool autoregroup;
 
         void hgq_construct_tree();

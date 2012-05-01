@@ -65,6 +65,11 @@ as visible in the \Condor{gridmanager} daemon log.
 to properly respect hierarchical group quotas.
 \Ticket{2570}
 
+\item Added logic to the \Condor{negotiator} to negotiate with full group 
+quota instead of allocated-slots when no surplus sharing is in effect, to
+address a bug where groups could fail to claim weighted slots.
+\Ticket{2958}
+
 \item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
 \Prog{glexec}.  
 When \Prog{glexec} was configured in log-only mode, 
