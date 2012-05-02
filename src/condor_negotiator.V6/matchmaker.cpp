@@ -1263,6 +1263,7 @@ negotiationTime ()
 
             if (autoregroup) {
                 dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+                hgq_root_group->quota = hgq_total_quota;
                 hgq_root_group->allocated = hgq_total_quota;
             }
 
