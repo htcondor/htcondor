@@ -948,7 +948,7 @@ processCommandLineArguments (int argc, char *argv[])
 	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
+	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1265,7 +1265,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
-				attrs.initializeFromString("ClusterId\nProcID"); // this is needed to prevent some DAG code from faulting.
+				attrs.initializeFromString("ClusterId\nProcId"); // this is needed to prevent some DAG code from faulting.
 			}
 			GetAllReferencesFromClassAdExpr(argv[i+2],attrs);
 				
@@ -1286,7 +1286,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
-				attrs.initializeFromString("ClusterId\nProcID"); // this is needed to prevent some DAG code from faulting.
+				attrs.initializeFromString("ClusterId\nProcId"); // this is needed to prevent some DAG code from faulting.
 			}
 			bool flabel = false;
 			bool fCapV  = false;
