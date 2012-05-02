@@ -8888,7 +8888,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 		 */
 
 	if( dprintf_lock_delay > 0.01 ) {
-		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its debug file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
+		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its log file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
 	}
 	if( dprintf_lock_delay > 0.1 ) {
 			// things are looking serious, so let's send mail
@@ -8903,7 +8903,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 			if( mailer ) {
 				fprintf(mailer,
 						"\n\nThe %s's child process with pid %d has spent %.1f%% of its time waiting\n"
-						"for a lock to its debug file.  This could indicate a scalability limit\n"
+						"for a lock to its log file.  This could indicate a scalability limit\n"
 						"that could cause system stability problems.\n",
 						get_mySubSystem()->getName(),
 						child_pid,
