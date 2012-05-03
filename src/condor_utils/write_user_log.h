@@ -25,7 +25,7 @@
    reliance on other Condor files to ease distribution.  -Jim B. */
 
 #include "condor_event.h"
-
+#include <string>
 #define XML_USERLOG_DEFAULT 0
 
 #ifdef HAVE_SYS_TYPES_H
