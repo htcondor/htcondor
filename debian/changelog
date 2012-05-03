@@ -1,3 +1,17 @@
+condor (7.7.6~dfsg.1-3) experimental; urgency=low
+
+  * Temporarily drop cgroups dependency and, consequently, support for cgroups
+    in Condor. The cgroups package is not in the condition to migrate into
+    wheezy, hence blocking Condor's migration as well. cgroups maintainer
+    suggests to drop this dependency for now.
+    http://lists.debian.org/debian-devel/2012/04/msg00617.html
+  * Improved Debconf templates after review by debian-l10n-english. Thanks
+    to Justin B. Rye and Christian Perrier.
+  * Add Debconf template translations:
+    - Danish -- courtesy of Joe Dalton (Closes: #671090).
+
+ -- Michael Hanke <mih@debian.org>  Wed, 02 May 2012 08:13:55 +0200
+
 condor (7.7.6~dfsg.1-2) unstable; urgency=low
 
   * Add upstream patch to address FTBFS on ia64 and s390x (Closes: #670393).
