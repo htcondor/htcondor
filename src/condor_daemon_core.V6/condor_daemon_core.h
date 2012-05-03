@@ -172,15 +172,17 @@ typedef enum {
 // constants for the DaemonCore::Create_Process job_opt_mask bitmask
 
 const int DCJOBOPT_SUSPEND_ON_EXEC  = (1<<1);
-const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
+const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);        // do not pass our env or CONDOR_INHERIT to the child
 const int DCJOBOPT_NEVER_USE_SHARED_PORT   = (1<<3);
 const int DCJOBOPT_NO_UDP           = (1<<4);
+const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHERIT to the child
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
 #define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
 #define HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(mask) ((mask)&DCJOBOPT_NEVER_USE_SHARED_PORT)
 #define HAS_DCJOBOPT_NO_UDP(mask) ((mask)&DCJOBOPT_NO_UDP)
+#define HAS_DCJOBOPT_CONDOR_ENV_INHERIT(mask)  (!((mask)&DCJOBOPT_NO_CONDOR_ENV_INHERIT))
 
 // structure to be used as an argument to Create_Process for tracking process
 // families

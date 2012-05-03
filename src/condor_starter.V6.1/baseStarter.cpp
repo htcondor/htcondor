@@ -946,9 +946,9 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.Value());
 	}
 
-    int setup_opt_mask = 0;
+    int setup_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
     if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
-        setup_opt_mask =  DCJOBOPT_NO_ENV_INHERIT;
+        setup_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
     }
 
 	if( !preferred_shells.IsEmpty() ) {
