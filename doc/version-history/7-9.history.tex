@@ -45,6 +45,30 @@ and improved its ability to detect parse failures closer to the point of corrupt
 a given daemon to be evaluated with respect to that daemon's ClassAd.
 \Ticket{856}
 
+\item Added new capability to \Condor{submit} to allow recursive macros in
+submit files. This facility allows one to update variables recursively.  An
+example of a construction that works is the following: \texttt{foo = bar},
+followed by \texttt{foo =  snap \$(foo)}.  Then the value of foo will be
+\texttt{foo = snap bar}.  Previously, this would send \Condor{submit} into an
+infinite loop of expanding the macro so that the expansion would be \texttt{foo
+= snap bar bar ...}, filling up memory with copies of ``\texttt{bar}''. Note
+that both left- and right- recursion works.  The construction \texttt{foo =
+\$(foo) bar} by itself will not work, as it does not have an initial base case.
+Mutually recursive constructions such as: \texttt{B = bar}, \texttt{C = \$(B)},
+and \texttt{B= \$(C) boo} will also fill memory with expansions.
+\Ticket{406}
+
+\item Removed restriction on having macros in submit files for \Condor{dagman}
+\Ticket{2428}
+
+\item \Condor{dagman} now uses, by default, watches only its default node
+userlog for events.  DAGman now requests the schedd and shadow to write each
+event to the default log, i.e., $\langle$DAG file$\rangle$.nodes.log, along
+with whatever log is specified by the user.  DAGman only writes POST Script
+TERMINATE events to its default log, not to the user log.  DAGman specifies
+that the default user log is in plain text format, not XML format.
+\Ticket{2807}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
