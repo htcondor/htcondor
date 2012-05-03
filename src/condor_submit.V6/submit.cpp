@@ -133,7 +133,7 @@ int		DisableFileChecks = 0;
 int		JobDisableFileChecks = 0;
 bool	RequestMemoryIsZero = false;
 bool	RequestDiskIsZero = false;
-bool	RequestCpusIsZero = false;
+bool	RequestCpusIsZeroOrOne = false;
 bool	already_warned_requirements_mem = false;
 bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
@@ -2109,6 +2109,7 @@ SetMachineCount()
 		InsertJobExpr (buffer);
 
 		request_cpus = 1;
+		RequestCpusIsZeroOrOne = true;
 	} else {
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( mach_count ) { 
@@ -2125,32 +2126,35 @@ SetMachineCount()
 			InsertJobExpr (buffer);
 
 			request_cpus = tmp;
+			RequestCpusIsZeroOrOne = (request_cpus == 0 || request_cpus == 1);
 		}
 	}
 
 	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
 		if (MATCH == strcasecmp(mach_count, "undefined")) {
-			RequestCpusIsZero = true;
+			RequestCpusIsZeroOrOne = true;
 		} else {
 			buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
-			RequestCpusIsZero = (MATCH == strcmp(mach_count, "0"));
+			InsertJobExpr(buffer);
+			RequestCpusIsZeroOrOne = ((MATCH == strcmp(mach_count, "0")) || (MATCH == strcmp(mach_count, "1")));
 		}
 		free(mach_count);
 	} else 
 	if (request_cpus > 0) {
 		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+		InsertJobExpr(buffer);
 	} else 
 	if ((mach_count = param("JOB_DEFAULT_REQUESTCPUS"))) {
 		if (MATCH == strcasecmp(mach_count, "undefined")) {
-			RequestCpusIsZero = true;
+			RequestCpusIsZeroOrOne = true;
 		} else {
 			buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
-			RequestCpusIsZero = (MATCH == strcmp(mach_count, "0"));
+			InsertJobExpr(buffer);
+			RequestCpusIsZeroOrOne = ((MATCH == strcmp(mach_count, "0")) || (MATCH == strcmp(mach_count, "1")));
 		}
 		free(mach_count);
 	}
 
-	InsertJobExpr(buffer);
 }
 
 struct SimpleExprInfo {
@@ -6672,7 +6676,7 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GRID ) {
-		if ( ! checks_cpus && ! RequestCpusIsZero && job->Lookup(ATTR_REQUEST_CPUS)) {
+		if ( ! checks_cpus && ! RequestCpusIsZeroOrOne && job->Lookup(ATTR_REQUEST_CPUS)) {
 			answer += " && (TARGET.Cpus >= RequestCpus)";
 		}
 	}
