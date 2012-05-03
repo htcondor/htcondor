@@ -5550,7 +5550,7 @@ void CreateProcessForkit::exec() {
 
 		// if I have brought in the parent's environment, then ensure that
 		// after the caller's changes have been enacted, this overrides them.
-	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
+	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(m_job_opt_mask) ) {
 
 			// add/override the inherit variable with the correct value
 			// for this process.
