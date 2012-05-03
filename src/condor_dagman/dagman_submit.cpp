@@ -230,7 +230,7 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory, const char *logFile,
+			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
@@ -307,11 +307,20 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
-	if ( logFile ) {
+	if( appendDefaultLog ) {
 		args.AppendArg( "-a" );
-		MyString logFileArg = MyString(
-					"log = " ) + logFile;
-		args.AppendArg( logFileArg.Value() );
+		std::string dlog("log = $(log);");
+		dlog += defaultLog;
+		args.AppendArg(dlog.c_str());
+	} else {
+		args.AppendArg( "-a" );
+		std::string dlog("log = ");
+		dlog += defaultLog;
+		args.AppendArg(dlog.c_str());
+			// We are using the default log
+			// Never let it be XML
+		args.AppendArg( "-a" );
+		args.AppendArg( "log_xml = False");
 	}
 
 	ArgList parentNameArgs;

@@ -844,7 +844,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	ASSERT ( _isSplice == false );
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
-		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr, DefaultNodeLog() );
 
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
@@ -908,7 +908,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr, DefaultNodeLog() );
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -1760,15 +1760,14 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// write to the user log also fails, and DAGMan hangs
 			// waiting for the event that wasn't written).
 		ulog.setEnableGlobalLog( false );
-		ulog.setUseXML( job->GetLogFileIsXml() );
 			// For NOOP jobs, we need the proc and subproc values;
 			// for "real" jobs, they are not significant.
 		int procID = job->GetNoop() ? job->_CondorID._proc : 0;
 		int subprocID = job->GetNoop() ? job->_CondorID._subproc : 0;
-		const char* s = job->GetLogFile();
+		const char* s = DefaultNodeLog();
 		debug_printf(DEBUG_QUIET,"Initializing logfile %s, %d, %d, %d\n",
 			s?s:"(unknown)",job->_CondorID._cluster,procID,subprocID);
-		ulog.initialize( job->GetLogFile(), job->_CondorID._cluster,
+		ulog.initialize( DefaultNodeLog(), job->_CondorID._cluster,
 					 	procID, subprocID, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
@@ -3747,11 +3746,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							node->GetLogFile(), node->GetLogFileIsXml() );
+							DefaultNodeLog(), false );
 
 			} else {
-				const char *logFile = node->UsingDefaultLog() ?
-							node->GetLogFile() : NULL;
 					// Note: assigning the ParentListString() return value
 					// to a variable here, instead of just passing it directly
 					// to condor_submit(), fixes a memory leak(!).
@@ -3760,16 +3757,15 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents,
 							node->varNamesFromDag, node->varValsFromDag,
-							node->GetDirectory(), logFile,
-							ProhibitMultiJobs(),
-							node->NumChildren() > 0 && dm._claim_hold_time > 0);
+							node->GetDirectory(), DefaultNodeLog(), node->UseDefaultLog(),
+							ProhibitMultiJobs(), node->NumChildren() > 0 && dm._claim_hold_time > 0);
 			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							node->GetLogFile(), node->GetLogFileIsXml() );
+							DefaultNodeLog(), false );
 
 			} else {
       			submit_success = stork_submit( dm, cmd_file.Value(), condorID,
@@ -3842,7 +3838,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr, DefaultNodeLog() );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.

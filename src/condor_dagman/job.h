@@ -364,21 +364,7 @@ class Job {
 		@return true if successful, false if failed
 	*/
 	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
-				ReadMultipleUserLogs &storkLogReader );
-
-		// Whether this node is using the default node log file.
-	bool UsingDefaultLog() { return _useDefaultLog; }
-
-	/** Get the log file for this node.
-		@return the name of this node's log file.
-	*/
-	const char *GetLogFile() const { return _logFile; }
-
-	/** Get whether this node's log file is XML (versus "standard"
-		format).
-		@return true iff the log file is XML.
-	*/
-	bool GetLogFileIsXml() const { return _logFileIsXml; }
+				ReadMultipleUserLogs &storkLogReader, const char* defaultLog );
 
 	/** Get the jobstate.log job tag for this node.
 		@return The job tag (can be "local"; if no tag is specified,
@@ -491,6 +477,7 @@ class Job {
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
+	bool UseDefaultLog() const { return append_default_log; }
 
 private:
 		// Mark this node as failed because of an error in monitoring
@@ -556,20 +543,6 @@ private:
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
-		// Whether this node's log file is currently being monitored.
-	bool _logIsMonitored;
-
-		// Whether this node uses the default user log file.
-	bool _useDefaultLog;
-
-		// The log file for this job -- it will be assigned the default
-		// log file name if no log file is specified in the submit file.
-	char *_logFile;
-
-		// Whether the log file is XML.
-	bool _logFileIsXml;
-
-
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).
 	bool _noop;
@@ -604,6 +577,7 @@ private:
 
 	// whether this is a final job
 	bool _final;
+	bool append_default_log;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
