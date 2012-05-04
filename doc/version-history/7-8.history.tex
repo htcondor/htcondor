@@ -50,6 +50,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed potential startd crash introduced in v7.7.5 when claiming 
+a partitionable slot that was in the Owner state. 
+\Ticket{2936}
+
 \item When ClassAd function stringListMember() is called with an empty
 string as the second argument, it now evaluates to \Expr{False}.
 Previously, it incorrectly evaluated to \Expr{Undefined}.
