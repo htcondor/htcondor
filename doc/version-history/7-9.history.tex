@@ -58,15 +58,20 @@ Mutually recursive constructions such as: \texttt{B = bar}, \texttt{C = \$(B)},
 and \texttt{B= \$(C) boo} will also fill memory with expansions.
 \Ticket{406}
 
-\item Removed restriction on having macros in submit files for \Condor{dagman}
+\item Removed restriction on having macros in the "log" directive in submit
+files for \Condor{dagman}
 \Ticket{2428}
 
-\item \Condor{dagman} now uses, by default, watches only its default node
+\item \Condor{dagman} now uses and watches, by default, only its default node
 userlog for events.  DAGman now requests the schedd and shadow to write each
 event to the default log, i.e., $\langle$DAG file$\rangle$.nodes.log, along
-with whatever log is specified by the user.  DAGman only writes POST Script
-TERMINATE events to its default log, not to the user log.  DAGman specifies
-that the default user log is in plain text format, not XML format.
+with whatever log is specified by the user.  \Condor{dagman} only writes POST
+Script TERMINATE events to its default log, not to the user log. This can be
+turned off by setting the configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to False.  In particular,
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to false if this newer
+version of \Condor{dagman} is submitting jobs to an older version of
+\Condor{schedd} or using an older version of \Condor{submit}
 \Ticket{2807}
 
 \end{itemize}
