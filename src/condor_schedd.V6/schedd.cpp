@@ -11931,7 +11931,9 @@ Scheduler::publish( ClassAd *cad ) {
 	
 	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
 	cad->Assign( ATTR_DISK, (int)disk_space );
-	
+
+	cad->Assign( ATTR_CPUS, 1 );
+
 		// -------------------------------------------------------
 		// Local Universe Attributes
 		// -------------------------------------------------------
