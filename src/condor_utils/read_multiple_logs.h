@@ -66,7 +66,7 @@ public:
 				or "" if unsuccessful
 		 */
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
-			const MyString &directory);
+			const MyString &directory, bool &isXml);
 
 		/** Gets the specified value from a submit file (looking for the
 			syntax <keyword> = <value>).

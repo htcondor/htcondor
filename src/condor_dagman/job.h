@@ -355,7 +355,7 @@ class Job {
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-				bool recovery, const char *defaultNodeLog );
+				bool recovery, const char *defaultNodeLog, bool usingDefault );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -364,7 +364,21 @@ class Job {
 		@return true if successful, false if failed
 	*/
 	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
-				ReadMultipleUserLogs &storkLogReader, const char* defaultLog );
+				ReadMultipleUserLogs &storkLogReader );
+
+		// Whether this node is using the default node log file.
+	bool UsingDefaultLog() const { return _useDefaultLog; }
+
+	/** Get the log file for this node.
+		@return the name of this node's log file.
+	*/
+	const char *GetLogFile() const { return _logFile; }
+
+	/** Get whether this node's log file is XML (versus "standard"
+		format).
+		@return true iff the log file is XML.
+	*/
+	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
 	/** Get the jobstate.log job tag for this node.
 		@return The job tag (can be "local"; if no tag is specified,
@@ -542,6 +556,20 @@ private:
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
+
+		// Whether this node's log file is currently being monitored.
+	bool _logIsMonitored;
+
+		// Whether this node uses the default user log file.
+	bool _useDefaultLog;
+
+		// The log file for this job -- it will be assigned the default
+		// log file name if no log file is specified in the submit file.
+	char *_logFile;
+
+		// Whether the log file is XML.
+	bool _logFileIsXml;
+
 
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).

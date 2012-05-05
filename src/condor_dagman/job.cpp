@@ -75,6 +75,7 @@ Job::~Job() {
     // as of 6/2004 we don't yet use that.  For details, see:
     // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
 	delete [] _jobName;
+	delete [] _logFile;
 
 	varNamesFromDag->Rewind();
 	MyString *name;
@@ -119,6 +120,8 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
+	_logIsMonitored = false;
+	_useDefaultLog = false;
 
     // _condorID struct initializes itself
 
@@ -142,6 +145,9 @@ Job::Job( const job_type_t jobType, const char* jobName,
 
 	_hasNodePriority = false;
 	_nodePriority = 0;
+
+	_logFile = NULL;
+	_logFileIsXml = false;
 
 	_noop = false;
 
@@ -200,9 +206,10 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 bool
 Job::CheckForLogFile() const
 {
+	bool tmpLogFileIsXml;
 	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-				_directory );
-	return  (logFile != "");
+				_directory, tmpLogFileIsXml );
+	return (logFile != "");
 }
 
 //---------------------------------------------------------------------------
@@ -775,25 +782,28 @@ Job::SetDagFile(const char *dagFile)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-			bool recovery, const char *defaultNodeLog )
+			bool recovery, const char *defaultNodeLog, bool usingDefault )
 {
 	debug_printf( DEBUG_DEBUG_2,
 				"Attempting to monitor log file for node %s\n",
 				GetJobName() );
 
+	if ( _logIsMonitored ) {
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
+					"%s is already monitored\n", GetJobName() );
+		return true;
+	}
+
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
 
-    MyString logFileStr;
+    std::string logFileStr;
 	if ( _jobType == TYPE_CONDOR ) {
-			// All we really want to know here is if the user has defined
-			// a UserLog.  If not, there is nothing to append to
-    	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-					_directory );
-		if ( logFileStr == "" ) {
-			append_default_log = false;
-		}
-		logFileStr = defaultNodeLog;
+			// We check to see if the user has specified a log file
+			// If not, we give him a default
+    	MyString templogFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+					_directory, _logFileIsXml );
+		logFileStr = templogFileStr.Value();
 	} else {
 		StringList logFiles;
 		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
@@ -817,27 +827,44 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 
 	if ( logFileStr == "" ) {
 		logFileStr = defaultNodeLog;
+		_useDefaultLog = true;
+			// Default User log is never XML
+			// This could be specified in the submit file and should be
+			// ignored.
+		_logFileIsXml = false;
 		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
 					"submit file %s (node %s); using default (%s)\n",
-					_cmdFile, GetJobName(), logFileStr.Value() );
+					_cmdFile, GetJobName(), logFileStr.c_str() );
 		append_default_log = false;
+	} else {
+		append_default_log = usingDefault;
+		if( append_default_log ) {
+				// DAGman is not going to look at the user-specified log.
+				// It will look at the defaultNode log.
+			logFileStr = defaultNodeLog;
+			_useDefaultLog = false;
+			_logFileIsXml = false;
+		}
 	}
+
 		// This function returns true if the log file is on NFS and
 		// that is an error.  If the log file is on NFS, but nfsIsError
 		// is false, it prints a warning but returns false.
-	if ( MultiLogFiles::logFileNFSError( logFileStr.Value(),
+	if ( MultiLogFiles::logFileNFSError( logFileStr.c_str(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					logFileStr.Value() );
+					logFileStr.c_str() );
 		LogMonitorFailed();
 		return false;
 	}
 
+	delete [] _logFile;
 		// Saving log file here in case submit file gets changed.
+	_logFile = strnewp( logFileStr.c_str() );
 	debug_printf( DEBUG_DEBUG_2, "Monitoring log file <%s> for node %s\n",
-				defaultNodeLog, GetJobName() );
+				GetLogFile(), GetJobName() );
 	CondorError errstack;
-	if ( !logReader.monitorLogFile( defaultNodeLog, !recovery, errstack ) ) {
+	if ( !logReader.monitorLogFile( GetLogFile(), !recovery, errstack ) ) {
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
@@ -846,28 +873,46 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		EXCEPT( "Fatal log file monitoring error!\n" );
 		return false;
 	}
+
+	_logIsMonitored = true;
+
 	return true;
 }
 
 //---------------------------------------------------------------------------
 bool
 Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-			ReadMultipleUserLogs &storkLogReader, const char* defaultLog )
+			ReadMultipleUserLogs &storkLogReader )
 {
 	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s> for node %s\n",
-				defaultLog, GetJobName() );
+				GetLogFile(), GetJobName() );
+
+	if ( !_logIsMonitored ) {
+		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
+					"%s is already unmonitored\n", GetJobName() );
+		return true;
+	}
 
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
 
+	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
+				GetLogFile(), GetJobName() );
+
 	CondorError errstack;
-	bool result = logReader.unmonitorLogFile( defaultLog, errstack );
+	bool result = logReader.unmonitorLogFile( GetLogFile(), errstack );
 	if ( !result ) {
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to unmonitor log " "file for node %s",
 					GetJobName() );
 		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
 		EXCEPT( "Fatal log file monitoring error!\n" );
+	}
+
+	if ( result ) {
+		delete [] _logFile;
+		_logFile = NULL;
+		_logIsMonitored = false;
 	}
 
 	return result;

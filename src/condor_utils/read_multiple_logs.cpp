@@ -372,7 +372,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 // Note: this method should get speeded up (see Gnats PR 846).
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
-		const MyString &directory)
+		const MyString &directory, bool &isXml)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
@@ -393,6 +393,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 
 	MyString	logFileName("");
 	MyString	initialDir("");
+	MyString	isXmlLogStr("");
 
 		// Now look through the submit file logical lines to find the
 		// log file and initial directory (if specified) and combine
@@ -410,6 +411,24 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 				"initialdir");
 		if ( tmpInitialDir != "" ) {
 			initialDir = tmpInitialDir;
+		}
+
+		MyString tmpLogXml = getParamFromSubmitLine(submitLine, "log_xml");
+		if ( tmpLogXml != "" ) {
+			isXmlLogStr = tmpLogXml;
+		}
+	}
+
+		//
+		// Check for macros in the log file name -- we currently don't
+		// handle those.
+		//
+	if ( logFileName != "" ) {
+		if ( strstr(logFileName.Value(), "$(") ) {
+			dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
+						"in log file name (%s) in DAG node submit files\n",
+						logFileName.Value());
+			logFileName = "";
 		}
 	}
 
@@ -429,6 +448,13 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
 			return "";
 		}
+	}
+
+	isXmlLogStr.lower_case();
+	if ( isXmlLogStr == "true" ) {
+		isXml = true;
+	} else {
+		isXml = false;
 	}
 
 	if ( directory != "" ) {
