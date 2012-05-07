@@ -204,11 +204,11 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 
 //---------------------------------------------------------------------------
 bool
-Job::CheckForLogFile() const
+Job::CheckForLogFile(bool usingDefault ) const
 {
 	bool tmpLogFileIsXml;
 	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-				_directory, tmpLogFileIsXml );
+				_directory, tmpLogFileIsXml, usingDefault );
 	return (logFile != "");
 }
 
@@ -802,7 +802,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			// We check to see if the user has specified a log file
 			// If not, we give him a default
     	MyString templogFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-					_directory, _logFileIsXml );
+					_directory, _logFileIsXml, usingDefault);
 		logFileStr = templogFileStr.Value();
 	} else {
 		StringList logFiles;

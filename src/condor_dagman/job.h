@@ -220,9 +220,11 @@ class Job {
 
 	/** Check whether the submit file for this job has a log file
 	    defined.
+		@param usingDefault is true if DAGman is watching the
+			default node log
 		@return true iff the submit file defines a log file
 	*/
-	bool CheckForLogFile() const;
+	bool CheckForLogFile(bool usingDefault) const;
 
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at

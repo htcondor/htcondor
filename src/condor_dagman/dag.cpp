@@ -3731,7 +3731,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// jobs because we can't specify the log file on the command
 		// line.  wenger 2009-08-14
 	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
-				!node->CheckForLogFile() ) {
+				!node->CheckForLogFile( _use_default_node_log ) ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
