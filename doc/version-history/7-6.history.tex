@@ -49,9 +49,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added logic to the \Condor{negotiator} that enables job \Term{preemption} 
-to properly respect \Term{group quotas}.
+\item Added the ability to delay reconfig in daemon core, and applied to the
+\Condor{negotiator} to defer reconfiguration requests during the negotiation
+cycle until after the cycle completes.
+\Ticket{2931}
+
+\item Fixed a potential infinite loop in the \Condor{gridmanager} for gt2
+grid universe jobs. If the GRAM jobmanager was listening on a different
+port than the \Condor{gridmanager} expected, the \Condor{gridmanager}
+would alternate between states GM\_REGISTER and GM\_RESTART,
+as visible in the \Condor{gridmanager} daemon log.
+\Ticket{2916}
+
+\item Added logic to the \Condor{negotiator} that enables job preemption 
+to properly respect hierarchical group quotas.
 \Ticket{2570}
+
+\item Added logic to the \Condor{negotiator} to negotiate with full group 
+quota instead of allocated-slots when no surplus sharing is in effect, to
+address a bug where groups could fail to claim weighted slots.
+\Ticket{2958}
 
 \item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
 \Prog{glexec}.  
@@ -94,10 +111,11 @@ This bug would have been observable with DAGMan.
 \Ticket{2858}
 
 \item NorduGrid ARC LDAP servers that return attributes in an unexpected
-order no longer cause the \condor{gridmanager} to exit.
+order no longer cause the \Condor{gridmanager} to exit.
 \Ticket{2888}
 
-\item Condor failed to execute jobs when using glexec 0.9.0 through 0.9.5.
+\item Condor failed to execute jobs when using \Prog{glexec} 
+versions 0.9.0 through 0.9.5.
 \Ticket{2907}
 
 \end{itemize}

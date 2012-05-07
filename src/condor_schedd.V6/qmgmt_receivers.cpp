@@ -65,7 +65,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 	
 			// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->triedAuthentication() ) {
-			if( DebugFlags & D_SECURITY ) {
+			if( IsDebugLevel(D_SECURITY) ) {
 				MyString methods;
 				SecMan::getAuthenticationMethods( WRITE, &methods );
 				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());

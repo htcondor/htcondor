@@ -84,7 +84,7 @@ void handle_sig(int sig)
 int
 main(int argc, const char **argv)
 {
-	DebugFlags = D_ALWAYS;
+	set_debug_flags(NULL, D_ALWAYS);
 	param_functions *p_funcs = NULL;
 
 	set_mySubSystem( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
@@ -198,7 +198,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			if ( arg.hasOpt() ) {
 				const char	*flags;
 				arg.getOpt( flags );
-				set_debug_flags( const_cast<char *>(flags) );
+				set_debug_flags( const_cast<char *>(flags), 0 );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
 				printf("%s", usage);

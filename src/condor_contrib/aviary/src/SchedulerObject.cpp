@@ -89,7 +89,7 @@ SchedulerObject::update(const ClassAd &ad)
 	m_stats.System = m_stats.Machine;
 
 	// debug
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsFulldebug(D_FULLDEBUG)) {
 		const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
 	}
 }

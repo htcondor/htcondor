@@ -1636,7 +1636,7 @@ GahpClient::globus_gram_client_job_request(
 	const char * description,
 	const int limited_deleg,
 	const char * callback_contact,
-	char ** job_contact,
+	std::string & job_contact,
 	bool is_restart)
 {
 
@@ -1689,7 +1689,9 @@ GahpClient::globus_gram_client_job_request(
 		}
 		int rc = atoi(result->argv[1]);
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
-			*job_contact = strdup(result->argv[2]);
+			job_contact = result->argv[2];
+		} else {
+			job_contact = "";
 		}
 		delete result;
 		return rc;

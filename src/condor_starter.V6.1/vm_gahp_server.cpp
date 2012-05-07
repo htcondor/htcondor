@@ -341,7 +341,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	job_env->SetEnv("VMGAHP_WORKING_DIR", workingdir);
 
 	// Grab the full environment back out of the Env object
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_str;
 		job_env->getDelimitedStringForDisplay(&env_str);
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());

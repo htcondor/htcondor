@@ -44,6 +44,7 @@ if ( WITH_VOMS )
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/globus52.patch &&
 								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
 			if ( ${SYSTEM_NAME} MATCHES "rhel3" )
 				set (VOMS_OPENSSL_FLAG --with-openssl-prefix=/usr/kerberos)
@@ -52,7 +53,7 @@ if ( WITH_VOMS )
 			endif()
 		endif()
 
-		condor_pre_external( VOMS voms-1.9.10_4-p2 "include;${VOMS_LIB}" "done")
+		condor_pre_external( VOMS voms-1.9.10_4-p3 "include;${VOMS_LIB}" "done")
 
 		ExternalProject_Add(voms
 							DEPENDS ${VOMS_DEPENDS}
@@ -69,7 +70,7 @@ if ( WITH_VOMS )
 								--with-api-only
 								${VOMS_OPENSSL_FLAG}
 								--with-globus-prefix=${GLOBUS_INSTALL_LOC}
-								--with-globus-flavor=${GLOBUS_FLAVOR} --disable-java --disable-docs --disable-glite
+								--with-globus-flavor=${GLOBUS_FLAVOR}pthr --disable-java --disable-docs --disable-glite
 							#--Build Step ----------
 							BUILD_COMMAND cd org.glite.security.voms && make
 							BUILD_IN_SOURCE 1
@@ -79,11 +80,11 @@ if ( WITH_VOMS )
 				)
 
 		if ( LINUX )
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.so" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}pthr.so" )
 		elseif ( DARWIN )
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.dylib" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}pthr.dylib" )
 		else()
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}pthr.a" )
 		endif()
 
 		condor_post_external( voms include/glite/security OFF )

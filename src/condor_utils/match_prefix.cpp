@@ -33,3 +33,61 @@ match_prefix(const char *s1, const char *s2)
 
 	return 0;
 }
+
+bool
+is_arg_prefix(const char * parg, const char * pval, int must_match_length /*= 0*/) 
+{
+	// no matter what, at least 1 char must match
+	// this also protects us from the case where parg is ""
+	if (!*pval || (*parg != *pval)) return false;
+
+	// do argument matching based on a minimum prefix. when we run out
+	// of characters in parg we must be at a \0 or no match and we
+	// must have matched at least must_match_length characters or no match
+	int match_length = 0;
+	while (*parg == *pval) {
+		++match_length;
+		++parg; ++pval;
+		if (!*pval) break;
+	}
+	if (*parg) return false;
+	if (must_match_length < 0) return (*pval == 0);
+	return match_length >= must_match_length;
+}
+
+bool
+is_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length /*= 0*/) 
+{
+	if (ppcolon) *ppcolon = NULL;
+
+	// no matter what, at least 1 char must match
+	// this also protects us from the case where parg is ""
+	if (!*pval || (*parg != *pval)) return false;
+
+	// do argument matching based on a minimum prefix. when we run out
+	// of characters in parg we must be at a \0 or no match and we
+	// must have matched at least must_match_length characters or no match
+	int match_length = 0;
+	while (*parg == *pval) {
+		++match_length;
+		++parg; ++pval;
+		if (*parg == ':') {
+			if (ppcolon) *ppcolon = parg;
+			break;
+		}
+		if (!*pval) break;
+	}
+	if (*parg && *parg != ':') return false;
+	if (must_match_length < 0) return (*pval == 0);
+	return match_length >= must_match_length;
+}
+
+bool
+is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length /*= 0*/)
+{
+	if (*parg != '-') return false;
+	++parg;
+	if (*parg == '-') ++parg; // allow -- as well as - for an arg prefix.
+	return is_arg_prefix(parg, pval, must_match_length);
+}
+

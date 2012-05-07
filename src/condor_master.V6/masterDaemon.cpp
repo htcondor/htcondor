@@ -820,7 +820,7 @@ int daemon::RealStart( )
 	}
 
 	const char	*proc_type = command_port ? "DaemonCore " : "";
-	if ( DebugFlags & D_FULLDEBUG ) {
+	if ( IsFulldebug(D_FULLDEBUG) ) {
 		MyString	 args_string, tmp;
 		args.GetArgsStringForDisplay( &tmp, 1 );
 		if( tmp.Length() ) {

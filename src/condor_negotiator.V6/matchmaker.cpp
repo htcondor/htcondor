@@ -39,6 +39,7 @@
 #include "misc_utils.h"
 #include "ConcurrencyLimitUtils.h"
 #include "MyString.h"
+#include "condor_daemon_core.h"
 
 #include <vector>
 #include <string>
@@ -285,7 +286,9 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+    accept_surplus = false;
     autoregroup = false;
+    allow_quota_oversub = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -419,7 +422,6 @@ initialize ()
 #endif
 }
 
-static bool delayReinit;
 
 int Matchmaker::
 reinitialize ()
@@ -427,16 +429,6 @@ reinitialize ()
 	char *tmp;
 	static bool first_time = true;
 	ExprTree *tmp_expr = 0;
-
-	// If we got reconfig'ed in the middle of the negotiation cycle,
-	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
-
-	if (daemonCore->InServiceCommandSocket()) {
-		delayReinit = true;
-		return true;
-	} else {
-		delayReinit = false;
-	}
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -1207,6 +1199,10 @@ negotiationTime ()
 		return;
 	}
 
+    // From here we are committed to the main negotiator cycle, which is non
+    // reentrant wrt reconfig. Set any reconfig to delay until end of this cycle
+    // to protect HGQ structures and also to prevent blocking of other commands
+    daemonCore->SetDelayReconfig(true);
 
 		// allocate stat object here, now that we know we are not going
 		// to abort the cycle
@@ -1430,6 +1426,7 @@ negotiationTime ()
 
             if (autoregroup) {
                 dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+                hgq_root_group->quota = hgq_total_quota;
                 hgq_root_group->allocated = hgq_total_quota;
             }
 
@@ -1447,7 +1444,8 @@ negotiationTime ()
                 allocated_total += group->allocated;
                 if (group->allocated > 0) served_groups += 1;
                 else if (group->requested > 0) unserved_groups += 1;
-                maxdelta = max(maxdelta, max(0.0, group->allocated - group->usage));
+                double target = (accept_surplus) ? group->allocated : group->quota;
+                maxdelta = max(maxdelta, max(0.0, target - group->usage));
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
@@ -1521,12 +1519,15 @@ negotiationTime ()
 		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
-                    double delta = max(0.0, group->allocated - group->usage);
+                    // if allocating surplus, use allocated, otherwise just use the group's quota directly
+                    double target = (accept_surplus) ? group->allocated : group->quota;
+
+                    double delta = max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
                     // we just got allocated, so just negotiate for what we were allocated.
-                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : group->allocated;
+                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
                     // Defensive -- do not exceed allocated slots
-                    slots = min(slots, group->allocated);
+                    slots = min(slots, target);
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
@@ -1603,9 +1604,13 @@ negotiationTime ()
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
 
-	if (delayReinit) {
-		this->reinitialize();
-	}
+    // if we got any reconfig requests during the cycle it is safe to service them now:
+    if (daemonCore->GetNeedReconfig()) {
+        daemonCore->SetNeedReconfig(false);
+        dprintf(D_FULLDEBUG,"Running delayed reconfig\n");
+        dc_reconfig();
+    }
+    daemonCore->SetDelayReconfig(false);
 
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
@@ -1657,7 +1662,9 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map.clear();
     group_entry_map[hgq_root_name] = hgq_root_group;
 
-    bool accept_surplus = false;
+    allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
+
+    accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
     const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
@@ -1739,10 +1746,6 @@ void Matchmaker::hgq_construct_tree() {
         if (group->accept_surplus) accept_surplus = true;
     }
 
-    if (autoregroup && accept_surplus) {
-        EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
-    }
-
     // Set the root group's autoregroup state to match the effective global value for autoregroup
     // we do this for the benefit of the accountant, it also can be use to remove some special cases
     // in the negotiator loops.
@@ -1805,10 +1808,10 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // static quotas get first dibs on any available quota
     // total static quota assignable is bounded by quota coming from above
-    double sqa = min(sqsum, quota);
+    double sqa = (allow_quota_oversub) ? sqsum : min(sqsum, quota);
 
     // children with dynamic quotas get allocated from the remainder 
-    double dqa = quota - sqa;
+    double dqa = max(0.0, quota - sqa);
 
     dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", group->name.c_str(), sqa, dqa);
 
@@ -1840,7 +1843,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // Current group gets anything remaining after assigning to any children
     // If there are no children (a leaf) then this group gets all the quota
-    group->quota = quota - chq;
+    group->quota = (allow_quota_oversub) ? quota : (quota - chq);
     if (group->quota < 0) group->quota = 0;
     dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
 }
@@ -1951,12 +1954,6 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
 
     // Nothing to allocate
     if (surplus <= 0) return 0;
-
-    // If we are in autoregroup mode, proportional surplus allocation is disabled
-    if (autoregroup) {
-        dprintf(D_ALWAYS, "group quotas: autoregroup mode: proportional surplus allocation disabled\n");
-        return surplus;
-    }
 
     // If entire subtree requests nothing, halt now
     if (group->subtree_requested <= 0) return surplus;
@@ -2532,7 +2529,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				negotiation_cycle_stats[0]->submitters_out_of_time.insert(scheddName.Value());
 				result = MM_DONE;
 			} else {
-				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
+				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 					result = MM_RESUME;
 				} else {
 					int numMatched = 0;
@@ -2839,7 +2836,7 @@ obtainAdsFromCollector (
 				ExprTree *expr = NULL;
 				::ParseClassAdRvalExpr(exprStr, expr); // expr will be null on error
 
-				int replace = true;
+				bool replace = true;
 				if (expr == NULL) {
 					// error evaluating expression
 					dprintf(D_ALWAYS, "Can't compile STARTD_AD_REEVAL_EXPR %s, treating as TRUE\n", exprStr);
@@ -2848,16 +2845,13 @@ obtainAdsFromCollector (
 
 						// Expression is valid, now evaluate it
 						// old ad is "my", new one is "target"
-					EvalResult er;
-					int evalRet = EvalExprTree(expr, oldAd, ad, &er);
+					classad::Value er;
+					int evalRet = EvalExprTree(expr, oldAd, ad, er);
 
-					if( !evalRet || (er.type != LX_BOOL && er.type != LX_INTEGER)) {
+					if( !evalRet || !er.IsBooleanValueEquiv(replace) ) {
 							// Something went wrong
 						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
 						replace = true;
-					} else {
-							// evaluation OK, result type bool
-						replace = er.i;
 					}
 
 						// But, if oldAd was null (i.e.. the first time), always replace
@@ -3048,7 +3042,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	time_t		currentTime;
 	ClassAd		request;
 	ClassAd*    offer = NULL;
-	bool		only_consider_startd_rank;
+	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
     string remoteUser;
@@ -3211,7 +3205,9 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			//  protocol w/ schedds and reconfig delaying until after
 			//  a negotiation cycle. -matt 21 mar 2012
 		if ( sleepy ) {
-			sleep(sleepy);
+            dprintf(D_ALWAYS, "begin sleep: %d seconds\n", sleepy);
+			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+            dprintf(D_ALWAYS, "end sleep: %d seconds\n", sleepy);
 		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
@@ -3301,18 +3297,16 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 					   accountant.GetWeightedResourcesUsed ( scheddName ));
         string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
-		bool is_group = false;
 		if (getGroupInfoFromUserId(scheddName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
 			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
-			is_group = true;
 		}
 
 		OptimizeJobAdForMatchmaking( &request );
 
-		if( DebugFlags & D_JOB ) {
+		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
 			request.dPrint(D_JOB);
 		}
@@ -3363,13 +3357,8 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 							"PREEMPTION_REQUIREMENTS == False";
 					} else if (rejPreemptForPrio) {
 						diagnostic_message = "insufficient priority";
-					} else if (rejForSubmitterLimit) {
-						if( is_group ) {
-							diagnostic_message = "group quota exceeded";
-						}
-						else {
-							diagnostic_message = "fair share exceeded";
-						}
+					} else if (rejForSubmitterLimit && !ignore_schedd_limit) {
+                        diagnostic_message = "submitter limit exceeded";
 					} else {
 						diagnostic_message = "no match found";
 					}
@@ -3511,14 +3500,13 @@ float Matchmaker::
 EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
                         ClassAd &request,ClassAd *resource)
 {
-	EvalResult result;
+	classad::Value result;
 	float rank = -(FLT_MAX);
 
-	if(expr && EvalExprTree(expr,resource,&request,&result)) {
-		if( result.type == LX_FLOAT ) {
-			rank = result.f;
-		} else if( result.type == LX_INTEGER ) {
-			rank = result.i;
+	if(expr && EvalExprTree(expr,resource,&request,result)) {
+		double val;
+		if( result.IsNumber(val) ) {
+			rank = (float)val;
 		} else {
 			dprintf(D_ALWAYS, "Failed to evaluate %s "
 			                  "expression to a float.\n",expr_name);
@@ -3587,7 +3575,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	bool			newBestFound;
 		// to store results of evaluations
 	string remoteUser;
-	EvalResult		result;
+	classad::Value	result;
+	bool			val;
 	float			tmp;
 		// request attributes
 	int				requestAutoCluster = -1;
@@ -3724,7 +3713,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
-		if( (DebugFlags & D_MACHINE) && (DebugFlags & D_FULLDEBUG) ) {
+		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
 			candidate->dPrint(D_MACHINE);
 		}
@@ -3734,7 +3723,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		int cluster_id=-1,proc_id=-1;
 		MyString machine_name;
-		if( DebugFlags & D_MACHINE ) {
+		if( IsDebugLevel( D_MACHINE ) ) {
 			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
 			request.LookupInteger(ATTR_PROC_ID,proc_id);
 			candidate->LookupString(ATTR_NAME,machine_name);
@@ -3780,8 +3769,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						machine_name.Value(), cluster_id, proc_id);
 				continue;
 			}
-			if ( !(EvalExprTree(rankCondStd, candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE) ) {
+			if ( !(EvalExprTree(rankCondStd, candidate, &request, result) && 
+				   result.IsBooleanValue(val) && val) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 
@@ -3801,8 +3790,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		//       tested above for the only condition we care about.
 		if ( (remoteUser != "") &&
 			 (!only_for_startdrank) ) {
-			if( EvalExprTree(rankCondStd, candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE ) {
+			if( EvalExprTree(rankCondStd, candidate, &request, result) && 
+				result.IsBooleanValue(val) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -3815,8 +3804,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) {
+					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					  result.IsBooleanValue(val) && val) ) {
 					rejPreemptForPolicy++;
 					dprintf(D_MACHINE,
 							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
@@ -3826,8 +3815,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,&result)&&
-						result.type == LX_INTEGER && result.i == TRUE ) ) {
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
 					dprintf(D_MACHINE,
@@ -4332,6 +4321,7 @@ Matchmaker::calculateSubmitterLimit(
 			submitterLimitUnclaimed = maxAllowed;
 		}
 	}
+    if (!ConsiderPreemption) submitterLimit = submitterLimitUnclaimed;
 
 		// calculate this schedd's absolute fair-share for allocating
 		// resources other than CPUs (like network capacity and licenses)
@@ -4688,10 +4678,11 @@ cache_still_valid(ClassAd &request, ExprTree *preemption_req, ExprTree *preempti
 		}
 		
 		if ( next_entry->PreemptStateValue == PRIO_PREEMPTION ) {
-			EvalResult result;
+			classad::Value result;
+			bool val;
 			if (preemption_req && 
-				!(EvalExprTree(preemption_req,next_entry->ad,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) 
+				!(EvalExprTree(preemption_req,next_entry->ad,&request,result) &&
+				  result.IsBooleanValue(val) && val) ) 
 			{
 				dprintf(D_FULLDEBUG,
 					"Cache invalidated due to preemption_requirements\n");
@@ -5097,7 +5088,7 @@ static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname 
 
 void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad )
 {
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		MyString name;
 		startd_ad->LookupString(ATTR_NAME,name);
 		MyString owner;

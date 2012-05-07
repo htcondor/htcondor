@@ -413,7 +413,7 @@ int Condor_Auth_X509::condor_gss_assist_gridmap(const char * from, char ** to) {
 	if (GridMap) {
 		MyString f(from), t;
 		if (GridMap->lookup(f, t) != -1) {
-			if (DebugFlags & D_FULLDEBUG) {
+			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "GSI: subject %s is mapped to user %s.\n", 
 					f.Value(), t.Value());
 			}

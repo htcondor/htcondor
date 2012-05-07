@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 	Termlog = true;
 	p_funcs = get_param_functions();
 	dprintf_config("condor_submit_dag", p_funcs); 
-	DebugFlags = D_ALWAYS | D_NOHEADER;
+	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 	config();
 
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.

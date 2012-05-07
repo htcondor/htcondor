@@ -118,7 +118,7 @@ Selector::reset()
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
 
-	if (DebugFlags & D_DAEMONCORE) {
+	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_FULLDEBUG, "selector %p resetting\n", this);
 	}
 }
@@ -197,7 +197,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 #endif
 
 
-	if(DebugFlags & D_DAEMONCORE) {
+	if(IsDebugLevel(D_DAEMONCORE)) {
 		char *fd_description = describe_fd(fd);
 
 		dprintf(D_FULLDEBUG, "selector %p adding fd %d (%s)\n",
@@ -248,7 +248,7 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 	}
 #endif
 
-	if (DebugFlags & D_DAEMONCORE) {
+	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_FULLDEBUG, "selector %p deleting fd %d\n", this, fd);
 	}
 

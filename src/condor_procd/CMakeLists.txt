@@ -27,7 +27,7 @@ else(WINDOWS)
     condor_selective_glob( "proc_family_client*;proc_family_io*;local_client.*;named_pipe_reader*;named_pipe_writer*;named_pipe_util*;named_pipe_watchdog*" ProcClientElements )
 endif(WINDOWS)
 
-set( ProcdUtilsSrcs "${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;../condor_utils/condor_full_io.cpp;../condor_utils/condor_blkng_full_disk_io.cpp;../condor_procapi/procapi.cpp;../condor_procapi/processid.cpp;../condor_procapi/procapi_killfamily.cpp" )
+set( ProcdUtilsSrcs "${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;../condor_utils/condor_full_io.cpp;../condor_utils/condor_blkng_full_disk_io.cpp;../condor_procapi/procapi.cpp;../condor_procapi/processid.cpp;../condor_procapi/procapi_killfamily.cpp;../condor_starter.V6.1/cgroup.linux.cpp" )
 if (WINDOWS)
 	set( ProcdUtilsSrcs "${ProcdUtilsSrcs};../condor_utils/process_control.WINDOWS.cpp;../condor_utils/ntsysinfo.WINDOWS.cpp" )
 endif(WINDOWS)

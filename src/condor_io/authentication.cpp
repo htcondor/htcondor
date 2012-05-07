@@ -138,7 +138,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 	Condor_Auth_Base * auth = NULL;
 	int auth_timeout_time = time(0) + timeout;
 
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsDebugVerbose(D_SECURITY)) {
 		if (hostAddr) {
 			dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( addr == '%s', "
 					"methods == '%s')\n", hostAddr, auth_methods);
@@ -160,7 +160,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ds timeout during authentication", timeout );
 			break;
 		}
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %s\n", methods_to_try.Value());
 		}
 
@@ -241,7 +241,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 		}
 
 
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d (%s)\n", firm,
 					(method_name?method_name:"?!?") );
 		}
@@ -320,7 +320,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 
 	//if none of the methods succeeded, we fall thru to default "none" from above
 	int retval = ( auth_status != CAUTH_NONE );
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsDebugVerbose(D_SECURITY)) {
 		dprintf(D_SECURITY, "AUTHENTICATE: auth_status == %i (%s)\n", auth_status,
 				(method_used?method_used:"?!?") );
 	}

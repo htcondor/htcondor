@@ -195,7 +195,7 @@ Tests::cmdLine( int argc, const char *argv[] )
 
 		if (  (m_op == OP_NONE)  &&  arg.Match('d', "debug")  ) {
 			if ( arg.hasOpt() ) {
-				set_debug_flags( const_cast<char *>(arg.getOpt()) );
+				set_debug_flags( const_cast<char *>(arg.getOpt()), 0 );
 				argno = arg.ConsumeOpt( );
 			} else {
 				fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );
@@ -813,7 +813,7 @@ Tests::getListConst( bool selected_only ) const
 int
 main(int argc, const char **argv)
 {
-	DebugFlags = D_ALWAYS;
+	set_debug_flags(NULL, D_ALWAYS);
 
 	set_mySubSystem( "TEST_LEASE_MANAGER", SUBSYSTEM_TYPE_TOOL );
 

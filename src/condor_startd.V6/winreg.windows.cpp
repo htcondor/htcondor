@@ -416,7 +416,7 @@ char * get_windows_reg_value(
 		// In fulldebug mode, enumerate the value names and subkey names
 		// if requested.
 		//
-		if (DebugFlags & (D_NORMAL | D_FULLDEBUG)) 
+		if (IsDebugLevel(D_NORMAL))
 		{
 			if (fEnumValues)
 			{
@@ -428,10 +428,10 @@ char * get_windows_reg_value(
 					lres = RegEnumValue(hkey, ii, szName, &cchName, 0, &vt, NULL, &cb);
 					if (ERROR_NO_MORE_ITEMS == lres)
 						break;
-					if ( ! ii) dprintf ( D_NORMAL | D_FULLDEBUG, " Named values:\n");
+					if ( ! ii) dprintf ( D_NORMAL, " Named values:\n");
 					dprintf( D_FULLDEBUG, "  \"%s\" = %d bytes\n", szName, cb);
 				}
-				if ( ! ii) dprintf ( D_NORMAL | D_FULLDEBUG, " No Named values\n");
+				if ( ! ii) dprintf ( D_NORMAL, " No Named values\n");
 			}
 			if (fEnumSubkeys)
 			{
@@ -443,10 +443,10 @@ char * get_windows_reg_value(
 					lres = RegEnumKeyEx(hkey, ii, szName, &cchName, NULL, NULL, NULL, NULL);
 					if (ERROR_NO_MORE_ITEMS == lres)
 						break;
-					if ( ! ii) dprintf ( D_NORMAL | D_FULLDEBUG, " Subkeys:\n");
-					dprintf( D_NORMAL | D_FULLDEBUG, "  \"%s\"\n", szName);
+					if ( ! ii) dprintf ( D_NORMAL, " Subkeys:\n");
+					dprintf( D_NORMAL, "  \"%s\"\n", szName);
 				}
-				if ( ! ii) dprintf ( D_NORMAL | D_FULLDEBUG, " No Subkeys\n");
+				if ( ! ii) dprintf ( D_NORMAL, " No Subkeys\n");
 			}
 		}
 

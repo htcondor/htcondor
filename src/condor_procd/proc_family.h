@@ -26,7 +26,7 @@
 #include "proc_family_io.h"
 
 #if defined(HAVE_EXT_LIBCGROUP)
-#include "libcgroup.h"
+#include "../condor_starter.V6.1/cgroup.linux.h"
 #endif
 
 class ProcFamilyMonitor;
@@ -119,7 +119,7 @@ public:
 
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Set the cgroup to use for this family
-	int set_cgroup(const char *);
+	int set_cgroup(const std::string&); 
 #endif
 
 	// dump info about all processes in this family
@@ -177,14 +177,9 @@ private:
 #endif
 
 #if defined(HAVE_EXT_LIBCGROUP)
-	static bool m_cgroup_initialized;
-	static bool m_cgroup_freezer_mounted;
-	static bool m_cgroup_cpuacct_mounted;
-	static bool m_cgroup_memory_mounted;
-	static bool m_cgroup_block_mounted;
-	char* m_cgroup_string;
-	struct cgroup* m_cgroup;
-	bool m_created_cgroup;
+	Cgroup m_cgroup;
+	std::string m_cgroup_string;
+	CgroupManager &m_cm;
 	static long clock_tick;
 
 	int count_tasks_cgroup();
@@ -193,7 +188,6 @@ private:
 	int freezer_cgroup(const char *);
 	int spree_cgroup(int);
 	int migrate_to_cgroup(pid_t);
-	void delete_cgroup(const char *);
 	void update_max_image_size_cgroup();
 #endif
 };

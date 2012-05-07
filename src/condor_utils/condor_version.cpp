@@ -40,7 +40,11 @@
    define the correct platform string right in here. :( -Derek 12/3/99 
 */
 
-#include "condor_common.h"
+/*
+ * WARNING! Don't include any Condor header files in this file!
+ *   This file is linked into programs that aren't linked with the Condor
+ *   libraries.
+ */
 
 #define xstr(s) str(s)
 #define str(s) #s

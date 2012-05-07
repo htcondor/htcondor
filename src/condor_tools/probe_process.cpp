@@ -67,8 +67,7 @@ int main(int argc, char *argv[], char *envp[])
 
 	Termlog = 1;
 	dprintf_config("TOOL", get_param_functions());
-	set_debug_flags("D_ALWAYS");
-	set_debug_flags("D_NOHEADER");
+	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 
 	/* must supply at least some options */
 	if (argc < 2) {

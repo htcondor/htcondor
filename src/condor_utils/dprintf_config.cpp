@@ -40,17 +40,25 @@ using std::string;
 int		Termlog = 0;
 
 extern int		DebugFlags;
-extern FILE		*DebugFPs[D_NUMLEVELS+1];
+#ifdef D_CATEGORY_COUNT
+extern int		DebugVerbose;
+#else
+//extern FILE		*DebugFPs[D_NUMLEVELS+1];
+#endif
 extern std::vector<DebugFileInfo> *DebugLogs;
 extern char		*DebugLock;
-extern const char		*_condor_DebugFlagNames[];
+#ifdef D_CATEGORY_MASK
+extern const char		*_condor_DebugFlagNames[D_CATEGORY_COUNT];
+#else
+extern const char		*_condor_DebugFlagNames[D_NUMLEVELS];
+#endif
 extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
 extern int		DebugUseTimestamps;
 extern int      DebugContinueOnOpenFailure;
 extern int		log_keep_open;
 
-extern void		_condor_set_debug_flags( const char *strflags );
+extern void		_condor_set_debug_flags( const char *strflags, int flags );
 extern void		_condor_dprintf_saved_lines( void );
 extern bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
 
@@ -129,13 +137,14 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	**  flags.  -Derek Wright 12/8/97 
 	*/
 	DebugFlags = D_ALWAYS;
+	DebugVerbose = 0;
 
 	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
 	pval = dprintf_param_funcs->param("ALL_DEBUG");
 	if( pval ) {
-		_condor_set_debug_flags( pval );
+		_condor_set_debug_flags( pval, 0 );
 		free( pval );
 	}
 
@@ -146,7 +155,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	(void)sprintf(pname, "%s_DEBUG", subsys);
 	pval = dprintf_param_funcs->param(pname);
 	if( pval ) {
-		_condor_set_debug_flags( pval );
+		_condor_set_debug_flags( pval, 0 );
 		free( pval );
 	}
 
@@ -168,21 +177,21 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	*/
 	if( !( Termlog) ) {
 		std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
-		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+		for (debug_level = 0; debug_level <= (int)COUNTOF(_condor_DebugFlagNames); debug_level++) {
 			std::string logPath;
 			want_truncate = 0;
-			if (debug_level == 0) {
+			std::string subsys_and_level = subsys;
+			if (debug_level > 0) {
 				/*
 				** the level 0 file gets all debug messages; thus, the
 				** offset into DebugFlagNames is off by one, since the
 				** first level-specific file goes into the other arrays at
 				** index 1
 				*/
-				(void)sprintf(pname, "%s_LOG", subsys);
-			} else {
-				(void)sprintf(pname, "%s_%s_LOG", subsys,
-							  _condor_DebugFlagNames[debug_level-1]+2);
+				subsys_and_level += _condor_DebugFlagNames[debug_level-1]+1;
 			}
+
+			(void)sprintf(pname, "%s_LOG", subsys_and_level.c_str());
 
 			// Hold a temporary copy of the old file pointer until
 			// *after* the param -- param can dprintf() in some cases
@@ -267,12 +276,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 					}
 				}
 
-				if (debug_level == 0) {
-					(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
-				} else {
-					(void)sprintf(pname, "TRUNC_%s_%s_LOG_ON_OPEN", subsys,
-								  _condor_DebugFlagNames[debug_level-1]+2);
-				}
+				(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys_and_level.c_str());
 				want_truncate = param_boolean_crufty(pname, false) ? 1 : 0;
 
 				if (debug_level == 0) {
@@ -305,13 +309,8 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 					}
 				}
 
-				if (debug_level == 0) {
-					(void)sprintf(pname, "MAX_%s_LOG", subsys);
-				} else {
-					(void)sprintf(pname, "MAX_%s_%s_LOG", subsys,
-								  _condor_DebugFlagNames[debug_level-1]+2);
-				}
-                
+				(void)sprintf(pname, "MAX_%s_LOG", subsys_and_level.c_str());
+
                 int64_t maxlog = 0;
 				pval = param(pname);
 				if (pval != NULL) {
@@ -328,13 +327,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 					it->maxLog = 1024*1024;
 				}
 				
-				if (debug_level == 0) {
-					(void)sprintf(pname, "MAX_NUM_%s_LOG", subsys);
-				} else {
-					(void)sprintf(pname, "MAX_NUM_%s_%s_LOG", subsys,
-								  _condor_DebugFlagNames[debug_level-1]+2);
-				}
-
+				(void)sprintf(pname, "MAX_NUM_%s_LOG", subsys_and_level.c_str());
 				pval = param(pname);
 				if (pval != NULL) {
 					it->maxLogNum = param_integer(pname, 1, 0);

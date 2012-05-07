@@ -196,7 +196,7 @@ void clean_files()
 					 "DaemonCore: ERROR: Can't delete pid file %s\n",
 					 pidFile );
 		} else {
-			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+			if( IsDebugVerbose( D_DAEMONCORE ) ) {
 				dprintf( D_DAEMONCORE, "Removed pid file %s\n", pidFile );
 			}
 		}
@@ -208,7 +208,7 @@ void clean_files()
 					 "DaemonCore: ERROR: Can't delete address file %s\n",
 					 addrFile );
 		} else {
-			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+			if( IsDebugVerbose( D_DAEMONCORE ) ) {
 				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
 						 addrFile );
 			}
@@ -224,7 +224,7 @@ void clean_files()
 						 "DaemonCore: ERROR: Can't delete classad file %s\n",
 						 daemonCore->localAdFile );
 			} else {
-				if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+				if( IsDebugVerbose( D_DAEMONCORE ) ) {
 					dprintf( D_DAEMONCORE, "Removed local classad file %s\n", 
 							 daemonCore->localAdFile );
 				}
@@ -902,7 +902,12 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
 		return FALSE;
 	}
-	dc_reconfig();
+	if (!daemonCore->GetDelayReconfig()) {
+		dc_reconfig();
+	} else {
+        dprintf(D_FULLDEBUG, "Delaying reconfig.\n");
+ 		daemonCore->SetNeedReconfig(true);
+	}
 	return TRUE;
 }
 

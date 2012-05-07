@@ -30,6 +30,7 @@
 #include "sig_install.h"
 #include "string_list.h"
 #include "condor_string.h"   // for strnewp()
+#include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"
 #include "condor_distribution.h"
@@ -79,6 +80,7 @@ struct SortSpec {
 
 // global variables
 AttrListPrintMask pm;
+List<const char> pm_head; // The list of headings for the mask entries
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
@@ -333,6 +335,10 @@ main (int argc, char *argv[])
 		projList.AppendArg("ActvtyTime");
 		projList.AppendArg("MyCurrentTime");
 		projList.AppendArg("EnteredCurrentActivity");
+	} else if( ppStyle == PP_VERBOSE ) {
+	    // Remove everything from the projection list if we're displaying
+	    // the "long form" of the ads.
+	    projList.Clear();
 	}
 
 	if( projList.Count() > 0 ) {
@@ -571,7 +577,9 @@ firstPass (int argc, char *argv[])
 	param_functions *p_funcs;
 	int had_pool_error = 0;
 	int had_direct_error = 0;
-    int had_statistics_error = 0;
+	int had_statistics_error = 0;
+	const char * pcolon = NULL;
+
 	// Process arguments:  there are dependencies between them
 	// o -l/v and -serv are mutually exclusive
 	// o -sub, -avail and -run are mutually exclusive
@@ -625,6 +633,21 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			i += 2;			
+		} else
+		if (*argv[i] == '-' &&
+			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
+			 is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2)) ) {
+				// make sure we have at least one more argument
+			if ( !argv[i+1] || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: Argument %s requires "
+						 "at last one attribute parameter\n", argv[i] );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			setPPstyle (PP_CUSTOM, i, argv[i]);
+			while (argv[i+1] && *(argv[i+1]) != '-') {
+				++i;
+			}
 		} else
 		if (matchPrefix (argv[i], "-target", 5)) {
 			if( !argv[i+1] ) {
@@ -684,7 +707,13 @@ firstPass (int argc, char *argv[])
 			setPPstyle (PP_XML, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i],"-attributes", 3)){
-			// we don't do anything right here ... see prefix check in secondPass
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -attributes requires one additional argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			i++;
 		} else	
 		if (matchPrefix (argv[i], "-run", 2) || matchPrefix(argv[i], "-claimed", 3)) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
@@ -885,6 +914,7 @@ firstPass (int argc, char *argv[])
 void
 secondPass (int argc, char *argv[])
 {
+	const char * pcolon = NULL;
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
@@ -898,7 +928,20 @@ secondPass (int argc, char *argv[])
 		}
 		if (matchPrefix (argv[i], "-format", 2)) {
 			pm.registerFormat (argv[i+1], argv[i+2]);
-			projList.AppendArg(argv[i+2]);
+
+			StringList attributes;
+			ClassAd ad;
+			if(!ad.GetExprReferences(argv[i+2],attributes,attributes)){
+				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
+				exit(1);
+			}
+
+			attributes.rewind();
+			char const *s;
+			while( (s=attributes.next()) ) {
+				projList.AppendArg(s);
+			}
+
 			if (diagnose) {
 				printf ("Arg %d --- register format [%s] for [%s]\n",
 						i, argv[i+1], argv[i+2]);
@@ -906,8 +949,75 @@ secondPass (int argc, char *argv[])
 			i += 2;
 			continue;
 		}
+		if (*argv[i] == '-' &&
+			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
+			 is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2)) ) {
+				// make sure we have at least one more argument
+			if ( !argv[i+1] || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: Argument %s requires "
+						 "at last one attribute parameter\n", argv[i] );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+
+			bool flabel = false;
+			bool fCapV  = false;
+			bool fheadings = false;
+			const char * pcolpre = " ";
+			const char * pcolsux = NULL;
+			if (pcolon) {
+				++pcolon;
+				while (*pcolon) {
+					switch (*pcolon)
+					{
+						case ',': pcolsux = ","; break;
+						case 'n': pcolsux = "\n"; break;
+						case 't': pcolpre = "\t"; break;
+						case 'l': flabel = true; break;
+						case 'V': fCapV = true; break;
+						case 'h': fheadings = true; break;
+					}
+					++pcolon;
+				}
+			}
+			pm.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+
+			while (argv[i+1] && *(argv[i+1]) != '-') {
+				++i;
+				ClassAd ad;
+				StringList attributes;
+				if(!ad.GetExprReferences(argv[i],attributes,attributes)){
+					fprintf( stderr, "Error:  Parse error of: %s\n", argv[i]);
+					exit(1);
+				}
+
+				attributes.rewind();
+				char const *s;
+				while ((s = attributes.next())) {
+					projList.AppendArg(s);
+				}
+
+				MyString lbl = "";
+				int wid = 0;
+				int opts = FormatOptionNoTruncate;
+				if (fheadings || pm_head.Length() > 0) { 
+					const char * hd = fheadings ? argv[i] : "(expr)";
+					wid = 0 - (int)strlen(hd); 
+					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
+					pm_head.Append(hd);
+				}
+				else if (flabel) { lbl.sprintf("%s = ", argv[i]); wid = 0; opts = 0; }
+				lbl += fCapV ? "%V" : "%v";
+				if (diagnose) {
+					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
+							i, lbl.Value(), wid, opts,  argv[i]);
+				}
+				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
+			}
+			continue;
+		}
 		if (matchPrefix (argv[i], "-target", 2)) {
-			i += 2;
+			i++;
 			continue;
 		}
 		if( matchPrefix(argv[i], "-sort", 3) ) {
@@ -935,7 +1045,7 @@ secondPass (int argc, char *argv[])
 			while( (s=more_attrs.next()) ) {
 				projList.AppendArg(s);
 			}
-			i += 2;
+			i++;
 			continue;
 		}
 		
@@ -1077,17 +1187,18 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 int
 customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 {
-	EvalResult 	lt_result;
+	classad::Value lt_result;
+	bool val;
 
 	for (unsigned i = 0;  i < sortSpecs.size();  ++i) {
-		if (EvalExprTree(sortSpecs[i].exprLT, ad1, ad2, &lt_result)
-			&& lt_result.type == LX_INTEGER ) {
-			if( lt_result.i ) {
+		if (EvalExprTree(sortSpecs[i].exprLT, ad1, ad2, lt_result)
+			&& lt_result.IsBooleanValue(val) ) {
+			if( val ) {
 				return 1;
 			} else {
 				if (EvalExprTree( sortSpecs[i].exprEQ, ad1,
-					ad2, &lt_result ) &&
-				(( lt_result.type != LX_INTEGER || !lt_result.i ))){
+					ad2, lt_result ) &&
+					( !lt_result.IsBooleanValue(val) || !val )){
 					return 0;
 				}
 			}

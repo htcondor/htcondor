@@ -363,7 +363,7 @@ MAIN( int argc, char *argv[], char **envp )
 			  -Derek Wright 9/29/99
 			*/
 		if( (strncmp(arg, "D_", 2) == MATCH) ) {
-			_condor_set_debug_flags( arg );
+			_condor_set_debug_flags( arg, 0 );
 			continue;
 		}
 
@@ -408,7 +408,7 @@ MAIN( int argc, char *argv[], char **envp )
 			   -Derek Wright 9/30/99
 			 */
 		if( (strncmp(arg, "D_", 2) == MATCH) ) {
-			_condor_set_debug_flags( arg );
+			_condor_set_debug_flags( arg, 0 );
 			continue;
 		}
 
@@ -879,10 +879,10 @@ get_ckpt_name()
 void
 _condor_setup_dprintf()
 {
-	if( ! DebugFlags ) {
+	if( ! IsDebugLevel(D_ALWAYS) ) {
 			// If it hasn't already been set, give a default, so we
 			// still get dprintf() if we're running in Condor.
-		DebugFlags = D_ALWAYS | D_NOHEADER;
+		_condor_set_debug_flags( NULL, D_ALWAYS | D_NOHEADER);
 	}
 
 		// Now, initialize what FD we print to.  If we got to this

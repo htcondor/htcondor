@@ -140,7 +140,7 @@ sysapi_load_avg_raw(void)
 
     fclose(proc);
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f %.2f %.2f\n", short_avg, 
 				 medium_avg, long_avg );
 	}
@@ -177,7 +177,7 @@ sysapi_load_avg_raw(void)
 	if (KernelLookupFailed)
 		val = lookup_load_avg_via_uptime();
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f\n", val );
 	}
 	return val;
@@ -257,7 +257,7 @@ sysapi_load_avg_raw(void)
 	second = (float)load.ldavg[1] / (float)load.fscale;
 	third = (float)load.ldavg[2] / (float)load.fscale;
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f %.2f %.2f\n", 
 			first, second, third );
 	}
@@ -516,7 +516,7 @@ sysapi_load_avg_raw(void)
 	sysapi_internal_reconfig();
 	val = lookup_load_avg_via_uptime();
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f\n", val );
 	}
 	return val;

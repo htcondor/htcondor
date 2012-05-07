@@ -36,7 +36,8 @@
    actually request them somewhere, either in dprintf_config(), or the
    equivalent inside the user job.
 */
-int		DebugFlags			= 0;		
+int		DebugFlags			= 0;
+int		DebugVerbose		= 0;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -47,14 +48,25 @@ int		DebugFlags			= 0;
 int		_condor_dprintf_works = 0;
 
 const char *_condor_DebugFlagNames[] = {
+#if !defined D_CATEGORY_MASK
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_CONFIG", "D_UNUSED2", "D_UNUSED3", "D_PROTOCOL",	"D_PRIV",
 	"D_SECURITY", "D_DAEMONCORE", "D_COMMAND", "D_MATCH", "D_NETWORK",
 	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
-	"D_FAILURE", "D_PID", "D_FDS", "D_UNUSED3", "D_NOHEADER",
+	"D_FAILURE", "D_PID", "D_FDS", "D_LEVEL", "D_NOHEADER",
+#else
+	"D_ALWAYS", "D_FAILURE", "D_STATUS", "D_GENERAL",
+	"D_JOB", "D_MACHINE", "D_CONFIG", "D_PROTOCOL",
+	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
+	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
+	"D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
+	"D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE",
+	"D_LOAD", "D_PROC", "D_NFS",
+// these are flags rather than categories
+// "D_EXPR", "D_FULLDEBUG", "D_FAILURE", "D_PID", "D_FDS", "D_NOHEADER",
+#endif
 };
-
 
 /*
    The real dprintf(), called by both the user job and all the daemons
@@ -82,50 +94,95 @@ dprintf(int flags, const char* fmt, ...)
  * We don't use strtok_r() because it's not available on Windows.
  */
 void
-_condor_set_debug_flags( const char *strflags )
+_condor_set_debug_flags( const char *strflags, int flags )
 {
 	char *tmp;
 	char *flag;
-	int notflag, bit, i;
+	int flag_verbosity, bit, i;
+#ifdef D_CATEGORY_MASK
+	// this flag is set when strflags or flags has D_FULLDEBUG
+	// 
+	bool fulldebug = (flags & D_FULLDEBUG) != 0;
+
+	// this flag is set when D_FLAG:n syntax is used, 
+	// when true, D_FULLDEBUG is treated strictly as a category and 
+	// not as a verbosity modifier of other flags.
+	bool individual_verbosity = false;
+#endif
 
 		// Always set D_ALWAYS
 	DebugFlags |= D_ALWAYS;
+	DebugFlags |= flags;
 
-	tmp = strdup( strflags );
-	if ( tmp == NULL ) {
-		return;
-	}
-
-	flag = strtok( tmp, ", " );
-
-	while ( flag != NULL ) {
-		if( *flag == '-' ) {
-			flag += 1;
-			notflag = 1;
-		} else {
-			notflag = 0;
+	if (strflags) {
+		tmp = strdup( strflags );
+		if ( tmp == NULL ) {
+			return;
 		}
 
-		bit = 0;
-		if( strcasecmp(flag, "D_ALL") == 0 ) {
-			bit = D_ALL;
-		} else for( i = 0; i < D_MAXFLAGS; i++ ) {
-			if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
-				bit = (1 << i);
-				break;
+		flag = strtok( tmp, ", " );
+
+		while ( flag != NULL ) {
+			if( *flag == '-' ) {
+				flag += 1;
+				flag_verbosity = 0;
+			} else {
+				flag_verbosity = 1;
 			}
-		}
 
-		if( notflag ) {
-			DebugFlags &= ~bit;
-		} else {
-			DebugFlags |= bit;
-		}
+			bit = 0;
+	#ifdef D_CATEGORY_MASK
+			char * colon = strchr(flag, ':');
+			if (colon) {
+				colon[0] = 0; // null terminate at the ':' so we can use strcasecmp on the flag name.
+				individual_verbosity = true;
+				if (colon[1] >= '0' && colon[1] <= '9') {
+					flag_verbosity = (int)(colon[1] - '0');
+				}
+			}
+			if( strcasecmp(flag, "D_ALL") == 0 ) {
+				bit = D_PID | D_FDS | ((1 << D_CATEGORY_COUNT)-1);
+			} else if( strcasecmp(flag, "D_PID") == 0 ) {
+				bit = D_PID;
+			} else if( strcasecmp(flag, "D_FDS") == 0 ) {
+				bit = D_FDS;
+			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
+				bit = D_EXPR;
+			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
+				fulldebug = (flag_verbosity > 0);
+				bit = D_GENERIC_VERBOSE;
+			} else for( i = 0; i < (int)COUNTOF(_condor_DebugFlagNames); i++ )
+	#else
+			if( strcasecmp(flag, "D_ALL") == 0 ) {
+				bit = D_ALL;
+			} else for( i = 0; i < D_MAXFLAGS; i++ )
+	#endif
+			{
+				if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
+					bit = (1 << i);
+					break;
+				}
+			}
 
-		flag = strtok( NULL, ", " );
-	}
+			if (flag_verbosity) {
+				DebugFlags |= bit;
+				if (flag_verbosity > 1)
+					DebugVerbose |= bit;
+			} else {
+				DebugFlags &= ~bit;
+			}
+
+			flag = strtok( NULL, ", " );
+		}
 
 	free( tmp );
+	}
+
+#ifdef D_CATEGORY_MASK
+	if ( ! individual_verbosity) {
+		DebugVerbose = (fulldebug) ? DebugFlags : 0;
+	}
+#endif
 }
 
 #if defined(HAVE__FTIME)

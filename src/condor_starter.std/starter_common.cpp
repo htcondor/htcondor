@@ -177,7 +177,7 @@ init_logging()
 
 		pval = param( "STARTER_DEBUG" );
 		if( pval ) {
-			set_debug_flags( pval );
+			set_debug_flags( pval, 0 );
 			free( pval );
 		}
 	}

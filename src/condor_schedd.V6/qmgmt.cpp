@@ -548,7 +548,7 @@ InitQmgmt()
 		i++;
 	}
 
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
 		for( i=0; i<num_super_users; i++ ) {
 			dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
@@ -1731,6 +1731,9 @@ NewProc(int cluster_id)
 	IncrementClusterSize(cluster_id);
     job_queued_count += 1;
 
+	// can't increment the JobsSubmitted count for other pools yet
+	scheduler.OtherPoolStats.DeferJobsSubmitted(cluster_id, proc_id);
+
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
 	MyString gjid = "\"";
@@ -2302,21 +2305,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	char *round_param = param(round_param_name.Value());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
-		LexemeType attr_type = LX_EOF;
+		classad::Value::ValueType attr_type = classad::Value::NULL_VALUE;
 		ExprTree *tree = NULL;
 		classad::Value val;
 		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
 			 tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
 			((classad::Literal *)tree)->GetValue( val );
 			if ( val.GetType() == classad::Value::INTEGER_VALUE ) {
-				attr_type = LX_INTEGER;
+				attr_type = classad::Value::INTEGER_VALUE;
 			} else if ( val.GetType() == classad::Value::REAL_VALUE ) {
-				attr_type = LX_FLOAT;
+				attr_type = classad::Value::REAL_VALUE;
 			}
 		}
 		delete tree;
 
-		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
+		if ( attr_type == classad::Value::INTEGER_VALUE || classad::Value::REAL_VALUE ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
@@ -2334,7 +2337,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			int ivalue;
 			double fvalue;
 
-			if ( attr_type == LX_INTEGER ) {
+			if ( attr_type == classad::Value::INTEGER_VALUE ) {
 				val.IsIntegerValue( ivalue );
 				fvalue = ivalue;
 			} else {
@@ -2362,7 +2365,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
-					if( attr_type == LX_INTEGER ) {
+					if( attr_type == classad::Value::INTEGER_VALUE ) {
 						new_value.sprintf("%d",(int)fvalue);
 					}
 					else {
@@ -2386,7 +2389,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				new_value = ivalue;
 
 					// if it was a float, append ".0" to keep it a float
-				if ( attr_type == LX_FLOAT ) {
+				if ( attr_type == classad::Value::REAL_VALUE ) {
 					new_value += ".0";
 				}
 			}
@@ -3451,13 +3454,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 								+ strlen(fallback)
 								+ 1  // optional '"'
 								+ 1); // null terminator
-							if(strlen(fallback) == 0) {
-								// fallback is nothing?  That confuses all sorts of
-								// things.  How about a nothing string instead?
-								sprintf(rebuild,"%s = \"%s\"",name,fallback);
-							} else {
-								sprintf(rebuild,"%s = %s",name,fallback);
-							}
+                            // fallback is defined as being a string value, encode it thusly:
+                            sprintf(rebuild,"%s = \"%s\"", name, fallback);
 							value = rebuild;
 						}
 						if(!fallback || !value) {

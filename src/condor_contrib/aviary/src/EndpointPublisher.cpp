@@ -135,7 +135,7 @@ EndpointPublisher::invalidate()
    invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
    invalidate_ad.SetTargetTypeName(ENDPOINT);
    invalidate_ad.Assign(ENDPOINT_URI,m_location.c_str());
-
+   invalidate_ad.Assign(ATTR_NAME,m_name.c_str());
    sprintf(line,"%s == \"%s\"", ATTR_NAME, m_name.c_str()); 
    invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 

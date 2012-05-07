@@ -907,9 +907,10 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 		}
 	}
 
-	EvalResult result;
-	if ( EvalExprTree( __filter__, cad, NULL, &result ) &&
-		 result.type == LX_INTEGER && result.i != 0 ) {
+	classad::Value result;
+	bool val;
+	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
+		 result.IsBooleanValueEquiv(val) && val ) {
 		// Found a match 
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
@@ -989,9 +990,10 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 		}
 	}
 
-	EvalResult result;
-	if ( EvalExprTree( __filter__, cad, NULL, &result ) &&
-		 result.type == LX_INTEGER && result.i != 0 ) {
+	classad::Value result;
+	bool val;
+	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
+		 result.IsBooleanValueEquiv(val) && val ) {
 
 		cad->Assign( ATTR_LAST_HEARD_FROM, 0 );
         __numAds__++;

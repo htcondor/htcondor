@@ -943,12 +943,12 @@ test_eval_error(
 {
  	int is_error;
 	ExprTree *tree;
-	EvalResult val;
+	classad::Value val;
 
 	tree = classad->LookupExpr(attribute_name);
 	if(!tree) {
         is_error = false;
-    } else if (EvalExprTree(tree, classad, NULL, &val) && val.type == LX_ERROR) {
+    } else if (EvalExprTree(tree, classad, NULL, val) && val.GetType() == classad::Value::ERROR_VALUE) {
         is_error = true;
     } else {
         is_error = false;

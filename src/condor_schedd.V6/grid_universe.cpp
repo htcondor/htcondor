@@ -569,7 +569,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		return NULL;
 	}
 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string);
 		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.Value());

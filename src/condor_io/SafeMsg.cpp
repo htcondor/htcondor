@@ -114,7 +114,7 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
     if (keyId) {
         outgoingEncKeyId_ = strdup(keyId);
         outgoingEidLen_   = strlen(outgoingEncKeyId_);
-		if( DebugFlags & D_FULLDEBUG ) {
+		if( IsDebugVerbose(D_SECURITY) ) {
 			dprintf( D_SECURITY, 
 					 "set_encryption_id: setting key length %d\n", 
 					 outgoingEidLen_ );  
@@ -1111,7 +1111,7 @@ int _condorInMsg::getn(char* dta, const int size)
 		incrementCurData(len);
 	} // of while(total..)
 
-    if( D_FULLDEBUG & DebugFlags ) {
+    if( IsDebugVerbose(D_NETWORK) ) {
         dprintf(D_NETWORK, "%d bytes read from UDP[size=%ld, passed=%d]\n",
                 total, msgLen, passed);
     }
@@ -1176,14 +1176,14 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 			tempDir = tempDir->nextDir;
 			tempPkt = 0;
 		} else if(!tempDir->dEntry[tempPkt].dGram) { // was the last packet
-			if( D_FULLDEBUG & DebugFlags )
+			if( IsDebugVerbose(D_NETWORK) )
 				dprintf(D_NETWORK,
 				        "SafeMsg::getPtr: get to end & '%c' not found\n", delim);
 			return -1;
 		}
 	}
 
-	if( D_FULLDEBUG & DebugFlags )
+	if( IsDebugVerbose(D_NETWORK) )
 		dprintf(D_NETWORK, "SafeMsg::_longMsg::getPtr: found delim = %c & length = %lu\n",
 			  delim, (unsigned long)n);
 	if( n > tempBufLen ) {

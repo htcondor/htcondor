@@ -19,8 +19,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.7.6 not yet released.
-%\item Condor version 7.7.6 released on Month Date, 2012.
+\item Condor version 7.7.6 released on April 24, 2012.
+This release contains all bug fixes from Condor version 7.6.7,
+as listed in this manual's version history. 
+
+\item In the Condor directory defined by \MacroUNI{SBIN},
+\File{condor\_vm\_vmware.pl} was
+renamed to \File{condor\_vm\_vmware} and \File{grid\_monitor.sh} was
+renamed to \File{grid\_monitor}.
+This makes Condor more compliant with Linux native packaging rules.
+Symbolic links to the old locations are included to ease upgrading.
+\Ticket{2940}
 
 \end{itemize}
 
@@ -29,8 +38,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Made keep\_claim\_idle a real submit description
-file command.
+\item The values of \SubmitCmd{request\_memory}, \SubmitCmd{request\_disk} and
+\SubmitCmd{request\_cpus} submit description file commands will now be
+automatically included in the job \Attr{Requirements} expression by
+\Condor{submit}.  This is part of several changes
+in code and policy intended to make partitionable slots easier to deploy
+and use.  The requested values for memory, disk and cpus, as well as the
+amount of these resources that a job actually uses are now printed in the
+user log when the job exits.
+\Ticket{2843}
+
+\item The new \SubmitCmd{keep\_claim\_idle} submit description
+file command requests that the \Condor{schedd} keep a claim for a defined
+number of seconds after the job exits.
+The job ClassAd attribute \Attr{KeepClaimIdle} was introduced in
+Condor version 7.7.1 to implement this functionality.
+See the definition of this command at 
+section ~\ref{condor-submit-keep-claim-idle}.
 \Ticket{2094}
 
 \item Changed the default for \Condor{history} to print out
@@ -38,11 +62,6 @@ items in reverse chronological order.
 The new \Opt{-forwards} option enables the previous behavior of 
 printing historical jobs in chronological order.
 \Ticket{2808}
-
-\item Advertised new attributes \Attr{RemoteGroup}, \Attr{RemoteNegotiatingGroup},
-\Attr{RemoteAutoregroup} and their Submitter counterparts to support enhanced
-preemption policies with accounting group awareness.
-\Ticket{2885}
 
 \item Enhanced the \Condor{negotiator} to provide the name of 
 concurrency limits that cause negotiation to fail, so that 
@@ -96,6 +115,13 @@ via the new \Opt{-X} option.
 
 \begin{itemize}
 
+\item The new machine ClassAd attributes \Attr{RemoteGroup}, 
+\Attr{RemoteNegotiatingGroup}, and \Attr{RemoteAutoregroup},
+and the new job ClassAd attributes \Attr{SubmitterGroup}, 
+\Attr{SubmitterNegotiatingGroup}, and \Attr{SubmitterAutoregroup}
+enhance support for preemption policies with accounting group awareness.
+\Ticket{2885}
+
 \item The new configuration variable
 \Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE} is a boolean which causes the
 \Condor{negotiator} to re-read the configuration prior to each
@@ -127,11 +153,43 @@ non negative integer.  It was formerly limited to values between 0 and 60,
 inclusive.
 \Ticket{2864}
 
+\item New configuration variables have been added, 
+such that the \Condor{schedd} may
+define statistics that count subsets of jobs. 
+These variables
+have the form \Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<name>} and 
+are defined by a boolean ClassAd expression.
+<name> will be prefixed to the names of attributes in the \Condor{schedd} 
+ClassAd, such as \Attr{physicsJobsStarted}
+where \MacroNI{SCHEDD\_COLLECT\_STATS\_FOR\_physics} evaluates to \Expr{True},
+and this attribute would be the count of jobs that have started.
+\Ticket{2862}
+
+\item Several OpSys related attributes were added or updated to assist with selection of execute resources.
+\begin{description}
+\item [\AdAttr{OpSysAndVer}:] A string containing the value of the \Attr{OpSysName} attribute with the \Attr{OpSysMajorVersion} attribute appended.
+\item [\AdAttr{OpSysLegacy}:] A string that holds the long-standing values for the \Attr{OpSys} attribute.
+\item [\AdAttr{OpSysLongName}:] A string containing a full description of the operating system.
+\item [\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+\item [\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
+\item [\AdAttr{OpSysShortName}:] A string containing a short description of the operating system.
+\item [\AdAttr{OpSysVer}:] An integer value representing the operating system version number.
+\end{description}
+\Ticket{2366}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in \Condor{vm-gahp} that caused 64-bit guest OSes that
+need network access to fail on start-up when run under VMware.
+\Ticket{2922}
+
+\item Submit command \Macro{remote\_initialdir} now works for pbs and lsf
+grid universe jobs.
+\Ticket{2913}
 
 \item Fixed the path to \Prog{sftp\_server} on Mac OS X and Debian
 platforms.
@@ -214,7 +272,11 @@ these macros for all node jobs).  This bug was introduced in 7.7.5.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{submit} man page contains descriptions of \Condor{starter}
+prescripts and postscripts.
+See ~\ref{man-condor-submit-prescript} and ~\ref{man-condor-submit-postscript}
+for the descriptions.
+\Ticket{2379}
 
 \end{itemize}
 
