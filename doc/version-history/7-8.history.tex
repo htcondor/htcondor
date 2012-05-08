@@ -53,6 +53,10 @@ without attempting to change to their original directory.
 
 \begin{itemize}
 
+\item Support glob() on Scientific Linux 6 and others using the new
+Linux system call fstatat(), but only when not using remote system calls.
+\Ticket{2945}
+
 \item Fixed potential startd crash introduced in v7.7.5 when claiming 
 a partitionable slot that was in the Owner state. 
 \Ticket{2936}
