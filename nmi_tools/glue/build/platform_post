@@ -63,22 +63,11 @@ $platform || die "No platform to use, NOT submitting tests\n";
 
 # Since we succeeded, let's pull out any RPM and Deb files and push them to mirror.batlab.org
 if(!$ENV{_NMI_STEP_FAILED}) {
-    print `pwd && ls -la .`;
     system("mkdir native-packages && cd native-packages && tar zxf ../results.tar.gz public/condor-*.{deb,rpm}");
+    print "Native packages to push to mirror.batlab.org:\n";
     print `find native-packages 2>&1`;
     foreach my $file (glob("native-packages/public/*.rpm")) {
-	my $wday = (localtime())[6];
-	my $remote_filename = basename($file);
-	$remote_filename =~ s|(condor-\d\.\d\.\d).*$|$1-$platform-$wday.rpm|;
-	my $cmd = "scp $file mirror.batlab.org:public/html/yum/$remote_filename";
-	print "Executing command: '$cmd'\n";
-	system($cmd);
-    }
-    foreach my $file (glob("native-packages/public/*.deb")) {
-	my $wday = (localtime())[6];
-	my $remote_filename = basename($file);
-	$remote_filename =~ s|(condor-\d\.\d\.\d).*$|$1-$platform-$wday.deb|;
-	my $cmd = "scp $file mirror.batlab.org:public/html/debian/$remote_filename";
+	my $cmd = "scp $file mirror.batlab.org:public/html/repos/inbox/";
 	print "Executing command: '$cmd'\n";
 	system($cmd);
     }
