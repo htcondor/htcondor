@@ -36,8 +36,8 @@ public:
        operator bool() const { return it != log.end(); } 
        std::string get();
 private:
-       const std::string& log;
-       std::string::const_iterator it;
+       std::string log;
+       std::string::iterator it;
        NameFinder(); 
 };
 

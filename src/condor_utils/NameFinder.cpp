@@ -18,29 +18,31 @@
  ***************************************************************/
 
 #include "NameFinder.h"
-
+#include <cctype>
+#include <algorithm>
+#include <iterator>
 NameFinder::NameFinder(const std::string& logname) :
        log(logname)
 {
        it = log.begin();       
 }
 
+namespace {
+bool not_space(char ch)
+{
+	return !std::isspace(ch);
+}
+}
+
 std::string NameFinder::get()
 {
 	std::string entry;
-		// Clear out prefix whitespace;
-	while(it != log.end() && isspace(*it)) {
-		++it;
-	}
-		// Pull in all characters until we see a semicolon
-		// Space allowed in UserLog entries?	
-	while(it != log.end() && *it != ';') {
-		entry += *it;
-		++it;
-	}
-		// Move past the semicolon, if we are at one
-	if(it != log.end() && *it == ';') {
-		++it;
+	it = std::find_if(it,log.end(),not_space);
+	if(it != log.end()) {
+		std::string::iterator p = std::find(it,log.end(),';');
+		entry.resize(std::distance(it,p));
+		std::copy(it,p,entry.begin());
+		it = p + ( p == log.end() ? 0 : 1 );
 	}
 	return entry;
 }
