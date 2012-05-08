@@ -53,6 +53,10 @@ without attempting to change to their original directory.
 
 \begin{itemize}
 
+\item (Fixed in 7.7.6.) Fix \Arg{-absent}, \Arg{-vm}, and \Arg{-java}
+flags to \Condor{status} so that they work with the \Arg{-long} option.
+\Ticket{2943}
+
 \item Support glob() on Scientific Linux 6 and others using the new
 Linux system call fstatat(), but only when not using remote system calls.
 \Ticket{2945}
