@@ -129,6 +129,16 @@ and later.
 \item \Condor{job\_router} failed to route spooled source jobs.
 \Ticket{2955}
 
+\item Fixed a bug on Debian 6 and RHEL 6 that could cause standard
+universe jobs to never checkpoint. This would happen if the job
+triggered a call to NSCD (Name Service Caching Daemon) but NSCD 
+wasn't running. 
+Calls to NSCD can be triggered by a lookup of a user account or
+resolving a machine hostname to an IP address.
+Now, NSCD is never consulted by a standard universe
+job (this was already the behavior on other platforms).
+\Ticket{2973}
+
 \end{itemize}
 
 \noindent Known Bugs:
