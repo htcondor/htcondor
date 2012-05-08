@@ -10379,6 +10379,7 @@ Scheduler::Init()
 		names.truncate(0);
 
 		OtherPoolStats.RemoveDisabled();
+		OtherPoolStats.Reconfig();
 	}
 
 	/* default 5 megabytes */
