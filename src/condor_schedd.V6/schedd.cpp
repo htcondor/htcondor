@@ -1503,13 +1503,13 @@ count( ClassAd *job )
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
-	// we don't actually need this for the current set of other_stats
+	// build a list of other stats pools that match this job
 	//
-	//ScheddOtherStats * other_stats = NULL;
-	//if (scheduler.OtherPoolStats.AnyEnabled()) {
-	//	other_stats = OtherPoolStats.Matches(*job);
-	//}
-	//#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+	ScheddOtherStats * other_stats = NULL;
+	if (scheduler.OtherPoolStats.AnyEnabled()) {
+		other_stats = scheduler.OtherPoolStats.Matches(*job);
+	}
+	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
@@ -1626,14 +1626,14 @@ count( ClassAd *job )
 		int job_image_size = 0;
 		job->LookupInteger("ImageSize_RAW", job_image_size);
 		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
-		//OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+		OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
 		int job_start_date = 0;
 		int job_running_time = 0;
 		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
 			job_running_time = (time(NULL) - job_start_date);
 		scheduler.stats.JobsRunningRuntimes += job_running_time;
-		//OTHER.JobsRunningRuntimes += job_running_time;
+		OTHER.JobsRunningRuntimes += job_running_time;
 	} else if (status == HELD) {
 		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
