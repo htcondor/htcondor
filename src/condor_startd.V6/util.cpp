@@ -24,6 +24,7 @@
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
 #include "daemon.h"
 #include "../condor_privsep/condor_privsep.h"
+#include "filesystem_remap.h"
 
 // helper method to determine whether the given execute directory
 // is root-squashed. this function assumes that the given directory
@@ -268,21 +269,27 @@ cleanup_execute_dirs( StringList &list )
 		// us to remove subdirectories of EXECUTE - so we need to
 		// list them and ask the Switchboard to delete each one
 		//
-		Directory execute_dir( exec_path, PRIV_ROOT );
 
-		execute_dir.Rewind();
-		while ( execute_dir.Next() ) {
-			check_recovery_file( execute_dir.GetFullPath() );
-		}
+		pair_strings_vector root_dirs = root_dir_list();
+		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
+			const char * exec_path_full = dirscat(it->second.c_str(), exec_path);
+			Directory execute_dir( exec_path_full, PRIV_ROOT );
 
-		if (privsep_enabled()) {
 			execute_dir.Rewind();
-			while (execute_dir.Next()) {
-				privsep_remove_dir(execute_dir.GetFullPath());
+			while ( execute_dir.Next() ) {
+				check_recovery_file( execute_dir.GetFullPath() );
 			}
-		}
-		else {
-			execute_dir.Remove_Entire_Directory();
+
+			if (privsep_enabled()) {
+				execute_dir.Rewind();
+				while (execute_dir.Next()) {
+					privsep_remove_dir(execute_dir.GetFullPath());
+				}
+			}
+			else {
+				execute_dir.Remove_Entire_Directory();
+			}
+			delete [] exec_path_full;
 		}
 #endif
 	}
@@ -353,13 +360,19 @@ cleanup_execute_dir(int pid, char const *exec_path)
 	}
 
 	// Instantiate a directory object pointing at the execute directory
-	Directory execute_dir( exec_path, PRIV_ROOT );
+	pair_strings_vector root_dirs = root_dir_list();
+	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
+		const char * exec_path_full = dirscat(it->second.c_str(), exec_path);
 
-		// Look for it
-	if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
+		Directory execute_dir( exec_path_full, PRIV_ROOT );
 
-			// Remove the execute directory
-		execute_dir.Remove_Current_File();
+			// Look for it
+		if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
+
+				// Remove the execute directory
+			execute_dir.Remove_Current_File();
+		}
+		delete [] exec_path_full;
 	}
 #endif  /* UNIX */
 }

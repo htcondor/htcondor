@@ -474,10 +474,7 @@ bool stringListMember_func( const char *name,
 
 	StringList sl( list_str.c_str(), delim_str.c_str() );
 	int rc;
-	if ( sl.number() == 0 ) {
-		result.SetUndefinedValue();
-		return true;
-	} else if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
+	if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
 		rc = sl.contains( item_str.c_str() );
 	} else {
 		rc = sl.contains_anycase( item_str.c_str() );
@@ -1395,7 +1392,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 0 : 1;
 				rc = 1;
 			}
 		}

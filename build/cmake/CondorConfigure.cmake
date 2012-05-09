@@ -595,11 +595,16 @@ if (NOT WINDOWS)
 
 endif(NOT WINDOWS)
 
-if (CONDOR_EXTERNALS AND NOT WINDOWS)
-	### addition of a single externals target which allows you to
+### addition of a single externals target which allows you to
+if (CONDOR_EXTERNALS)
+if (NOT WINDOWS)
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
-endif(CONDOR_EXTERNALS AND NOT WINDOWS)
+else (NOT WINDOWS)
+	add_custom_target( ALL_EXTERN DEPENDS ${EXTERNAL_MOD_DEP} )
+	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
+endif (NOT WINDOWS)	
+endif(CONDOR_EXTERNALS)
 
 ######### special case for contrib
 if (WANT_CONTRIB AND WITH_MANAGEMENT)

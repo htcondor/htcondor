@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added the ability to delay reconfig in daemon core, and applied to the
+\Condor{negotiator} to defer reconfiguration requests during the negotiation
+cycle until after the cycle completes.
+\Ticket{2931}
+
 \item Fixed a potential infinite loop in the \Condor{gridmanager} for gt2
 grid universe jobs. If the GRAM jobmanager was listening on a different
 port than the \Condor{gridmanager} expected, the \Condor{gridmanager}
@@ -59,6 +64,11 @@ as visible in the \Condor{gridmanager} daemon log.
 \item Added logic to the \Condor{negotiator} that enables job preemption 
 to properly respect hierarchical group quotas.
 \Ticket{2570}
+
+\item Added logic to the \Condor{negotiator} to negotiate with full group 
+quota instead of allocated-slots when no surplus sharing is in effect, to
+address a bug where groups could fail to claim weighted slots.
+\Ticket{2958}
 
 \item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
 \Prog{glexec}.  

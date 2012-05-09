@@ -54,6 +54,7 @@ if (NOT CLIPPED)
 		if (${SYS_ARCH} STREQUAL "X86_64")
 
 			set (VER 2.5-20061008T1257-x86_64-p0)
+			set (GLIBC_TARNAME glibc-2.5-20061008T1257-x86_64-p0)
 
 			set (GLIBC_CONFIGURE ./configure --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.9 --with-headers=$HOME/junk/glibc-2.5-20061008T1257/override_headers:/usr/include --enable-bind-now --with-tls --with-__thread --build x86_64-redhat-linux --host x86_64-redhat-linux --disable-profile --enable-static-nss)
 
@@ -61,6 +62,7 @@ if (NOT CLIPPED)
 
 		else()
 			set (VER 2.5-20061008T1257-p0)
+			set (GLIBC_TARNAME glibc-2.5-20061008T1257-p0)
 
 			set (GLIBC_CONFIGURE ./configure --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.9 --with-headers=$HOME/junk/glibc-2.5-20061008T1257/override_headers:/usr/include --enable-bind-now --with-tls --with-__thread --build i486-redhat-linux --host i486-redhat-linux --disable-profile --enable-static-nss)
 
@@ -77,6 +79,7 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 
 		if (${SYS_ARCH} STREQUAL "X86_64")
 			set (VER 2.7-18-x86_64)
+			set (GLIBC_TARNAME glibc-2.7-18-x86_64)
 
 			set (GLIBC_FLAGS CC=gcc-4.3 CXX=g++-4.3 AUTOCONF=false MAKEINFO=: CFLAGS='-pipe -O2 -fstrict-aliasing -g ')
 
@@ -85,6 +88,7 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 			set (GLIBC_MAKE make -j2 -r)
 		else()
 			set (VER 2.7-18)
+			set (GLIBC_TARNAME glibc-2.7-18)
 
 			set (GLIBC_FLAGS CC=gcc-4.3 CXX=g++-4.3 AUTOCONF=false MAKEINFO=: CFLAGS='-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3 ')
 
@@ -98,7 +102,8 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 	elseif(${GLIBC_VERSION} STREQUAL "211")
 
 		if (${SYS_ARCH} STREQUAL "X86_64")
-			set (VER 2.11.2-10-x86_64)
+			set (VER 2.11.2-10-x86_64-p1)
+			set (GLIBC_TARNAME glibc-2.11.2-10-x86_64)
 
 			set (GLIBC_FLAGS CC=gcc-4.4 CXX=g++-4.4 AUTOCONF=false MAKEINFO=: CFLAGS='-pipe -O2 -fstrict-aliasing -g ')
 
@@ -107,6 +112,7 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 			set (GLIBC_MAKE make -j2 -r)
 		else()
 			set (VER 2.11.2-10)
+			set (GLIBC_TARNAME glibc-2.11.2-10)
 
 			# XXX FIXME
 			set (GLIBC_FLAGS CC=gcc-4.4 CXX=g++ AUTOCONF=false MAKEINFO=: CFLAGS='-pipe -O2 -fstrict-aliasing -g ')
@@ -120,12 +126,13 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 		endif()
 
 		# The enable-static-nss patch is still needed...
-		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch )
+		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
 
 	elseif(${GLIBC_VERSION} STREQUAL "212")
 
 		if (${SYS_ARCH} STREQUAL "X86_64")
-			set (VER 2.12-2-x86_64)
+			set (VER 2.12-2-x86_64-p1)
+			set (GLIBC_TARNAME glibc-2.12-2-x86_64)
 
 			set (GLIBC_FLAGS CC=gcc CXX=g++ AUTOCONF=false MAKEINFO=: CFLAGS='-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 ')
 
@@ -134,6 +141,7 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 			set (GLIBC_MAKE make -j2 -r)
 		else()
 			set (VER 2.12-2)
+			set (GLIBC_TARNAME glibc-2.12-2)
 
 			set (GLIBC_FLAGS CC=gcc-4.3 CXX=g++-4.3 AUTOCONF=false MAKEINFO=: CFLAGS='-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 ')
 
@@ -144,7 +152,7 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 		endif()
 
 		# The enable-static-nss patch works, and disable link warning about dynamic nss
-		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch)
+		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
 
 	else()
 		message(STATUS "Condor can not build standard universe for glibc version:${GLIBC_VERSION}")
@@ -160,14 +168,14 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 	  ExternalProject_Add(glibc
 					  #-- Download Step ----------
 					  DOWNLOAD_COMMAND wget -N
-					  #http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz ${CMD_TERM}
-					  http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz ${CMD_TERM}
+					  #http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz ${CMD_TERM}
+					  http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz ${CMD_TERM}
 					  DOWNLOAD_DIR ${GLIBC_STAGE}/dl
-					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz
+					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz
 					  #--Patch step ----------
-					  PATCH_COMMAND cd ${GLIBC_VER} && ${GLIBC_PATCH}
+					  PATCH_COMMAND cd ${GLIBC_TARNAME} && ${GLIBC_PATCH}
 					  #--Configure step ----------
-					  CONFIGURE_COMMAND ${GLIBC_FLAGS} ${GLIBC_VER}/${GLIBC_CONFIGURE} --prefix=${GLIBC_INSTALL_LOC}
+					  CONFIGURE_COMMAND ${GLIBC_FLAGS} ${GLIBC_TARNAME}/${GLIBC_CONFIGURE} --prefix=${GLIBC_INSTALL_LOC}
 					  #--Build Step ----------
 					  BUILD_COMMAND ${GLIBC_MAKE}
 					  BUILD_IN_SOURCE 1

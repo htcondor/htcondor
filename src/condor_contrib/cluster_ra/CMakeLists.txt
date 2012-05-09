@@ -16,9 +16,9 @@
 # 
 ###############################################################
 if (LINUX)
-  option(WITH_CLUSTER "Cluster Suite support" ON)
+  option(WITH_CLUSTER_RA "Cluster Resource Agent support" ON)
 endif()
 
-if (WITH_CLUSTER)
+if (WITH_CLUSTER_RA)
   add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
 endif()

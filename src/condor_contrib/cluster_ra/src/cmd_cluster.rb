@@ -1,4 +1,4 @@
-# cmd_cs_control.rb: Cluster Suite control
+# cmd_cs_control.rb: Cluster control
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ module Mrg
             "BaseScheduler"
           end
 
-          def self.gen_params(name, spool)
+          def self.gen_params(name, spool, sname)
             {name=>"$(SCHEDD)",
              "SCHEDD.#{name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "SCHEDD.#{name}.SPOOL"=>spool,
@@ -29,7 +29,9 @@ module Mrg
              "SCHEDD.#{name}.SCHEDD_LOG"=>"$(LOG)/SchedLog-#{name}.log",
              "SCHEDD.#{name}.SCHEDD_ADDRESS_FILE"=>"$(LOG)/.schedd-#{name}_address",
              "SCHEDD.#{name}.SCHEDD_DAEMON_AD_FILE"=>"$(LOG)/.schedd-#{name}_classad",
-             "MASTER.USE_PROCD"=>"TRUE", "RESTART_PROCD_ON_ERROR"=>"TRUE"
+             "SCHEDD.#{name}.USE_PROCD"=>"TRUE",
+             "#{name}_ENVIRONMENT"=>"_CONDOR_PROCD_ADDRESS=$(PROCD_ADDRESS).#{name}",
+             "SCHEDD.#{name}.RESTART_PROCD_ON_ERROR"=>"TRUE"
             }
           end
         end
@@ -39,15 +41,17 @@ module Mrg
             "BaseQueryServer"
           end
 
-          def self.gen_params(name, spool)
-            qs_name = "#{name}_query_server"
+          def self.gen_params(name, spool, sname)
+            qs_name = (sname ? sname : "#{name}_query_server")
             {qs_name=>"$(QUERY_SERVER)",
              "QUERY_SERVER.#{qs_name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "QUERY_SERVER.#{qs_name}.SPOOL"=>"$(SCHEDD.#{name}.SPOOL)",
              "QUERY_SERVER.#{qs_name}.HISTORY"=>"$(QUERY_SERVER.#{qs_name}.SPOOL)/history",
              "QUERY_SERVER.#{qs_name}.QUERY_SERVER_LOG"=>"$(LOG)/QueryServerLog-#{qs_name}",
              "QUERY_SERVER.#{qs_name}.QUERY_SERVER_ADDRESS_FILE"=>"$(LOG)/.query_server_address-#{qs_name}",
-             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.query_server_classad-#{qs_name}"
+             "QUERY_SERVER.#{qs_name}.QUERY_SERVER_DAEMON_AD_FILE"=>"$(LOG)/.query_server_classad-#{qs_name}",
+             "QUERY_SERVER.#{qs_name}.AVIARY_PUBLISH_INTERVAL"=>"10",
+             "QUERY_SERVER.#{qs_name}.AVIARY_PUBLISH_LOCATION"=>"True"
             }
           end
         end
@@ -57,8 +61,8 @@ module Mrg
             "BaseJobServer"
           end
 
-          def self.gen_params(name, spool)
-            js_name = "#{name}_job_server"
+          def self.gen_params(name, spool, sname)
+            js_name = (sname ? sname : "#{name}_job_server")
             {js_name=>"$(JOB_SERVER)",
              "JOB_SERVER.#{js_name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "JOB_SERVER.#{js_name}.SPOOL"=>"$(SCHEDD.#{name}.SPOOL)",
@@ -96,7 +100,7 @@ module Mrg
                 `#{@ccs} --rmsubservice "#{@service}" netfs:condor[#{num}]`
               else
                 services[@name][:condor].each {|n| exit!(1, "There is already a #{@subsys} configured for HA Schedd #{@name}") if n.type == @subsys}
-                `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1" #{@password}`
+                `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1"`
               end
             end
 
@@ -177,11 +181,11 @@ module Mrg
                 exit
               end
 
-              if supports_options
-                opts.on("--riccipassword PASS", "The ricci user password") do |p|
-                  @options[:password] = p
-                end
+              opts.on("--riccipassword PASS", "The ricci user password") do |p|
+                @options[:password] = p
+              end
 
+              if supports_options
                 opts.on("-n", "--no-store", "Only configure the cluster, don't update the store") do
                   @options[:cluster_only] = true
                 end
@@ -196,7 +200,7 @@ module Mrg
           end
 
           def add_options(opts)
-            opts.on("-e", "--expire NUM", "Length of time to forget a restart") do |num|
+            opts.on("-e", "--expire NUM", "Length of time in seconds to forget a restart (default 300)") do |num|
               @options[:expire] = num
             end
 
@@ -225,11 +229,21 @@ module Mrg
                 domain, spool, name = nil, nil, nil
                 cl = []
               end
-              line.scan(/domain=([^,]+),/) {|d| domain = d[0]}
-              line.scan(/mountpoint=([^,]+),/) {|m| spool = m[0]}
-              line.scan(/condor:\s*name=([^,]+).*type=([^,]+)/) {|c| cl << cservice.new(c[0], c[1])}
-              line.scan(/condor:\s*name=([^,]+).*type=schedd/) {|n| name = n[0]}
+              domain = $1 if line =~ /domain=([^,]+),/
+              spool = $1 if line =~ /mountpoint=([^,]+),/
+              cl << cservice.new($1, $2) if line =~ /condor:\s*name=([^,]+).*type=([^,]+)/
+              name = $1 if line =~ /condor:\s*name=([^,]+).*type=schedd/
             end
+
+            # Add the final service if it exists
+            if domain && spool && name && (not cl.empty?)
+              s[name][:domain] = domain
+              s[name][:spool] = spool
+              s[name][:condor] = cl
+            end
+            domain, spool, name = nil, nil, nil
+            cl = []
+
             s
           end
 
@@ -268,10 +282,10 @@ module Mrg
             # Determine if -i is needed
             `ccs -h localhost -i`
             ignore = "-i" if $?.exitstatus == 0
-            @ccs = "ccs #{ignore} -h localhost"
 
             @domain = "Schedd #{@options[:name]} Failover Domain"
-            @password = "--password #{@options[:password]}" if @options.has_key?(:password)
+            password = "--password #{@options[:password]}" if @options.has_key?(:password)
+            @ccs = "ccs #{ignore} -h localhost #{password}"
             @name = @options[:name]
             @service = "HA Schedd #{@name}"
             @tag = "CLUSTER_NAMES"
@@ -290,16 +304,16 @@ module Mrg
           def modify_ccs_nodes
             cmd = (@action.to_s.include?("remove") ? "rm" : "add")
             @options[:nodes].each do |node|
-              `#{@ccs} --#{cmd}node #{node} #{@password}` if cmd == "add"
-              `#{@ccs} --#{cmd}failoverdomainnode '#{@domain}' #{node} #{@password}`
+              `#{@ccs} --#{cmd}node #{node}` if cmd == "add"
+              `#{@ccs} --#{cmd}failoverdomainnode '#{@domain}' #{node}`
             end
           end
 
           def remove_ccs_entries
-            `#{@ccs} --rmsubservice "#{@service}" condor #{@password}`
-            `#{@ccs} --rmsubservice "#{@service}" netfs #{@password}`
-            `#{@ccs} --rmservice "#{@service}" #{@password}`
-            `#{@ccs} --rmfailoverdomain "#{@domain}" #{@password}`
+            `#{@ccs} --rmsubservice "#{@service}" condor`
+            `#{@ccs} --rmsubservice "#{@service}" netfs`
+            `#{@ccs} --rmservice "#{@service}"`
+            `#{@ccs} --rmfailoverdomain "#{@domain}"`
           end
 
           def remove_store_groups
@@ -332,7 +346,7 @@ module Mrg
           end
 
           def get_params
-            Mrg::Grid::Config::Shell.const_get(get_const_name).gen_params(@name, @options[:spool])
+            Mrg::Grid::Config::Shell.const_get(get_const_name).gen_params(@name, @options[:spool], @sname)
           end
 
           def get_store_feature
@@ -344,9 +358,17 @@ module Mrg
             store.checkParameterValidity(get_params.keys).each do |pname|
 
             # Add missing params
-              pargs = ["--needs-restart", "yes", "--kind", "String", "--description", "Created for HA Schedd #{@name}", pname]
+              pargs = ["--needs-restart", get_restart(pname), "--kind", get_kind(pname), "--description", "Created for HA Schedd #{@name}", pname]
               Mrg::Grid::Config::Shell::AddParam.new(store, "").main(pargs)
             end
+          end
+
+          def get_kind(n)
+            n.upcase.include?("PROCD") ? "Boolean" : "String"
+          end
+
+          def get_restart(n)
+            n.upcase.include?("RESTART_PROCD") ? "no" : "yes"
           end
 
           def modify_params_on_group
@@ -400,10 +422,10 @@ module Mrg
               restarts = @options.has_key?(:max_restarts) ? @options[:max_restarts] : 3
               expire = @options.has_key?(:expire) ? @options[:expire] : 300
 
-              # Cluster Suite config
+              # Cluster config
               if @options.has_key?(:new_cluster)
                 `#{@ccs} --stopall`
-                `#{@ccs} --createcluster "HACondorCluster" #{@password}`
+                `#{@ccs} --createcluster "HACondorCluster"`
                 if $?.exitstatus != 0
                   puts "Failed to create the cluster.  Try supplying a ricci password with --riccipassword"
                   exit!(1)
@@ -411,17 +433,17 @@ module Mrg
               end
 
               # Handle nodes
-              `#{@ccs} --addfailoverdomain "#{@domain}" restricted #{@password}`
+              `#{@ccs} --addfailoverdomain "#{@domain}" restricted`
               exit!(1, "Failed to add cluster failover domain.  Does it already exist?") if $?.exitstatus != 0
               modify_ccs_nodes
 
               # Handle service
-              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=relocate #{@password}`
+              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=relocate`
               exit!(1, "Failed to add cluster service.  Does it already exist?") if $?.exitstatus != 0
 
               # Handle subservices
-              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on" #{@password}`
-              `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}" type="#{@subsys}" __independent_subtree="1" __max_restarts=#{restarts} __restart_expire_time=#{expire} #{@password}`
+              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on"`
+              `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}" type="#{@subsys}" __independent_subtree="1" __max_restarts=#{restarts} __restart_expire_time=#{expire}`
             end
 
             if not @options.has_key?(:cluster_only)
@@ -459,7 +481,7 @@ module Mrg
             end
 
             if not @options.has_key?(:wallaby_only)
-              # Cluster Suite config
+              # Cluster config
               remove_ccs_entries
             end
 
@@ -583,10 +605,12 @@ module Mrg
             end
 
             services.keys.each do |n|
+              @sname = nil
               @name = n
               @options[:spool] = services[n][:spool]
               @options[:nodes] = domains[services[n][:domain]]
               services[n][:condor].each do |service|
+                @sname = service.name
                 @subsys = service.type
                 update_store
               end

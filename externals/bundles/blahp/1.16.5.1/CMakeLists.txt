@@ -26,34 +26,14 @@ endif ( LINUX )
 if ( WITH_BLAHP )
 
 	if ( NOT PROPER )
-		message(STATUS "TODO:TSTCLAIR BLAHP eval if linking correct popt w/o mundging Makefile.am")
-
-		########################################
-		condor_pre_external( POPT popt-1.14 "lib;include" "lib/libpopt.a")
-
-		ExternalProject_Add(popt
-						#-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${POPT_VER}.tar.gz ${CMD_TERM}
-						DOWNLOAD_DIR ${POPT_STAGE}/dl
-						URL http://parrot.cs.wisc.edu/externals/${POPT_VER}.tar.gz
-						#--Configure step ----------
-			    		CONFIGURE_COMMAND cd ${POPT_VER} && ./configure --prefix=${POPT_INSTALL_LOC}
-						#--Build Step ----------
-						BUILD_COMMAND cd ${POPT_VER} && make
-						BUILD_IN_SOURCE 1
-						#--install Step ----------
-						INSTALL_DIR ${POPT_INSTALL_LOC}
-						INSTALL_COMMAND cd ${POPT_VER} && make install )
-
-		condor_post_external( popt OFF OFF )
 
 		########################################
 		if ( BUILDING_OPENSSL )
-			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF} )
+			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4 )
 			set( OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC} )
 		else()
-			set( BLAHP_DEPENDS ${GLOBUS_REF} ${POPT_REF} )
+			set( BLAHP_DEPENDS ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4.openssl )
 			set( OPENSSL_FLAG "" )
 		endif()

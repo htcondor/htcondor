@@ -39,6 +39,7 @@
 #include "misc_utils.h"
 #include "ConcurrencyLimitUtils.h"
 #include "MyString.h"
+#include "condor_daemon_core.h"
 
 #include <vector>
 #include <string>
@@ -285,6 +286,7 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+    accept_surplus = false;
     autoregroup = false;
     allow_quota_oversub = false;
 
@@ -420,7 +422,6 @@ initialize ()
 #endif
 }
 
-static bool delayReinit;
 
 int Matchmaker::
 reinitialize ()
@@ -428,16 +429,6 @@ reinitialize ()
 	char *tmp;
 	static bool first_time = true;
 	ExprTree *tmp_expr = 0;
-
-	// If we got reconfig'ed in the middle of the negotiation cycle,
-	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
-
-	if (daemonCore->InServiceCommandSocket()) {
-		delayReinit = true;
-		return true;
-	} else {
-		delayReinit = false;
-	}
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -1208,6 +1199,10 @@ negotiationTime ()
 		return;
 	}
 
+    // From here we are committed to the main negotiator cycle, which is non
+    // reentrant wrt reconfig. Set any reconfig to delay until end of this cycle
+    // to protect HGQ structures and also to prevent blocking of other commands
+    daemonCore->SetDelayReconfig(true);
 
 		// allocate stat object here, now that we know we are not going
 		// to abort the cycle
@@ -1431,6 +1426,7 @@ negotiationTime ()
 
             if (autoregroup) {
                 dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+                hgq_root_group->quota = hgq_total_quota;
                 hgq_root_group->allocated = hgq_total_quota;
             }
 
@@ -1448,7 +1444,8 @@ negotiationTime ()
                 allocated_total += group->allocated;
                 if (group->allocated > 0) served_groups += 1;
                 else if (group->requested > 0) unserved_groups += 1;
-                maxdelta = max(maxdelta, max(0.0, group->allocated - group->usage));
+                double target = (accept_surplus) ? group->allocated : group->quota;
+                maxdelta = max(maxdelta, max(0.0, target - group->usage));
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
@@ -1522,12 +1519,15 @@ negotiationTime ()
 		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
-                    double delta = max(0.0, group->allocated - group->usage);
+                    // if allocating surplus, use allocated, otherwise just use the group's quota directly
+                    double target = (accept_surplus) ? group->allocated : group->quota;
+
+                    double delta = max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
                     // we just got allocated, so just negotiate for what we were allocated.
-                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : group->allocated;
+                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
                     // Defensive -- do not exceed allocated slots
-                    slots = min(slots, group->allocated);
+                    slots = min(slots, target);
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
@@ -1604,9 +1604,13 @@ negotiationTime ()
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
 
-	if (delayReinit) {
-		this->reinitialize();
-	}
+    // if we got any reconfig requests during the cycle it is safe to service them now:
+    if (daemonCore->GetNeedReconfig()) {
+        daemonCore->SetNeedReconfig(false);
+        dprintf(D_FULLDEBUG,"Running delayed reconfig\n");
+        dc_reconfig();
+    }
+    daemonCore->SetDelayReconfig(false);
 
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
@@ -1660,7 +1664,7 @@ void Matchmaker::hgq_construct_tree() {
 
     allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
 
-    bool accept_surplus = false;
+    accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
     const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
@@ -1740,10 +1744,6 @@ void Matchmaker::hgq_construct_tree() {
         group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
         if (group->autoregroup) autoregroup = true;
         if (group->accept_surplus) accept_surplus = true;
-    }
-
-    if (autoregroup && accept_surplus) {
-        EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
     // Set the root group's autoregroup state to match the effective global value for autoregroup
@@ -1954,12 +1954,6 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
 
     // Nothing to allocate
     if (surplus <= 0) return 0;
-
-    // If we are in autoregroup mode, proportional surplus allocation is disabled
-    if (autoregroup) {
-        dprintf(D_ALWAYS, "group quotas: autoregroup mode: proportional surplus allocation disabled\n");
-        return surplus;
-    }
 
     // If entire subtree requests nothing, halt now
     if (group->subtree_requested <= 0) return surplus;
@@ -3214,7 +3208,9 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			//  protocol w/ schedds and reconfig delaying until after
 			//  a negotiation cycle. -matt 21 mar 2012
 		if ( sleepy ) {
-			sleep(sleepy);
+            dprintf(D_ALWAYS, "begin sleep: %d seconds\n", sleepy);
+			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+            dprintf(D_ALWAYS, "end sleep: %d seconds\n", sleepy);
 		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();

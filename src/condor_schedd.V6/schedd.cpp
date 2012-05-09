@@ -2261,44 +2261,6 @@ jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 }
 
 
-/*
-  Return true if we should create/chown the spool directory for this job.
-*/
-bool
-jobIsSandboxed( ClassAd * ad )
-{
-	ASSERT(ad);
-	int stage_in_start = 0;
-	// int never_create_sandbox_expr = 0;
-
-		// Spooled jobs should return true, because they already
-		// have a spool directory, so we need to manage it
-		// (i.e. chown it to the correct user)
-	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
-	if( stage_in_start > 0 ) {
-		return true;
-	}
-
-	int univ = CONDOR_UNIVERSE_VANILLA;
-	ad->LookupInteger( ATTR_JOB_UNIVERSE, univ );
-
-		// As of 7.5.5, parallel jobs specify JobRequiresSandbox=true,
-		// because they use the spool directory for chirp stuff to make
-		// sshd work.  For backward compatibility with prior releases,
-		// we assume all parallel jobs require this unless they explicitly
-		// specify otherwise.
-	int job_requires_sandbox_expr = 0;
-	bool create_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
-
-	if( ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) )
-	{
-		create_sandbox = job_requires_sandbox_expr ? true : false;
-	}
-
-	return create_sandbox;
-}
-
-
 bool
 getSandbox( int cluster, int proc, MyString & path )
 {
@@ -2332,7 +2294,7 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 
 	ClassAd * job_ad = GetJobAd( cluster, proc );
 	ASSERT( job_ad ); // No job ad?
-	if( ! jobIsSandboxed(job_ad) ) {
+	if( ! SpooledJobFiles::jobRequiresSpoolDirectory(job_ad) ) {
 			// nothing more to do...
 		FreeJobAd( job_ad );
 		return TRUE;
@@ -2577,40 +2539,8 @@ jobIsFinished( int cluster, int proc, void* )
 
 #ifndef WIN32
 
-	if( jobIsSandboxed(job_ad) ) {
-		MyString sandbox;
-		if( getSandbox(cluster, proc, sandbox) ) {
-			uid_t src_uid = 0;
-			uid_t dst_uid = get_condor_uid();
-			gid_t dst_gid = get_condor_gid();
-
-			MyString jobOwner;
-			job_ad->LookupString( ATTR_OWNER, jobOwner );
-
-			passwd_cache* p_cache = pcache();
-			if( p_cache->get_user_uid( jobOwner.Value(), src_uid ) ) {
-				if( ! recursive_chown(sandbox.Value(), src_uid,
-									  dst_uid, dst_gid, true) )
-				{
-					dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
-							 "%d to %d.%d.  User may run into permissions "
-							 "problems when fetching sandbox.\n", 
-							 cluster, proc, sandbox.Value(),
-							 src_uid, dst_uid, dst_gid );
-				}
-			} else {
-				dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
-						 "for user %s.  Cannot chown \"%s\".  User may "
-						 "run into permissions problems when fetching "
-						 "job sandbox.\n", cluster, proc, jobOwner.Value(),
-						 sandbox.Value() );
-			}
-		} else {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to find sandbox for this "
-					 "job.  Cannot chown sandbox to user.  User may run "
-					 "into permissions problems when fetching sandbox.\n",
-					 cluster, proc );
-		}
+	if( SpooledJobFiles::jobRequiresSpoolDirectory(job_ad) ) {
+		SpooledJobFiles::chownSpoolDirectoryToCondor(job_ad);
 	}
 
 #else	/* WIN32 */
@@ -8435,6 +8365,19 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 			free( last_host );
 			last_host = NULL;
 		}
+
+        char* last_pool = NULL;
+		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_POOL, &last_pool );
+		if( last_pool ) {
+			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_POOL,
+								last_pool );
+			free( last_pool );
+			last_pool = NULL;
+		} else {
+            // If RemotePool is not defined, be sure to remove the last remote pool (if it exists)
+             DeleteAttribute( cluster, proc, ATTR_LAST_REMOTE_POOL );
+        }
+
 	}
 
 	if( pid ) {
@@ -11969,7 +11912,9 @@ Scheduler::publish( ClassAd *cad ) {
 	
 	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
 	cad->Assign( ATTR_DISK, (int)disk_space );
-	
+
+	cad->Assign( ATTR_CPUS, 1 );
+
 		// -------------------------------------------------------
 		// Local Universe Attributes
 		// -------------------------------------------------------

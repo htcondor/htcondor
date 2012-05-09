@@ -131,7 +131,11 @@ int		Quiet = 1;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		JobDisableFileChecks = 0;
-int		SetDefaultMemoryUsage = 1;
+bool	RequestMemoryIsZero = false;
+bool	RequestDiskIsZero = false;
+bool	RequestCpusIsZeroOrOne = false;
+bool	already_warned_requirements_mem = false;
+bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -396,6 +400,7 @@ const char* EC2TagNames = "ec2_tag_names";
 const char* DeltacloudUsername = "deltacloud_username";
 const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
+const char* DeltacloudInstanceName = "deltacloud_instance_name";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
 const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
@@ -2104,6 +2109,7 @@ SetMachineCount()
 		InsertJobExpr (buffer);
 
 		request_cpus = 1;
+		RequestCpusIsZeroOrOne = true;
 	} else {
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( mach_count ) { 
@@ -2120,22 +2126,35 @@ SetMachineCount()
 			InsertJobExpr (buffer);
 
 			request_cpus = tmp;
+			RequestCpusIsZeroOrOne = (request_cpus == 0 || request_cpus == 1);
 		}
 	}
 
 	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		if (MATCH == strcasecmp(mach_count, "undefined")) {
+			RequestCpusIsZeroOrOne = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+			InsertJobExpr(buffer);
+			RequestCpusIsZeroOrOne = ((MATCH == strcmp(mach_count, "0")) || (MATCH == strcmp(mach_count, "1")));
+		}
 		free(mach_count);
 	} else 
 	if (request_cpus > 0) {
 		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+		InsertJobExpr(buffer);
 	} else 
 	if ((mach_count = param("JOB_DEFAULT_REQUESTCPUS"))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		if (MATCH == strcasecmp(mach_count, "undefined")) {
+			RequestCpusIsZeroOrOne = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+			InsertJobExpr(buffer);
+			RequestCpusIsZeroOrOne = ((MATCH == strcmp(mach_count, "0")) || (MATCH == strcmp(mach_count, "1")));
+		}
 		free(mach_count);
 	}
 
-	InsertJobExpr(buffer);
 }
 
 struct SimpleExprInfo {
@@ -2310,6 +2329,9 @@ SetImageSize()
 		int64_t req_memory_mb = 0;
 		if (parse_int64_bytes(tmp, req_memory_mb, 1024*1024)) {
 			buffer.sprintf("%s = %"PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
+			RequestMemoryIsZero = (req_memory_mb == 0);
+		} else if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestMemoryIsZero = true;
 		} else {
 			buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		}
@@ -2321,9 +2343,14 @@ SetImageSize()
 		free(tmp);
 		InsertJobExpr(buffer);
 	} else if ( (tmp = param("JOB_DEFAULT_REQUESTMEMORY")) ) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+		if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestMemoryIsZero = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+			RequestMemoryIsZero = (MATCH == strcmp(tmp, "0"));
+			InsertJobExpr(buffer);
+		}
 		free(tmp);
-		InsertJobExpr(buffer);
 	}
 
 	// set an initial value for RequestDisk
@@ -2334,15 +2361,23 @@ SetImageSize()
 		int64_t req_disk_kb = 0;
 		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
 			buffer.sprintf("%s = %"PRId64, ATTR_REQUEST_DISK, req_disk_kb);
+			RequestDiskIsZero = (req_disk_kb == 0);
+		} else if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestDiskIsZero = true;
 		} else {
 			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
 	} else if ( (tmp = param("JOB_DEFAULT_REQUESTDISK")) ) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestDiskIsZero = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+			RequestDiskIsZero = (MATCH == strcmp(tmp, "0"));
+			InsertJobExpr(buffer);
+		}
 		free(tmp);
-		InsertJobExpr(buffer);
 	}
 	
 }
@@ -5437,12 +5472,20 @@ SetGridParams()
 		exit( 1 );
 	}
 
+	bool bInstanceName=false;
+	if( (tmp = condor_param( DeltacloudInstanceName, ATTR_DELTACLOUD_INSTANCE_NAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_INSTANCE_NAME, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		bInstanceName = true;
+	}
+	
 	if ( (tmp = condor_param( DeltacloudImageId, ATTR_DELTACLOUD_IMAGE_ID )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_IMAGE_ID, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudImageId );
+	} else if ( JobGridType && !bInstanceName && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" or \"%s\" parameters\n", DeltacloudImageId, DeltacloudInstanceName );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
@@ -6396,6 +6439,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_opsys = false;
 	bool	checks_arch = false;
 	bool	checks_disk = false;
+	bool	checks_cpus = false;
 	bool	checks_mem = false;
 	//bool	checks_reqmem = false;
 	bool	checks_fsdomain = false;
@@ -6477,6 +6521,7 @@ check_requirements( char const *orig, MyString &answer )
 	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
 	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS );
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
+	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
 #if defined(WIN32)
 	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
@@ -6578,7 +6623,9 @@ check_requirements( char const *orig, MyString &answer )
 
 	if( !checks_disk ) {
 		if (job->Lookup(ATTR_REQUEST_DISK)) {
-			answer += " && (TARGET.Disk >= RequestDisk)";
+			if ( ! RequestDiskIsZero) {
+				answer += " && (TARGET.Disk >= RequestDisk)";
+			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			// VM universe uses Total Disk 
@@ -6589,13 +6636,16 @@ check_requirements( char const *orig, MyString &answer )
 		}
 	} else {
 		if (JobUniverse != CONDOR_UNIVERSE_VM) {
-			if (job->Lookup(ATTR_REQUEST_DISK)) {
+			if ( ! RequestDiskIsZero && job->Lookup(ATTR_REQUEST_DISK)) {
 				answer += " && (TARGET.Disk >= RequestDisk)";
 			}
-			fprintf(stderr, 
-					"\nWARNING: Your Requirements expression refers to TARGET.Disk. "
-					"This is obsolete. Set request_disk and condor_submit will modify the "
-					"Requirements expression as needed.\n");
+			if ( ! already_warned_requirements_disk && param_boolean("ENABLE_DEPRECATION_WARNINGS", false)) {
+				fprintf(stderr, 
+						"\nWARNING: Your Requirements expression refers to TARGET.Disk. "
+						"This is obsolete. Set request_disk and condor_submit will modify the "
+						"Requirements expression as needed.\n");
+				already_warned_requirements_disk = true;
+			}
 		}
 	}
 
@@ -6603,14 +6653,17 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 #if 1
-		if (job->Lookup(ATTR_REQUEST_MEMORY)) {
+		if ( ! RequestMemoryIsZero && job->Lookup(ATTR_REQUEST_MEMORY)) {
 			answer += " && (TARGET.Memory >= RequestMemory)";
 		}
 		if (checks_mem) {
-			fprintf(stderr, 
-					"\nWARNING: your Requirements expression refers to TARGET.Memory. "
-					"This is obsolete. Set request_memory and condor_submit will modify the "
-					"Requirements expression as needed.\n");
+			if ( ! already_warned_requirements_mem && param_boolean("ENABLE_DEPRECATION_WARNINGS", false)) {
+				fprintf(stderr, 
+						"\nWARNING: your Requirements expression refers to TARGET.Memory. "
+						"This is obsolete. Set request_memory and condor_submit will modify the "
+						"Requirements expression as needed.\n");
+				already_warned_requirements_mem = true;
+			}
 		}
 #else
 		if ( !checks_mem ) {
@@ -6621,6 +6674,13 @@ check_requirements( char const *orig, MyString &answer )
 		}
 #endif
 	}
+
+	if ( JobUniverse != CONDOR_UNIVERSE_GRID ) {
+		if ( ! checks_cpus && ! RequestCpusIsZeroOrOne && job->Lookup(ATTR_REQUEST_CPUS)) {
+			answer += " && (TARGET.Cpus >= RequestCpus)";
+		}
+	}
+
 
 	if( HasTDP && !checks_tdp ) {
 		answer += " && (TARGET.";

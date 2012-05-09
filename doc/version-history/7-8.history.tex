@@ -1,0 +1,105 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-7-8}Stable Release Series 7.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of Condor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 7.8.x releases.
+New features will be added in the 7.9.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-0}Version 7.8.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.0 not yet released.
+%\item Condor version 7.8.0 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The job ClassAd attribute \Attr{RemotePool} is now saved in
+  \Attr{LastRemotePool} when the job finishes running.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed potential startd crash introduced in v7.7.5 when claiming 
+a partitionable slot that was in the Owner state. 
+\Ticket{2936}
+
+\item When ClassAd function stringListMember() is called with an empty
+string as the second argument, it now evaluates to \Expr{False}.
+Previously, it incorrectly evaluated to \Expr{Undefined}.
+\Ticket{2953}
+
+\item Format tags \%v and \%V for the \Opt{-format} option now properly
+print all ClassAd value types. Previously, \Expr{True} and \Expr{False}
+were printed as integers, and new ClassAd types like lists and nested
+ads couldn't be printed.
+\Ticket{2960}
+
+\item Restored RCS keyword strings CondorVersion and CondorPlatform to
+the Condor binaries. These strings are found and printed by the 
+\Opt{ident} program on unix. They were missing in Condor versions 7.7.3
+and later.
+\Ticket{2932}
+
+\item \Condor{job\_router} failed to route spooled source jobs.
+\Ticket{2955}
+
+\item Fixed a bug on Debian 6 and RHEL 6 that could cause standard
+universe jobs to never checkpoint. This would happen if the job
+triggered a call to NSCD (Name Service Caching Daemon) but NSCD 
+wasn't running. 
+Calls to NSCD can be triggered by a lookup of a user account or
+resolving a machine hostname to an IP address.
+Now, NSCD is never consulted by a standard universe
+job (this was already the behavior on other platforms).
+\Ticket{2973}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+

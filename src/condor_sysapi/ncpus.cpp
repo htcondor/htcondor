@@ -40,6 +40,29 @@
 static void ncpus_linux( int *num_cpus,int *num_hyperthread_cpus );
 #endif
 
+#ifdef WIN32
+typedef BOOL (WINAPI *LPFN_GLPI)(
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, 
+    PDWORD);
+#endif
+
+#ifdef WIN32
+static DWORD CountSetBits(ULONG_PTR bitMask)
+{
+    DWORD LSHIFT = sizeof(ULONG_PTR)*8 - 1;
+    DWORD bitSetCount = 0;
+    ULONG_PTR bitTest = (ULONG_PTR)1 << LSHIFT;    
+    DWORD i;
+
+    for (i = 0; i <= LSHIFT; ++i)
+    {
+        bitSetCount += ((bitMask & bitTest)?1:0);
+        bitTest/=2;
+    }
+
+    return bitSetCount;
+}
+#endif
 
 void
 sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
@@ -76,10 +99,77 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)
-	SYSTEM_INFO info;
-	GetNativeSystemInfo(&info);
-	if( num_cpus ) *num_cpus = info.dwNumberOfProcessors;
-	if( num_hyperthread_cpus ) *num_hyperthread_cpus = info.dwNumberOfProcessors;
+	if(!_sysapi_count_hyperthread_cpus)
+	{
+		LPFN_GLPI glpi;
+		DWORD returnLength = 0;
+		int byteOffset = 0;
+		int coreCount = 0;
+		int logicalCoreCount = 0;
+		bool done = false;
+		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
+		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION info = NULL;
+		glpi = (LPFN_GLPI) GetProcAddress(
+                            GetModuleHandle(TEXT("kernel32")),
+                            "GetLogicalProcessorInformation");
+		if(glpi == NULL)
+		{
+			EXCEPT("Error: COUNT_HYPERTHREAD_CPUS can only be set to false on Windows XP SP3 or Windows 2003 SP1 or higher.\n");
+		}
+		while(!done)
+		{
+			DWORD rc = glpi(buffer, &returnLength);
+			if(rc == FALSE)
+			{
+				if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+				{
+					if(buffer)
+						free(buffer);
+					buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
+					if(!buffer)
+						EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+				}
+				else
+				{
+					EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d\n", GetLastError());
+				}
+			}
+			else
+			{
+				done = true;
+			}
+		}
+
+		info = buffer;
+
+		while(byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
+		{
+			switch(info->Relationship)
+			{
+			case RelationProcessorCore:
+				coreCount++;
+				logicalCoreCount += CountSetBits(info->ProcessorMask);
+				break;
+			default:
+				break;
+			}
+
+			byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+			info++;
+		}
+
+		if( num_cpus ) *num_cpus = coreCount;
+		if( num_hyperthread_cpus ) *num_hyperthread_cpus = logicalCoreCount;
+
+		free(buffer);
+	}
+	else
+	{
+		SYSTEM_INFO info;
+		GetNativeSystemInfo(&info);
+		if( num_cpus ) *num_cpus = info.dwNumberOfProcessors;
+		if( num_hyperthread_cpus ) *num_hyperthread_cpus = info.dwNumberOfProcessors;
+	}
 #elif defined(LINUX)
 	ncpus_linux(num_cpus,num_hyperthread_cpus );
 #elif defined(AIX)
