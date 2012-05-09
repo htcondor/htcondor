@@ -1517,7 +1517,7 @@ count( ClassAd *job )
 	//
 	ScheddOtherStats * other_stats = NULL;
 	if (scheduler.OtherPoolStats.AnyEnabled()) {
-		other_stats = scheduler.OtherPoolStats.Matches(*job);
+		other_stats = scheduler.OtherPoolStats.Matches(*job,time(0));
 	}
 	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
