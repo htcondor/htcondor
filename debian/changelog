@@ -1,3 +1,20 @@
+condor (7.8.0~dfsg.1-1) unstable; urgency=low
+
+  * New upstream release (Closes: #670304). This is the first release of the
+    new 7.8 stable series. Patches introduced to prevent FTBFS on mips, ia64
+    and s390x are merged/obsolete.
+  * Add Debconf template translations (Closes: #670487):
+    - German -- courtesy of Erik Pfannenstein <epfannenstein@gmx.de>
+      (Closes: #671394)
+    - Russian -- courtesy of Yuri Kozlov <yuray@komyakino.ru>
+      (Closes: #671510)
+    - Italian -- courtesy of Beatrice Torracca <beatricet@libero.it>
+      (Closes: #671641)
+    - Polish -- courtesy of Michał Kułach <michalkulach@gmail.com>
+      (Closes: #671547)
+
+ -- Michael Hanke <mih@debian.org>  Wed, 09 May 2012 11:35:19 +0200
+
 condor (7.7.6~dfsg.1-3) experimental; urgency=low
 
   * Temporarily drop cgroups dependency and, consequently, support for cgroups
