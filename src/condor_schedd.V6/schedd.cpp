@@ -1515,9 +1515,10 @@ count( ClassAd *job )
 
 	// build a list of other stats pools that match this job
 	//
+	time_t now = time(NULL);
 	ScheddOtherStats * other_stats = NULL;
 	if (scheduler.OtherPoolStats.AnyEnabled()) {
-		other_stats = scheduler.OtherPoolStats.Matches(*job,time(0));
+		other_stats = scheduler.OtherPoolStats.Matches(*job,now);
 	}
 	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
@@ -1641,7 +1642,7 @@ count( ClassAd *job )
 		int job_start_date = 0;
 		int job_running_time = 0;
 		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
-			job_running_time = (time(NULL) - job_start_date);
+			job_running_time = (now - job_start_date);
 		scheduler.stats.JobsRunningRuntimes += job_running_time;
 		OTHER.JobsRunningRuntimes += job_running_time;
 	} else if (status == HELD) {
