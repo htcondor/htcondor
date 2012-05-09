@@ -1077,10 +1077,10 @@ sub TunePersonalCondor
 	# need to put these into a directory with permissions 1777.
 	print NEW "# Relocate C_GAHP files to prevent collision from multiple tests (running on multiple slots) writing into /tmp\n";
 	print NEW "# If we are running tests as root we might need to relocate these to a directory with permissions 1777\n";
-	print NEW "C_GAHP_LOG = $(LOG)/CGAHPLog.$(USERNAME)\n";
-	print NEW "C_GAHP_LOCK = $(LOCK)/CGAHPLock.$(USERNAME)\n";
-	print NEW "C_GAHP_WORKER_THREAD_LOG = $(LOG)/CGAHPWorkerLog.$(USERNAME)\n";
-	print NEW "C_GAHP_WORKER_THREAD_LOCK = $(LOCK)/CGAHPWorkerLock.$(USERNAME)\n";
+	print NEW "C_GAHP_LOG = \$(LOG)/CGAHPLog.\$(USERNAME)\n";
+	print NEW "C_GAHP_LOCK = \$(LOCK)/CGAHPLock.\$(USERNAME)\n";
+	print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CGAHPWorkerLog.\$(USERNAME)\n";
+	print NEW "C_GAHP_WORKER_THREAD_LOCK = \$(LOCK)/CGAHPWorkerLock.\$(USERNAME)\n";
 
 	close(NEW);
 
