@@ -58,8 +58,8 @@ our %build_and_test_sets = (
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
 	# are those platforms.
 	'nmi_one_offs' => [
-		'x86_64_freebsd_8.2-updated',
-		'x86_64_sol_5.11',
+		#'x86_64_freebsd_8.2-updated',
+		#'x86_64_sol_5.11',
 	],
 
         # This is a placeholder that is intended to remain empty in V7_6-branch.
