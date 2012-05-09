@@ -1066,7 +1066,7 @@ changes to the original DAG input file take effect when running a Rescue DAG.
 POST scripts will be run regardless of the return value from 
 the PRE script of the same node as described in section~\ref{dagman:SCRIPT}.  
 The previous behavior of not running the POST script can be restored by
-either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+either adding the \Opt{-DontAlwaysRunPost} option to the \Condor{submit\_dag}
 command line, 
 or by setting the new configuration variable
 \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 
