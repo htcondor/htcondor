@@ -33,7 +33,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item (Added in 7.7.6.)  Added the \Arg{-\_condor\_relocatable} argument
+for standalone checkpointing.  This allows checkpointed programs to restart
+without attempting to change to their original directory.
+\Ticket{2877}
+
+\item (Added in 7.7.5.) Added the \Arg{-absent} flag to \Condor{status},
+which displays absent ads.
+\Ticket{2690}
+
+\item (Added in 7.7.5.) Implement absent ads, which help track pool membership
+in a persistent way.
+\Ticket{2608} 
 
 \end{itemize}
 
@@ -49,6 +60,14 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item (Fixed in 7.7.6.) Fix \Arg{-absent}, \Arg{-vm}, and \Arg{-java}
+flags to \Condor{status} so that they work with the \Arg{-long} option.
+\Ticket{2943}
+
+\item Support glob() on Scientific Linux 6 and others using the new
+Linux system call fstatat(), but only when not using remote system calls.
+\Ticket{2945}
 
 \item Fixed potential startd crash introduced in v7.7.5 when claiming 
 a partitionable slot that was in the Owner state. 
