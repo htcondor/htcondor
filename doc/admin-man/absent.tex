@@ -1,0 +1,33 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Absent-Ads}Absent Ads}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{pool management!absent ads}
+
+By default, Condor assumes that resources are transient: the collector 
+will discard ads older than CLASSAD\_LIFETIME seconds.  (The default 
+configuration is 15 minutes, so that the default UPDATE\_INTERVAL will 
+pass three times before Condor forgets about a resource.)  In some 
+pools, especially those with dedicated resources, this approach may make 
+it unnecessarily difficult to determine what the composition of the pool 
+``should be'', in the sense of which machines would be in the pool if 
+Condor were properly functioning on all of them.
+
+This assumption can be corrected by use of absent ads.  When a machine 
+ad would otherwise expire (that is, CLASSAD\_LIFETIME seconds have 
+passed), the collector evaluates ABSENT\_REQUIREMENTS against the ad.  If 
+true, the ad will be saved persistently and marked as absent; this will 
+cause it to appear in the output of 'condor\_status -absent'.  When the 
+machine returns to the pool, its first update to the collector will 
+invalidate the absent ad.
+
+Absent ads, like offline ads, are stored to disk to ensure that they 
+aren't forgotten even across collector crashes.  The configuration knob 
+PERSISTENT\_AD\_LOG defines the file in which the ads are stored, and 
+deprecates the older OFFLINE\_LOG.  Absent ads are retained on disk by 
+the collector for ABSENT\_EXPIRE\_ADS\_AFTER seconds, for which a value of 
+0 means forever, and defaults to thirty days.
+
+Absent ads are only returned by the collector when using the -collector 
+option to condor\_status, or when the Absent machine-ad attribute is 
+mentioned on its command-line.  This renders absent ads invisible to the 
+rest of the Condor infrastructure.
