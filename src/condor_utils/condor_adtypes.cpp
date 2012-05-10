@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
 #include <string.h>
 #include "condor_adtypes.h"
 
