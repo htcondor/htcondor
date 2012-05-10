@@ -348,6 +348,8 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
 	}
 
+	UtcTime begin(true);
+
 	// Perform the query
 	List<ClassAd> results;
 	ForkStatus	fork_status = FORK_FAILED;
@@ -362,6 +364,8 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		}
 	}
 
+	UtcTime end_write, end_query(true);
+
 	// send the results via cedar
 	sock->encode();
 	results.Rewind();
@@ -369,12 +373,11 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	int more = 1;
 	
 		// See if query ad asks for server-side projection
-	char *projection = NULL;
-	cad.LookupString(ATTR_PROJECTION, &projection);
+	string projection = "";
+	cad.LookupString(ATTR_PROJECTION, projection);
 	SimpleList<MyString> projectionList;
 
-	::split_args(projection, &projectionList);
-	free(projection);
+	::split_args(projection.c_str(), &projectionList);
 
 	while ( (curr_ad=results.Next()) )
     {
@@ -409,6 +412,18 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	}
 	return_status = 1;
 
+	end_write.getTime();
+
+	dprintf (D_ALWAYS,
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; peer=%s; projection={%s}\n",
+			 __numAds__,
+			 __failed__,
+			 end_query.difference(begin),
+			 end_write.difference(end_query),
+			 AdTypeToString(whichAds),
+			 ExprTreeToString(__filter__),
+			 sock->peer_description(),
+			 projection.c_str());
 
     // all done; let daemon core will clean up connection
   END:
@@ -914,7 +929,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 		// Found a match 
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
-    }
+    } else {
+		__failed__++;
+	}
 
     return 1;
 }
@@ -929,6 +946,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	// set up for hashtable scan
 	__query__ = query;
 	__numAds__ = 0;
+	__failed__ = 0;
 	__ClassAdResultList__ = results;
 	// An empty adType means don't check the MyType of the ads.
 	// This means either the command indicates we're only checking one
@@ -975,7 +993,6 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	{
 		dprintf (D_ALWAYS, "Error sending query response\n");
 	}
-
 
 	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
 }	
