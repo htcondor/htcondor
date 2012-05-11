@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug when running in privsep mode where if a job created a hardlink
+from one file to another, condor was unable to transfer the files back to the
+submit side, and put the job on hold.
+\Ticket{2987}
 
 \end{itemize}
 
