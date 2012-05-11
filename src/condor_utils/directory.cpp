@@ -772,7 +772,7 @@ Directory::Rewind()
 			dirp = condor_opendir( curr_dir );
 			if( dirp == NULL ) {
 				dprintf( D_ALWAYS, "Can't open directory \"%s\" as owner, "
-						 "errno: %d (%s)", curr_dir, errno, strerror(errno) );
+						 "errno: %d (%s)\n", curr_dir, errno, strerror(errno) );
 					// we can just set our priv back to what it was
 					// before we called Set_Access_Priv()...
 				return_and_resetpriv(false);
