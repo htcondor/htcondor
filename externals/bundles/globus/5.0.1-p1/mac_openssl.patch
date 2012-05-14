@@ -1,0 +1,12 @@
+--- gt5.0.1-all-source-installer/source-trees/gsi/openssl/source/configure	2010-03-26 11:26:48.000000000 -0500
++++ gt5.0.1-all-source-installer/source-trees/gsi/openssl/source/configure.patched	2012-05-11 14:05:12.000000000 -0500
+@@ -2002,6 +2002,9 @@
+             esac
+ 
+ fi;
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ if test "${openssl}" != ""; then
+     PKG_CONFIG_PATH=${openssl}/lib/pkgconfig

@@ -37,6 +37,17 @@ if ( WITH_VOMS )
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
 								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
 			set (VOMS_OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC})
+		elseif( DARWIN )
+			set (VOMS_DEPENDS ${GLOBUS_REF})
+			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure_openssl.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch &&
+								cp ${CMAKE_CURRENT_SOURCE_DIR}/dummy.c org.glite.security.voms/src/replib &&
+								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
+			set (VOMS_OPENSSL_FLAG "")
 		else()
 			set (VOMS_DEPENDS ${GLOBUS_REF})
 			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure_openssl.patch &&

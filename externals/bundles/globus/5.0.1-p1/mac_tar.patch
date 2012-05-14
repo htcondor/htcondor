@@ -1,0 +1,12 @@
+--- gt5.0.1-all-source-installer/gpt/packaging_tools/perl/GPT/Localize.pm.orig	2012-05-04 09:55:04.000000000 -0500
++++ gt5.0.1-all-source-installer/gpt/packaging_tools/perl/GPT/Localize.pm	2012-05-04 09:58:17.000000000 -0500
+@@ -157,6 +157,9 @@
+         if (-f "$d/tar" ) {
+           my $result = `$d/tar --version`;
+           $me->{'gtar_location'} = "$d/tar" if $result =~ m!GNU\s+tar!;
++          if ( `uname` =~ m/Darwin/ ) {
++            $me->{'gtar_location'} = "$d/tar" if $result =~ m!bsdtar!;
++          }
+         }
+       }
+     }

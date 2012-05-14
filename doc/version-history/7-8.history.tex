@@ -49,6 +49,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Restored Globus and VOMS support on Mac OS X.
+\Ticket{2991}
+
 \item Fixed a bug when running in privsep mode where if a job created a hardlink
 from one file to another, condor was unable to transfer the files back to the
 submit side, and put the job on hold.
