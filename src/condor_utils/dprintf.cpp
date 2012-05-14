@@ -312,6 +312,8 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 			}
 		}
 
+#ifdef D_LEVEL //  with the switch from flags to enum, this code doesn't work anymore.
+// this should probably just be removed rather than fixed.
         if ((mask_flags | flags) & D_LEVEL) {
             rc = sprintf_realloc(&buf, &bufpos, &buflen, "(");
             if (rc < 0) sprintf_errno = errno;
@@ -332,6 +334,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
             rc = sprintf_realloc(&buf, &bufpos, &buflen, ") ");
             if (rc < 0) sprintf_errno = errno;
         }
+#endif
 
 		if( DebugId ) {
 			rc = (*DebugId)( &buf, &bufpos, &buflen );

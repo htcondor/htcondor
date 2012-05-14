@@ -32,7 +32,7 @@
 **  counting levels at 0, D_NUMLEVELS should be one greater than the
 **  highest level.
 */
-#if 1
+#if 0
 #define D_NUMLEVELS		28
 #define D_MAXFLAGS 		32
 #define D_ALWAYS 		(1<<0)
