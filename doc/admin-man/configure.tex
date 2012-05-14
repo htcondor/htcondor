@@ -4605,7 +4605,8 @@ Power Management for more details.
   or another program that evaluates the
   \Attr{Unhibernate} expression of offline machine ClassAds.
   In addition, the collecting of offline machine ClassAds must be enabled
-  for this expression to work.  The variable \Macro{OFFLINE\_LOG}, as
+  for this expression to work.  The variable 
+  \Macro{PERSISTENT\_AD\_LOG} on page~\pageref{param:PersistentAdLog}
   detailed on page~\pageref{param:OfflineLog} explains this.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
@@ -4692,7 +4693,8 @@ Power Management for more details.
 
 \label{param:OfflineLog}
 \item[\Macro{OFFLINE\_LOG}]
-  Deprecated by \MacroNI{PERSISTENT\_AD\_LOG}.
+  This configuration variables is no longer used.
+  It has been replaced by \MacroNI{PERSISTENT\_AD\_LOG}.
 
 \label{param:OfflineExpireAdsAfter}
 \item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
@@ -6323,15 +6325,17 @@ These macros affect the \Condor{collector}.
   
 \label{param:ClassadLifetime}
 \item[\Macro{CLASSAD\_LIFETIME}]
-  This macro determines the default maximum age for ClassAds collected by the
-  \Condor{collector}.  ClassAd older than the maximum age are
+  The default maximum age in seconds for ClassAds collected by the
+  \Condor{collector}.  ClassAds older than the maximum age are
   discarded by the \Condor{collector} as stale.
 
-  If present, the ClassAd attribute ``ClassAdLifetime'' specifies the
-  ad's lifetime in seconds.  If ``ClassAdLifetime'' is not present in
-  the ad, the \Condor{collector} will use the value of
-  \MacroUNI{CLASSAD\_LIFETIME}.  The macro is defined in terms of
-  seconds, and defaults to 900 (15 minutes).
+  If present, the ClassAd attribute \Attr{ClassAdLifetime} specifies the
+  ClassAd's lifetime in seconds.  
+  If \Attr{ClassAdLifetime} is not present in the ClassAd, 
+  the \Condor{collector} will use the value of
+  \MacroUNI{CLASSAD\_LIFETIME}.  
+  This variable is defined in terms of seconds, 
+  and it defaults to 900 seconds (15 minutes).
   
 \label{param:MasterCheckInterval}
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
@@ -6627,20 +6631,26 @@ These macros affect the \Condor{collector}.
 \end{description}
 
 The following macros control where, when, and for how long Condor 
-persistently stores absent ads.  See section~\ref{sec:Absent-Ads} on 
+persistently stores absent ClassAds.
+See section~\ref{sec:Absent-Ads} on 
 page~\pageref{sec:Absent-Ads} for more details.
 
 \begin{description}
 
 \label{param:AbsentRequirements}
 \item[\Macro{ABSENT\_REQUIREMENTS}]
-  Evaluated by the collector when a machine ad would otherwise expire.  If 
-  true, the ad instead becomes absent.
+  A boolean expression evaluated by the \Condor{collector} when a 
+  machine ClassAd would otherwise expire.
+  If \Expr{True}, the ClassAd instead becomes absent.
+  If not defined, the implementation will behave as if \Expr{False},
+  and no absent ClassAds will be stored.
 
 \label{param:AbsentExpireAdsAfter}
 \item[\Macro{ABSENT\_EXPIRE\_ADS\_AFTER}]
-  The integer number of seconds after which the collector forgets about an
-  absent ad.  If 0, the collector will never forget.  Defaults to 30 days.
+  The integer number of seconds after which the \Condor{collector} 
+  forgets about an absent ClassAd.
+  If 0, the ClassAds persist forever.  
+  Defaults to 30 days.
 
 \label{param:PersisentAdLog}
 \item[\Macro{PERSISTENT\_AD\_LOG}]
@@ -6654,7 +6664,8 @@ page~\pageref{sec:Absent-Ads} for more details.
   directory defined by \MacroUNI{SPOOL}, add the file to the list
   given by \MacroNI{VALID\_SPOOL\_FILES}.
 
-  Deprecates \MacroNI{OFFLINE\_LOG}.
+  This configuration variable replaces \MacroNI{OFFLINE\_LOG},
+  which is no longer used.
 
 \end{description}
 
@@ -9988,8 +9999,8 @@ machine(s) that can read from the pool's \Condor{collector} daemon.
 
 For \Condor{rooster} to wake up hibernating machines, the collecting
 of offline machine ClassAds must be enabled.  See variable
-\Macro{OFFLINE\_LOG} on page~\pageref{param:OfflineLog} for details on
-how to do this.
+\Macro{PERSISTENT\_AD\_LOG} on page~\pageref{param:PersistentAdLog}
+for details on how to do this.
 
 \begin{description}
 
