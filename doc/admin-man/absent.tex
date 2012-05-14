@@ -1,33 +1,48 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Absent-Ads}Absent Ads}
+\subsection{\label{sec:Absent-Ads}Absent ClassAds}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{pool management!absent ads}
+\index{pool management!absent ClassAds}
 
-By default, Condor assumes that resources are transient: the collector 
-will discard ads older than CLASSAD\_LIFETIME seconds.  (The default 
-configuration is 15 minutes, so that the default UPDATE\_INTERVAL will 
-pass three times before Condor forgets about a resource.)  In some 
-pools, especially those with dedicated resources, this approach may make 
-it unnecessarily difficult to determine what the composition of the pool 
-``should be'', in the sense of which machines would be in the pool if 
-Condor were properly functioning on all of them.
+By default, Condor assumes that resources are transient: 
+the \Condor{collector}
+will discard ClassAds older than \Macro{CLASSAD\_LIFETIME} seconds.
+Its default configuration value is 15 minutes, 
+and as such, the default value for \Macro{UPDATE\_INTERVAL} will 
+pass three times before Condor forgets about a resource.
+In some pools, especially those with dedicated resources, 
+this approach may make it unnecessarily difficult to determine 
+what the composition of the pool ought to be, 
+in the sense of knowing which machines would be in the pool,
+if Condor were properly functioning on all of them.
 
-This assumption can be corrected by use of absent ads.  When a machine 
-ad would otherwise expire (that is, CLASSAD\_LIFETIME seconds have 
-passed), the collector evaluates ABSENT\_REQUIREMENTS against the ad.  If 
-true, the ad will be saved persistently and marked as absent; this will 
-cause it to appear in the output of 'condor\_status -absent'.  When the 
-machine returns to the pool, its first update to the collector will 
-invalidate the absent ad.
+This assumption of transient machines can be modified by 
+the use of absent ClassAds.  
+When a machine ClassAd would otherwise expire, 
+the \Condor{collector} evaluates the configuration variable
+\Macro{ABSENT\_REQUIREMENTS} against the machine ClassAd.
+If \Expr{True}, 
+the machine ClassAd will be saved in a persistent manner and 
+be marked as absent;
+this causes the machine to appear in the output of 
+\Expr{condor\_status -absent}.
+When the machine returns to the pool, 
+its first update to the \Condor{collector} will 
+invalidate the absent machine ClassAd.
 
-Absent ads, like offline ads, are stored to disk to ensure that they 
-aren't forgotten even across collector crashes.  The configuration knob 
-PERSISTENT\_AD\_LOG defines the file in which the ads are stored, and 
-deprecates the older OFFLINE\_LOG.  Absent ads are retained on disk by 
-the collector for ABSENT\_EXPIRE\_ADS\_AFTER seconds, for which a value of 
-0 means forever, and defaults to thirty days.
+Absent ClassAds, like offline ClassAds, 
+are stored to disk to ensure that they are remembered,
+even across \Condor{collector} crashes.
+The configuration variable \Macro{PERSISTENT\_AD\_LOG}
+defines the file in which the ClassAds are stored,
+and replaces the no longer used variable \MacroNI{OFFLINE\_LOG}.
+Absent ClassAds are retained on disk as maintained by 
+the \Condor{collector} for a length of time in seconds defined by the
+configuration variable \Macro{ABSENT\_EXPIRE\_ADS\_AFTER}.
+A value of 0 for this variable means that the ClassAds are never discarded,
+and the default value is thirty days.
 
-Absent ads are only returned by the collector when using the -collector 
-option to condor\_status, or when the Absent machine-ad attribute is 
-mentioned on its command-line.  This renders absent ads invisible to the 
-rest of the Condor infrastructure.
+Absent ClassAds are only returned by the \Condor{collector} when 
+using the \Opt{-collector} option to \Condor{status},
+or when the absent machine ClassAd attribute is mentioned on 
+the \Condor{status} command line.  
+This renders absent ClassAds invisible to the rest of the Condor infrastructure.
