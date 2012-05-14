@@ -35,6 +35,7 @@ if (WITH_GLOBUS)
 		condor_pre_external( GLOBUS globus-5.2.1 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
+						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
 						cd gt5.2.1-all-source-installer/source-trees/xio/src/builtins &&
 						mkdir -p gsi popen &&
 						sed -e 's/globus_xio_gsi.h/globus_xio_gsi_driver.h/' ../../drivers/gsi/globus_i_xio_gsi.h >gsi/globus_i_xio_gsi.h &&
