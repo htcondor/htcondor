@@ -602,7 +602,7 @@ our %submit_info = (
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=> undef,
 		},
