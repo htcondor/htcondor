@@ -77,7 +77,7 @@ class Factory:
                         self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
             else:
                 # Initialize as emtpy, which infers to submit 'here'
-                self.cluster_list = [ get_option("CONDOR_HOST") ]
+                self.cluster_list = [ Cluster(get_option("CONDOR_HOST"), useOffline = self.UseOffline) ]
         
         # Tar up the executables
         wrangler = DaemonWrangler()
