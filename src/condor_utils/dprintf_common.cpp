@@ -108,6 +108,7 @@ _condor_set_debug_flags( const char *strflags, int flags )
 	// when true, D_FULLDEBUG is treated strictly as a category and 
 	// not as a verbosity modifier of other flags.
 	bool individual_verbosity = false;
+	DebugFlags |= 1<<D_ALWAYS;
 #endif
 
 		// Always set D_ALWAYS

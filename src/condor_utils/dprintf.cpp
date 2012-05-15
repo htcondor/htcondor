@@ -255,6 +255,12 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 	FILE *local_fp;
 	int fopen_rc = 1;
 
+#ifdef D_CATEGORY_MASK
+	int flags_in = flags;
+	mask_flags |= (1<<D_ALWAYS) | (flags & 0xF0000000);
+	flags = 1<<(flags_in&0x1F);
+#endif
+
 		/* Print the message with the time and a nice identifier */
 	if( ((mask_flags|flags) & D_NOHEADER) == 0 ) {
 		if ( DebugUseTimestamps ) {
@@ -313,7 +319,8 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 		}
 
 #ifdef D_LEVEL //  with the switch from flags to enum, this code doesn't work anymore.
-// this should probably just be removed rather than fixed.
+               // it's not a very good idea to expose debug flags into the log file
+               // anyway, this code should probably just be removed rather than fixed.
         if ((mask_flags | flags) & D_LEVEL) {
             rc = sprintf_realloc(&buf, &bufpos, &buflen, "(");
             if (rc < 0) sprintf_errno = errno;
@@ -447,9 +454,15 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	} 
 
 		/* See if this is one of the messages we are logging */
+#ifdef D_CATEGORY_MASK
+	int temp_mask = (1<<D_ALWAYS) | (DebugFlags & ~0xF0000000);
+	if (!((1<<(flags&0x1F)) & temp_mask))
+		return;
+#else
 	if( !(flags&DebugFlags) ) {
 		return;
 	}
+#endif
 
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */

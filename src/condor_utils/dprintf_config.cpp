@@ -136,7 +136,11 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	**	debug flags have changed, we actually use the new
 	**  flags.  -Derek Wright 12/8/97 
 	*/
+#ifdef D_CATEGORY_MASK
+	DebugFlags = 1<<D_ALWAYS;
+#else
 	DebugFlags = D_ALWAYS;
+#endif
 	DebugVerbose = 0;
 
 	/*
