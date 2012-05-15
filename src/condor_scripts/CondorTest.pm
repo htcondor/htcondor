@@ -30,6 +30,7 @@ use Cwd;
 use Time::Local;
 use File::Basename;
 use IO::Handle;
+use FileHandle;
 
 use Condor;
 use CondorUtils;
@@ -1737,6 +1738,26 @@ sub debug
 	my $newstring = "CT:$string";
 	Condor::debug($newstring,$level);
 }
+
+
+sub slurp {
+    my ($file) = @_;
+
+    if (not -e $file) {
+        print "Warning: trying to slurp non-existent file '$file'";
+        return undef;
+    }
+
+    my $fh = new FileHandle $file;
+    if (not defined $fh) {
+        print "Warning: could not open file '$file' to slurp: $!";
+        return undef;
+    }
+
+    my @contents = <$fh>;
+    return wantarray ? @contents : join('', @contents);
+}
+
 
 # PersonalCondorInstance is used to keep track of each personal
 # condor that is launched.
