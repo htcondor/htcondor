@@ -46,10 +46,8 @@ our %build_and_test_sets = (
 		'x86_64_deb_6.0-updated', # this will switch to non-updated when NMI has that platform
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
-		'x86_64_rhas_3',
 		'x86_deb_5.0',
 		'x86_rhap_5',
-		'x86_rhas_3',
 		'x86_winnt_5.1',
 		'x86_64_rhap_6.1-updated',
 		'x86_64_macos_10.6-updated',
@@ -58,8 +56,6 @@ our %build_and_test_sets = (
 	# NMI will need builds on a set of platforms that we do not provide in our
 	# core builds.	These are those platforms.
 	'nmi_one_offs' => [
-		#'x86_64_freebsd_8.2-updated',
-		#'x86_64_sol_5.11',
 	],
 	
 	# We will build on a set of machines that we want to be sure continue building
@@ -68,15 +64,11 @@ our %build_and_test_sets = (
 	# release - a build problem on this platform could indicate problems on a future
 	# release of RHEL.
 	'extra_builds' => [
-		#'x86_64_fedora_14-updated',
-		#'x86_64_opensuse_11.4-updated',
-		#'x86_64_macos_10.6-updated',
 	],
 	
 	'stduniv' => [
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
-		'x86_64_rhas_3',
 		'x86_deb_5.0',
 	],
 	);
@@ -481,27 +473,6 @@ our %submit_info = (
 
 
 	##########################################################################
-	# Platform RHEL 3 on x86_64
-	##########################################################################
-	'x86_64_rhas_3'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
-							 'VMware-server-1.0.7' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Debian 5 on x86
 	##########################################################################
 	'x86_deb_5.0'		=> {
@@ -632,33 +603,6 @@ our %submit_info = (
 		},
 	},
 
-	##########################################################################
-	# Platform RHEL 3 on x86
-	##########################################################################
-	'x86_rhas_3'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [ 
-				@default_prereqs,
-				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
-			],
-			'xtests'	=> [ 
-			 	'x86_64_rhas_3',
-			],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5',
-							 'VMware-server-1.0.7' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-
 	# These describe what a human, sadly, had to figure out about certain
 	# ports that we do in a "one off" fashion. These ports are generally
 	# not released to the public, but are often needed by NMI to run their
@@ -668,43 +612,9 @@ our %submit_info = (
 	# builds of Condor are as clipped as possible to ensure compilation.
 
 	##########################################################################
-	# Platform Fedora 13 on x86_64
+	# Platform Fedora 15 on x86_64
 	##########################################################################
-	'x86_64_fedora_13'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Fedora 13 with updates on x86_64
-	##########################################################################
-	'x86_64_fedora_13-updated'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Fedora 14 on x86_64
-	##########################################################################
-	'x86_64_fedora_14'	=> {
+	'x86_64_fedora_15'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 			},
@@ -719,27 +629,9 @@ our %submit_info = (
 		},
 	},
 
-	'x86_64_fedora_15'				=> 'x86_64_fedora_14',
-	'x86_64_fedora_16'				=> 'x86_64_fedora_14',
-	'x86_64_fedora_17'				=> 'x86_64_fedora_14',
-	'x86_64_fedora_18'				=> 'x86_64_fedora_14',
-	##########################################################################
-	# Platform Fedora 14 with updates on x86_64
-	##########################################################################
-	'x86_64_fedora_14-updated'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
+	'x86_64_fedora_16'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_17'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_18'				=> 'x86_64_fedora_15',
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
@@ -765,129 +657,6 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> ($isNewBatlab ? [] : [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ]),
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Solaris 10 on x86_64
-	# Building openssl is problematic on this platform.	 There is
-	# some confusion betwen 64-bit and 32-bit, which causes linkage
-	# problems.	 Since ssh_to_job depends on openssl's base64 functions,
-	# that is also disabled.
-	##########################################################################
-	'x86_64_sol_5.10'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_OPENSSL:BOOL' => 'OFF',
-								  '-DWITH_CURL:BOOL' => 'OFF',
-								  '-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
-								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
-			},
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9',
-				],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform RHEL 5 on x86  (umanaged!)
-	# This might work.
-	##########################################################################
-	'unmanaged-x86_rhap_5'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-		
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform RHEL 5.2 on X86_64
-	# This might work.
-	# I suspect this could be a real port if we bothered.
-	##########################################################################
-	'x86_64_rhap_5.2'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform RHEL 5.3 on X86_64
-	# This might work.
-	# I suspect this could be a real port if we bothered.
-	##########################################################################
-	'x86_64_rhap_5.3'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform RHEL 5.3 with updates on X86_64
-	# This might work.
-	# I suspect this could be a real port if we bothered.
-	##########################################################################
-	'x86_64_rhap_5.3-updated'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform RHEL 5.4 on X86_64
-	# This might work.
-	# I suspect this could be a real port if we bothered.
-	##########################################################################
-	'x86_64_rhap_5.4'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -922,48 +691,6 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-
-
-	##########################################################################
-	# Platform RHEL 4 on X86_64
-	# This might work.
-	##########################################################################
-	'x86_64_rhas_4'		=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
-			 },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SLES 9 on x86_64
-	##########################################################################
-	'x86_64_sles_9'				=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'wget-1.9.1' ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args,
-				
-			},
-			'prereqs'	=> [ @default_prereqs, 'wget-1.9.1', 'java-1.4.2_05' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -1006,23 +733,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform RHEL 4 on x86
-	##########################################################################
-	'x86_rhas_4'		=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform openSUSE 11.3 on x86_64 (& updated)
 	##########################################################################
 	'x86_64_opensuse_11.3'				=> {
@@ -1046,33 +756,7 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
-
-	# This one is for old batlab with java and ruby test prereqs.
-	# Can go away when old batlab does
-	'x86_64_opensuse_11.4-updated'		=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
-								  '-DWITH_CURL:BOOL' => 'ON',
-								  '-DWITH_LIBVIRT:BOOL' => 'ON',
-								  '-DWITH_LIBXML2:BOOL' => 'ON',
-			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args
-				
-			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
 
 	##########################################################################
 	# Platform FreeBSD 7.4 on x86
