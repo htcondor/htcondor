@@ -5412,7 +5412,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=313
 
-[CLASSAD_LIB_PATH]
+[CLASSAD_USER_LIBS]
 aliases=
 default=
 version=0.0.0
