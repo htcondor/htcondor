@@ -377,6 +377,7 @@ write_stderr_to_pipe()
 	}
 }
 
+#ifndef vmprintf
 void vmprintf( int flags, const char *fmt, ... ) 
 {
 	int saved_flags = 0;
@@ -425,7 +426,7 @@ void vmprintf( int flags, const char *fmt, ... )
 	}
 	oriDebugFlags = saved_flags;
 }
-
+#endif
 
 void 
 initialize_uids(void)
