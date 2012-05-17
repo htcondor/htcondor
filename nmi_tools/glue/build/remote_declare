@@ -46,8 +46,17 @@ open(TASKLIST, '>', $tasklist_file) or die "Can't open $tasklist_file for writin
 
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     #Windows
-    print TASKLIST $TAR_TASK;
-}
+    if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
+        # new BATLAB
+        print TASKLIST "$EXTERNALS_TASK\n";
+        print TASKLIST "$TAR_TASK\n";
+        print TASKLIST "$CHECK_TAR_TASK\n";
+        print TASKLIST "$NATIVE_TASK\n";
+    } else {
+        # old BATLAB
+        print TASKLIST "$TAR_TASK\n";
+    }
+}    
 else {
     # Everything else
     print TASKLIST "$EXTERNALS_TASK\n";

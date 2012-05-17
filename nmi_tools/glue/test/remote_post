@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -19,19 +19,95 @@
 ##**************************************************************
 
 
-# $Id: remote_post,v 1.3 2007-11-08 22:53:46 nleroy Exp $
+######################################################################
+# post script for Condor testsuite runs
+######################################################################
 
-# Condor implementation of NMI test infrastructure interface
-# Simple wrapper to source the environment file and spawn the
-# corresponding perl script for a given stage of the test.
+use strict;
+use warnings;
+use File::Basename;
 
-ENV_FILE=setup_test_env
+my $dir = dirname($0);
+unshift @INC, $dir;
+require "TestGlue.pm";
+TestGlue::setup_test_environment();
 
-# include the environment info from the pre-script
-if [ ! -f $ENV_FILE ]; then
-    echo "$ENV_FILE does not exist!"
-    exit 1
-fi
-. $ENV_FILE
+my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
+my $exit_status = 0;
 
-exec remote_post.pl $*
+# This is debugging output for the sake of the NWO infrastructure.
+# However, it might be useful to us some day so we can see what's
+# going on in case of failures...
+if( defined $ENV{_NMI_STEP_FAILED} ) { 
+    print "The value of _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
+}
+else {
+    print "The _NMI_STEP_FAILED variable is not set\n";
+}
+
+
+######################################################################
+# kill test suite personal condor daemons
+######################################################################
+
+
+print "Seeing if personal condor needs killing\n";
+
+my $personal_condor_dir = File::Spec->catdir($BaseDir, "condor_tests", "TestingPersonalCondor");
+my $sentinel = File::Spec->catfile($personal_condor_dir, "local", "log", ".scheduler_address");
+if( -f $sentinel ) {
+    #  Came up and had a scheduler running. good
+    $ENV{CONDOR_CONFIG} = File::Spec->catfile($personal_condor_dir, "condor_config");
+    if( defined $ENV{_NMI_STEP_FAILED} ) { 
+        print "Not calling condor_off for $ENV{CONDOR_CONFIG}\n";
+    }
+    else {
+        print "Calling condor_off for $ENV{CONDOR_CONFIG}\n";
+        my $condor_off = File::Spec->catfile($BaseDir, "condor", "sbin", "condor_off");
+        system("$condor_off -master");
+
+        # give some time for condor to shutdown
+        sleep(30);
+        print "Done calling condor_off for $ENV{CONDOR_CONFIG}\n";
+    }
+}
+else {
+    # if there's no pid_file, there must be no personal condor running
+    # which we'd have to kill.  this would be caused by an empty
+    # tasklist.  so, make sure the tasklist is empty.  if so, we can
+    # move on with success.  if there are tasks but no pid_file,
+    # that's a weird fatal error and we should propagate that.
+    if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
+        # our tasklist is empty, good.
+        print "tasklist.nmi is empty and there's no condor_master_pid file.\n";
+        print "Nothing to cleanup, returning SUCCESS.\n";
+    }
+    else {
+        print "ERROR: tasklist.nmi contains data but condor_master_pid does not exist!\n";
+        $exit_status = 1;
+    }
+}
+    
+
+######################################################################
+# save and tar up test results
+######################################################################
+
+if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
+    # our tasklist is empty, so don't do any real work
+    print "No tasks in tasklist.nmi, nothing to do\n";
+    exit $exit_status;
+}
+
+print "cding to $BaseDir \n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+
+#----------------------------------------
+# final tar and exit
+#----------------------------------------
+print "Tarring up all results\n";
+chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
+my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
+system("tar zcf results.tar.gz --exclude *.exe $test_dir local");
+
+exit $exit_status;

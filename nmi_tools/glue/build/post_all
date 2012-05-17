@@ -18,5 +18,20 @@
 ##
 ##**************************************************************
 
-print "Nothing to do for remote_pre_declare currently.\n";
+my $pwd = `pwd`;
+chop($pwd);
+
+$tag = "unknown";
+$tag = `sed -ne 's/^set(VERSION *"\\([^"]*\\)".*/\\1/p' CMakeLists.txt`;
+chop($tag);
+
+print "tag is $tag\n";
+print "pwd is $pwd\n";
+
+symlink "$pwd", "../condor-$tag";
+
+system("cd .. ; tar cvzf condor_src-${tag}-all-all.tar.gz condor-$tag/*");
+
+unlink("../condor-$tag");
+
 exit(0);

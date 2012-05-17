@@ -33,7 +33,7 @@ package SubmitInfo;
 # With nmi_condor_submit, one can request a build/test set to submit.
 ###############################################################################
 
-# The sets of ports we know about nativly in the glue script.
+# The sets of ports we know about natively in the glue script.
 our %build_and_test_sets = (
 	# The ports we officially support and for which we provide native binaries
 	# on our download site.
@@ -58,8 +58,6 @@ our %build_and_test_sets = (
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
 	# are those platforms.
 	'nmi_one_offs' => [
-		#'x86_64_freebsd_8.2-updated',
-		#'x86_64_sol_5.11',
 	],
 
         # This is a placeholder that is intended to remain empty in V7_6-branch.
@@ -89,6 +87,15 @@ my @default_prereqs = (
 	'wget-1.9.1',
 	'm4-1.4.1',
 );
+
+ # Hackery to test running in new batlab
+my $isNewBatlab = 0;
+if ((`hostname -f` eq "submit-1.batlab.org\n") ||
+	(`hostname -f` eq "submit-2.batlab.org\n")) {
+	@default_prereqs = ();
+	$isNewBatlab = 1;
+} 
+
 
 ###############################################################################
 # Minimal build configuration
@@ -200,6 +207,29 @@ our %submit_info = (
 	# Microsoft Windows 6.0/2000/xp/whatever on x86_64
 	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
+	'x86_64_winnt_6.1'      => {
+        'build' => {
+            'configure_args' => {
+				# TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
+				# '-G \"Visual Studio 9 2008\"' => undef,
+				'-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
+            },
+            'prereqs'   => undef,
+            'xtests'    => undef,
+        },
+
+        'test' => {
+            'configure_args' => { @default_test_configure_args },
+            'prereqs'   => undef,
+            'testclass' => [ @default_testclass ],
+        },
+    },
+
+
+	##########################################################################
+	# Microsoft Windows 6.0/2000/xp/whatever on x86_64
+	# This probably doesn't work--glue scripts do funky things with it.
+	##########################################################################
 	'x86_winnt_6.0'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
@@ -298,13 +328,13 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args,
 				'-DCLIPPED:BOOL=OFF' => undef,
 			 },
-			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
+			'prereqs'	=> ($isNewBatlab ? [] : [ 'libtool-1.5.26', 'cmake-2.8.3' ]),
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> ( $isNewBatlab ? [] : ['java-1.4.2_05', 'ruby-1.9.2-p180'] ),
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -317,13 +347,13 @@ our %submit_info = (
         	'configure_args' => { @default_build_configure_args,
                               	'-DCLIPPED:BOOL=OFF' => undef,
         	},
-        	'prereqs'   => [ 'cmake-2.8.3' ],
+        	'prereqs'   => ($isNewBatlab ? [] : [ 'cmake-2.8.3' ]),
         	'xtests'    => undef,
     	},
 	
     	'test' => {
         	'configure_args' => { @default_test_configure_args },
-        	'prereqs'   => [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+        	'prereqs'   => ( $isNewBatlab ? [] : [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ]),
         	'testclass' => [ @default_testclass ],
     	},
 	},
@@ -375,7 +405,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> ( $isNewBatlab ? [] : [@default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ]),
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -389,6 +419,8 @@ our %submit_info = (
 	# Platform RHEL 6.1 on x86_64. This one is updated by the batlab.
 	#################################################################
 	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
+
+	'x86_64_rhap_6.2' => 'x86_64_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 5 on x86_64
@@ -405,11 +437,12 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> ( $isNewBatlab ? [] : [@default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ]),
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
 
+	'x86_64_rhap_5.7' => 'x86_64_rhap_5',
 
 	##########################################################################
 	# Platform RHEL 3 on x86_64

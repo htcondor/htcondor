@@ -45,7 +45,7 @@ if (WITH_OPENSSL)
 			
 			if (DARWIN)
 			  string(SUBSTRING ${OS_VER} 0 2 DARWIN_MAJOR)
-			  if(${DARWIN_MAJOR} STREQUAL "10")
+			  if(${DARWIN_MAJOR} STREQUAL "10" OR ${DARWIN_MAJOR} STREQUAL "11")
 				dprint("OPENSSL_CONVERT")
 				set (OPENSSL_CONFIGURE ./Configure darwin64-x86_64-cc --prefix=${OPENSSL_INSTALL_LOC} no-asm -fPIC )
 			  endif()

@@ -22,7 +22,7 @@ add_definitions(-D_FORTIFY_SOURCE=2)
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.6" AND ${SYS_ARCH} MATCHES "I386")
+  if(${TEST_VER} MATCHES "10.[67]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
 elseif(${OS_NAME} MATCHES "WIN")
@@ -539,11 +539,16 @@ if (NOT WINDOWS)
 
 endif(NOT WINDOWS)
 
-if (CONDOR_EXTERNALS AND NOT WINDOWS)
-	### addition of a single externals target which allows you to
-	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
-	add_dependencies( externals ${CONDOR_EXTERNALS} )
-endif(CONDOR_EXTERNALS AND NOT WINDOWS)
+### addition of a single externals target which allows you to
+if (CONDOR_EXTERNALS)
+if (NOT WINDOWS)
+   add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
+        add_dependencies( externals ${CONDOR_EXTERNALS} )
+else (NOT WINDOWS)
+        add_custom_target( ALL_EXTERN DEPENDS ${EXTERNAL_MOD_DEP} )
+        add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
+endif (NOT WINDOWS)
+endif(CONDOR_EXTERNALS)
 
 ######### special case for contrib
 if (WANT_CONTRIB AND WITH_MANAGEMENT)

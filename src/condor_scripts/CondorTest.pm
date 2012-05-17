@@ -17,27 +17,24 @@
 ##
 ##**************************************************************
 
-
-# CondorTest.pm - a Perl module for automated testing of Condor
-#
-# 19??-???-?? originally written by Tom Stanis (?)
-# 2000-Jun-02 total overhaul by pfc@cs.wisc.edu and wright@cs.wisc.edu
-
 package CondorTest;
 
-require 5.0;
+use strict;
+use warnings;
+
 use Carp;
-use CondorUtils;
-use Condor;
-use CondorPersonal;
-use FileHandle;
 use POSIX;
+use POSIX qw/strftime/;
 use Net::Domain qw(hostfqdn);
 use Cwd;
 use Time::Local;
-use strict;
-use warnings;
 use File::Basename;
+use IO::Handle;
+use FileHandle;
+
+use Condor;
+use CondorUtils;
+use CondorPersonal;
 
 my %securityoptions =
 (
@@ -49,10 +46,6 @@ my %securityoptions =
 
 # Tracking Running Tests
 my $RunningFile = "RunningTests";
-my $LOCK_EXCLUSIVE = 2;
-my $UNLOCK = 8;
-my $TRUE = 1;
-my $FALSE = 0;
 my $teststrt = 0;
 my $teststop = 0;
 my $debuglevel = 2;
@@ -73,14 +66,16 @@ my %machine_ads;
 my $lastconfig;
 my $handle; #actually the test name.
 my $BaseDir = getcwd();
-my $iswindows = IsThisWindows();
 my $isnightly = IsThisNightly($BaseDir);
 
 # we want to process and track the collection of cores
 my $coredir = "$BaseDir/Cores";
 if(!(-d $coredir)) {
 	debug("Creating collection directory for cores\n",2);
-	runcmd("mkdir -p $coredir");
+#	runcmd("mkdir -p $coredir");
+#	the above command doesn't work on windows (-p isn't valid for windows' mkdir which always has -p behavior)
+#	but since cwd is $BaseDir we can just use perl's mkdir
+        mkdir 'Cores' || die "ERROR: could not create $coredir\n";
 }
 
 # set up for reading in core/ERROR exemptions
@@ -648,7 +643,7 @@ sub DoTest
 	if($isnightly == 1) {
 		print "\nCurrent date and load follow:\n";
 		print scalar localtime() . "\n";
-		if($iswindows == 0) {
+		if(CondorUtils::is_windows() == 0) {
 			runcmd("uptime");
 		}
 		print "\n\n";
@@ -742,7 +737,7 @@ sub DoTest
 		print "Test started <$teststrt> ended <$teststop> taking <$timediff> seconds\n";
 		print "Current date and load follow:\n";
 		print scalar localtime() . "\n";
-		if($iswindows == 0) {
+		if(CondorUtils::is_windows() == 0) {
 			runcmd("uptime");
 		}
 		print "\n\n";
@@ -787,7 +782,7 @@ sub DoTest
 		debug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
 		# running in TestingPersonalCondor
 		my $logdir = `condor_config_val log`;
-		fullchomp($logdir);
+		CondorUtils::fullchomp($logdir);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	}
 	##############################################################
@@ -798,7 +793,7 @@ sub DoTest
 
 	if(defined  $wrap_test) {
 		my $logdir = `condor_config_val log`;
-		fullchomp($logdir);
+		CondorUtils::fullchomp($logdir);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			print "KillDaemonPids called on this config file<$config>\n";
@@ -844,9 +839,9 @@ sub CheckTimedRegistrations
 	# when we started the test and submited it. This is the time 
 	# at all other regsitrations have to be registered by....
 
-    if( defined $test{$handle}{"RegisterTimed"} )
+    if( exists $test{$handle} and defined $test{$handle}{"RegisterTimed"} )
     {
-		debug( "Found a timer to regsiter.......\n",4);
+		debug( "Found a timer to register.......\n",4);
 		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
     }
 }
@@ -989,7 +984,7 @@ sub CompareText
     
     while( <FILE> )
     {
-	fullchomp($_);
+	CondorUtils::fullchomp($_);
 	$line = $_;
 	$linenum++;
 
@@ -1007,7 +1002,7 @@ sub CompareText
 	{
 	    die "$file contains more text than expected\n";
 	}
-	fullchomp($expectline);
+	CondorUtils::fullchomp($expectline);
 
 	debug("\$expectline: $expectline\n",$debuglevel);
 
@@ -1100,7 +1095,7 @@ sub ParseMachineAds
     debug( "reading machine ads from $machine...\n" ,5);
     while( <PULL> )
     {
-	fullchomp($_);
+	CondorUtils::fullchomp($_);
 	debug("Raw AD is $_\n",5);
 	$line++;
 
@@ -1126,7 +1121,7 @@ sub ParseMachineAds
 
 	    # compress whitespace and remove trailing newline for readability
 	    $value =~ s/\s+/ /g;
-	    fullchomp($value);
+	    CondorUtils::fullchomp($value);
 
 	
 		# Do proper environment substitution
@@ -1316,78 +1311,6 @@ sub runCondorTool
 	return(0);
 }
 
-# Sometimes `which ...` is just plain broken due to stupid fringe vendor
-# not quite bourne shells. So, we have our own implementation that simply
-# looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unixies. As for windows, well, for now it just sucks, but it appears
-# to at least work.
-
-#BEGIN {
-## A variable specific to the BEGIN block which retains its value across calls
-## to Which. I use this to memoize the mapping between unix and windows paths
-## via cygpath.
-#my %memo;
-#sub Which
-#{
-#	my $exe = shift(@_);
-#	my $pexe;
-#	my $origpath;
-
-#	if(!( defined  $exe)) {
-#		return "CT::Which called with no args\n";
-#	}
-#	my @paths;
-
-#	# On unix, this does the right thing, mostly, on windows we are using
-#	# cygwin, so it also mostly does the right thing initially.
-#	@paths = split /:/, $ENV{PATH};
-
-#	foreach my $path (@paths) {
-#		fullchomp($path);
-#		$origpath = $path;
-
-#		# Here we convert each path to a windows path 
-#		# before we use it with cygwin.
-#		if ($iswindows) {
-#			if (!exists($memo{$path})) {
-#				# XXX Stupid slow code.  The right solution is to abstract the
-#				# $ENV{PATH} variable and its cygpath converted counterpart and
-#				# deal with said abstraction everywhere in the codebase.  A
-#				# less right solution is to memoize the arguments to this
-#				# function call. Guess which one I chose.
-#				my $cygconvert = `cygpath -m -p "$path"`;
-#				fullchomp($cygconvert);
-#				$memo{$path} = $cygconvert; # memoize it
-#				$path = $cygconvert;
-#			} else {
-#				# grab the memoized copy.
-#				$path = $memo{$path};
-#			}
-
-#			# XXX Why just for this and not for all names with spaces in them?
-#			if($path =~ /^(.*)Program Files(.*)$/){
-#				$path = $1 . "progra~1" . $2;
-#			} else {
-#				CondorTest::debug("Path DOES NOT contain Program Files\n",3);
-#			}
-#		}
-
-#		$pexe = "$path/$exe";
-
-#		if ($iswindows) {
-#			# Stupid windows, do this to ensure the -x works.
-#			$pexe =~ s#/#\\#g;
-#		}
-
-#		if (-x "$pexe") {
-#			# stupid caller code expects the result in unix format".
-#			return "$origpath/$exe";
-#		}
-#	}
-
-#	return "$exe: command not found";
-#}
-#}
 
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
@@ -1401,29 +1324,13 @@ sub GetQueue
 		open(PULL, "$request 2>&1 |");
 		while(<PULL>)
 		{
-			fullchomp($_);
+			CondorUtils::fullchomp($_);
 			print "GetQueue: $_\n";
 		}
 		close(PULL);
 	}
 }
 
-#
-# Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code. The real chomp
-# totals the number or changes but I currently return the modified
-# array. bt 10/06
-#
-
-sub fullchomp
-{
-	push (@_,$_) if( scalar(@_) == 0);
-	foreach my $arg (@_) {
-		$arg =~ s/\012+$//;
-		$arg =~ s/\015+$//;
-	}
-	return(0);
-}
 
 sub changeDaemonState
 {
@@ -1670,10 +1577,10 @@ sub spawn_cmd
 # hostname.
 ##############################################################################
 
-sub getFqdnHost
-{
-	my $host = hostfqdn();
-	return($host);
+sub getFqdnHost {
+    my $host = hostfqdn();
+    CondorUtils::fullchomp($host);
+    return($host);
 }
 
 ##############################################################################
@@ -1690,7 +1597,7 @@ sub SearchCondorLog
     my $regexp = shift;
 
     my $logloc = `condor_config_val ${daemon}_log`;
-    fullchomp($logloc);
+    CondorUtils::fullchomp($logloc);
 
     CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
@@ -1720,7 +1627,7 @@ sub PersonalPolicySearchLog
     my $logname = shift;
 
 	my $logdir = `condor_config_val log`;
-	fullchomp($logdir);
+	CondorUtils::fullchomp($logdir);
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
@@ -1749,7 +1656,7 @@ sub OuterPoolTest
     debug( "Running this command: <$cmd> \n",2);
     # shhhhhhhh third arg 0 makes it hush its output
 	my $logdir = `condor_config_val log`;
-	fullchomp($logdir);
+	CondorUtils::fullchomp($logdir);
 	debug( "log dir is<$logdir>\n",2);
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
@@ -1772,7 +1679,7 @@ sub PersonalCondorTest
     print "Running this command: <$cmd> \n";
     # shhhhhhhh third arg 0 makes it hush its output
 	my $logdir = `condor_config_val log`;
-	fullchomp($logdir);
+	CondorUtils::fullchomp($logdir);
 	print "log dir is<$logdir>\n";
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
@@ -1805,7 +1712,7 @@ sub findOutput
 	my $testname = "UNKNOWN";
 	my $line = "";
 	while(<SF>) {
-		fullchomp($_);
+		CondorUtils::fullchomp($_);
 		$line = $_;
 		if($line =~ /^\s*[Ll]og\s+=\s+(.*)(\..*)$/){
 			$testname = $1;
@@ -1832,6 +1739,38 @@ sub debug
 	Condor::debug($newstring,$level);
 }
 
+
+sub slurp {
+    my ($file) = @_;
+
+    if (not -e $file) {
+        print "Warning: trying to slurp non-existent file '$file'";
+        return undef;
+    }
+
+    my $fh = new FileHandle $file;
+    if (not defined $fh) {
+        print "Warning: could not open file '$file' to slurp: $!";
+        return undef;
+    }
+
+    my @contents = <$fh>;
+    return wantarray ? @contents : join('', @contents);
+}
+
+# Cygwin's chomp does not remove the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
+
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
+
+    return;
+}
+
+
 # PersonalCondorInstance is used to keep track of each personal
 # condor that is launched.
 { package PersonalCondorInstance;
@@ -1841,7 +1780,7 @@ sub debug
       my $self = {
           name => shift,
           condor_config => shift,
-          collector_port => shift,
+          collector_addr => shift,
           is_running => shift
       };
       bless $self, $class;
@@ -1852,10 +1791,15 @@ sub debug
       my $self = shift;
       return $self->{condor_config};
   }
+  sub MakeThisTheDefaultInstance
+  {
+      my $self = shift;
+      $ENV{CONDOR_CONFIG} = $self->{condor_config};
+  }
   sub GetCollectorAddress
   {
       my $self = shift;
-      return "localhost:" . $self->{collector_port};
+      return $self->{collector_addr};
   }
 }
 
@@ -1902,22 +1846,28 @@ sub GetPersonalCondorWithConfig
     }
 }
 
-sub StartPersonal
-{
-    my $testname = shift;
-    my $paramfile = shift;
-    my $version = shift;
+sub StartPersonal {
+    my ($testname, $paramfile, $version) = @_;
 
-	$handle = $testname;
+    $handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
+    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
+    print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
+    print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
     my $collector_port = shift @condor_info;
+    my $collector_addr = CondorPersonal::FindCollectorAddress();
 
-    $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_port, 1 );
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
+    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
+    $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
+    print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
 }
@@ -1963,8 +1913,9 @@ sub StartCondorWithParams
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
     my $collector_port = shift @condor_info;
+    my $collector_addr = CondorPersonal::FindCollectorAddress();
 
-    my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_port, 1 );
+    my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_addr, 1 );
     $personal_condors{$condor_name} = $new_condor;
 
     return $new_condor;
@@ -2000,7 +1951,7 @@ sub KillPersonal
 sub ShouldCheck_coreERROR
 {
 	my $logdir = `condor_config_val log`;
-	fullchomp($logdir);
+	CondorUtils::fullchomp($logdir);
 	my $testsrunning = CountRunningTests();
 	if(($logdir =~ /TestingPersonalCondor/) &&($testsrunning > 1)) {
 		# no because we are doing concurrent testing
@@ -2026,20 +1977,20 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
-	if($iswindows == 1) {
+	if(CondorUtils::is_windows() == 1) {
 		#print "CoreCheck for windows\n";
 		$logdir =~ s/\\/\//g;
 		#print "old log dir <$logdir>\n";
 		my $windowslogdir = `cygpath -m $logdir`;
 		#print "New windows path <$windowslogdir>\n";
-		fullchomp($windowslogdir);
+		CondorUtils::fullchomp($windowslogdir);
 		$logdir = $windowslogdir;
 	}
 
 	debug("Checking <$logdir> for test <$test>\n",2);
 	my @files = `ls $logdir`;
 	foreach my $perp (@files) {
-		fullchomp($perp);
+		CondorUtils::fullchomp($perp);
 		$fullpath = $logdir . "/" . $perp;
 		if(-f $fullpath) {
 			if($fullpath =~ /^.*\/(core.*)$/) {
@@ -2080,7 +2031,7 @@ sub ScanForERROR
 	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
 	my $line = "";
 	while(<MDL>) {
-		fullchomp();
+		CondorUtils::fullchomp();
 		$line = $_;
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
 		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
@@ -2153,27 +2104,16 @@ sub AddFileTrace
 	my $time = shift;
 	my $entry = shift;
 
-	my $tracefile = $coredir . "/core_error_trace";
-	my $newtracefile = $coredir . "/core_error_trace.new";
-
-	# make sure the trace file exists
-	if(!(-f $tracefile)) {
-		open(TF,">$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-		print TF "Tracking file for core files and ERROR prints in daemonlogs\n";
-		close(TF);
-	}
-	open(TF,"<$tracefile") or die "Can not create ERROR/CORE trace file<$tracefile>:$!\n";
-	open(NTF,">$newtracefile") or die "Can not create ERROR/CORE trace file<$newtracefile>:$!\n";
-	while(<TF>) {
-		print NTF "$_";
-	}
-	close(TF);
 	my $buildentry = "$time	$file	$entry\n";
-	print NTF "$buildentry";
-	debug("\n$buildentry",2);
-	close(NTF);
-	runcmd("mv $newtracefile $tracefile");
 
+	my $tracefile = $coredir . "/core_error_trace";
+	local *TF;
+	open(TF, '>>', $tracefile)
+		or die qq(Unable to open "$tracefile" for writing: $!);
+	print TF $buildentry;
+	close TF;
+
+	debug("\n$buildentry",2);
 }
 
 sub MoveCoreFile
@@ -2199,10 +2139,8 @@ sub CountFileTrace
 	my $tracefile = $coredir . "/core_error_trace";
 	my $count = 0;
 
-	open(CT,"<$tracefile") or die "Can not count<$tracefile>:$!\n";
-	while(<CT>) {
-		$count += 1;
-	}
+	open(CT, "<", $tracefile) or return 0;
+	while(<CT>) { $count ++; }
 	close(CT);
 	return($count);
 }
@@ -2292,16 +2230,12 @@ sub DropExemptions
 ##############################################################################
 # Tracking Running Tests
 # my $RunningFile = "RunningTests";
-# my $LOCK_EXCLUSIVE = 2;
-# my $UNLOCK = 8;
-# my $TRUE = 1;
-# my $FALSE = 0;
 
 sub FindControlFile
 {
 	my $cwd = getcwd();
 	my $runningfile = "";
-	fullchomp($cwd);
+	CondorUtils::fullchomp($cwd);
 	debug( "Current working dir is <$cwd>\n",$debuglevel);
 	if($cwd =~ /^(.*condor_tests)(.*)$/) {
 		$runningfile = $1 . "/" . $RunningFile;
@@ -2350,39 +2284,20 @@ sub CountRunningTests
 	return($count);
 }
 
-sub AddRunningTest
-{
-	my $test = shift;
-	my $runningfile = FindControlFile();
-	my $retRF;
-	my $tmpfile;
-	my $line = "";
-	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
-	runcmd("touch $runningfile/$test");
+sub AddRunningTest {
+    my $test = shift;
+    my $runningfile = FindControlFile();
+    debug( "Adding <$test> to running tests\n",$debuglevel);
+    runcmd("touch $runningfile/$test");
 }
 
-sub RemoveRunningTest
-{
-	my $test = shift;
-	my $runningfile = FindControlFile();
-	my $retRF;
-	my $tmpfile;
-	my $line = "";
-	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	runcmd("rm -f $runningfile/$test");
+sub RemoveRunningTest {
+    my $test = shift;
+    my $runningfile = FindControlFile();
+    debug( "Removing <$test> from running tests\n",$debuglevel);
+    unlink("$runningfile/$test");
 }
 
-sub IsThisWindows
-{
-	my $path = CondorTest::Which("cygpath");
-	#debug("Path return from which cygpath: $path\n",2);
-	if($path =~ /^.*\/bin\/cygpath.*$/ ) {
-		#print "This IS windows\n";
-		return(1);
-	}
-	#print "This is NOT windows\n";
-	return(0);
-}
 
 sub IsThisNightly
 {

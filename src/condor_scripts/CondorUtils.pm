@@ -4,13 +4,20 @@ use warnings;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
 
+BEGIN {
+	if ($^O =~ /MSWin32/) {
+		require Thread; Thread->import();
+		require Thread::Queue; Thread::Queue->import();
+	}
+}
+
 package CondorUtils;
 
 our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL verbose_system Which TRUE FALSE);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -77,6 +84,26 @@ sub SIGNAL {
 	}
 }
 
+# create a Queue, and a reader thread to read from $fh and write into the queue
+# returns the Queue
+sub async_reader {
+	my $fh = shift;
+	if ($^O =~ /MSWin32/) {
+		my $Q  = new Thread::Queue;
+
+		Thread->new(
+			sub {
+				$Q->enqueue($_) while <$fh>;
+				$Q->enqueue(undef);
+			}	
+		)->detach;
+
+		return $Q;
+	} else {
+		return undef;
+	}
+}
+
 #others of interest may be:
 #sub NOSIG {...} # can have any return code, just not a signal.
 #sub SIG {...} # takes a list of signals you expect it to die with
@@ -112,7 +139,8 @@ sub runcmd {
 	local(*IN,*OUT,*ERR);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
-	my $date = sprintf("%02d/%02d/%02d %02d:%02d:%02d", $mon, $mday, $year % 100, $hour, $min, $sec);
+        use POSIX qw/strftime/; # putting this at the top of the script doesn't work oddly
+        my $date = strftime("%Y/%m/%d %H:%M:%S", localtime);
 	my $childpid;
 	my $local_expectation = FALSE;
 	my %altoptions;
@@ -146,6 +174,16 @@ sub runcmd {
 		#print "$key\n";
 	#}
 
+	# some common *nix shell commands aren't valid on windows, but instead of fixing 
+	# all of the tests, it's easier to just re-write the command stings here
+	if ($^O =~ /MSWin32/) {
+		if ($args =~ /^mkdir \-p/) {
+			$args =~ s/^mkdir \-p/mkdir/;
+			$args =~ s/\/cygwin\/c/c:/;
+			$args =~ s/\//\\/g;
+		}
+	}
+
 	my $rc = undef;
 	my @outlines;
 	my @errlines;
@@ -163,16 +201,39 @@ sub runcmd {
 		$rc = system("$args");
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {
-		if(${$options}{sh_wrap} == TRUE) {
-			$cmd = "/bin/sh -c \'$args\'";
-		} else {
-			$cmd = $args;
-		}
-
-		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $cmd);
+		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $args);
 
 		my $bulkout = "";
 		my $bulkerror = "";
+
+ 		# ActiveState perl on Windows doesn't support select for files/pipes, but threaded IO works great
+		if ($^O =~ /MSWin32/) {
+			my $outQ = async_reader(\*OUT);
+			my $errQ = async_reader(\*ERR);
+
+			my $oe = 0; # set to 1 when OUT is EOF
+			my $ee = 0; # set to 1 when ERR ie EOF
+
+			while (1) {
+				my $wait = 1;
+
+				while ( ! $oe && $outQ->pending) {
+					my $line = $outQ->dequeue or $oe = 1;
+					if ($line) { $bulkout .= $line; }
+					$wait = 0;
+				}
+				while ( ! $ee && $errQ->pending) {
+					my $line = $errQ->dequeue or $ee = 1;
+					if ($line) { $bulkerror .= $line; }
+					$wait = 0;
+				}
+
+				if ($oe && $ee) { last; }
+				if ($wait) { sleep(.1); }
+			}
+
+		} else {  # use select for Linux and Cygwin perl
+
 		my $tmpout = "";
 		my $tmperr = "";
 		my $rin = '';
@@ -226,7 +287,8 @@ sub runcmd {
 			} else {
 				print "Select error in runcmd:$!\n";
 			}
-		}
+		} # end while
+		} # use select for Linux and cygwin perl
 
 		#print "$bulkout\n";
 		#print "\n++++++++++++++++++++++++++\n";
@@ -416,107 +478,58 @@ sub verbose_system {
 	return ${$hashref}{exitcode};
 }
 
-# Sometimes `which ...` is just plain broken due to stupid fringe vendor
-# not quite bourne shells. So, we have our own implementation that simply
-# looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unicies. As for windows, well, for now it just sucks.
 
-sub Which
-{
-	my $exe = shift(@_);
+# which is broken on some platforms, so implement a Perl version here
+sub Which {
+    my ($exe) = @_;
 
-	if(!( defined  $exe)) {
-		return "CP::Which called with no args\n";
-	}
-	my @paths;
+    return "" if(!$exe);
 
-	if( exists $ENV{PATH}) {
-		@paths = split /:/, $ENV{PATH};
-		foreach my $path (@paths) {
-			chomp $path;
-			if (-x "$path/$exe") {
-				return "$path/$exe";
-			}
-		}
-	} else {
-		#print "Who is calling CondorPersonal::Which($exe)\n";
-	}
+    if( is_windows_native_perl() ) {
+        return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
+    }
+    foreach my $path (split /:/, $ENV{PATH}) {
+        chomp $path;
+        if(-x "$path/$exe") {
+            return "$path/$exe";
+        }
+    }
 
-	return "$exe: command not found";
+    return "";
 }
 
-# Sometimes `which ...` is just plain broken due to stupid fringe vendor
-# not quite bourne shells. So, we have our own implementation that simply
-# looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unixies. As for windows, well, for now it just sucks, but it appears
-# to at least work.
+# Cygwin's chomp does not remove the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
 
-#BEGIN {
-## A variable specific to the BEGIN block which retains its value across calls
-## to Which. I use this to memoize the mapping between unix and windows paths
-## via cygpath.
-#my %memo;
-#sub Which
-#{
-#	my $exe = shift(@_);
-#	my $pexe;
-#	my $origpath;
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
 
-#	if(!( defined  $exe)) {
-#		return "CT::Which called with no args\n";
-#	}
-#	my @paths;
+    return;
+}
 
-#	# On unix, this does the right thing, mostly, on windows we are using
-#	# cygwin, so it also mostly does the right thing initially.
-#	@paths = split /:/, $ENV{PATH};
 
-#	foreach my $path (@paths) {
-#		fullchomp($path);
-#		$origpath = $path;
+sub is_windows {
+    if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
+        return 1;
+    }
+    return 0;
+}
 
-#		# Here we convert each path to a windows path 
-#		# before we use it with cygwin.
-#		if ($iswindows) {
-#			if (!exists($memo{$path})) {
-#				# XXX Stupid slow code.  The right solution is to abstract the
-#				# $ENV{PATH} variable and its cygpath converted counterpart and
-#				# deal with said abstraction everywhere in the codebase.  A
-#				# less right solution is to memoize the arguments to this
-#				# function call. Guess which one I chose.
-#				my $cygconvert = `cygpath -m -p "$path"`;
-#				fullchomp($cygconvert);
-#				$memo{$path} = $cygconvert; # memoize it
-#				$path = $cygconvert;
-#			} else {
-#				# grab the memoized copy.
-#				$path = $memo{$path};
-#			}
+sub is_cygwin_perl {
+    if ($^O =~ /cygwin/) {
+        return 1;
+    }
+    return 0;
+}
 
-#			# XXX Why just for this and not for all names with spaces in them?
-#			if($path =~ /^(.*)Program Files(.*)$/){
-#				$path = $1 . "progra~1" . $2;
-#			} else {
-#				CondorTest::debug("Path DOES NOT contain Program Files\n",3);
-#			}
-#		}
-
-#		$pexe = "$path/$exe";
-
-#		if ($iswindows) {
-#			# Stupid windows, do this to ensure the -x works.
-#			$pexe =~ s#/#\\#g;
-#		}
-
-#		if (-x "$pexe") {
-#			# stupid caller code expects the result in unix format".
-#			return "$origpath/$exe";
-#		}
-#	}
-
-#	return "$exe: command not found";
-#}
-#}
-
+sub is_windows_native_perl {
+    if ($^O =~ /MSWin32/) {
+         return 1;
+    }
+    return 0;
+}
 
 1;
