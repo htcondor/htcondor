@@ -58,6 +58,13 @@ Condor was unable to transfer the files back to the submit side,
 and the job was put on hold.
 \Ticket{2987}
 
+\item When \MacroNI{MaxJobRetirementTime} or
+  \MacroNI{MachineMaxVacateTime} were very large, estimates of machine
+  draining badput and completion time were sometimes nonsensical
+  because of integer overflow.
+\Ticket{3001}
+
+
 \end{itemize}
 
 \noindent Known Bugs:
