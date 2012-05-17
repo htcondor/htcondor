@@ -110,6 +110,7 @@ const char * const ATTR_AVAIL_TIME_ESTIMATE		 = "AvailTimeEstimate";
 const char * const ATTR_BANDWIDTH_TO_SUBMIT_MACHINE= "BandwidthToSubmitMachine";
 const char * const ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER= "BandwidthToLastCkptServer";
 const char * const ATTR_BANDWIDTH_TO_CKPT_SERVER = "BandwidthToCkptServer";
+const char * const ATTR_BATCH_QUEUE				 = "BatchQueue";
 const char * const ATTR_BUFFER_SIZE				 = "BufferSize";
 const char * const ATTR_BUFFER_FILES				 = "BufferFiles";
 const char * const ATTR_BUFFER_BLOCK_SIZE		 = "BufferBlockSize";

@@ -264,6 +264,7 @@ const char	*KeystoreFile = "keystore_file";
 const char	*KeystoreAlias = "keystore_alias";
 const char	*KeystorePassphraseFile = "keystore_passphrase_file";
 const char  *CreamAttributes = "cream_attributes";
+const char  *BatchQueue = "batch_queue";
 
 const char	*FileRemaps = "file_remaps";
 const char	*BufferFiles = "buffer_files";
@@ -5175,6 +5176,11 @@ SetGridParams()
 
 	if( (tmp = condor_param(CreamAttributes, ATTR_CREAM_ATTRIBUTES)) ) {
 		InsertJobExprString ( ATTR_CREAM_ATTRIBUTES, tmp );
+		free( tmp );
+	}
+
+	if( (tmp = condor_param(BatchQueue, ATTR_BATCH_QUEUE)) ) {
+		InsertJobExprString ( ATTR_BATCH_QUEUE, tmp );
 		free( tmp );
 	}
 

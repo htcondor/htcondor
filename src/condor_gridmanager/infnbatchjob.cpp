@@ -881,6 +881,12 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_JOB_IWD, expr );
 	}
 
+	expr = "";
+	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
+	if ( !expr.IsEmpty() ) {
+		submit_ad->Assign( "Queue", expr );
+	}
+
 	// The blahp expects the Cmd attribute to contain the full pathname
 	// of the job executable.
 	jobAd->LookupString( ATTR_JOB_CMD, expr );

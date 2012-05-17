@@ -46,6 +46,7 @@ extern const char * const  ATTR_AVAIL_TIME_ESTIMATE;
 extern const char * const  ATTR_BANDWIDTH_TO_SUBMIT_MACHINE;
 extern const char * const  ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER;
 extern const char * const  ATTR_BANDWIDTH_TO_CKPT_SERVER;
+extern const char * const  ATTR_BATCH_QUEUE;
 extern const char * const  ATTR_BUFFER_SIZE;
 extern const char * const  ATTR_BUFFER_FILES;
 extern const char * const  ATTR_BUFFER_BLOCK_SIZE;

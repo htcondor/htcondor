@@ -1603,6 +1603,18 @@ conditions that were present when the job checkpointed.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% batch_queue
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!batch\_queue}
+\label{condor-submit-batch-queue}
+\item[batch\_queue = $<$queuename$>$]
+Used for \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge} jobs.
+Specifies the name of the PBS/LSF/SGE job queue into which the job should
+be submitted.
+If this attribute is absent, the default queue is used.
+
+%%%%%%%%%%%%%%%%%%%
 %% cream_attributes
 %%%%%%%%%%%%%%%%%%%
 
