@@ -6104,6 +6104,22 @@ Configuration File Entries}
   ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,1)
 \end{verbatim}
 
+\label{param:JobDefaultRequestDisk}
+\item[\Macro{JOB\_DEFAULT\_REQUESTDISK}]
+  The amount of disk in Kbytes to acquire for a job,
+  if the job does not specify how much it needs using the 
+  \SubmitCmd{request\_disk} submit command.
+  If the job defines the value, then that value takes precedence. 
+  If not set, then then the default is defined as \Expr{DiskUsage}.
+
+\label{param:JobDefaultRequestCpus}
+\item[\Macro{JOB\_DEFAULT\_REQUESTCPUS}]
+  The number of CPUs to acquire for a job,
+  if the job does not specify how many it needs using the 
+  \SubmitCmd{request\_cpus} submit command.
+  If the job defines the value, then that value takes precedence. 
+  If not set, then then the default is 1.
+
 \end{description}
 
 If you want \Condor{submit} to automatically append an expression to
