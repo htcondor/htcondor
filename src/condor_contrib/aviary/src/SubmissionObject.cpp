@@ -36,7 +36,7 @@ using namespace aviary::util;
 SubmissionObject::SubmissionObject (
                                      const char *_name,
                                      const char *_owner ) :
-        ownerSet ( false ), m_oldest_qdate(0)
+        ownerSet ( false ), m_oldest_qdate(time(NULL))
 {
 	m_name = _name;
     if ( _owner )
@@ -266,7 +266,7 @@ SubmissionObject::getOldest() {
 
 void
 SubmissionObject::setOldest(int qdate) {
-	if ((qdate < m_oldest_qdate) || (m_oldest_qdate <= 0)) {
+	if (qdate < m_oldest_qdate) {
 		m_oldest_qdate = qdate;
 	}
 }
