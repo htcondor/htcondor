@@ -339,7 +339,7 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
         }
 #endif
 #ifdef D_CAT
-		if ((hdr_flags & D_CAT) && cat >= 0 && cat < D_CATEGORY_COUNT) {
+		if ((hdr_flags & D_CAT) && /*cat > 0 &&*/ cat < D_CATEGORY_COUNT) {
 			int verbosity = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
 			if (cat_and_flags & D_FULLDEBUG) verbosity = 2;
 			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%s:%d) ", 
