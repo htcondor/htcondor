@@ -58,10 +58,10 @@ Condor was unable to transfer the files back to the submit side,
 and the job was put on hold.
 \Ticket{2987}
 
-\item When \MacroNI{MaxJobRetirementTime} or
-  \MacroNI{MachineMaxVacateTime} were very large, estimates of machine
-  draining badput and completion time were sometimes nonsensical
-  because of integer overflow.
+\item When configuration variables \MacroNI{MaxJobRetirementTime} or
+\MacroNI{MachineMaxVacateTime} were very large, estimates of machine
+draining badput and completion time were sometimes nonsensical
+because of integer overflow.
 \Ticket{3001}
 
 
@@ -107,7 +107,7 @@ without attempting to change to their original directory.
 \Ticket{2877}
 
 \item (Added in 7.7.5.) Added the \Arg{-absent} flag to \Condor{status},
-which displays absent ads.
+which displays absent ClassAds.
 \Ticket{2690}
 
 \item (Added in 7.7.5.) Implement absent ads, which help track pool membership
