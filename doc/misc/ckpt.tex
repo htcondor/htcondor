@@ -151,12 +151,19 @@ Again, platforms that implement address space randomization will
 need a modified invocation,
 as described in section~\ref{sec:platform-linux-addrspace-random}.
 
-By default, the checkpointed program will restart in the same directory 
-in which it originally ran, failing if it can not change to that 
-absolute path.  You may pass the \Arg{-\_condor\_relocatable} argument 
-to the program to suppress this behavior, but not all programs will 
-continue to work.  Doing so may simplify moving standalone checkpoints 
-between machines.
+By default, the program will restart in the same directory 
+in which it originally ran, 
+and the program will fail if it can not change to that absolute path.
+To suppress this behavior, 
+also pass the \Arg{-\_condor\_relocatable} argument 
+to the program. 
+Not all programs will continue to work.  
+Doing this may simplify moving standalone checkpoints between machines.
+Continuing the example given above,
+the command would be
+\begin{verbatim}
+P1 -_condor_restart P1.ckpt -_condor_relocatable
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:ckpt-safety}Checkpoint Safety}
