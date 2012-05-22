@@ -35,16 +35,9 @@ if(NOT WIN_EXEC_NODE_ONLY)
 
 	if (NOT WINDOWS)
         if (HAVE_EXT_GLOBUS)
-            add_custom_command(
-                OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor"
-                DEPENDS grid_monitor_wrapper grid_manager_monitor_agent
-                COMMAND cat
-                ARGS grid_monitor_wrapper grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor"
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            )
             add_custom_target( grid_monitor
-                    ALL
-                    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor"
+                ALL cat ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor"
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent
             )
             install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	    # CRUFT: grid_monitor.sh was renamed to grid_monitor in
