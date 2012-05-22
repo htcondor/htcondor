@@ -22,16 +22,57 @@
 // to have any effect.
 #include <string>
 #include <map>
+enum DebugOutput
+{
+	FILE_OUT,
+	STD_OUT,
+	STD_ERR,
+	OUTPUT_DEBUG_STR
+};
+
+/* future
+class DebugOutputChoice
+{
+public:
+	unsigned int flags; // one or more of D_xxx flags (but NOT category) values
+	unsigned char level[D_CATEGORY_COUNT]; // indexed by D_CATEGORY enum
+	DebugOutputChoice(unsigned int val);
+	DebugOutputChoice::DebugOutputChoice(unsigned int val)
+	{
+		flags = val & ~D_CATEGORY_RESERVED_MASK;
+		memset(level, 0, sizeof(level));
+		unsigned int catflags = val & D_CATEGORY_MASK;
+		for (int ix = 0; catflags && ix < sizeof(level); ++ix, catflags/=2)
+			level[ix] += (catflags&1);
+	}
+};
+*/
+
 struct DebugFileInfo
 {
+	DebugOutput outputTarget;
 	FILE *debugFP;
-	int debugFlags;
+	DebugOutputChoice choice;
 	std::string logPath;
 	int64_t maxLog;
 	int maxLogNum;
-
-	DebugFileInfo() : debugFP(0), debugFlags(0), maxLog(0), maxLogNum(0) {}
+	bool want_truncate;
+	bool accepts_all;
+	DebugFileInfo() : outputTarget(FILE_OUT), debugFP(0), choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
 	DebugFileInfo(const DebugFileInfo &debugFileInfo);
 	~DebugFileInfo();
-    bool MatchesFlags(int flags) const;
+	bool MatchesCatAndFlags(int cat_and_flags) const;
 };
+
+struct param_info
+{
+	DebugOutputChoice choice;
+	std::string logPath;
+	off_t maxLog;
+	int maxLogNum;
+	bool want_truncate;
+	bool accepts_all;
+
+	param_info() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
+};
+

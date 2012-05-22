@@ -36,8 +36,12 @@
    actually request them somewhere, either in dprintf_config(), or the
    equivalent inside the user job.
 */
-int		DebugFlags			= 0;
-int		DebugVerbose		= 0;
+//int		DebugFlags			= 0;
+//int		DebugVerbose		= 0;
+unsigned int      DebugHeaderOptions = 0;
+DebugOutputChoice DebugBasic = 0;
+DebugOutputChoice DebugVerbose = 0;
+
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -90,16 +94,23 @@ dprintf(int flags, const char* fmt, ...)
 }
 
 
-/* If this were C++ code, we could use StringList instead of strtok().
+/* parse debug flags, but don't set any of the debug global variables.
+ *
+ * If this were C++ code, we could use StringList instead of strtok().
  * We don't use strtok_r() because it's not available on Windows.
  */
 void
-_condor_set_debug_flags( const char *strflags, int flags )
+_condor_parse_debug_flags(
+	const char *strflags,
+	int flags,
+	unsigned int & HeaderOpts,
+	DebugOutputChoice & basic,
+	DebugOutputChoice & verbose)
 {
 	char *tmp;
 	char *flag;
-	int flag_verbosity, bit, i;
-#ifdef D_CATEGORY_MASK
+	unsigned int flag_verbosity, bit, hdr;
+
 	// this flag is set when strflags or flags has D_FULLDEBUG
 	// 
 	bool fulldebug = (flags & D_FULLDEBUG) != 0;
@@ -108,12 +119,12 @@ _condor_set_debug_flags( const char *strflags, int flags )
 	// when true, D_FULLDEBUG is treated strictly as a category and 
 	// not as a verbosity modifier of other flags.
 	bool individual_verbosity = false;
-	DebugFlags |= 1<<D_ALWAYS;
-#endif
+	basic = 1<<D_ALWAYS;
+	if (fulldebug)
+		verbose = 1<<D_ALWAYS;
 
 		// Always set D_ALWAYS
-	DebugFlags |= D_ALWAYS;
-	DebugFlags |= flags;
+	HeaderOpts = flags & ~D_CATEGORY_RESERVED_MASK;
 
 	if (strflags) {
 		tmp = strdup( strflags );
@@ -132,7 +143,7 @@ _condor_set_debug_flags( const char *strflags, int flags )
 			}
 
 			bit = 0;
-	#ifdef D_CATEGORY_MASK
+			hdr = 0;
 			char * colon = strchr(flag, ':');
 			if (colon) {
 				colon[0] = 0; // null terminate at the ':' so we can use strcasecmp on the flag name.
@@ -142,22 +153,20 @@ _condor_set_debug_flags( const char *strflags, int flags )
 				}
 			}
 			if( strcasecmp(flag, "D_ALL") == 0 ) {
-				bit = D_PID | D_FDS | ((1 << D_CATEGORY_COUNT)-1);
+				hdr = D_PID | D_FDS;
+				bit = ((1 << D_CATEGORY_COUNT)-1);
 			} else if( strcasecmp(flag, "D_PID") == 0 ) {
-				bit = D_PID;
+				hdr = D_PID;
 			} else if( strcasecmp(flag, "D_FDS") == 0 ) {
-				bit = D_FDS;
+				hdr = D_FDS;
 			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
-				bit = D_EXPR;
+				hdr = D_EXPR;
+			} else if( strcasecmp(flag, "D_LABEL") == 0 || strcasecmp(flag, "D_CAT") == 0 ) {
+				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
 				fulldebug = (flag_verbosity > 0);
 				bit = D_GENERIC_VERBOSE;
-			} else for( i = 0; i < (int)COUNTOF(_condor_DebugFlagNames); i++ )
-	#else
-			if( strcasecmp(flag, "D_ALL") == 0 ) {
-				bit = D_ALL;
-			} else for( i = 0; i < D_MAXFLAGS; i++ )
-	#endif
+			} else for(unsigned int i = 0; i < COUNTOF(_condor_DebugFlagNames); i++ )
 			{
 				if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
 					bit = (1 << i);
@@ -165,12 +174,13 @@ _condor_set_debug_flags( const char *strflags, int flags )
 				}
 			}
 
+			HeaderOpts |= hdr;
 			if (flag_verbosity) {
-				DebugFlags |= bit;
+				basic |= bit;
 				if (flag_verbosity > 1)
-					DebugVerbose |= bit;
+					verbose |= bit;
 			} else {
-				DebugFlags &= ~bit;
+				verbose &= ~bit;
 			}
 
 			flag = strtok( NULL, ", " );
@@ -181,9 +191,17 @@ _condor_set_debug_flags( const char *strflags, int flags )
 
 #ifdef D_CATEGORY_MASK
 	if ( ! individual_verbosity) {
-		DebugVerbose = (fulldebug) ? DebugFlags : 0;
+		verbose = (fulldebug) ? basic : 0;
 	}
 #endif
+}
+
+// set debug global flags and header options
+//
+void
+_condor_set_debug_flags( const char *strflags, int flags )
+{
+	_condor_parse_debug_flags( strflags, flags, DebugHeaderOptions, DebugBasic, DebugVerbose);
 }
 
 #if defined(HAVE__FTIME)

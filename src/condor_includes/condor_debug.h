@@ -131,19 +131,20 @@ enum {
 #define D_EXPR          (1<<11) // set by condor_submit, used by ??
 
 // format-modifying flags to change the appearance of the dprintf line
+#define D_TIMESTAMP     (1<<27) // print unix timestamp rather than human-readable time.
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
-#define D_UNUSED4       (1<<30)
+#define D_CAT           (1<<30)
 #define D_NOHEADER      (1<<31)
 //#define D_ALL           (~(0) & (~(D_NOHEADER)))
 
 // first re-definition pass.  add a separate set of flags for Verbose mode
 // for each category. 
 //
-#define IsDebugLevel(cat)    ((DebugFlags & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugCategory(cat) ((DebugFlags & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugLevel(cat)    ((DebugBasic & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugCategory(cat) ((DebugBasic & (1<<(cat&D_CATEGORY_MASK))) != 0)
 #define IsDebugVerbose(cat)  ((DebugVerbose & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsFulldebug(cat)     ((DebugFlags & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
+#define IsFulldebug(cat)     ((DebugBasic & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
 #define IsDebugCatAndVerbosity(flags) ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
 
 // in the future, we will change the debug system to use a table rather than 
@@ -174,8 +175,11 @@ extern "C" {
 #define PREFAST_ASSUME(x)
 #endif
 
-extern int DebugFlags;	/* Bits to look for in dprintf */
-extern int DebugVerbose; /* verbose bits for dprintf */
+typedef unsigned int DebugOutputChoice;
+
+extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
+extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
+extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
 
@@ -188,7 +192,14 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #ifdef __cplusplus
-void dprintf_config( const char *subsys, param_functions * p_funcs = NULL );
+int dprintf_config( const char *subsys, param_functions * p_funcs = NULL, struct param_info *p_info = NULL, int c_info = 0);
+void _condor_parse_debug_flags(
+	const char *strflags, // in: if not NULL, parse to get flags
+	int flags,            // in: initialize flags from this
+	unsigned int & HeaderOpts, // out: returns formatting options
+	DebugOutputChoice & basic, // out: returns basic output choice
+	DebugOutputChoice & verbose); // out: returns verbose output choice (temporary)
+void dprintf_set_outputs(const char *subsys, const struct param_info *p_info = NULL, int c_info = 0);
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
@@ -316,14 +327,20 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         (ptr)->ru_stime.tv_usec ); \
 }
 
-#ifndef REMIND
+#ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message
 #  define PRAGMA_QUOTE(x)   #x
 #  define PRAGMA_QQUOTE(y)  PRAGMA_QUOTE(y)
-#  define REMIND(str)       message(__FILE__ "(" PRAGMA_QQUOTE(__LINE__) ") : " str)
+#  define PRAGMA_REMIND(str) __pragma(message(__FILE__ "(" PRAGMA_QQUOTE(__LINE__) ") : " str))
 # elif defined __GNUC__ // gcc emits file and line prefix automatically.
-#  define REMIND(str)       message str
+#  if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
+#   define PRAGMA_QUOTE(x)  _Pragma(#x)
+#   define PRAGMA_REMIND(str) PRAGMA_QUOTE(message(str))
+#  else
+#   define PRAGMA_REMIND(str)
+#  endif
 # else 
+#  define PRAGMA_REMIND(str)
 # endif
 #endif // REMIND
 
