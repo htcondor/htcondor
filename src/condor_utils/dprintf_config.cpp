@@ -266,9 +266,10 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 			DebugParams[0].accepts_all = true;
 			DebugParams[0].want_truncate = false;
 			DebugParams[0].logPath = logPath;
-			DebugParams[0].choice = 1<<D_ALWAYS;
 			DebugParams[0].maxLog = 1024*1024;
 			DebugParams[0].maxLogNum = 1;
+			DebugParams[0].HeaderOpts = HeaderOpts;
+			DebugParams[0].VerboseCats = verbose;
 		}
 		else
 		{
@@ -363,6 +364,8 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 			p_info[ii].logPath       = DebugParams[ii].logPath;
 			p_info[ii].maxLog        = DebugParams[ii].maxLog;
 			p_info[ii].maxLogNum     = DebugParams[ii].maxLogNum;
+			p_info[ii].HeaderOpts    = DebugParams[ii].HeaderOpts;
+			p_info[ii].VerboseCats   = DebugParams[ii].VerboseCats;
 		}
 		return DebugParams.size();
 	}
@@ -448,10 +451,10 @@ void dprintf_set_outputs( const char * /*subsys*/, const struct param_info *p_in
 				}
 
 				if (ii == 0) {
-					DebugHeaderOptions = p_info[0].choice & ~D_CATEGORY_RESERVED_MASK;
 					PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
-					DebugBasic = p_info[0].choice & ~0xF0000000;
-					DebugVerbose = (p_info[0].choice & D_FULLDEBUG) ? DebugBasic : 0;
+					DebugBasic = p_info[0].choice;
+					DebugVerbose = p_info[0].VerboseCats;
+					DebugHeaderOptions = p_info[0].HeaderOpts;
 				}
 
 				// check to see if we can open the log file.
@@ -478,6 +481,13 @@ void dprintf_set_outputs( const char * /*subsys*/, const struct param_info *p_in
 			}
 		}
 	} else {
+
+		if (p_info && (c_info > 0)) {
+			PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
+			DebugBasic = p_info[0].choice;
+			DebugVerbose = p_info[0].VerboseCats;
+			DebugHeaderOptions = p_info[0].HeaderOpts;
+		}
 
 #if !defined(WIN32)
 		setlinebuf( stderr );

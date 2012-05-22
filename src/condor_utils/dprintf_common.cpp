@@ -161,11 +161,12 @@ _condor_parse_debug_flags(
 				hdr = D_FDS;
 			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
 				hdr = D_EXPR;
-			} else if( strcasecmp(flag, "D_LABEL") == 0 || strcasecmp(flag, "D_CAT") == 0 ) {
+			} else if( (strcasecmp(flag, "D_LABEL") == 0) || (strcasecmp(flag, "D_CATEGORY") == 0) || (strcasecmp(flag, "D_CAT") == 0) ) {
 				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
 				fulldebug = (flag_verbosity > 0);
-				bit = D_GENERIC_VERBOSE;
+				flag_verbosity *= 2;
+				bit = (1<<D_ALWAYS);
 			} else for(unsigned int i = 0; i < COUNTOF(_condor_DebugFlagNames); i++ )
 			{
 				if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
@@ -192,6 +193,9 @@ _condor_parse_debug_flags(
 #ifdef D_CATEGORY_MASK
 	if ( ! individual_verbosity) {
 		verbose = (fulldebug) ? basic : 0;
+	} else if (verbose & (1<<D_ALWAYS)) {
+		// special case so that D_ALWAYS:2 means the same thing as D_FULLDEBUG all by itself.
+		basic |= (1<<D_GENERIC_VERBOSE);
 	}
 #endif
 }

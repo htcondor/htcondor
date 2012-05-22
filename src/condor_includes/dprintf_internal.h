@@ -72,7 +72,9 @@ struct param_info
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
+	unsigned int HeaderOpts;  // temporary, should get folded into choice
+	unsigned int VerboseCats; // temporary, should get folded into choice
 
-	param_info() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
+	param_info() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
 };
 
