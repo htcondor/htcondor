@@ -219,3 +219,16 @@ diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/sysconfig/source/config
  
  
  if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gridftp/client/source/configure gt5.2.1-all-source-installer-patched/source-trees/gridftp/client/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gridftp/client/source/configure	2012-04-25 20:36:20.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gridftp/client/source/configure	2012-05-23 17:07:05.000000000 -0500
+@@ -10886,6 +10886,9 @@
+ 
+ fi
+ 
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ if test "${openssl}" != ""; then
+     PKG_CONFIG_PATH=${openssl}/lib/pkgconfig
