@@ -42,29 +42,18 @@ our %build_and_test_sets = (
 	
 	# NOTE: Keep the stable or developer release branches synchronized with
 	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
-	'official_ports' => [
-		'x86_64_deb_6.0-updated', # this will switch to non-updated when NMI has that platform
-		'x86_64_deb_5.0',
-		'x86_64_rhap_5',
-		'x86_deb_5.0',
-		'x86_rhap_5',
-		'x86_winnt_5.1',
-		'x86_64_rhap_6.1-updated',
-		'x86_64_macos_10.6-updated',
-	],
+	'official_ports' => [],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
 	# core builds.	These are those platforms.
-	'nmi_one_offs' => [
-	],
+	'nmi_one_offs' => [],
 	
 	# We will build on a set of machines that we want to be sure continue building
 	# but we do not release them so they are not included in the 'official ports' 
 	# section above.  Platforms in this list include things like the latest Fedora
 	# release - a build problem on this platform could indicate problems on a future
 	# release of RHEL.
-	'extra_builds' => [
-	],
+	'extra_builds' => [],
 	
 	'stduniv' => [
 		'x86_64_deb_5.0',
@@ -77,25 +66,7 @@ our %build_and_test_sets = (
 # For every build, test, and cross test, of condor everywhere,
 # these are the default prereqs _usually_ involved.
 ###############################################################################
-my @default_prereqs = (
-	'tar-1.14',
-	'patch-2.5.4',
-	'cmake-2.8.3',
-	'flex-2.5.4a',
-	'make-3.80',
-	'byacc-1.9',
-	'bison-1.25',
-	'wget-1.9.1',
-	'm4-1.4.1',
-	);
-
-# Hackery to test running in new batlab
-my $isNewBatlab = 0;
-if ((`hostname -f` eq "submit-1.batlab.org\n") ||
-	(`hostname -f` eq "submit-2.batlab.org\n")) {
-@default_prereqs = ();
-$isNewBatlab = 1;
-} 
+my @default_prereqs = ();
 
 ###############################################################################
 # Minimal build configuration
@@ -224,46 +195,6 @@ our %submit_info = (
 	},
 	
 	##########################################################################
-	# Microsoft Windows 6.1/2000/xp/whatever on x86	
-	# This probably doesn't work--glue scripts do funky things with it.
-	##########################################################################
-	'x86_winnt_6.1'		=> {
-		'build' => {
-			'configure_args' => { 
-			 # TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
-			 # '-G \"Visual Studio 9 2008\"' => undef,
-			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
-			},
-			'prereqs'	=> undef,
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> undef,
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Microsoft Windows 5.1/2000/xp/whatever on x86_64
-	# This probably doesn't work--glue scripts do funky things with it.
-	##########################################################################
-	'x86_64_winnt_5.1'	=> {
-		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
-			'prereqs'	=> undef,
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> undef,
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
 	# the official "blessed" windows build configuration
 	##########################################################################
@@ -285,25 +216,6 @@ our %submit_info = (
 	},
 	
 	##########################################################################
-	# Microsoft Windows 5.1/2000/xp/whatever on x86
-	# CMake build testing configuration
-	##########################################################################
-	'x86_winnt_5.1-tst' => {
-		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
-			'prereqs'	=> undef,
-			# when it works add x86_64_winnt_5.1 to the x_tests
-			'xtests'	=> [ "x86_winnt_5.1", "x86_64_winnt_5.1", "x86_winnt_6.0" ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> undef,
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Debian 5.0 on x86_64
 	##########################################################################
 	'x86_64_deb_5.0'	=> {
@@ -311,43 +223,21 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
-			'prereqs'	=> ($isNewBatlab ? [] : [ 'libtool-1.5.26', 'cmake-2.8.3' ]),
-			'xtests'	=> ($isNewBatlab ? [] : [ 'x86_64_ubuntu_10.04', ]),
+			'prereqs'	=> [],
+			'xtests'	=> [],
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> ($isNewBatlab ? [] : [ 'java-1.4.2_05' ]),
+			'prereqs'	=> [],
 			'testclass' => [ @default_testclass ],
 		},
 	},
 
-
-	##########################################################################
-	# Platform Debian 6.0 on x86_64 (updated)
-	##########################################################################
-	# This is the name of the platform in old batlab
-	'x86_64_deb_6.0-updated' => {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				'-DCLIPPED:BOOL=OFF' => undef,
-			 },
-			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
 
 	##########################################################################
 	# Platform DEB 6 on x86_64 
 	##########################################################################
-	# This is the name of the platform in new batlab
-	# It is actually updated, despite what the name says
 	'x86_64_deb_6.0' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
@@ -364,55 +254,7 @@ our %submit_info = (
 		},
 	},
 
-	##########################################################################
-	# Platform RHEL 6 on x86
-	##########################################################################
-	'x86_rhap_6.0'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				# turn this back on when ready
-				# '-dclipped:bool=off' => undef,
-			 },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform RHEL 6 on x86. Unmanaged.
-	##########################################################################
-	'x86_rhap_6.0-updated'	=> 'x86_rhap_6.0',
-
-	##########################################################################
-	# Platform RHEL 6 on x86_64
-	##########################################################################
-	'x86_64_rhap_6.0'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				'-DCLIPPED:BOOL' => 'OFF',
-			 },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	'x86_64_rhap_6.0-updated'	=> 'x86_64_rhap_6.0',
-	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
-
-	# This is the new batlab one
-	'x86_64_rhap_6.1'	=> {
+	'x86_64_rhap_6.2'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DCLIPPED:BOOL' => 'OFF',
@@ -428,33 +270,9 @@ our %submit_info = (
 		},
 	},
 
-    'x86_64_sl_6.0' => 'x86_64_rhap_6.1',
+    'x86_64_sl_6.2' => 'x86_64_rhap_6.2',
 
-	# And now, 6.1 has become 6.2 through the magic of auto-update
-    'x86_64_rhap_6.2' => 'x86_64_rhap_6.1',
 
-	##########################################################################
-	# Platform RHEL 5 on x86_64
-	##########################################################################
-	'x86_64_rhap_5'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 
-				'x86_64_rhap_6.1-updated',
-				],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	# This is the new batlab one
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
@@ -471,105 +289,6 @@ our %submit_info = (
 		},
 	},
 
-
-	##########################################################################
-	# Platform Debian 5 on x86
-	##########################################################################
-	'x86_deb_5.0'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
-									  'prereqs' => [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-									  'xtests'	=> [ ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'		=> [ 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Mac OSX 10.4 on x86
-	##########################################################################
-	'x86_macos_10.4'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs,
-							 'coreutils-5.2.1',
-							 'libtool-1.5.26',],
-			'xtests'	=> [
-				'x86_64_macos_10.6',
-				'x86_64_macos_10.6-updated',
-				],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 
-				@default_prereqs, 
-				'java-1.4.2_12', 
-				'coreutils-5.2.1'
-				],
-				'testclass'		=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Mac OSX 10.5 on x86_64
-	# condor actually builds naturally for this one, we just don't release it
-	##########################################################################
-	'x86_64_macos_10.5' => {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [
-				@default_prereqs,
-				'libtool-1.5.26',
-				],
-				'xtests'		=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Mac OSX 10.5 on x86_64 with updates
-	# condor actually builds naturally for this one, we just don't release it
-	##########################################################################
-	'x86_64_macos_10.5-updated' => 'x86_64_macos_10.5',
-
-
-	##########################################################################
-	# Platform Mac OSX 10.6 on x86_64
-	##########################################################################
-	'x86_64_macos_10.6' => {
-		'build' => {
-			'configure_args' => {  @default_build_configure_args },
-			'prereqs'	=> [
-				@default_prereqs,
-				'libtool-1.5.26',
-				],
-				'xtests'		=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Mac OSX 10.6 with updates on x86_64
-	##########################################################################
-	'x86_64_macos_10.6-updated' => 'x86_64_macos_10.6',
-
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
 		'build' => {
@@ -584,24 +303,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	##########################################################################
-	# Platform RHEL 5 on x86
-	##########################################################################
-	'x86_rhap_5'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
 
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
 
 	# These describe what a human, sadly, had to figure out about certain
 	# ports that we do in a "one off" fashion. These ports are generally
@@ -648,33 +350,13 @@ our %submit_info = (
 								  '-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 			},
-			'prereqs'	=> ($isNewBatlab ? [] : [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9']),
+			'prereqs'	=> [],
 			'xtests'	=> undef,
 		},  
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> ($isNewBatlab ? [] : [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ]),
-			'testclass' => [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SL 5.5 on X86_64
-	# I suspect this could be a real port if we bothered.
-	##########################################################################
-	'x86_64_sl_5.5' => {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -699,7 +381,7 @@ our %submit_info = (
 	# Platform Ubuntu 10.04 on x86_64
 	# This might work.
 	##########################################################################
-	'x86_64_ubuntu_10.04'		=> {
+	'x86_64_ubuntu_10.04.4'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
@@ -713,8 +395,6 @@ our %submit_info = (
 		},
 	},
 
-	'x86_64_ubuntu_10.04.3'		=> 'x86_64_ubuntu_10.04',
-	'x86_64_ubuntu_10.04.4'		=> 'x86_64_ubuntu_10.04',
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86
 	##########################################################################
@@ -761,7 +441,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform FreeBSD 7.4 on x86
 	##########################################################################
-	'x86_freebsd_7.4-updated'		=> {
+	'x86_freebsd_7.4'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
@@ -823,10 +503,6 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
-	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
-	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
-	'x86_64_freebsd_8.3'				=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {
