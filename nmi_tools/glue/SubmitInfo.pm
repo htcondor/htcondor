@@ -194,26 +194,7 @@ our %submit_info = (
 		},
 	},
 	
-	##########################################################################
-	# Microsoft Windows 5.1/2000/xp/whatever on x86
-	# the official "blessed" windows build configuration
-	##########################################################################
-	'x86_winnt_5.1'		=> {
-		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
-			'prereqs'	=> [
-				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1',
-				'VisualStudio-9.0', 'WindowsSDK-6.1',
-				],
-				'xtests'		=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
+	'x86_winnt_5.1'		=> 'x86_64_winnt_6.1',
 	
 	##########################################################################
 	# Platform Debian 5.0 on x86_64
