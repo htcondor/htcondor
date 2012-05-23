@@ -6295,6 +6295,12 @@ do not specify their own with:
   The default value is 0, which does not limit the number of jobs
   assigned a single cluster number.
 
+\label{param:EnableDeprecationWarnings}
+\item[\Macro{ENABLE\_DEPRECATION\_WARNINGS}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, \Condor{submit} issues warnings when a job requests
+  features that are no longer supported. 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
