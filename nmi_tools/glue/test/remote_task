@@ -72,7 +72,7 @@ my $perl_exe = "perl";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     my $perlver = `$perl_exe -version`;
     print $perlver;
-    if ( ! $force_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) { # if new batlab
+    if ( !$force_cygwin ) {
         print "attempting to run tests using current perl\n";
 	if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
             print "removing base condor from the path\n";
