@@ -61,7 +61,7 @@ extern char*	DebugTimeFormat;
 extern int		DebugLockIsMutex;
 extern char*	DebugLogDir;
 
-extern void		_condor_set_debug_flags( const char *strflags, int flags );
+extern void		_condor_set_debug_flags( const char *strflags, int cat_and_flags );
 extern void		_condor_dprintf_saved_lines( void );
 extern bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
 
@@ -147,18 +147,20 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 	*/
 	pval = dprintf_param_funcs->param("ALL_DEBUG");
 	if( pval ) {
-		_condor_parse_debug_flags( pval, 0, HeaderOpts, DebugParams[0].choice, verbose);
+		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, DebugParams[0].choice, verbose);
 		free( pval );
 	}
 
 	/*
-	**  Then, pick up the subsys_DEBUG parameters.   Note: if we don't have
-	**  anything set, we just leave it as D_ALWAYS.
+	**  Then, add flags set by the subsys_DEBUG parameters
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
 	pval = dprintf_param_funcs->param(pname);
+	if ( ! pval) {
+		pval = dprintf_param_funcs->param("DEFAULT_DEBUG");
+	}
 	if( pval ) {
-		_condor_parse_debug_flags( pval, 0, HeaderOpts, DebugParams[0].choice, verbose);
+		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, DebugParams[0].choice, verbose);
 		free( pval );
 	}
 
@@ -317,7 +319,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 		}
 
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys_and_level.c_str());
-		DebugParams[param_index].want_truncate = param_boolean_crufty(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
+		DebugParams[param_index].want_truncate = dprintf_param_funcs->param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
 
 		PRAGMA_REMIND("TJ: move initialization of DebugLock")
 		if (debug_level == D_ALWAYS) {
@@ -352,7 +354,8 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 	}
 
 	// if a p_info array was supplied, return the parsed params, but don't operate
-	// on them, if it was not supplied, then use the params to configure dprintf outputs.
+	// on them
+	// if it was not supplied, then use the params to configure dprintf outputs.
 	//
 	if (p_info)
 	{
@@ -367,16 +370,17 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 			p_info[ii].HeaderOpts    = DebugParams[ii].HeaderOpts;
 			p_info[ii].VerboseCats   = DebugParams[ii].VerboseCats;
 		}
+		// return the NEEDED size of the p_info array, even if it is bigger than c_info
 		return DebugParams.size();
 	}
 	else
 	{
-		dprintf_set_outputs(subsys, &DebugParams[0], DebugParams.size());
+		dprintf_set_outputs(&DebugParams[0], DebugParams.size());
 	}
 	return 0;
 }
 
-void dprintf_set_outputs( const char * /*subsys*/, const struct param_info *p_info, int c_info )
+void dprintf_set_outputs(const struct param_info *p_info, int c_info)
 {
 	static int first_time = 1;
 
@@ -390,6 +394,7 @@ void dprintf_set_outputs( const char * /*subsys*/, const struct param_info *p_in
 	*/
 	DebugBasic = 1<<D_ALWAYS;
 	DebugVerbose = 0;
+	DebugHeaderOptions = 0;
 
 	if ( ! p_info || ! c_info || p_info[0].logPath == "2>" || p_info[0].logPath == "CON:" || p_info[0].logPath == "\\dev\\tty") {
 		Termlog = true;

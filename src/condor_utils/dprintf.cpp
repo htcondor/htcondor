@@ -70,7 +70,7 @@ FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
-void _condor_set_debug_flags( const char *strflags, int flags );
+void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
@@ -340,9 +340,13 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 #endif
 #ifdef D_CAT
 		if ((hdr_flags & D_CAT) && /*cat > 0 &&*/ cat < D_CATEGORY_COUNT) {
-			int verbosity = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
-			if (cat_and_flags & D_FULLDEBUG) verbosity = 2;
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%s:%d) ", 
+			char verbosity[10] = "";
+			if (cat_and_flags & (D_VERBOSE_MASK | D_FULLDEBUG)) {
+				int verb = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
+				if (cat_and_flags & D_FULLDEBUG) verb = 2;
+				sprintf(verbosity, ":%d", verb);
+			}
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%s%s) ", 
 					_condor_DebugFlagNames[cat], verbosity);
 			if( rc < 0 ) {
 				sprintf_errno = errno;
@@ -1459,9 +1463,9 @@ _condor_dprintf_exit( int error_code, const char* msg )
   the code in both places. -Derek Wright 9/29/99
 */
 void
-set_debug_flags( const char *strflags, int flags )
+set_debug_flags( const char *strflags, int cat_and_flags )
 {
-	_condor_set_debug_flags( strflags, flags );
+	_condor_set_debug_flags( strflags, cat_and_flags );
 }
 
 

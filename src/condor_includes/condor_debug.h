@@ -131,7 +131,7 @@ enum {
 #define D_EXPR          (1<<11) // set by condor_submit, used by ??
 
 // format-modifying flags to change the appearance of the dprintf line
-#define D_TIMESTAMP     (1<<27) // print unix timestamp rather than human-readable time.
+#define D_TIMESTAMP     (1<<27) // future: print unix timestamp rather than human-readable time.
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
 #define D_CAT           (1<<30)
@@ -192,23 +192,42 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #ifdef __cplusplus
-int dprintf_config( const char *subsys, param_functions * p_funcs = NULL, struct param_info *p_info = NULL, int c_info = 0);
-void _condor_parse_debug_flags(
+// parse config files (via param_functions) and use them to fill out the array of param_info structures
+// one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
+// if p_info is NULL, then dprintf_set_outputs is called with the param_info array.  if != NULL, then
+// the array is returned, calling dprintf_set_outputs is left to the caller.
+//
+// NOTE!!! as of May-2012, some of the dprintf globals are still set as side effects in this function
+//         so you should always call it unless you are doing output purely to STDERR and want defaults
+//         for all config knobs.
+int dprintf_config( 
+	const char *subsys,  // in: subsystem name to use for param lookups
+	param_functions * p_funcs = NULL, // in: callback functions to use for param-ing
+	struct param_info *p_info = NULL, // in,out: if != NULL results of config parsing returned here
+	int c_info = 0);                  // in: number of entries in p_info array on input.
+
+// parse strflags and cat_and_flags and merge them into the in,out args
+// for backward compatibility, the D_ALWAYS bit will always be set in basic
+// and bits passed in via the in,out args will be preserved unless explicitly cleared via D_FLAG:0 syntax.
+void _condor_parse_merge_debug_flags(
 	const char *strflags, // in: if not NULL, parse to get flags
-	int flags,            // in: initialize flags from this
-	unsigned int & HeaderOpts, // out: returns formatting options
-	DebugOutputChoice & basic, // out: returns basic output choice
-	DebugOutputChoice & verbose); // out: returns verbose output choice (temporary)
-void dprintf_set_outputs(const char *subsys, const struct param_info *p_info = NULL, int c_info = 0);
+	int cat_and_flags,    // in: set header flags, D_FULLDEBUG, and D_category prior to parsing strflags
+	unsigned int & HeaderOpts, // in,out: formatting options, D_PID, etc
+	DebugOutputChoice & basic, // in,out: basic output choice
+	DebugOutputChoice & verbose); // in,out: verbose output choice, expect this to get folded into basic someday.
+
+// initialize
+void dprintf_set_outputs(const struct param_info *p_info, int c_info);
+
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
-void set_debug_flags( const char *strflags, int flags );
+void set_debug_flags( const char *strflags, int cat_and_flags );
 void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_fd_panic( int line, const char *file );
-void _condor_set_debug_flags( const char *strflags, int flags );
+void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 int  _condor_dprintf_is_initialized();
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
