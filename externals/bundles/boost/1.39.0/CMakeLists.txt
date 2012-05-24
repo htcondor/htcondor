@@ -19,13 +19,11 @@
 
 # so in condor only cream cares about this
 # re-anable DARWIN when bug is fixed.
-if (LINUX OR WANT_CONTRIB)
-  option( WITH_BOOST "Compiling with support for BOOST" ON )
-endif()
+#option( WITH_BOOST "Compiling with support for BOOST" ON )
 
 # could be modified.
-if (WITH_BOOST )
-
+#if (WITH_BOOST)
+  
   if (NOT PROPER)
 
 		condor_pre_external( BOOST boost_1_39_0 "lib;include" "include/boost")
@@ -41,13 +39,15 @@ if (WITH_BOOST )
 		  set(EXEC ./)
 		endif()
 
-		if (DARWIN)
-		  set(BOOST_PATCH patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch)
+		if(LINUX)
+			set(BOOST_MIN_BUILD_DEP --with-thread)
 		else()
-		  set(BOOST_PATCH echo "nothing")
+			set(BOOST_MIN_BUILD_DEP --without-date_time --without-filesystem --without-graph --without-iostreams --without-math --without-mpi --without-program_options --without-python --without-regex --without-serialization --without-signals --without-system --without-test --without-thread --without-wave)
 		endif()
 
-                # so if we want contrib then build the extra elements,
+		set(BOOST_PATCH echo "nothing")
+
+        # so if we want contrib then build the extra elements,
 		# otherwise just default to the normal build.
 		if (WANT_CONTRIB)
 		  set(BOOST_INSTALL ${EXEC}bjam -a --with-thread
@@ -57,7 +57,7 @@ if (WITH_BOOST )
 		  define=BOOST_HAS_THREADS link=shared variant=release toolset=${TOOLSET}
 		  install)
 		else()
-		  set(BOOST_INSTALL echo "Do Nothing")
+			set(BOOST_INSTALL echo "nothing")
 		endif()
 
 
@@ -74,7 +74,7 @@ if (WITH_BOOST )
 				    	./bootstrap.${JAM_EXT} --prefix=${BOOST_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd ${BOOST_VER} &&
-				    ${EXEC}bjam --with-thread --layout=system --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
+				    ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --layout=system --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${BOOST_INSTALL_LOC}
@@ -84,44 +84,48 @@ if (WITH_BOOST )
 	if (WINDOWS)
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 
-        if (WANT_CONTRIB)
+        	if (WANT_CONTRIB)
 
-            # binding dep to VS-2008 :-( there is no easy solution to this
-            install ( FILES ${BOOST_INSTALL_LOC}/lib/boost_date_time-vc90-mt-1_39.dll
-                        ${BOOST_INSTALL_LOC}/lib/boost_filesystem-vc90-mt-1_39.dll
-                        ${BOOST_INSTALL_LOC}/lib/boost_program_options-vc90-mt-1_39.dll
-                        ${BOOST_INSTALL_LOC}/lib/boost_regex-vc90-mt-1_39.dll
-                        ${BOOST_INSTALL_LOC}/lib/boost_system-vc90-mt-1_39.dll
-                        ${BOOST_INSTALL_LOC}/lib/boost_thread-vc90-mt-1_39.dll
-                    DESTINATION ${C_LIB} )
+            	# binding dep to VS-2008 :-( there is no easy solution to this
+            		install ( FILES ${BOOST_INSTALL_LOC}/lib/boost_date_time-vc90-mt-1_39.dll
+                        	${BOOST_INSTALL_LOC}/lib/boost_filesystem-vc90-mt-1_39.dll
+                        	${BOOST_INSTALL_LOC}/lib/boost_program_options-vc90-mt-1_39.dll
+                        	${BOOST_INSTALL_LOC}/lib/boost_regex-vc90-mt-1_39.dll
+                        	${BOOST_INSTALL_LOC}/lib/boost_system-vc90-mt-1_39.dll
+                        	${BOOST_INSTALL_LOC}/lib/boost_thread-vc90-mt-1_39.dll
+                    	DESTINATION ${C_LIB} )
 
-        endif()
+        	endif()
 
-    else()
-        dprint ("TBD: NON-PROPER INSTALL for CONTRIB")
+    	else()
+        	dprint ("TBD: NON-PROPER INSTALL for CONTRIB")
 	endif()
 
-	condor_post_external( boost "include" OFF )
+	condor_post_external( boost "include" "lib" )
 	
   else()
 
-	# For proper builds use the .so/.dll's .
+	# Search for system's boost libraries.
 	set(Boost_USE_MULTITHREADED ON)
 	find_package( Boost 1.33.1 COMPONENTS thread program_options system regex filesystem)
+
+	# For proper builds use the .so/.dll's .
 	if(Boost_FOUND)
 		append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 		set (BOOST_VER ${Boost_VERSION})
+		set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
 	endif(Boost_FOUND)
 
-  endif(NOT PROPER)
+  endif()
 
-endif()
+#endif()
 
 # update configure information
 if (BOOST_VER)
-	message (STATUS "external configured (BOOST_INCLUDE_FOUND=${BOOST_INCLUDE_FOUND}) version:(${BOOST_VER})")
+	message (STATUS "external configured (BOOST_INCLUDE=${BOOST_INCLUDE}) version:(${BOOST_VER})")
 	set( HAVE_EXT_BOOST ON PARENT_SCOPE )
 	set( BOOST_VER ${BOOST_VER} PARENT_SCOPE )
+	set( BOOST_INCLUDE ${BOOST_INCLUDE} PARENT_SCOPE )
 else(BOOST_VER)
-	message (STATUS "external skipped (boost)")
+	message (FATAL_ERROR "boost not found, and required for build")
 endif(BOOST_VER)
