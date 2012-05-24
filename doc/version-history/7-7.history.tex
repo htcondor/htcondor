@@ -198,8 +198,8 @@ requested sizes of resources.
 \item
 \Ticket{2850}
 
-\item New a new configuration variable \Macro{MUST\_MODIFY\_REQUEST\_EXPRS} for the \Condor{startd}.
-If false, then \Macro{MODIFY\_REQUEST\_EXPRs} are only applied if the job claim still matches the partitionable
+\item There is a new configuration variable \Macro{MUST\_MODIFY\_REQUEST\_EXPRS} for the \Condor{startd}.
+If false, then \MacroNI{MODIFY\_REQUEST\_EXPRs} are only applied if the job claim still matches the partitionable
 slot after modification. If true, the modifications always take place, and if the modifications cause the claim
 to no longer match, then the startd will simply refuse the claim.  The default value is false.
 \Ticket{2850}
