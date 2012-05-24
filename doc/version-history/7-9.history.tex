@@ -77,6 +77,9 @@ queue to use for grid universe jobs of type
 
 \begin{itemize}
 
+\item The EC2 GAHP will now respect X509_CERT_DIR for all (secure) connections.
+\Ticket{2823}
+
 \item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
 \Ticket{2893}
 
