@@ -212,16 +212,17 @@ ClassAd *ClassAdCollectionInterface::
 _AddClassAd( const string &xactionName, const string &key,ClassAd *ad )
 {
     ClassAd *rec;
+    ExprTree * pAd = ad;
     if( !( rec = new ClassAd( ) ) ) {
         CondorErrno = ERR_MEM_ALLOC_FAILED;
         CondorErrMsg = "";
         return( (ClassAd*) NULL );
     }
     if( ( !xactionName.empty( ) && 
-				!rec->InsertAttr( ATTR_XACTION_NAME, xactionName ) )||
+			!rec->InsertAttr( ATTR_XACTION_NAME, xactionName ) )||
             !rec->InsertAttr( "OpType", ClassAdCollOp_AddClassAd )  ||
             !rec->InsertAttr( "Key", key ) 							||
-            !rec->Insert( "Ad", ad ) ) {
+            !rec->Insert( "Ad", pAd ) ) {
         CondorErrMsg += "; failed to make add classad " + key + " record";
         delete rec;
         return( (ClassAd*) NULL );

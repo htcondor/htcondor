@@ -29,6 +29,10 @@
 #include "unit_test_utils.h"
 #include "condor_xml_classads.h"
 
+#ifdef WIN32
+	#define strcasecmp _stricmp
+#endif
+
 static bool test_copy_constructor_actuals(void);
 static bool test_copy_constructor_pointer(void);
 static bool test_assignment_actuals(void);
@@ -1715,7 +1719,7 @@ static bool test_next_dirty_expr_insert() {
 	emit_param("Dirty Attribute", "C");
 	emit_output_actual_header();
 	emit_param("Dirty Attribute", name);
-	if(strcmp(name, "C") != MATCH) {
+	if(strcasecmp(name, "C") != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1770,7 +1774,7 @@ static bool test_next_dirty_expr_two_inserts_first() {
 	emit_param("Dirty Attribute", "C");
 	emit_output_actual_header();
 	emit_param("Dirty Attribute", name);
-	if(strcmp(name, "C") != MATCH) {
+	if(strcasecmp(name, "C") != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1799,7 +1803,7 @@ static bool test_next_dirty_expr_two_inserts_second() {
 	emit_param("Dirty Attribute", "D");
 	emit_output_actual_header();
 	emit_param("Dirty Attribute", name);
-	if(strcmp(name, "D") != MATCH) {
+	if(strcasecmp(name, "D") != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -7014,6 +7018,8 @@ static bool test_equality() {
 	emit_output_actual_header();
 	emit_param("ExprTree Equality", tfstr((*e1) == (*e2)));
 	emit_param("MyString Equality", tfstr(n1 == n2));
+	emit_param("n1", n1.Value());
+	emit_param("n2", n2.Value());
 	if(!((*e1) == (*e2)) || !(n1 == n2)) {
 		delete(e1); delete(e2);
 		FAIL;

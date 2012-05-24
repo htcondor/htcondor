@@ -25,6 +25,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <sstream>
 #include "classad/classad_stl.h"
 #include "classad/exprTree.h"
 
@@ -51,6 +52,23 @@ void ClassAdLibraryVersion(std::string &version_string);
 // from an older version of ClassAds with slightly different evaluation
 // semantics. It will be removed without warning in a future release.
 extern bool _useOldClassAdSemantics;
+
+template <class T>
+void nvp(std::string & szOut, const std::string & szName, const T & tValue)
+{
+  std::stringstream foo;
+  foo << "[" << szName<<" = "<<tValue<<"]";
+  szOut = foo.str();
+}
+template<bool>
+void nvp(std::string & szOut, const std::string & szName, const bool & tValue)
+{
+  std::stringstream foo;
+  foo << "[" << szName<<" = "<<(tValue?"true":"false")<<"]";
+  szOut = foo.str();
+}
+
+void split_nvp(const std::string & nvp, std::string & name, std::string & value);
 
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
@@ -90,7 +108,8 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool Insert( const std::string &attrName, ExprTree *expr );
+		bool Insert( const std::string& attrName, ExprTree *& pRef, bool cache=true);
+		bool Insert( const std::string& attrName, ClassAd *& expr, bool cache=true );
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -462,14 +481,6 @@ e		*/
         int size(void) const { return attrList.size(); }
 		//@}
 
-		/**@name Miscellaneous */
-		//@{
-		/** Factory method to make a classad
-		 * 	@param vec A vector of (name,expression) pairs to make a classad
-		 * 	@return The constructed classad
-		 */
-		static ClassAd *MakeClassAd( std::vector< std::pair< std::string, ExprTree* > > &vec );
-
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
 		 * 		attributes of the classad
@@ -587,6 +598,11 @@ e		*/
          *  @param new_chain_parent_ad the parent ad we are chained too.
          */
 	    void		ChainToAd(ClassAd *new_chain_parent_ad);
+		
+		/** If there is a chained parent remove redundant entries.
+		 */
+		int 		PruneChildAd();
+		
         /** If we are chained to a parent ad, remove the chain. 
          */
 		void		Unchain(void);
@@ -658,6 +674,8 @@ e		*/
 		ClassAd *alternateScope;
 
   	private:
+		void _BaseInsert( const std::string& name, ExprTree * tree);
+		
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;

@@ -45,6 +45,7 @@
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
+#include "classad/classadCache.h"
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
@@ -1351,11 +1352,27 @@ unix_sigusr1(int)
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
 	}
+	
 }
 
 void
 unix_sigusr2(int)
 {
+	// This is a debug only param not to be advertised.
+	if (param_boolean( "DEBUG_CLASSAD_CACHE", false))
+	{
+	  std::string szFile = param("LOG");
+	  szFile +="/";
+	  szFile += get_mySubSystem()->getName();
+	  szFile += "_classad_cache";
+	  
+	  if (!classad::CachedExprEnvelope::_debug_dump_keys(szFile))
+	  {
+	    dprintf( D_FULLDEBUG, "FAILED to write file %s\n",szFile.c_str() );
+	  }
+	}
+	
+  
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
 	}
