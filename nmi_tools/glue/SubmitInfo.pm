@@ -270,6 +270,38 @@ our %submit_info = (
 		},
 	},
 
+	'x86_rhap_6.2'		=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> [ ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	'x86_rhap_5.8'		=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> [ ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
 		'build' => {
