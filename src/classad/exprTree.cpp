@@ -210,28 +210,6 @@ Flatten( EvalState &state, Value &val, ExprTree *&tree, int* op) const
 	return( _Flatten( state, val, tree, op ) );
 }
 
-bool ExprTree::isClassad(ClassAd ** ptr)
-{
-	bool bRet = false;
-	
-	
-	if ( CLASSAD_NODE == nodeKind )
-	{
-		if (ptr){
-			*ptr = (ClassAd *) this;
-		}
-		
-		bRet = true;
-	}
-	
-	return (bRet);
-}
-
-const ExprTree* ExprTree::self()
-{
-	ExprTree * pRet=this;
-	return (pRet);
-}
 
 void ExprTree::
 Puke( ) const
@@ -298,14 +276,14 @@ SetRootScope( )
     if (curAd == NULL) {
         rootAd = NULL;
     } else {
-        const ClassAd *curScope = curAd->GetParentScope();
+        const ClassAd *curScope = curAd->parentScope;
         
         while( curScope ) {
             if( curScope == curAd ) {	// NAC - loop detection
                 return;					// NAC
             }							// NAC
             prevScope = curScope;
-            curScope  = curScope->GetParentScope();
+            curScope  = curScope->parentScope;
         }
         
         rootAd = prevScope;
@@ -313,12 +291,12 @@ SetRootScope( )
     return;
 }
 
-ostream& operator<<(ostream &stream, const ExprTree *expr)
+ostream& operator<<(ostream &stream, const ExprTree &expr)
 {
-	ClassAdUnParser unparser;
+	PrettyPrint unparser;
 	string      string_representation;
 
-	unparser.Unparse(string_representation, expr);
+	unparser.Unparse(string_representation, &expr);
 	stream << string_representation;
 	
 	return stream;

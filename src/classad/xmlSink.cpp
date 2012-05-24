@@ -24,7 +24,6 @@
 #include "classad/sink.h"
 #include "classad/xmlLexer.h"
 #include "classad/util.h"
-#include "classad/classadCache.h"
 
 using namespace std;
 
@@ -110,10 +109,6 @@ Unparse(
 			((ExprList*)tree)->GetComponents(exprs);
 			UnparseAux(buffer, exprs, indent);
 			break;
-		}
-		
-		case ExprTree::EXPR_ENVELOPE: {
-			Unparse( buffer, ((CachedExprEnvelope*)tree)->get(),indent ); 
 		}
 		
 		default:

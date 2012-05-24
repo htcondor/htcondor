@@ -30,10 +30,6 @@ else()
 	add_definitions(-DUSE_POSIX_REGEX) 
 endif(PCRE_FOUND)
 
-if (HAVE_EXT_BOOST)
-	include_directories(${BOOST_INCLUDE})
-endif(HAVE_EXT_BOOST)
-
 if (HAVE_DLOPEN)
 	add_definitions(-DHAVE_DLOPEN)
 endif()
@@ -63,13 +59,13 @@ condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysb
 
 if (NOT WINDOWS)
 
-  condor_selective_glob("attrrefs.*;classad.*;classadCache.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
+  condor_selective_glob("attrrefs.*;classad.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
   add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
   if (LINUX OR DARWIN)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 4 )
+	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 3 )
 	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
@@ -99,7 +95,7 @@ if (NOT WINDOWS)
 
 else()	
 	# windows specific configuration.
-	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;classadCache.*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
+	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
 	set (CLASSADS_FOUND classads)
 
@@ -121,13 +117,6 @@ if (NOT PROPER)
   # have a dependency here so we build pcre before classads
   if ( DARWIN AND PCRE_REF)
 	add_dependencies( classad ${PCRE_REF} )
-  endif()
-
-  if (BOOST_REF)
-	  add_dependencies( classads ${BOOST_REF} )
-	  if ( LINUX OR DARWIN )
-		  add_dependencies( classad ${BOOST_REF} )
-	  endif()
   endif()
 
   if (NOT WINDOWS)
