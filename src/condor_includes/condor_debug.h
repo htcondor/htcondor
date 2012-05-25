@@ -88,7 +88,7 @@
 enum {
    D_CATEGORY_BASE = 0,
    D_ALWAYS = 0,
-   D_FAILURE,
+   D_ERROR,
    D_STATUS,
    D_GENERAL,
    D_JOB,
@@ -129,6 +129,8 @@ enum {
 
 #define D_FULLDEBUG     (1<<10) // when or'd with a D_category, it means that category, or (D_ALWAYS|D_VERBOSE)
 #define D_EXPR          (1<<11) // set by condor_submit, used by ??
+#define D_FAILURE       (1<<12) // nearly always mixed with D_ALWAYS, ignored for now.
+
 
 // format-modifying flags to change the appearance of the dprintf line
 #define D_TIMESTAMP     (1<<27) // future: print unix timestamp rather than human-readable time.
@@ -192,9 +194,9 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #ifdef __cplusplus
-// parse config files (via param_functions) and use them to fill out the array of param_info structures
+// parse config files (via param_functions) and use them to fill out the array of dprintf_output_settings
 // one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
-// if p_info is NULL, then dprintf_set_outputs is called with the param_info array.  if != NULL, then
+// if p_info is NULL, then dprintf_set_outputs is called with the dprintf_output_settings array.  if != NULL, then
 // the array is returned, calling dprintf_set_outputs is left to the caller.
 //
 // NOTE!!! as of May-2012, some of the dprintf globals are still set as side effects in this function
@@ -203,7 +205,7 @@ void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 int dprintf_config( 
 	const char *subsys,  // in: subsystem name to use for param lookups
 	param_functions * p_funcs = NULL, // in: callback functions to use for param-ing
-	struct param_info *p_info = NULL, // in,out: if != NULL results of config parsing returned here
+	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
 	int c_info = 0);                  // in: number of entries in p_info array on input.
 
 // parse strflags and cat_and_flags and merge them into the in,out args
@@ -217,7 +219,7 @@ void _condor_parse_merge_debug_flags(
 	DebugOutputChoice & verbose); // in,out: verbose output choice, expect this to get folded into basic someday.
 
 // initialize
-void dprintf_set_outputs(const struct param_info *p_info, int c_info);
+void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
 
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );

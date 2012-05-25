@@ -64,7 +64,7 @@ struct DebugFileInfo
 	bool MatchesCatAndFlags(int cat_and_flags) const;
 };
 
-struct param_info
+struct dprintf_output_settings
 {
 	DebugOutputChoice choice;
 	std::string logPath;
@@ -75,6 +75,6 @@ struct param_info
 	unsigned int HeaderOpts;  // temporary, should get folded into choice
 	unsigned int VerboseCats; // temporary, should get folded into choice
 
-	param_info() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
+	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
 };
 

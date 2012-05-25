@@ -106,7 +106,7 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 int
-dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info *p_info /* = NULL*/, int c_info /*= 0*/)
+dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
 {
 	char pname[ BUFSIZ ];
 	char *pval = NULL;
@@ -122,8 +122,8 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 	DebugOutputChoice verbose = 0;
 	PRAGMA_REMIND("TJ: move verbose into choice")
 
-	std::vector<struct param_info> DebugParams(1);
-	DebugParams[0].choice = 1<<D_ALWAYS;
+	std::vector<struct dprintf_output_settings> DebugParams(1);
+	DebugParams[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
 	DebugParams[0].accepts_all = true;
 
 	/*
@@ -299,7 +299,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 
 			if (param_index >= (int)DebugParams.size())
 			{
-				struct param_info info;
+				struct dprintf_output_settings info;
 				info.accepts_all = false;
 				info.want_truncate = false;
 				info.choice = 1<<debug_level;
@@ -380,7 +380,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct param_info 
 	return 0;
 }
 
-void dprintf_set_outputs(const struct param_info *p_info, int c_info)
+void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info)
 {
 	static int first_time = 1;
 
@@ -392,7 +392,7 @@ void dprintf_set_outputs(const struct param_info *p_info, int c_info)
 	**	debug flags have changed, we actually use the new
 	**  flags.  -Derek Wright 12/8/97
 	*/
-	DebugBasic = 1<<D_ALWAYS;
+	DebugBasic = 1<<D_ALWAYS | 1<<D_ERROR;
 	DebugVerbose = 0;
 	DebugHeaderOptions = 0;
 

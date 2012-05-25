@@ -60,7 +60,7 @@ const char *_condor_DebugFlagNames[] = {
 	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
 	"D_FAILURE", "D_PID", "D_FDS", "D_LEVEL", "D_NOHEADER",
 #else
-	"D_ALWAYS", "D_FAILURE", "D_STATUS", "D_GENERAL",
+	"D_ALWAYS", "D_ERROR", "D_STATUS", "D_GENERAL",
 	"D_JOB", "D_MACHINE", "D_CONFIG", "D_PROTOCOL",
 	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
 	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
@@ -118,10 +118,12 @@ _condor_parse_merge_debug_flags(
 	// not as a verbosity modifier of other flags.
 	bool individual_verbosity = false;
 
-	// For backward compatibility reasons, we always set D_ALWAYS category
+	// For backward compatibility reasons, we always listen to D_ALWAYS
 	// as well as whatever category was passed in, and we interprest D_FULLDEBUG
 	// as meaning verbose for the passed in category
-	bit = (1<<D_ALWAYS) | (1<<(cat_and_flags&D_CATEGORY_MASK));
+	// for possible future use, D_ERROR could be set instead of D_ALWAYS to indicate
+	// error messages, so listen to that as well.
+	bit = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<(cat_and_flags&D_CATEGORY_MASK));
 	basic |= bit;
 	if (fulldebug)
 		verbose |= bit;
@@ -169,6 +171,15 @@ _condor_parse_merge_debug_flags(
 				fulldebug = (flag_verbosity > 0);
 				flag_verbosity *= 2; // so D_FULLDEBUG:1 ends up as D_ALWAYS:2
 				bit = (1<<D_ALWAYS);
+			} else if( strcasecmp(flag, "D_FAILURE") == 0 ) {
+				// D_FAILURE is a special case because lots of condor code sets D_ALWAYS|D_FAILURE
+				// to indicate _either_ messages that should be output always OR messages that should
+				// show up in a 'failure' log. if D_FAILURE were a category rather than a flag, then
+				// when OR'd with D_ALWAYS, it would equal D_FAILURE and thus NOT output in D_ALWAYS logs
+				// so treat D_FAILURE as header flag from the dprintf side, and as a synonym for the D_ERROR
+				// category from the condor_config side.
+				hdr = D_FAILURE;
+				bit = (1<<D_ERROR);
 			} else for(unsigned int i = 0; i < COUNTOF(_condor_DebugFlagNames); i++ )
 			{
 				if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
