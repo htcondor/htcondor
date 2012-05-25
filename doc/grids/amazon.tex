@@ -74,15 +74,15 @@ ec2_secret_access_key = /path/to/x.509/private.key
 
 If using an X.509 proxy, specify the proxy in both places.
 
-%Condor can use the EC2 API to create an SSH key pair that allows
-%secure log in to the virtual machine once it is running.
-%If the command
-%\SubmitCmd{ec2\_keypair\_file}
-%is set in the submit description file,
-%Condor will write an SSH private key into the indicated file.
-%The key can be used to log into the virtual machine.
-%Note that modification will also be needed of the firewall
-%rules for the job to incoming SSH connections.
+Condor can use the EC2 API to create an SSH key pair that allows
+secure log in to the virtual machine once it is running.
+If the command
+\SubmitCmd{ec2\_keypair\_file}
+is set in the submit description file,
+Condor will write an SSH private key into the indicated file.
+The key can be used to log into the virtual machine.
+Note that modification will also be needed of the firewall
+rules for the job to incoming SSH connections.
 
 An EC2 service uses a firewall to restrict network access to 
 the virtual machine instances it runs.
@@ -116,72 +116,6 @@ data are concatenated, with the data from \SubmitCmd{ec2\_user\_data}
 occurring first.  Condor performs the base64 encoding that EC2 expects on 
 the data.
 
-Below is a sample submission: 
-
-\begin{verbatim}
-###################################
-# Note to submit an AMI as a job we need the grid universe
-# To submit to a different region update the url passed to the grid_resource
-# e.g. https://ec2.ap-northeast-1.amazonaws.com
-# Note: The ami *must* be present in that region
-# For more details see: 
-# http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/Welcome.html
-
-Universe = grid
-grid_resource = ec2 https://ec2.amazonaws.com/
-
-# Executable in this context is just a label for the job
-Executable  = ec2_test_job
-
-# log for job run
-Log=$(cluster).ec2.log
-
-###################################
-# The AMI ID used 
-ec2_ami_id = ami-MyAmiId0
-ec2_instance_type = m1.small
-
-###################################
-# User data input for the instance (optional)
-# ec2_user_data = Hello EC2!
-# ec2_user_data_file = /path/to/datafile
-
-###################################
-# Required credentials used to access EC2 (must be full paths)
-ec2_access_key_id = /home/user/your_ec2.aid
-ec2_secret_access_key = /home/user/your_ec2.key
-
-###################################
-# Location to store instance's SSH keypair (optional)
-ec2_keypair_file = /home/user/ec2_gend_key.pem
-
-###################################
-# Pre-allocated elastic ip for the instance (optional)
-# ec2_elastic_ip = your.elastic.ip.addr
-
-###################################
-# Security group for the instance (optional, default if not provided)
-ec2_security_groups = sg-MySecGroup
-
-###################################
-# VPC subnet in which to launch the instance (optional)
-# ec2_vpc_subnet = subnet-a1bc23d4
-
-###################################
-# Param to attach to an ebs volume volume:/drive_loc (optional)
-# ec2_ebs_volumes = vol-abcde15f:/dev/sdb
-###################################
-# If a volume is specified, the zone is required
-# Note: zone must be within specified or default region
-# ec2_availability_zone = us-east-1b
-
-############################
-# Adding Tag (name) foo=bar (value) (optional)
-# ec2_tag_names = foo
-# ec2_tag_foo = bar 
-
-queue
-\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Amazon-config}EC2 Configuration Variables}
