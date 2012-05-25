@@ -52,6 +52,17 @@ warnings when a job requests features that are no longer supported.
 
 \begin{itemize}
 
+\item Fixed a bug in the handling of local universe jobs which caused
+the schedd to print a spurious ERROR every time a local universe job
+exited, and caused the statistics for local universe jobs to be 
+incorrectly computed.
+\Ticket{3008}
+
+\item Changed \Condor{ckpt\_probe} to link statically, which should make the
+checkpoint signature more resistant to non-significant changes in the system
+configuration.
+\Ticket{2901}
+
 \item Restored Globus and VOMS support for the Mac OS X platform.
 \Ticket{2991}
 
@@ -66,7 +77,6 @@ and the job was put on hold.
 draining badput and completion time were sometimes nonsensical
 because of integer overflow.
 \Ticket{3001}
-
 
 \end{itemize}
 
