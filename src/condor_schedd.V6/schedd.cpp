@@ -9135,7 +9135,6 @@ Scheduler::child_exit(int pid, int status)
 				//
 			if ( this->LocalUniverseJobsRunning > 0 ) {
 				this->LocalUniverseJobsRunning--;
-				this->jobExitCode(job_id,status);
 			}
 			else
 			{
