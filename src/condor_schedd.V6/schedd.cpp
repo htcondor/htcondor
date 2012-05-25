@@ -9138,8 +9138,7 @@ Scheduler::child_exit(int pid, int status)
 			}
 			else
 			{
-				EXCEPT("Internal consistency error: No local universe jobs were"
-					" expected to be running, but one just exited!");
+				dprintf(D_ALWAYS, "Warning: unexpected count for  local universe jobs: %d\n", LocalUniverseJobsRunning);
 			}
 		} else {
 				// A real shadow
