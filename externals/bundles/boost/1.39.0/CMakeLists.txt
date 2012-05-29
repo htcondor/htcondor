@@ -26,7 +26,7 @@
   
   if (NOT PROPER)
 
-		condor_pre_external( BOOST boost_1_49_0 "lib;include" "include/boost")
+		condor_pre_external( BOOST boost_1_39_0 "lib;include" "include/boost")
 		
 		if (WINDOWS)
 		  # need to expand the configure and
@@ -34,23 +34,16 @@
 		  set(JAM_EXT bat)
 		  set(EXEC .\\)
 		else()
-
-		  if (DARWIN)
-		  	set(TOOLSET darwin)
-		  else()
-		  	set(TOOLSET gcc)
-		  endif()
-
-		  #set(TOOLSET gcc)
+		  set(TOOLSET gcc)
 		  set(JAM_EXT sh)
 		  set(EXEC ./)
 		endif()
 
-		#if(LINUX)
+		if(LINUX)
 			set(BOOST_MIN_BUILD_DEP --with-thread)
-		#else()
-		#	set(BOOST_MIN_BUILD_DEP --without-date_time --without-filesystem --without-graph --without-iostreams --without-math --without-mpi --without-program_options --without-python --without-regex --without-serialization --without-signals --without-system --without-test --without-thread --without-wave)
-		#endif()
+		else()
+			set(BOOST_MIN_BUILD_DEP --without-date_time --without-filesystem --without-graph --without-iostreams --without-math --without-mpi --without-program_options --without-python --without-regex --without-serialization --without-signals --without-system --without-test --without-thread --without-wave)
+		endif()
 
 		set(BOOST_PATCH echo "nothing")
 

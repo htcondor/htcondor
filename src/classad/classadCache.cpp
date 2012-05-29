@@ -22,11 +22,6 @@
 #include <stdio.h>
 #include <list>
 
-#ifdef WIN32
-#include <process.h> 
-#define _getpid getpid
-#endif
-
 using namespace classad;
 using namespace std;
 
