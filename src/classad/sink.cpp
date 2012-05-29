@@ -22,7 +22,6 @@
 #include "classad/exprTree.h"
 #include "classad/sink.h"
 #include "classad/util.h"
-#include "classad/classadCache.h"
 
 #include <math.h>
 
@@ -305,13 +304,6 @@ Unparse( string &buffer, const ExprTree *tree )
 			vector<ExprTree*> exprs;
 			((ExprList*)tree)->GetComponents( exprs );
 			UnparseAux( buffer, exprs );
-			return;
-		}
-		
-		case ExprTree::EXPR_ENVELOPE:
-		{
-			// recurse b/c we indirect for this element.
-			Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
 			return;
 		}
 

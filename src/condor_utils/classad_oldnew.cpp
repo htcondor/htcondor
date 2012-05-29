@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "my_hostname.h"
 #include "string_list.h"
-//#include "debug_timer.h"
 
 using namespace std;
 
@@ -62,13 +61,8 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	int 					numExprs;
 	string					buffer;
 	MyString				inputLine;
-	
-	// TODO: TSTCLAIR: I'm leaving this timer in place because we are planning several 
-	// several other performance optimizations and this code is in the critical path. 
-	//
-	//DebugTimerBase dTimer; 
-	//static double dTotal=0;
-	
+
+
 	ad.Clear( );
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
@@ -104,11 +98,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	if( !parser.ParseClassAd( buffer, ad ) ) {
 		return( false );
 	}
-	
-	//dTotal +=dTimer.Stop();
-	//dprintf(D_FULLDEBUG, "Total elapsed Time = %f\n", dTotal );
-	
-	
+
 		// get type info
 	if (!sock->get(inputLine)) {
 		return false;

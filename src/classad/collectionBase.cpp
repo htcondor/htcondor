@@ -140,10 +140,9 @@ InitializeFromLog( const string &logfile, const string storagefile, const string
 	}
 	Value				val;
 	vector<ExprTree*>	vec;
-	ExprTree * pExpr=0;
 	if( !ad->InsertAttr( ATTR_REQUIREMENTS, true ) 						||
-			!ad->Insert( ATTR_RANK, (pExpr=Literal::MakeLiteral( val )) )		||
-			!ad->Insert( ATTR_PARTITION_EXPRS, (pExpr=ExprList::MakeExprList( vec )) )||
+			!ad->Insert( ATTR_RANK, Literal::MakeLiteral( val ) )		||
+			!ad->Insert( ATTR_PARTITION_EXPRS, ExprList::MakeExprList( vec ) )||
 			!viewTree.SetViewInfo( this, ad ) ) {
 		CondorErrMsg += "; failed to initialize from log";
 		return( false );

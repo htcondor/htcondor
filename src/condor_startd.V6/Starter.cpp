@@ -147,14 +147,6 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 	}
 	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
 		requirements = 0;
-		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
-		classad::PrettyPrint pp;
-		std::string szbuff;
-		pp.Unparse(szbuff,job_ad);
-		dprintf( D_ALWAYS, "job_ad\n%s\n",szbuff.c_str());
-		pp.Unparse(szbuff,merged_ad);
-		dprintf( D_ALWAYS, "merged_ad\n%s\n",szbuff.c_str());
-		
 	}
 	delete( merged_ad );
 	return (bool)requirements;

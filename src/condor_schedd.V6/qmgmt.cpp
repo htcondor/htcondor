@@ -56,7 +56,6 @@
 #include "condor_holdcodes.h"
 #include "nullfile.h"
 #include "condor_url.h"
-#include "classad/classadCache.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -2842,14 +2841,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 						scheduler.WriteSubmitToUserLog( job_id, doFsync );
 					}
 				}
-				
-				int iDup, iTotal;
-				iDup = procad->PruneChildAd();
-				iTotal = procad->size();
-				
-				dprintf(D_FULLDEBUG,"New job: %s, Duplicate Keys: %d, Total Keys: %d \n",key, iDup, iTotal);
 			}	
-			
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
 

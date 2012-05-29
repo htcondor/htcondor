@@ -26,7 +26,6 @@
 #include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
-#include "classad/classadCache.h"
 
 using namespace std;
 
@@ -77,21 +76,19 @@ Reconfig()
 	}
 }
 
-// TSTCLAIR: this really needs to be killed off now.
-// static classad::AttributeReference *the_my_ref = NULL;
+static classad::AttributeReference *the_my_ref = NULL;
 static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
 {
 	ASSERT( !the_my_ref_in_use );
 	the_my_ref_in_use = true;
 
-	//if( !the_my_ref ) {
-	//	the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-	//}
+	if( !the_my_ref ) {
+		the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+	}
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=0;
-		ad->Insert( "my", (pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" ) ) );
+		ad->Insert( "my", the_my_ref );
 	}
 }
 
@@ -100,7 +97,7 @@ void releaseTheMyRef( classad::ClassAd *ad )
 	ASSERT( the_my_ref_in_use );
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my"); //Remove( "my" ); 
+		ad->Remove( "my" );
 		ad->MarkAttributeClean( "my" );
 	}
 
@@ -803,16 +800,16 @@ ClassAdAttributeIsPrivate( char const *name )
 }
 
 bool ClassAd::
-Insert( const std::string &attrName, classad::ExprTree *expr, bool bCache )
+Insert( const std::string &attrName, classad::ExprTree *expr )
 {
-	return classad::ClassAd::Insert( attrName, expr, bCache );
+	return classad::ClassAd::Insert( attrName, expr );
 }
 
 int ClassAd::
-Insert( const char *name, classad::ExprTree *expr, bool bCache )
+Insert( const char *name, classad::ExprTree *expr )
 {
 	string str = name;
-	return Insert( str, expr, bCache ) ? TRUE : FALSE;
+	return Insert( str, expr ) ? TRUE : FALSE;
 }
 
 int
@@ -846,8 +843,7 @@ ClassAd::Insert( const char *str )
 	}
 	
 	iterator itr = newAd->begin();
-	ExprTree * pTree = itr->second->Copy();
-	if ( !classad::ClassAd::Insert( itr->first,pTree,false ) ) {
+	if ( !classad::ClassAd::Insert( itr->first, itr->second->Copy() ) ) {
 		delete newAd;
 		return FALSE;
 	}
@@ -1775,8 +1771,6 @@ AddExplicitConditionals( classad::ExprTree *expr )
 										 condExpr2, NULL, NULL );
 		return parenExpr2;
 	}
-	case classad::ExprTree::EXPR_ENVELOPE:
-		return ( AddExplicitConditionals( ( (classad::CachedExprEnvelope*)expr )->get() ) );
 	case classad::ExprTree::FN_CALL_NODE:
 	case classad::ExprTree::CLASSAD_NODE:
 	case classad::ExprTree::EXPR_LIST_NODE: {

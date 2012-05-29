@@ -115,10 +115,9 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 		return( false );
 	}
 
-	// Insert the Ad resolver but also lookup before using b/c
-	// there are no gaurentees not to collide.
-	Insert( "lCtx", lCtx, false );
-	Insert( "rCtx", rCtx, false );
+		// insert the left and right contexts
+	Insert( "lCtx", lCtx );
+	Insert( "rCtx", rCtx );
 
 	symmetric_match = Lookup("symmetricMatch");
 	right_matches_left = Lookup("rightMatchesLeft");
@@ -140,19 +139,16 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 bool MatchClassAd::
 ReplaceLeftAd( ClassAd *ad )
 {
-	ladParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
+	lad = ad;
+	ladParent = lad ? lad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
-		if( !Insert( "LEFT", ad, false ) ) {
+		if( !Insert( "LEFT", ad ) ) {
 			return false;
 		}
-		
-		lad = ad;
-	
-		// For the ability to efficiently reference the ad via
-		// .LEFT, it is inserted in the top match ad, but we want
-		// its parent scope to be the context ad.
-		lCtx->SetParentScope(this);
-		lad->SetParentScope(lCtx);
+			// For the ability to efficiently reference the ad via
+			// .LEFT, it is inserted in the top match ad, but we want
+			// its parent scope to be the context ad.
+		lad->SetParentScope( lCtx );
 	}
 	return true;
 }
@@ -161,19 +157,16 @@ ReplaceLeftAd( ClassAd *ad )
 bool MatchClassAd::
 ReplaceRightAd( ClassAd *ad )
 {
-	radParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
+	rad = ad;
+	radParent = rad ? rad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
-		if( !Insert( "RIGHT", ad , false ) ) {
+		if( !Insert( "RIGHT", ad ) ) {
 			return false;
 		}
-		
-		rad = ad;
-	
-		// For the ability to efficiently reference the ad via
-		// .RIGHT, it is inserted in the top match ad, but we want
-		// its parent scope to be the context ad.
-		rCtx->SetParentScope(this);
-		rad->SetParentScope(rCtx);
+			// For the ability to efficiently reference the ad via
+			// .RIGHT, it is inserted in the top match ad, but we want
+			// its parent scope to be the context ad.
+		rad->SetParentScope( rCtx );
 	}
 	return true;
 }
@@ -271,18 +264,16 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 		// insert "my" into this ad so that references that use it
 		// can be flattened
 	Value me;
-	ExprTree * pLit;
 	me.SetClassAdValue( ad );
-	ad->Insert("my",(pLit=Literal::MakeLiteral(me)));
+	ad->Insert("my",Literal::MakeLiteral(me));
 
 		// insert "target" and "other" into this ad so references can be
 		// _partially_ flattened to the more efficient .RIGHT or .LEFT
 	char const *other = is_right ? "LEFT" : "RIGHT";
-	ExprTree *target = AttributeReference::MakeAttributeReference(NULL,other,true);
-	ExprTree *t2 = AttributeReference::MakeAttributeReference(NULL,other,true);
-	
+	ExprTree *target =
+		AttributeReference::MakeAttributeReference(NULL,other,true);
 	ad->Insert("target",target);
-	ad->Insert("other",t2);
+	ad->Insert("other",target);
 
 
 	ExprTree *flat_requirements = NULL;
@@ -324,7 +315,7 @@ OptimizeAdForMatchmaking( ClassAd *ad, bool is_right, std::string *error_msg )
 		// Even if there are, those can be resolved by the context ads, so
 		// we don't need to leave these attributes in the ad.
 	ad->Delete("my");
-	ad->Delete("other"); 
+	ad->Remove("other"); // this is a pointer to same object as target
 	ad->Delete("target");
 
 	return true;
