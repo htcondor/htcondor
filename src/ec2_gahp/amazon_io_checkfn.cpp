@@ -34,7 +34,7 @@
 // we support multiple groupnames
 bool AmazonVMStart::ioCheck(char **argv, int argc)
 {
-	return verify_min_number_args(argc, 14) &&
+	return verify_min_number_args(argc, 13) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -46,8 +46,7 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[9]) && 
 		verify_string_name(argv[10]) &&
 		verify_string_name(argv[11]) &&
-		verify_string_name(argv[12]) &&
-		verify_string_name(argv[13]);
+		verify_string_name(argv[12]);
 }
 
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>

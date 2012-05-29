@@ -5606,7 +5606,6 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string vpc_subnet,
 							  std::string vpc_ip,
 							  std::string client_token,
-							  std::string ebs_volumes,
 							  StringList & groupnames,
 							  char * &instance_id,
 							  char * &error_code)
@@ -5639,7 +5638,6 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( vpc_subnet.empty() ) vpc_subnet = NULLSTRING;
 	if ( vpc_ip.empty() ) vpc_ip = NULLSTRING;
 	if ( client_token.empty() ) client_token = NULLSTRING;
-	if ( ebs_volumes.empty() ) ebs_volumes = NULLSTRING;
 
 	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
 	// XXX: You probably should specify a NULL for all "optional" parameters -matt
@@ -5653,6 +5651,7 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	char* esc5 = strdup( escapeGahpString(keypair) );
 	char* esc6 = strdup( escapeGahpString(user_data) );
 	char* esc7 = strdup( escapeGahpString(user_data_file) );
+
 	// currently we support the following instance type:
 	// 1. m1.small
 	// 2. m1.large
@@ -5662,9 +5661,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	char* esc10 = strdup( escapeGahpString(vpc_subnet) );
 	char* esc11 = strdup( escapeGahpString(vpc_ip) );
 	char* esc12 = strdup( escapeGahpString(client_token) );
-    char* esc13 = strdup( escapeGahpString(ebs_volumes) );
 
-	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12, esc13 );
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12 );
 
 	free( esc1 );
 	free( esc2 );
@@ -5678,7 +5676,6 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	free( esc10 );
 	free( esc11 );
 	free( esc12 );
-	free( esc13 );
 	ASSERT( x > 0 );
 
 	const char * group_name;

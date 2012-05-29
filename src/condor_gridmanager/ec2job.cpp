@@ -538,7 +538,6 @@ void EC2Job::doEvaluateState()
 											 m_vpc_subnet,
 											 m_vpc_ip,
 											 m_client_token,
-											 m_ebs_volumes,
 											 *m_group_names,
 											 instance_id,
 											 gahp_error_code);
