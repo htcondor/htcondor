@@ -606,10 +606,10 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     int requestID;
     get_int( argv[1], & requestID );
     
-    if( ! verify_min_number_args( argc, 14 ) ) {
+    if( ! verify_min_number_args( argc, 15 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 10, argv[0] );
+                 argc, 15, argv[0] );
         return false;
     }
 
@@ -622,8 +622,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.query_parameters[ "ImageId" ] = argv[5];
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
-	vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
-    
+
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "KeyName" ] = argv[6];
@@ -636,11 +635,11 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[10], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "Placement.AvailabilityZone" ] = argv[10];
     }
-    
+
     if( strcasecmp( argv[11], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "SubnetId" ] = argv[11];
     }
-    
+
     if( strcasecmp( argv[12], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "PrivateIpAddress" ] = argv[12];
     }
@@ -649,9 +648,13 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         vmStartRequest.query_parameters[ "ClientToken" ] = argv[13];
     }
 
-    for( int i = 14; i < argc; ++i ) {
+    if( strcasecmp( argv[14], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
+    }
+
+    for( int i = 15; i < argc; ++i ) {
         std::ostringstream groupName;
-        groupName << "SecurityGroup." << ( i - 13 + 1 );
+        groupName << "SecurityGroup." << ( i - 15 + 1 );
         vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
     }    
 
