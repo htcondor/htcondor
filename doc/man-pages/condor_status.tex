@@ -173,6 +173,15 @@ options} may be specified.
       A format without any conversion specifiers may be specified,
       but an attribute is still required.
       Include \Bs n to specify a line break. }
+    \OptItem{\OptArg{-autoformat}{attr1 ...}} {
+		Display machine classad attribute values formatted in a default way according to 
+		their types.  This option takes an arbitrary number of attribute
+		names as arguments, and prints out their values.  It is like the
+		format option above, but no format strings need to be given, just
+		the attribute names.  It is assumed that no attribute names begin
+		with a dash character, so that the next word that begins with dash
+		is the start of the next option.
+	 }
 \end{Options}
 
 \GenRem
@@ -336,6 +345,17 @@ chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
        Total       3     1        1          1         0        0
 \end{verbatim}
 \normalsize
+
+\underline{-format option example}
+To display the name and memory attributes of each job ad in format
+that is easily parseable by other tools.
+\begin{verbatim}
+% condor_status -format "%s " Name -format "%d\n" Memory
+\end{verbatim}
+To do the same with the autoformat option, run the following command
+\begin{verbatim}
+% condor_status -autoformat Name Memory
+\end{verbatim}
 
 
 \ExitStatus
