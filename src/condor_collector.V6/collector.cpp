@@ -348,7 +348,19 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
 	}
 
+		// The client can give us a hint as to when it will give up
+		// waiting for a query response. If the hint time has passed
+		// before we start the query, there's no point in doing the
+		// query (the client has already given up).
+	int expires;
+	sleep(param_integer("TEST_QUERY_DELAY", 0));
 	UtcTime begin(true);
+	if (cad.LookupInteger(ATTR_QUERY_EXPIRES, expires) &&
+		begin.seconds() > expires) {
+		dprintf(D_ALWAYS, "Received an expired query (old by %lds), ignoring\n",
+				begin.seconds() - expires);
+		return FALSE;
+	}
 
 	// Perform the query
 	List<ClassAd> results;
