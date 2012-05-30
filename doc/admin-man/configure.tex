@@ -7349,8 +7349,8 @@ Configuration File Macros}
   group ID-based process tracking (see
   Section~\ref{sec:GroupTracking}). In either of these cases, the
   \MacroNI{USE\_PROCD} setting will be ignored and a \Condor{procd} will
-  always be used. By default, the \Condor{master} will not use a
-  \Condor{procd} but all other daemons that need process family tracking will.
+  always be used. By default, the \Condor{master} will start a
+  \Condor{procd} that all other daemons that need process family tracking will use.
   A daemon that uses the \Condor{procd} will start a \Condor{procd} for
   use by itself and all of its child daemons.
 
