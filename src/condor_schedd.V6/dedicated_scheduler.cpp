@@ -2857,9 +2857,30 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 			unclaimed_candidate_machines.Rewind();
 			unclaimed_candidate_jobs.Rewind();
 			ClassAd *um;
+
+				// Loop over the machines, as there might be fewer unclaimed
+				// machines than idle jobs
 			while( (um = unclaimed_candidate_machines.Next()) ) {
 						// Make a resource request out of this job
-				generateRequest(unclaimed_candidate_jobs.Next());
+
+					// Make sure it matches this PSG
+				ClassAd *aJob = unclaimed_candidate_jobs.Next();
+				
+				char *previousPSG = NULL;
+				aJob->LookupString(ATTR_MATCHED_PSG, &previousPSG);
+				
+				if (previousPSG) {
+					// We've already munged the Requirements, don't do it again
+					// just update the matched PSG attr
+					free(previousPSG);
+				} else {
+					ExprTree *requirements = aJob->LookupExpr(ATTR_REQUIREMENTS);
+					const char *rhs = ExprTreeToString(requirements);
+					std::string newRequirements = std::string("( ParallelSchedulingGroup =?= my.Matched_PSG) && ")  + rhs;
+					aJob->AssignExpr(ATTR_REQUIREMENTS, newRequirements.c_str());
+				}
+				aJob->Assign(ATTR_MATCHED_PSG, groupName);
+				generateRequest(aJob);
 			}
 				
 
