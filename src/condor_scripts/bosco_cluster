@@ -1,11 +1,6 @@
 #!/bin/sh
 # bosco_add_host: Used to install ssh keys and blahp on remote hosts.
 
-# 
-# Arguments:
-# add host: add host to cluster
-#
-
 # Bosco key location
 bosco_key=$HOME/.ssh/bosco_key.rsa
 
