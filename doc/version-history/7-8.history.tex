@@ -52,6 +52,10 @@ warnings when a job requests features that are no longer supported.
 
 \begin{itemize}
 
+\item Fixed a bug in the condor init script that would cause
+the init script to hang if condor wasn't running
+\Ticket{2872}
+
 \item Fixed a bug that caused Parallel Universe jobs using
 Parallel Scheduling Groups to occasionally stay idle even when
 there were available machines to run them.
