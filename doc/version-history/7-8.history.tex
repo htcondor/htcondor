@@ -52,6 +52,11 @@ warnings when a job requests features that are no longer supported.
 
 \begin{itemize}
 
+\item Fixed a bug that caused Parallel Universe jobs using
+Parallel Scheduling Groups to occasionally stay idle even when
+there were available machines to run them.
+\Ticket{3017}
+
 \item Fixed a bug that caused the \Condor{gridmanager} to crash when
 attempting to submit jobs to a local PBS/LSF/SGI cluster.
 \Ticket{3014}
