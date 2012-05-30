@@ -143,6 +143,7 @@ const char * const ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char * const ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char * const ATTR_COMPLETION_DATE			 = "CompletionDate";
 const char * const ATTR_MATCHED_CONCURRENCY_LIMITS = "MatchedConcurrencyLimits";
+const char * const ATTR_MATCHED_PSG 			 = "Matched_PSG";
 const char * const ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
 const char * const ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
