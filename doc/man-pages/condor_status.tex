@@ -58,7 +58,8 @@ options} may be specified.
     \OptItem{\Opt{-collector}}{(Query option) Query \Condor{collector} ClassAds
       and display attributes}
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
-      the given host name to get the ClassAds to display}
+      the given host name to get the ClassAds to display.  By default, returns the
+      startd ad.  If \Opt{-schedd} is also given, return the schedd ad on that host.}
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-license}}{(Query option) Display license attributes.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ClassAds 
