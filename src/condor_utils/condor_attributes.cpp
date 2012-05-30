@@ -1014,3 +1014,5 @@ const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";
 const char* const ATTR_GROUP_RESOURCES_IN_USE = "GroupResourcesInUse";
 const char* const ATTR_SORT_EXPR = "SortExpr";
 const char* const ATTR_SORT_EXPR_STRING = "SortExprString";
+
+const char* const ATTR_QUERY_EXPIRES = "Expires";

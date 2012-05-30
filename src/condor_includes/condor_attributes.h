@@ -965,6 +965,8 @@ extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
 extern const char* const ATTR_SORT_EXPR;
 extern const char* const ATTR_SORT_EXPR_STRING;
 
+extern const char* const ATTR_QUERY_EXPIRES;
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {
