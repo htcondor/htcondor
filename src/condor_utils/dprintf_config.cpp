@@ -204,6 +204,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 	instead of the standard date format in all the log messages
 	*/
 	DebugUseTimestamps = dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	if (DebugUseTimestamps) HeaderOpts |= D_TIMESTAMP;
 	char * time_format = dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
 	if (time_format) {
 		if(DebugTimeFormat)
