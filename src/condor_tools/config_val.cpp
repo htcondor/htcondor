@@ -100,6 +100,7 @@ usage()
 			 MyName );
 	fprintf( stderr, "   or: %s [options] -tilde\n", MyName );
 	fprintf( stderr, "   or: %s [options] -owner\n", MyName );
+	fprintf( stderr, "   or: %s -dump [-verbose] [-expand]\n", MyName );
 	fprintf( stderr, "\n   Valid options are:\n" );
 	fprintf( stderr, "   -name daemon_name\t(query the specified daemon for its configuration)\n" );
 	fprintf( stderr, "   -pool hostname\t(use the given central manager to find daemons)\n" );
