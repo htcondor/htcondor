@@ -4,12 +4,13 @@
 # by Matt Farrellee, but modified to be a Resource Agent and to support
 # multiple daemons.
 
-# The program being managed
-if [ $OCF_RESKEY_type = "query_server" ]; then
+if [ "$OCF_RESKEY_type" = "query_server" ]; then
   prefix="aviary"
 else
   prefix="condor"
 fi
+
+# The program being managed
 prog=${prefix}_$OCF_RESKEY_type
 
 pidfile=/var/run/condor/$prog-$OCF_RESKEY_name.pid
@@ -71,6 +72,7 @@ metadata() {
     <action name="monitor" interval="30" timeout="5"/>
     <action name="status" interval="30" timeout="5"/>
     <action name="meta-data" timeout="5"/>
+    <action name="validate-all" timeout="5"/>
   </actions>
 </resource-agent>
 EOT
@@ -231,7 +233,7 @@ verify_binary() {
 case "$1" in
     start)
 	pid_status $pidfile 
-	[ $? -eq 0 ] && return 0
+	[ $? -eq 0 ] && exit 0
 	start
 	exit $?
 	;;
@@ -269,7 +271,6 @@ case "$1" in
     validate-all)
 	[ -n "$OCF_RESKEY_name" ] || exit $OCF_ERR_ARGS
 
-	# xxx do nothing for now.
 	exit 0
 	;;
     *)

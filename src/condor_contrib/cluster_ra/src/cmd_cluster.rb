@@ -41,8 +41,8 @@ module Mrg
             "BaseQueryServer"
           end
 
-          def self.gen_params(name, spool, sname)
-            qs_name = (sname ? sname : "#{name}_query_server")
+          def self.gen_params(name, spool, dname)
+            qs_name = (dname && (not dname.empty?) ? dname : "#{name}_query_server")
             {qs_name=>"$(QUERY_SERVER)",
              "QUERY_SERVER.#{qs_name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "QUERY_SERVER.#{qs_name}.SPOOL"=>"$(SCHEDD.#{name}.SPOOL)",
@@ -61,8 +61,8 @@ module Mrg
             "BaseJobServer"
           end
 
-          def self.gen_params(name, spool, sname)
-            js_name = (sname ? sname : "#{name}_job_server")
+          def self.gen_params(name, spool, dname)
+            js_name = (dname && (not dname.empty?) ? dname : "#{name}_job_server")
             {js_name=>"$(JOB_SERVER)",
              "JOB_SERVER.#{js_name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "JOB_SERVER.#{js_name}.SPOOL"=>"$(SCHEDD.#{name}.SPOOL)",
@@ -99,7 +99,7 @@ module Mrg
                 services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys}
                 `#{@ccs} --rmsubservice "#{@service}" netfs:condor[#{num}]`
               else
-                services[@name][:condor].each {|n| exit!(1, "There is already a #{@subsys} configured for HA Schedd #{@name}") if n.type == @subsys}
+                services[@name][:condor].each {|d| exit!(1, "There is already a #{@subsys} configured for HA Schedd #{@name}") if d.type == @subsys}
                 `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1"`
               end
             end
@@ -107,7 +107,7 @@ module Mrg
             if not @options.has_key?(:cluster_only)
               # Store config
 
-              add_params_to_store
+              add_params_to_store if (not @action.to_s.include?("remove"))
               modify_params_on_group
             end
 
@@ -218,25 +218,28 @@ module Mrg
             s = Hash.new {|h,k| h[k] = Hash.new {|h1,k1| h1[k1] = {}}}
             cservice = Struct.new(:name, :type)
             cl = []
-            domain, spool, name = nil, nil, nil
+            service, domain, spool, name = nil, nil, nil, nil
             `#{@ccs} --lsservices`.each do |line|
               if (not line.scan(/^service:.*/).empty?) || (not line.scan(/^resources:.*/).empty?)
-                if domain && spool && name && (not cl.empty?)
+                if domain && spool && name && (not cl.empty?) && service
+                  s[name][:service] = service
                   s[name][:domain] = domain
                   s[name][:spool] = spool
                   s[name][:condor] = cl
                 end
-                domain, spool, name = nil, nil, nil
+                service, domain, spool, name = nil, nil, nil, nil
                 cl = []
               end
-              domain = $1 if line =~ /domain=([^,]+),/
-              spool = $1 if line =~ /mountpoint=([^,]+),/
-              cl << cservice.new($1, $2) if line =~ /condor:\s*name=([^,]+).*type=([^,]+)/
-              name = $1 if line =~ /condor:\s*name=([^,]+).*type=schedd/
+              service = $1.chomp if line =~ /^service:\s*name=([^,]+),/
+              domain = $1.chomp if line =~ /domain=([^,]+),/
+              spool = $1.chomp if line =~ /mountpoint=([^,]+),/
+              cl << cservice.new($1.chomp, $2.chomp) if line =~ /condor:\s*name=([^,]+).*type=([^,]+)/
+              name = $1.chomp if line =~ /condor:\s*name=([^,]+).*type=schedd/
             end
 
             # Add the final service if it exists
-            if domain && spool && name && (not cl.empty?)
+            if domain && spool && name && (not cl.empty?) && service
+              s[name][:service] = service
               s[name][:domain] = domain
               s[name][:spool] = spool
               s[name][:condor] = cl
@@ -247,8 +250,23 @@ module Mrg
             s
           end
 
+          def get_domains
+            # Get current failover domains from ccs
+            name = ""
+            d = Hash.new {|h,k| h[k] = []}
+            `#{@ccs} --lsfailoverdomain`.each do |line|
+              line.scan(/^(\S[^:]+)/) {|l| name = l[0]}
+              line.scan(/^\s+([^:]+)/) {|l| d[name] << l[0]}
+            end
+            d
+          end
+
           def services
             @services ||= get_services
+          end
+
+          def domains
+            @domains ||= get_domains
           end
         
           def action
@@ -283,11 +301,12 @@ module Mrg
             `ccs -h localhost -i`
             ignore = "-i" if $?.exitstatus == 0
 
-            @domain = "Schedd #{@options[:name]} Failover Domain"
             password = "--password #{@options[:password]}" if @options.has_key?(:password)
             @ccs = "ccs #{ignore} -h localhost #{password}"
             @name = @options[:name]
-            @service = "HA Schedd #{@name}"
+            @daemon_name = (services.has_key?(@name) ? services[@name][:condor].collect {|d| d.name if d.type == @subsys}.compact.to_s : nil)
+            @service = (services.has_key?(@name) ? services[@name][:service] : "HA Schedd #{@name}")
+            @domain = (services.has_key?(@name) ? services[@name][:domain] : "Schedd #{@options[:name]} Failover Domain")
             @tag = "CLUSTER_NAMES"
           end
 
@@ -307,13 +326,6 @@ module Mrg
               `#{@ccs} --#{cmd}node #{node}` if cmd == "add"
               `#{@ccs} --#{cmd}failoverdomainnode '#{@domain}' #{node}`
             end
-          end
-
-          def remove_ccs_entries
-            `#{@ccs} --rmsubservice "#{@service}" condor`
-            `#{@ccs} --rmsubservice "#{@service}" netfs`
-            `#{@ccs} --rmservice "#{@service}"`
-            `#{@ccs} --rmfailoverdomain "#{@domain}"`
           end
 
           def remove_store_groups
@@ -346,7 +358,7 @@ module Mrg
           end
 
           def get_params
-            Mrg::Grid::Config::Shell.const_get(get_const_name).gen_params(@name, @options[:spool], @sname)
+            Mrg::Grid::Config::Shell.const_get(get_const_name).gen_params(@name, @options[:spool], @daemon_name)
           end
 
           def get_store_feature
@@ -482,7 +494,10 @@ module Mrg
 
             if not @options.has_key?(:wallaby_only)
               # Cluster config
-              remove_ccs_entries
+              `#{@ccs} --rmsubservice "#{@service}" condor`
+              `#{@ccs} --rmsubservice "#{@service}" netfs`
+              `#{@ccs} --rmservice "#{@service}"`
+              `#{@ccs} --rmfailoverdomain "#{@domain}"`
             end
 
             if not @options.has_key?(:cluster_only)
@@ -596,22 +611,14 @@ module Mrg
             # Remove all groups in the store
             remove_store_groups
 
-            # Get current failover domains from ccs
-            name = ""
-            domains = Hash.new {|h,k| h[k] = []}
-            `#{@ccs} --lsfailoverdomain`.each do |line|
-              line.scan(/^(\S.+)/) {|l| name = l[0].split(':')[0]}
-              line.scan(/^\s+(.+)/) {|l| domains[name] << l[0].split(':')[0]}
-            end
-
             services.keys.each do |n|
-              @sname = nil
+              @daemon_name = nil
               @name = n
               @options[:spool] = services[n][:spool]
               @options[:nodes] = domains[services[n][:domain]]
-              services[n][:condor].each do |service|
-                @sname = service.name
-                @subsys = service.type
+              services[n][:condor].each do |daemon|
+                @daemon_name = daemon.name
+                @subsys = daemon.type
                 update_store
               end
             end
