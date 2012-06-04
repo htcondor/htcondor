@@ -1,0 +1,369 @@
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the condor package.
+#
+# Yuri Kozlov <yuray@komyakino.ru>, 2012.
+msgid ""
+msgstr ""
+"Project-Id-Version: condor 7.7.6~dfsg.1-2\n"
+"Report-Msgid-Bugs-To: condor@packages.debian.org\n"
+"POT-Creation-Date: 2012-04-30 20:35+0200\n"
+"PO-Revision-Date: 2012-05-04 21:32+0400\n"
+"Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
+"Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Lokalize 1.2\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<"
+"=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#. Type: title
+#. Description
+#: ../condor.templates:1001
+msgid "Condor configuration"
+msgstr "ÐÐ°ÑÑÑÐ¾Ð¹ÐºÐ° Condor"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:2001
+msgid "Manage initial Condor configuration automatically?"
+msgstr "ÐÑÐ¿Ð¾Ð»Ð½Ð¸ÑÑ Ð½Ð°ÑÐ°Ð»ÑÐ½ÑÑ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÑ Condor Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:2001
+msgid ""
+"The setup for Condor can be handled automatically, asking a few questions to "
+"create an initial configuration appropriate for a machine that is either a "
+"member of an existing pool or a fully functional \"Personal Condor "
+"installation\". This generated initial configuration can be further extended "
+"later on."
+msgstr ""
+"ÐÐ°ÑÐ°Ð»ÑÐ½Ð°Ñ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ° Condor Ð´Ð»Ñ Ð¼Ð°ÑÐ¸Ð½Ñ, ÐºÐ¾ÑÐ¾ÑÐ°Ñ Ð¼Ð¾Ð¶ÐµÑ Ð±ÑÑÑ "
+"ÑÐ»ÐµÐ½Ð¾Ð¼ ÑÑÑÐµÑÑÐ²ÑÑÑÐµÐ³Ð¾ Ð¿ÑÐ»Ð° Ð¸Ð»Ð¸ Ð¿Ð¾Ð»Ð½Ð¾ÑÑÑÑ ÑÐ°Ð±Ð¾ÑÐ°ÑÑ Ð² ÐºÐ°ÑÐµÑÑÐ²Ðµ "
+"Â«Ð¿ÐµÑÑÐ¾Ð½Ð°Ð»ÑÐ½Ð¾Ð¹ ÑÑÑÐ°Ð½Ð¾Ð²ÐºÐ¸ CondorÂ», Ð¼Ð¾Ð¶ÐµÑ Ð±ÑÑÑ Ð²ÑÐ¿Ð¾Ð»Ð½ÐµÐ½Ð° "
+"Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸ Ð½Ð° Ð¾ÑÐ½Ð¾Ð²Ðµ Ð¾ÑÐ²ÐµÑÐ¾Ð² Ð½Ð° Ð½ÐµÑÐºÐ¾Ð»ÑÐºÐ¾ Ð²Ð¾Ð¿ÑÐ¾ÑÐ¾Ð². "
+"Ð¡Ð¾Ð·Ð´Ð°Ð½Ð½Ð°Ñ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ° Ð² Ð´Ð°Ð»ÑÐ½ÐµÐ¹ÑÐµÐ¼ Ð¼Ð¾Ð¶ÐµÑ Ð±ÑÑÑ ÑÐ°ÑÑÐ¸ÑÐµÐ½Ð°."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:2001
+msgid ""
+"Otherwise, Condor will be installed with a default configuration that needs "
+"to be customized manually."
+msgstr ""
+"Ð Ð¿ÑÐ¾ÑÐ¸Ð²Ð½Ð¾Ð¼ ÑÐ»ÑÑÐ°Ðµ Condor Ð±ÑÐ´ÐµÑ ÑÑÑÐ°Ð½Ð¾Ð²Ð»ÐµÐ½ Ñ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ¾Ð¹ Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ, "
+"ÐºÐ¾ÑÐ¾ÑÑÑ ÑÑÐµÐ±ÑÐµÑÑÑ Ð´Ð¾ÑÐ°Ð±Ð¾ÑÐ°ÑÑ Ð²ÑÑÑÐ½ÑÑ."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:3001
+msgid "Enable submission of usage statistics?"
+msgstr "ÐÐºÐ»ÑÑÐ¸ÑÑ Ð¾ÑÐ¿ÑÐ°Ð²ÐºÑ ÑÑÐ°ÑÐ¸ÑÑÐ¸ÐºÐ¸ Ð¿Ð¾ Ð¸ÑÐ¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°Ð½Ð¸Ñ?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:3001
+msgid ""
+"The Condor authors politely request that each Condor pool sends them "
+"periodic updates with basic information about the status of the pool. "
+"Updates include only the total number of machines, the number of jobs "
+"submitted, the number of machines running jobs, the host name of the central "
+"manager, and the name of the pool. These updates help the Condor Team see "
+"how Condor is being used around the world."
+msgstr ""
+"ÐÐ²ÑÐ¾ÑÑ Condor Ð²ÐµÐ¶Ð»Ð¸Ð²Ð¾ Ð¿ÑÐ¾ÑÑÑ, ÑÑÐ¾Ð±Ñ ÐºÐ°Ð¶Ð´ÑÐ¹ Ð¿ÑÐ» Condor Ð¿ÐµÑÐ¸Ð¾Ð´Ð¸ÑÐµÑÐºÐ¸ "
+"Ð¿Ð¾ÑÑÐ»Ð°Ð» Ð¸Ð¼ Ð¾Ð±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸Ñ Ñ Ð¾Ð±ÑÐµÐ¹ Ð¸Ð½ÑÐ¾ÑÐ¼Ð°ÑÐ¸ÐµÐ¹ Ð¾ ÑÐ¾ÑÑÐ¾ÑÐ½Ð¸Ð¸ Ð¿ÑÐ»Ð°. "
+"Ð Ð¾Ð±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸Ñ Ð²ÐºÐ»ÑÑÐ°ÐµÑÑÑ ÑÐ¾Ð»ÑÐºÐ¾ ÐºÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ð¾ Ð¼Ð°ÑÐ¸Ð½, ÐºÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ð¾ Ð¾ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð½ÑÑ "
+"Ð·Ð°Ð´Ð°Ð½Ð¸Ð¹, ÐºÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ð¾ Ð¼Ð°ÑÐ¸Ð½, Ð²ÑÐ¿Ð¾Ð»Ð½ÑÑÑÐ¸Ñ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ, Ð¸Ð¼Ñ ÑÐ·Ð»Ð° ÑÐµÐ½ÑÑÐ° ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ñ "
+"Ð¸ Ð¸Ð¼Ñ Ð¿ÑÐ»Ð°. Ð­ÑÐ¸ Ð¾Ð±Ð½Ð¾Ð²Ð»ÐµÐ½Ð¸Ñ Ð¿Ð¾Ð¼Ð¾Ð³Ð°ÑÑ ÐºÐ¾Ð¼Ð°Ð½Ð´Ðµ Condor Ð½Ð°Ð±Ð»ÑÐ´Ð°ÑÑ ÐºÐ°Ðº "
+"Condor Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÐµÑÑÑ Ð² Ð¼Ð¸ÑÐµ."
+
+#. Type: string
+#. Description
+#: ../condor.templates:4001
+msgid "Address of the central manager:"
+msgstr "ÐÐ´ÑÐµÑ ÑÐµÐ½ÑÑÐ° ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ñ:"
+
+#. Type: string
+#. Description
+#: ../condor.templates:4001
+msgid ""
+"If this machine is intended to join an existing Condor pool, the address of "
+"the central manager machine has to be specified. Any address format "
+"supported by Condor can be used, including macro expressions."
+msgstr ""
+"ÐÐ»Ñ ÑÐ¾Ð³Ð¾, ÑÑÐ¾Ð±Ñ Ð´Ð°Ð½Ð½ÑÑ Ð¼Ð°ÑÐ¸Ð½Ñ Ð²ÐºÐ»ÑÑÐ¸ÑÑ Ð² ÑÑÑÐµÑÑÐ²ÑÑÑÐµÐ¹ Ð¿ÑÐ» Condor, "
+"ÑÑÐµÐ±ÑÐµÑÑÑ ÑÐºÐ°Ð·Ð°ÑÑ Ð°Ð´ÑÐµÑ Ð¼Ð°ÑÐ¸Ð½Ñ ÑÐµÐ½ÑÑÐ° ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ñ. "
+"ÐÐ¾Ð¶ÐµÑ Ð±ÑÑÑ Ð¸ÑÐ¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°Ð½ Ð»ÑÐ±Ð¾Ð¹ ÑÐ¾ÑÐ¼Ð°Ñ Ð°Ð´ÑÐµÑÐ°, Ð¿Ð¾Ð´Ð´ÐµÑÐ¶Ð¸Ð²Ð°ÐµÐ¼ÑÐ¹ "
+"Condor, Ð²ÐºÐ»ÑÑÐ°Ñ Ð²ÑÑÐ°Ð¶ÐµÐ½Ð¸Ñ Ñ Ð¼Ð°ÐºÑÐ¾ÑÐ°Ð¼Ð¸."
+
+#. Type: string
+#. Description
+#: ../condor.templates:4001
+msgid "Example: condor-manager.example.org"
+msgstr "ÐÑÐ¸Ð¼ÐµÑ: condor-manager.example.org"
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:5001
+msgid "Job submission"
+msgstr "ÐÑÐ¿ÑÐ°Ð²Ð¸ÑÐµÐ»Ñ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ"
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:5001
+msgid "Job execution"
+msgstr "ÐÑÐ¿Ð¾Ð»Ð½Ð¸ÑÐµÐ»Ñ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ"
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:5001
+msgid "Central manager"
+msgstr "Ð¦ÐµÐ½ÑÑ ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ñ"
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:5002
+msgid "Role of this machine in the Condor pool:"
+msgstr "Ð Ð¾Ð»Ñ Ð´Ð°Ð½Ð½Ð¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ñ Ð² Ð¿ÑÐ»Ðµ Condor:"
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:5002
+msgid ""
+"Please specify the intended role or roles of this machine, for which the "
+"corresponding daemons will be started automatically."
+msgstr ""
+"Ð£ÐºÐ°Ð¶Ð¸ÑÐµ Ð¿ÑÐµÐ´Ð½Ð°Ð·Ð½Ð°ÑÐµÐ½Ð¸Ðµ Ð´Ð°Ð½Ð½Ð¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ñ â Ð¾Ñ ÑÑÐ¾Ð³Ð¾ Ð·Ð°Ð²Ð¸ÑÐ¸Ñ "
+"ÐºÐ°ÐºÐ¸Ðµ ÑÐ»ÑÐ¶Ð±Ñ Ð±ÑÐ´ÑÑ Ð·Ð°Ð¿ÑÑÐºÐ°ÑÑÑÑ Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸."
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:5002
+msgid ""
+"A machine in a Condor pool can have multiple roles. In general there is one "
+"central manager and multiple nodes that run jobs. Often the central manager "
+"is also the machine from which users submit jobs. However, it is also "
+"possible to have multiple machines available for job submission."
+msgstr ""
+"ÐÐ°ÑÐ¸Ð½Ð° Ð² Ð¿ÑÐ»Ðµ Condor Ð¼Ð¾Ð¶ÐµÑ Ð¸Ð¼ÐµÑÑ Ð½ÐµÑÐºÐ¾Ð»ÑÐºÐ¾ ÑÐ¾Ð»ÐµÐ¹. ÐÐ±ÑÑÐ½Ð¾, ÐµÑÑÑ "
+"ÑÐµÐ½ÑÑ ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ñ Ð¸ Ð½ÐµÑÐºÐ¾Ð»ÑÐºÐ¾ ÑÐ·Ð»Ð¾Ð², ÐºÐ¾ÑÐ¾ÑÑÐµ Ð²ÑÐ¿Ð¾Ð»Ð½ÑÑÑ ÑÐ°Ð±Ð¾ÑÑ. "
+"Ð§Ð°ÑÑÐ¾ Ð¼Ð°ÑÐ¸Ð½Ð° ÑÐµÐ½ÑÑÐ° ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¸Ñ ÑÐ°ÐºÐ¶Ðµ ÑÐ»ÑÐ¶Ð¸Ñ Ð´Ð»Ñ Ð¾ÑÐ¿ÑÐ°Ð²ÐºÐ¸ "
+"Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»ÑÑÐºÐ¸Ñ Ð·Ð°Ð´Ð°Ð½Ð¸Ð¹. "
+"ÐÐ´Ð½Ð°ÐºÐ¾ ÑÐ°ÐºÐ¶Ðµ Ð²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ Ð¸Ð¼ÐµÑÑ Ð½ÐµÑÐºÐ¾Ð»ÑÐºÐ¾ Ð¼Ð°ÑÐ¸Ð½ Ð´Ð»Ñ Ð¾ÑÐ¿ÑÐ°Ð²ÐºÐ¸ Ð·Ð°Ð´Ð°Ð½Ð¸Ð¹."
+
+#. Type: string
+#. Description
+#: ../condor.templates:6001
+msgid "Email address of the local Condor administrator:"
+msgstr "ÐÐ´ÑÐµÑ ÑÐ»ÐµÐºÑÑÐ¾Ð½Ð½Ð¾Ð¹ Ð¿Ð¾ÑÑÑ Ð»Ð¾ÐºÐ°Ð»ÑÐ½Ð¾Ð³Ð¾ Ð°Ð´Ð¼Ð¸Ð½Ð¸ÑÑÑÐ°ÑÐ¾ÑÐ° Condor:"
+
+#. Type: string
+#. Description
+#: ../condor.templates:6001
+msgid ""
+"The Condor administrator will receive error messages if something goes wrong "
+"with Condor on this machine."
+msgstr ""
+"ÐÐ´Ð¼Ð¸Ð½Ð¸ÑÑÑÐ°ÑÐ¾Ñ Condor Ð±ÑÐ´ÐµÑ Ð¿Ð¾Ð»ÑÑÐ°ÑÑ ÑÐ¾Ð¾Ð±ÑÐµÐ½Ð¸Ñ Ð¾Ð± Ð¾ÑÐ¸Ð±ÐºÐ°Ñ, ÐµÑÐ»Ð¸ ÑÑÐ¾-ÑÐ¾ "
+"ÑÐ»ÑÑÐ¸ÑÑÑ Ñ Condor Ð½Ð° ÑÑÐ¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ðµ."
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid "user directory domain label:"
+msgstr "Ð¯ÑÐ»ÑÐº-Ð´Ð¾Ð¼ÐµÐ½ ÐºÐ°ÑÐ°Ð»Ð¾Ð³Ð° Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»ÐµÐ¹:"
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid ""
+"This label is a string that Condor uses to decide if a submitting machine "
+"and an execute machine share the same directory of user accounts (that is, "
+"whether UID 1000 on one machine is the same person as UID 1000 on the "
+"other). If the labels on the two machines match, Condor will run each job "
+"under the UID that submitted the job, and send emails about them to "
+"user@DOMAIN (using this label as the value of DOMAIN). If not, Condor will "
+"run all jobs as user \"nobody\". Leaving it blank will cause Condor to run "
+"all jobs on this machine as user \"nobody\"."
+msgstr ""
+"ÐÐ°Ð½Ð½ÑÐ¹ ÑÑÐ»ÑÐº Ð¿ÑÐµÐ´ÑÑÐ°Ð²Ð»ÑÐµÑ ÑÐ¾Ð±Ð¾Ð¹ ÑÑÑÐ¾ÐºÑ, ÐºÐ¾ÑÐ¾ÑÑÑ Condor "
+"Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÐµÑ Ð´Ð»Ñ Ð¿ÑÐ¸Ð½ÑÑÐ¸Ñ ÑÐµÑÐµÐ½Ð¸Ñ Ð¾ ÑÐ¾Ð¼, Ð¸Ð¼ÐµÐµÑ Ð»Ð¸ Ð¾ÑÐ¿ÑÐ°Ð²Ð»ÑÑÑÐ°Ñ Ð¼Ð°ÑÐ¸Ð½Ð° "
+"Ð¸ Ð¸ÑÐ¿Ð¾Ð»Ð½ÑÑÑÐ°Ñ Ð¼Ð°ÑÐ¸Ð½Ð° Ð¾Ð´Ð¸Ð½Ð°ÐºÐ¾Ð²ÑÐ¹ ÐºÐ°ÑÐ°Ð»Ð¾Ð³ Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»ÑÑÐºÐ¸Ñ ÑÑÑÑÐ½ÑÑ "
+"Ð·Ð°Ð¿Ð¸ÑÐµÐ¹ (ÑÐ¾ ÐµÑÑÑ, Ð¿ÑÐ¸Ð½Ð°Ð´Ð»ÐµÐ¶Ð¸Ñ Ð»Ð¸ UID 1000 Ð½Ð° Ð¾Ð´Ð½Ð¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ðµ "
+"ÑÐ¾Ð¼Ñ Ð¶Ðµ ÑÐµÐ»Ð¾Ð²ÐµÐºÑ Ñ UID 1000 Ð½Ð° Ð´ÑÑÐ³Ð¾Ð¹). ÐÑÐ»Ð¸ ÑÑÐ»ÑÐºÐ¸ Ð½Ð° Ð´Ð²ÑÑ Ð¼Ð°ÑÐ¸Ð½Ð°Ñ "
+"ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑÑ, ÑÐ¾ Condor Ð±ÑÐ´ÐµÑ Ð·Ð°Ð¿ÑÑÐºÐ°ÑÑ ÐºÐ°Ð¶Ð´Ð¾Ðµ Ð·Ð°Ð´Ð°Ð½Ð¸Ðµ "
+"Ñ ÑÐµÐ¼ Ð¶Ðµ UID, Ñ ÐºÐ¾ÑÐ¾ÑÑÐ¼ Ð±ÑÐ»Ð¾ Ð¾ÑÐ¿ÑÐ°Ð²Ð»ÐµÐ½Ð¾ Ð·Ð°Ð´Ð°Ð½Ð¸Ðµ Ð¸ Ð¿Ð¾ÑÑÐ»Ð°ÑÑ ÑÐ»ÐµÐºÑÑÐ¾Ð½Ð½Ð¾Ðµ "
+"ÑÐ¾Ð¾Ð±ÑÐµÐ½Ð¸Ðµ "
+"Ð¾ Ð½ÑÐ¼ Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»Ñ@ÐÐÐÐÐ (Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÑ Ð´Ð°Ð½Ð½ÑÐ¹ ÑÑÐ»ÑÐº Ð² ÐºÐ°ÑÐµÑÑÐ²Ðµ ÐÐÐÐÐÐ). "
+"ÐÑÐ»Ð¸ ÑÑÐ»ÑÐºÐ¸ Ð½Ðµ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑÑ, ÑÐ¾ Condor Ð±ÑÐ´ÐµÑ Ð²ÑÐ¿Ð¾Ð»Ð½ÑÑÑ Ð²ÑÐµ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ Ñ Ð¿ÑÐ°Ð²Ð°Ð¼Ð¸ "
+"Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»Ñ Â«nobodyÂ». ÐÑÐ»Ð¸ Ð¾ÑÑÐ°Ð²Ð¸ÑÑ Ð¿Ð¾Ð»Ðµ Ð¿ÑÑÑÑÐ¼, ÑÐ¾ Condor Ð±ÑÐ´ÐµÑ Ð²ÑÐ¿Ð¾Ð»Ð½ÑÑÑ "
+"Ð²ÑÐµ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ Ð½Ð° ÑÑÐ¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ðµ Ñ Ð¿ÑÐ°Ð²Ð°Ð¼Ð¸ Ð¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÐµÐ»Ñ Â«nobodyÂ»."
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid ""
+"Any domain format supported by Condor can be used, including macro "
+"expressions. Example: $(FULL_HOSTNAME)"
+msgstr ""
+"ÐÐ¾Ð¶Ð½Ð¾ Ð¸ÑÐ¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°ÑÑ Ð»ÑÐ±Ð¾Ð¹ ÑÐ¾ÑÐ¼Ð°Ñ, Ð¿Ð¾Ð´Ð´ÐµÑÐ¶Ð¸Ð²Ð°ÐµÐ¼ÑÐ¹ "
+"Condor, Ð²ÐºÐ»ÑÑÐ°Ñ Ð²ÑÑÐ°Ð¶ÐµÐ½Ð¸Ñ Ñ Ð¼Ð°ÐºÑÐ¾ÑÐ°Ð¼Ð¸. ÐÑÐ¸Ð¼ÐµÑ: $(FULL_HOSTNAME)"
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid "File system domain label:"
+msgstr "Ð¯ÑÐ»ÑÐº-Ð´Ð¾Ð¼ÐµÐ½ ÑÐ°Ð¹Ð»Ð¾Ð²Ð¾Ð¹ ÑÐ¸ÑÑÐµÐ¼Ñ:"
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid ""
+"This label is an arbitrary string that is used to decide if a submitting "
+"machine and an execute machine share the same file system. In a dedicated "
+"cluster all machines will most likely use a shared file system and hence "
+"should use the same label. If left blank, it will automatically be set to "
+"the fully qualified hostname of the local machine, which will prevent Condor "
+"assuming that any two machines share a file system."
+msgstr ""
+"ÐÐ°Ð½Ð½ÑÐ¹ ÑÑÐ»ÑÐº Ð¿ÑÐµÐ´ÑÑÐ°Ð²Ð»ÑÐµÑ ÑÐ¾Ð±Ð¾Ð¹ Ð¿ÑÐ¾Ð¸Ð·Ð²Ð¾Ð»ÑÐ½ÑÑ ÑÑÑÐ¾ÐºÑ, ÐºÐ¾ÑÐ¾ÑÐ°Ñ "
+"Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÐµÑÑÑ Ð´Ð»Ñ Ð¿ÑÐ¸Ð½ÑÑÐ¸Ñ ÑÐµÑÐµÐ½Ð¸Ñ Ð¾ ÑÐ¾Ð¼, Ð¸Ð¼ÐµÐµÑ Ð»Ð¸ Ð¾ÑÐ¿ÑÐ°Ð²Ð»ÑÑÑÐ°Ñ Ð¼Ð°ÑÐ¸Ð½Ð° "
+"Ð¸ Ð¸ÑÐ¿Ð¾Ð»Ð½ÑÑÑÐ°Ñ Ð¼Ð°ÑÐ¸Ð½Ð° Ð¾Ð±ÑÑÑ ÑÐ°Ð¹Ð»Ð¾Ð²ÑÑ ÑÐ¸ÑÑÐµÐ¼Ñ. Ð Ð²ÑÐ´ÐµÐ»ÐµÐ½Ð½ÑÑ "
+"Ð¼Ð°ÑÐ¸Ð½Ð½ÑÑ ÐºÐ»Ð°ÑÑÐµÑÐ°Ñ, Ð²ÐµÑÐ¾ÑÑÐ½ÐµÐµ Ð²ÑÐµÐ³Ð¾, Ð±ÑÐ´ÐµÑ Ð¸ÑÐ¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°Ð½Ð° Ð¾Ð±ÑÐ°Ñ ÑÐ°Ð¹Ð»Ð¾Ð²Ð°Ñ "
+"ÑÐ¸ÑÑÐµÐ¼Ð° "
+"Ð¸ Ð¿Ð¾ÑÑÐ¾Ð¼Ñ Ð½Ð° Ð²ÑÐµÑ Ð¼Ð°ÑÐ¸Ð½Ð°Ñ Ð´Ð¾Ð»Ð¶ÐµÐ½ Ð±ÑÑÑ Ð¾Ð´Ð¸Ð½Ð°ÐºÐ¾Ð²ÑÐ¹ ÑÑÐ»ÑÐº. "
+"ÐÑÐ»Ð¸ Ð¾ÑÑÐ°Ð²Ð¸ÑÑ Ð¿Ð¾Ð»Ðµ Ð¿ÑÑÑÑÐ¼, ÑÐ¾ ÐµÐ¼Ñ Ð±ÑÐ´ÐµÑ Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸ "
+"Ð¿ÑÐ¸ÑÐ²Ð¾ÐµÐ½Ð¾ Ð·Ð½Ð°ÑÐµÐ½Ð¸Ðµ Ð¿Ð¾Ð»Ð½Ð¾ÑÑÑÑ Ð¾Ð¿ÑÐµÐ´ÐµÐ»ÑÐ½Ð½Ð¾Ð³Ð¾ Ð´Ð¾Ð¼ÐµÐ½Ð½Ð¾Ð³Ð¾ Ð¸Ð¼ÐµÐ½Ð¸ "
+"Ð»Ð¾ÐºÐ°Ð»ÑÐ½Ð¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ñ, ÑÑÐ¾ Ð·Ð°ÑÑÐ°Ð²Ð¸Ñ Condor ÑÑÐ¸ÑÐ°ÑÑ, ÑÑÐ¾ "
+"Ð¾Ð±ÑÐ°Ñ ÑÐ°Ð¹Ð»Ð¾Ð²Ð°Ñ ÑÐ¸ÑÑÐµÐ¼Ð° Ð½Ðµ Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÐµÑÑÑ."
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid "Example: my_shared_volume"
+msgstr "ÐÑÐ¸Ð¼ÐµÑ: my_shared_volume"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:9001
+msgid "Perform a \"Personal Condor installation\"?"
+msgstr "ÐÑÐ¿Ð¾Ð»Ð½Ð¸ÑÑ Â«Ð¿ÐµÑÑÐ¾Ð½Ð°Ð»ÑÐ½ÑÑ ÑÑÑÐ°Ð½Ð¾Ð²ÐºÑ CondorÂ»?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:9001
+msgid ""
+"A Personal Condor installation is a fully functional Condor pool on a single "
+"machine. Condor will automatically configure and advertise as many slots as "
+"it detects CPU cores on this machine. Condor daemons will not be available "
+"through external network interfaces."
+msgstr ""
+"ÐÐµÑÑÐ¾Ð½Ð°Ð»ÑÐ½Ð°Ñ ÑÑÑÐ°Ð½Ð¾Ð²ÐºÐ° Condor â ÑÑÐ¾ Ð¿Ð¾Ð»Ð½Ð¾ÑÑÑÑ ÑÐ°Ð±Ð¾ÑÐ¾ÑÐ¿Ð¾ÑÐ¾Ð±Ð½ÑÐ¹ "
+"Ð¿ÑÐ» Condor, ÑÐ¾ÑÑÐ¾ÑÑÐ¸Ð¹ Ð¸Ð· Ð¾Ð´Ð½Ð¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ñ. "
+"Condor Ð±ÑÐ´ÐµÑ Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸ Ð½Ð°ÑÑÑÐ¾ÐµÐ½ Ð¸ Ð¾Ð±ÑÑÐ²Ð¸Ñ ÐºÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ð¾ ÑÐ»Ð¾ÑÐ¾Ð² "
+"ÑÐ°Ð²Ð½ÑÐ¼ ÐºÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ñ Ð¾Ð±Ð½Ð°ÑÑÐ¶ÐµÐ½Ð½ÑÑ Ð¿ÑÐ¾ÑÐµÑÑÐ¾ÑÐ½ÑÑ ÑÐ´ÐµÑ Ð½Ð° ÑÑÐ¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ðµ. "
+"Ð¡Ð»ÑÐ¶Ð±Ñ Condor Ð±ÑÐ´ÑÑ Ð½ÐµÐ´Ð¾ÑÑÑÐ¿Ð½Ñ Ð½Ð° Ð²Ð½ÐµÑÐ½Ð¸Ñ ÑÐµÑÐµÐ²ÑÑ Ð¸Ð½ÑÐµÑÑÐµÐ¹ÑÐ°Ñ."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:9001
+msgid ""
+"This configuration is not appropriate if this machine is intended to be a "
+"member of a pool."
+msgstr ""
+"Ð­ÑÐ° Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ° Ð½Ðµ Ð¿Ð¾Ð´ÑÐ¾Ð´Ð¸Ñ, ÐµÑÐ»Ð¸ Ð´Ð°Ð½Ð½Ð°Ñ Ð¼Ð°ÑÐ¸Ð½Ð° Ð´Ð¾Ð»Ð¶Ð½Ð° Ð²ÑÐ¾Ð´Ð¸ÑÑ "
+"Ð² Ð¿ÑÐ»."
+
+#. Type: string
+#. Description
+#: ../condor.templates:10001
+msgid "Amount of physical memory to withhold from Condor (in MB):"
+msgstr "ÐÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ð¾ ÑÐ¸Ð·Ð¸ÑÐµÑÐºÐ¾Ð¹ Ð¿Ð°Ð¼ÑÑÐ¸, Ð½Ðµ Ð·Ð°Ð½Ð¸Ð¼Ð°ÐµÐ¼Ð¾Ð¹ Condor (Ð² ÐÐ):"
+
+#. Type: string
+#. Description
+#: ../condor.templates:10001
+msgid ""
+"By default, Condor considers all the physical memory of a machine as "
+"available to be used by Condor jobs. If this value is defined, Condor "
+"subtracts it from the amount of memory it advertises as available."
+msgstr ""
+"ÐÐ¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ, Condor ÑÑÐ¸ÑÐ°ÐµÑ Ð´Ð¾ÑÑÑÐ¿Ð½Ð¾Ð¹ Ð´Ð»Ñ Ð·Ð°Ð´Ð°Ð½Ð¸Ð¹ "
+"Ð²ÑÑ ÑÐ¸Ð·Ð¸ÑÐµÑÐºÑÑ Ð¿Ð°Ð¼ÑÑÑ Ð¼Ð°ÑÐ¸Ð½Ñ. Ð£ÐºÐ°Ð·ÑÐ²Ð°ÐµÐ¼Ð¾Ðµ Ð·Ð´ÐµÑÑ Ð·Ð½Ð°ÑÐµÐ½Ð¸Ðµ "
+"Ð±ÑÐ´ÐµÑ Ð²ÑÑÑÐµÐ½Ð¾ Condor Ð¸Ð· ÐºÐ¾Ð»Ð¸ÑÐµÑÑÐ²Ð° Ð¿Ð°Ð¼ÑÑÐ¸ Ð¾Ð±ÑÑÐ²Ð»ÑÐµÐ¼Ð¾Ð¹ ÐºÐ°Ðº "
+"Ð´Ð¾ÑÑÑÐ¿Ð½Ð°Ñ."
+
+#. Type: string
+#. Description
+#: ../condor.templates:10001
+msgid "Example (to reserve 1 GB): 1024"
+msgstr "ÐÑÐ¸Ð¼ÐµÑ (ÑÐµÐ·ÐµÑÐ²Ð¸ÑÑÐµÑÑÑ 1ÐÐ): 1024"
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid "Machines with write access to this host:"
+msgstr "ÐÐ°ÑÐ¸Ð½Ñ, Ð¸Ð¼ÐµÑÑÐ¸Ðµ Ð¿ÑÐ°Ð²Ð¾ Ð·Ð°Ð¿Ð¸ÑÐ¸ Ð½Ð° ÑÑÐ¾Ð¼ ÑÐ·Ð»Ðµ:"
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid ""
+"All machines that are to participate in the Condor pool need to be listed "
+"here. This setting can be a plain comma-separated list, a domain with "
+"wildcards, or a macro expression. By default only localhost is allowed to "
+"access Condor daemons on this machine."
+msgstr ""
+"ÐÐ´ÐµÑÑ ÑÑÐµÐ±ÑÐµÑÑÑ Ð¿ÐµÑÐµÑÐ¸ÑÐ»Ð¸ÑÑ Ð²ÑÐµ Ð¼Ð°ÑÐ¸Ð½Ñ, ÐºÐ¾ÑÐ¾ÑÑÐµ Ð²ÑÐ¾Ð´ÑÑ Ð² Ð¿ÑÐ» Condor. "
+"ÐÐ°Ð½Ð½Ð°Ñ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ° Ð¼Ð¾Ð¶ÐµÑ Ð¿ÑÐµÐ´ÑÑÐ°Ð²Ð»ÑÑÑ ÑÐ¾Ð±Ð¾Ð¹ ÑÐ¿Ð¸ÑÐ¾Ðº Ð·Ð½Ð°ÑÐµÐ½Ð¸Ð¹ ÑÐµÑÐµÐ· "
+"Ð·Ð°Ð¿ÑÑÑÑ, Ð´Ð¾Ð¼ÐµÐ½ Ñ Ð¼Ð°ÑÐºÐ¾Ð¹ Ð¸Ð»Ð¸ Ð²ÑÑÐ°Ð¶ÐµÐ½Ð¸Ðµ Ñ Ð¼Ð°ÐºÑÐ¾ÑÐ°Ð¼Ð¸. ÐÐ¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ, ÑÐ¾Ð»ÑÐºÐ¾ "
+"localhost ÑÐ°Ð·ÑÐµÑÑÐ½ Ð´Ð¾ÑÑÑÐ¿ Ðº ÑÐ»ÑÐ¶Ð±Ð°Ð¼ Condor Ð½Ð° ÑÑÐ¾Ð¹ Ð¼Ð°ÑÐ¸Ð½Ðµ."
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid "Example: *.condor-pool.example.org"
+msgstr "ÐÑÐ¸Ð¼ÐµÑ: *.condor-pool.example.org"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:12001
+msgid "Run Condor jobs regardless of other machine activity?"
+msgstr "ÐÑÐ¿Ð¾Ð»Ð½ÑÑÑ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ Condor Ð½ÐµÐ·Ð°Ð²Ð¸ÑÐ¸Ð¼Ð¾ Ð¾Ñ Ð´ÑÑÐ³Ð¾Ð¹ Ð°ÐºÑÐ¸Ð²Ð½Ð¾ÑÑÐ¸ Ð½Ð° Ð¼Ð°ÑÐ¸Ð½Ðµ?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:12001
+msgid ""
+"By default Condor only starts jobs when a machine is idle, i.e. no keyboard "
+"activity or CPU load for some time. Moreover, it also suspends jobs whenever "
+"there is console activity and doesn't continue them until the machine "
+"becomes idle again. However, for a dedicated compute node or a Personal "
+"Condor installation it might be desirable to always start jobs as soon as "
+"they are submitted (given that resources are still available), and to run "
+"them continuously regardless of other activity on this machine."
+msgstr ""
+"ÐÐ¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ, Condor Ð·Ð°Ð¿ÑÑÐºÐ°ÐµÑ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ ÑÐ¾Ð»ÑÐºÐ¾ ÐºÐ¾Ð³Ð´Ð° Ð¼Ð°ÑÐ¸Ð½Ð° Ð¿ÑÐ¾ÑÑÐ°Ð¸Ð²Ð°ÐµÑ, "
+"ÑÐ¾ ÐµÑÑÑ, ÐºÐ¾Ð³Ð´Ð° ÐºÐ°ÐºÐ¾Ðµ-ÑÐ¾ Ð²ÑÐµÐ¼Ñ Ð½ÐµÑ Ð°ÐºÑÐ¸Ð²Ð½Ð¾ÑÑÐ¸ ÐºÐ»Ð°Ð²Ð¸Ð°ÑÑÑÑ Ð¸Ð»Ð¸ Ð½Ð°Ð³ÑÑÐ·ÐºÐ¸ Ð¦Ð. "
+"ÐÑÐ¾Ð¼Ðµ ÑÑÐ¾Ð³Ð¾, Ð¾Ð½ ÑÐ°ÐºÐ¶Ðµ Ð¿ÑÐ¸Ð¾ÑÑÐ°Ð½Ð°Ð²Ð»Ð¸Ð²Ð°ÐµÑ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ Ð¿ÑÐ¸ Ð¿Ð¾ÑÐ²Ð»ÐµÐ½Ð¸Ð¸ Ð°ÐºÑÐ¸Ð²Ð½Ð¾ÑÑÐ¸ "
+"Ð½Ð° ÐºÐ¾Ð½ÑÐ¾Ð»Ð¸ Ð¸ Ð½Ðµ Ð¿ÑÐ¾Ð´Ð¾Ð»Ð¶Ð°ÐµÑ Ð²ÑÐ¿Ð¾Ð»Ð½ÐµÐ½Ð¸Ðµ Ð¿Ð¾ÐºÐ° Ð¼Ð°ÑÐ¸Ð½Ð° ÑÐ½Ð¾Ð²Ð° Ð½Ðµ ÑÑÐ°Ð½ÐµÑ Ð¿ÑÐ¾ÑÑÐ°Ð¸Ð²Ð°ÑÑ."
+" "
+"ÐÐ´Ð½Ð°ÐºÐ¾, Ð½Ð° Ð²ÑÐ´ÐµÐ»ÐµÐ½Ð½Ð¾Ð¼ Ð²ÑÑÐ¸ÑÐ»Ð¸ÑÐµÐ»ÑÐ½Ð¾Ð¼ ÑÐ·Ð»Ðµ Ð¸Ð»Ð¸ Ð¿ÑÐ¸ Ð¿ÐµÑÑÐ¾Ð½Ð°Ð»ÑÐ½Ð¾Ð¹ ÑÑÑÐ°Ð½Ð¾Ð²ÐºÐµ "
+"Condor Ð¼Ð¾Ð¶ÐµÑ Ð±ÑÑÑ Ð¶ÐµÐ»Ð°ÑÐµÐ»ÑÐ½Ð¾ Ð²ÑÐµÐ³Ð´Ð° Ð·Ð°Ð¿ÑÑÐºÐ°ÑÑ Ð·Ð°Ð´Ð°Ð½Ð¸Ñ ÑÑÐ°Ð·Ñ Ð¿Ð¾ÑÐ»Ðµ Ð¸Ñ "
+"Ð¿Ð¾ÑÑÑÐ¿Ð»ÐµÐ½Ð¸Ñ (Ð¿Ð¾ÐºÐ° ÐµÑÑÑ ÑÐµÑÑÑÑÑ), Ð¸ Ð²ÑÐ¿Ð¾Ð»Ð½ÑÑÑ Ð¸Ñ Ð±ÐµÐ· Ð¿ÐµÑÐµÑÑÐ²Ð° Ð½ÐµÐ·Ð°Ð²Ð¸ÑÐ¸Ð¼Ð¾ Ð¾Ñ "
+"Ð´ÑÑÐ³Ð¾Ð¹ Ð½Ð°Ð³ÑÑÐ·ÐºÐ¸ Ð½Ð° Ð¼Ð°ÑÐ¸Ð½Ñ."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:12001
+msgid ""
+"If you plan to compose a custom policy it is best to keep Condor's default "
+"here."
+msgstr ""
+"ÐÑÐ»Ð¸ Ð²Ñ Ð¿Ð»Ð°Ð½Ð¸ÑÑÐµÑÐµ ÑÐ¾ÑÑÐ°Ð²Ð¸ÑÑ ÑÐ²Ð¾Ñ ÑÐ¾Ð±ÑÑÐ²ÐµÐ½Ð½ÑÑ Ð¿Ð¾Ð»Ð¸ÑÐ¸ÐºÑ, Ð»ÑÑÑÐµ "
+"Ð¾ÑÑÐ°Ð²Ð¸ÑÑ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÑ Condor Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ."
+
+

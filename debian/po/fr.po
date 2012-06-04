@@ -1,0 +1,366 @@
+# Translation of Condor debconf template to French
+# Copyright (C) 2012 Debian French l10n team
+# This file is distributed under the same license as the condor package.
+# Translator:
+# Steve Petruzzello <dlist@bluewin.ch>, 2012
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: condor\n"
+"Report-Msgid-Bugs-To: condor@packages.debian.org\n"
+"POT-Creation-Date: 2012-04-30 20:35+0200\n"
+"PO-Revision-Date: 2012-05-10 09:44+0200\n"
+"Last-Translator: Steve Petruzzello <dlist@bluewin.ch>\n"
+"Language-Team: French <debian-l10n-french@lists.debian..org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: title
+#. Description
+#: ../condor.templates:1001
+msgid "Condor configuration"
+msgstr "Configuration de Condor"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:2001
+msgid "Manage initial Condor configuration automatically?"
+msgstr "Faut-il gÃ©rer la configuration initiale de Condor automatiquementÂ ?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:2001
+msgid ""
+"The setup for Condor can be handled automatically, asking a few questions to "
+"create an initial configuration appropriate for a machine that is either a "
+"member of an existing pool or a fully functional \"Personal Condor "
+"installation\". This generated initial configuration can be further extended "
+"later on."
+msgstr ""
+"La mise en place de Condor peut Ãªtre gÃ©rÃ©e automatiquement en rÃ©pondant Ã  "
+"quelques questions afin de crÃ©er une configuration initiale appropriÃ©e pour "
+"une machine qui est soit membre d'un groupement (Â«Â poolÂ Â») existant, soit "
+"une Â«Â installation personnelle de CondorÂ Â» complÃ¨tement fonctionnelle. Cette "
+"configuration initiale gÃ©nÃ©rÃ©e peut Ãªtre par la suite modifiÃ©e."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:2001
+msgid ""
+"Otherwise, Condor will be installed with a default configuration that needs "
+"to be customized manually."
+msgstr ""
+"Dans le cas contraire, Condor sera installÃ© avec une configuration "
+"par dÃ©faut qu'il est conseillÃ© d'adapter manuellement."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:3001
+msgid "Enable submission of usage statistics?"
+msgstr "Faut-il activer l'inscription des statistiques d'utilisationÂ ?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:3001
+msgid ""
+"The Condor authors politely request that each Condor pool sends them "
+"periodic updates with basic information about the status of the pool. "
+"Updates include only the total number of machines, the number of jobs "
+"submitted, the number of machines running jobs, the host name of the central "
+"manager, and the name of the pool. These updates help the Condor Team see "
+"how Condor is being used around the world."
+msgstr ""
+"Les auteurs de Condor suggÃ¨rent que chaque groupement de Condor "
+"leur envoie rÃ©guliÃ¨rement des informations basiques Ã  propos de l'Ã©tat du "
+"groupement. Ces informations incluent le nombre total de machines, le nombre "
+"de travaux soumis, le nombre de machines exÃ©cutant des travaux, le nom "
+"d'hÃ´te du gestionnaire central et le nom du groupement. Elles "
+"permettent Ã  l'Ã©quipe de Condor de savoir comment leur logiciel est utilisÃ© Ã  "
+"travers le monde."
+
+#. Type: string
+#. Description
+#: ../condor.templates:4001
+msgid "Address of the central manager:"
+msgstr "Adresse du gestionnaire centralÂ :"
+
+#. Type: string
+#. Description
+#: ../condor.templates:4001
+msgid ""
+"If this machine is intended to join an existing Condor pool, the address of "
+"the central manager machine has to be specified. Any address format "
+"supported by Condor can be used, including macro expressions."
+msgstr ""
+"Si cette machine doit rejoindre un groupement Condor existant, il est alors "
+"nÃ©cessaire d'indiquer l'adresse de la machine faisant office de gestionnaire "
+"central. Tout format d'adresse gÃ©rÃ© par Condor peut Ãªtre utilisÃ© en incluant "
+"des macros."
+
+#. Type: string
+#. Description
+#: ../condor.templates:4001
+msgid "Example: condor-manager.example.org"
+msgstr "ExempleÂ : condor-manager.example.org"
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:5001
+msgid "Job submission"
+msgstr "Soumission de travail"
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:5001
+msgid "Job execution"
+msgstr "ExÃ©cution de travail"
+
+#. Type: multiselect
+#. Choices
+#: ../condor.templates:5001
+msgid "Central manager"
+msgstr "Gestionnaire central"
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:5002
+msgid "Role of this machine in the Condor pool:"
+msgstr "RÃ´le de cette machine au sein du groupement CondorÂ :"
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:5002
+msgid ""
+"Please specify the intended role or roles of this machine, for which the "
+"corresponding daemons will be started automatically."
+msgstr ""
+"Veuillez indiquer le(s) rÃ´le(s) prÃ©vu(s) pour cette machine afin que les "
+"dÃ©mons correspondant soient dÃ©marrÃ©s automatiquement."
+
+#. Type: multiselect
+#. Description
+#: ../condor.templates:5002
+msgid ""
+"A machine in a Condor pool can have multiple roles. In general there is one "
+"central manager and multiple nodes that run jobs. Often the central manager "
+"is also the machine from which users submit jobs. However, it is also "
+"possible to have multiple machines available for job submission."
+msgstr ""
+"Une machine dans un groupement Condor peut avoir diffÃ©rents rÃ´les. En "
+"gÃ©nÃ©ral, il y a un gestionnaire central et plusieurs nÅuds qui exÃ©cutent des "
+"travaux. Il arrive souvent que le gestionnaire central soit aussi la machine "
+"depuis laquelle les utilisateurs soumettent leurs travaux. Toutefois, il est "
+"aussi possible d'avoir plusieurs machines disponibles pour la soumission de "
+"travaux."
+
+#. Type: string
+#. Description
+#: ../condor.templates:6001
+msgid "Email address of the local Condor administrator:"
+msgstr "Adresse Ã©lectronique de l'administrateur local de CondorÂ :"
+
+#. Type: string
+#. Description
+#: ../condor.templates:6001
+msgid ""
+"The Condor administrator will receive error messages if something goes wrong "
+"with Condor on this machine."
+msgstr ""
+"L'administrateur de Condor recevra les messages d'erreur en cas de problÃ¨me "
+"avec Condor sur cette machine."
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid "user directory domain label:"
+msgstr "Ãtiquette de domaine du rÃ©pertoire utilisateurÂ :"
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid ""
+"This label is a string that Condor uses to decide if a submitting machine "
+"and an execute machine share the same directory of user accounts (that is, "
+"whether UID 1000 on one machine is the same person as UID 1000 on the "
+"other). If the labels on the two machines match, Condor will run each job "
+"under the UID that submitted the job, and send emails about them to "
+"user@DOMAIN (using this label as the value of DOMAIN). If not, Condor will "
+"run all jobs as user \"nobody\". Leaving it blank will cause Condor to run "
+"all jobs on this machine as user \"nobody\"."
+msgstr ""
+"Cette Ã©tiquette est une chaÃ®ne de caractÃ¨res que Condor utilise pour dÃ©cider "
+"si une machine qui soumet un travail et une machine qui exÃ©cute le travail "
+"partagent le mÃªme rÃ©pertoire d'un compte utilisateur (c'est-Ã -dire si l'UID "
+"1000 d'une machine est la mÃªme personne que l'UID 1000 d'une autre machine). "
+"Si les Ã©tiquettes des deux machines correspondent, Condor exÃ©cutera chaque "
+"travail sous l'UID qui a soumis le travail et enverra un message "
+"Ã©lectronique Ã  l'adresse utilisateur@DOMAINE (en utilisant l'Ã©tiquette comme "
+"valeur pour DOMAINE). Dans le cas contraire, Condor exÃ©cutera tous les "
+"travaux en tant qu'utilisateur Â«Â nobodyÂ Â». Si vous laissez ce champ vide, "
+"Condor exÃ©cutera tous les travaux en tant qu'utilisateur Â«Â nobodyÂ Â»."
+
+#. Type: string
+#. Description
+#: ../condor.templates:7001
+msgid ""
+"Any domain format supported by Condor can be used, including macro "
+"expressions. Example: $(FULL_HOSTNAME)"
+msgstr ""
+"Tout format de domaine gÃ©rÃ© par Condor peut Ãªtre utilisÃ© en incluant des "
+"macros. ExempleÂ : $(NOM_DHOTE_COMPLET)"
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid "File system domain label:"
+msgstr "Ãtiquette de domaine du systÃ¨me de fichiersÂ :"
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid ""
+"This label is an arbitrary string that is used to decide if a submitting "
+"machine and an execute machine share the same file system. In a dedicated "
+"cluster all machines will most likely use a shared file system and hence "
+"should use the same label. If left blank, it will automatically be set to "
+"the fully qualified hostname of the local machine, which will prevent Condor "
+"assuming that any two machines share a file system."
+msgstr ""
+"Cette Ã©tiquette est une chaÃ®ne de caractÃ¨res alÃ©atoire qui est utilisÃ©e pour "
+"dÃ©cider si une machine qui soumet un travail et une machine qui exÃ©cute un "
+"travail partagent un mÃªme systÃ¨me de fichiers. Dans une grappe dÃ©diÃ©e de "
+"machines, il est fort probable que toutes les machines utilisent un systÃ¨me "
+"de fichiers partagÃ© et par consÃ©quent elles devraient utiliser la mÃªme "
+"Ã©tiquette. Si vous laissez ce champ vide, "
+"le nom d'hÃ´te complÃ¨tement qualifiÃ© de la machine "
+"locale sera utilisÃ©, ce qui empÃªchera Condor de supposer que des machines prises deux Ã  "
+"deux partagent le mÃªme systÃ¨me de fichiers."
+
+#. Type: string
+#. Description
+#: ../condor.templates:8001
+msgid "Example: my_shared_volume"
+msgstr "ExempleÂ : mon_volume_partagÃ©"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:9001
+msgid "Perform a \"Personal Condor installation\"?"
+msgstr "Faut-il effectuer une Â«Â installation personnelle de CondorÂ Â»Â ?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:9001
+msgid ""
+"A Personal Condor installation is a fully functional Condor pool on a single "
+"machine. Condor will automatically configure and advertise as many slots as "
+"it detects CPU cores on this machine. Condor daemons will not be available "
+"through external network interfaces."
+msgstr ""
+"Une Â«Â installation personnelle de CondorÂ Â» est un groupement de Condor "
+"autonome sur une seule machine. Condor configurera et "
+"annoncera automatiquement autant de crÃ©neaux (Â«Â slotsÂ Â») que de cÅurs CPU "
+"dÃ©tectÃ©s sur cette machine. Les dÃ©mons de Condor ne seront pas disponibles "
+"pour des interfaces rÃ©seau externes."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:9001
+msgid ""
+"This configuration is not appropriate if this machine is intended to be a "
+"member of a pool."
+msgstr ""
+"Cette configuration n'est pas adaptÃ©e si cette machine est prÃ©vue pour "
+"Ãªtre membre d'un groupement."
+
+#. Type: string
+#. Description
+#: ../condor.templates:10001
+msgid "Amount of physical memory to withhold from Condor (in MB):"
+msgstr "QuantitÃ© de mÃ©moire physique Ã  retenir pour Condor (en Mo)Â :"
+
+#. Type: string
+#. Description
+#: ../condor.templates:10001
+msgid ""
+"By default, Condor considers all the physical memory of a machine as "
+"available to be used by Condor jobs. If this value is defined, Condor "
+"subtracts it from the amount of memory it advertises as available."
+msgstr ""
+"Condor considÃ¨re par dÃ©faut que toute la mÃ©moire physique d'une machine est "
+"disponible pour les travaux Condor. Si cette valeur est dÃ©finie, elle sera "
+"soustraite Ã  la quantitÃ© de mÃ©moire annoncÃ©e comme Ã©tant disponible."
+
+#. Type: string
+#. Description
+#: ../condor.templates:10001
+msgid "Example (to reserve 1 GB): 1024"
+msgstr "Exemple pour rÃ©server 1Â GoÂ : 1024"
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid "Machines with write access to this host:"
+msgstr "Machines ayant un accÃ¨s en Ã©criture sur cet hÃ´teÂ :"
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid ""
+"All machines that are to participate in the Condor pool need to be listed "
+"here. This setting can be a plain comma-separated list, a domain with "
+"wildcards, or a macro expression. By default only localhost is allowed to "
+"access Condor daemons on this machine."
+msgstr ""
+"Toutes les machines qui feront partie d'un groupement Condor doivent Ãªtre "
+"indiquÃ©es ici. Ce paramÃ©trage peut Ãªtre une liste simple sÃ©parÃ©e par des "
+"virgules, un domaine avec des caractÃ¨res gÃ©nÃ©riques (Â«Â wildcardsÂ Â») ou une "
+"macro. Par dÃ©faut seul l'hÃ´te local a la permission d'accÃ©der aux dÃ©mons "
+"Condor de cette machine."
+
+#. Type: string
+#. Description
+#: ../condor.templates:11001
+msgid "Example: *.condor-pool.example.org"
+msgstr "ExempleÂ : *.groupement-condor.example.org"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:12001
+msgid "Run Condor jobs regardless of other machine activity?"
+msgstr ""
+"Faut-il exÃ©cuter les travaux de Condor malgrÃ© l'activitÃ© des autres "
+"machinesÂ ?"
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:12001
+msgid ""
+"By default Condor only starts jobs when a machine is idle, i.e. no keyboard "
+"activity or CPU load for some time. Moreover, it also suspends jobs whenever "
+"there is console activity and doesn't continue them until the machine "
+"becomes idle again. However, for a dedicated compute node or a Personal "
+"Condor installation it might be desirable to always start jobs as soon as "
+"they are submitted (given that resources are still available), and to run "
+"them continuously regardless of other activity on this machine."
+msgstr ""
+"Par dÃ©faut, Condor ne dÃ©marre des travaux que si une machine est inoccupÃ©e, "
+"c'est Ã  dire qu'il n'y a aucune activitÃ© du clavier ou de charge du CPU "
+"pendant un certain temps. De plus, il suspend un travail quand il dÃ©tecte de "
+"l'activitÃ© sur une console et ne continue que quand la machine redevient "
+"inoccupÃ©e. Toutefois, pour un nÅud dÃ©diÃ© ou une Â«Â installation personnelle "
+"de Condor Â Â», il peut Ãªtre souhaitable de toujours dÃ©buter un travail dÃ¨s "
+"que soumis (en supposant que les ressources soient encore disponibles) et de "
+"l'exÃ©cuter en continu indiffÃ©remment d'autres activitÃ©s sur cette machine."
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:12001
+msgid ""
+"If you plan to compose a custom policy it is best to keep Condor's default "
+"here."
+msgstr ""
+"Si vous prÃ©voyez de crÃ©er une politique personnalisÃ©e, il est prÃ©fÃ©rable de "
+"conserver la politique par dÃ©faut de Condor ici."
