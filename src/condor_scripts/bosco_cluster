@@ -16,12 +16,12 @@ cat << EOM
 usage: $0 command
 
 commands:
- -l|--list          List the installed clusters
- -a|--add host      Install and add a cluster
- -r|--remove host   Remove the installed cluster
- -s|--status host   Get status of installed cluster
- -t|--test host     Test the installed cluster
- -h|--help          Show this help message
+ -l|--list                  List the installed clusters
+ -a|--add host [sched]      Install and add a cluster, with scheduler sched
+ -r|--remove host           Remove the installed cluster
+ -s|--status host           Get status of installed cluster
+ -t|--test host             Test the installed cluster
+ -h|--help                  Show this help message
 
 Where host is user@fqdn.example.com
 
@@ -30,10 +30,14 @@ EOM
 
 list()
 {
+    # Line looks like:
+    # entry=user@host.edu max_queued=2000 cluster_type=pbs
     # Check for the cluster_list file
     if [ -e $CLUSTERLIST_LOCATION ]; then
         while read line; do
-            expr "$line" : "entry=\(.*\) "
+            name=`expr "$line" : "entry=\(.*\) max"`
+            type=`expr "$line" : ".*cluster_type=\(.*\)"`
+            echo $name/$type
         done < $CLUSTERLIST_LOCATION
     else
         echo "No clusters configured"
@@ -76,9 +80,11 @@ check_cluster_list () {
 add_cluster_to_list () {
     # $1 = cluster to add
     # $2 = max queued setting of cluster
+    # $3 = cluster batch system (pbs, lsf, sge)
     # Remove the host, and readd
     remote_host=$1
     max_queued=$2
+    cluster_type=$3
     check_cluster_list $remote_host
     if [ $? -eq 0 ]; then
         tmpfile=`mktemp`
@@ -86,7 +92,7 @@ add_cluster_to_list () {
         mv tmpfile $CLUSTERLIST_LOCATION
     fi
 
-    echo "entry=$remote_host max_queued=$max_queued" >> $CLUSTERLIST_LOCATION
+    echo "entry=$remote_host max_queued=$max_queued cluster_type=$cluster_type" >> $CLUSTERLIST_LOCATION
 
 }
 
@@ -381,6 +387,22 @@ done
 # The rest of the file covers the 'add' cluster functionality.
 ################################################################
 
+# Shift away the "--"
+shift
+if [ "x$1" == "x" ]; then
+    echo "Warning: No batch system specified, defaulting to PBS"
+    echo "If this is incorrect, rerun the command with the batch system specified"
+    echo 
+    cluster_type="pbs"
+else
+    cluster_type=$1
+    if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" ]; then
+        echo "Unrecognized batch system: $cluster_type"
+        echo "Please specify one of the following: pbs, lsf, sge, condor"
+        exit 1
+    fi
+fi
+
 # Check if the cluster is already in the list
 check_cluster_list $remote_host
 if [ $? -eq 0 ]; then
@@ -479,7 +501,7 @@ rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 
 # Add the cluster to the cluster list
-add_cluster_to_list $remote_host $max_queued
+add_cluster_to_list $remote_host $max_queued $cluster_type
 
 echo "Installation complete"
 
