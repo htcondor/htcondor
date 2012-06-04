@@ -148,7 +148,7 @@ Copyright: 2011, Joseph Turner
 License: Apache-2.0
 
 Files: src/condor_contrib/rcondor/*
-Copryright: 2010, Jeffrey M. Dost <jdost@ucsd.edu>
+Copyright: 2010, Jeffrey M. Dost <jdost@ucsd.edu>
 License: BSD-3-clause
 
 Files: src/condor_utils/my_getopt.cpp
@@ -213,7 +213,7 @@ Copyright: 2004, Andreas Hirczy <ahi@itp.tu-graz.ac.at>
            2004-2006, Peter Troeger <peter.troeger@hpi.uni-potsdam.de>
            2006, Guillaume Pernot <gpernot@praksys.org>
            2010-2012, Michael Hanke <mih@debian.org>
-Licenses: Apache-2.0
+License: Apache-2.0
 
 
 License: Apache-2.0
