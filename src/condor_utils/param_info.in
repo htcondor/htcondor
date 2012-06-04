@@ -5412,7 +5412,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=313
 
-[CLASSAD_LIB_PATH]
+[CLASSAD_USER_LIBS]
 aliases=
 default=
 version=0.0.0
@@ -10491,7 +10491,7 @@ id=603
 
 [JOB_DEFAULT_REQUESTMEMORY]
 aliases=
-default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,1) 
+default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 version=7.7.6
 range=.*
 state=default
@@ -10596,6 +10596,22 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Default modification to a disk resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
+
+[ENABLE_DEPRECATION_WARNINGS]
+aliases=
+default=true
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable warnings about the use of deprecated features
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd

@@ -188,10 +188,12 @@ void _condor_prestart( int syscall_mode );
 /* I hate C++, especially when it is badly mixed with C */
 extern void init_syscall_connection_noret( int );
 void init_image_with_file_name( const char *ckpt_name );
+void init_image_relocatable( int );
+void init_image_with_iwd( char * );
 void restart(void);
 
 /* These are the various remote system calls we need to worry about */
-extern int REMOTE_CONDOR_register_syscall_version(char *version);
+extern int REMOTE_CONDOR_register_syscall_version(const char *version);
 extern int REMOTE_CONDOR_chdir(const char *path);
 extern int REMOTE_CONDOR_image_size(int kbytes);
 extern int REMOTE_CONDOR_get_ckpt_mode(enum condor_signal_t sig);
@@ -203,6 +205,7 @@ extern int REMOTE_CONDOR_get_ckpt_name(char **path);
 extern int _condor_dprintf_works;
 extern int	_condor_DebugFD;
 static int do_remote_syscalls = 1;
+
 
 /* This is what we use to determine if an executable has been linked with
 	Condor. Do not rename this function because things like analyze_exec 
@@ -462,7 +465,7 @@ MAIN( int argc, char *argv[], char **envp )
 
 		_linked_with_condor_message();
 			// Also, register the version with the shadow
-		REMOTE_CONDOR_register_syscall_version( (char *) CondorVersion() );
+		REMOTE_CONDOR_register_syscall_version( CondorVersion() );
 
 		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 

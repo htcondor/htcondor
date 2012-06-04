@@ -70,6 +70,15 @@ public:
 		 * hierarchy if possible.
 		 */
 	static void removeClusterSpooledFiles(int cluster);
+
+		/* Restore ownership of spool directory to condor after job ran.
+		   Returns true on success.
+		 */
+	static bool chownSpoolDirectoryToCondor(ClassAd const *job_ad);
+
+		/* Returns true if this job requires a spool directory.
+		 */
+	static bool jobRequiresSpoolDirectory(ClassAd const *job_ad);
 };
 
 char *gen_ckpt_name ( char const *dir, int cluster, int proc, int subproc );

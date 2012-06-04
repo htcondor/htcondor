@@ -1,8 +1,9 @@
 if (NOT WINDOWS)
-    # BSD has both BSD tar, named "tar", and GNU tar, named "gtar" in ports...
-    if (NOT BSD_UNIX)
+    if (LINUX)
 		set( TAR_COMMAND tar)
     else()
+    	# BSD and Solaris have both BSD tar, named "tar", and GNU tar, named "gtar" in ports...
+
 		# Macos is _like_ bsd, but calls it "gnutuar"
 		FIND_PROGRAM(TAR_COMMAND NAMES "gtar" "gnutar")
 

@@ -228,8 +228,8 @@ int LiveJobImpl::GetQDate() const
 
 	if ( !this->Get ( ATTR_Q_DATE, attr ) )
 	{
-		// default to 0?
-		return 0;
+		// default to current
+		return time(NULL);
 	}
 
 	return strtol ( attr->GetValue(), ( char ** ) NULL, 10 );
@@ -595,7 +595,9 @@ void Job::Set ( const char *_name, const char *_value ) {
 	if (m_live_job) {
 		m_live_job->Set(_name,_value);
 	}
-	// ignore for history jobs
+	if (m_submission) {
+        m_submission->UpdateQdate(this->GetQDate());
+    }
 }
 
 void Job::Remove ( const char *_name ) {

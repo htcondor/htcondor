@@ -1316,4 +1316,49 @@ Spaces appear in this example where they are permitted.
 \end{verbatim}
 \normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:classad-userfunctions}
+Extending classads with user written functions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The classad language provides a rich set of functions.  It is possible
+to add new functions to the classad language without recompiling
+the condor system or the classad library.  This requires implementing the
+new function in the C++ programming language, compiling the code into a shared
+library, and telling Condor where in the filesystem the share library lives.
+
+While the details of the classad implementation are beyond the scope of this document,
+the classad source distribution ships with an example source file that extends classads
+by adding two new functions,named todays\_date and double.  This can be used as a model for users to implement
+their own functions. To deploy this example extension, follow the following steps on Linux:
+
+\begin{itemize}
+\item{Download the classad source distribution from \URL{http://www.cs.wisc.edu/condor/classad}}
+\item{Unpack the tarball}
+\item{Inspect the source file shared.cpp  This one file contains the whole extension.}
+\item{Build shared.cpp into a shared library.  On Linux, the command line to do so is
+\begin{verbatim}
+$ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \
+  -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
+\end{verbatim}
+}
+\item{Copy the file shared.so somewhere all the condor tools and daemons can read.
+\begin{verbatim}
+$ cp shared.so `condor_config_val LIBEXEC`
+\end{verbatim}
+}
+\item{Tell condor to load the shared library into all tools and daemons, by setting the \Macro{CLASSAD\_USER\_LIBS} parameter to the full name of the shared library.  In this case,
+\begin{verbatim}
+CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
+\end{verbatim}
+}
+\item{Restart condor}
+\item{Test the new functions by running
+\begin{verbatim}
+$ condor_status -format "%s\n" todays_date()
+\end{verbatim}
+}
+
+\end{itemize}
+
 \index{ClassAd|)}

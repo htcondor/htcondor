@@ -1202,13 +1202,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			char *tmp = param(knob.Value());
 			if( tmp ) {
 				ExprTree *tree = NULL;
-				EvalResult result;
+				classad::Value result;
+				int val;
 				ParseClassAdRvalExpr(tmp, tree);
 				if ( tree &&
-					 EvalExprTree(tree,req_classad,mach_classad,&result) &&
-					 result.type == LX_INTEGER )
+					 EvalExprTree(tree,req_classad,mach_classad,result) &&
+					 result.IsIntegerValue(val) )
 				{
-					req_classad->Assign(resources[i],result.i);
+					req_classad->Assign(resources[i],val);
 
 				}
 				if (tree) delete tree;
@@ -1347,7 +1348,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 			// And the partitionable parent needs a new claim
 		rip->r_cur = new Claim( rip );
-			// Stash this claim as the "leftover_claim", which 
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+			// Call update() in case we were never matched, i.e. no state change
+			// Note: update() may create a new claim if pass thru Owner state
+		rip->update();
+
+		resmgr->addResource( new_rip );
+
+			// XXX: This is overkill, but the best way, right now, to
+			// get many of the new_rip's attributes calculated.
+		resmgr->compute( A_ALL );
+		resmgr->compute( A_TIMEOUT | A_UPDATE );
+
+			// Stash pslot claim as the "leftover_claim", which
 			// we will send back directly to the schedd iff it supports
 			// receiving partitionable slot leftover info as part of the
 			// new-style extended claiming protocol. 
@@ -1362,17 +1377,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			leftover_claim = rip->r_cur;
 			ASSERT(leftover_claim);
 		}
-
-			// Recompute the partitionable slot's resources
-		rip->change_state( unclaimed_state );
-		rip->update(); // in case we were never matched, i.e. no state change
-
-		resmgr->addResource( new_rip );
-
-			// XXX: This is overkill, but the best way, right now, to
-			// get many of the new_rip's attributes calculated.
-		resmgr->compute( A_ALL );
-		resmgr->compute( A_TIMEOUT | A_UPDATE );
 
 			// Now we continue on with the newly spawned Resource
 			// getting claimed

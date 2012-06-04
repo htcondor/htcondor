@@ -445,11 +445,12 @@ is not applied (for gt5 jobs).
 \end{itemize}
 
 Normally, Condor will automatically detect whether a service is GRAM2 or
-GRAM5 and interact with it accordingly. It doesn't matter whether you
-say the resource is gt2 or gt5. You can disable this detection by setting
-the configuation parameter \Macro{GRAM\_VERSION\_DETECTION} to \Expr{False}.
-But then you must accurately identify each resource as either gt2 or gt5
-in your \Macro{grid\_resource} submit attribute.
+GRAM5 and interact with it accordingly. 
+It does not matter whether gt2 or gt5 is specified. 
+Disable this detection by setting
+the configuration variable \Macro{GRAM\_VERSION\_DETECTION} to \Expr{False}.
+If disabled, each resource must be accurately identified as either gt2 or gt5
+in the \SubmitCmd{grid\_resource} submit command.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:My-Proxy}Credential Management with \Prog{MyProxy}}

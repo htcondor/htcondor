@@ -192,11 +192,12 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 	m_auxid("")
 {
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
-	EvalResult val;
+	classad::Value val;
+	const char *str;
 	if ( ad && tree && 
-		 EvalExprTree(tree,ad,NULL,&val) && val.type==LX_STRING && val.s )
+		 EvalExprTree(tree,ad,NULL,val) && val.IsStringValue(str) )
 	{
-		m_auxid = val.s;
+		m_auxid = str;
 	}
 }
 
@@ -1512,13 +1513,14 @@ count( ClassAd *job )
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
-	// we don't actually need this for the current set of other_stats
+	// build a list of other stats pools that match this job
 	//
-	//ScheddOtherStats * other_stats = NULL;
-	//if (scheduler.OtherPoolStats.AnyEnabled()) {
-	//	other_stats = OtherPoolStats.Matches(*job);
-	//}
-	//#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+	time_t now = time(NULL);
+	ScheddOtherStats * other_stats = NULL;
+	if (scheduler.OtherPoolStats.AnyEnabled()) {
+		other_stats = scheduler.OtherPoolStats.Matches(*job,now);
+	}
+	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
@@ -1635,14 +1637,14 @@ count( ClassAd *job )
 		int job_image_size = 0;
 		job->LookupInteger("ImageSize_RAW", job_image_size);
 		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
-		//OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+		OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
 		int job_start_date = 0;
 		int job_running_time = 0;
 		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
-			job_running_time = (time(NULL) - job_start_date);
+			job_running_time = (now - job_start_date);
 		scheduler.stats.JobsRunningRuntimes += job_running_time;
-		//OTHER.JobsRunningRuntimes += job_running_time;
+		OTHER.JobsRunningRuntimes += job_running_time;
 	} else if (status == HELD) {
 		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
@@ -2270,44 +2272,6 @@ jobCleanupNeedsThread( int /* cluster */, int /* proc */ )
 }
 
 
-/*
-  Return true if we should create/chown the spool directory for this job.
-*/
-bool
-jobIsSandboxed( ClassAd * ad )
-{
-	ASSERT(ad);
-	int stage_in_start = 0;
-	// int never_create_sandbox_expr = 0;
-
-		// Spooled jobs should return true, because they already
-		// have a spool directory, so we need to manage it
-		// (i.e. chown it to the correct user)
-	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
-	if( stage_in_start > 0 ) {
-		return true;
-	}
-
-	int univ = CONDOR_UNIVERSE_VANILLA;
-	ad->LookupInteger( ATTR_JOB_UNIVERSE, univ );
-
-		// As of 7.5.5, parallel jobs specify JobRequiresSandbox=true,
-		// because they use the spool directory for chirp stuff to make
-		// sshd work.  For backward compatibility with prior releases,
-		// we assume all parallel jobs require this unless they explicitly
-		// specify otherwise.
-	int job_requires_sandbox_expr = 0;
-	bool create_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
-
-	if( ad->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) )
-	{
-		create_sandbox = job_requires_sandbox_expr ? true : false;
-	}
-
-	return create_sandbox;
-}
-
-
 bool
 getSandbox( int cluster, int proc, MyString & path )
 {
@@ -2341,7 +2305,7 @@ aboutToSpawnJobHandler( int cluster, int proc, void* )
 
 	ClassAd * job_ad = GetJobAd( cluster, proc );
 	ASSERT( job_ad ); // No job ad?
-	if( ! jobIsSandboxed(job_ad) ) {
+	if( ! SpooledJobFiles::jobRequiresSpoolDirectory(job_ad) ) {
 			// nothing more to do...
 		FreeJobAd( job_ad );
 		return TRUE;
@@ -2586,40 +2550,8 @@ jobIsFinished( int cluster, int proc, void* )
 
 #ifndef WIN32
 
-	if( jobIsSandboxed(job_ad) ) {
-		MyString sandbox;
-		if( getSandbox(cluster, proc, sandbox) ) {
-			uid_t src_uid = 0;
-			uid_t dst_uid = get_condor_uid();
-			gid_t dst_gid = get_condor_gid();
-
-			MyString jobOwner;
-			job_ad->LookupString( ATTR_OWNER, jobOwner );
-
-			passwd_cache* p_cache = pcache();
-			if( p_cache->get_user_uid( jobOwner.Value(), src_uid ) ) {
-				if( ! recursive_chown(sandbox.Value(), src_uid,
-									  dst_uid, dst_gid, true) )
-				{
-					dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
-							 "%d to %d.%d.  User may run into permissions "
-							 "problems when fetching sandbox.\n", 
-							 cluster, proc, sandbox.Value(),
-							 src_uid, dst_uid, dst_gid );
-				}
-			} else {
-				dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
-						 "for user %s.  Cannot chown \"%s\".  User may "
-						 "run into permissions problems when fetching "
-						 "job sandbox.\n", cluster, proc, jobOwner.Value(),
-						 sandbox.Value() );
-			}
-		} else {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to find sandbox for this "
-					 "job.  Cannot chown sandbox to user.  User may run "
-					 "into permissions problems when fetching sandbox.\n",
-					 cluster, proc );
-		}
+	if( SpooledJobFiles::jobRequiresSpoolDirectory(job_ad) ) {
+		SpooledJobFiles::chownSpoolDirectoryToCondor(job_ad);
 	}
 
 #else	/* WIN32 */
@@ -9214,12 +9146,10 @@ Scheduler::child_exit(int pid, int status)
 				//
 			if ( this->LocalUniverseJobsRunning > 0 ) {
 				this->LocalUniverseJobsRunning--;
-				this->jobExitCode(job_id,status);
 			}
 			else
 			{
-				EXCEPT("Internal consistency error: No local universe jobs were"
-					" expected to be running, but one just exited!");
+				dprintf(D_ALWAYS, "Warning: unexpected count for  local universe jobs: %d\n", LocalUniverseJobsRunning);
 			}
 		} else {
 				// A real shadow
@@ -10467,6 +10397,7 @@ Scheduler::Init()
 		names.truncate(0);
 
 		OtherPoolStats.RemoveDisabled();
+		OtherPoolStats.Reconfig();
 	}
 
 	/* default 5 megabytes */
@@ -12000,7 +11931,9 @@ Scheduler::publish( ClassAd *cad ) {
 	
 	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
 	cad->Assign( ATTR_DISK, (int)disk_space );
-	
+
+	cad->Assign( ATTR_CPUS, 1 );
+
 		// -------------------------------------------------------
 		// Local Universe Attributes
 		// -------------------------------------------------------

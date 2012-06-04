@@ -117,20 +117,21 @@ public:
   
   virtual bool CheckClassAd(ClassAd* Ad) {
     ExprTree* tree;
-    EvalResult result;
+    classad::Value result;
+    bool val;
 
     if (ParseClassAdRvalExpr(Constraint.Value(), tree) != 0) {
         return false;
     }
 
-    if (!EvalExprTree(tree, Ad, NULL, &result)) {
+    if (!EvalExprTree(tree, Ad, NULL, result)) {
         delete tree;
         return false;
     }
 
     delete tree;
-    if (result.type == LX_INTEGER) {
-        return (bool)result.i;
+    if (result.IsBooleanValue(val)) {
+        return val;
     }
 
     return false;

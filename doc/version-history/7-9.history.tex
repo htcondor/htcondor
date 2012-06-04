@@ -29,6 +29,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item \Condor{status} now returns the schedd ad directly from the schedd daemon
+if both -direct and -schedd are given on the command line.
+\Ticket{2492}
+
+\item Added status and echo command line options to \Condor{wait} command.
+\Ticket{2926}
+
+\item Changed default for USE\_PROCD setting to be true for the master.  This means that by
+default the master will start a \Condor{procd} to be used by it and all other daemons on
+that machine.
+\Ticket{2911}
+
 \item Added logging output flag \Dflag{LEVEL} which causes Condor to include the logging level
 flags in effect for each line of logging output.
 \Ticket{2712}
@@ -40,6 +52,13 @@ added to \Condor{q} in 7.7.6.
 \item Enhanced the classad log system (e.g. the job que log) to report the record number on parse failures, 
 and improved its ability to detect parse failures closer to the point of corruption.
 \Ticket{2934}
+
+\item Added an \Opt{-evaluate} option to \Condor{config\_val}, which causes the configured value queried from
+a given daemon to be evaluated with respect to that daemon's ClassAd.
+\Ticket{856}
+
+\item Added code to \Condor{dagman} so that VARS assignments in top-level DAGs are applied to splices
+\Ticket{1780}
 
 \end{itemize}
 
@@ -58,14 +77,26 @@ started that evaluate to "value".  An optional variable of the form
 for each set of statistics.
 \Ticket{2862}
 
+\item The new \SubmitCmd{batch\_queue} submit description file command
+(and new job ClassAd attribute \Attr{BatchQueue}) specified which job
+queue to use for grid universe jobs of type
+\SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge}.
+\Ticket{2996}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
+\item The EC2 GAHP will now respect X509\_CERT\_DIR for all (secure) connections.
+\Ticket{2823}
+
 \item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
 \Ticket{2893}
+
+\item Made \Condor{negotiator} logic for computing submitter limits properly aware of \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
+\Ticket{2952}
 
 \end{itemize}
 

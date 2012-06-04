@@ -339,8 +339,8 @@ log_except (const char *msg)
 extern "C" void
 log_old_starter_shadow_suspend_event_hack (char *s1, char *s2)
 {
-	char *magic_suspend = "TISABH Starter: Suspended user job: ";
-	char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
+	const char *magic_suspend = "TISABH Starter: Suspended user job: ";
+	const char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
 
 	/* This should be bug enough to hold the two string params */
 	char buffer[BUFSIZ * 2 + 2];

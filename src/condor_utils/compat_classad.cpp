@@ -46,159 +46,6 @@ IsStringEnd(const char *str, unsigned off)
 
 namespace compat_classad {
 
-// EvalResult ctor
-EvalResult::EvalResult()
-{
-	type = LX_UNDEFINED;
-	debug = false;
-}
-
-// EvalResult dtor
-EvalResult::~EvalResult()
-{
-	if ((type == LX_STRING || type == LX_TIME) && (s)) {
-		delete [] s;
-	}
-}
-
-void EvalResult::clear()
-{
-	this->~EvalResult();
-	type = LX_UNDEFINED;
-}
-
-void
-EvalResult::deepcopy(const EvalResult & rhs)
-{
-	type = rhs.type;
-	debug = rhs.debug;
-	switch ( type ) {
-		case LX_INTEGER:
-		case LX_BOOL:
-			i = rhs.i;
-			break;
-		case LX_FLOAT:
-			f = rhs.f;
-			break;
-		case LX_STRING:
-				// need to make a deep copy of the string
-			s = strnewp( rhs.s );
-			break;
-		default:
-			break;
-	}
-}
-
-// EvalResult copy ctor
-EvalResult::EvalResult(const EvalResult & rhs)
-{
-	deepcopy(rhs);
-}
-
-// EvalResult assignment op
-EvalResult & EvalResult::operator=(const EvalResult & rhs)
-{
-	if ( this == &rhs )	{	// object assigned to itself
-		return *this;		// all done.
-	}
-
-		// deallocate any state in this object by invoking dtor
-	this->~EvalResult();
-
-		// call copy ctor to make a deep copy of data
-	deepcopy(rhs);
-
-		// return reference to invoking object
-	return *this;
-}
-
-
-void EvalResult::fPrintResult(FILE *fi)
-{
-    switch(type)
-    {
-	case LX_INTEGER :
-
-	     fprintf(fi, "%d", this->i);
-	     break;
-
-	case LX_FLOAT :
-
-	     fprintf(fi, "%f", this->f);
-	     break;
-
-	case LX_STRING :
-
-	     fprintf(fi, "%s", this->s);
-	     break;
-
-	case LX_NULL :
-
-	     fprintf(fi, "NULL");
-	     break;
-
-	case LX_UNDEFINED :
-
-	     fprintf(fi, "UNDEFINED");
-	     break;
-
-	case LX_ERROR :
-
-	     fprintf(fi, "ERROR");
-	     break;
-
-	default :
-
-	     fprintf(fi, "type unknown");
-	     break;
-    }
-    fprintf(fi, "\n");
-}
-
-void EvalResult::toString(bool force)
-{
-	switch(type) {
-		case LX_STRING:
-			break;
-		case LX_FLOAT: {
-			MyString buf;
-			buf.sprintf("%lf",f);
-			s = strnewp(buf.Value());
-			type = LX_STRING;
-			break;
-		}
-		case LX_BOOL:	
-			type = LX_STRING;
-			if (i) {
-				s = strnewp("TRUE");
-			} else {
-				s = strnewp("FALSE");
-			}	
-			break;
-		case LX_INTEGER: {
-			MyString buf;
-			buf.sprintf("%d",i);
-			s = strnewp(buf.Value());
-			type = LX_STRING;
-			break;
-		}
-		case LX_UNDEFINED:
-			if( force ) {
-				s = strnewp("UNDEFINED");
-				type = LX_STRING;
-			}
-			break;
-		case LX_ERROR:
-			if( force ) {
-				s = strnewp("ERROR");
-				type = LX_STRING;
-			}
-			break;
-		default:
-			ASSERT("Unknown classad result type");
-	}
-}
-
 static StringList ClassAdUserLibs;
 
 bool ClassAd::m_initConfig = false;
@@ -474,10 +321,7 @@ bool stringListMember_func( const char *name,
 
 	StringList sl( list_str.c_str(), delim_str.c_str() );
 	int rc;
-	if ( sl.number() == 0 ) {
-		result.SetUndefinedValue();
-		return true;
-	} else if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
+	if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
 		rc = sl.contains( item_str.c_str() );
 	} else {
 		rc = sl.contains_anycase( item_str.c_str() );
@@ -1478,7 +1322,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 0 : 1;
 				rc = 1;
 			}
 		}

@@ -2332,30 +2332,31 @@ DedicatedScheduler::computeSchedule( void )
 
 				busy_resources->Rewind();
 				while (ClassAd *machine = busy_resources->Next()) {
-					EvalResult result;
+					classad::Value result;
 					bool requirement = false;
 
 						// See if this machine has a true
 						// SCHEDD_PREEMPTION_REQUIREMENT
 					requirement = EvalExprTree( preemption_req, machine, job,
-												&result );
+												result );
 					if (requirement) {
-						if (result.type == LX_INTEGER) {
-							requirement = result.i;
+						bool val;
+						if (result.IsBooleanValue(val)) {
+							requirement = val;
 						}
 					}
 
 						// If it does
 					if (requirement) {
-						float rank = 0.0;
+						double rank = 0.0;
 
 							// Evaluate its SCHEDD_PREEMPTION_RANK in
 							// the context of this job
 						int rval;
 						rval = EvalExprTree( preemption_rank, machine, job,
-											 &result );
-						if( !rval || result.type != LX_FLOAT) {
-								// The result better be a float
+											 result );
+						if( !rval || !result.IsNumber(rank) ) {
+								// The result better be a number
 							const char *s = ExprTreeToString( preemption_rank );
 							char *m = NULL;
 							machine->LookupString( ATTR_NAME, &m );
@@ -2365,7 +2366,6 @@ DedicatedScheduler::computeSchedule( void )
 							free(m);
 							continue;
 						}
-						rank = result.f;
 						preempt_candidate_array[num_candidates].rank = rank;
 						preempt_candidate_array[num_candidates].cluster_id = cluster;
 						preempt_candidate_array[num_candidates].machine_ad = machine;
@@ -2857,9 +2857,30 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 			unclaimed_candidate_machines.Rewind();
 			unclaimed_candidate_jobs.Rewind();
 			ClassAd *um;
+
+				// Loop over the machines, as there might be fewer unclaimed
+				// machines than idle jobs
 			while( (um = unclaimed_candidate_machines.Next()) ) {
 						// Make a resource request out of this job
-				generateRequest(unclaimed_candidate_jobs.Next());
+
+					// Make sure it matches this PSG
+				ClassAd *aJob = unclaimed_candidate_jobs.Next();
+				
+				char *previousPSG = NULL;
+				aJob->LookupString(ATTR_MATCHED_PSG, &previousPSG);
+				
+				if (previousPSG) {
+					// We've already munged the Requirements, don't do it again
+					// just update the matched PSG attr
+					free(previousPSG);
+				} else {
+					ExprTree *requirements = aJob->LookupExpr(ATTR_REQUIREMENTS);
+					const char *rhs = ExprTreeToString(requirements);
+					std::string newRequirements = std::string("( ParallelSchedulingGroup =?= my.Matched_PSG) && ")  + rhs;
+					aJob->AssignExpr(ATTR_REQUIREMENTS, newRequirements.c_str());
+				}
+				aJob->Assign(ATTR_MATCHED_PSG, groupName);
+				generateRequest(aJob);
 			}
 				
 

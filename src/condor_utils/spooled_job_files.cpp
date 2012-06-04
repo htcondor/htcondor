@@ -385,3 +385,80 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster)
 		}
 	}
 }
+
+bool
+SpooledJobFiles::chownSpoolDirectoryToCondor(ClassAd const *job_ad)
+{
+	bool result = true;
+
+#ifndef WIN32
+	std::string sandbox;
+	int cluster=-1,proc=-1;
+
+	job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID,proc);
+
+	getJobSpoolPath(cluster, proc, sandbox);
+
+	uid_t src_uid = 0;
+	uid_t dst_uid = get_condor_uid();
+	gid_t dst_gid = get_condor_gid();
+
+	MyString jobOwner;
+	job_ad->LookupString( ATTR_OWNER, jobOwner );
+
+	passwd_cache* p_cache = pcache();
+	if( p_cache->get_user_uid( jobOwner.Value(), src_uid ) ) {
+		if( ! recursive_chown(sandbox.c_str(), src_uid,
+							  dst_uid, dst_gid, true) )
+		{
+			dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
+					 "%d to %d.%d.  User may run into permissions "
+					 "problems when fetching sandbox.\n", 
+					 cluster, proc, sandbox.c_str(),
+					 src_uid, dst_uid, dst_gid );
+			result = false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
+				 "for user %s.  Cannot chown \"%s\".  User may "
+				 "run into permissions problems when fetching "
+				 "job sandbox.\n", cluster, proc, jobOwner.Value(),
+				 sandbox.c_str() );
+		result = false;
+	}
+
+#endif
+
+	return result;
+}
+
+bool
+SpooledJobFiles::jobRequiresSpoolDirectory(ClassAd const *job_ad)
+{
+	ASSERT(job_ad);
+	int stage_in_start = 0;
+
+	job_ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
+	if( stage_in_start > 0 ) {
+		return true;
+	}
+
+	int univ = CONDOR_UNIVERSE_VANILLA;
+	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, univ );
+
+		// As of 7.5.5, parallel jobs specify JobRequiresSandbox=true,
+		// because they use the spool directory for chirp stuff to make
+		// sshd work.  For backward compatibility with prior releases,
+		// we assume all parallel jobs require this unless they explicitly
+		// specify otherwise.
+	int job_requires_sandbox_expr = 0;
+	bool requires_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
+
+	if( (const_cast<ClassAd *>(job_ad))->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) )
+	{
+		requires_sandbox = job_requires_sandbox_expr ? true : false;
+	}
+
+	return requires_sandbox;
+}

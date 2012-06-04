@@ -65,7 +65,6 @@ sub setup_test_environment {
         #$end_path .= ";C:\\prereq\\ActivePerl-5.10.1\\bin";
 
         my $force_cygwin = 1; # set to 0 to work on removing cygwin dependancies from tests.
-        if ( not is_new_batlab() ) { $force_cygwin = 1; }
         if ( $force_cygwin ) {
             if ( ! ($ENV{PATH} =~ /cygwin/i) ) {
                 $front_path .= ";C:\\cygwin\\bin";
@@ -140,13 +139,6 @@ sub which {
 
 sub is_windows {
     if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
-        return 1;
-    }
-    return 0;
-}
-
-sub is_new_batlab {
-    if ( $ENV{COMPUTERNAME} =~ /^EXEC\-/ ) {
         return 1;
     }
     return 0;

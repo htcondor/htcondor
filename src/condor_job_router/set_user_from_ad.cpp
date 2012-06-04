@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
-#include "classad_newold.h"
 #include "condor_uid.h"
 #include "classad/classad_distribution.h"
 
@@ -33,12 +32,9 @@ void set_user_from_ad(classad::ClassAd const &ad)
         std::string owner;
         std::string domain;
         if( 0 == ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
-                classad::ClassAd ad_copy;
-                ClassAd old_ad;
+                ClassAd ad_copy;
                 ad_copy = ad;
-                if(new_to_old(ad_copy,old_ad)) {
-                        old_ad.dPrint(D_ALWAYS);
-                }
+                ad_copy.dPrint(D_ALWAYS);
                 EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
         }
         ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);
