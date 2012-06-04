@@ -137,7 +137,7 @@ Depends: libclassad3 (= ${binary:Version}), ${misc:Depends}
 Description: Condor classads expression language - development library
  Classified Advertisements (classads) are the lingua franca of Condor, used for
  describing jobs, workstations, and other resources. There is a protocol for
- evaluating whether two classads match, which is is used by the Condor central
+ evaluating whether two classads match, which is used by the Condor central
  manager to determine the compatibility of jobs, and workstations where they
  may be run.
  .
@@ -150,7 +150,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Condor classads expression language - runtime library
  Classified Advertisements (classads) are the lingua franca of Condor, used for
  describing jobs, workstations, and other resources. There is a protocol for
- evaluating whether two classads match, which is is used by the Condor central
+ evaluating whether two classads match, which is used by the Condor central
  manager to determine the compatibility of jobs, and workstations where they
  may be run.
  .
