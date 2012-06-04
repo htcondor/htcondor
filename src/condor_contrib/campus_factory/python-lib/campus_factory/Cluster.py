@@ -58,7 +58,7 @@ class Cluster:
         toSubmit = self.offline.Update( [self.cluster_unique] )
         
         # Get the delinquent sites
-        num_submit = offline.GetDelinquentSites([self.cluster_unique])
+        num_submit = self.offline.GetDelinquentSites([self.cluster_unique])
         logging.debug("toSubmit from offline %s", str(toSubmit))
         logging.debug("num_submit = %s\n", str(num_submit))
             
