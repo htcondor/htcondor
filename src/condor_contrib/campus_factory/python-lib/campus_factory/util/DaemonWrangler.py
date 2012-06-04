@@ -150,7 +150,7 @@ class DaemonWrangler:
         rlist = []
         if os.path.exists(file):
             (stdout, stderr) = RunExternal("ldd %s" % file)
-            for line in stdout.split('\n')::
+            for line in stdout.split('\n'):
                 tokens = line.split('=>')
                 if len(tokens) == 2:
                     lib_loc = ((tokens[1].strip()).split(' '))[0].strip()
