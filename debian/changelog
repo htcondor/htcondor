@@ -1,3 +1,19 @@
+condor (7.8.0~dfsg.1-2) unstable; urgency=low
+
+  * Actually include the Russian, Italian, and Polish translations.
+  * Add Debconf template translations:
+    - Swedish -- courtesy of Martin Bagge <brother@bsnet.se>
+      (Closes: #673877)
+    - French -- courtesy of Steve Petruzzello <dlist@bluewin.ch>
+      (Closes: #673138)
+    - Portuguese -- courtesy of Pedro Ribeiro <p.m42.ribeiro@gmail.com>
+      (Closes: #674943)
+  * Add explicit dependency on Python (for condor_router_history).
+  * Remove word duplication from package description.
+  * Fix typos in debian/copyright.
+
+ -- Michael Hanke <mih@debian.org>  Mon, 04 Jun 2012 08:49:07 +0200
+
 condor (7.8.0~dfsg.1-1) unstable; urgency=low
 
   * New upstream release (Closes: #670304). This is the first release of the
