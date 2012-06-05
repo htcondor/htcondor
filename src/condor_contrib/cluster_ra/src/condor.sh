@@ -67,8 +67,8 @@ metadata() {
 
   <actions>
     <action name="start" timeout="5"/>
-    <action name="stop" timeout="5"/>
-    <action name="recover" timeout="5"/>
+    <action name="stop" timeout="605"/>
+    <action name="recover" timeout="615"/>
     <action name="monitor" interval="30" timeout="5"/>
     <action name="status" interval="30" timeout="5"/>
     <action name="meta-data" timeout="5"/>
