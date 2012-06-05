@@ -136,6 +136,28 @@ remove_cluster () {
 }
 
 
+check_condor_q_classad () {
+    # Check a classad with a timeout
+    # Will continue to check classad until any output is given
+    # $1 = classad expression
+    # $2 = timeout (seconds)
+    # Returns 0 if not found, 1 if found
+    classad=$1
+    counter=$2
+
+    while [ $counter -gt 0 ]
+    do
+        cmd_out=`condor_q -const "$classad"`
+        if [ ! "x$cmd_out" == "x" ]; then
+            return 1
+        fi
+        counter=$(( $counter - 1 ))
+    done
+    return 0
+
+}
+
+
 test_cluster () {
     remote_host=$1
 
@@ -178,6 +200,7 @@ test_cluster () {
     submit_dir=`mktemp -d -p $root_submit_dir`
     submit_file=$submit_dir/condor.submit
     log_file=$submit_dir/logfile
+    test_id=bosco-test.$RANDOM
     cat > $submit_file << End_of_Submit
 universe = grid
 grid_resource = pbs $remote_host
@@ -188,6 +211,7 @@ executable = /bin/hostname
 log = $log_file
 skip_filechecks = true
 +remote_iwd="$default_pwd"
++bosco_test_id = "$test_id"
 queue
 End_of_Submit
 
@@ -200,6 +224,20 @@ End_of_Submit
         echo "Passed!"
     fi
     echo "Submission and log files for these jobs are in $root_submit_dir"
+
+    # Get the condor job id using the bosco_test_id
+    condor_jobid=`condor_q -const 'bosco_test_id =?= "$test_id"' -format '%i' ClusterId`
+
+    # Check if the jobmanager picked up the job
+    echo -n "Waiting for jobmanager to accept job..."
+    check_condor_q_classad "(ClusterId == '$condor_jobid') && (Managed == 'External')" 20
+    if [ $? -eq 0 ]; then
+        echo "Failed!"
+        echo "Check your gridmanager log, located at: `condor_config_val GRIDMANAGER_LOG`"
+        exit 1
+    else
+        echo "Passed"
+    fi
 
     # Check if there is anything in the user log
     echo -n "Checking for submission to remote pbs cluster (could take ~30 seconds)..."
@@ -218,7 +256,6 @@ End_of_Submit
     
     if [ $submit_found -eq 1 ]; then
         echo "Passed!"
-        echo "Execution on the remote cluster could take a while...Exiting"
     else
         echo "Failed"
         echo "Showing last 5 lines of logs:"
@@ -228,7 +265,38 @@ End_of_Submit
         else
             echo "Failed to open gridmanager log for reading"
         fi
+        exit 1
     fi
+    
+    # Check the remote job state
+    echo -n "Checking the current GridJobStatus: "
+    check_condor_q_classad "(ClusterId == '$condor_jobid') && (isUndefined(GridJobStatus) =!= TRUE)" 30
+    if [ $? -eq 0 ]; then
+        echo "Failed"
+        echo "GridManager did not update status of remote job"
+        echo "See GridManager log for information, located at `condor_config_val GRIDMANAGER_LOG`"
+        exit 1
+    else
+        condor_q -const "(ClusterId == '$condor_jobid')" -format '%s\n' GridJobStatus
+    fi
+
+    # Check for job to run
+    echo -n "Waiting for job to run... this could take a while (waiting 60 seconds)..."
+    check_condor_q_classad "(ClusterId == '$condor_jobid') && (JobStatus == 2)" 60
+    if [ $? -eq 0 ]; then
+        echo "Failed"
+        echo "The job did not start in the 60 seconds we waited."
+        echo "This doesn't always mean there is something wrong, maybe the remote queue is long..."
+        echo "Here is the current status of the job:"
+        condor_q $condor_jobid
+        exit 1
+    else
+        echo "Passed!"
+    fi
+
+    
+
+
 
 }
 
