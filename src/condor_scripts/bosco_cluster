@@ -300,9 +300,19 @@ End_of_Submit
     else
         echo "Passed!"
     fi
-
     
-
+    echo -n "Waiting for job to exit... this again could take a while (waiting 60 seconds)..."
+    check_condor_q_classad "(ClusterId == $condor_jobid) && (GridJobStatus=\"COMPLETED\") " 60
+    if [ $? -eq 0 ]; then
+        echo "Failed"
+        echo "The job did not end in 60 seconds.  This is not always a bad thing..."
+        echo "Maybe condor is waiting longer to poll for job completion?"
+        echo "Here is the current status of the job:"
+        condor_q $condor_jobid
+        exit 1
+    else
+        echo "Passed!"
+    fi
 
 
 }
