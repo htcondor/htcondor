@@ -314,6 +314,36 @@ End_of_Submit
         echo "Passed!"
     fi
 
+    # Check if there is anything in the user log
+    echo -n "Checking for completion in Condor, could take a while..."
+    counter=5
+    complete_found=0
+    while [ $counter -gt 0 ]
+    do
+        grep_out=`grep -A 2 -e "^005.*" $log_file`
+        if [ $? -eq 0 ]; then
+            complete_found=1
+            break
+        fi
+        sleep 10
+        counter=$(( $counter - 1 ))
+    done
+    
+    if [ $complete_found -eq 1 ]; then
+        echo "Passed!"
+    else
+        echo "Failed"
+        echo "Showing last 5 lines of logs:"
+        gridmanager_log=`condor_config_val GRIDMANAGER_LOG`
+        if [ -r $gridmanager_log ]; then
+            tail -5 $gridmanager_log
+        else
+            echo "Failed to open gridmanager log for reading"
+        fi
+        exit 1
+    fi
+ 
+
 
 }
 
