@@ -582,7 +582,15 @@ To enable dynamic provisioning,
 set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
 to \Expr{True}.
 The string \MacroNI{N} within the configuration variable name
-is the slot number.
+is the slot number.  For the most common cases the machine should
+be configured for one slot, managing all the resources on the machine.
+To do so, set the following configuration variables:
+
+\begin{verbatim}
+NUM_SLOTS=1
+NUM_SLOTS_TYPE_1=1
+SLOT_TYPE_1_PARTITIONABLE=true
+\end{verbatim}
 
 In a pool using dynamic provisioning, 
 jobs can have extra, and desired, resources specified in the submit
