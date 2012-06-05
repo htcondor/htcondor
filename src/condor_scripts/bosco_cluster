@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh 
 # bosco_add_host: Used to install ssh keys and blahp on remote hosts.
 
 # Bosco key location
@@ -147,11 +147,12 @@ check_condor_q_classad () {
 
     while [ $counter -gt 0 ]
     do
-        cmd_out=`condor_q -const "$classad"`
+        cmd_out=`condor_q -const "$classad" -format '%s' ClusterId `
         if [ ! "x$cmd_out" == "x" ]; then
             return 1
         fi
         counter=$(( $counter - 1 ))
+        sleep 1
     done
     return 0
 
@@ -226,11 +227,11 @@ End_of_Submit
     echo "Submission and log files for these jobs are in $root_submit_dir"
 
     # Get the condor job id using the bosco_test_id
-    condor_jobid=`condor_q -const 'bosco_test_id =?= "$test_id"' -format '%i' ClusterId`
+    condor_jobid=`condor_q -const "bosco_test_id =?= \"$test_id\"" -format '%i' ClusterId`
 
     # Check if the jobmanager picked up the job
     echo -n "Waiting for jobmanager to accept job..."
-    check_condor_q_classad "(ClusterId == '$condor_jobid') && (Managed == 'External')" 20
+    check_condor_q_classad "(ClusterId == $condor_jobid) && (Managed == \"External\")" 20
     if [ $? -eq 0 ]; then
         echo "Failed!"
         echo "Check your gridmanager log, located at: `condor_config_val GRIDMANAGER_LOG`"
@@ -269,8 +270,8 @@ End_of_Submit
     fi
     
     # Check the remote job state
-    echo -n "Checking the current GridJobStatus: "
-    check_condor_q_classad "(ClusterId == '$condor_jobid') && (isUndefined(GridJobStatus) =!= TRUE)" 30
+    echo -n "Checking the current GridJobStatus, this could take a very long time... "
+    check_condor_q_classad "(ClusterId == $condor_jobid) && (isUndefined(GridJobStatus) =!= TRUE)" 60
     if [ $? -eq 0 ]; then
         echo "Failed"
         echo "GridManager did not update status of remote job"
@@ -282,7 +283,7 @@ End_of_Submit
 
     # Check for job to run
     echo -n "Waiting for job to run... this could take a while (waiting 60 seconds)..."
-    check_condor_q_classad "(ClusterId == '$condor_jobid') && (JobStatus == 2)" 60
+    check_condor_q_classad "(ClusterId == $condor_jobid) && (JobStatus == 2)" 60
     if [ $? -eq 0 ]; then
         echo "Failed"
         echo "The job did not start in the 60 seconds we waited."
