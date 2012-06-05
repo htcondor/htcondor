@@ -73,6 +73,7 @@ class INFNBatchJob : public BaseJob
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	char *batchType;
+	char *remoteSandboxId;
 	char *remoteJobId;
 	int lastPollTime;
 	bool pollNow;
@@ -85,8 +86,11 @@ class INFNBatchJob : public BaseJob
 
 	void ProcessRemoteAd( ClassAd *remote_ad );
 
+	void SetRemoteSandboxId( const char *sandbox_id );
 	void SetRemoteJobId( const char *job_id );
+	void SetRemoteIds( const char *sandbox_id, const char *job_id );
 	ClassAd *buildSubmitAd();
+	void CreateSandboxId();
 
 		// If we're in the middle of a condor call that requires a ClassAd,
 		// the ad is stored here (so that we don't have to reconstruct the

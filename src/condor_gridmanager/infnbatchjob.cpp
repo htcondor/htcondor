@@ -45,6 +45,10 @@
 #define GM_REFRESH_PROXY		11
 #define GM_START				12
 #define GM_POLL_ACTIVE			13
+#define GM_SAVE_SANDBOX_ID		14
+#define GM_TRANSFER_INPUT		15
+#define GM_TRANSFER_OUTPUT		16
+#define GM_DELETE_SANDBOX		17
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -60,7 +64,11 @@ static const char *GMStateNames[] = {
 	"GM_HOLD",
 	"GM_REFRESH_PROXY",
 	"GM_START",
-	"GM_POLL_ACTIVE"
+	"GM_POLL_ACTIVE",
+	"GM_SAVE_SANDBOX_ID",
+	"GM_TRANSFER_INPUT",
+	"GM_TRANSFER_OUTPUT",
+	"GM_DELETE_SANDBOX",
 };
 
 #define JOB_STATE_UNKNOWN				-1
@@ -144,6 +152,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	enteredCurrentRemoteState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
+	remoteSandboxId = NULL;
 	remoteJobId = NULL;
 	lastPollTime = 0;
 	pollNow = false;
@@ -182,7 +191,18 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	buff = "";
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( buff != "" ) {
-		SetRemoteJobId( strchr( buff.c_str(), ' ' ) + 1 );
+		const char *token;
+		Tokenize( buff );
+
+			// TODO Do we want to handle values from older versions
+			//   i.e. ones with no sandbox id?
+		token = GetNextToken( " ", false );
+		if ( (token = GetNextToken( " ", false )) ) {
+			SetRemoteSandboxId( token );
+		}
+		if ( (token = GetNextToken( " ", false )) ) {
+			SetRemoteJobId( token );
+		}
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
@@ -260,6 +280,7 @@ INFNBatchJob::~INFNBatchJob()
 	if ( batchType != NULL ) {
 		free( batchType );
 	}
+	free( remoteSandboxId );
 	if ( remoteJobId != NULL ) {
 		free( remoteJobId );
 	}
@@ -363,9 +384,29 @@ void INFNBatchJob::doEvaluateState()
 			} else if ( condorState == COMPLETED ) {
 				gmState = GM_DELETE;
 			} else {
-				gmState = GM_SUBMIT;
+				gmState = GM_SAVE_SANDBOX_ID;
 			}
 			} break;
+		case GM_SAVE_SANDBOX_ID: {
+			// Create and save sandbox id for bosco
+			if ( remoteSandboxId == NULL ) {
+				CreateSandboxId();
+			}
+			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+			if ( attr_exists && attr_dirty ) {
+				requestScheddUpdate( this, true );
+				break;
+			}
+			gmState = GM_TRANSFER_INPUT;
+		} break;
+		case GM_TRANSFER_INPUT: {
+			// Transfer input sandbox
+			// TODO implement
+			//   Construct TransferRequest(s)
+			//   Send requests to both sides
+			//   Wait for completion (maybe in another state)
+			gmState = GM_SUBMIT;
+		} break;
 		case GM_SUBMIT: {
 			// Start a new remote submission for this job.
 
@@ -538,6 +579,14 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 			}
 		} break;
+		case GM_TRANSFER_OUTPUT: {
+			// Transfer output sandbox
+			// TODO Implement
+			//   Construct TransferRequests
+			//   send request(s) to both ends
+			//   wait for completion (possible in another state)
+			gmState = GM_DONE_SAVE;
+		} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
 			JobTerminated();
@@ -555,15 +604,15 @@ void INFNBatchJob::doEvaluateState()
 
 			// Nothing to do for this job type
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
-				gmState = GM_DELETE;
+				// noop
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				SetRemoteJobId( NULL );
+				SetRemoteIds( NULL, NULL );
 				requestScheddUpdate( this, false );
 				myResource->CancelSubmit( this );
-				gmState = GM_CLEAR_REQUEST;
 			}
+			gmState = GM_DELETE_SANDBOX;
 			} break;
 		case GM_CANCEL: {
 			// We need to cancel the job submission.
@@ -589,12 +638,20 @@ void INFNBatchJob::doEvaluateState()
 				SetRemoteJobId( NULL );
 				myResource->CancelSubmit( this );
 			}
-			if ( condorState == REMOVED ) {
+			gmState = GM_DELETE_SANDBOX;
+			} break;
+		case GM_DELETE_SANDBOX: {
+			// Delete the remote sandbox
+			// TODO implement
+			//   send delete command to remote side
+			//   wait for completion (possibly in another state)
+			SetRemoteSandboxId( NULL );
+			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
 				gmState = GM_CLEAR_REQUEST;
 			}
-			} break;
+		} break;
 		case GM_DELETE: {
 			// We are done with the job. Propagate any remaining updates
 			// to the schedd, then delete this object.
@@ -614,7 +671,7 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 			errorString = "";
-			SetRemoteJobId( NULL );
+			SetRemoteIds( NULL, NULL );
 			myResource->CancelSubmit( this );
 			JobIdle();
 			if ( submitLogged ) {
@@ -712,18 +769,43 @@ void INFNBatchJob::doEvaluateState()
 	} while ( reevaluate_state );
 }
 
+void INFNBatchJob::SetRemoteSandboxId( const char *sandbox_id )
+{
+	SetRemoteIds( sandbox_id, remoteJobId );
+}
+
 void INFNBatchJob::SetRemoteJobId( const char *job_id )
 {
-	free( remoteJobId );
-	if ( job_id ) {
-		remoteJobId = strdup( job_id );
-	} else {
-		remoteJobId = NULL;
+	SetRemoteIds( remoteSandboxId, job_id );
+}
+
+void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
+{
+	if ( sandbox_id != remoteSandboxId ) {
+		free( remoteSandboxId );
+		if ( sandbox_id ) {
+			remoteSandboxId = strdup( sandbox_id );
+		} else {
+			remoteSandboxId = NULL;
+		}
+	}
+
+	if ( job_id != remoteJobId ) {
+		free( remoteJobId );
+		if ( job_id ) {
+			ASSERT( remoteSandboxId );
+			remoteJobId = strdup( job_id );
+		} else {
+			remoteJobId = NULL;
+		}
 	}
 
 	std::string full_job_id;
-	if ( job_id ) {
-		sprintf( full_job_id, "%s %s", batchType, job_id );
+	if ( remoteSandboxId ) {
+		sprintf( full_job_id, "%s %s", batchType, remoteSandboxId );
+	}
+	if ( remoteJobId ) {
+		sprintf_cat( full_job_id, " %s", remoteJobId );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
@@ -1028,4 +1110,33 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
 
 	return submit_ad;
+}
+
+void INFNBatchJob::CreateSandboxId()
+{
+	// Build a name for the sandbox that will be unique to this job.
+	// Our pattern is <collector name>_<GlobalJobId>
+
+	// get condor pool name
+	// In case there are multiple collectors, strip out the spaces
+	// If there's no collector, insert a dummy name
+	char* pool_name = param( "COLLECTOR_HOST" );
+	if ( pool_name ) {
+		StringList collectors( pool_name );
+		free( pool_name );
+		pool_name = collectors.print_to_string();
+	} else {
+		pool_name = strdup( "NoPool" );
+	}
+
+	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
+	std::string job_id;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+
+	std::string unique_id;
+	sprintf( unique_id, "%s_%s", pool_name, job_id.c_str() );
+
+	free( pool_name );
+
+	SetRemoteSandboxId( unique_id.c_str() );
 }
