@@ -7464,7 +7464,7 @@ id=454
 
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -10395,7 +10395,7 @@ id=550
 
 [GROUP_SORT_EXPR]
 aliases=
-default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+default=ifThenElse(AccountingGroup=?="<none>",3.4e+38,ifThenElse(GroupQuota>0,GroupResourcesInUse/GroupQuota,3.3e+38))
 version=0.0.0
 range=.*
 state=default

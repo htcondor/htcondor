@@ -22,22 +22,22 @@ grid_resource = sge
 
 The sge grid type requires two variables to be set in the Condor
 configuration file.
-\Macro{SGE\_GAHP} is the path to the SGE GAHP server binary that is to be
+\Macro{BATCH\_GAHP} is the path to the GAHP server binary that is to be
 used to submit SGE jobs.
 \Macro{GLITE\_LOCATION} specifies the path to the directory containing the 
-SGE GAHP's configuration file and auxiliary binaries.
+batch GAHP's configuration file and auxiliary binaries.
 In the Condor distribution, this configuration and the auxiliary binaries
 are located in the directory \File{\MacroUNI{LIB}/glite/}.
-The SGE GAHP's configuration file will be at
+The batch GAHP's configuration file will be at
 \File{\MacroUNI{GLITE\_LOCATION}/etc/batch\_gahp.config}.
-The SGE GAHP's auxiliary binaries
+The batch GAHP's auxiliary binaries
 are in the directory \File{\MacroUNI{GLITE\_LOCATION}/bin/}.
 The Condor configuration file appears
 
 \footnotesize
 \begin{verbatim}
 GLITE_LOCATION = $(LIB)/glite
-SGE_GAHP       = $(GLITE_LOCATION)/bin/batch_gahp
+BATCH_GAHP     = $(GLITE_LOCATION)/bin/batch_gahp
 \end{verbatim}
 \normalsize
 
