@@ -25,6 +25,31 @@ class Cluster:
         if useOffline:
             self.offline = OfflineAds()
         
+        self.cluster_entry, self.cluster_type = self._ParseClusterId(cluster_unique)
+        if self.cluster_type == None:
+            self.cluster_type = "pbs"
+        
+    
+    def _ParseClusterId(self, cluster_unique):
+        """
+        @param cluster_unique: Cluster unique string usually sent with bosco_cluster -l
+        @return: ( cluster_entry, cluster_type )
+        """
+        
+        # Line: user@host.edu/pbs
+        split_cluster = cluster_unique.split("/")
+        if len(split_cluster) == 0:
+            return (None, None)
+        if len(split_cluster) == 1:
+            return ( split_cluster[0], None )
+        elif len(split_cluster) == 2:
+            return (split_cluster[0], split_cluster[1])
+        else:
+            logging.error("Unable to parse cluster id: %s" % cluster_unique)
+            logging.error("Going to just try using entry %s, with cluster type %s" % (split_cluster[0], split_cluster[1]))
+            return (split_cluster[0], split_cluster[1])
+        
+    
     def ClusterMeetPreferences(self):
         idleslots = self.status.GetIdleGlideins()
         if idleslots == None:
@@ -111,7 +136,7 @@ class Cluster:
         if get_option("CONDOR_HOST") == self.cluster_unique:
             remote_cluster = ""
         else:
-            remote_cluster = self.cluster_unique
+            remote_cluster = self.cluster_entry
         
         # TODO: These options should be moved to a better location
         options = {"WN_TMP": cluster_tmp, \
@@ -119,7 +144,8 @@ class Cluster:
                    "GLIDEIN_Site": self.cluster_unique, \
                    "BOSCOCluster": self.cluster_unique, \
                    "REMOTE_FACTORY": remote_factory_location, \
-                   "REMOTE_CLUSTER": remote_cluster }
+                   "REMOTE_CLUSTER": remote_cluster, \
+                   "REMOTE_SCHEDULER": self.cluster_type }
         
         options_str = ""
         for key in options.keys():
