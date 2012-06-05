@@ -112,9 +112,9 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_job_ad.Assign("_condor_SEND_LEFTOVERS",
 		param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true));
 
-	if( !sock->put_secret( m_claim_id.Value() ) ||
+	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !m_job_ad.put( *sock ) ||
-	    !sock->put( m_scheduler_addr.Value() ) ||
+	    !sock->put( m_scheduler_addr.c_str() ) ||
 	    !sock->put( m_alive_interval ) )
 	{
 		dprintf(failureDebugLevel(),
@@ -239,11 +239,11 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::deactivateClaim: ";
+		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 	int cmd;
@@ -254,7 +254,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	}
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
-		MyString err = "DCStartd::deactivateClaim: ";
+		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send command ";
 		if( graceful ) {
 			err += "DEACTIVATE_CLAIM";
@@ -262,7 +262,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 			err += "DEACTIVATE_CLAIM_FORCIBLY";
 		}
 		err += " to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		return false;
 	}
 		// Now, send the ClaimId
@@ -361,10 +361,10 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		// Now, try to get the reply
 	tmp->decode();
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
-		MyString err = "DCStartd::activateClaim: ";
+		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
 		err += _addr;
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
@@ -389,7 +389,7 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 {
 	setCmdStr( "requestClaim" );
 
-	MyString err_msg;
+	std::string err_msg;
 	switch( cType ) {
 	case CLAIM_COD:
 	case CLAIM_OPPORTUNISTIC:
@@ -398,7 +398,7 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 		err_msg = "Invalid ClaimType (";
 		err_msg += (int)cType;
 		err_msg += ')';
-		newError( CA_INVALID_REQUEST, err_msg.Value() );
+		newError( CA_INVALID_REQUEST, err_msg.c_str() );
 		return false;
 	}
 
@@ -722,11 +722,11 @@ DCStartd::vacateClaim( const char* name_vacate )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::vacateClaim: ";
+		std::string err = "DCStartd::vacateClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -773,11 +773,11 @@ DCStartd::_suspendClaim( )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::_suspendClaim: ";
+		std::string err = "DCStartd::_suspendClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -826,11 +826,11 @@ DCStartd::_continueClaim( )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::_continueClaim: ";
+		std::string err = "DCStartd::_continueClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -872,11 +872,11 @@ DCStartd::checkpointJob( const char* name_ckpt )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::checkpointJob: ";
+		std::string err = "DCStartd::checkpointJob: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -951,13 +951,13 @@ DCStartd::checkClaimId( void )
 	if( claim_id ) {
 		return true;
 	}
-	MyString err_msg;
+	std::string err_msg;
 	if( _cmd_str ) {
 		err_msg += _cmd_str;
 		err_msg += ": ";
 	}
 	err_msg += "called with no ClaimId";
-	newError( CA_INVALID_REQUEST, err_msg.Value() );
+	newError( CA_INVALID_REQUEST, err_msg.c_str() );
 	return false;
 }
 
@@ -965,16 +965,14 @@ DCStartd::checkClaimId( void )
 bool
 DCStartd::checkVacateType( VacateType t )
 {
-	MyString err_msg;
+	std::string err_msg;
 	switch( t ) {
 	case VACATE_GRACEFUL:
 	case VACATE_FAST:
 		break;
 	default:
-		err_msg = "Invalid VacateType (";
-		err_msg += (int)t;
-		err_msg += ')';
-		newError( CA_INVALID_REQUEST, err_msg.Value() );
+		sprintf(err_msg, "Invalid VacateType (%d)", (int)t);
+		newError( CA_INVALID_REQUEST, err_msg.c_str() );
 		return false;
 	}
 	return true;
@@ -988,7 +986,7 @@ DCClaimIdMsg::DCClaimIdMsg( int cmd, char const *claim_id ):
 
 bool DCClaimIdMsg::writeMsg( DCMessenger *, Sock *sock )
 {
-	if( !sock->put_secret( m_claim_id.Value() ) ) {
+	if( !sock->put_secret( m_claim_id.c_str() ) ) {
 		sockFailed( sock );
 		return false;
 	}
