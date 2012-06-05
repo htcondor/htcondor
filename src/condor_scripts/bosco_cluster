@@ -169,7 +169,7 @@ test_cluster () {
     remote_host=$1
 
     # First, check if the cluster is in the clusterlist
-    grep "$remote_host" $CLUSTERLIST_LOCATION
+    grep_out=`grep "$remote_host" $CLUSTERLIST_LOCATION`
     if [ $? -ne 0 ]; then
         echo "Unable to find $remote_host in list of installed clusters."
         echo "Available clusters:"
