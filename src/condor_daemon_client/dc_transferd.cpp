@@ -125,7 +125,6 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	ClassAd reqad, respad;
 	MyString cap;
 	int ftp;
-	MyString jids;
 	int invalid;
 	int protocol;
 	MyString reason;
@@ -293,7 +292,6 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	ClassAd reqad, respad;
 	MyString cap;
 	int ftp;
-	MyString jids;
 	int invalid;
 	int protocol;
 	MyString reason;
