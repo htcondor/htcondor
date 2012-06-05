@@ -613,8 +613,7 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 	}
 
 	respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-	sprintf(errstr, "Schedd refused registration: %s", reason.c_str());
-	errstack->push("DC_SCHEDD", 1, errstr.c_str());
+	errstack->pushf("DC_SCHEDD", 1, "Schedd refused registration: %s", reason.c_str());
 
 	return false;
 }

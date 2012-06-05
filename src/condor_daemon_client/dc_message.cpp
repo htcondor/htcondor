@@ -226,9 +226,7 @@ DCMsg::addError( int code, char const *format, ... )
 	va_list args;
 	va_start(args, format);
 
-	MyString msg;
-	msg.vsprintf( format,args );
-	m_errstack.push( "CEDAR", code, msg.Value() );
+	m_errstack.pushf( "CEDAR", code, format, args );
 
 	va_end(args);
 }
