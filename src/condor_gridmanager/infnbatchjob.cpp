@@ -196,10 +196,16 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 			// TODO Do we want to handle values from older versions
 			//   i.e. ones with no sandbox id?
+
+			// This should be 'batch'
 		token = GetNextToken( " ", false );
+			// This should be the batch system type
+		token = GetNextToken( " ", false );
+			// This should be the sandbox id
 		if ( (token = GetNextToken( " ", false )) ) {
 			SetRemoteSandboxId( token );
 		}
+			// This should be the batch system job id
 		if ( (token = GetNextToken( " ", false )) ) {
 			SetRemoteJobId( token );
 		}
@@ -802,7 +808,7 @@ void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 
 	std::string full_job_id;
 	if ( remoteSandboxId ) {
-		sprintf( full_job_id, "%s %s", batchType, remoteSandboxId );
+		sprintf( full_job_id, "batch %s %s", batchType, remoteSandboxId );
 	}
 	if ( remoteJobId ) {
 		sprintf_cat( full_job_id, " %s", remoteJobId );

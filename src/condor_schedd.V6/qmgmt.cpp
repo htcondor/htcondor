@@ -346,6 +346,22 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		}
 	}
 
+		// CRUFT
+		// Starting in 7.9.??, in ATTR_GRID_JOB_ID, the grid-types
+		// pbs, sge, lsf, nqs, and naregi were made sub-types of
+		// 'batch'.
+	std::string orig_value;
+	if ( job_ad->LookupString( ATTR_GRID_JOB_ID, orig_value ) ) {
+		const char *orig_str = orig_value.c_str();
+		if ( strncasecmp( "pbs", orig_str, 3 ) ||
+			 strncasecmp( "sge", orig_str, 3 ) ||
+			 strncasecmp( "lsf", orig_str, 3 ) ||
+			 strncasecmp( "nqs", orig_str, 3 ) ||
+			 strncasecmp( "naregi", orig_str, 6 ) ) {
+			std::string new_value = "batch " + orig_value;
+			job_ad->Assign( ATTR_GRID_JOB_ID, new_value );
+		}
+	}
 }
 
 QmgmtPeer::QmgmtPeer()
