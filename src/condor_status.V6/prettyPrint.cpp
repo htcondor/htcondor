@@ -28,6 +28,7 @@
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
+extern List<const char>     pm_head; // The list of headings for the mask entries
 extern int					wantOnlyTotals;
 extern bool javaMode;
 extern bool vmMode;
@@ -70,6 +71,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	ClassAd	*ad;
 	int     classad_index;
 	int     last_classad_index;
+	bool    fPrintHeadings = pm_head.Length() > 0;
 
 	classad_index = 0;
 	last_classad_index = adList.Length() - 1;
@@ -164,6 +166,15 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				break;
 
 			  case PP_CUSTOM:
+				  // hack: print a single item to a string, then discard the string
+				  // this makes sure that the headings line up correctly over the first
+				  // line of data.
+				if (fPrintHeadings) {
+					char * tmp = pm.display(ad, targetAd);
+					delete [] tmp;
+					pm.display_Headings(stdout, pm_head);
+					fPrintHeadings = false;
+				}
 				printCustom (ad);
 				break;
 

@@ -954,7 +954,7 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     if (RealmMap) {
         MyString from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
-			if (DebugFlags & D_FULLDEBUG) {
+			if (IsFulldebug(D_SECURITY)) {
 				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
 					from.Value(), to.Value());
 			}
@@ -967,12 +967,10 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     }
 
     // if there is no map, we just allow realm -> domain.
-	if (DebugFlags & D_FULLDEBUG) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
-				domain, domain);
-            setRemoteDomain(domain);
-		}
+	if (IsDebugVerbose(D_SECURITY)) {
+		dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
+			domain, domain);
+		setRemoteDomain(domain);
 	}
 	return TRUE;
 

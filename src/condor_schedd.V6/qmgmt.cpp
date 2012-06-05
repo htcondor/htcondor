@@ -548,7 +548,7 @@ InitQmgmt()
 		i++;
 	}
 
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
 		for( i=0; i<num_super_users; i++ ) {
 			dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
@@ -1730,6 +1730,9 @@ NewProc(int cluster_id)
 
 	IncrementClusterSize(cluster_id);
     job_queued_count += 1;
+
+	// can't increment the JobsSubmitted count for other pools yet
+	scheduler.OtherPoolStats.DeferJobsSubmitted(cluster_id, proc_id);
 
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
@@ -3451,13 +3454,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 								+ strlen(fallback)
 								+ 1  // optional '"'
 								+ 1); // null terminator
-							if(strlen(fallback) == 0) {
-								// fallback is nothing?  That confuses all sorts of
-								// things.  How about a nothing string instead?
-								sprintf(rebuild,"%s = \"%s\"",name,fallback);
-							} else {
-								sprintf(rebuild,"%s = %s",name,fallback);
-							}
+                            // fallback is defined as being a string value, encode it thusly:
+                            sprintf(rebuild,"%s = \"%s\"", name, fallback);
 							value = rebuild;
 						}
 						if(!fallback || !value) {

@@ -195,7 +195,7 @@ JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, AviaryStatu
     }
 
     // debug
-//    if (DebugFlags & D_FULLDEBUG) {
+//    if (IsFulldebug(D_FULLDEBUG)) {
 //        classAd.dPrint(D_FULLDEBUG|D_NOHEADER);
 //        std::ostringstream oss;
 //        oss << _map;
@@ -277,11 +277,28 @@ JobServerObject::fetchJobData(const char* key,
 	StatInfo the_file(fname.c_str());
 	if (the_file.Error()) {
 		sprintf (_status.text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
-		dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
-		return false;
-	}
-
-	fsize = the_file.GetFileSize();
+        dprintf(D_FULLDEBUG,"%s\n", _status.text.c_str());
+        // don't give up yet...maybe it's IWD+filename
+        string iwd_path;
+        if ( !ad.LookupString(ATTR_JOB_IWD, iwd_path)  ) {
+            sprintf (_status.text,  "No IWD found for job '%s'",key);
+            dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
+            return false;
+        }
+        StatInfo the_iwd_file(iwd_path.c_str(),fname.c_str());
+        if (the_iwd_file.Error()) {
+            sprintf (_status.text,  "No output file for job '%s'",key);
+            dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
+            return false;
+        }
+        else {
+            fsize = the_iwd_file.GetFileSize();
+            fname = the_iwd_file.FullPath();
+        }
+    }
+    else {
+        fsize = the_file.GetFileSize();
+    }
 
 	// we calculate these based on file size
 	if (from_end) {

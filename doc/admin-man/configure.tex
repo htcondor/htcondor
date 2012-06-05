@@ -628,8 +628,7 @@ File System Configuration File Entries''.
   
 \label{param:CondorHost}
 \item[\Macro{CONDOR\_HOST}]
-  This macro may be
-  used to define the \MacroUNI{NEGOTIATOR\_HOST} and is used to define the
+  This macro is used to define the
   \MacroUNI{COLLECTOR\_HOST} macro.  Normally the \Condor{collector}
   and \Condor{negotiator} would run on the same machine.  If for some
   reason they were not run on the same machine,
@@ -670,7 +669,7 @@ File System Configuration File Entries''.
   It previously defined the host name of the machine where 
   the \Condor{negotiator} is running.
   At present, the port where the \Condor{negotiator} is listening 
-  is dynamically allocated.
+  is dynamically allocated. 
 
   % commented out by Karen in 2008, as this 6.7ism is too old
   %For pools running 6.7.3 and older versions: The
@@ -1768,7 +1767,17 @@ of the subsystem corresponding to the daemon.
     descriptors as it will generally track the number of file descriptors
     that Condor has open.
 
-    
+  \label{dflag:level}
+  \item[\Dflag{LEVEL}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_LEVEL@\texttt{D\_LEVEL}}
+    This flag is different from the other flags, because it is
+    used to change the formatting of all log messages that are printed,
+    as opposed to specifying what kinds of messages should be printed.
+    If \Dflag{LEVEL} is set, Condor will include the debugging level flags 
+    that were in effect for each line of output.  This may be used to filter 
+    log output by the level or tag it was output under, e.g. identifying all
+    logging output at level D\_SECURITY, or D\_ACCOUNTANT, etc.
+
   \end{description}
 
 \label{param:AllDebug}
@@ -6102,7 +6111,14 @@ Configuration File Entries}
 
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
-  This definition has not yet been written.
+  The amount of memory in Mbytes to acquire for a job, 
+  if the job does not specify how much it needs using the 
+  \SubmitCmd{request\_memory} submit command.
+  If this variable is not defined, then the default is defined by
+  the expression
+\begin{verbatim}
+  ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,1)
+\end{verbatim}
 
 \end{description}
 

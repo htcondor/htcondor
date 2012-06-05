@@ -202,7 +202,7 @@ readJobAd( void )
 		EXCEPT( "reading ClassAd from (%s): file is empty",
 				is_stdin ? "STDIN" : job_ad_file );
 	}
-	if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose(D_JOB) ) {
 		ad->dPrint( D_JOB );
 	} 
 
@@ -430,7 +430,7 @@ dumpClassad( const char* header, ClassAd* ad, int debug_flag )
 				 header );   
 		return;
 	}
-	if( DebugFlags & debug_flag ) {
+	if( IsDebugCatAndVerbosity(debug_flag) ) {
 		dprintf( debug_flag, "*** ClassAd Dump: %s ***\n", header );  
 		ad->dPrint( debug_flag );
 		dprintf( debug_flag, "--- End of ClassAd ---\n" );

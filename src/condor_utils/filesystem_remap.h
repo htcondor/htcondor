@@ -22,7 +22,10 @@
 
 #include <string>
 #include <list>
+#include <vector>
 #include <utility>
+
+
 
 /**
  * Represents a set of mappings to perform on the filesystem.
@@ -35,6 +38,7 @@
  */
 typedef std::pair<std::string, std::string> pair_strings;
 typedef std::pair<std::string, bool> pair_str_bool;
+typedef std::vector<pair_strings> pair_strings_vector;
 
 class FilesystemRemap {
 
@@ -91,4 +95,10 @@ private:
 	std::list<pair_str_bool> m_mounts_shared;
 
 };
+
+/**
+ * Get a list of the named chroots
+ */
+pair_strings_vector root_dir_list();
+
 #endif

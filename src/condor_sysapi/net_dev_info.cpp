@@ -85,7 +85,8 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
 		}
 		if( ip ) {
-			NetworkDeviceInfo inf("",ip);
+			bool is_up = interfaces[i].iiFlags & IFF_UP;
+			NetworkDeviceInfo inf("",ip, is_up);
 			devices.push_back(inf);
 		}
 	}
@@ -99,6 +100,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
+#include <net/if.h>
 
 bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 {
@@ -120,7 +122,9 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {
-			NetworkDeviceInfo inf(name,ip);
+			bool is_up = ifap->ifa_flags & IFF_UP;
+			dprintf(D_ALWAYS, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
+			NetworkDeviceInfo inf(name,ip,is_up);
 			devices.push_back(inf);
 		}
 	}
@@ -201,7 +205,8 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {
-			NetworkDeviceInfo inf(name,ip);
+			bool is_up = true;
+			NetworkDeviceInfo inf(name,ip,is_up);
 			devices.push_back(inf);
 		}
 	}

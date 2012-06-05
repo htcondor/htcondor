@@ -143,7 +143,7 @@ JICLocalFile::readClassAdFromFile( char* filename, ClassAd* ad )
 				// ignore blank lines
 			continue;
 		}
-		if( DebugFlags & D_JOB ) {
+		if( IsDebugLevel( D_JOB ) ) {
 			dprintf( D_JOB, "FILE: %s\n", line.Value() );
 		} 
         if( ! ad->Insert(line.Value()) ) {

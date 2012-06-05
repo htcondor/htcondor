@@ -52,6 +52,8 @@
 #include "log_rotate.h"
 #include "dprintf_internal.h"
 
+extern const char *_condor_DebugFlagNames[];
+
 FILE *debug_lock(int debug_flags, const char *mode, int force_lock);
 void debug_unlock(int debug_flags);
 
@@ -68,7 +70,7 @@ FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
-void _condor_set_debug_flags( const char *strflags );
+void _condor_set_debug_flags( const char *strflags, int flags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
@@ -309,6 +311,27 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 				sprintf_errno = errno;
 			}
 		}
+
+        if ((mask_flags | flags) & D_LEVEL) {
+            rc = sprintf_realloc(&buf, &bufpos, &buflen, "(");
+            if (rc < 0) sprintf_errno = errno;
+
+            int flagswritten = 0;
+            for (int j = 0;  j < D_NUMLEVELS;  ++j) {
+                int b = 1 << j;
+                if (0 == ((flags) & b)) continue;
+                if (flagswritten > 0) {
+                    rc = sprintf_realloc(&buf, &bufpos, &buflen, "|");
+                    if (rc < 0) sprintf_errno = errno;
+                }
+                rc = sprintf_realloc(&buf, &bufpos, &buflen, "%s", _condor_DebugFlagNames[j]);
+                if (rc < 0) sprintf_errno = errno;
+                flagswritten += 1;
+            }
+
+            rc = sprintf_realloc(&buf, &bufpos, &buflen, ") ");
+            if (rc < 0) sprintf_errno = errno;
+        }
 
 		if( DebugId ) {
 			rc = (*DebugId)( &buf, &bufpos, &buflen );
@@ -1401,9 +1424,9 @@ _condor_dprintf_exit( int error_code, const char* msg )
   the code in both places. -Derek Wright 9/29/99
 */
 void
-set_debug_flags( const char *strflags )
+set_debug_flags( const char *strflags, int flags )
 {
-	_condor_set_debug_flags( strflags );
+	_condor_set_debug_flags( strflags, flags );
 }
 
 

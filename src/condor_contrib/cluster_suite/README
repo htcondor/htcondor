@@ -21,11 +21,15 @@ noting that Cluster Suite manages the daemon not condor_master, which means
 any daemon that Cluster Suite is to manage should NOT be listed in condor's
 DAEMON_LIST.
 
-The second part of the tools are the wasllby shell commands.  These are
+The second part of the tools are the wallaby shell commands.  These are
 commands that wrap wallaby and Cluster Suite tools, ensuring that a cluster
 configuration is appropriately represented in wallaby and nodes in the
 cluster have the proper condor configuration.  Currently, only the schedd,
 job_server, and query_server are supported with these tools.
+
+In order for the query_server to fail over cleanly, the Aviary Locator feature
+needs to be enabled on the pool.  Query servers configured with the wallaby
+shell commands will be configured with locator support enabled.
 
 Dependencies
 ============
@@ -73,7 +77,7 @@ Source
 ------
 The Resource Agent (condor.sh) should be installed in the directory
 containing other Resource Agents used by Cluster Suite
-(usually /usr/share/cluster).
+(usually /usr/share/cluster).  This file MUST be executable.
 
 The wallaby shell command (cmd_cluster.rb) should be installed in the
 directory containing other wallaby shell commands
@@ -93,53 +97,92 @@ Almost all cluster related wallaby shell commands take the following arguments:
   -n, --no-store      : Only configure the cluster, don't update the store
   -s, --store-only    : Don't configure the cluster, just update the store
 
-cluster-add-node-to-<type>
---------------------------
-This command adds a node to an existing HA daemon cluster configuration.  It
-takes the common options and requires the name of the daemon configuration
+cluster-add-node
+----------------
+This command adds a node to an existing HA Schedd cluster configuration.  It
+takes the common options and requires the name of the schedd configuration
 and a list of nodes to add.
 
-example: wallaby cluster-add-node-to-schedd name=schedd1 node1 node2 node3
-example: wallaby cluster-add-node-to-jobserver name=js node4 node5 node6
+example: wallaby cluster-add-node name=schedd1 node1 node2 node3
 
 
-cluster-create-<type>
+cluster-add-jobserver
 ---------------------
-This command creates an HA daemon cluster configuration.  It takes the common
+This command adds a JobServer to an existing HA Schedd cluster configuration.
+This JobServer will work with the schedd it is associated with and failover
+when the schedd fails over.  However, failure of the JobServer will not cause
+the schedd to failover.  It takes the common options and requires the name of
+the schedd configuration.
+
+example: wallaby cluster-add-jobserver name=schedd1
+
+
+cluster-add-queryserver
+---------------------
+This command adds a QueryServer to an existing HA Schedd cluster configuration.
+This QueryServer will work with the schedd it is associated with and failover
+when the schedd fails over.  However, failure of the QueryServer will not cause
+the schedd to failover.  It takes the common options and requires the name
+of the schedd configuration.
+
+example: wallaby cluster-add-queryserver name=schedd1
+
+
+cluster-create
+--------------
+This command creates an HA Schedd cluster configuration.  It takes the common
 options and requires the following information about the configuration in
 addition to a list of nodes:
-NAME   : The unique name of the daemon configuration.  This is used to
-         identify configuration parameters for the daemon instance in
+NAME   : The unique name of the schedd configuration.  This is used to
+         identify configuration parameters for the schedd instance in
          wallaby, and to tell Cluster Suite the name that should be passed to
-         the condor daemon on startup.
-SPOOL  : The spool directory for the daemon.  This is also the mount
+         the condor schedd on startup.
+SPOOL  : The spool directory for the schedd.  This is also the mount
          point of the NFS export.
 SERVER : The server offering the NFS export.
 EXPORT : The directory on the SERVER that is exported over NFS.
 
-example: wallaby cluster-create-schedd name=schedd1 spool=/path/to/mountpoint server=NFSserver export=/path/on/NFSServer node1 node2 node3
+example: wallaby cluster-create name=schedd1 spool=/path/to/mountpoint server=NFSserver export=/path/on/NFSServer node1 node2 node3
 
 
-cluster-delete-<type>
----------------------
-This command deletes an HA daemon cluster configuration.  It takes the common
-options and requires the name of the daemon configuration to delete.
+cluster-delete
+--------------
+This command deletes an HA Schedd cluster configuration.  It takes the common
+options and requires the name of the schedd configuration to delete.
 
-example: cluster-delete-schedd name=schedd1
+example: wallaby cluster-delete name=schedd1
 
 
-cluster-remove-node-from-<type>
--------------------------------
-This command removes a node from an existing HA daemon cluster configuration.
-It takes the common options and requires the name of the daemon configuration
+cluster-remove-node
+-------------------
+This command removes a node from an existing HA Schedd cluster configuration.
+It takes the common options and requires the name of the schedd configuration
 and a list of nodes to remove.
 
-example: wallaby cluster-remove-node-from-schedd name=schedd1 node1 node2 node3
+example: wallaby cluster-remove-node name=schedd1 node1 node2 node3
+
+
+cluster-remove-jobserver
+------------------------
+This command removes a JobServer from an existing HA Schedd cluster
+configuration.  It takes the common options and requires the name of the
+schedd configuration.
+
+example: wallaby cluster-remove-jobserver name=schedd1
+
+
+cluster-remove-queryserver
+------------------------
+This command removes a QueryServer from an existing HA Schedd cluster
+configuration.  It takes the common options and requires the name of the
+schedd configuration.
+
+example: wallaby cluster-remove-queryserver name=schedd1
 
 
 cluster-sync-to-store
 ---------------------
-This command replaces HA daemon configuration(s) in wallaby with the cluster
+This command replaces HA Schedd configuration(s) in wallaby with the cluster
 configuration.  It takes no options and requires no arguments.
 
 example: wallaby cluster-sync-to-store

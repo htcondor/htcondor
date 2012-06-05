@@ -881,7 +881,7 @@ Sock::do_connect_finish()
 					// We expect to be called back later (e.g. by DaemonCore)
 					// when the connection attempt succeeds/fails/times out
 
-				if( DebugFlags & D_NETWORK ) {
+				if( IsDebugLevel( D_NETWORK ) ) {
 					dprintf( D_NETWORK,
 					         "non-blocking CONNECT started fd=%d dst=%s\n",
 					         _sock, get_sinful_peer() );
@@ -1007,7 +1007,7 @@ Sock::do_connect_finish()
 			_state = sock_connect_pending_retry;
 			connect_state.retry_wait_timeout_time = time(NULL)+1;
 
-			if( DebugFlags & D_NETWORK ) {
+			if( IsDebugLevel( D_NETWORK ) ) {
 				dprintf(D_NETWORK,
 				        "non-blocking CONNECT  waiting for next "
 				        "attempt fd=%d dst=%s\n",
@@ -1030,7 +1030,7 @@ bool
 Sock::enter_connected_state(char const *op)
 {
 	_state = sock_connect;
-	if( DebugFlags & D_NETWORK ) {
+	if( IsDebugLevel( D_NETWORK ) ) {
 		dprintf( D_NETWORK, "%s bound to %s fd=%d peer=%s\n",
 				 op, get_sinful(), _sock, get_sinful_peer() );
 	}
@@ -1311,7 +1311,7 @@ int Sock::close()
 
 	if (_state == sock_virgin) return FALSE;
 
-	if (type() == Stream::reli_sock && (DebugFlags & D_NETWORK)) {
+	if (type() == Stream::reli_sock && IsDebugLevel(D_NETWORK)) {
 		dprintf( D_NETWORK, "CLOSE %s fd=%d\n", 
 						sock_to_string(_sock), _sock );
 	}

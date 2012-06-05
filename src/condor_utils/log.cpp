@@ -33,10 +33,23 @@
 #endif
 
 #include "log.h"
+#include "stl_string_utils.h"
 
-class LogRecordHead: public LogRecord {
-	virtual char const *get_key() {return NULL;}
-};
+bool valid_record_optype(int optype) {
+    switch (optype) {
+        case CondorLogOp_NewClassAd:
+        case CondorLogOp_DestroyClassAd:
+        case CondorLogOp_SetAttribute:
+        case CondorLogOp_DeleteAttribute:
+        case CondorLogOp_BeginTransaction:
+        case CondorLogOp_EndTransaction:
+        case CondorLogOp_LogHistoricalSequenceNumber:
+            return true;
+        default:
+            return false;
+    }
+    return false;
+}
 
 LogRecord::LogRecord()
 {
@@ -137,7 +150,7 @@ LogRecord::readline(FILE *fp, char * &str)
 		buf[i] = ch;
 	}
 
-		// treat no input as newline
+		// treat no input as error
 	if( i==1 ) {
 		free( buf );
 		return( -1 );
@@ -191,13 +204,17 @@ LogRecord::ReadHeader(FILE *fp)
     int rval;
     char *op = NULL;
 
+    op_type = CondorLogOp_Error;
+
     rval = readword(fp, op);
     if (rval < 0) {
         return rval;
     }
-    op_type = atoi(op);
+    if (!lex_cast(op, op_type) || !valid_record_optype(op_type)) {
+        op_type = CondorLogOp_Error;
+    }
     free(op);
-    return rval;
+    return (op_type == CondorLogOp_Error) ? -1 : rval;
 }
 
 
@@ -210,20 +227,16 @@ LogRecord::ReadTail(FILE *  /*fp*/)
 }
 
 LogRecord *
-ReadLogEntry(FILE *fp, LogRecord* (*InstantiateLogEntry)(FILE *fp, int type))
+ReadLogEntry(FILE *fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(FILE *fp, unsigned long recnum, int type))
 {
-	LogRecord		*log_rec;
-	LogRecordHead	head_only;
-	int				rval;
+    char* opword = NULL;
+    int opcode = CondorLogOp_Error;
+	int rval = LogRecord::readword(fp, opword);
+	if (rval < 0) return NULL;
+    if (!lex_cast(opword, opcode) || !valid_record_optype(opcode)) {
+        opcode = CondorLogOp_Error;
+    }
+    free(opword);
 
-	rval = head_only.ReadHeader(fp);
-	if (rval < 0) {
-		return 0;
-	}
-	log_rec = InstantiateLogEntry(fp, head_only.get_op_type());
-	if (head_only.ReadTail(fp) < 0) {
-		delete log_rec;
-		return 0;
-	}
-	return log_rec;
+	return InstantiateLogEntry(fp, recnum, opcode);
 }

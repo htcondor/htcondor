@@ -53,7 +53,7 @@
 
 State get_machine_state();
 
-extern void		_condor_set_debug_flags( const char *strflags );
+extern void		_condor_set_debug_flags( const char *strflags, int flags );
 
 // Define this to check for memory leaks
 
@@ -167,7 +167,7 @@ main( int argc, char *argv[] )
 			szVerbose+=pval;
 			free( pval );
 		}
-		_condor_set_debug_flags( szVerbose.c_str() );
+		_condor_set_debug_flags( szVerbose.c_str(), D_FULLDEBUG );
 		
 	}
 	dprintf( D_ALWAYS, "********************************\n");

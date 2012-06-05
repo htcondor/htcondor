@@ -2420,7 +2420,7 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 		}
 	}
 	loadStatistics();
-	if( DebugFlags & D_JOB ) {
+	if( IsDebugLevel(D_JOB) ) {
 		dprintf(D_JOB,"Updated job ClassAd:\n");
 		c_ad->dPrint(D_JOB);
 	}

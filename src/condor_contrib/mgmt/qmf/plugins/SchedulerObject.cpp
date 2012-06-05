@@ -130,7 +130,7 @@ SchedulerObject::update(const ClassAd &ad)
 	mgmtObject->set_System(mgmtObject->get_Machine());
 
 	// debug
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsFulldebug(D_FULLDEBUG)) {
 		const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
 	}
 }

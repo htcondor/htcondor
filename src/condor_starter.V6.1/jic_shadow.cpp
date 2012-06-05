@@ -791,7 +791,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 	else {
 		dprintf(D_FULLDEBUG,"Sent job ClassAd update to startd.\n");
 	}
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsDebugVerbose(D_JOB) ) {
 		ad->dPrint(D_JOB);
 	}
 
@@ -1152,7 +1152,7 @@ JICShadow::initUserPriv( void )
 			}
 		}
 		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "SLOT%s_USER", slotName.Value() );
+			snprintf( nobody_param, 20, "%s_USER", slotName.Value() );
 			nobody_user = param(nobody_param);
 			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
 				snprintf( nobody_param, 20, "VM%s_USER", slotName.Value() );

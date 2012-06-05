@@ -223,14 +223,14 @@ void KeyCache::delete_storage()
 		key_table->startIterations();
 		while( key_table->iterate(key_entry) ) {
 			if( key_entry ) {
-				if( DebugFlags & D_FULLDEBUG ) {
+				if( IsDebugVerbose(D_SECURITY) ) {
 					dprintf( D_SECURITY, "KEYCACHEENTRY: deleted: %p\n", 
 							 key_entry );
 				}
 				delete key_entry;
 			}
 		}
-		if( DebugFlags & D_FULLDEBUG ) {
+		if( IsDebugVerbose(D_SECURITY) ) {
 			dprintf( D_SECURITY, "KEYCACHE: deleted: %p\n", key_table );
 		}
 		delete key_table;

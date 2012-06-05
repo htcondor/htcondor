@@ -152,7 +152,7 @@ ParallelProc::addEnvVars()
 		env.SetEnv("CONDOR_CONFIG", condor_config);
 	}
 	
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_str;
 		env.getDelimitedStringForDisplay(&env_str);
 		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );

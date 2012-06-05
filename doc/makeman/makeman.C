@@ -840,6 +840,8 @@ static void add_fixed_characters(string &source, string &dest, bool in_pre_text)
 				}
 			}
 			in_spaces = false;
+		} else if (source[offset] == '\\') {
+			dest += "\\\\";  // replace backslash with double backslash.
 		} else if (!in_pre_text && source[offset] == ' ' || source[offset] == '\t') {
 			if (!in_spaces) {
 				dest += ' '; // tabs become spaces.

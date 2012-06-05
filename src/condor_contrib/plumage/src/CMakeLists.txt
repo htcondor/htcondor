@@ -42,7 +42,7 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	#src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 	#src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-	file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ${ETL_COMMON_SRCS})
+	file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ODSAccountant.cpp ODSProcessors.cpp ${ETL_COMMON_SRCS})
 	condor_plugin( ODSCollectorPlugin-plugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 	############################
@@ -61,8 +61,14 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	# install targets
 	############################
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
-	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+	file(GLOB PLUMAGE_STATS ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats )
+	install(FILES ${PLUMAGE_STATS} DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+	file(GLOB TEST_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_*)
+	list(REMOVE_ITEM TEST_SCRIPTS ${PLUMAGE_STATS})
+	
+	install(FILES ${TEST_SCRIPTS} DESTINATION ${C_LIB}/plumage PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../README DESTINATION ${C_LIB}/plumage)
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../SCHEMA DESTINATION ${C_LIB}/plumage)
 else()
 	message (STATUS "plumage deps *not found*")
 endif()

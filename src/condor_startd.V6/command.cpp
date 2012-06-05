@@ -1248,6 +1248,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			}
 		} while (mach_requirements == 0);
 
+			// No longer need this, make sure to free the memory.
+		if (unmodified_req_classad) {
+			delete unmodified_req_classad;
+			unmodified_req_classad = NULL;
+		}
+
 			// Pull out the requested attribute values.  If specified, we go with whatever
 			// the schedd wants, which is in request attributes prefixed with
 			// "_condor_".  This enables to schedd to request something different than
@@ -1298,11 +1304,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 
+        for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+            string reqname;
+            sprintf(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
+            int reqval = 0;
+            if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
+            string attr;
+            sprintf(attr, " %s=%d", j->first.c_str(), reqval);
+            type += attr;
+        }
+
 		rip->dprintf( D_FULLDEBUG,
 					  "Match requesting resources: %s\n", type.Value() );
 
 		type_list.initializeFromString( type.Value() );
-		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );
@@ -1773,12 +1789,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
-	if( DebugFlags & D_JOB ) {
+	if( IsDebugLevel( D_JOB ) ) {
 		req_classad->dPrint( D_JOB );
 	}
 	  
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
-	if( DebugFlags & D_MACHINE ) {
+	if( IsDebugLevel( D_MACHINE ) ) {
 		mach_classad->dPrint( D_MACHINE );
 	}
 

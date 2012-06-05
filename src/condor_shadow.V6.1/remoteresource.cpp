@@ -1051,7 +1051,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 	hadContact();
 
-	if( DebugFlags & D_MACHINE ) {
+	if( IsDebugLevel(D_MACHINE) ) {
 		dprintf( D_MACHINE, "Update ad:\n" );
 		update_ad->dPrint( D_MACHINE );
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
@@ -2174,7 +2174,7 @@ RemoteResource::checkX509Proxy( void )
 			&quoted_DN_and_FQAN);
 	if (vomserr == 0) {
 		// VOMS attributes were found
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "VOMS attributes were found\n");
 		}
 		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
@@ -2184,7 +2184,7 @@ RemoteResource::checkX509Proxy( void )
 		free(firstfqan);
 		free(quoted_DN_and_FQAN);
 	} else {
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "VOMS attributes were not found\n");
 		}
 	}

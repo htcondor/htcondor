@@ -1376,6 +1376,7 @@ public:
    void Publish(ClassAd & ad, int flags) const;
    void Publish(ClassAd & ad, const char * prefix, int flags) const;
    void Unpublish(ClassAd & ad) const;
+   void Unpublish(ClassAd & ad, const char * prefix) const;
 
 private:
    struct pubitem {

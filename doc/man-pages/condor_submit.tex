@@ -225,18 +225,47 @@ in this cluster will be written into file \File{foo.log}.
                                                                           
       Executable     = foo                                                    
       Universe       = standard
-      Requirements   = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
+      Requirements   = OpSys == "LINUX" && Arch =="INTEL"
       Rank           = Memory >= 64
-      Image_Size     = 28 Meg                                                 
+      Request_Memory = 32 Mb
+      Image_Size     = 28 Mb
                                                                           
       Error   = err.$(Process)                                                
       Input   = in.$(Process)                                                 
       Output  = out.$(Process)                                                
       Log = foo.log                                                                       
-                                                                          
       Queue 150
 \end{verbatim}
 \normalsize
+
+\item{Submit Description File Example 3:}  This example targets the 
+\Prog{/bin/sleep} program to run only on a platform running a 
+RHEL 6 operating system.
+The example presumes that the pool contains machines running more than one
+version of Linux, 
+and this job needs the particular operating system to run correctly.
+
+\footnotesize
+\begin{verbatim}
+      ####################                                                    
+      #                                                                       
+      # Example 3: Run on a RedHat 6 machine
+      #                                                                       
+      ####################                                                    
+      Universe     = vanilla
+      Executable   = /bin/sleep
+      Arguments    = 30
+      Requirements = (OpSysAndVer == "RedHat6")
+                                                                          
+      Error   = err.$(Process)                                                
+      Input   = in.$(Process)                                                 
+      Output  = out.$(Process)                                                
+      Log     = sleep.log                                                                       
+      Queue
+\end{verbatim}
+\normalsize
+
+
 
 \item{Command Line example:} The following command uses the
 \Opt{-append} option to add two commands before the job(s) is queued.

@@ -187,6 +187,7 @@ const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
 const char * const ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
 const char * const ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
 const char * const ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
+const char * const ATTR_DELTACLOUD_INSTANCE_NAME	 = "DeltacloudInstanceName";
 const char * const ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
 const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
 const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
@@ -430,6 +431,7 @@ const char * const ATTR_LAST_REJ_MATCH_REASON	 = "LastRejMatchReason";
 const char * const ATTR_LAST_PERIODIC_CHECKPOINT = "LastPeriodicCheckpoint";
 const char * const ATTR_LAST_RELEASE_REASON      = "LastReleaseReason";
 const char * const ATTR_LAST_REMOTE_HOST		 = "LastRemoteHost";
+const char * const ATTR_LAST_REMOTE_POOL		 = "LastRemotePool";
 const char * const ATTR_LAST_REMOTE_STATUS_UPDATE = "LastRemoteStatusUpdate";
 const char * const ATTR_LAST_UPDATE				 = "LastUpdate";
 const char * const ATTR_LOCAL_CREDD              = "LocalCredd";
@@ -541,6 +543,8 @@ const char * const ATTR_REMOVE_KILL_SIG          = "RemoveKillSig";
 const char * const ATTR_REMOVE_REASON            = "RemoveReason";
 const char * const ATTR_REQUEUE_REASON           = "RequeueReason";
 const char * const ATTR_REQUIREMENTS             = "Requirements";
+const char * const ATTR_SLOT_TYPE                = "SlotType";
+const char * const ATTR_SLOT_TYPE_ID             = "SlotTypeID";
 const char * const ATTR_SLOT_WEIGHT              = "SlotWeight";
 const char * const ATTR_RESULT                   = "Result";
 const char * const ATTR_RSC_BYTES_SENT			 = "RSCBytesSent";
@@ -875,6 +879,13 @@ const char * const ATTR_VM_CKPT_IP = "VM_CkptIP";
 const char * const ATTR_REQUEST_CPUS = "RequestCpus";
 const char * const ATTR_REQUEST_MEMORY = "RequestMemory";
 const char * const ATTR_REQUEST_DISK = "RequestDisk";
+
+// machine resource prefixes
+const char * const ATTR_REQUEST_PREFIX = "Request";
+const char * const ATTR_DETECTED_PREFIX = "Detected";
+const char * const ATTR_TOTAL_PREFIX = "Total";
+const char * const ATTR_TOTAL_SLOT_PREFIX = "TotalSlot";
+const char * const ATTR_MACHINE_RESOURCES = "MachineResources";
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)

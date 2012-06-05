@@ -32,8 +32,7 @@ ProcFamilyInterface* ProcFamilyInterface::create(const char* subsys)
 
 	bool is_master = ((subsys != NULL) && !strcmp(subsys, "MASTER"));
 
-	bool use_procd_default = !is_master;
-	if (param_boolean("USE_PROCD", use_procd_default)) {
+	if (param_boolean("USE_PROCD", true)) {
 
 		// if we're not the Master, create the ProcFamilyProxy
 		// object with our subsystem as the address suffix; this

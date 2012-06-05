@@ -529,6 +529,9 @@ public:
 //
 static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 {
+	if ( ! pusageAd)
+		return;
+
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
 
@@ -537,7 +540,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 	for (classad::ClassAd::iterator iter = pusageAd->begin();
 		 iter != pusageAd->end();
 		 iter++) {
-		int ixu = iter->first.size() - 5; // size "Usage" == 5
+		int ixu = (int)iter->first.size() - 5; // size "Usage" == 5
 		std::string key = "";
 		int efld = -1;
 		if (0 == iter->first.find("Request")) {
@@ -573,7 +576,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 				case 1: // Request
 					psumy->req = val;
 					break;
-				case 2:
+				case 2:	// Allocated
 					psumy->alloc = val;
 					break;
 			}
@@ -583,6 +586,8 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 			fprintf(file, "\t%s = %s\n", iter->first.c_str(), val.c_str());
 		}
 	}
+	if (useMap.empty())
+		return;
 
 	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
@@ -596,10 +601,10 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 			}
 		}
 		//fprintf(file, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
-		cchRes = MAX(cchRes, it->first.size());
-		cchUse = MAX(cchUse, psumy->use.size());
-		cchReq = MAX(cchReq, psumy->req.size());
-		cchAlloc = MAX(cchAlloc, psumy->alloc.size());
+		cchRes = MAX(cchRes, (int)it->first.size());
+		cchUse = MAX(cchUse, (int)psumy->use.size());
+		cchReq = MAX(cchReq, (int)psumy->req.size());
+		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
 	}
 
 	MyString fmt;
@@ -677,13 +682,13 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 		// 
 		if (MATCH == strcmp(pszLbl, "Partitionable")) {
 			psz = pszTbl;
-			while (*psz && *psz == ' ') ++psz; // skip ws
+			while (*psz == ' ') ++psz;         // skip spaces
 			while (*psz && *psz != ' ') ++psz; // skip "Usage"
 			ixUse = (int)(psz - pszTbl)+1;     // save right edge of Usage
-			while (*psz && *psz == ' ') ++psz; // skip ws
+			while (*psz == ' ') ++psz;         // skip spaces
 			while (*psz && *psz != ' ') ++psz; // skip "Request"
 			ixReq = (int)(psz - pszTbl)+1;     // save right edge of Request
-			while (*psz && *psz == ' ') ++psz; // skip ws
+			while (*psz == ' ') ++psz;         // skip spaces
 			if (*psz) {                        // if there is an "Allocated"
 				while (*psz && *psz != ' ') ++psz; // skip "Allocated"
 				ixAlloc = (int)(psz - pszTbl)+1;
@@ -2810,7 +2815,7 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 
 
 int
-TerminatedEvent::readEvent( FILE *file, const char* /*header*/ )
+TerminatedEvent::readEvent( FILE *file, const char* header )
 {
 	char buffer[128];
 	int  normalTerm;
@@ -2860,6 +2865,9 @@ TerminatedEvent::readEvent( FILE *file, const char* /*header*/ )
 #if 1
 	for (;;) {
 		char sz[250];
+		char srun[sizeof("Total")];
+		char sdir[sizeof("Recieved")];
+		char sjob[22];
 
 		// if we hit end of file or end of record "..." rewind the file pointer.
 		fpos_t filep;
@@ -2870,21 +2878,29 @@ TerminatedEvent::readEvent( FILE *file, const char* /*header*/ )
 			break;
 		}
 
-		float val;
-		if (1 == sscanf(sz, "\t%f  -  Run Bytes Sent By ", &val)) {
-			sent_bytes = val;
+		// expect for strings of the form "\t%f  -  Run Bytes Sent By Job"
+		// where "Run" "Sent" and "Job" can all vary. 
+		float val; srun[0] = sdir[0] = sjob[0] = 0;
+		bool fOK = false;
+		if (4 == sscanf(sz, "\t%f  -  %5s Bytes %8s By %21s", &val, srun, sdir, sjob)) {
+			if (!strcmp(sjob,header)) {
+				if (!strcmp(srun,"Run")) {
+					if (!strcmp(sdir,"Sent")) {
+						sent_bytes = val; fOK = true;
+					} else if (!strcmp(sdir,"Received")) {
+						recvd_bytes = val; fOK = true;
+					}
+				} else if (!strcmp(srun,"Total")) {
+					if (!strcmp(sdir,"Sent")) {
+						total_sent_bytes = val; fOK = true;
+					} else if (!strcmp(sdir,"Received")) {
+						total_recvd_bytes = val; fOK = true;
+					}
+				}
+			}
 		}
-		else if (1 == sscanf(sz, "\t%f  -  Run Bytes Received By ", &val)) {
-			recvd_bytes = val;
-		}
-		else if (1 == sscanf(sz, "\t%f  -  Total Bytes Sent By ", &val)) {
-			total_sent_bytes = val;
-		}
-		else if (1 == sscanf(sz, "\t%f  -  Total Bytes Received By ", &val)) {
-			total_recvd_bytes = val;
-		}
-		else {
-			fsetpos( file, &filep );
+		if ( ! fOK) {
+			fsetpos(file, &filep);
 			break;
 		}
 	}
@@ -3137,25 +3153,30 @@ JobImageSizeEvent::readEvent (FILE *file)
 
 	for (;;) {
 		char sz[250];
+		char lbl[48+1];
 
 		// if we hit end of file or end of record "..." rewind the file pointer.
 		fpos_t filep;
-		fgetpos( file, &filep );
+		fgetpos(file, &filep);
 		if ( ! fgets(sz, sizeof(sz), file) || 
 			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
-			fsetpos( file, &filep );
+			fsetpos(file, &filep);
 			break;
 		}
 
-		int64_t val;
-		if (1 == sscanf(sz, "\t%"PRId64"  -  MemoryUsage", &val)) {
-			memory_usage_mb = val;
-		}
-		else if (1 == sscanf(sz, "\t%"PRId64"  -  ResidentSetSize", &val)) {
-			resident_set_size_kb = val;
-		}
-		else if (1 == sscanf(sz, "\t%"PRId64"  -  ProportionalSetSize", &val)) {
-			proportional_set_size_kb = val;
+		int64_t val; lbl[0] = 0;
+		if (2 == sscanf(sz, "\t%"PRId64"  -  %48s", &val, lbl)) {
+			if (!strcmp(lbl,"MemoryUsage")) {
+				memory_usage_mb = val;
+			} else if (!strcmp(lbl, "ResidentSetSize")) {
+				resident_set_size_kb = val;
+			} else if (!strcmp(lbl, "ProportionalSetSize")) {
+				proportional_set_size_kb = val;
+			} else {
+				// rewind the file pointer so we don't consume what we can't parse.
+				fsetpos(file, &filep);
+				break;
+			}
 		}
 	}
 

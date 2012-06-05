@@ -32,6 +32,7 @@
 **  counting levels at 0, D_NUMLEVELS should be one greater than the
 **  highest level.
 */
+#if 1
 #define D_NUMLEVELS		28
 #define D_MAXFLAGS 		32
 #define D_ALWAYS 		(1<<0)
@@ -68,9 +69,91 @@
 */ 
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
-#define D_UNUSED4       (1<<30)
+#define D_LEVEL         (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
+
+// these defines encapsulate the old DebugFlags behavior, while allowing us
+// to fix client code so that that don't touch DebugFlags directly
+//
+#define IsDebugLevel(cat)    ((DebugFlags & (cat)) != 0)
+#define IsDebugCategory(cat) ((DebugFlags & (cat)) != 0)
+#define IsFulldebug(cat)     ((DebugFlags & D_FULLDEBUG) != 0) // D_FULLDEBUG turns any category to 11
+#define IsDebugVerbose(cat)  (IsFulldebug(cat) && ( !(cat) || IsDebugLevel(cat)))
+#define IsDebugCatAndVerbosity(flags) ((DebugFlags & (flags)) == (flags)) // so you can D_SECURITY | D_FULLDEBUG and both must match
+
+#else // TJ's re-design of dprintf 'levels' to be an enum + flags
+
+// The debug categories enum
+enum {
+   D_CATEGORY_BASE = 0,
+   D_ALWAYS = 0,
+   D_FAILURE,
+   D_STATUS,
+   D_GENERAL,
+   D_JOB,
+   D_MACHINE,
+   D_CONFIG,
+   D_PROTOCOL,
+   D_PRIV,
+   D_DAEMONCORE,
+   D_GENERIC_VERBOSE, // (1<<D_GENERIC_VERBOSE) == D_FULLDEBUG
+   D_SECURITY,
+   D_COMMAND,
+   D_MATCH,
+   D_NETWORK,
+   D_KEYBOARD,
+   D_PROCFAMILY,
+   D_IDLE,
+   D_THREADS,
+   D_ACCOUNTANT,
+   D_SYSCALLS,
+   D_CKPT,
+   D_HOSTNAME,
+   D_PERF_TRACE,
+   D_LOAD,
+   D_PROC,
+   D_NFS,
+
+   // this must be last
+   D_CATEGORY_COUNT
+};
+#define D_CATEGORY_MASK (0x1F)
+#define D_CATEGORY_RESERVED_MASK (0xFF)
+
+#define D_VERBOSE_MASK  (3<<8)
+#define D_TERSE         (0<<8)
+#define D_VERBOSE       (1<<8)
+#define D_DIAGNOSTIC    (2<<8)
+#define D_NEVER         (3<<8)
+
+#define D_FULLDEBUG     (1<<10) // when or'd with a D_category, it means that category, or (D_ALWAYS|D_VERBOSE)
+#define D_EXPR          (1<<11) // set by condor_submit, used by ??
+
+// format-modifying flags to change the appearance of the dprintf line
+#define D_PID           (1<<28)
+#define D_FDS           (1<<29)
+#define D_UNUSED4       (1<<30)
+#define D_NOHEADER      (1<<31)
+//#define D_ALL           (~(0) & (~(D_NOHEADER)))
+
+// first re-definition pass.  add a separate set of flags for Verbose mode
+// for each category. 
+//
+#define IsDebugLevel(cat)    ((DebugFlags & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugCategory(cat) ((DebugFlags & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugVerbose(cat)  ((DebugVerbose & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsFulldebug(cat)     ((DebugFlags & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
+#define IsDebugCatAndVerbosity(flags) ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
+
+// in the future, we will change the debug system to use a table rather than 
+// a bit mask.  possibly this..
+//#define IsDebugLevel(cat)    (DebugCategories[(cat) & D_CATEGORY_MASK)] > 0)
+//   or this
+//#define IsDebugLevel(cat)    (DebugLevels & (3<<((cat)*2))) != 0)
+
+#endif
+
 #ifdef __cplusplus
 #include <string>
 #include <map>
@@ -92,6 +175,7 @@ extern "C" {
 #endif
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
+extern int DebugVerbose; /* verbose bits for dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
 
@@ -110,10 +194,11 @@ void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
-void set_debug_flags( const char *strflags );
+void set_debug_flags( const char *strflags, int flags );
 void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_fd_panic( int line, const char *file );
-void _condor_set_debug_flags( const char *strflags );
+void _condor_set_debug_flags( const char *strflags, int flags );
+int  _condor_dprintf_is_initialized();
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
 

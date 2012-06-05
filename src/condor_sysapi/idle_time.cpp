@@ -198,7 +198,7 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		m_idle = MIN(m_console_idle, m_idle);
 	}
 
-	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_IDLE ) ) {
 		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
 				 (int)m_idle, (int)m_console_idle );
 	}
@@ -508,7 +508,7 @@ dev_idle_time( const char *path, time_t now )
 
 #  endif
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
+	if( IsDebugVerbose( D_IDLE ) ) {
         dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
 	}
 
@@ -568,7 +568,7 @@ get_keyboard_info(idle_t *fill_me)
 	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
 		if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
 
-			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+			if( IsDebugVerbose( D_IDLE ) ) {
 				dprintf( D_IDLE, "Keyboard IRQ: %d\n", atoi(buf) );
 			}
 			tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
@@ -578,7 +578,7 @@ get_keyboard_info(idle_t *fill_me)
 					if (tok && is_number(tok)) {
 						/* It is ok if this overflows */
 						fill_me->num_key_intr += strtoul(tok, NULL, 10);
-						if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+						if( IsDebugVerbose( D_IDLE ) ) {
 							dprintf( D_FULLDEBUG, 
 									"Add %lu keyboard interrupts.  Total: %lu\n",
 									strtoul(tok, NULL, 10), fill_me->num_key_intr );
@@ -630,7 +630,7 @@ get_mouse_info(idle_t *fill_me)
 		     strstr(buf, "Mouse") != NULL || strstr(buf, "mouse") != NULL)  
 		{
 
-			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+			if( IsDebugVerbose( D_IDLE ) ) {
 		   		dprintf(D_FULLDEBUG, "Mouse IRQ: %d\n", atoi(buf));
 			}
 		    tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
@@ -640,7 +640,7 @@ get_mouse_info(idle_t *fill_me)
 			    /* It is ok if this overflows */
 			    fill_me->num_mouse_intr += strtoul(tok, NULL, 10);
 
-				if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+				if( IsDebugVerbose( D_IDLE ) ) {
 					dprintf(D_FULLDEBUG, 
 					"Add %lu mouse interrupts.  Total: %lu\n",
 					strtoul(tok, NULL, 10), fill_me->num_mouse_intr);

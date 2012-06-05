@@ -1,0 +1,88 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-7-9}Development Release Series 7.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of Condor.
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-0}Version 7.9.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.9.0 not yet released.
+%\item Condor version 7.9.0 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added logging output flag \Dflag{LEVEL} which causes Condor to include the logging level
+flags in effect for each line of logging output.
+\Ticket{2712}
+
+\item Added -autoformat option to \Condor{status}, behavior is the same as -autoformat option
+added to \Condor{q} in 7.7.6.
+\Ticket{2941}
+
+\item Enhanced the classad log system (e.g. the job que log) to report the record number on parse failures, 
+and improved its ability to detect parse failures closer to the point of corruption.
+\Ticket{2934}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item New configuration variables were added to to the \Condor{schedd} to
+define statistics that count subsets of jobs. These variables
+have the form \Macro{SCHEDD\_COLLECT\_STATS\_BY\_XXXX} and should contain
+a ClassAd expression that evaluates to a string.
+XXXX\_value\_ will be prefixed to the names of attributes in the \Condor{schedd} ad
+such as \Attr{XXXX\_string\_JobsStarted} which would be the count of jobs that have
+started that evaluate to "value".  An optional variable of the form
+\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_XXXX} can be used to set an expiration time in seconds
+for each set of statistics.
+\Ticket{2862}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
+\Ticket{2893}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
