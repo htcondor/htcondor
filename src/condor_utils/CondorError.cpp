@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "CondorError.h"
 #include "condor_snutils.h"
-
+#include "condor_debug.h"
 
 CondorError::CondorError() {
 	init();
@@ -117,7 +117,8 @@ void CondorError::pushf( const char* the_subsys, int the_code, const char* the_f
 const char*
 CondorError::getFullText( bool want_newline )
 {
-	static MyString errbuf;
+	PRAGMA_REMIND("Why keep this static? -matt");
+	static std::string errbuf;
 	bool printed_one = false;
 
 	errbuf = "";
@@ -139,7 +140,7 @@ CondorError::getFullText( bool want_newline )
 		errbuf += walk->_message;
 		walk = walk->_next;
 	}
-	return errbuf.Value();
+	return errbuf.c_str();
 }
 
 const char*
