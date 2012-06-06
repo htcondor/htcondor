@@ -116,8 +116,10 @@ still recognized, but their use is now discouraged.
 the init script to hang if condor wasn't running
 \Ticket{2872}
 
-\item Fixed a bug that caused Parallel Universe jobs using
-Parallel Scheduling Groups to occasionally stay idle even when
+\item Fixed a bug that caused parallel universe jobs using
+Parallel Scheduling Groups 
+(see section ~\ref{sec:Configure-Dedicated-Groups})
+to occasionally stay idle even when
 there were available machines to run them.
 \Ticket{3017}
 
@@ -132,7 +134,8 @@ and then further caused the statistics for local universe jobs to be
 incorrectly computed.
 \Ticket{3008}
 
-\item Changed \Condor{ckpt\_probe} to link statically, which should make the
+\item Changed the internally used \Condor{ckpt\_probe} executable
+to link statically, which should make the
 checkpoint signature more resistant to non-significant changes in the system
 configuration.
 \Ticket{2901}
