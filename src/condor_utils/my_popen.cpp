@@ -160,7 +160,8 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 	}
-	si.dwFlags = STARTF_USESTDHANDLES;
+	si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_HIDE;
 
 	// make call to CreateProcess
 	cmd = strdup(const_cmd);
