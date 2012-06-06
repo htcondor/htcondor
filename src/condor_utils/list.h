@@ -118,6 +118,7 @@ friend class ListIterator<ObjType>;
 public:
 		// General
 	List();
+	List(int dummy); // to allow custruction of list as struct member
 
 	virtual ~List();
 	bool	Append( ObjType * obj );
@@ -243,6 +244,17 @@ Item<ObjType>::~Item()
 
 template <class ObjType>
 List<ObjType>::List()
+{
+	dummy = new Item<ObjType>( 0 );
+	dummy->next = dummy;
+	dummy->prev = dummy;
+	current = dummy;
+	// cout << "Constructed List" << endl;
+	num_elem = 0;
+}
+
+template <class ObjType>
+List<ObjType>::List(int /*dummy*/)
 {
 	dummy = new Item<ObjType>( 0 );
 	dummy->next = dummy;
