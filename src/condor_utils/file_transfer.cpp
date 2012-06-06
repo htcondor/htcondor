@@ -2313,7 +2313,7 @@ FileTransfer::CommitFiles()
 		}
 		// TODO: remove files specified in commit file
 
-		SpooledJobFiles::removeJobSwapSpoolDirectory(cluster,proc);
+		SpooledJobFiles::removeJobSwapSpoolDirectory(&jobAd);
 	}
 
 	// We have now commited the files in tmpspool, if we were supposed to.
