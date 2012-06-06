@@ -631,6 +631,54 @@ These dynamic slots can also be preempted in the same way as
 nonpartitioned slots.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-resource-defaults}
+Defaults for partitionable slot sizes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+If a job does not specify the required number of cpus, amount of memory
+or disk space, there are ways for the administrator to set default
+values for all of these paramaters.
+
+First, if any of these attributes are not set in the \Condor{submit} file,
+there are three parameters in the configuration file that the \condor{submit}
+command will use to fill in default values.  These are
+
+\begin{verbatim}
+JOB_DEFAULT_REQUESTMEMORY
+JOB_DEFAULT_REQUESTDISK
+JOB_DEFAULT_REQUESTCPUS
+\end{verbatim}
+
+The value of these parameters can be classad expressions.  The default values
+for these configuration parameters, should they not be set follow:
+
+\begin{table}[hbt]
+\begin{tabular}{l l}
+JOB\_DEFAULT\_REQUEST\_MEMORY & ifthenelse(MemoryUsage =!= UNDEF, MemoryUsage, 1) \\
+JOB\_DEFAULT\_REQUEST\_CPUS & 1 \\
+JOB\_DEFAULT\_REQUEST\_DISK & DiskUsage \\
+\end{tabular}
+\end{table}
+
+Note that the above default values are chosen so that jobs matched to partitionable
+slots function similiarly to static slots.
+
+Once the job has been matched, and has made it to the execute machine, the \Condor{startd}
+has the ability to modify these resource requests before using them to size the
+actual dynamic slots carved out of the partitionable slot.  Clearly, for the job to work,
+the startd must create slots with at least as many resources as the job needs.  However,
+it may be valuable to create dynamic slots somewhat bigger than the job's request, as
+subsequent jobs may be more likely to reuse the newly created slot when the initial job
+is done using it.
+
+The startd configuration parameters which control this, and their defaults are as below:
+\begin{table}[hbt]
+\begin{tabular}{l l}
+MODIFY\_REQUEST\_EXPR\_REQUESTCPUS & quantize(RequestCpus, {1}) \\
+MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY & quantize(RequestMemory, {TotalSlotMem / TotalSlotCpus / 4}) \\
+MODIFY\_REQUEST\_EXPR\_REQUESTDISK & quantize(RequestDisk, {1024}) \\
+\end{tabular}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-defrag}
 Defragmenting Dynamic Slots}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
