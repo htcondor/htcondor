@@ -1187,17 +1187,18 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 int
 customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 {
-	EvalResult 	lt_result;
+	classad::Value lt_result;
+	bool val;
 
 	for (unsigned i = 0;  i < sortSpecs.size();  ++i) {
-		if (EvalExprTree(sortSpecs[i].exprLT, ad1, ad2, &lt_result)
-			&& lt_result.type == LX_INTEGER ) {
-			if( lt_result.i ) {
+		if (EvalExprTree(sortSpecs[i].exprLT, ad1, ad2, lt_result)
+			&& lt_result.IsBooleanValue(val) ) {
+			if( val ) {
 				return 1;
 			} else {
 				if (EvalExprTree( sortSpecs[i].exprEQ, ad1,
-					ad2, &lt_result ) &&
-				(( lt_result.type != LX_INTEGER || !lt_result.i ))){
+					ad2, lt_result ) &&
+					( !lt_result.IsBooleanValue(val) || !val )){
 					return 0;
 				}
 			}

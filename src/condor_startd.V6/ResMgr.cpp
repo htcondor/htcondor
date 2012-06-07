@@ -25,6 +25,7 @@
 #include "classad_merge.h"
 #include "vm_common.h"
 #include "VMRegister.h"
+#include "overflow.h"
 #include <math.h>
 
 
@@ -2728,22 +2729,25 @@ ResMgr::publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask )
 void
 ResMgr::compute_draining_attrs( int /*how_much*/ )
 {
-	expected_graceful_draining_completion = 0;
-	expected_quick_draining_completion = 0;
-	expected_graceful_draining_badput = 0;
-	expected_quick_draining_badput = 0;
-	total_draining_unclaimed = 0;
+		// Using long long for int math in this function so
+		// MaxJobRetirementTime=MAX_INT or MaxVacateTime=MAX_INT do
+		// not cause overflow.
+	long long ll_expected_graceful_draining_completion = 0;
+	long long ll_expected_quick_draining_completion = 0;
+	long long ll_expected_graceful_draining_badput = 0;
+	long long ll_expected_quick_draining_badput = 0;
+	long long ll_total_draining_unclaimed = 0;
 
 	for( int i = 0; i < nresources; i++ ) {
 		Resource *rip = resources[i];
 		if( rip->r_cur ) {
-			int runtime = rip->r_cur->getJobTotalRunTime();
-			int retirement_remaining = rip->evalRetirementRemaining();
-			int max_vacate_time = rip->evalMaxVacateTime();
-			int cpus = rip->r_attr->num_cpus();
+			long long runtime = rip->r_cur->getJobTotalRunTime();
+			long long retirement_remaining = rip->evalRetirementRemaining();
+			long long max_vacate_time = rip->evalMaxVacateTime();
+			long long cpus = rip->r_attr->num_cpus();
 
-			expected_quick_draining_badput += cpus*(runtime + max_vacate_time);
-			expected_graceful_draining_badput += cpus*runtime;
+			ll_expected_quick_draining_badput += cpus*(runtime + max_vacate_time);
+			ll_expected_graceful_draining_badput += cpus*runtime;
 
 			int graceful_time_remaining;
 			if( retirement_remaining < max_vacate_time ) {
@@ -2755,21 +2759,27 @@ ResMgr::compute_draining_attrs( int /*how_much*/ )
 				graceful_time_remaining = retirement_remaining;
 			}
 
-			expected_graceful_draining_badput += cpus*graceful_time_remaining;
-			if( graceful_time_remaining > expected_graceful_draining_completion ) {
-				expected_graceful_draining_completion = graceful_time_remaining;
+			ll_expected_graceful_draining_badput += cpus*graceful_time_remaining;
+			if( graceful_time_remaining > ll_expected_graceful_draining_completion ) {
+				ll_expected_graceful_draining_completion = graceful_time_remaining;
 			}
-			if( max_vacate_time > expected_quick_draining_completion ) {
-				expected_quick_draining_completion = max_vacate_time;
+			if( max_vacate_time > ll_expected_quick_draining_completion ) {
+				ll_expected_quick_draining_completion = max_vacate_time;
 			}
 
-			total_draining_unclaimed += rip->r_state->timeDrainingUnclaimed();
+			ll_total_draining_unclaimed += rip->r_state->timeDrainingUnclaimed();
 		}
 	}
 
 		// convert time estimates from relative time to absolute time
-	expected_graceful_draining_completion += cur_time;
-	expected_quick_draining_completion += cur_time;
+	ll_expected_graceful_draining_completion += cur_time;
+	ll_expected_quick_draining_completion += cur_time;
+
+	expected_graceful_draining_completion = cap_int(ll_expected_graceful_draining_completion);
+	expected_quick_draining_completion = cap_int(ll_expected_quick_draining_completion);
+	expected_graceful_draining_badput = cap_int(ll_expected_graceful_draining_badput);
+	expected_quick_draining_badput = cap_int(ll_expected_quick_draining_badput);
+	total_draining_unclaimed = cap_int(ll_total_draining_unclaimed);
 }
 
 void

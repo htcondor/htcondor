@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "classad_newold.h"
+#include "compat_classad_util.h"
 
 #include "NewClassAdJobLogConsumer.h"
 
@@ -124,21 +124,8 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 				m_reader->GetClassAdLogFileName(), key);
 		return false;
 	}
-	MyString new_classad_value, err_msg;
-	if (!old_classad_value_to_new_classad_value(value,
-												new_classad_value,
-												&err_msg)) {
-		dprintf(D_ALWAYS,
-				"error reading %s: failed to convert expression from "
-				"old to new ClassAd format: %s\n",
-				m_reader->GetClassAdLogFileName(), err_msg.Value());
-		return false;
-	}
-
-	classad::ClassAdParser ad_parser;
-
-	classad::ExprTree *expr =
-		ad_parser.ParseExpression(new_classad_value.Value());
+	classad::ExprTree *expr;
+	ParseClassAdRvalExpr(value, expr, NULL);
 	if (!expr) {
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to parse expression: %s\n",

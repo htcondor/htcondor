@@ -21,6 +21,9 @@
 #Defaults
 REMOTE_HOSTNAME=""
 REMOTE_USER=`whoami`
+# Fix the home directory when spawned from a root process
+unset HOME
+export HOME=`echo ~`
 # Needs '~' because resolved on remote site
 REMOTE_GLITE="~/bosco/glite"
 # We do this in case $HOME isn't set properly

@@ -12,7 +12,7 @@
 #  - All failures will go to them, even if they are not in the author list.
 #  - Error emails will go to them and nobody else.
 #WRANGLERS = ["kronenfe@cs.wisc.edu", "gthain@cs.wisc.edu", "johnkn@cs.wisc.edu"]
-WRANGLERS = ["kronenfe@cs.wisc.edu", "johnkn@cs.wisc.edu", "gthain@cs.wisc.edu"]
+WRANGLERS = ["kronenfe@cs.wisc.edu", "johnkn@cs.wisc.edu"]
 
 EMAIL_FROM_ADDRESS = 'noreply@cs.wisc.edu'
 

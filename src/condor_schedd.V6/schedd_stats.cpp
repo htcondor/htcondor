@@ -128,13 +128,14 @@ void ScheddStatistics::Init(int fOtherPool)
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedRuntimes,     IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputRuntimes,        IF_BASICPUB);
 
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          IF_BASICPUB);
+
    if ( ! fOtherPool){
       SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
       SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
       SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
 
-      SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             IF_BASICPUB);
-      SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          IF_BASICPUB);
       SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
       SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
 

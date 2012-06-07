@@ -1205,12 +1205,14 @@ void
 output_param_list( struct node *list, int rdiscard, int ldiscard )
 {
 	struct node	*p;
+    int firstp = 0;
 
 	for( p=list->next; p != list; p = p->next ) {
 		if(p->ldiscard && ldiscard ) continue;
 		if(p->rdiscard && rdiscard ) continue;
-		if( p!=list->next ) printf(" , ");
+		if( firstp != 0 ) printf(" , ");
 		printf( "%s", p->id );
+		firstp = 1;
 	}
 }
 
@@ -1218,12 +1220,14 @@ void
 output_type_list( struct node *list, int rdiscard, int ldiscard )
 {
 	struct node	*p;
+	int firstp = 0;
 
 	for( p=list->next; p != list; p = p->next ) {
 		if(p->ldiscard && ldiscard ) continue;
 		if(p->rdiscard && rdiscard ) continue;
-		if( p!=list->next ) printf(" , ");
+		if( firstp != 0 ) printf(" , ");
 		printf( "%s", node_type(p) );
+		firstp = 1;
 	}
 }
 
@@ -1655,12 +1659,14 @@ output_sender( struct node *n )
 	}
 
 	/* spit out the shiny sender function */
+    int firstp = 0;
 	printf("%s\nREMOTE_CONDOR_%s(", node_type(n), n->sender_name);
 	for( p=param_list->next; p != param_list; p = p->next ) {
 		/* only discard remote args since a sender can ONLY do a remote call. */
 		if(p->rdiscard ) continue;
-		if( p!=param_list->next ) printf(" , ");
+		if( firstp != 0 ) printf(" , ");
 		printf("%s %s",node_type_noconst(p),p->id);
+		firstp = 1;
 	}
 	printf(")\n");
 	printf( "{\n" );

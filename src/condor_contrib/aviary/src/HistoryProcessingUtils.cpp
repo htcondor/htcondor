@@ -47,7 +47,7 @@ using namespace std;
 typedef set<long unsigned int> HistoryFileListType;
 static HistoryFileListType m_historyFiles;
 MyString m_path;
-bool force_reset;
+bool force_reset=false;
 
 // force a reset of history processing
 void aviary::history::process_history_files() {
@@ -57,7 +57,7 @@ void aviary::history::process_history_files() {
     }
     processHistoryDirectory();
     processOrphanedIndices();
-    processCurrentHistory(force_reset);
+    processCurrentHistory();
 }
 
 // Processing jobs from history file must allow for
@@ -211,21 +211,23 @@ aviary::history::processOrphanedIndices()
  * 4) detect rotations
  */
 void
-aviary::history::processCurrentHistory(bool do_reset)
+aviary::history::processCurrentHistory()
 {
     static MyString currentHistoryFilename = m_path + DIR_DELIM_STRING + "history";
     static HistoryFile currentHistory ( currentHistoryFilename.Value() );
 
     CondorError errstack;
 
-    if (do_reset) {
+    if (force_reset) {
        currentHistory.cleanup();
     }
 
 	// (1)
     long unsigned int id;
-    if ( !currentHistory.getId ( id ) || do_reset)
+    if ( !currentHistory.getId ( id ) || force_reset)
     {
+        // at this point adjust the reset flag
+        force_reset = false;
         if ( !currentHistory.init ( errstack ) )
         {
             dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
@@ -234,6 +236,7 @@ aviary::history::processCurrentHistory(bool do_reset)
         ASSERT ( currentHistory.getId ( id ) );
         m_historyFiles.insert ( id );
     }
+
 
     // (2)
     // Stat before poll to handle race of: poll + write + rotate + stat
@@ -273,5 +276,4 @@ aviary::history::processCurrentHistory(bool do_reset)
         force_reset = true;
         return;
     }
-    force_reset = false;
 }

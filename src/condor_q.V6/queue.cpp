@@ -948,7 +948,7 @@ processCommandLineArguments (int argc, char *argv[])
 	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
+	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1265,7 +1265,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
-				attrs.initializeFromString("ClusterId\nProcID"); // this is needed to prevent some DAG code from faulting.
+				attrs.initializeFromString("ClusterId\nProcId"); // this is needed to prevent some DAG code from faulting.
 			}
 			GetAllReferencesFromClassAdExpr(argv[i+2],attrs);
 				
@@ -1286,7 +1286,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
-				attrs.initializeFromString("ClusterId\nProcID"); // this is needed to prevent some DAG code from faulting.
+				attrs.initializeFromString("ClusterId\nProcId"); // this is needed to prevent some DAG code from faulting.
 			}
 			bool flabel = false;
 			bool fCapV  = false;
@@ -2264,8 +2264,6 @@ usage (const char *myName)
 		"\t\t\tor to the schedd without falling back to the queue\n"
 		"\t\t\tlocation discovery algortihm, even in case of error\n"
 		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
-#else
-		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
 		"\t\t-stream-results \tProduce output as ads are fetched\n"
 		"\t\t-version\t\tPrint the Condor Version and exit\n"
@@ -3416,7 +3414,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-	EvalResult	eval_result;
+	classad::Value	eval_result;
+	bool	val;
 	int		cluster, proc;
 	int		jobState;
 	int		niceUser;
@@ -3550,8 +3549,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-			if( EvalExprTree( stdRankCondition, offer, request, &eval_result ) &&
-					eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
+			if( EvalExprTree( stdRankCondition, offer, request, eval_result ) &&
+				eval_result.IsBooleanValue(val) && val ) {
 				// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
 					return_buff );
@@ -3581,12 +3580,12 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		}
 
 		// 4. Satisfies preemption priority condition?
-		if( EvalExprTree( preemptPrioCondition, offer, request, &eval_result ) &&
-			eval_result.type == LX_INTEGER && eval_result.i == TRUE ) {
+		if( EvalExprTree( preemptPrioCondition, offer, request, eval_result ) &&
+			eval_result.IsBooleanValue(val) && val ) {
 
 			// 5. Satisfies standard rank condition?
-			if( EvalExprTree( stdRankCondition, offer , request , &eval_result ) &&
-				eval_result.type == LX_INTEGER && eval_result.i == TRUE )  
+			if( EvalExprTree( stdRankCondition, offer , request , eval_result ) &&
+				eval_result.IsBooleanValue(val) && val )  
 			{
 				if( verbose )
 					sprintf( return_buff, "%sAvailable\n", return_buff );
@@ -3594,12 +3593,12 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if( EvalExprTree( preemptRankCondition, offer, request, &eval_result ) &&
-					eval_result.type == LX_INTEGER && eval_result.i == TRUE )
+				if( EvalExprTree( preemptRankCondition, offer, request, eval_result ) &&
+					eval_result.IsBooleanValue(val) && val )
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if( EvalExprTree( preemptionReq, offer , request , &eval_result ) &&
-						eval_result.type == LX_INTEGER && eval_result.i == FALSE ) 
+					if( EvalExprTree( preemptionReq, offer , request , eval_result ) &&
+						eval_result.IsBooleanValue(val) && !val ) 
 					{
 						fPreemptReqTest++;
 						if (fPreemptReqTest != 1) {

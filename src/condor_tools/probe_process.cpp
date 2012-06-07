@@ -25,6 +25,23 @@
 
 #include "../condor_ckpt/maps.h"
 
+/*
+ * Hack to enable static linking.
+ */
+#include "exit.h"
+int             _EXCEPT_Line;
+const char *    _EXCEPT_File;
+int             _EXCEPT_Errno;
+void _EXCEPT_( const char * fmt, ... ) {
+    va_list pvar;
+    char buf[ BUFSIZ ];
+    va_start(pvar, fmt);
+    vsprintf( buf, fmt, pvar );
+    fprintf( stderr, "ERROR \"%s\" at line %d in file %s\n",
+             buf, _EXCEPT_Line, _EXCEPT_File );
+    exit( JOB_EXCEPTION );
+}
+
 /* must be global instead of an object so I do as little memory 
 	accesses in the heap as possible. This stuff is in bss. */
 SegmentTable g_segment_table;
@@ -35,9 +52,9 @@ int matches(char *arg, const char *thing);
 
 void usage(char *argv0)
 {
-	dprintf(D_ALWAYS, "%s <options>\n", argv0);
+	fprintf( stderr, "%s <options>\n", argv0);
 
-	dprintf(D_ALWAYS,
+	fprintf( stderr,
 
 " --vdso-addr        Emit the vsyscall page location if applicable\n"
 " --segments         Emit a map of all loaded segments\n"
@@ -65,9 +82,9 @@ int main(int argc, char *argv[], char *envp[])
 	int pers_change = 1; /* assume yes */
 	char **new_args;
 
-	Termlog = 1;
-	dprintf_config("TOOL", get_param_functions());
-	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
+	//Termlog = 1;
+	//dprintf_config("TOOL", get_param_functions());
+	//set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 
 	/* must supply at least some options */
 	if (argc < 2) {
@@ -89,7 +106,7 @@ int main(int argc, char *argv[], char *envp[])
 		/* add one for the new argument, and one for NULL */
 		new_args = (char**)malloc(sizeof(char*) * (argc + 2));
 		if (new_args == NULL) {
-			dprintf(D_ALWAYS, "Out of memory! Exiting.\n");
+			fprintf( stderr, "Out of memory! Exiting.\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -105,7 +122,7 @@ int main(int argc, char *argv[], char *envp[])
 
 		execve("/proc/self/exe", new_args, envp);
 
-		dprintf(D_ALWAYS, "execve failed: errno %d(%s)\n",
+		fprintf( stderr, "execve failed: errno %d(%s)\n",
 			errno, strerror(errno));
 
 		exit(EXIT_FAILURE);
@@ -119,10 +136,10 @@ int main(int argc, char *argv[], char *envp[])
 			vdso_idx = segment_table_find_vdso(g_st);
 
 			if (vdso_idx == NOT_FOUND) {
-				dprintf(D_ALWAYS, "VDSO: N/A\n");
+				fprintf( stderr, "VDSO: N/A\n");
 				return EXIT_FAILURE;
 			}
-			dprintf(D_ALWAYS, "VDSO: 0x%llx\n", g_st->segs[vdso_idx].mem_start);
+			fprintf( stderr, "VDSO: 0x%llx\n", g_st->segs[vdso_idx].mem_start);
 
 		} else if (matches(argv[i], "--segments")) {
 			segment_table_stdout(g_st);

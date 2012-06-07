@@ -73,8 +73,9 @@ static bool parse_abort(Dag *dag,
 		const char *filename, int lineNumber);
 static bool parse_dot(Dag *dag, 
 		const char *filename, int lineNumber);
-static bool parse_vars(Dag *dag, 
-		const char *filename, int lineNumber);
+static bool parse_vars(Dag *dag,
+		const char *filename, int lineNumber,
+		std::list<std::string>* varq);
 static bool parse_priority(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_category(Dag *dag, const char *filename, int lineNumber);
@@ -176,10 +177,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	char *line;
 	int lineNumber = 0;
 
+	std::list<std::string> vars_to_save;
 	//
 	// This loop will read every line of the input file
 	//
 	while ( ((line=getline(fp)) != NULL) ) {
+		std::string varline(line);
 		lineNumber++;
 
 		//
@@ -287,7 +290,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a Vars spec
 		// Example syntax is: Vars JobName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
-			parsed_line_successfully = parse_vars(dag, filename, lineNumber);
+			vars_to_save.push_back(varline);	
+			parsed_line_successfully = parse_vars(dag, filename, lineNumber, &vars_to_save);
 		}
 
 		// Handle a Priority spec
@@ -372,12 +376,22 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 	fclose(fp);
 
-
 	// always remember which were the inital and final nodes for this dag.
 	// If this dag is used as a splice, then this information is very
 	// important to preserve when building dependancy links.
 	dag->LiftSplices(SELF);
 	dag->RecordInitialAndFinalNodes();
+	
+	for(std::list<std::string>::iterator p = vars_to_save.begin(); p != vars_to_save.end(); ++p) {
+		char* varline = strnewp(p->c_str());
+		strtok(varline, DELIMITERS); // Drop the VARS token
+		bool parsed_line_successfully = parse_vars(dag,filename,0,0);
+		if(!parsed_line_successfully) {
+			delete[] varline;
+			return false;
+		}
+		delete[] varline;
+	}	
 
 	if ( useDagDir ) {
 		MyString	errMsg;
@@ -1137,7 +1151,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //           Vars JobName VarName1="value1" VarName2="value2" etc
 //           Whitespace surrounding the = sign is permissible
 //-----------------------------------------------------------------------------
-static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
+static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list<std::string>* varq) {
 	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
 	MyString varName;
 	MyString varValue;
@@ -1157,7 +1171,18 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 	if(job == NULL) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): Unknown Job %s\n",
 					filename, lineNumber, jobNameOrig);
-		return false;
+		if(varq) {
+			debug_printf(DEBUG_QUIET, "Queueing this line up to try later\n");
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+			// The line we are searching for should be at the back of the list
+			// unless we have lifted, in which case it is empty
+		if(varq && !varq->empty()) {
+			varq->pop_back();
+		}
 	}
 
 	char *str = strtok(NULL, "\n"); // just get all the rest -- we'll be doing this by hand

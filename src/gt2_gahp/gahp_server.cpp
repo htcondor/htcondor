@@ -745,8 +745,10 @@ version_in_range( globus_module_descriptor_t *module, int low_major,
 	int low = low_major * 100 + low_minor;
 	int high = high_major * 100 + high_minor;
 	int cur = vers.major * 100 + vers.minor;
+	/*
 	fprintf( stderr, "Low=%d.%d, High=%d.%d, Curr=%d.%d\n", low_major,
 			 low_minor, high_major, high_minor, vers.major, vers.minor );
+	*/
 	return ( low <= cur ) && ( cur <= high );
 }
 
@@ -789,9 +791,9 @@ handle_gass_server_init(void * user_arg)
 	// versions may change how the structures are layed out, since they're
 	// supposed to be private. So if we see a version we don't recgonize,
 	// disable our optimization.
-	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 3, 0 ) ||
-		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 8, 0 ) ||
-		 !version_in_range( GLOBUS_GASS_TRANSFER_MODULE, 4, 3, 7, 0 ) ) {
+	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 3, 3 ) ||
+		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 9, 3 ) ||
+		 !version_in_range( GLOBUS_GASS_TRANSFER_MODULE, 4, 3, 7, 2 ) ) {
 		fprintf( stderr, "Unexpected module version, using low-performance GASS server!\n" );
 		num_listeners = 1;
 	}

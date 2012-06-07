@@ -2305,21 +2305,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	char *round_param = param(round_param_name.Value());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
-		LexemeType attr_type = LX_EOF;
+		classad::Value::ValueType attr_type = classad::Value::NULL_VALUE;
 		ExprTree *tree = NULL;
 		classad::Value val;
 		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
 			 tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
 			((classad::Literal *)tree)->GetValue( val );
 			if ( val.GetType() == classad::Value::INTEGER_VALUE ) {
-				attr_type = LX_INTEGER;
+				attr_type = classad::Value::INTEGER_VALUE;
 			} else if ( val.GetType() == classad::Value::REAL_VALUE ) {
-				attr_type = LX_FLOAT;
+				attr_type = classad::Value::REAL_VALUE;
 			}
 		}
 		delete tree;
 
-		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
+		if ( attr_type == classad::Value::INTEGER_VALUE || classad::Value::REAL_VALUE ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
@@ -2337,7 +2337,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			int ivalue;
 			double fvalue;
 
-			if ( attr_type == LX_INTEGER ) {
+			if ( attr_type == classad::Value::INTEGER_VALUE ) {
 				val.IsIntegerValue( ivalue );
 				fvalue = ivalue;
 			} else {
@@ -2365,7 +2365,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
-					if( attr_type == LX_INTEGER ) {
+					if( attr_type == classad::Value::INTEGER_VALUE ) {
 						new_value.sprintf("%d",(int)fvalue);
 					}
 					else {
@@ -2389,7 +2389,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				new_value = ivalue;
 
 					// if it was a float, append ".0" to keep it a float
-				if ( attr_type == LX_FLOAT ) {
+				if ( attr_type == classad::Value::REAL_VALUE ) {
 					new_value += ".0";
 				}
 			}

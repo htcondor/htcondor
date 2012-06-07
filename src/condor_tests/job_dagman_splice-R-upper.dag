@@ -1,0 +1,2 @@
+splice A job_dagman_splice-R-lower.dag
+vars A+A foo="bar"

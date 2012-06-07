@@ -40,6 +40,9 @@
 // axis includes
 #include "axutil_date_time.h"
 
+// c++ includes
+#include <algorithm>
+
 using namespace std;
 using namespace AviaryQuery;
 using namespace AviaryCommon;

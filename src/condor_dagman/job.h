@@ -63,7 +63,9 @@ typedef int JobID_t;
      in the Condor system.  If it completes successfully and the job
      has a POST script defined it changes to POSTRUN while that script
      executes, otherwise if it completes successfully it is DONE, or
-     is in the ERROR state if it completes abnormally.<p>
+     is in the ERROR state if it completes abnormally.  Note that final
+     nodes are a special case -- they are created with a state of
+     NOT_READY<p>
 
      The DAG class will control the job by modifying and viewing its
      three queues.  Once the WAITING queue becomes empty, the job

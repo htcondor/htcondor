@@ -2,6 +2,11 @@
 
 \index{ClassAd!job attributes}
 
+%%% ClassAd attribute: Absent
+\index{ClassAd job attribute!Absent}
+\index{Absent!job ClassAd attribute}
+\item[\AdAttr{Absent}:] Boolean set to true \Expr{True} if the ad is absent.
+
 %%% ClassAd attribute: AllRemoteHosts
 \index{ClassAd job attribute!AllRemoteHosts}
 \index{AllRemoteHosts!job ClassAd attribute}
@@ -12,6 +17,12 @@ of all the remote machines running a parallel or mpi universe job.
 \index{ClassAd job attribute!Args}
 \index{Args!job ClassAd attribute}
 \item[\AdAttr{Args}:]  String representing the arguments passed to the job.
+
+%%% ClassAd attribute: BatchQueue
+\index{ClassAd job attribute!BatchQueue}
+\index{BatchQueue!job ClassAd attribute}
+\item[\AdAttr{BatchQueue}:]  For grid jobs going to PBS, LSG or SGE, the
+name of the queue in the remote batch system.
 
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
@@ -79,15 +90,6 @@ CommittedTime - CommittedSuspensionTime
 \AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
 on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
 
-%%% ClassAd attribute: CumulativeSlotTime
-\index{ClassAd job attribute!CumulativeSlotTime}
-\index{CumulativeSlotTime!job ClassAd attribute}
-\label{CumulativeSlotTime}
-\item[\AdAttr{CumulativeSlotTime}:] This attribute is identical to
-\AdAttr{RemoteWallClockTime} except that the time is multiplied by the
-\AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
-on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
-
 %%% ClassAd attribute: CompletionDate
 \index{ClassAd job attribute!CompletionDate}
 \index{CompletionDate!job ClassAd attribute}
@@ -104,11 +106,27 @@ seconds the job has spent in suspension during time in which the job was
 not evicted without a checkpoint.  This number is updated when the job is
 checkpointed and when it exits.
 
+%%% ClassAd attribute: CumulativeSlotTime
+\index{ClassAd job attribute!CumulativeSlotTime}
+\index{CumulativeSlotTime!job ClassAd attribute}
+\label{CumulativeSlotTime}
+\item[\AdAttr{CumulativeSlotTime}:] This attribute is identical to
+\AdAttr{RemoteWallClockTime} except that the time is multiplied by the
+\AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
+on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+
 %%% ClassAd attribute: CumulativeSuspensionTime
 \index{ClassAd job attribute!CumulativeSuspensionTime}
 \index{CumulativeSuspensionTime!job ClassAd attribute}
 \item[\AdAttr{CumulativeSuspensionTime}:]  A running total of the number of
 seconds the job has spent in suspension for the life of the job.
+
+%%% ClassAd attribute: CumulativeTransferTime
+\index{ClassAd job attribute!CumulativeTransferTime}
+\index{CumulativeTransferTime!job ClassAd attribute}
+\label{CumulativeTransferTime}
+\item[\AdAttr{CumulativeTransferTime}:] The total time, in seconds, that 
+condor has spent transferring the input and output sandboxes for the life of the job.
 
 %%% ClassAd attribute: CurrentHosts
 \index{ClassAd job attribute!CurrentHosts}
@@ -594,6 +612,30 @@ This is the same as the configuration setting
 \MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
 page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
 the user log instead of the system event log.
+
+%%% ClassAd attribute: JobCurrentStartDate
+\index{ClassAd job attribute!JobCurrentStartDate}
+\index{JobCurrentStartDate!job ClassAd attribute}
+\label{JobCurrentStartDate-job-attribute}
+\item[\AdAttr{JobCurrentStartDate}:]  Time at which the job most recently began
+running.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).  
+
+%%% ClassAd attribute: JobCurrentStartExecutingDate
+\index{ClassAd job attribute!JobCurrentStartExecutingDate}
+\index{JobCurrentStartExecutingDate!job ClassAd attribute}
+\label{JobCurrentStartExecutingDate-job-attribute}
+\item[\AdAttr{JobCurrentStartExecutingDate}:]  Time at which the job most recently finished
+transfering its input sandbox and began executing.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
+
+%%% ClassAd attribute: JobCurrentStartTransferOutputDate
+\index{ClassAd job attribute!JobCurrentStartTransferOutputDate}
+\index{JobCurrentStartTransferOutputDate!job ClassAd attribute}
+\label{JobCurrentStartTransferOutputDate-job-attribute}
+\item[\AdAttr{JobCurrentStartTransferOutputDate}:]  Time at which the job most recently finished
+executing and began transferring its output sandbox.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
 
 %%% ClassAd attribute: JobLeaseDuration

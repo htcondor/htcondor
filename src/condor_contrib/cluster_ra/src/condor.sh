@@ -1,15 +1,16 @@
 #!/bin/bash
 # This is a resource agent for controlling condor daemons from 
-# cluster suite.  It is based on the condor init script developed
+# cluster.  It is based on the condor init script developed
 # by Matt Farrellee, but modified to be a Resource Agent and to support
 # multiple daemons.
 
-# The program being managed
-if [ $OCF_RESKEY_type = "query_server" ]; then
+if [ "$OCF_RESKEY_type" = "query_server" ]; then
   prefix="aviary"
 else
   prefix="condor"
 fi
+
+# The program being managed
 prog=${prefix}_$OCF_RESKEY_type
 
 pidfile=/var/run/condor/$prog-$OCF_RESKEY_name.pid
@@ -71,6 +72,7 @@ metadata() {
     <action name="monitor" interval="30" timeout="5"/>
     <action name="status" interval="30" timeout="5"/>
     <action name="meta-data" timeout="5"/>
+    <action name="validate-all" timeout="5"/>
   </actions>
 </resource-agent>
 EOT
@@ -80,7 +82,7 @@ start() {
     verify_binary
     RETVAL=$?
     if [ $RETVAL -ne 0 ]; then
-      return $RETVAL
+        return $RETVAL
     fi
 
     ocf_log info "Starting $prog $OCF_RESKEY_name"
@@ -90,15 +92,15 @@ start() {
     fi
     condor_config_val $OCF_RESKEY_name > /dev/null 2> /dev/null
     if [ $? -ne 0 ]; then
-      # Configuration for schedd isn't on this node, so fail to start
-      ocf_log err "$prog $OCF_RESKEY_name not configured on this node"
-      return $OCF_ERR_GENERIC
+        # Configuration for schedd isn't on this node, so fail to start
+        ocf_log err "$prog $OCF_RESKEY_name not configured on this node"
+        return $OCF_ERR_GENERIC
     fi
     env=`condor_config_val ${OCF_RESKEY_name}_ENVIRONMENT`
     if [ $? -eq 0 ]; then
-      name=`echo $env | cut -d'=' -f 1`
-      val=`echo $env | cut -d'=' -f 2-`
-      export $name=$val
+        name=`echo $env | cut -d'=' -f 1`
+        val=`echo $env | cut -d'=' -f 2-`
+        export $name=$val
     fi
     daemon --pidfile $pidfile --check $prog $prog -pidfile $pidfile -local-name $OCF_RESKEY_name
     RETVAL=$?
@@ -220,6 +222,7 @@ get_pid() {
 verify_binary() {
     # Report that $prog does not exist, or is not executable
     if [ ! -x /usr/sbin/$prog ]; then
+        ocf_log err "Binary /usr/sbin/$prog doesn't exist"
 	return $OCF_ERR_INSTALLED
     fi
 
@@ -230,7 +233,7 @@ verify_binary() {
 case "$1" in
     start)
 	pid_status $pidfile 
-	[ $? -eq 0 ] && return 0
+	[ $? -eq 0 ] && exit 0
 	start
 	exit $?
 	;;
@@ -268,7 +271,6 @@ case "$1" in
     validate-all)
 	[ -n "$OCF_RESKEY_name" ] || exit $OCF_ERR_ARGS
 
-	# xxx do nothing for now.
 	exit 0
 	;;
     *)

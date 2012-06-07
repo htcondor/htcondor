@@ -32,28 +32,22 @@
 
 // GridManager job states
 #define GM_INIT					0
-#define GM_REGISTER				1
-#define GM_STDIO_UPDATE			2
-#define GM_UNSUBMITTED			3
-#define GM_SUBMIT				4
-#define GM_SUBMIT_SAVE			5
-#define GM_SUBMITTED			6
-#define GM_DONE_SAVE			7
-#define GM_DONE_COMMIT			8
-#define GM_CANCEL				9
-#define GM_FAILED				10
-#define GM_DELETE				11
-#define GM_CLEAR_REQUEST		12
-#define GM_HOLD					13
-#define GM_PROXY_EXPIRED		14
-#define GM_REFRESH_PROXY		15
-#define GM_START				16
-#define GM_POLL_ACTIVE			17
+#define GM_UNSUBMITTED			1
+#define GM_SUBMIT				2
+#define GM_SUBMIT_SAVE			3
+#define GM_SUBMITTED			4
+#define GM_DONE_SAVE			5
+#define GM_DONE_COMMIT			6
+#define GM_CANCEL				7
+#define GM_DELETE				8
+#define GM_CLEAR_REQUEST		9
+#define GM_HOLD					10
+#define GM_REFRESH_PROXY		11
+#define GM_START				12
+#define GM_POLL_ACTIVE			13
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
-	"GM_REGISTER",
-	"GM_STDIO_UPDATE",
 	"GM_UNSUBMITTED",
 	"GM_SUBMIT",
 	"GM_SUBMIT_SAVE",
@@ -61,11 +55,9 @@ static const char *GMStateNames[] = {
 	"GM_DONE_SAVE",
 	"GM_DONE_COMMIT",
 	"GM_CANCEL",
-	"GM_FAILED",
 	"GM_DELETE",
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
-	"GM_PROXY_EXPIRED",
 	"GM_REFRESH_PROXY",
 	"GM_START",
 	"GM_POLL_ACTIVE"
@@ -887,6 +879,12 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	jobAd->LookupString( ATTR_JOB_REMOTE_IWD, expr );
 	if ( !expr.IsEmpty() ) {
 		submit_ad->Assign( ATTR_JOB_IWD, expr );
+	}
+
+	expr = "";
+	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
+	if ( !expr.IsEmpty() ) {
+		submit_ad->Assign( "Queue", expr );
 	}
 
 	// The blahp expects the Cmd attribute to contain the full pathname

@@ -1603,6 +1603,18 @@ conditions that were present when the job checkpointed.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% batch_queue
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!batch\_queue}
+\label{condor-submit-batch-queue}
+\item[batch\_queue = $<$queuename$>$]
+Used for \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge} jobs.
+Specifies the name of the PBS/LSF/SGE job queue into which the job should
+be submitted.
+If this attribute is absent, the default queue is used.
+
+%%%%%%%%%%%%%%%%%%%
 %% cream_attributes
 %%%%%%%%%%%%%%%%%%%
 
@@ -1768,6 +1780,30 @@ with abbreviations other than \Expr{AMI},
 for example \Expr{EMI} is valid for Eucalyptus.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_availability_zone
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_availability\_zone}
+\label{condor-submit-ec2-availability-zone}
+\item[ec2\_availability\_zone = $<$zone name$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the Availability Zone that the instance should be run in. 
+This command is optional, unless \SubmitCmd{ec2\_ebs\_volumes} is set.
+As an example, one current zone is \Expr{us-east-1b}.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_ebs_volumes
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_ebs\_volumes}
+\label{condor-submit-ec2-ebs-volumes}
+\item[ec2\_ebs\_volumes = $<$ebs name$>$:$<$device name$>$,$<$ebs name$>$:$<$device name$>$,\Dots]
+For grid type \SubmitCmd{ec2} jobs,
+optionally specifies a list of Elastic Block Store (EBS)
+volumes to be made available to the instance and the device names they
+should have in the instance.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_elastic_ip
 %%%%%%%%%%%%%%%%%%%
 
@@ -1775,7 +1811,8 @@ for example \Expr{EMI} is valid for Eucalyptus.
 \label{condor-submit-ec2-elastic-id}
 \item[ec2\_elastic\_ip = $<$elastic IP address$>$]
 For grid type \SubmitCmd{ec2} jobs,
-specifies an Elastic IP address to associate with the instance.
+and optional specification of an Elastic IP address 
+that should be assigned to this instance.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_instance_type
@@ -1788,15 +1825,17 @@ For grid type \SubmitCmd{ec2} jobs, identifies the instance type.
 Different services may offer different instance types,
 so no default value is set.
 
-%%%%%%%%%%%%%%%%%%%%
-%%% ec2_keypair_file
-%%%%%%%%%%%%%%%%%%%%
-%
-%\index{submit commands!ec2\_keypair\_file}
-%\item[ec2\_key\_pair\_file = $<$pathname$>$]
-%For grid type \SubmitCmd{ec2} jobs, 
-%specifies the path and file name into which to write the SSH key 
-%used to access the image, once it is running.
+%%%%%%%%%%%%%%%%%%%
+%% ec2_keypair_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_keypair\_file}
+\item[ec2\_key\_pair\_file = $<$pathname$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the complete path and file name of a file into which 
+Condor will write an SSH key for use with ec2 jobs. 
+The key can be used to \Prog{ssh} into the
+virtual machine once it is running.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_secret_access_key
@@ -1818,6 +1857,30 @@ specifies the path and file name containing the secret access key.
 For grid type \SubmitCmd{ec2} jobs, 
 defines the list of EC2 security groups which
 should be associated with the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_tag_names
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_tag\_names}
+\label{condor-submit-ec2-tag-names}
+\item[ec2\_tag\_names = $<$name0,name1,name...$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the case of tag names that will be associated with the
+running instance.
+This is only necessary if a tag name case matters.
+By default the list will be automatically generated.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_tag_*
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_tag\_$<$name$>$}
+\item[ec2\_tag\_$<$name$>$ = $<$value$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies a tag to be associated with the running instance.
+The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
+change the case.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_user_data
@@ -1851,28 +1914,28 @@ with the data from that \SubmitCmd{ec2\_user\_data} submit command
 occurring first.
 
 %%%%%%%%%%%%%%%%%%%
-%% ec2_tag_names
+%% ec2_vpc_ip
 %%%%%%%%%%%%%%%%%%%
 
-\index{submit commands!ec2\_tag\_names}
-\label{condor-submit-ec2-tag-names}
-\item[ec2\_tag\_names = $<$name0,name1,name...$>$]
+\index{submit commands!ec2\_vpc\_ip}
+\label{condor-submit-ec2-vpc-ip}
+\item[ec2\_vpc\_ip = $<$a.b.c.d$>$]
 For grid type \SubmitCmd{ec2} jobs, 
-specifies the case of tag names that will be associated with the
-running instance.
-This is only necessary if a tag name case matters.
-By default the list will be automatically generated.
+that are part of a Virtual Private Cloud (VPC),
+an optional specification of the IP address that this instance should have 
+within the VPC.
 
 %%%%%%%%%%%%%%%%%%%
-%% ec2_tag_*
+%% ec2_vpc_subnet
 %%%%%%%%%%%%%%%%%%%
 
-\index{submit commands!ec2\_tag\_$<$name$>$}
-\item[ec2\_tag\_$<$name$>$ = $<$value$>$]
+\index{submit commands!ec2\_vpc\_subnet}
+\label{condor-submit-ec2-vpc-subnet}
+\item[ec2\_vpc\_subnet = $<$subnet specification string$>$]
 For grid type \SubmitCmd{ec2} jobs, 
-specifies a tag to be associated with the running instance.
-The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
-change the case.
+an optional specification of the Virtual Private Cloud (VPC) that
+this instance should be a part of.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch
@@ -3118,6 +3181,7 @@ following \Arg{attribute} into the job ClassAd with the given
 %% +PreCmd
 %%%%%%%%%%%%%%%%%%%
 
+\label{man-condor-submit-prescript}
 \index{submit commands!+PreCmd}
 \item[+PreCmd = $<$executable$>$]
 A vanilla universe job may specify that a script is to be run 
@@ -3136,6 +3200,7 @@ when file transfer is enabled.
 %% +PostCmd
 %%%%%%%%%%%%%%%%%%%
 
+\label{man-condor-submit-postscript}
 \index{submit commands!+PostCmd}
 \item[+PostCmd = $<$executable$>$]
 A vanilla universe job may specify that a script is to be run 

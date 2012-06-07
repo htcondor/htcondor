@@ -250,30 +250,30 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 
 			{
 				ExprTree *tree = NULL;
-				EvalResult result;
+				classad::Value result;
 				bool eval_ok = false;
 
 				if(tree = al->LookupExpr (attr)) {
-					eval_ok = EvalExprTree(tree, al, target, &result);
+					eval_ok = EvalExprTree(tree, al, target, result);
 				} else {
 						// drat, we couldn't find it. Maybe it's an
 						// expression?
 					tree = NULL;
 					if( 0 == ParseClassAdRvalExpr(attr, tree) != 0 ) {
-						eval_ok = EvalExprTree(tree, al, target, &result);
+						eval_ok = EvalExprTree(tree, al, target, result);
 						delete tree;
 						tree = NULL;
 					}
 				}
 				if (eval_ok) {
 					bool fQuote = fmt->fmt_letter == 'V';
-					result.toString(true);
-					if (result.type == LX_STRING && result.s) {
-						colval = result.s;
-						if (fQuote) {
-							colval += "''";
-						}
+					std::string buff;
+					if ( fQuote || !result.IsStringValue( buff ) ) {
+						classad::ClassAdUnParser unparser;
+						unparser.SetOldClassAd( true );
+						unparser.Unparse( buff, val );
 					}
+					colval = buff.c_str();
 				}
 			}
 			break;
@@ -452,7 +452,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	Formatter *fmt;
 	char 	*attr, *alt;
 	ExprTree *tree;
-	EvalResult result;
+	classad::Value result;
 	MyString  retval("");
 	int		intValue;
 	float 	floatValue;
@@ -564,9 +564,10 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
-						if( EvalExprTree(tree, al, target, &result) &&
-							result.type == LX_STRING && result.s ) {
-							retval.sprintf_cat(fmt->printfFmt, result.s);
+						std::string buff;
+						if( EvalExprTree(tree, al, target, result) &&
+							result.IsStringValue(buff) ) {
+							retval.sprintf_cat(fmt->printfFmt, buff.c_str());
 						} else {
 							// couldn't eval
 							if( alt ) {
@@ -597,21 +598,16 @@ display (AttrList *al, AttrList *target /* = NULL */)
 #if 1
 						const char * pszValue = alt;
 						std::string buff;
-						if( EvalExprTree(tree, al, target, &result) ) {
+						if( EvalExprTree(tree, al, target, result) ) {
 							// Only strings are formatted differently for
 							// %v vs %V
 							bool fQuote = (fmt_info.fmt_letter == 'V');
-							if ( fQuote && result.type == LX_STRING ) {
-								classad::Value val;
+							if ( fQuote || !result.IsStringValue(buff) ) {
 								classad::ClassAdUnParser unparser;
-								val.SetStringValue( result.s );
 								unparser.SetOldClassAd( true );
-								unparser.Unparse( buff, val );
-								pszValue = buff.c_str();
-							} else {
-								result.toString(true);
-								pszValue = result.s;
+								unparser.Unparse( buff, result );
 							}
+							pszValue = buff.c_str();
 						}
 
 						if ((fmt->options & FormatOptionAutoWidth) && strlen(fmt->printfFmt) == 2) {
@@ -642,23 +638,20 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
 						char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
 						bool fQuote = (*ptag == 'V');
+						classad::Value val;
+						std::string buff;
 						if (*ptag == 'v' || *ptag == 'V')
 							*ptag = 's'; // convert printf format to %s
-						if( EvalExprTree(tree, al, target, &result) ) {
+						if( EvalExprTree(tree, al, target, val) ) {
 							// Only strings are formatted differently for
 							// %v vs %V
-							if ( fQuote && result.type == LX_STRING ) {
-								classad::Value val;
+							if ( fQuote || !val.IsStringValue( buff ) ) {
 								classad::ClassAdUnParser unparser;
-								std::string buff;
-								val.SetStringValue( result.s );
 								unparser.SetOldClassAd( true );
 								unparser.Unparse( buff, val );
 								stringValue.sprintf( tfmt, buff.c_str() );
-							} else {
-								result.toString(true);
-								stringValue.sprintf( tfmt, result.s );
 							}
+							stringValue.sprintf( tfmt, buff.c_str() );
 							retval += stringValue;
 						} else {
 								// couldn't eval
@@ -674,26 +667,43 @@ display (AttrList *al, AttrList *target /* = NULL */)
 
 				case PFT_INT:
 				case PFT_FLOAT:
-					if( EvalExprTree(tree, al, target, &result) ) {
-						switch( result.type ) {
-						case LX_FLOAT:
+					if( EvalExprTree(tree, al, target, result) ) {
+						switch( result.GetType() ) {
+						case classad::Value::REAL_VALUE:
+							double d;
+							result.IsRealValue( d );
 							if( fmt_type == PFT_INT ) {
 								stringValue.sprintf( fmt->printfFmt, 
-													 (int)result.f );
+													 (int)d );
 							} else {
 								stringValue.sprintf( fmt->printfFmt, 
-													 result.f );
+													 (float)d );
 							}
 							retval += stringValue;
 							break;
 
-						case LX_INTEGER:
+						case classad::Value::INTEGER_VALUE:
+							int i;
+							result.IsIntegerValue( i );
 							if( fmt_type == PFT_INT ) {
 								stringValue.sprintf( fmt->printfFmt, 
-													 result.i );
+													 i );
 							} else {
 								stringValue.sprintf( fmt->printfFmt, 
-													 (float)result.i );
+													 (float)i );
+							}
+							retval += stringValue;
+							break;
+
+						case classad::Value::BOOLEAN_VALUE:
+							bool b;
+							result.IsBooleanValue( b );
+							if( fmt_type == PFT_INT ) {
+								stringValue.sprintf( fmt->printfFmt, 
+													 b ? 1 : 0 );
+							} else {
+								stringValue.sprintf( fmt->printfFmt, 
+													 b ? 1.0 : 0.0 );
 							}
 							retval += stringValue;
 							break;

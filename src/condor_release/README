@@ -23,7 +23,6 @@ lib              - directory containing libraries
 libexec          - directory containing auxilliary files
 man              - directory containing man pages
 sbin             - directory containing daemon binaries and admin tools
-sql              - directory containing SQL commands for Quill
 src              - directory containing source for some interfaces
 
 A complete manual for Condor is available on the World Wide Web at

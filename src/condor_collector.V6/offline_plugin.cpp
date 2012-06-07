@@ -421,7 +421,8 @@ bool
 OfflineCollectorPlugin::expire ( 
 	ClassAd &ad )
 {
-	EvalResult result;
+	classad::Value result;
+	bool val;
 
 	dprintf (
 		D_FULLDEBUG,
@@ -468,8 +469,8 @@ OfflineCollectorPlugin::expire (
 
 	/* Test is ad against the absent requirements expression, and
 	   mark the ad absent if true */
-	if (EvalExprTree(AbsentReq,&ad,NULL,&result) &&
-		result.type == LX_INTEGER && result.i == TRUE) 
+	if (EvalExprTree(AbsentReq,&ad,NULL,result) &&
+		result.IsBooleanValue(val) && val) 
 	{
 		int lifetime, timestamp;
 
