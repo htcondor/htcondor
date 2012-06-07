@@ -112,8 +112,8 @@ still recognized, but their use is now discouraged.
 
 \begin{itemize}
 
-\item Fixed a bug in the condor init script that would cause
-the init script to hang if condor wasn't running
+\item Fixed a bug in the Condor init script that would cause
+the init script to hang if Condor was not running.
 \Ticket{2872}
 
 \item Fixed a bug that caused parallel universe jobs using
@@ -124,7 +124,7 @@ there were available machines to run them.
 \Ticket{3017}
 
 \item Fixed a bug that caused the \Condor{gridmanager} to crash when
-attempting to submit jobs to a local PBS/LSF/SGI cluster.
+attempting to submit jobs to a local PBS, LSF, or SGI cluster.
 \Ticket{3014}
 
 \item Fixed a bug in the handling of local universe jobs which caused
@@ -154,11 +154,6 @@ and the job was put on hold.
 draining badput and completion time were sometimes nonsensical
 because of integer overflow.
 \Ticket{3001}
-
-\item Fixed a bug where per-job sub-directories and their contents
-in \MacroNI{SPOOL} would not be removed when the associated job
-left the queue.
-\Ticket{2942}
 
 \end{itemize}
 
