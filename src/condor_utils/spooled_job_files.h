@@ -59,11 +59,11 @@ public:
 		 * This also removes the shared proc directory from the
 		 * hierarchy if possible.
 		 */
-	static void removeJobSpoolDirectory( ClassAd * ad);
+	static void removeJobSpoolDirectory(int cluster, int proc);
 
 		/* Remove the .swap spool directory belonging to a job.
 		 */
-	static void removeJobSwapSpoolDirectory( ClassAd * ad);
+	static void removeJobSwapSpoolDirectory( int cluster, int proc);
 
 		/* Remove files spooled for a job cluster.
 		 * This also removes the shared cluster directory from the

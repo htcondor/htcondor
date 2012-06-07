@@ -135,12 +135,9 @@ bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
 }
 #endif
 
-#if defined(__cplusplus)
-
-#if ! defined WIN32
+#if defined(__cplusplus) && !defined( WIN32 )
 #include "passwd_cache.unix.h"
 extern passwd_cache* pcache(void);
-#endif
 
 // An object that automatically returns the previous privilege level when destroyed
 class TemporaryPrivSentry {
@@ -167,6 +164,6 @@ private:
 	priv_state m_orig_state;
 };
 
-#endif // __cplusplus
+#endif
 
 #endif /* _UID_H */
