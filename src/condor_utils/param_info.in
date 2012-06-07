@@ -10619,7 +10619,7 @@ id=610
 
 [STARTER_RLIMIT_AS]
 aliases=
-default=
+default=0
 version=7.8.1
 range=.*
 state=default
