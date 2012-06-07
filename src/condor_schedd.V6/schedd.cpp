@@ -9957,7 +9957,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
 	}
 
-	SpooledJobFiles::removeJobSpoolDirectory(GetJobAd(cluster,proc));
+	SpooledJobFiles::removeJobSpoolDirectory(cluster,proc);
 }
 
 
