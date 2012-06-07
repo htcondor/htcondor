@@ -10616,3 +10616,21 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
+
+[STARTER_RLIMIT_AS]
+aliases=
+default=
+version=7.8.1
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Classad expression used to set virtual memory rlimit for job
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=611
+
+
