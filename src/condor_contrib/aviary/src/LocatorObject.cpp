@@ -92,7 +92,7 @@ LocatorObject::update (const ClassAd& ad)
     }
     else {
         Endpoint& ep_old = (*it).second;
-        if (DebugFlags & D_FULLDEBUG) {
+        if (IsDebugLevel( D_FULLDEBUG)) {
             stringstream sold,snew; sold << ep_old; snew << ep_new;
             dprintf(D_FULLDEBUG,"LocatorObject: comparing endpoint '%s' to '%s'\n",sold.str().c_str(),snew.str().c_str());
         }
