@@ -49,7 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where per-job sub-directories and their contents
+in \MacroNI{SPOOL} would not be removed when the associated job
+left the queue.
+\Ticket{2942}
+
 
 \end{itemize}
 
@@ -154,11 +158,6 @@ and the job was put on hold.
 draining badput and completion time were sometimes nonsensical
 because of integer overflow.
 \Ticket{3001}
-
-\item Fixed a bug where per-job sub-directories and their contents
-in \MacroNI{SPOOL} would not be removed when the associated job
-left the queue.
-\Ticket{2942}
 
 \end{itemize}
 
