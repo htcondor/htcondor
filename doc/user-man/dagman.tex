@@ -385,8 +385,12 @@ and the node will be marked as successful.
 
 Eight variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
 \Env{\$MAX\_RETRIES}, \Env{\$RETURN}, \Env{\$PRE\_SCRIPT\_RETURN},
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the
-DAG input file as arguments passed to a PRE or POST script.
+\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the DAG input
+file as arguments passed to a PRE or POST script. These variables must be
+standalone, separated from other words by whitespace. For example, a construction such as
+\Env{job\_status=\$RETURN} will not cause substitution of the \Env{\$RETURN} value,
+and the command line of the script will contain the token
+``\Env{job\_status=\$RETURN}''.
 
 \index{DAGMan!JOB@\verb^$JOB^ value}
 The variable \Env{\$JOB} evaluates to the (case sensitive) string
