@@ -179,14 +179,6 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
-DebugFileInfo::DebugFileInfo(const DebugFileInfo &debugFileInfo)
-{
-	this->choice = debugFileInfo.choice;
-	this->logPath = std::string(debugFileInfo.logPath);
-	this->maxLog = debugFileInfo.maxLog;
-	this->maxLogNum = debugFileInfo.maxLogNum;
-	this->debugFP = NULL;
-}
 
 DebugFileInfo::~DebugFileInfo()
 {
@@ -196,6 +188,11 @@ DebugFileInfo::~DebugFileInfo()
 		debugFP = NULL;
 	}
 }
+
+DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
+	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice),
+	maxLog(p.maxLog), maxLogNum(p.maxLogNum),
+	want_truncate(p.want_truncate), accepts_all(p.accepts_all) {}
 
 bool DebugFileInfo::MatchesCatAndFlags(int cat_and_flags) const
 {
