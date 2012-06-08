@@ -26,6 +26,7 @@
 #include "directory.h"
 #include "filename_tools.h"
 #include "proc.h"
+#include "condor_uid.h"
 
 char *
 gen_ckpt_name( char const *directory, int cluster, int proc, int subproc )
