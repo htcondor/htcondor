@@ -4,6 +4,8 @@
 %e 2500
 %o 5000
 %option noyywrap
+%option noinput
+%option nounput
 %{
 #include <string.h>
 #include <ctype.h>
