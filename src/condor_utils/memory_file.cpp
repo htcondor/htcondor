@@ -50,7 +50,7 @@ Compare this memory_file against a real file.
 Return the number of errors found.
 */
 
-int memory_file::compare( char *filename )
+int memory_file::compare( const char *filename )
 {
 	int errors=0;
 	off_t position=0, chunksize=0;

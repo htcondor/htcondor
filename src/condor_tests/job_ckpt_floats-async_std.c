@@ -34,7 +34,7 @@
 #include <time.h>
 
 int main( int argc, char* argv[] ) {
-	int i, j, s, num_secs = 1;
+	int j, s, num_secs = 1;
 	time_t old_time, new_time;
 	float x = 45;
 	float y = 23;
@@ -54,7 +54,7 @@ int main( int argc, char* argv[] ) {
 		for( j=0; j<10000; j++ ) {
 			if( (x+y)>=z ) {
 				printf( "error: floating point comparison failed on "
-						"sec: %d, i: %d, j: %d\n", s, i, j );
+						"sec: %d, j: %d\n", s, j );
 				success=0;
 			}
 		}

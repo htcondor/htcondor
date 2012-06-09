@@ -56,7 +56,7 @@ public:
 	/* A UNIX file.  Return the number of bytes that */
 	/* are different */
 
-	int compare( char *filename );
+	int compare( const char *filename );
 
 private:
 
