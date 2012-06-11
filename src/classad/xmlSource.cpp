@@ -136,6 +136,7 @@ ParseClassAd(ClassAd *classad_in)
 {
 	bool             in_classad;
 	ClassAd          *classad = NULL;
+	ClassAd          *local_ad = NULL;
 	XMLLexer::Token  token;
 
 	classad = NULL;
@@ -154,7 +155,8 @@ ParseClassAd(ClassAd *classad_in)
 						classad_in->Clear();
 						classad = classad_in;
 					} else {
-						classad = new ClassAd();
+						local_ad = new ClassAd();
+						classad = local_ad;
 					}
 					classad->DisableDirtyTracking();
 				} else {
@@ -167,6 +169,7 @@ ParseClassAd(ClassAd *classad_in)
 			if (token.token_type == XMLLexer::tokenType_Tag) {
 			  if (token.tag_id   == XMLLexer::tagID_Attribute) {
 			    if (token.tag_type == XMLLexer::tagType_Invalid) {
+				  delete local_ad;
 			      return NULL;
 			    } else if( token.tag_type == XMLLexer::tagType_Start) {
 					string attribute_name;
@@ -177,9 +180,12 @@ ParseClassAd(ClassAd *classad_in)
 						classad->Insert(attribute_name, tree);
 					}
 					else {
+					  delete local_ad;
 					  return NULL;
 					}
-			    } 
+			    } else {
+					lexer.ConsumeToken(NULL);
+				}
               } else if (token.tag_id   == XMLLexer::tagID_ClassAd) {
                   lexer.ConsumeToken(NULL);
                   if (token.tag_type == XMLLexer::tagType_End) {
@@ -198,6 +204,8 @@ ParseClassAd(ClassAd *classad_in)
 					lexer.ConsumeToken(NULL);
 					break;
 				}
+			} else {
+				lexer.ConsumeToken(NULL);
 			}
 		}
 	}
