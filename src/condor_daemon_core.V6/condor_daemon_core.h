@@ -1146,7 +1146,8 @@ class DaemonCore : public Service
         int              *affinity_mask	     = NULL,
         char const      *daemon_sock         = NULL,
         MyString        *err_return_msg      = NULL,
-        FilesystemRemap *remap               = NULL
+        FilesystemRemap *remap               = NULL,
+        long		 	as_hard_limit        = 0l
         );
 
     //@}

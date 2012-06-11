@@ -47,6 +47,7 @@ public:
 	}
 };
 */
+struct dprintf_output_settings;
 
 struct DebugFileInfo
 {
@@ -59,7 +60,10 @@ struct DebugFileInfo
 	bool want_truncate;
 	bool accepts_all;
 	DebugFileInfo() : outputTarget(FILE_OUT), debugFP(0), choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
-	DebugFileInfo(const DebugFileInfo &debugFileInfo);
+	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
+		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum),
+		want_truncate(dfi.want_truncate), accepts_all(dfi.accepts_all) {}
+	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
 	bool MatchesCatAndFlags(int cat_and_flags) const;
 };
