@@ -58,6 +58,11 @@ variables are still recognized, but their use is now discouraged.
 
 \begin{itemize}
 
+\item Fixed a bug that caused events to not be written to the job event
+log when the log is written in XML and a job policy expression triggering
+the event contains any double-quotes.
+\Ticket{3048}
+
 \item Fixed a bug in the Condor init script that would cause
 the init script to hang if Condor was not running.
 \Ticket{2872}
