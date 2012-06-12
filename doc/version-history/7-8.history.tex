@@ -33,7 +33,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The \File{libcondorapi} library for reading and writing job event
+logs is again available as a shared library on linux and mac.
+Since Condor 7.5.x, it had only been available as a static library.
+\Ticket{3047}
 
 \end{itemize}
 
@@ -49,7 +52,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed several problems with the XML parsing class
+\Macro{ClassAdXMLParser} in the ClassAds library:
+  \begin{itemize}
+  \item Several methods named \Macro{ParseClassAd} were declared, but never
+    implemented. \Ticket{3049}
+  \item The parser silently dropped leading white-space in string values.
+    \Ticket{3042}
+  \item The parser could go into an infinite loop or leak memory when
+    reading a mal-formed ClassAd XML document. \Ticket{3045}
+  \end{itemize}
 
 \end{itemize}
 
@@ -107,11 +119,23 @@ warnings when a job requests features that are no longer supported.
 variables are still recognized, but their use is now discouraged.
 \Ticket{2670}
 
+\item The default value for \Macro{GROUP\_SORT\_EXPR} was changed so that
+the none group would always negotiate last when using hierarchical group quotas.
+The default value for \Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} was changed
+to true.  These changes were made to make negotiation behave more like it did 
+before hierarchical group quotas were added.
+\Ticket{3040}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that caused events to not be written to the job event
+log when the log is written in XML and a job policy expression triggering
+the event contains any double-quotes.
+\Ticket{3048}
 
 \item Fixed a bug in the Condor init script that would cause
 the init script to hang if Condor was not running.
