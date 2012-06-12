@@ -88,8 +88,8 @@ int main(void)
 		information */
 
 	if (fread(read_array, BSIZE, 1, f) != 1) {
-		printf("Failed to read binary block on iteration %d: %d(%s)\n",
-			i, errno, strerror(errno));
+		printf("Failed to read binary block %d: %d(%s)\n",
+			errno, strerror(errno));
 		printf("FAILURE\n");
 		exit(EXIT_FAILURE);
 	}

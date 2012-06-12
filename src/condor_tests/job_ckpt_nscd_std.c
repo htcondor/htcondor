@@ -19,6 +19,8 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 void ckpt_and_exit( void );
 

@@ -16,6 +16,61 @@ New features will be added in the 7.9.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-2}Version 7.8.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.2 not yet released.
+%\item Condor version 7.8.2 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-1}Version 7.8.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -46,23 +101,30 @@ The details of each version are described below.
 warnings when a job requests features that are no longer supported.
 \Ticket{2968}
 
+\item (Added in 7.7.6) The new configuration variable
+\Macro{BATCH\_GAHP} should be used instead of \Macro{PBS\_GAHP},
+\Macro{LSF\_GAHP} and \Macro{SGE\_GAHP}. The older parameters are
+still recognized, but their use is now discouraged.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed a bug in the condor init script that would cause
-the init script to hang if condor wasn't running
+\item Fixed a bug in the Condor init script that would cause
+the init script to hang if Condor was not running.
 \Ticket{2872}
 
-\item Fixed a bug that caused Parallel Universe jobs using
-Parallel Scheduling Groups to occasionally stay idle even when
+\item Fixed a bug that caused parallel universe jobs using
+Parallel Scheduling Groups 
+(see section ~\ref{sec:Configure-Dedicated-Groups})
+to occasionally stay idle even when
 there were available machines to run them.
 \Ticket{3017}
 
 \item Fixed a bug that caused the \Condor{gridmanager} to crash when
-attempting to submit jobs to a local PBS/LSF/SGI cluster.
+attempting to submit jobs to a local PBS, LSF, or SGI cluster.
 \Ticket{3014}
 
 \item Fixed a bug in the handling of local universe jobs which caused
@@ -72,7 +134,8 @@ and then further caused the statistics for local universe jobs to be
 incorrectly computed.
 \Ticket{3008}
 
-\item Changed \Condor{ckpt\_probe} to link statically, which should make the
+\item Changed the internally used \Condor{ckpt\_probe} executable
+to link statically, which should make the
 checkpoint signature more resistant to non-significant changes in the system
 configuration.
 \Ticket{2901}
@@ -91,6 +154,11 @@ and the job was put on hold.
 draining badput and completion time were sometimes nonsensical
 because of integer overflow.
 \Ticket{3001}
+
+\item Fixed a bug where per-job sub-directories and their contents
+in \MacroNI{SPOOL} would not be removed when the associated job
+left the queue.
+\Ticket{2942}
 
 \end{itemize}
 
