@@ -7711,19 +7711,36 @@ These macros affect the \Condor{gridmanager}.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/gahp\_server}.
 
+\label{param:BatchGAHP}
+\item[\Macro{BATCH\_GAHP}]
+  The complete path and file name of the batch GAHP executable,
+  to be used for PBS, LSF, SGE, and similar batch systems.
+  The default location is
+  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+
 \label{param:PBSGAHP}
 \item[\Macro{PBS\_GAHP}]
   The complete path and file name of the PBS GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \label{param:LSFGAHP}
 \item[\Macro{LSF\_GAHP}]
   The complete path and file name of the LSF GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \label{param:UnicoreGAHP}
 \item[\Macro{UNICORE\_GAHP}]
@@ -7756,9 +7773,14 @@ These macros affect the \Condor{gridmanager}.
 \label{param:SGEGAHP}
 \item[\Macro{SGE\_GAHP}]
   The complete path and file name of the SGE GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \end{description}
 
