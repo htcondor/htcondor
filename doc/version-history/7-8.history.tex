@@ -48,8 +48,9 @@ warnings when a job requests features that are no longer supported.
 
 \item (Added in 7.7.6) The new configuration variable
 \Macro{BATCH\_GAHP} should be used instead of \Macro{PBS\_GAHP},
-\Macro{LSF\_GAHP} and \Macro{SGE\_GAHP}. The older parameters are
-still recognized, but their use is now discouraged.
+\Macro{LSF\_GAHP} and \Macro{SGE\_GAHP}. These older configuration
+variables are still recognized, but their use is now discouraged.
+\Ticket{2670}
 
 \end{itemize}
 
@@ -135,6 +136,14 @@ the newly added definitions of
 \item There is now a manual page for \Condor{router\_rm}, 
 a script that provides additional features convenient for removing
 jobs managed by the Condor Job Router.
+
+\item Documentation not completed for the 7.7.6 release is now available.
+The use of configuration variable \MacroNI{BATCH\_GAHP},
+as well as the use of the new \SubmitCmd{grid\_resource} of
+type \Expr{batch} for local submission of PBS, LSF, and SGE
+jobs is documented.
+See section ~\ref{sec:batch} for details.
+\Ticket{2670}
 
 \end{itemize}
 
