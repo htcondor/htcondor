@@ -66,6 +66,15 @@ a given daemon to be evaluated with respect to that daemon's ClassAd.
 
 \begin{itemize}
 
+\item There is a new configuration variable used by the \Condor{starter}.
+If \Macro{STARTER\_RLIMIT\_AS} is set to an integer value, the starter
+will use the setrlimit system call with the RLIMIT\_AS parameter to
+limit the virtual size of each process in the user job.  The value of
+this parameter is a ClassAd expression, evaluated in the context of both
+the machine and job ads, where the machine ad is the "my" ad, and the job 
+ad is the "target" ad.
+\Ticket{1663}
+
 \item New configuration variables were added to to the \Condor{schedd} to
 define statistics that count subsets of jobs. These variables
 have the form \Macro{SCHEDD\_COLLECT\_STATS\_BY\_XXXX} and should contain
