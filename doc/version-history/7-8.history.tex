@@ -52,7 +52,16 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
-\item None.
+\item Fixed several problems with the XML parsing class
+\Macro{ClassAdXMLParser} in the ClassAds library:
+  \begin{itemize}
+  \item Several methods named \Macro{ParseClassAd} were declared, but never
+    implemented. \Ticket{3049}
+  \item The parser silently dropped leading white-space in string values.
+    \Ticket{3042}
+  \item The parser could go into an infinite loop or leak memory when
+    reading a mal-formed ClassAd XML document. \Ticket{3045}
+  \end{itemize}
 
 \end{itemize}
 
