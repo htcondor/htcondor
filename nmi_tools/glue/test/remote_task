@@ -158,11 +158,7 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 # personal condor configured from release generic config files.
 out("About to run batch_test.pl");
 
-my $isolated = "";
-if(not TestGlue::is_windows()) {
-    $isolated = "--isolated";
-}
-system("$perl_exe batch_test.pl -d $compiler -t $testname -b $isolated -v");
+system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
