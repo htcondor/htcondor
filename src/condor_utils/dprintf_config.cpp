@@ -176,11 +176,12 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		 * 2) O_APPEND doesn't guarantee atomic writes in Windows
 		 */
 	DebugShouldLockToAppend = 1;
+	DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
 	DebugShouldLockToAppend = dprintf_param_funcs->param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugLockIsMutex = FALSE;
 #endif
 
-	DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 	(void)sprintf(pname, "%s_LOCK", subsys);
 	if (DebugLock) {
 		free(DebugLock);
