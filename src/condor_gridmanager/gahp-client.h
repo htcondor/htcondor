@@ -451,6 +451,9 @@ class GahpClient : public Service {
 		blah_upload_sandbox(const ClassAd *job_ad);
 
 		int
+		blah_destroy_sandbox(const ClassAd *job_ad);
+
+		int
 		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);
 
 		int
