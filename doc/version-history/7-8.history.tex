@@ -90,8 +90,7 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
-\item Condor version 7.8.1 not yet released.
-%\item Condor version 7.8.1 released on Month Date, 2012.
+\item Condor version 7.8.1 released on June 15, 2012.
 
 \end{itemize}
 
@@ -119,10 +118,14 @@ warnings when a job requests features that are no longer supported.
 variables are still recognized, but their use is now discouraged.
 \Ticket{2670}
 
-\item The default value for \Macro{GROUP\_SORT\_EXPR} was changed so that
-the none group would always negotiate last when using hierarchical group quotas.
-The default value for \Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} was changed
-to true.  These changes were made to make negotiation behave more like it did 
+\item The default value for \Macro{GROUP\_SORT\_EXPR} was changed 
+so that the \Expr{<none>} group would always negotiate last 
+when using hierarchical group quotas.
+Associated with that, 
+the default value for \Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} 
+was changed to \Expr{True}.  
+These changes were made to make negotiation behave more like it did 
+in the stable 7.4 series of Condor,
 before hierarchical group quotas were added.
 \Ticket{3040}
 
