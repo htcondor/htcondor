@@ -52,6 +52,11 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
+\item Fixed a bug that can cause the first grid-type cream jobs destined 
+for a particular CREAM server to never to be submitted to that server.
+This bug was probably introduced in Condor 7.6.5.
+\Ticket{3054}
+
 \item Fixed several problems with the XML parsing class
 \Macro{ClassAdXMLParser} in the ClassAds library:
   \begin{itemize}
@@ -62,6 +67,11 @@ Since Condor 7.5.x, it had only been available as a static library.
   \item The parser could go into an infinite loop or leak memory when
     reading a mal-formed ClassAd XML document. \Ticket{3045}
   \end{itemize}
+
+\item Fixed a bug that prevented the -f command line option of condor_history
+from being recognised. The -f option was being interpreted as -forward. At least
+four letters are now required for the -forward option (-forw) to prevent ambiguity.
+\Ticket{3044}
 
 \end{itemize}
 
