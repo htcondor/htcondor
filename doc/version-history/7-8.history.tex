@@ -134,7 +134,7 @@ before hierarchical group quotas were added.
 
 \item Fixed a bug that caused events to not be written to the job event
 log when the log is written in XML and a job policy expression triggering
-the event contains any double-quotes.
+the event contains any double quote marks.
 \Ticket{3048}
 
 \item Fixed a bug in the Condor init script that would cause
@@ -185,8 +185,14 @@ in \MacroUNI{SPOOL} would not be removed when the associated job
 left the queue.
 \Ticket{2942}
 
-\item Fixed a bug that could cause the \Condor{schedd} to crash 
-occasionally when running local universe jobs.
+\item Fixed a bug that could cause the \Condor{schedd} to 
+occasionally crash due to a race condition when running local universe jobs.
+Associated with the bug would be the error message
+\footnotesize
+\begin{verbatim}
+No local universe jobs were expected to be running, but one just exited!
+\end{verbatim}
+\normalsize
 \Ticket{3009}
 
 \end{itemize}
