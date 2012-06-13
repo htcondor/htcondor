@@ -80,8 +80,10 @@ use CondorUtils;
 #
 #################################################################
 
-Condor::DebugOn();
-Condor::DebugLevel(5);
+Condor::DebugOff();
+Condor::DebugLevel(0);
+CondorPersonal::DebugLevel(0);
+CondorPersonal::DebugOff();
 
 #################################################################
 #
@@ -156,6 +158,8 @@ my $configlocal = "../condor_examples/condor_config.local.central.manager";
 my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 my $pretestsetuponly = 0; # only get the personal condor in place
 
+my $isolated = 0;
+
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
 
@@ -220,14 +224,14 @@ while( $_ = shift( @ARGV ) ) {
 	  print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
 	  print "--[no-]core: enable/disable core dumping <enabled>\n";
 	  print "--[no-]debug: enable/disable test debugging <disabled>\n";
+          print "--isolated: run tests in separate Condor instances\n";
+          print "-v[erbose]: print debugging output\n";
 	  exit(0);
       }
       if( /--debug/ ) {
-	  DebugOn();
 	  next SWITCH;
       }
       if( /--no-debug/ ) {
-	  DebugOff();
 	  next SWITCH;
       }
       if( /--core/ ) {
@@ -312,92 +316,37 @@ while( $_ = shift( @ARGV ) ) {
 	  push (@extracondorargs, "-pidfile $condorpidfile");
 	  next SWITCH;
       }
+      if( /^--isolated/ ) {
+          $isolated = 1;
+      }
+      if( /^-v.*/ ) {
+          Condor::DebugOn();
+          Condor::DebugLevel(5);
+          CondorPersonal::DebugOn();
+          CondorPersonal::DebugLevel(5);
+      }
     }
 }
 
 
 my %test_suite = ();
 
-# take a momment to get a personal condor running if it is not configured
-# and running already
-
-my $awkscript = "";
-my $genericconfig = "";
-my $genericlocalconfig = "";
-my $res = 0;
-
+# If a Condor was requested we want to start one up...
 if(!($wantcurrentdaemons)) {
-
-    $awkscript = "../condor_examples/convert_config_to_win32.awk";
-    $genericconfig = "../condor_examples/condor_config.generic";
-    $genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
-
-    $res = IsPersonalTestDirThere();
-    if($res != 0) {
-	die "Could not establish directory for personal condor\n";
+    # ...unless isolation was requested.  Then we do one before running each test
+    if(!$isolated) {
+	start_condor();
     }
-
-    WhereIsInstallDir();
-
-    $res = IsPersonalTestDirSetup();
-    if($res == 0) {
-	debug("Need to set up config files for test condor\n",2);
-	CreateConfig();
-	CreateLocalConfig();
-	CreateLocal();
-    }
-
-    if($iswindows == 1) {
-	my $tmp = $targetconfig;
-	if ($iscygwin) {
-	    $tmp = `cygpath -m $targetconfig`;
-	    CondorUtils::fullchomp($tmp);
-	}
-	$ENV{CONDOR_CONFIG} = $tmp;
-	print "setting CONDOR_CONFIG=$tmp\n";
-	# need to know if there is already a personal condor running 
-	# at CONDOR_CONFIG so we know if we have to uniqify ports & pipes
-	$res = CondorPersonal::IsRunningYet($tmp);
-    } else {
-	$ENV{CONDOR_CONFIG} = $targetconfig;
-	$res = CondorPersonal::IsRunningYet($targetconfig);
-    }
-
-    # capture pid for master
-    chdir("$BaseDir");
-
-    if($res == 0) {
-	debug("Starting Personal Condor\n",2);
-	unlink("$testpersonalcondorlocation/local/log/.master_address");
-        unlink("$testpersonalcondorlocation/local/log/.collector_address");
-        unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
-        unlink("$testpersonalcondorlocation/local/log/.startd_address");
-        unlink("$testpersonalcondorlocation/local/log/.schedd_address");
-
-	if($iswindows == 1) {
-	    my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
-	    if ($iscygwin) {
-		$mcmd =~ s|\\|/|g;
-	    } else {
-		my $keep = "/c"; if ($cmd_prompt) { $keep = "/k"; }
-		#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
-		$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
-	    }
-	    debug( "Starting master like this:\n",2);
-	    debug( "\"$mcmd\"\n",2);
-	    CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
-	} else {
-	    CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
-	}
-	debug("Done Starting Personal Condor\n",2);
-    }
-    CondorPersonal::IsRunningYet() || die "Failed to start Condor";
 }
 
-my @myfig = `condor_config_val -config 2>&1`;
-debug("Current config settings are:\n",2);
-foreach my $fig (@myfig) {
-    debug("$fig\n",2);
+# If we are running isolated then we probably don't have a valid CONDOR_CONFIG set
+# in the environment, therefore condor_config_val won't work.
+if(!$isolated) {
+    my @myfig = `condor_config_val -config 2>&1`;
+    debug("Current config settings are:\n",2);
+    foreach my $fig (@myfig) {
+        debug("$fig\n",2);
+    }
 }
 
 if($pretestsetuponly == 1) {
@@ -468,40 +417,33 @@ else {
     foreach my $compiler (@compilers) {
 	if($compiler eq ".") {
 	    $gotdot = 1;
-	} else {
+	}
+        else {
 	    if (-d $compiler) {
-		opendir( COMPILER_DIR, $compiler )
-		    || die "error opening \"$compiler\": $!\n";
-		@{$test_suite{"$compiler"}} = 
-		    grep /\.run$/, readdir( COMPILER_DIR );
+		opendir( COMPILER_DIR, $compiler ) || die "error opening \"$compiler\": $!\n";
+		@{$test_suite{$compiler}} = grep /\.run$/, readdir( COMPILER_DIR );
 		closedir COMPILER_DIR;
-		#print "error: no test programs found for $compiler\n" 
-		#unless @{$test_suite{"$compiler"}};
-	    } else {
+	    }
+            else {
 		print "Skipping unbuilt compiler dir: $compiler\n";
 	    }
 	}
     }
     # by default look at the current blessed tests in the top
     # level of the condor_tests directory and run these.
-    my $moretests = "";
     my @toptests;
 
     if($iswindows == 1) {
-	open(QUICK,"<Windows_list")|| die "Can't open Windows_list\n";
-    } else {
-	open(QUICK,"<list_quick")|| die "Can't open list_quick\n";
+	open(QUICK, '<', "Windows_list") || die "Can't open Windows_list\n";
+    }
+    else {
+	open(QUICK, '<', "list_quick") || die "Can't open list_quick\n";
     }
 
     while(<QUICK>) {
 	CondorUtils::fullchomp($_);
-	my $tmp = $_;
-	if( $tmp =~ /^#.*$/ ) {
-	    # comment so skip
-	    next;
-	}
-	$moretests = $tmp . ".run";
-	push @toptests,$moretests;
+        next if(/^#/ );
+	push @toptests, "$_.run";
     }
     close(QUICK);
     @{$test_suite{"."}} = @toptests;
@@ -540,23 +482,15 @@ if ($isXML){
 }
 
 # Now we'll run each test.
-print "Testing: ";
-foreach my $compiler (@compilers)
-{
-    print "$compiler ";
-}
-print "\n";
+print "Testing: " . join(" ", @compilers) . "\n";
 
-my $lastcompiler = "";
 my $hashsize = 0;
 my %test;
 
-foreach my $compiler (@compilers)
-{
-    $lastcompiler = $compiler;
+foreach my $compiler (@compilers) {
     # as long as we have tests to start, loop back again and start
     # another when we are trying to keep N running at once
-    my $testspercompiler = $#{$test_suite{"$compiler"}} + 1;
+    my $testspercompiler = $#{$test_suite{$compiler}} + 1;
     my $currenttest = 0;
 
     debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
@@ -584,8 +518,10 @@ foreach my $compiler (@compilers)
     if($sortfirst == 1) {
 	@currenttests = sort @currenttests;
     }
-    foreach my $test_program (@currenttests)
-    {
+    foreach my $test_program (@currenttests) {
+        print "----------------------------\n";
+        print "Starting test: $test_program\n";
+
 	# doing this next test
 	$currenttest = $currenttest + 1;
 
@@ -602,6 +538,14 @@ foreach my $compiler (@compilers)
 	    debug("Want $repeat runs of each test\n",3);
 	}
 	while($repeatcounter < $repeat) {
+	    if($isolated) {
+                my $state_dir = "$BaseDir/$test_program.$repeatcounter";
+                if($compiler ne ".") {
+                    $state_dir .= ".$compiler";
+                }
+                my $time = time();
+                start_condor("$state_dir.$time.saveme");
+	    }
 
 	    debug( "About to fork test<$currentgroup>\n",2);
 	    $currentgroup += 1;
@@ -677,6 +621,10 @@ foreach my $compiler (@compilers)
 	    #*****************************************************************
 
 	    $repeatcounter = $repeatcounter + 1;
+
+            if($isolated) {
+                stop_condor();
+            }
 	}
     }
 
@@ -739,22 +687,125 @@ close OUTF;
 close SUMOUTF;
 
 
-if ( $cleanupcondor )
-{
-    my $pid;
+if ( $cleanupcondor ) {
+    stop_condor();
+}
+
+exit $num_failed;
+
+
+sub start_condor {
+    if($isolated) {
+	$testpersonalcondorlocation = $_[0];
+	if($iswindows == 1) {
+	    if ($iscygwin) {
+		$wintestpersonalcondorlocation = `cygpath -m $testpersonalcondorlocation`;
+		CondorUtils::fullchomp($wintestpersonalcondorlocation);
+	    }
+	    else {
+		($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
+	    }
+	}
+	$targetconfig      = "$testpersonalcondorlocation/condor_config";
+	$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
+	$localdir          = "$testpersonalcondorlocation/local";
+
+        $condorpidfile     = "$testpersonalcondorlocation/.pidfile";
+        push(@extracondorargs, "-pidfile $condorpidfile");
+    }
+    
+    my $awkscript = "../condor_examples/convert_config_to_win32.awk";
+    my $genericconfig = "../condor_examples/condor_config.generic";
+    my $genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
+
+    if( -d $testpersonalcondorlocation ) {
+	debug( "Test Personal Condor Directory Established prior\n",2);
+    }
+    else {
+	debug( "Test Personal Condor Directory being Established now\n",2);
+	system("mkdir -p $testpersonalcondorlocation");
+    }
+
+    WhereIsInstallDir();
+
+    my $res = IsPersonalTestDirSetup();
+    if($res == 0) {
+	debug("Need to set up config files for test condor\n",2);
+	CreateConfig($awkscript, $genericconfig);
+	CreateLocalConfig($awkscript, $genericlocalconfig);
+	CreateLocal();
+    }
+
+    if($iswindows == 1) {
+	my $tmp = $targetconfig;
+	if ($iscygwin) {
+	    $tmp = `cygpath -m $targetconfig`;
+	    CondorUtils::fullchomp($tmp);
+	}
+	$ENV{CONDOR_CONFIG} = $tmp;
+	print "setting CONDOR_CONFIG=$tmp\n";
+	# need to know if there is already a personal condor running 
+	# at CONDOR_CONFIG so we know if we have to uniqify ports & pipes
+    }
+    else {
+	$ENV{CONDOR_CONFIG} = $targetconfig;
+    }
+
+    $res = 0;
+    if(!$isolated) {
+        $res = CondorPersonal::IsRunningYet($targetconfig);
+    }
+
+    chdir("$BaseDir");
+
+    if($res == 0) {
+	debug("Starting Personal Condor\n",2);
+	unlink("$testpersonalcondorlocation/local/log/.master_address");
+	unlink("$testpersonalcondorlocation/local/log/.collector_address");
+	unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
+	unlink("$testpersonalcondorlocation/local/log/.startd_address");
+	unlink("$testpersonalcondorlocation/local/log/.schedd_address");
+
+	if($iswindows == 1) {
+	    my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
+	    if ($iscygwin) {
+		$mcmd =~ s|\\|/|g;
+	    }
+            else {
+		my $keep = ($cmd_prompt) ? "/k" : "/c";
+		#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
+		$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
+	    }
+	    debug( "Starting master like this:\n",2);
+	    debug( "\"$mcmd\"\n",2);
+	    CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
+	}
+        else {
+	    CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
+	}
+	debug("Done Starting Personal Condor\n",2);
+    }
+    CondorPersonal::IsRunningYet() || die "Failed to start Condor";
+}
+
+
+sub stop_condor {
+    my $pid = undef;
     local *IN;
-    if( open IN, '<', $condorpidfile) {
+    if( open(IN, '<', $condorpidfile)) {
 	$pid = <IN>;
 	close IN;
-	chomp $pid;
+	chomp($pid);
     }
-    if($pid !~ /^\d+$/) {
-	print STDERR "PID file appears corrupt! Contains: $pid\n";
-	$pid = undef;
-    }
+
     if(not defined $pid) {
 	print STDERR "PID file wasn't available; may not be able to shut down Condor.\n";
     }
+    elsif($pid !~ /^\d+$/) {
+	print STDERR "PID file appears corrupt! Contains: $pid\n";
+	$pid = undef;
+    }
+
     system("condor_off","-master");
     if($pid) {
 	if( ! wait_for_process_gone($pid, 5) ) {
@@ -770,7 +821,7 @@ if ( $cleanupcondor )
     }
     unlink($condorpidfile) if -f $condorpidfile;
 }
-exit $num_failed;
+
 
 # Spin wait until $pid is no longer present or $max_wait (seconds) passes.
 # Returns 1 if process exited, 0 if we timed out.
@@ -803,18 +854,6 @@ sub CleanFromPath
     }
 }
 
-sub IsPersonalTestDirThere
-{
-    if( -d $testpersonalcondorlocation ) {
-	debug( "Test Personal Condor Directory Established prior\n",2);
-	return(0)
-    } else {
-	debug( "Test Personal Condor Directory being Established now\n",2);
-	system("mkdir -p $testpersonalcondorlocation");
-	return(0)
-}
-}
-
 sub IsPersonalTestDirSetup
 {
     my $configfile = $testpersonalcondorlocation . "/condor_config";
@@ -824,8 +863,7 @@ sub IsPersonalTestDirSetup
     return(1);
 }
 
-sub WhereIsInstallDir
-{
+sub WhereIsInstallDir {
     if($iswindows == 1) {
 	my $top = getcwd();
 	debug( "getcwd says \"$top\"\n",2);
@@ -903,8 +941,9 @@ sub CreateLocal
     }
 }
 
-sub CreateConfig
-{
+sub CreateConfig {
+    my ($awkscript, $genericconfig) = @_;
+
     # The only change we need to make to the generic configuration
     # file is to set the release-dir and local-dir. (non-windows)
     # change RELEASE_DIR and LOCAL_DIR    
@@ -915,78 +954,75 @@ sub CreateConfig
 
     # Windows needs config file preparation, wrapper scripts etc
     if($iswindows == 1) {
-	# set up job wrapper
-	# safe_copy("../condor_scripts/exe_switch.pl", "$wininstalldir/bin/exe_switch.pl") || die "couldn't copy exe_swtich.pl";
-	# open( WRAPPER, ">$wininstalldir/bin/exe_switch.bat" ) || die "Can't open new job wrapper: $!\n";
-	# print WRAPPER "\@c:\\perl\\bin\\perl.exe $wininstalldir/bin/exe_switch.pl %*\n";
-	# close(WRAPPER);
-	
 	# pre-process config file src and windowize it
-
 	# create config file with todd's awk script
 	my $configcmd = "gawk -f $awkscript $genericconfig";
 	if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
 	debug("awk cmd is $configcmd\n",2);
 
-	open( OLDFIG, " $configcmd 2>&1 |")
-	    || die "Can't run script file\"$configcmd\": $!\n";    
-
-    } else {
-	open( OLDFIG, "<$configmain" ) 
-	    || die "Can't open base config file: $!\n";    
+	open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
+    }
+    else {
+	open(OLDFIG, '<', $configmain ) || die "Can't read base config file $configmain: $!\n";
     }
 
-    my $line = "";    
-    open( NEWFIG, ">$targetconfig" ) 
-	|| die "Can't open new config file: $!\n";    
-    while( <OLDFIG> ) {        
+    open(NEWFIG, '>', $targetconfig ) || die "Can't write to new config file $targetconfig: $!\n";    
+    while( <OLDFIG> ) {
 	CondorUtils::fullchomp($_);        
-	$line = $_;        
-	if($line =~ /^RELEASE_DIR\s*=.*/) {            
-	    debug( "Matching <<$line>>\n",2);
+	if(/^RELEASE_DIR\s*=/) {
+	    debug("Matching <<$_>>\n", 2);
 	    if($iswindows == 1) {
 		print NEWFIG "RELEASE_DIR = $wininstalldir\n";
-	    } else {
+	    }
+	    else {
 		print NEWFIG "RELEASE_DIR = $installdir\n";
 	    }
-	} elsif($line =~ /^LOCAL_DIR\s*=.*/) {            
-	    debug( "Matching <<$line>>\n",2);
+	}
+	elsif(/^LOCAL_DIR\s*=/) {
+	    debug("Matching <<$_>>\n", 2);
 	    if($iswindows == 1) {
-		my $newloc = $wintestpersonalcondorlocation . "/local";
-		print NEWFIG "LOCAL_DIR = $newloc\n";
-	    } else {
+		print NEWFIG "LOCAL_DIR = $wintestpersonalcondorlocation/local\n";
+	    }
+	    else {
 		print NEWFIG "LOCAL_DIR = $localdir\n";        
 	    }
-	} elsif($line =~ /^LOCAL_CONFIG_FILE\s*=.*/) {            
-	    debug( "Matching <<$line>>\n",2);
+	}
+	elsif(/^LOCAL_CONFIG_FILE\s*=/) {
+	    debug( "Matching <<$_>>\n",2);
 	    if($iswindows == 1) {
-		my $newloc = $wintestpersonalcondorlocation . "/condor_config.local";
-		print NEWFIG "LOCAL_CONFIG_FILE = $newloc\n";
-	    } else {
-		print NEWFIG "LOCAL_CONFIG_FILE = $testpersonalcondorlocation/condor_config.local\n";        
+		print NEWFIG "LOCAL_CONFIG_FILE = $wintestpersonalcondorlocation/condor_config.local\n";
 	    }
-	} elsif($line =~ /^CONDOR_HOST\s*=.*/) {
-	    debug( "Matching <<$line>>\n",2);
+	    else {
+		print NEWFIG "LOCAL_CONFIG_FILE = $testpersonalcondorlocation/condor_config.local\n";
+	    }
+	}
+	elsif(/^CONDOR_HOST\s*=/) {
+	    debug( "Matching <<$_>>\n",2);
 	    print NEWFIG "CONDOR_HOST = $currenthost\n";
-	} elsif($line =~ /^ALLOW_WRITE\s*=.*/) {
-	    debug( "Matching <<$line>>\n",2);
+	}
+	elsif(/^ALLOW_WRITE\s*=/) {
+	    debug( "Matching <<$_>>\n",2);
 	    print NEWFIG "ALLOW_WRITE = *\n";
-	} elsif($line =~ /NOT_RESPONDING_WANT_CORE\s*=.*/ and $want_core_dumps ) {
-	    debug( "Matching <<$line>>\n",2);
+	}
+	elsif(/NOT_RESPONDING_WANT_CORE\s*=/ and $want_core_dumps ) {
+	    debug( "Matching <<$_>>\n",2);
 	    print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
-	} elsif($line =~ /CREATE_CORE_FILES\s*=.*/ and $want_core_dumps ) {
-	    debug( "Matching <<$line>>\n",2);
+	}
+	elsif(/CREATE_CORE_FILES\s*=/ and $want_core_dumps ) {
+	    debug( "Matching <<$_>>\n",2);
 	    print NEWFIG "CREATE_CORE_FILES = True\n";
-	} else {
-	    print NEWFIG "$line\n";
+	}
+	else {
+	    print NEWFIG "$_\n";
 	}    
     }    
     close( OLDFIG );    
     close( NEWFIG );
 }
 
-sub CreateLocalConfig
-{
+sub CreateLocalConfig {
+    my ($awkscript, $genericlocalconfig) = @_;
+
     debug( "Modifying local config file\n",2);
     my $logsize = 50000000;
 
@@ -1018,7 +1054,7 @@ sub CreateLocalConfig
     print FIX "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
     print FIX "MASTER_ADDRESS_FILE = \$(LOG)/.master_address\n";
     print FIX "STARTD_ADDRESS_FILE = \$(LOG)/.startd_address\n";
-    print FIX "SCHEDD_ADDRESS_FILE = \$(LOG)/.scheduler_address\n";
+    print FIX "SCHEDD_ADDRESS_FILE = \$(LOG)/.schedd_address\n";
 
     # ADD size for log files and debug level
     # default settings are in condor_config, set here to override 
@@ -1383,13 +1419,6 @@ sub debug {
     Condor::debug("batch_test - $msg", $level);
 }
 
-sub DebugOn
-{
-}
-
-sub DebugOff
-{
-}
 
 # yates_shuffle(\@foo) random shuffle of array
 sub yates_shuffle
