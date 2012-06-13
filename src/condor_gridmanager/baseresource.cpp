@@ -624,6 +624,8 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases in progress\n");
 	}
 
 dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing results\n");
+	bool first_update = lastUpdateLeases == 0;
+
 	updateLeasesCmdActive = false;
 	lastUpdateLeases = time(NULL);
 
@@ -632,6 +634,11 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 		std::string tmp;
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( curr_job ) ) {
+			if ( first_update ) {
+				// New jobs may be waiting for the lease be to established
+				// before they proceed with submission.
+				curr_job->SetEvaluateState();
+			}
 			if ( !curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, tmp ) ) {
 				continue;
 			}

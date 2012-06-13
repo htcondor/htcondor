@@ -52,6 +52,11 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
+\item Fixed a bug that can cause the first grid-type cream jobs destined 
+for a particular CREAM server to never to be submitted to that server.
+This bug was probably introduced in Condor 7.6.5.
+\Ticket{3054}
+
 \item Fixed several problems with the XML parsing class
 \Macro{ClassAdXMLParser} in the ClassAds library:
   \begin{itemize}
