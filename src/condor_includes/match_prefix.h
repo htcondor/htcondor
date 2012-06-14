@@ -48,6 +48,3 @@ bool is_arg_colon_prefix(const char * parg, const char * pval, const char ** ppc
 
 // return true of parg begins with '-' and is_arg_prefix(parg,pval,mml) is true
 bool is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length = 0);
-
-
-

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+require 'timeout'
+
 module Mrg
   module Grid
     module Config
@@ -95,13 +97,17 @@ module Mrg
           def act
             if not @options.has_key?(:wallaby_only)
               num = -1
+              success = true
+              services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys}
+              sub = @subsys.to_s.split('_').collect {|n| n.capitalize}.join
+              act = @action.to_s.split('_').shift
               if @action.to_s.include?("remove")
-                services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys}
-                `#{@ccs} --rmsubservice "#{@service}" netfs:condor[#{num}]`
+                success = exec_ccs("--rmsubservice '#{@service}' netfs:condor[#{num}]")
               else
-                services[@name][:condor].each {|d| exit!(1, "There is already a #{@subsys} configured for HA Schedd #{@name}") if d.type == @subsys}
-                `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}_#{@subsys}" type="#{@subsys}" __independent_subtree="1"`
+                exit!(1, "There is already a #{sub} configured for the HA schedd #{@name} service") if num != -1
+                success = exec_ccs("--addsubservice '#{@service}' netfs:condor name='#{@options[:name]}_#{@subsys}' type='#{@subsys}' __independent_subtree='1'")
               end
+              exit!(1, "Failed to #{act} #{sub} #{preposition} the HA schedd #{@name} service") if not success
             end
 
             if not @options.has_key?(:cluster_only)
@@ -133,6 +139,10 @@ module Mrg
             sym.to_s.gsub(/(.+)s$/,'\1').upcase
           end
 
+          def preposition
+            @action.to_s.include?("remove") ? "from" : "to"
+          end
+
           def modify_group_membership
             prefix = @action.to_s.include?("remove") ? "RemoveNode" : "AddNode"
 
@@ -155,8 +165,8 @@ module Mrg
             Mrg::Grid::Config::Shell::Activate.new(store, "").main([])
 
             # Activate cluster changes
-            `#{@ccs} --sync --activate`
-            `#{@ccs} --startall`
+            exit!(1, "Failed to synchronize cluster configuration") if not exec_ccs("--sync --activate")
+            exit!(1, "Failed to start cluster services") if not exec_ccs("--startall")
           end
 
           def args_for_help(list)
@@ -181,16 +191,20 @@ module Mrg
                 exit
               end
 
-              opts.on("--riccipassword PASS", "The ricci user password") do |p|
+              opts.on("--riccipassword PASS", "the ricci user password") do |p|
                 @options[:password] = p
               end
 
+              opts.on("-t", "--timeout NUM", Integer, "number of seconds to wait for a single configuration command to complete (default: 60)") do |t|
+                @options[:timeout] = t
+              end
+
               if supports_options
-                opts.on("-n", "--no-store", "Only configure the cluster, don't update the store") do
+                opts.on("-n", "--no-store", "only configure the cluster, don't update the store") do
                   @options[:cluster_only] = true
                 end
 
-                opts.on("-s", "--store-only", "Don't configure the cluster, just update the store") do
+                opts.on("-s", "--store-only", "don't configure the cluster, just update the store") do
                   @options[:wallaby_only] = true
                 end
 
@@ -200,15 +214,15 @@ module Mrg
           end
 
           def add_options(opts)
-            opts.on("-e", "--expire NUM", "Length of time in seconds to forget a restart (default 300)") do |num|
+            opts.on("-e", "--expire NUM", Integer, "length of time in seconds to forget a restart (default: 300)") do |num|
               @options[:expire] = num
             end
 
-            opts.on("-m", "--max-restarts NUM", "Maximum number of restarts before relocation (default 3)") do |num|
+            opts.on("-m", "--max-restarts NUM", Integer, "maximum number of restarts before relocation (default: 3)") do |num|
               @options[:max_restarts] = num
             end
 
-            opts.on("--new-cluster", "Create a new cluster even it one already exists") do
+            opts.on("--new-cluster", "create a new cluster even it one already exists") do
               @options[:new_cluster] = true
             end
           end
@@ -320,11 +334,30 @@ module Mrg
             end
           end
 
+          def exec_ccs(args)
+            @timeout ||= @options.has_key?(:timeout) ? @options[:timeout] : 60
+            ret = true
+            begin
+              cmd = "#{@ccs} #{args}"
+              Timeout.timeout(@timeout) do
+                output = `#{cmd}`
+                ret = $?.exitstatus == 0
+              end
+            rescue Timeout::Error
+              ret = false
+            end
+            ret
+          end
+
           def modify_ccs_nodes
             cmd = (@action.to_s.include?("remove") ? "rm" : "add")
             @options[:nodes].each do |node|
-              `#{@ccs} --#{cmd}node #{node}` if cmd == "add"
-              `#{@ccs} --#{cmd}failoverdomainnode '#{@domain}' #{node}`
+              if cmd == "add"
+                # Failure to add means the node is already part of the
+                # cluster, so we don't care about a failure.
+                exec_ccs("--#{cmd}node #{node}")
+              end
+              exit!(1, "Unable to #{cmd} failover domain node #{node} #{preposition} the HA schedd #{@name} failover domain") if not exec_ccs("--#{cmd}failoverdomainnode '#{@domain}' #{node}")
             end
           end
 
@@ -436,26 +469,20 @@ module Mrg
 
               # Cluster config
               if @options.has_key?(:new_cluster)
-                `#{@ccs} --stopall`
-                `#{@ccs} --createcluster "HACondorCluster"`
-                if $?.exitstatus != 0
-                  puts "Failed to create the cluster.  Try supplying a ricci password with --riccipassword"
-                  exit!(1)
-                end
+                exit!(1, "Failed to stop all cluster services") if not exec_ccs("--stopall")
+                exit!(1, "Failed to create the cluster.  Try supplying a ricci password with --riccipassword") if not exec_ccs("--createcluster 'HACondorCluster'")
               end
 
               # Handle nodes
-              `#{@ccs} --addfailoverdomain "#{@domain}" restricted`
-              exit!(1, "Failed to add cluster failover domain.  Does it already exist?") if $?.exitstatus != 0
+              exit!(1, "Failed to add failover domain for HA schedd #{@name}.  Does it already exist?") if not exec_ccs("--addfailoverdomain '#{@domain}' restricted")
               modify_ccs_nodes
 
               # Handle service
-              `#{@ccs} --addservice "#{@service}" domain="#{@domain}" autostart=1 recovery=relocate`
-              exit!(1, "Failed to add cluster service.  Does it already exist?") if $?.exitstatus != 0
+              exit!(1, "Failed to add HA schedd #{@name} cluster service.  Does it already exist?") if not exec_ccs("--addservice '#{@service}' domain='#{@domain}' autostart=1 recovery=relocate")
 
               # Handle subservices
-              `#{@ccs} --addsubservice "#{@service}" netfs name="Job Queue for #{@options[:name]}" mountpoint="#{@options[:spool]}" host="#{@options[:server]}" export="#{@options[:export]}" options="rw,soft" force_unmount="on"`
-              `#{@ccs} --addsubservice "#{@service}" netfs:condor name="#{@options[:name]}" type="#{@subsys}" __independent_subtree="1" __max_restarts=#{restarts} __restart_expire_time=#{expire}`
+              exit!(1, "Failed to add shared storage to HA schedd #{@name} service") if not exec_ccs("--addsubservice '#{@service}' netfs name='Job Queue for #{@options[:name]}' mountpoint='#{@options[:spool]}' host='#{@options[:server]}' export='#{@options[:export]}' options='rw,soft' force_unmount='on'")
+              exit!(1, "Failed to add condor instance to HA schedd #{@name} service") if not exec_ccs("--addsubservice '#{@service}' netfs:condor name='#{@options[:name]}' type='#{@subsys}' __independent_subtree='1' __max_restarts=#{restarts} __restart_expire_time=#{expire}")
             end
 
             if not @options.has_key?(:cluster_only)
@@ -494,10 +521,8 @@ module Mrg
 
             if not @options.has_key?(:wallaby_only)
               # Cluster config
-              `#{@ccs} --rmsubservice "#{@service}" condor`
-              `#{@ccs} --rmsubservice "#{@service}" netfs`
-              `#{@ccs} --rmservice "#{@service}"`
-              `#{@ccs} --rmfailoverdomain "#{@domain}"`
+              puts "Warning: failed to remove HA schedd #{@name} service '#{@service}'" if not exec_ccs("--rmservice '#{@service}'")
+              puts "Warning: failed to remove HA schedd #{@name} failover domain '#{@domain}'" if not exec_ccs("--rmfailoverdomain '#{@domain}'")
             end
 
             if not @options.has_key?(:cluster_only)

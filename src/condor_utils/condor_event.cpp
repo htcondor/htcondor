@@ -324,12 +324,11 @@ ULogEvent::toClassAd(void)
 {
 	ClassAd* myad = new ClassAd;
 
-	char buf0[128];
-
 	if( eventNumber >= 0 ) {
-		snprintf(buf0, 128, "EventTypeNumber = %d", eventNumber);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if ( !myad->InsertAttr("EventTypeNumber", eventNumber) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	switch( (ULogEventNumber) eventNumber )
@@ -433,10 +432,7 @@ ULogEvent::toClassAd(void)
 	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
-		MyString buf1;
-		buf1.sprintf("EventTime = \"%s\"", eventTimeStr);
-		free(eventTimeStr);
-		if( !myad->Insert(buf1.Value()) ) {
+		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
 			delete myad;
 			return NULL;
 		}
@@ -446,27 +442,21 @@ ULogEvent::toClassAd(void)
 	}
 
 	if( cluster >= 0 ) {
-		snprintf(buf0, 128, "Cluster = %d", cluster);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("Cluster", cluster) ) {
 			delete myad;
 			return NULL;
 		}
 	}
 
 	if( proc >= 0 ) {
-		snprintf(buf0, 128, "Proc = %d", proc);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("Proc", proc) ) {
 			delete myad;
 			return NULL;
 		}
 	}
 
 	if( subproc >= 0 ) {
-		snprintf(buf0, 128, "Subproc = %d", subproc);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("Subproc", subproc) ) {
 			delete myad;
 			return NULL;
 		}
@@ -850,14 +840,14 @@ SubmitEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( submitHost && submitHost[0] ) {
-		if( !myad->Assign("SubmitHost",submitHost) ) return NULL;
+		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
 	if( submitEventLogNotes && submitEventLogNotes[0] ) {
-		if( !myad->Assign("LogNotes",submitEventLogNotes) ) return NULL;
+		if( !myad->InsertAttr("LogNotes",submitEventLogNotes) ) return NULL;
 	}
 	if( submitEventUserNotes && submitEventUserNotes[0] ) {
-		if( !myad->Assign("UserNotes",submitEventUserNotes) ) return NULL;
+		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
 	}
 
 	return myad;
@@ -995,22 +985,24 @@ GlobusSubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	if( rmContact && rmContact[0] ) {
-		MyString buf2;
-		buf2.sprintf("RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("RMContact", rmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( jmContact && jmContact[0] ) {
-		MyString buf3;
-		buf3.sprintf("JMContact = \"%s\"",jmContact);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("JMContact", jmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
-	snprintf(buf0, 512, "RestartableJM = %s", restartableJM ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("RestartableJM", restartableJM ? true : false) ){
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -1117,9 +1109,10 @@ GlobusSubmitFailedEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( reason && reason[0] ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1205,9 +1198,10 @@ GlobusResourceUpEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
-		MyString buf2;
-		buf2.sprintf("RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("RMContact", rmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1294,9 +1288,10 @@ GlobusResourceDownEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
-		MyString buf2;
-		buf2.sprintf("RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("RMContact", rmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1359,12 +1354,12 @@ GenericEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[2048];
 
 	if( info[0] ) {
-		snprintf(buf0, sizeof(buf0), "Info = \"%s\"", info);
-		buf0[sizeof(buf0)-1] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("Info", info) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1961,12 +1956,12 @@ ExecutableErrorEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	if( errType >= 0 ) {
-		snprintf(buf0, 512, "ExecuteErrorType = %d", errType);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ExecuteErrorType", errType) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -2073,23 +2068,27 @@ CheckpointedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -2433,60 +2432,71 @@ JobEvictedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "Checkpointed = %s", checkpointed ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("Checkpointed", checkpointed ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
-	snprintf(buf0, 512, "TerminatedAndRequeued = %s",
-			 terminate_and_requeued ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TerminatedNormally = %s",
-			 normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedAndRequeued",
+					  terminate_and_requeued ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 
 	if( return_value >= 0 ) {
-		snprintf(buf0, 512, "ReturnValue = %d", return_value);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ReturnValue", return_value) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( signal_number >= 0 ) {
-		snprintf(buf0, 512, "TerminatedBySignal = %d", signal_number);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("TerminatedBySignal", signal_number) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	if( reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( core_file ) {
-		MyString buf3;
-		buf3.sprintf("CoreFile = \"%s\"", core_file);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("CoreFile", core_file) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -2657,9 +2667,10 @@ JobAbortedEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -2994,62 +3005,77 @@ JobTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 	if( returnValue >= 0 ) {
-		snprintf(buf0, 512, "ReturnValue = %d", returnValue);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ReturnValue", returnValue) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( signalNumber >= 0 ) {
-		snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("TerminatedBySignal", signalNumber) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	const char* core = getCoreFile();
 	if( core ) {
-		MyString buf3;
-		buf3.sprintf("CoreFile = \"%s\"", core);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("CoreFile", core) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_local_rusage);
-	snprintf(buf0, 512, "TotalLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("TotalLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_remote_rusage);
-	snprintf(buf0, 512, "TotalRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("TotalRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalSentBytes = %f", total_sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalReceivedBytes = %f", total_recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalSentBytes", total_sent_bytes)  ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalReceivedBytes", total_recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -3338,22 +3364,14 @@ ShadowExceptionEvent::toClassAd(void)
 	bool     success = true;
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( myad ) {
-		char buf0[512];
-
-		MyString buf2;
-		buf2.sprintf("Message = \"%s\"", message);
-		if( !myad->Insert(buf2.Value())) {
+		if( !myad->InsertAttr("Message", message) ) {
 			success = false;
 		}
 
-		snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
 			success = false;
 		}
-		snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
 			success = false;
 		}
 	}
@@ -3442,11 +3460,11 @@ JobSuspendedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "NumberOfPIDs = %d", num_pids);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("NumberOfPIDs", num_pids) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -3689,15 +3707,20 @@ JobHeldEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	const char* hold_reason = getReason();
-	MyString buf2;
 	if ( hold_reason ) {
-		buf2.sprintf("%s = \"%s\"", ATTR_HOLD_REASON,hold_reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr(ATTR_HOLD_REASON, hold_reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
-	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_CODE,code);
-	if( !myad->Insert(buf2.Value()) ) return NULL;
-	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_SUBCODE,code);
-	if( !myad->Insert(buf2.Value()) ) return NULL;
+	if( !myad->InsertAttr(ATTR_HOLD_REASON_CODE, code) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr(ATTR_HOLD_REASON_SUBCODE, subcode) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -3841,9 +3864,10 @@ JobReleasedEvent::toClassAd(void)
 
 	const char* release_reason = getReason();
 	if( release_reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", release_reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", release_reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -4033,14 +4057,14 @@ NodeExecuteEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	if( executeHost ) {
-		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
+		if( !myad->InsertAttr("ExecuteHost",executeHost) ) return NULL;
 	}
-	snprintf(buf0, 512, "Node = %d", node);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("Node", node) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -4100,63 +4124,78 @@ NodeTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReturnValue = %d", returnValue);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReturnValue", returnValue) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TerminatedBySignal", signalNumber) ) {
+		delete myad;
+		return NULL;
+	}
 
 	const char* core = getCoreFile();
 	if( core ) {
-		MyString buf3;
-		buf3.sprintf("CoreFile = \"%s\"", core);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("CoreFile", core) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_local_rusage);
-	snprintf(buf0, 512, "TotalLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("TotalLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_remote_rusage);
-	snprintf(buf0, 512, "TotalRemoteUsage = \"%s\"", rs);
-	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TotalRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalSentBytes = %f", total_sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalReceivedBytes = %f", total_recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalSentBytes", total_sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalReceivedBytes", total_recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
 	if( node >= 0 ) {
-		snprintf(buf0, 512, "Node = %d", node);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("Node", node) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -4322,25 +4361,26 @@ PostScriptTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 	if( returnValue >= 0 ) {
-		snprintf(buf0, 512, "ReturnValue = %d", returnValue);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ReturnValue", returnValue) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( signalNumber >= 0 ) {
-		snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("TerminatedBySignal", signalNumber) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( dagNodeName && dagNodeName[0] ) {
-		MyString buf1;
-		buf1.sprintf( "%s = \"%s\"", dagNodeNameAttr, dagNodeName );
-		if( !myad->Insert( buf1.Value() ) ) {
+		if( !myad->InsertAttr( dagNodeNameAttr, dagNodeName ) ) {
+			delete myad;
 			return NULL;
 		}
 	}
@@ -4609,33 +4649,32 @@ JobDisconnectedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	MyString line;
-	line.sprintf( "StartdAddr = \"%s\"", startd_addr );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdAddr", startd_addr) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "StartdName = \"%s\"", startd_name );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdName", startd_name) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "DisconnectReason = \"%s\"", disconnect_reason );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("DisconnectReason", disconnect_reason) ) {
+		delete myad;
 		return NULL;
 	}
 
-	line = "EventDescription = \"Job disconnected, ";
+	MyString line = "Job disconnected, ";
 	if( can_reconnect ) {
-		line += "attempting to reconnect\"";
+		line += "attempting to reconnect";
 	} else {
-		line += "can not reconnect, rescheduling job\"";
+		line += "can not reconnect, rescheduling job";
 	}
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("EventDescription", line.Value()) ) {
+		delete myad;
 		return NULL;
 	}
 
 	if( no_reconnect_reason ) {
-		line.sprintf( "NoReconnectReason = \"%s\"", no_reconnect_reason );
-		if( !myad->Insert(line.Value()) ) {
+		if( !myad->InsertAttr("NoReconnectReason", no_reconnect_reason) ) {
 			return NULL;
 		}
 	}
@@ -4844,20 +4883,20 @@ JobReconnectedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	MyString line;
-	line.sprintf( "StartdAddr = \"%s\"", startd_addr );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdAddr", startd_addr) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "StartdName = \"%s\"", startd_name );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdName", startd_name) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "StarterAddr = \"%s\"", starter_addr );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StarterAddr", starter_addr) ) {
+		delete myad;
 		return NULL;
 	}
-	if( !myad->Insert("EventDescription = \"Job reconnected\"") ) {
+	if( !myad->InsertAttr("EventDescription", "Job reconnected") ) {
+		delete myad;
 		return NULL;
 	}
 	return myad;
@@ -5044,17 +5083,16 @@ JobReconnectFailedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	MyString line;
-	line.sprintf( "StartdName = \"%s\"", startd_name );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdName", startd_name) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "Reason = \"%s\"", reason );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("Reason", reason) ) {
+		delete myad;
 		return NULL;
 	}
-	line = "EventDescription=\"Job reconnect impossible: rescheduling job\"";
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("EventDescription", "Job reconnect impossible: rescheduling job") ) {
+		delete myad;
 		return NULL;
 	}
 	return myad;
@@ -5155,9 +5193,10 @@ GridResourceUpEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
-		MyString buf2;
-		buf2.sprintf("GridResource = \"%s\"",resourceName);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridResource", resourceName) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -5244,9 +5283,10 @@ GridResourceDownEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
-		MyString buf2;
-		buf2.sprintf("GridResource = \"%s\"",resourceName);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridResource", resourceName) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -5351,14 +5391,16 @@ GridSubmitEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
-		MyString buf2;
-		buf2.sprintf("GridResource = \"%s\"",resourceName);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridResource", resourceName) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( jobId && jobId[0] ) {
-		MyString buf3;
-		buf3.sprintf("GridJobId = \"%s\"",jobId);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridJobId", jobId) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -5768,10 +5810,10 @@ AttributeUpdate::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if (name) {
-		myad->Assign("Attribute", name);
+		myad->InsertAttr("Attribute", name);
 	}
 	if (value) {
-		myad->Assign("Value", value);
+		myad->InsertAttr("Value", value);
 	}
 
 	return myad;

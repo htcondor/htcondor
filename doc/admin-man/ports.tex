@@ -1,9 +1,32 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Port-Details}Port Usage in Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \index{port usage}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:IPv4-Port-Specification}IPv4 Port Specification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{IPv4 port specification}
+\index{port usage!IPv4 port specification}
+The general form for IPv4 port specification is 
+\begin{verbatim}
+<IP:port?param1name=value1&param2name=value2&param3name=value3&...> 
+\end{verbatim}
+
+These parameters and values are URL-encoded.
+This means any special character is encoded with \Percent,
+followed by two hexadecimal digits specifying the ASCII value.
+Special characters are any non-alphanumeric character. 
+
+Condor currently recognizes the following parameters:
+\begin{description}
+\item[\Expr{CCBID}]
+\item[\Expr{PrivNet}]
+\item[\Expr{sock}]
+\item[\Expr{PrivAddr}]
+\end{description}
+
+\MoreTodo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-Standard}Default Port Usage}

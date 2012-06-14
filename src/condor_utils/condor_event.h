@@ -25,7 +25,7 @@
 
 #include <stdio.h>              /* for FILE type */
 #if !defined(WIN32) 
-#include <sys/time.h>
+#include <time.h>
 #include <sys/resource.h>       /* for struct rusage */
 #endif
 

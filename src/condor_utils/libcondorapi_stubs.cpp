@@ -396,5 +396,10 @@ int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
 }
 #endif
 
+int my_spawnl( const char*, ... )
+{ return not_impl(); }
 
 END_C_DECLS
+
+void statusString( int, MyString & )
+{ not_impl(); }
