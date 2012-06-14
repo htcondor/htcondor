@@ -1279,7 +1279,6 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
-#if ! defined WIN32
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.sprintf("%d", major_ver);
@@ -1307,6 +1306,7 @@ fill_attributes()
 		extra_info->AddInternalParam("OPSYS_LEGACY");
 	}
 
+#if ! defined WIN32
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
 		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );
