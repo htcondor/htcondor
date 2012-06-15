@@ -1,0 +1,44 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:ipv6}Running Condor on an IPV6 network stack}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{IPV6}
+
+Condor has limited support for running on IPV6 networks.
+
+Current Limitations
+
+\begin{itemize}
+    \item{Microsoft Windows is not supported.}
+    \item{Mixed IPv4/IPv6 pools are not supported.}
+    \item{Security policies cannot use IP addresses, only hostnames. (If you use NO\_DNS=TRUE, the "hostnames" are reformatted IP addresses, and you can match against those.)}
+    \item{You must set NETWORK\_INTERFACE to a specific IPv6 address. It is not possible to use multiple IPv6 interfaces on a single computer.}
+    \item{You must have valid IPv6 (AAAA) DNS and reverse DNS records for the computers. (NO\_DNS=TRUE removes this limitation.)}
+\end{itemize}
+
+Enabling IPv6
+
+\begin{itemize}
+    \item{Set ENABLE\_IPV6 = TRUE}
+    \item{Specify the IPv6 interface to use. Note, do not put [square brackets] around this address.}
+    \item{e.g. NETWORK\_INTERFACE = 2607:f388:1086:0:21b:24ff:fedf:b520}
+\end{itemize}
+
+Additional Notes
+
+If you specify CONDOR\_HOST or COLLECTOR\_HOST as an IP address, you must put the address, but not the port, in square brackets. You can continue to specify hostnames. For example:
+
+\begin{verbatim}
+CONDOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f]:6462
+# This configures the collector to listen on the non-standard port 5332.
+COLLECTOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+\end{verbatim}
+
+Because IPv6 addresses are not supported in the security settings, you will be unable to use $(CONDOR\_HOST) or $(COLLECTOR\_HOST) in your security configuration if you specify an IP address.
+
+When using NO\_DNS, IPv6 addresses are turned into hostnames by taking the IPv6 address, changing colons to dashes, and appending DEFAULT\_DOMAIN\_NAME. 
+\begin{verbatim}
+So 2607:f388:1086:0:21b:24ff:fedf:b520 becomes 
+2607-f388-1086-0-21b-24ff-fedf-b520.example.com 
+(assuming DEFAULT_DOMAIN_NAME=example.com)
+\end{verbatim}

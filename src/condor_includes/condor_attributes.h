@@ -79,6 +79,7 @@ extern const char * const  ATTR_AUTO_CLUSTER_ID;
 extern const char * const  ATTR_AUTO_CLUSTER_ATTRS;
 extern const char * const  ATTR_COMPLETION_DATE;
 extern const char * const  ATTR_MATCHED_CONCURRENCY_LIMITS;
+extern const char * const  ATTR_MATCHED_PSG;
 extern const char * const  ATTR_CONCURRENCY_LIMITS;
 extern const char * const  ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )

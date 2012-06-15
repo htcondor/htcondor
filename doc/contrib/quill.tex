@@ -1,13 +1,15 @@
+% introduce new LaTeX macros only used within Quill documentation files,
+% such that if the files are removed, so are the LaTeX macros
+\newcommand{\QuillMacroNI}[1]{\texttt{#1}}      % Quill file macro, NO index
+\newcommand{\QuillMacro}[1]{\texttt{#1}  \index{Quill source code contrib configuration macro!\texttt{#1}}}  % Quill file macro and index
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Quill}Quill}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Quill|(}
-\index{Condor daemon!condor\_quill@\Condor{quill}}
-\index{daemon!condor\_quill@\Condor{quill}}
-\index{condor\_quill daemon}
-\index{Condor daemon!condor\_dbmsd@\Condor{dbmsd}}
-\index{daemon!condor\_dbmsd@\Condor{dbmsd}}
-\index{condor\_dbmsd daemon}
+\index{Quill contrib|(}
+\index{Condor daemon, source code contrib!condor\_quill@\Condor{quill}}
+\index{condor\_quill source code contrib daemon}
+\index{Condor daemon, source code contrib!condor\_dbmsd@\Condor{dbmsd}}
+\index{condor\_dbmsd source code contrib daemon}
 Quill is an optional component of Condor that maintains a mirror 
 of Condor operational data
 in a relational database.  The \Condor{quill} daemon updates
@@ -109,7 +111,7 @@ host&all&quillwriter&128.105.0.0&255.255.0.0&md5
 \end{tabular}
 
 Note that in addition to the database specified by
-the configuration variable \MacroNI{QUILL\_DB\_NAME},
+the configuration variable \QuillMacroNI{QUILL\_DB\_NAME},
 the \Condor{quill} daemon also needs access to the database
 "template1".
 In order to create the database in the first place, 
@@ -160,7 +162,7 @@ A sample command to do this is
 createdb -O quillwriter quill
 \end{verbatim}
 \normalsize
-\verb@quill@ is the database name to use with the \MacroNI{QUILL\_DB\_NAME}
+\verb@quill@ is the database name to use with the \QuillMacroNI{QUILL\_DB\_NAME}
 configuration variable.
 
 \item The \Condor{quill} and \Condor{dbmsd} daemons need read and write access
@@ -187,7 +189,7 @@ the name of the database,
 the "quillwriter" user name,
 and the password.
 The form used in the first field must exactly match the value set for 
-the configuration variable \Macro{QUILL\_DB\_IP\_ADDR}.
+the configuration variable \QuillMacro{QUILL\_DB\_IP\_ADDR}.
 Condor uses a string comparison between the two, and it does not resolve the
 host names to compare IP addresses.
 Example:
@@ -223,13 +225,13 @@ configured to use Quill, since by default Quill is configured to be off.
 
 \begin{description}
 \item Add the file \File{.pgpass} to the 
-  \MacroNI{VALID\_SPOOL\_FILES} variable, since \Condor{preen} must
+  \QuillMacroNI{VALID\_SPOOL\_FILES} variable, since \Condor{preen} must
   be told not to delete this file.
   This step may not be necessary, depending on which version of Condor 
   you are upgrading from. 
  
 \item Set up configuration variables that are specific to the installation,
-and check that the \MacroNI{HISTORY} variable is set.
+and check that the \QuillMacroNI{HISTORY} variable is set.
 \footnotesize
 \begin{verbatim}
 HISTORY                 = $(SPOOL)/history
@@ -266,15 +268,15 @@ SCHEDD_DAEMON_AD_FILE   = $(LOG)/.schedd_classad
 \end{description}
 
 The default Condor configuration file should already contain definitions
-for \MacroNI{QUILL} and \MacroNI{QUILL\_LOG}.  
+for \QuillMacroNI{QUILL} and \QuillMacroNI{QUILL\_LOG}.  
 When upgrading from a previous version that did not have Quill to
 a new one that does, define these two configuration variables.
 
 Only one machine should run the \Condor{dbmsd} daemon.  
-On this machine, add it to the \MacroNI{DAEMON\_LIST} configuration variable.
+On this machine, add it to the \QuillMacroNI{DAEMON\_LIST} configuration variable.
 All Quill-enabled machines should also run the \Condor{quill} daemon.
 The machine running the \Condor{dbmsd} daemon can also 
-run a \Condor{quill} daemon.  An example \MacroNI{DAEMON\_LIST}
+run a \Condor{quill} daemon.  An example \QuillMacroNI{DAEMON\_LIST}
 for a machine running both daemons,
 and acting as both a submit machine and a central manager might 
 look like the following:
@@ -300,80 +302,80 @@ MAX_DBMSD_LOG = 10000000
 \subsubsection{\label{sec:Quill-Config}Configuration Variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!Quill configuration variables}
+\index{configuration of source code contrib!Quill configuration variables}
 These macros affect the Quill database
 management and interface to its representation of the job queue.
 
 \begin{description}
 \label{param:Quill}
-\item[\Macro{QUILL}]
+\item[\QuillMacro{QUILL}]
   The full path name to the \Condor{quill} daemon.
 
 \label{param:QuillArgs}
-\item[\Macro{QUILL\_ARGS}]
+\item[\QuillMacro{QUILL\_ARGS}]
   Arguments to be passed to the \Condor{quill} daemon upon its invocation.
 
 \label{param:QuillLog}
-\item[\Macro{QUILL\_LOG}]
+\item[\QuillMacro{QUILL\_LOG}]
   Path to the Quill daemon's log file.
 
 \label{param:QuillEnabled}
-\item[\Macro{QUILL\_ENABLED}]
+\item[\QuillMacro{QUILL\_ENABLED}]
   A boolean variable that defaults to \Expr{False}.
   When \Expr{True}, Quill functionality is enabled.
   When \Expr{False}, the Quill daemon writes a message to its log and exits.
   The \Condor{q} and \Condor{history} tools then do not use Quill.
 
 \label{param:QuillName}
-\item[\Macro{QUILL\_NAME}]
+\item[\QuillMacro{QUILL\_NAME}]
   A string that uniquely identifies an instance of the \Condor{quill}
   daemon, as there may be more than \Condor{quill} daemon per pool.
   The string must not be the same as for any \Condor{schedd} daemon.
 
-  See the description of \MacroNI{MASTER\_NAME} in
+  See the description of \QuillMacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
   for defaults and composition of valid Condor daemon names.
 
 \label{param:QuillUseSQLLog}
-\item[\Macro{QUILL\_USE\_SQL\_LOG}]
+\item[\QuillMacro{QUILL\_USE\_SQL\_LOG}]
   In order for Quill to store historical job information or resource
   information, the Condor daemons must write information to the SQL logfile.
   By default, this is set to \Expr{False}, and the only information Quill
   stores in the database is the current job queue.
   This can be set on a per daemon basis. For example, to store information
   about historical jobs, but not store execute resource information, set
-  \MacroNI{QUILL\_USE\_SQL\_LOG} to \Expr{False} and set
-  \MacroNI{SCHEDD.\_QUILL\_USE\_SQL\_LOG} to \Expr{True}.
+  \QuillMacroNI{QUILL\_USE\_SQL\_LOG} to \Expr{False} and set
+  \QuillMacroNI{SCHEDD.\_QUILL\_USE\_SQL\_LOG} to \Expr{True}.
 
 \label{param:QuillDBName}
-\item[\Macro{QUILL\_DB\_NAME}]
+\item[\QuillMacro{QUILL\_DB\_NAME}]
   A string that identifies a database within a database server.
 
 \label{param:QuillDBUser}
-\item[\Macro{QUILL\_DB\_USER}] 
+\item[\QuillMacro{QUILL\_DB\_USER}] 
   A string that identifies the \Prog{PostgreSQL} user that Quill 
   will connect as to the database.
   We recommend \Username{quillwriter} for this setting. 
-  There is no default setting for \MacroNI{QUILL\_DB\_USER}, 
+  There is no default setting for \QuillMacroNI{QUILL\_DB\_USER}, 
   so it must be specified in the configuration file. 
 
 \label{param:QuillDBType}
-\item[\Macro{QUILL\_DB\_TYPE}]
+\item[\QuillMacro{QUILL\_DB\_TYPE}]
   A string that distinguishes between database system types.
   Defaults to the only database system currently defined,
   \verb@"PGSQL"@.
 
 \label{param:QuillDBIPAddr}
-\item[\Macro{QUILL\_DB\_IP\_ADDR}]
+\item[\QuillMacro{QUILL\_DB\_IP\_ADDR}]
   The host address of the database server. It can be either an IP address
   or an IP address.
   It must match exactly what is used in the \File{.pgpass} file.
   More than one Quill server can talk to the same database
   server.  This can be accomplished by letting all the 
-  \MacroNI{QUILL\_DB\_IP\_ADDR} values point to the same database server.
+  \QuillMacroNI{QUILL\_DB\_IP\_ADDR} values point to the same database server.
 
 \label{param:QuillPollingPeriod}
-\item[\Macro{QUILL\_POLLING\_PERIOD}]
+\item[\QuillMacro{QUILL\_POLLING\_PERIOD}]
   The frequency, in number of seconds, at which the Quill daemon
   polls the file \File{job\_queue.log} for updates.
   New information in the log file is sent to the database.
@@ -384,7 +386,7 @@ management and interface to its representation of the job queue.
   and Quill's load on the system, which is usually negligible.
 
 \label{param:QuillNotRespondingTimeout}
-\item[\Macro{QUILL\_NOT\_RESPONDING\_TIMEOUT}]
+\item[\QuillMacro{QUILL\_NOT\_RESPONDING\_TIMEOUT}]
   The length of time, in seconds, before the \Condor{master}
   may decide that the \Condor{quill} daemon is hung due to 
   a lack of communication,
@@ -396,7 +398,7 @@ management and interface to its representation of the job queue.
   advisable to increase this to several hours. 
 
 \label{param:QuillMaintainDBConn}
-\item[\Macro{QUILL\_MAINTAIN\_DB\_CONN}]
+\item[\QuillMacro{QUILL\_MAINTAIN\_DB\_CONN}]
   A boolean variable that defaults to \Expr{True}.
   When \Expr{True}, the \Condor{quill} daemon
   maintains an open connection the database server,
@@ -405,49 +407,49 @@ management and interface to its representation of the job queue.
   we recommend a setting of \Expr{False} for large pools.
 
 \label{param:QuillDatabasePurgeInterval}
-\item[\Macro{DATABASE\_PURGE\_INTERVAL}] 
+\item[\QuillMacro{DATABASE\_PURGE\_INTERVAL}] 
   The interval, in seconds, between scans of the database to identify and
   delete records that are beyond their history durations. 
   The default value is 86400, or one day.
 
 \label{param:QuillJobHistoryDuration}
-\item[\Macro{QUILL\_JOB\_HISTORY\_DURATION}]
+\item[\QuillMacro{QUILL\_JOB\_HISTORY\_DURATION}]
   The number of days after entry into the database that a job will
   remain in the database.
-  After \MacroNI{QUILL\_JOB\_HISTORY\_DURATION} days, the job is deleted.
+  After \QuillMacroNI{QUILL\_JOB\_HISTORY\_DURATION} days, the job is deleted.
   The job history is the final ClassAd, and contains all information 
   necessary for \Condor{history} to succeed.
   The default is 3650, or about 10 years. 
 
 \label{param:QuillRunHistoryDuration}
-\item[\Macro{QUILL\_RUN\_HISTORY\_DURATION}]
+\item[\QuillMacro{QUILL\_RUN\_HISTORY\_DURATION}]
   The number of days after entry into the database that extra information 
   about the job will remain in the database.
-  After \MacroNI{QUILL\_RUN\_HISTORY\_DURATION} days, the records are deleted.
+  After \QuillMacroNI{QUILL\_RUN\_HISTORY\_DURATION} days, the records are deleted.
   This data includes matches made for the job, file transfers the job 
   performed, and user log events.
   The default is 7 days, or one week. 
 
 \label{param:QuillResourceHistoryDuration}
-\item[\Macro{QUILL\_RESOURCE\_HISTORY\_DURATION}]
+\item[\QuillMacro{QUILL\_RESOURCE\_HISTORY\_DURATION}]
   The number of days after entry into the database that a resource record will
   remain in the database.
-  After \MacroNI{QUILL\_RESOURCE\_HISTORY\_DURATION} days, the record is 
+  After \QuillMacroNI{QUILL\_RESOURCE\_HISTORY\_DURATION} days, the record is 
   deleted.
   The resource history data includes the ClassAd of a compute slot,
   submitter ClassAds, and daemon ClassAds.
   The default is 7 days, or one week. 
 
 \label{param:QuillDBSizeLimit}
-\item[\Macro{QUILL\_DBSIZE\_LIMIT}]
-  At intervals of time set by \MacroNI{DATABASE\_PURGE\_INTERVAL},
+\item[\QuillMacro{QUILL\_DBSIZE\_LIMIT}]
+  At intervals of time set by \QuillMacroNI{DATABASE\_PURGE\_INTERVAL},
   the \Condor{quill} daemon estimates the size of the database. 
   If the size of the database exceeds the limit set by this variable, 
   the \Condor{quill} daemon will e-mail the administrator a warning. 
   This size is given in Gbytes, and defaults to 20. 
 
 \label{param:QuillManageVacuum}
-\item[\Macro{QUILL\_MANAGE\_VACUUM}]
+\item[\QuillMacro{QUILL\_MANAGE\_VACUUM}]
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, the \Condor{quill} daemon takes on 
   the maintenance task of vacuuming the database.
@@ -457,24 +459,24 @@ management and interface to its representation of the job queue.
   A value of \Expr{True} causes warnings to be written to the log file.
 
 \label{param:QuillShouldReindex}
-\item[\Macro{QUILL\_SHOULD\_REINDEX}]
+\item[\QuillMacro{QUILL\_SHOULD\_REINDEX}]
   A boolean value that defaults to \Expr{True}.
   When \Expr{True}, the \Condor{quill} daemon will re-index the database
   tables when the history file is purged of old data. So, if Quill is
   configured to never delete history data, the tables are never re-indexed.
 
 \label{param:QuillDatabaseReindexInterval}
-\item[\Macro{DATABASE\_REINDEX\_INTERVAL}] 
+\item[\QuillMacro{DATABASE\_REINDEX\_INTERVAL}] 
   Because \Prog{PostgreSQL} does not aggressively maintain the index 
   structures for deleted tuples, it can lead to bloated index structures.
   This variable is the interval, in seconds, 
   between re-index commands on the database.
   The default value is 86400, or one day.
-  This is only used when the \MacroNI{QUILL\_DB\_TYPE} is set to
+  This is only used when the \QuillMacroNI{QUILL\_DB\_TYPE} is set to
   \verb@"PGSQL"@.
 
 \label{param:QuillIsRemotelyQueryable}
-\item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
+\item[\QuillMacro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
   A boolean value that defaults to \Expr{True}.
   Thanks to \Prog{PostgreSQL},
   one can now remotely query both the job queue and the history tables. 
@@ -484,7 +486,7 @@ management and interface to its representation of the job queue.
   at the remote \Condor{schedd} daemon.
 
 \label{param:QuillDBQueryPassword}
-\item[\Macro{QUILL\_DB\_QUERY\_PASSWORD}]
+\item[\QuillMacro{QUILL\_DB\_QUERY\_PASSWORD}]
   Defines the password string needed by \Condor{q} to gain read
   access for remotely querying the Quill database.
   In order for the query tools to connect to a database, 
@@ -500,29 +502,29 @@ management and interface to its representation of the job queue.
   cannot view the password, and as such cannot query the database.
 
 \label{param:QuillAddressFile}
-\item[\Macro{QUILL\_ADDRESS\_FILE}]
+\item[\QuillMacro{QUILL\_ADDRESS\_FILE}]
   When defined, it specifies the path and file name of a local file
   that contains the IP address and port number of the Quill daemon.
   By using the file, tools executed on the local machine do not need
   to query the central manager in order to find the \Condor{quill} daemon.
 
 \label{param:DBMSD} 
-\item[\Macro{DBMSD}]
+\item[\QuillMacro{DBMSD}]
   The full path name to the \Condor{dbmsd} daemon.
   The default location is \File{\$(SBIN)/condor\_dbmsd}.
 
 \label{param:DBMSDArgs}
-\item[\Macro{DBMSD\_ARGS}]
+\item[\QuillMacro{DBMSD\_ARGS}]
   Arguments to be passed to the \Condor{dbmsd} daemon upon its invocation.
   The default arguments are \verb@-f@.
 
 \label{param:DBMSDLog}
-\item[\Macro{DBMSD\_LOG}]
+\item[\QuillMacro{DBMSD\_LOG}]
   Path to the \Condor{dbmsd} daemon's log file.
   The default log location is \File{\$(LOG)/DbmsdLog}.
 
 \label{param:DBMSDNotRespondingTimeout}
-\item[\Macro{DBMSD\_NOT\_RESPONDING\_TIMEOUT}]
+\item[\QuillMacro{DBMSD\_NOT\_RESPONDING\_TIMEOUT}]
   The length of time, in seconds, before the \Condor{master}
   may decide that the \Condor{dbmsd} is hung due to a lack of communication,
   potentially causing  the \Condor{master} to kill and
@@ -548,14 +550,14 @@ for all the jobs in the queue
 
 \end{verbatim}
 There are two ways to get to a Quill daemon: directly using its name as 
-specified in the \MacroNI{QUILL\_NAME} configuration variable, or indirectly
+specified in the \QuillMacroNI{QUILL\_NAME} configuration variable, or indirectly
 by querying the \Condor{schedd} daemon using its name.
 In the latter case, \Condor{q} will detect 
 if that \Condor{schedd} daemon is being serviced by a database, and if so, directly query it.
 In both cases, the IP address and port of the database server hosting the data of 
-this particular remote Quill daemon can be figured out by the \MacroNI{QUILL\_DB\_IP\_ADDR} 
-and \MacroNI{QUILL\_DB\_NAME} variables specified in the \MacroNI{QUILL\_AD}
-sent by the quill daemon to the collector and in the \MacroNI{SCHEDD\_AD} sent by
+this particular remote Quill daemon can be figured out by the \QuillMacroNI{QUILL\_DB\_IP\_ADDR} 
+and \QuillMacroNI{QUILL\_DB\_NAME} variables specified in the \QuillMacroNI{QUILL\_AD}
+sent by the quill daemon to the collector and in the \QuillMacroNI{SCHEDD\_AD} sent by
 the \Condor{schedd} daemon.  
 
 \item Query a remote Quill daemon on \File{regular.cs.wisc.edu} for all historical 
@@ -632,3 +634,5 @@ to disallow the database from being read by all remote Condor query tools.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \input{contrib/quill-schema.tex}
+
+\index{Quill contrib|)}

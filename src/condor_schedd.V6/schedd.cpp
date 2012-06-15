@@ -1503,13 +1503,13 @@ count( ClassAd *job )
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
-	// we don't actually need this for the current set of other_stats
+	// build a list of other stats pools that match this job
 	//
-	//ScheddOtherStats * other_stats = NULL;
-	//if (scheduler.OtherPoolStats.AnyEnabled()) {
-	//	other_stats = OtherPoolStats.Matches(*job);
-	//}
-	//#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+	ScheddOtherStats * other_stats = NULL;
+	if (scheduler.OtherPoolStats.AnyEnabled()) {
+		other_stats = scheduler.OtherPoolStats.Matches(*job);
+	}
+	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
@@ -1626,14 +1626,14 @@ count( ClassAd *job )
 		int job_image_size = 0;
 		job->LookupInteger("ImageSize_RAW", job_image_size);
 		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
-		//OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+		OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
 		int job_start_date = 0;
 		int job_running_time = 0;
 		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
 			job_running_time = (time(NULL) - job_start_date);
 		scheduler.stats.JobsRunningRuntimes += job_running_time;
-		//OTHER.JobsRunningRuntimes += job_running_time;
+		OTHER.JobsRunningRuntimes += job_running_time;
 	} else if (status == HELD) {
 		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
@@ -9135,12 +9135,10 @@ Scheduler::child_exit(int pid, int status)
 				//
 			if ( this->LocalUniverseJobsRunning > 0 ) {
 				this->LocalUniverseJobsRunning--;
-				this->jobExitCode(job_id,status);
 			}
 			else
 			{
-				EXCEPT("Internal consistency error: No local universe jobs were"
-					" expected to be running, but one just exited!");
+				dprintf(D_ALWAYS, "Warning: unexpected count for  local universe jobs: %d\n", LocalUniverseJobsRunning);
 			}
 		} else {
 				// A real shadow
@@ -9959,7 +9957,11 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		RemoveLocalOrRemoteFile(owner,Name,ckpt_name);
 	}
 
-	SpooledJobFiles::removeJobSpoolDirectory(cluster,proc);
+	ClassAd * ad = GetJobAd(cluster, proc);
+	if(ad) {
+		SpooledJobFiles::removeJobSpoolDirectory(ad);
+		FreeJobAd(ad);
+	}
 }
 
 
@@ -10379,6 +10381,7 @@ Scheduler::Init()
 		names.truncate(0);
 
 		OtherPoolStats.RemoveDisabled();
+		OtherPoolStats.Reconfig();
 	}
 
 	/* default 5 megabytes */

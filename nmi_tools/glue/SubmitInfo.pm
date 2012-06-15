@@ -58,8 +58,8 @@ our %build_and_test_sets = (
 	# NMI will need builds on a set of platforms that we do not provide in our
 	# core builds.	These are those platforms.
 	'nmi_one_offs' => [
-		'x86_64_freebsd_8.2-updated',
-		'x86_64_sol_5.11',
+		#'x86_64_freebsd_8.2-updated',
+		#'x86_64_sol_5.11',
 	],
 	
 	# We will build on a set of machines that we want to be sure continue building
@@ -68,9 +68,9 @@ our %build_and_test_sets = (
 	# release - a build problem on this platform could indicate problems on a future
 	# release of RHEL.
 	'extra_builds' => [
-		'x86_64_fedora_14-updated',
-		'x86_64_opensuse_11.4-updated',
-		'x86_64_macos_10.6-updated',
+		#'x86_64_fedora_14-updated',
+		#'x86_64_opensuse_11.4-updated',
+		#'x86_64_macos_10.6-updated',
 	],
 	
 	'stduniv' => [
@@ -602,7 +602,7 @@ our %submit_info = (
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
 			'xtests'	=> undef,
 		},

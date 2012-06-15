@@ -181,33 +181,6 @@ larger value than the maximum value possible for the existing rank expression.
 \Macro{RANK} is just a floating point value, so there is no harm in
 having a value that is very large. 
 
-
-\item[Policy Scenario: Parallel Scheduling Groups]
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-In some parallel environments, machines are divided into groups, and
-jobs should not cross groups of machines -- that is, all the nodes of a parallel
-job should be allocated to machines within the same group.
-The most common example is a pool of machines using infiniband switches.
-Each switch
-might connect 16 machines, and a pool might have 160 machines on 10 switches.
-If the infiniband switches are not routed to each other, each job must run 
-on machines connected to the same switch.  
-
-The dedicated scheduler's 
-parallel scheduling groups features supports jobs that must not 
-cross group boundaries.
-Define a group by having each machine within a group
-set the configuration variable 
-\Macro{ParallelSchedulingGroup} with a string that is a unique name for
-the group.
-The submit description file for a parallel universe job which
-must not cross group boundaries contains 
-\begin{verbatim}
-+WantParallelSchedulingGroups = True
-\end{verbatim}
-
-The dedicated scheduler enforces the allocation to within a group.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -255,26 +228,36 @@ from the beginning when assigned to a new set of machines.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Configure-Dedicated-Groups}
-Grouping dedicated nodes into parallel scheduling groups}
+Grouping Dedicated Nodes into Parallel Scheduling Groups}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{parallel scheduling groups}
 
 In some parallel environments, machines are divided into groups, and
-jobs should not cross groups of machines -- that is, all the nodes of a parallel
-job should be allocated to machines in the same group.  The most common
-example is a pool of machine using infiniband switches.  Each switch
-might connect 16 machines, and a pool might have 160 machines on 10 switches.
-If the infiniband switches are not routed to each other, each job must run 
-on machines connected to the same switch.  The dedicated scheduler's 
-parallel scheduling groups features supports this operation.
+jobs should not cross groups of machines.
+That is, all the nodes of a parallel
+job should be allocated to machines within the same group.  
+The most common example is a pool of machine using InfiniBand switches.
+For example, 
+each switch might connect 16 machines, 
+and a pool might have 160 machines on 10 switches.
+If the InfiniBand switches are not routed to each other, 
+each job must run on machines connected to the same switch.
+The dedicated scheduler's 
+\Term{Parallel Scheduling Groups} feature supports this operation.
 
 Each \Condor{startd} must define which group it belongs to by setting the 
 \Macro{ParallelSchedulingGroup} variable in the configuration file, and 
 advertising it into the machine ClassAd.  
 The value of this variable is a string,
-which should be the same for all \Condor{startd} daemons in a given group.
+which should be the same for all \Condor{startd} daemons within a given group.
 The property must be advertised in the \Condor{startd} ClassAd
-by appending \Macro{ParallelSchedulingGroup}
+by appending \MacroNI{ParallelSchedulingGroup}
 to the \Macro{STARTD\_ATTRS} configuration variable.
-Then, parallel jobs which want to be scheduled by group declare this
-by setting \Expr{+WantParallelSchedulingGroups = True}
-in their submit description file. 
+
+The submit description file for a parallel universe job which
+must not cross group boundaries contains 
+\begin{verbatim}
++WantParallelSchedulingGroups = True
+\end{verbatim}
+
+The dedicated scheduler enforces the allocation to within a group.

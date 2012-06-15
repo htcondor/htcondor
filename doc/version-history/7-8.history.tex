@@ -16,15 +16,15 @@ New features will be added in the 7.9.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-8-0}Version 7.8.0}
+\subsection*{\label{sec:New-7-8-1}Version 7.8.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.8.0 not yet released.
-%\item Condor version 7.8.0 released on Month Date, 2012.
+\item Condor version 7.8.1 not yet released.
+%\item Condor version 7.8.1 released on Month Date, 2012.
 
 \end{itemize}
 
@@ -33,13 +33,137 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item (Added in 7.7.6.)  Added the \Arg{-\_condor\_relocatable} argument
-for standalone checkpointing.  This allows checkpointed programs to restart
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item (Added in 7.8.0.) The new configuration variable
+\Macro{ENABLE\_DEPRECATION\_WARNINGS} causes \Condor{submit} to issue
+warnings when a job requests features that are no longer supported.
+\Ticket{2968}
+
+\item (Added in 7.7.6) The new configuration variable
+\Macro{BATCH\_GAHP} should be used instead of \Macro{PBS\_GAHP},
+\Macro{LSF\_GAHP} and \Macro{SGE\_GAHP}. The older parameters are
+still recognized, but their use is now discouraged.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in the Condor init script that would cause
+the init script to hang if Condor was not running.
+\Ticket{2872}
+
+\item Fixed a bug that caused parallel universe jobs using
+Parallel Scheduling Groups 
+(see section ~\ref{sec:Configure-Dedicated-Groups})
+to occasionally stay idle even when
+there were available machines to run them.
+\Ticket{3017}
+
+\item Fixed a bug that caused the \Condor{gridmanager} to crash when
+attempting to submit jobs to a local PBS, LSF, or SGI cluster.
+\Ticket{3014}
+
+\item Fixed a bug in the handling of local universe jobs which caused
+the \Condor{schedd} to log a spurious \Expr{ERROR} message
+every time a local universe job exited, 
+and then further caused the statistics for local universe jobs to be 
+incorrectly computed.
+\Ticket{3008}
+
+\item Changed the internally used \Condor{ckpt\_probe} executable
+to link statically, which should make the
+checkpoint signature more resistant to non-significant changes in the system
+configuration.
+\Ticket{2901}
+
+\item Restored Globus and VOMS support for the Mac OS X platform.
+\Ticket{2991}
+
+\item Fixed a bug when Condor runs under the PrivSep model,
+in which if a job created a hard link from one file to another,
+Condor was unable to transfer the files back to the submit side,
+and the job was put on hold.
+\Ticket{2987}
+
+\item When configuration variables \MacroNI{MaxJobRetirementTime} or
+\MacroNI{MachineMaxVacateTime} were very large, estimates of machine
+draining badput and completion time were sometimes nonsensical
+because of integer overflow.
+\Ticket{3001}
+
+\item Fixed a bug where per-job sub-directories and their contents
+in \MacroNI{SPOOL} would not be removed when the associated job
+left the queue.
+\Ticket{2942}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item Submit description file commands introduced in Condor version 7.7.1
+have now been documented.
+See the \Condor{submit} manual page at ~\ref{man-condor-submit} for
+the newly added definitions of
+\begin{description}
+  \item[\SubmitCmd{ec2\_availability\_zone}]
+  \item[\SubmitCmd{ec2\_ebs\_volumes}]
+  \item[\SubmitCmd{ec2\_elastic\_ip}]
+  \item[\SubmitCmd{ec2\_keypair\_file}]
+  \item[\SubmitCmd{ec2\_vpc\_ip}]
+  \item[\SubmitCmd{ec2\_vpc\_subnet}]
+\end{description}
+
+\item There is now a manual page for \Condor{router\_rm}, 
+a script that provides additional features convenient for removing
+jobs managed by the Condor Job Router.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-0}Version 7.8.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.0 released on May 10, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item (Added in 7.7.6.)  The new \Arg{-\_condor\_relocatable} argument
+may be given as part of the invocation of a program that uses
+standalone checkpointing.  This allows checkpointed programs to restart
 without attempting to change to their original directory.
 \Ticket{2877}
 
 \item (Added in 7.7.5.) Added the \Arg{-absent} flag to \Condor{status},
-which displays absent ads.
+which displays absent ClassAds.
 \Ticket{2690}
 
 \item (Added in 7.7.5.) Implement absent ads, which help track pool membership
@@ -81,12 +205,12 @@ Previously, it incorrectly evaluated to \Expr{Undefined}.
 \item Format tags \%v and \%V for the \Opt{-format} option now properly
 print all ClassAd value types. Previously, \Expr{True} and \Expr{False}
 were printed as integers, and new ClassAd types like lists and nested
-ads couldn't be printed.
+ClassAds could not be printed.
 \Ticket{2960}
 
 \item Restored RCS keyword strings CondorVersion and CondorPlatform to
 the Condor binaries. These strings are found and printed by the 
-\Opt{ident} program on unix. They were missing in Condor versions 7.7.3
+\Opt{ident} program on Unix. They were missing in Condor versions 7.7.3
 and later.
 \Ticket{2932}
 
@@ -97,7 +221,7 @@ and later.
 universe jobs to never checkpoint. This would happen if the job
 triggered a call to NSCD (Name Service Caching Daemon) but NSCD 
 wasn't running. 
-Calls to NSCD can be triggered by a lookup of a user account or
+Calls to NSCD can be triggered by a look up of a user account or
 resolving a machine hostname to an IP address.
 Now, NSCD is never consulted by a standard universe
 job (this was already the behavior on other platforms).

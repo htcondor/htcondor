@@ -5412,7 +5412,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=313
 
-[CLASSAD_LIB_PATH]
+[CLASSAD_USER_LIBS]
 aliases=
 default=
 version=0.0.0
@@ -7481,7 +7481,7 @@ id=454
 
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -10412,7 +10412,7 @@ id=550
 
 [GROUP_SORT_EXPR]
 aliases=
-default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+default=ifThenElse(AccountingGroup=?="<none>",3.4e+38,ifThenElse(GroupQuota>0,GroupResourcesInUse/GroupQuota,3.3e+38))
 version=0.0.0
 range=.*
 state=default
@@ -10613,6 +10613,22 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Default modification to a disk resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
+
+[ENABLE_DEPRECATION_WARNINGS]
+aliases=
+default=false
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable warnings about the use of deprecated features
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd

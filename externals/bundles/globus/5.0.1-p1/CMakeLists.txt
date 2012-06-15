@@ -36,6 +36,8 @@ if (WITH_GLOBUS)
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
+						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_tar.patch -p0 &&
+						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
 						cd gt5.0.1-all-source-installer/source-trees/xio/src/builtins &&
 						mkdir -p gsi popen &&
 						sed -e 's/globus_xio_gsi.h/globus_xio_gsi_driver.h/' ../../drivers/gsi/globus_i_xio_gsi.h >gsi/globus_i_xio_gsi.h &&
@@ -225,7 +227,7 @@ if (WITH_GLOBUS)
 		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
 		find_multiple( "globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
-		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include")
+		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include;/usr/local/globus/include/globus")
 		endif(GLOBUS_FOUND)
 
 	endif(NOT PROPER)

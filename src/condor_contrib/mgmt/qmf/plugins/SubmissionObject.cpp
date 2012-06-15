@@ -162,7 +162,7 @@ SubmissionObject::updateQdate(const PROC_ID &id) {
 	int q_date, old;
 	if (GetAttributeInt(id.cluster, id.proc, ATTR_Q_DATE, &q_date) >= 0) {
 		old = mgmtObject->get_QDate();
-		if ((q_date < old) || (old <= 0)) {
+		if ((q_date < old)) {
 			mgmtObject->set_QDate((uint64_t) q_date*1000000000);
 		}
 	}
