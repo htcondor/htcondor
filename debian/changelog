@@ -23,6 +23,7 @@ condor (7.8.1~dfsg.1-1) unstable; urgency=low
     - Fixed a bug where per-job sub-directories and their contents in the
       SPOOL directory would not be removed when the associated job left the
       queue (Ticket 2942). Closes: #663031
+  * Updated Swedish Debconf translation (Closes: #676943).
 
  -- Michael Hanke <mih@debian.org>  Wed, 06 Jun 2012 10:39:35 +0200
 

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: condor\n"
 "Report-Msgid-Bugs-To: condor@packages.debian.org\n"
 "POT-Creation-Date: 2012-04-30 20:35+0200\n"
-"PO-Revision-Date: 2012-05-21 21:27+0100\n"
+"PO-Revision-Date: 2012-06-10 19:11+0100\n"
 "Last-Translator: Martin Bagge / brother <brother@bsnet.se>\n"
 "Language-Team: Swedish <debian-l10n-swedish@lists.debian.org>\n"
 "Language: \n"
@@ -27,10 +27,9 @@ msgstr "Inställningar för Condor"
 #. Type: boolean
 #. Description
 #: ../condor.templates:2001
-#, fuzzy
 #| msgid "Manage initial configuration with Debconf?"
 msgid "Manage initial Condor configuration automatically?"
-msgstr "Ska initiell inställning av Condor utföras med Debconf?"
+msgstr "Ska initiell inställning av Condor utföras automatiskt?"
 
 #. Type: boolean
 #. Description
@@ -42,6 +41,11 @@ msgid ""
 "installation\". This generated initial configuration can be further extended "
 "later on."
 msgstr ""
+"Inställningarna för Condor kan hanteras automatiskt genom att några frågor "
+"ställs för att skapa en initiell konfiguration för en maskin som antingen är "
+"medlem i en existerande pool eller fungerar som en \"Personlig Condor-"
+"installation\". Den initiella konfiguraitonen kan utökas ytterligare "
+"framöver."
 
 #. Type: boolean
 #. Description
@@ -50,11 +54,12 @@ msgid ""
 "Otherwise, Condor will be installed with a default configuration that needs "
 "to be customized manually."
 msgstr ""
+"Annars kommer Condor att intalleras med en standardkonfiguration som måste "
+"justeras manuellt."
 
 #. Type: boolean
 #. Description
 #: ../condor.templates:3001
-#, fuzzy
 #| msgid "Enabled submission of usage statistics?"
 msgid "Enable submission of usage statistics?"
 msgstr "Aktivera sändande av användningsstatistik?"
@@ -62,7 +67,6 @@ msgstr "Aktivera sändande av användningsstatistik?"
 #. Type: boolean
 #. Description
 #: ../condor.templates:3001
-#, fuzzy
 #| msgid ""
 #| "The Condor authors kindly ask that each Condor pool sends them periodic "
 #| "updates with basic information about the status of the pool. Updates "
@@ -78,12 +82,12 @@ msgid ""
 "manager, and the name of the pool. These updates help the Condor Team see "
 "how Condor is being used around the world."
 msgstr ""
-"Condors upphovsman ber vänligast om att varje Condor-pool skickar periodiska "
+"Condors upphovsmän ber vänligast om att varje Condor-pool skickar periodiska "
 "uppdateringar med grundläggande information om status för poolen. "
 "Uppdateringarna innehåller bara totalt antal maskiner, antal jobb skickade, "
-"antal maskiner som kör jobb, värdnamnet på den centrala resursen och namnet "
-"för poolen. Dessa uppdateringar hjälper utvecklarna bakom Condor att se hur "
-"Condor används runt jorden."
+"antal maskiner som kör jobb, värdnamnet på den centrala övervakaren och "
+"namnet för poolen. Dessa uppdateringar hjälper utvecklarna bakom Condor att "
+"se hur Condor används."
 
 #. Type: string
 #. Description
@@ -94,7 +98,6 @@ msgstr "Adress till den centrala resursen:"
 #. Type: string
 #. Description
 #: ../condor.templates:4001
-#, fuzzy
 #| msgid ""
 #| "If this machine is supposed to join an existing Condor pool, the address "
 #| "of the central manager machine has to be specified. Any address format "
@@ -105,8 +108,8 @@ msgid ""
 "supported by Condor can be used, including macro expressions."
 msgstr ""
 "Om denna maskin ska anslutas till en existerande Condor-pool måste adressen "
-"till maskinen med den centrala resursen anges. Ett adressformat som stöds av "
-"Condor kan användas, inklusive macro-uttryck."
+"till maskinen med den centrala övervakaren anges. Ett adressformat som stöds "
+"av Condor kan användas, inklusive macro-uttryck."
 
 #. Type: string
 #. Description
@@ -145,11 +148,12 @@ msgid ""
 "Please specify the intended role or roles of this machine, for which the "
 "corresponding daemons will be started automatically."
 msgstr ""
+"Ange den eller de roller som den här maskinen kommer att ha, motsvarande "
+"tjänster kommer att startas automatiskt."
 
 #. Type: multiselect
 #. Description
 #: ../condor.templates:5002
-#, fuzzy
 #| msgid ""
 #| "A machine in a Condor pool can have multiple roles. In general there is "
 #| "one central manager and multiple nodes that run jobs. Often the central "
@@ -164,11 +168,9 @@ msgid ""
 "possible to have multiple machines available for job submission."
 msgstr ""
 "En maskin i en Condor-pool kan ha flera roller. Generellt sett finns det en "
-"central resurs och flera noder som kör jobb. Ofta är den centrala resursen "
-"också maskinen som används för att skicka jobb. Det är dock möjligt att ha "
-"flera maskiner för att skicka ut jobb. Genom att ange vilken roll denna "
-"maskin ska ta kan Debianpaketet aktivera motsvarande tjänster så att de "
-"startar automatiskt."
+"central övervakare och flera noder som kör jobb. Ofta är den centrala "
+"övervakaren också maskinen som används för att skicka jobb. Det är dock "
+"möjligt att ha flera maskiner för att skicka ut jobb."
 
 #. Type: string
 #. Description
@@ -179,7 +181,6 @@ msgstr "E-post-adress till den lokala Condor-administratören:"
 #. Type: string
 #. Description
 #: ../condor.templates:6001
-#, fuzzy
 #| msgid ""
 #| "The condor administrator will receive error messages when something goes "
 #| "wrong with Condor on this machine."
@@ -187,16 +188,15 @@ msgid ""
 "The Condor administrator will receive error messages if something goes wrong "
 "with Condor on this machine."
 msgstr ""
-"Den lokala condor-administratören kommer att få felmeddelanden när något går "
-"fel med Condor på den här maskinen."
+"Condor-administratören kommer att få felmeddelanden när något går fel med "
+"Condor på den här maskinen."
 
 #. Type: string
 #. Description
 #: ../condor.templates:7001
-#, fuzzy
 #| msgid "File system domain label:"
 msgid "user directory domain label:"
-msgstr "Domänettikett för filsystemet:"
+msgstr "användarkatalogens domänettikett:"
 
 #. Type: string
 #. Description
@@ -211,6 +211,15 @@ msgid ""
 "run all jobs as user \"nobody\". Leaving it blank will cause Condor to run "
 "all jobs on this machine as user \"nobody\"."
 msgstr ""
+"Denna ettikett är en sträng som Condor använder för att bedöma om en "
+"skickande och en utförande maskin delar samma katalog med användarkonton "
+"(alltså att UID 1000 på en maskin är samma person som UID 1000 på en annan). "
+"Om ettiketterna på de två maskinerna stämmer överrens kommer Condor att köra "
+"jobben som det UID som skickade jobbet och skicka e-post-meddelanden till "
+"användare@DOMÄN (den här ettiketten används som värde för DOMÄN). Om inte "
+"kommer Condor att köra alla jobb som användaren \"nobody\". Lämnas fältet "
+"tomt kommer Condor att köra alla jobb på den här maskinen som användaren "
+"\"nobody\"."
 
 #. Type: string
 #. Description
@@ -231,7 +240,6 @@ msgstr "Domänettikett för filsystemet:"
 #. Type: string
 #. Description
 #: ../condor.templates:8001
-#, fuzzy
 #| msgid ""
 #| "This label is an arbitrary string that is used to decide if two machines "
 #| "(a submitting machine and an execute machine) share the same file system. "
@@ -248,33 +256,30 @@ msgid ""
 "the fully qualified hostname of the local machine, which will prevent Condor "
 "assuming that any two machines share a file system."
 msgstr ""
-"Denna ettikett är en sträng som används för att bedöma om två maskiner(en "
-"skickande maskin och en utförande maskin) delar samma filsystem. Obs, om du "
-"lämnar detta värde tomt kommer Condor automatiskt att sätta det till "
-"komplett kvalificerat värdnamn för den lokala maskinen och därmed anse att "
-"två maskiner aldrig delar filsystem. I ett dedikerat kluster kommer troligen "
-"alla maskiner att dela filsystem och ska då ha samma ettikett."
+"Denna ettikett är en sträng som används för att bedöma om en skickande "
+"maskin och en utförande maskin delar samma filsystem. I ett dedikerat "
+"kluster kommer troligen alla maskiner att dela filsystem och ska då ha samma "
+"ettikett. Om du lämnar detta värde tomt kommer Condor automatiskt att sätta "
+"det till komplett kvalificerat värdnamn för den lokala maskinen och därmed "
+"anse att två maskiner aldrig delar filsystem."
 
 #. Type: string
 #. Description
 #: ../condor.templates:8001
-#, fuzzy
 #| msgid "Example: my_super_computer"
 msgid "Example: my_shared_volume"
-msgstr "Exempel: min_superdator"
+msgstr "Exempel: min_delade_volym"
 
 #. Type: boolean
 #. Description
 #: ../condor.templates:9001
-#, fuzzy
 #| msgid "Perform a \"Personal Condor\" installation?"
 msgid "Perform a \"Personal Condor installation\"?"
-msgstr "Ska installation av  \"Personlig Condor\" genomföras?"
+msgstr "Ska en \"Personlig Condor-intallation\" genomföras?"
 
 #. Type: boolean
 #. Description
 #: ../condor.templates:9001
-#, fuzzy
 #| msgid ""
 #| "A personal condor installation is a fully functional Condor pool on a "
 #| "single machine. Condor will automatically configure and advertise as many "
@@ -298,6 +303,8 @@ msgid ""
 "This configuration is not appropriate if this machine is intended to be a "
 "member of a pool."
 msgstr ""
+"Denna inställning är inte önskvärd om den här maskinen ska vara medlem i en "
+"pool."
 
 #. Type: string
 #. Description
@@ -320,10 +327,9 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../condor.templates:10001
-#, fuzzy
 #| msgid "Example setting to reserve 1GB: 1024"
 msgid "Example (to reserve 1 GB): 1024"
-msgstr "Exempelinställning för att reservera 1GB: 1024"
+msgstr "Exempel (för att reservera 1GB): 1024"
 
 #. Type: string
 #. Description
@@ -334,7 +340,6 @@ msgstr "Maskiner med skrivrättighet för den här värden:"
 #. Type: string
 #. Description
 #: ../condor.templates:11001
-#, fuzzy
 #| msgid ""
 #| "All machines that shall participate in the Condor pool need to be listed "
 #| "here. This setting can be a plain list, a domain with wildcards or a "
@@ -347,9 +352,9 @@ msgid ""
 "access Condor daemons on this machine."
 msgstr ""
 "Alla maskiner som ska vara med i Condor-poolen behöver vara listade här. "
-"Denna inställning kan vara en ren lista, en domän med jokertecken eller ett "
-"macro-uttryck. Som standard är bara lokal värd tillåten att komma åt "
-"tjänster på denna maskin."
+"Denna inställning kan vara en kommaseparerad lista, en domän med jokertecken "
+"eller ett macro-uttryck. Som standard är bara lokal värd tillåten att komma "
+"åt tjänster på denna maskin."
 
 #. Type: string
 #. Description
@@ -386,7 +391,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../condor.templates:12001
-#, fuzzy
 #| msgid ""
 #| "If it is planned to compose a custom policy it is best to keep Condor's "
 #| "default here."
