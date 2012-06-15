@@ -1,3 +1,31 @@
+condor (7.8.1~dfsg.1-1) unstable; urgency=low
+
+  * New upstream bugfix release:
+    - Fixed a bug in the condor init script that would cause
+      the init script to hang if condor wasn't running (Ticket 2872)
+    - Fixed a bug that caused Parallel Universe jobs using Parallel
+      Scheduling Groups to occasionally stay idle even when there were
+      available machines to run them (Ticket 3017)
+    - Fixed a bug that caused the Condor GridManager to crash when
+      attempting to submit jobs to a local PBS/LSF/SGI cluster
+      (Ticket 3014)
+    - Fixed a bug in the handling of local universe jobs which caused
+      the Condor SCHEDD to log a spurious ERROR message every time a local
+      universe job exited, and then further caused the statistics for local
+      universe jobs to be incorrectly computed (Ticket 3008)
+    - Fixed a bug when Condor runs under the PrivSep model, in which if a job
+      created a hard link from one file to another, Condor was unable to
+      transfer the files back to the submit side, and the job was put on hold.
+      (Ticket 2987)
+    - When configuration variables MaxJobRetirementTime or MachineMaxVacateTime
+      were very large, estimates of machine draining badput and completion time
+      were sometimes nonsensical because of integer overflow (Ticket 3001)
+    - Fixed a bug where per-job sub-directories and their contents in the
+      SPOOL directory would not be removed when the associated job left the
+      queue (Ticket 2942). Closes: #663031
+
+ -- Michael Hanke <mih@debian.org>  Wed, 06 Jun 2012 10:39:35 +0200
+
 condor (7.8.0~dfsg.1-2) unstable; urgency=low
 
   * Actually include the Russian, Italian, and Polish translations.
