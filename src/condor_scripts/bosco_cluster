@@ -151,13 +151,16 @@ test_cluster () {
     remote_host=$1
 
     # First, check if the cluster is in the clusterlist
-    grep "$remote_host" $CLUSTERLIST_LOCATION
+    cluster_out=`grep "$remote_host" $CLUSTERLIST_LOCATION`
     if [ $? -ne 0 ]; then
         echo "Unable to find $remote_host in list of installed clusters."
         echo "Available clusters:"
         list
         exit 1
     fi
+
+    # Get the cluster type
+    cluster_type=`expr "$cluster_out" : ".*cluster_type=\(.*\)"`
 
     # Check if passwordless ssh works
     echo -n "Testing ssh to $1..."
@@ -191,7 +194,7 @@ test_cluster () {
     log_file=$submit_dir/logfile
     cat > $submit_file << End_of_Submit
 universe = grid
-grid_resource = pbs $remote_host
+grid_resource = $cluster_type $remote_host
 output = /dev/null
 error = /dev/null
 transfer_executable=false
@@ -310,7 +313,7 @@ while true; do
         -a|--add) remote_host=$2; shift 2; break ;;
         -l|--list) list; exit 0 ;;
         -s|--status) get_status $2;  shift 2; exit 0 ;;
-        -t|--test) test_cluster $2;  shift 2; exit 0 ;;
+        -t|--test) test_cluster $2; shift 2; exit 0 ;;
         -r|--remove) remove_cluster $2; shift 2; exit 0;;
         
         --) echo "No command found" >&2; usage; exit 1;;
