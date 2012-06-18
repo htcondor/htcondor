@@ -63,8 +63,8 @@ typedef struct {
 } LOG_INFO;
 
 typedef std::map<std::string, LOG_INFO*> LOG_INFO_MAP;
-typedef std::map<std::string, unsigned int> MAP_TO_PID;
-typedef	std::map<unsigned int, std::string> MAP_FROM_PID;
+typedef std::map<std::string, pid_t> MAP_TO_PID;
+typedef	std::map<pid_t, std::string> MAP_FROM_PID;
 
 //char	*param();
 static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info);
@@ -89,7 +89,7 @@ static struct {
 	bool   full_ads;
 	bool   job_ad;		     // debugging
 	bool   ping_all_addrs;	 // 
-	vector<int> query_pids;
+	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
 	vector<const char *> query_addrs;
 	vector<const char *> constraint;
@@ -213,7 +213,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 			const char WS[] = " \t\r\n";
 			if (subhead.empty()) {
 				// use field index, assume all but last field have no spaces in them.
-				unsigned int ixh=0, ixd=0, ixh2, ixd2;
+				size_t ixh=0, ixd=0, ixh2, ixd2;
 				for (;;) {
 					if (ixh == string::npos || ixd == string::npos)
 						break;
@@ -243,7 +243,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 				}
 			} else {
 				// use subhead to get field widths
-				unsigned int ixh = 0, ixh2;
+				size_t ixh = 0, ixh2;
 				for (;;) {
 					if (ixh == string::npos)
 						break;
@@ -286,7 +286,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 #include <psapi.h>
 #endif
 
-static void init_program_for_pid(unsigned int pid)
+static void init_program_for_pid(pid_t pid)
 {
 	App.pid_to_program[pid] = "";
 
@@ -301,6 +301,28 @@ static void init_program_for_pid(unsigned int pid)
 			CloseHandle(hProcess);
 		}
 	#endif
+#else
+#if 1
+		ArgList cmdargs;
+	#ifdef WIN32
+		cmdargs.AppendArg("tasklist");
+		cmdargs.AppendArg("/FI");
+		std::string eqpid;
+		sprintf(eqpid, "PID eq %u", pid);
+		cmdargs.AppendArg(eqpid.c_str());
+		const char * fld_name = "Image Name";
+		const int    parse_type = 0;
+		//const int    parse_type = 1;
+	#else
+		cmdargs.AppendArg("ps");
+		cmdargs.AppendArg("-f");
+		std::string eqpid;
+		sprintf(eqpid, "%u", pid);
+		cmdargs.AppendArg(eqpid.c_str());
+		const char * fld_name = "CMD";
+		const  int    parse_type = 0;
+	#endif
+		FILE * stream = my_popen(cmdargs, "r", FALSE);
 #else
 		std::string cmdline;
 	#ifdef WIN32
@@ -317,6 +339,7 @@ static void init_program_for_pid(unsigned int pid)
 		sprintf(cmdline, cmd_format, pid);
 		const char * pcmdline = cmdline.c_str();
 		FILE * stream = my_popen(pcmdline, "r", FALSE);
+#endif
 		if (stream) {
 			std::string program;
 			if (get_field_from_stream(stream, parse_type, fld_name, program))
@@ -332,7 +355,7 @@ format_jobid_program (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 	const char * outstr = NULL;
 
 	if (App.job_to_pid.find(jobid) != App.job_to_pid.end()) {
-		unsigned int pid = App.job_to_pid[jobid];
+		pid_t pid = App.job_to_pid[jobid];
 		if (App.pid_to_program.find(pid) == App.pid_to_program.end()) {
 			init_program_for_pid(pid);
 		}
@@ -419,7 +442,7 @@ void parse_args(int /*argc*/, char *argv[])
 				}
 				++ixArg;
 				char * p;
-				int pid = strtol(argv[ixArg+1], &p, 10);
+				pid_t pid = strtol(argv[ixArg+1], &p, 10);
 				App.query_pids.push_back(pid);
 			} else if (IsArg(parg, "ps", 2)) {
 			} else if (IsArg(parg, "long", 1)) {
@@ -551,11 +574,11 @@ main( int argc, char *argv[] )
 	if (App.query_log_dirs.size() > 0) {
 		if (App.diagnostic) {
 			printf("Query log dirs:\n");
-			for (unsigned int ii = 0; ii < App.query_log_dirs.size(); ++ii) {
+			for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 				printf("    [%3d] %s\n", ii, App.query_log_dirs[ii]);
 			}
 		}
-		for (unsigned int ii = 0; ii < App.query_log_dirs.size(); ++ii) {
+		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 			LOG_INFO_MAP info;
 			query_log_dir(App.query_log_dirs[ii], info);
 			scan_logs_for_info(info, App.job_to_pid);
@@ -592,7 +615,7 @@ main( int argc, char *argv[] )
 	}
 
 	if (App.constraint.size() > 0) {
-		for (unsigned int ii = 0; ii < App.constraint.size(); ++ii) {
+		for (size_t ii = 0; ii < App.constraint.size(); ++ii) {
 			query->addANDConstraint (App.constraint[ii]);
 		}
 	}
@@ -623,7 +646,7 @@ main( int argc, char *argv[] )
 		App.query_addrs.push_back("NULL");
 	}
 
-	for (unsigned int ixAddr = 0; ixAddr < App.query_addrs.size(); ++ixAddr) {
+	for (size_t ixAddr = 0; ixAddr < App.query_addrs.size(); ++ixAddr) {
 
 		const char * direct = NULL; //"<128.105.136.32:7977>";
 		const char * addr = App.query_addrs[ixAddr];
@@ -749,6 +772,7 @@ bool starts_with(const char * p1, const char * p2, const char ** ppEnd)
 	return true;
 }
 
+/*
 static LOG_INFO * find_log_info(LOG_INFO_MAP & info, std::string name)
 {
 	LOG_INFO_MAP::const_iterator it = info.find(name);
@@ -757,6 +781,7 @@ static LOG_INFO * find_log_info(LOG_INFO_MAP & info, std::string name)
 	}
 	return it->second;
 }
+*/
 
 static LOG_INFO * find_or_add_log_info(LOG_INFO_MAP & info, std::string name, std::string log_dir)
 {
@@ -1066,7 +1091,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 				break;
 			}
 			// parse master header
-			unsigned int ix = line.find(" ** PID = ");
+			size_t ix = line.find(" ** PID = ");
 			if (ix != string::npos) {
 				possible_master_pid = line.substr(ix+10);
 			}
@@ -1074,12 +1099,12 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// parse "Sent signal NNN to DAEMON (pid NNNN)"
 			ix = line.find("Sent signal");
 			if (ix != string::npos) {
-				unsigned int ix2 = line.find(" to ", ix);
+				size_t ix2 = line.find(" to ", ix);
 				if (ix2 != string::npos) {
 					ix2 += 4;
-					unsigned int ix3 = line.find(" (pid ", ix2);
+					size_t ix3 = line.find(" (pid ", ix2);
 					if (ix3 != string::npos) {
-						unsigned int ix4 = line.find(")", ix3);
+						size_t ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
 						std::string pid = line.substr(ix3+6, ix4-ix3-6);
 						lower_case(daemon);
@@ -1099,12 +1124,12 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// parse "Started DaemonCore process PATH, pid and pgroup = NNNN"
 			ix = line.find("Started DaemonCore process");
 			if (ix != string::npos) {
-				unsigned int ix2 = line.find(", pid and pgroup = ", ix);
+				size_t ix2 = line.find(", pid and pgroup = ", ix);
 				if (ix2 != string::npos) {
 					std::string pid = line.substr(ix2+sizeof(", pid and pgroup = ")-1);
-					unsigned int ix3 = line.rfind("condor_");
+					size_t ix3 = line.rfind("condor_");
 					if (ix3 > ix && ix3 < ix2) {
-						unsigned int ix4 = line.find_first_of("\".", ix3);
+						size_t ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
 							std::string daemon = line.substr(ix3+7,ix4-ix3-7);
 							lower_case(daemon);
@@ -1146,7 +1171,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			return;
 		}
 
-		std::map<int,bool> dead_pids;
+		std::map<pid_t,bool> dead_pids;
 		std::string possible_starter_pid;
 		std::string possible_job_id;
 		std::string possible_job_pid;
@@ -1172,25 +1197,25 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			}
 
 			// parse start banner
-			unsigned int ix = line.find(" ** PID = ");
+			size_t ix = line.find(" ** PID = ");
 			if (ix != string::npos) {
 				possible_starter_pid = line.substr(ix+10);
 			}
 
 			ix = line.find("DaemonCore: command socket at");
-			if (ix != string.npos) {
+			if (ix != string::npos) {
 				pliDaemon->addr = line.substr(line.find("<", ix));
 			}
 
 			// parse jobid
 			ix = line.find("Starting a ");
 			if (ix != string::npos) {
-				unsigned int ix2 = line.find("job with ID: ", ix);
+				size_t ix2 = line.find("job with ID: ", ix);
 				if (ix2 != string::npos) {
 					possible_job_id = line.substr(line.find(": ", ix2)+2);
 					if (App.diagnostic) { printf("found JobId %s\n", possible_job_id.c_str()); }
 					if ( ! possible_job_pid.empty()) {
-						unsigned int pid = atoi(possible_job_pid.c_str());
+						pid_t pid = atoi(possible_job_pid.c_str());
 						if (App.diagnostic) { printf("Adding %s = %s to job->pid map\n", possible_job_id.c_str(), possible_job_pid.c_str()); }
 						job_to_pid[possible_job_id] = pid;
 					}
@@ -1203,8 +1228,8 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			if (ix != string::npos) {
 				possible_job_pid = line.substr(line.find("=",ix)+1);
 				if (App.diagnostic) { printf("found JobPID %s\n", possible_job_pid.c_str()); }
-				unsigned int pid = atoi(possible_job_pid.c_str());
-				std::map<int,bool>::iterator it_pids = dead_pids.find(pid);
+				pid_t pid = atoi(possible_job_pid.c_str());
+				std::map<pid_t,bool>::iterator it_pids = dead_pids.find(pid);
 				if (it_pids != dead_pids.end()) {
 					possible_job_pid.clear();
 					dead_pids.erase(it_pids);
@@ -1217,7 +1242,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			if (ix != string::npos) {
 				std::string exited_pid = line.substr(line.find("=",ix)+1);
 				if (App.diagnostic) { printf("found PID exited %s\n", exited_pid.c_str()); }
-				unsigned int pid = atoi(exited_pid.c_str());
+				pid_t pid = atoi(exited_pid.c_str());
 				dead_pids[pid] = true;
 			}
 		}
@@ -1398,7 +1423,7 @@ static void query_daemons_for_pids(LOG_INFO_MAP & info)
 	}
 }
 
-
+/*
 static void query_daemons_for_config_built_ins(LOG_INFO_MAP & info)
 {
 	for (LOG_INFO_MAP::iterator it = info.begin(); it != info.end(); ++it) {
@@ -1416,7 +1441,7 @@ static void query_daemons_for_config_built_ins(LOG_INFO_MAP & info)
 		}
 	}
 }
-
+*/
 
 static bool ping_a_daemon(std::string addr, std::string /*name*/)
 {
