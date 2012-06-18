@@ -76,7 +76,7 @@ static char * get_daemon_param(std::string addr, char * param_name);
 
 // app globals
 static struct {
-	char * Name; // tool name as invoked from argv[0]
+	const char * Name; // tool name as invoked from argv[0]
 	List<const char> target_names;    // list of target names to query
 	List<LOG_INFO>   all_log_info;    // pool of info from scanning log directories.
 
@@ -98,8 +98,18 @@ static struct {
 	MAP_TO_PID   job_to_pid;
 	MAP_FROM_PID pid_to_program;
 
-} App = { NULL, 0/*target_names*/, 0/*all_log_info*/, 0/*print_head*/, };
+} App;
 
+// init fields in the App structure that have no default initializers
+void InitAppGlobals(const char * argv0)
+{
+	App.Name = argv0;
+	App.diagnostic = false; // output useful only to developers
+	App.verbose = false;    // extra output useful to users
+	App.full_ads = false;
+	App.job_ad = false;     // debugging
+	App.ping_all_addrs = false;
+}
 
 	// Tell folks how to use this program
 void usage(bool and_exit)
@@ -119,7 +129,7 @@ void usage(bool and_exit)
 		"\t-v[erbose]\t\tSame as -long\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
 		"\t-a[uto]f[ormat]:[V,ntlh] <attr1> [attr2 [attr3 ...]]\tPrint attr(s) with automatic formatting\n"
-		"\t\t,\tUse %V formatting\n"
+		"\t\t,\tUse %%V formatting\n"
 		"\t\t,\tComma separated (default is space separated)\n"
 		"\t\tt\tTab separated\n"
 		"\t\tn\tNewline after each attribute\n"
@@ -152,13 +162,13 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 }
 
 static const char *
-format_int_runtime (int utime, AttrList *ad, Formatter & /*fmt*/)
+format_int_runtime (int utime, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	return format_time(utime);
 }
 
 static const char *
-format_jobid_pid (char *jobid, AttrList *ad, Formatter & /*fmt*/)
+format_jobid_pid (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	static char outstr[100];
 	outstr[0] = 0;
@@ -203,7 +213,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 			const char WS[] = " \t\r\n";
 			if (subhead.empty()) {
 				// use field index, assume all but last field have no spaces in them.
-				int ixh=0, ixd=0, ixh2, ixd2;
+				unsigned int ixh=0, ixd=0, ixh2, ixd2;
 				for (;;) {
 					if (ixh == string::npos || ixd == string::npos)
 						break;
@@ -233,7 +243,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 				}
 			} else {
 				// use subhead to get field widths
-				int ixh = 0, ixh2;
+				unsigned int ixh = 0, ixh2;
 				for (;;) {
 					if (ixh == string::npos)
 						break;
@@ -300,12 +310,13 @@ static void init_program_for_pid(unsigned int pid)
 		//const int    parse_type = 1;
 		const int    parse_type = 0;
 	#else
-		const char * arg_format = "ps -f %u";
+		const char * cmd_format = "ps -f %u";
 		const char * fld_name = "CMD";
-		inst  int    parse_type = 0;
+		const  int    parse_type = 0;
 	#endif
 		sprintf(cmdline, cmd_format, pid);
-		FILE * stream = my_popen(cmdline.c_str(), "r", FALSE);
+		const char * pcmdline = cmdline.c_str();
+		FILE * stream = my_popen(pcmdline, "r", FALSE);
 		if (stream) {
 			std::string program;
 			if (get_field_from_stream(stream, parse_type, fld_name, program))
@@ -316,7 +327,7 @@ static void init_program_for_pid(unsigned int pid)
 }
 
 static const char *
-format_jobid_program (char *jobid, AttrList *ad, Formatter & /*fmt*/)
+format_jobid_program (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	const char * outstr = NULL;
 
@@ -353,7 +364,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, IntCusto
 
 #define IsArg is_arg_prefix
 
-void parse_args(int argc, char *argv[])
+void parse_args(int /*argc*/, char *argv[])
 {
 	for (int ixArg = 0; argv[ixArg]; ++ixArg)
 	{
@@ -521,7 +532,7 @@ void parse_args(int argc, char *argv[])
 int
 main( int argc, char *argv[] )
 {
-	App.Name = argv[0];
+	InitAppGlobals(argv[0]);
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
@@ -540,11 +551,11 @@ main( int argc, char *argv[] )
 	if (App.query_log_dirs.size() > 0) {
 		if (App.diagnostic) {
 			printf("Query log dirs:\n");
-			for (int ii = 0; ii < App.query_log_dirs.size(); ++ii) {
+			for (unsigned int ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 				printf("    [%3d] %s\n", ii, App.query_log_dirs[ii]);
 			}
 		}
-		for (int ii = 0; ii < App.query_log_dirs.size(); ++ii) {
+		for (unsigned int ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 			LOG_INFO_MAP info;
 			query_log_dir(App.query_log_dirs[ii], info);
 			scan_logs_for_info(info, App.job_to_pid);
@@ -581,7 +592,7 @@ main( int argc, char *argv[] )
 	}
 
 	if (App.constraint.size() > 0) {
-		for (int ii = 0; ii < App.constraint.size(); ++ii) {
+		for (unsigned int ii = 0; ii < App.constraint.size(); ++ii) {
 			query->addANDConstraint (App.constraint[ii]);
 		}
 	}
@@ -612,7 +623,7 @@ main( int argc, char *argv[] )
 		App.query_addrs.push_back("NULL");
 	}
 
-	for (int ixAddr = 0; ixAddr < App.query_addrs.size(); ++ixAddr) {
+	for (unsigned int ixAddr = 0; ixAddr < App.query_addrs.size(); ++ixAddr) {
 
 		const char * direct = NULL; //"<128.105.136.32:7977>";
 		const char * addr = App.query_addrs[ixAddr];
@@ -800,13 +811,13 @@ protected:
 	int    error;
 
 public:
-	BWReaderBuffer(int size=0, char * input = NULL) 
-		: data(input), cbData(size), cbAlloc(size), at_eof(false), error(0) {
+	BWReaderBuffer(int cb=0, char * input = NULL) 
+		: data(input), cbData(cb), cbAlloc(cb), at_eof(false), error(0) {
 		if (input) {
-			cbAlloc = cbData = size;
-		} else if (size > 0) {
-			data = (char*)malloc(size);
-			memset(data, 17, size);
+			cbAlloc = cbData = cb;
+		} else if (cb > 0) {
+			data = (char*)malloc(cb);
+			memset(data, 17, cb);
 			cbData = 0;
 		}
 	}
@@ -827,13 +838,13 @@ public:
 	char operator[](int ix) const { return data[ix]; }
 	char& operator[](int ix) { return data[ix]; }
 
-	bool reserve(int size) {
-		if (data && cbAlloc >= size)
+	bool reserve(int cb) {
+		if (data && cbAlloc >= cb)
 			return true;
-		void * pv = realloc(data, size);
+		void * pv = realloc(data, cb);
 		if (pv) {
 			data = (char*)pv;
-			cbAlloc = size;
+			cbAlloc = cb;
 			return true;
 		}
 		return false;
@@ -841,13 +852,13 @@ public:
 
 	/* returns number of characters read. or 0 on error use LastError & AtEOF methods to know which.
 	*/
-	int fread_at(FILE * file, off_t offset, int size) {
-		if ( ! reserve(((size + 16) & ~15) + 16))
+	int fread_at(FILE * file, off_t offset, int cb) {
+		if ( ! reserve(((cb + 16) & ~15) + 16))
 			return 0;
 
 		fseek(file, offset, SEEK_SET);
 
-		int ret = fread(data, 1, size, file);
+		int ret = fread(data, 1, cb, file);
 		cbData = ret;
 
 		if (ret <= 0) {
@@ -917,10 +928,12 @@ public:
 		return false;
 	}
 
+#if 0
 	bool NextLine(std::string & str) {
 		// write this
 		return false;
 	}
+#endif
 	bool PrevLine(std::string & str) {
 		str.clear();
 
@@ -1053,7 +1066,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 				break;
 			}
 			// parse master header
-			int ix = line.find(" ** PID = ");
+			unsigned int ix = line.find(" ** PID = ");
 			if (ix != string::npos) {
 				possible_master_pid = line.substr(ix+10);
 			}
@@ -1061,12 +1074,12 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// parse "Sent signal NNN to DAEMON (pid NNNN)"
 			ix = line.find("Sent signal");
 			if (ix != string::npos) {
-				int ix2 = line.find(" to ", ix);
+				unsigned int ix2 = line.find(" to ", ix);
 				if (ix2 != string::npos) {
 					ix2 += 4;
-					int ix3 = line.find(" (pid ", ix2);
+					unsigned int ix3 = line.find(" (pid ", ix2);
 					if (ix3 != string::npos) {
-						int ix4 = line.find(")", ix3);
+						unsigned int ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
 						std::string pid = line.substr(ix3+6, ix4-ix3-6);
 						lower_case(daemon);
@@ -1086,12 +1099,12 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// parse "Started DaemonCore process PATH, pid and pgroup = NNNN"
 			ix = line.find("Started DaemonCore process");
 			if (ix != string::npos) {
-				int ix2 = line.find(", pid and pgroup = ", ix);
+				unsigned int ix2 = line.find(", pid and pgroup = ", ix);
 				if (ix2 != string::npos) {
 					std::string pid = line.substr(ix2+sizeof(", pid and pgroup = ")-1);
-					int ix3 = line.rfind("condor_");
+					unsigned int ix3 = line.rfind("condor_");
 					if (ix3 > ix && ix3 < ix2) {
-						int ix4 = line.find_first_of("\".", ix3);
+						unsigned int ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
 							std::string daemon = line.substr(ix3+7,ix4-ix3-7);
 							lower_case(daemon);
@@ -1159,7 +1172,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			}
 
 			// parse start banner
-			int ix = line.find(" ** PID = ");
+			unsigned int ix = line.find(" ** PID = ");
 			if (ix != string::npos) {
 				possible_starter_pid = line.substr(ix+10);
 			}
@@ -1172,7 +1185,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// parse jobid
 			ix = line.find("Starting a ");
 			if (ix != string::npos) {
-				int ix2 = line.find("job with ID: ", ix);
+				unsigned int ix2 = line.find("job with ID: ", ix);
 				if (ix2 != string::npos) {
 					possible_job_id = line.substr(line.find(": ", ix2)+2);
 					if (App.diagnostic) { printf("found JobId %s\n", possible_job_id.c_str()); }
