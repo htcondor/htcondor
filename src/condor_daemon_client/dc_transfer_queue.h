@@ -57,7 +57,7 @@ class TransferQueueContactInfo {
 
 		// serializes all contact information into a string suitable for
 		// passing on a command line etc.
-	char const *GetStringRepresentation();
+	bool GetStringRepresentation(std::string &str);
 
 		// returns NULL if unlimited, o.w. sinful string of transfer
 		// queue server

@@ -85,17 +85,16 @@ TransferQueueContactInfo::TransferQueueContactInfo(char const *str) {
 	}
 }
 
-char const *
-TransferQueueContactInfo::GetStringRepresentation() {
+bool
+TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 		// this function must produce the same format that is parsed by
 		// TransferQueueContactInfo(char const *str).
 		// expected format: limit=upload,download,...;addr=<...>
 	char const *delim = ";";
 	if( m_unlimited_uploads && m_unlimited_downloads ) {
-		return NULL;
+		return false;
 	}
 
-	std::string str_representation;
 	StringList limited_queues;
 	if( !m_unlimited_uploads ) {
 		limited_queues.append("upload");
@@ -103,14 +102,14 @@ TransferQueueContactInfo::GetStringRepresentation() {
 	if( !m_unlimited_downloads ) {
 		limited_queues.append("download");
 	}
-	str_representation = "";
-	str_representation += "limit=";
-	str_representation += limited_queues.print_to_delimed_string(",");
-	str_representation += delim;
-	str_representation += "addr=";
-	str_representation += m_addr;
+	str = "";
+	str += "limit=";
+	str += limited_queues.print_to_delimed_string(",");
+	str += delim;
+	str += "addr=";
+	str += m_addr;
 
-	return str_representation.c_str();
+	return true;
 }
 
 DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
