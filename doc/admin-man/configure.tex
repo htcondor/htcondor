@@ -193,14 +193,10 @@ For example,
 the ports that Condor may use can be restricted to a range 
 using the \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} configuration
 variables.
-If the range of intended ports is different for specific
-daemons, this syntax may be used.
 
 \begin{verbatim}
   MASTER.LOWPORT   = 20000
   MASTER.HIGHPORT  = 20100
-  NEGOTIATOR.LOWPORT   =  22000 
-  NEGOTIATOR.HIGHPORT  =  22100
 \end{verbatim}
 
 Note that all configuration variables may utilize this syntax,
