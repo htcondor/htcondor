@@ -521,8 +521,8 @@ module Mrg
 
             if not @options.has_key?(:wallaby_only)
               # Cluster config
-              puts "Warning: failed to remove HA schedd #{@name} service '#{@service}'" if not exec_ccs("--rmservice '#{@service}'")
-              puts "Warning: failed to remove HA schedd #{@name} failover domain '#{@domain}'" if not exec_ccs("--rmfailoverdomain '#{@domain}'")
+              exit!(1, "failed to remove HA schedd #{@name} service '#{@service}'") if not exec_ccs("--rmservice '#{@service}'")
+              exit!(1, "failed to remove HA schedd #{@name} failover domain '#{@domain}'") if not exec_ccs("--rmfailoverdomain '#{@domain}'")
             end
 
             if not @options.has_key?(:cluster_only)
