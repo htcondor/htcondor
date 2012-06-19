@@ -98,7 +98,7 @@ module Mrg
             if not @options.has_key?(:wallaby_only)
               num = -1
               success = true
-              services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys}
+              services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys} if services.has_key?(@name)
               sub = @subsys.to_s.split('_').collect {|n| n.capitalize}.join
               act = @action.to_s.split('_').shift
               if @action.to_s.include?("remove")
@@ -521,8 +521,8 @@ module Mrg
 
             if not @options.has_key?(:wallaby_only)
               # Cluster config
-              puts "Warning: failed to remove HA schedd #{@name} service '#{@service}'" if not exec_ccs("--rmservice '#{@service}'")
-              puts "Warning: failed to remove HA schedd #{@name} failover domain '#{@domain}'" if not exec_ccs("--rmfailoverdomain '#{@domain}'")
+              exit!(1, "failed to remove HA schedd #{@name} service '#{@service}'") if not exec_ccs("--rmservice '#{@service}'")
+              exit!(1, "failed to remove HA schedd #{@name} failover domain '#{@domain}'") if not exec_ccs("--rmfailoverdomain '#{@domain}'")
             end
 
             if not @options.has_key?(:cluster_only)
