@@ -8719,7 +8719,40 @@ section~\ref{sec:Security} on Security.
   Instead use \Macro{ALLOW\_CLIENT} or \Macro{DENY\_CLIENT} as
   appropriate. When used, this variable defined
   a comma separated list of the subject
-  name(s) of the certificate(s) that the daemons use.
+  name(s) of the certificate(s) used by Condor daemons to
+  which this configuration of Condor will connect.
+  The \verb|*| character may be used as a wildcard character.
+  Any certificates matched by this setting are accepted whether
+  or not the daemon hostname matches the hostname in the
+  daemon's certificate.  Therefore, if
+  \MacroNI{GSI\_DAEMON\_NAME} is empty (the default), only
+  certificates passing the hostname check are authenticated.  If
+  \Expr{GSI\_DAEMON\_NAME=*} then no certificates will be rejected
+  due to hostname checks.  Rather than using
+  \MacroNI{GSI\_DAEMON\_NAME} to control this behavior, we
+  recommend using the new
+  configuration settings \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+  \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+
+\label{param:GsiSkipHostCheck}
+\item[\Macro{GSI\_SKIP\_HOST\_CHECK}]
+This is a boolean setting that controls whether a check is performed during
+GSI authentication of a Condor daemon.  When false (the default),
+the check is not skipped, so the daemon hostname must match the
+hostname in the daemon's certificate, unless otherwise exempted
+by \MacroNI{GSI\_DAEMON\_NAME} or
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+When true, this check is skipped, and hosts will not be rejected
+due to a mismatch of certificate and hostname.
+
+\label{param:GsiSkipHostCheckCertRegex}
+\item[\Macro{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}]
+This may be set to a regular expression.  GSI certificates of Condor
+daemons with a subject name that are matched in full by this regular
+expression are not required to have a matching daemon hostname and
+certificate hostname.  The default is an empty regular expression,
+which will not match any certificates (even if they have an empty
+subject name).
 
 \label{param:GSIDaemonDirectory}
 \item[\Macro{GSI\_DAEMON\_DIRECTORY}]

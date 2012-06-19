@@ -63,6 +63,19 @@ a given daemon to be evaluated with respect to that daemon's ClassAd.
 \item Condor now uses libraries from Globus 5.2.1.
 \Ticket{2838}
 
+\item When authenticating Condor daemons with GSI, Condor now checks
+that the server name in the certificate matches the hostname that
+the client is connecting to.  For backward compatibility, any daemon
+certificates matching \MacroNI{GSI\_DAEMON\_NAME} are allowed,
+whether or not they satisfy the hostname check.  Therefore, if
+\MacroNI{GSI\_DAEMON\_NAME} is empty (the default), only
+certificates passing the hostname check are authenticated.  If
+\Expr{GSI\_DAEMON\_NAME=*} then no certificates will be rejected
+due to hostname checks.  Rather than using
+\MacroNI{GSI\_DAEMON\_NAME}, we recommend using the new
+configuration settings \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -94,6 +107,24 @@ for each set of statistics.
 queue to use for grid universe jobs of type
 \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge}.
 \Ticket{2996}
+
+\item The new configuration macro \MacroNI{GSI\_SKIP\_HOST\_CHECK} is
+a boolean setting that controls whether a check is performed during
+GSI authentication of a Condor daemon.  When false (the default),
+the check is not skipped, so the daemon hostname must match the
+hostname in the daemon's certificate, unless otherwise exempted
+by \MacroNI{GSI\_DAEMON\_NAME} or
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+When true, this check is skipped, and hosts will not be rejected
+due to a mismatch of certificate and hostname.
+
+\item The new configuration macro
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX} may be set to a
+regular expression.  GSI certificates of Condor daemons with a
+subject name that are matched in full by this regular expression
+are not required to have a matching daemon hostname and certificate
+hostname.  The default is an empty regular expression, which will
+not match any certificates (even if they have an empty subject name).
 
 \end{itemize}
 
