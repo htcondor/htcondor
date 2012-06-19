@@ -98,7 +98,7 @@ module Mrg
             if not @options.has_key?(:wallaby_only)
               num = -1
               success = true
-              services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys}
+              services[@name][:condor].each_index {|loc| num = loc if services[@name][:condor][loc].type == @subsys} if services.has_key?(@name)
               sub = @subsys.to_s.split('_').collect {|n| n.capitalize}.join
               act = @action.to_s.split('_').shift
               if @action.to_s.include?("remove")
