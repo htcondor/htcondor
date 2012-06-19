@@ -72,7 +72,7 @@ static void print_log_info(LOG_INFO_MAP & info);
 static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid);
 static void query_daemons_for_pids(LOG_INFO_MAP & info);
 static void ping_all_known_addrs(LOG_INFO_MAP & info);
-static char * get_daemon_param(std::string addr, char * param_name);
+static char * get_daemon_param(const char * addr, const char * param_name);
 
 // app globals
 static struct {
@@ -575,7 +575,7 @@ main( int argc, char *argv[] )
 		if (App.diagnostic) {
 			printf("Query log dirs:\n");
 			for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
-				printf("    [%3d] %s\n", ii, App.query_log_dirs[ii]);
+				printf("    [%3d] %s\n", (int)ii, App.query_log_dirs[ii]);
 			}
 		}
 		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
@@ -976,15 +976,21 @@ public:
 			int off = cbPos > cbBack ? cbPos - cbBack : 0;
 			int cbToRead = (int)(cbPos - off);
 
-			// in order to get EOF to register, we have to read a little past the end of file.
-			bool expect_eof = false;
+			// we want to read in cbBack chunks at cbBack aligment, of course
+			// this only makes sense to do if cbBack is a power of 2. 
+			// also, in order to get EOF to register, we have to read a little 
+			// so we may want the first read (from the end, of course) to be a bit 
+			// larger than cbBack so that we read at least cbBack but also end up
+			// on cbBack alignment. 
 			if (cbFile == cbPos) {
-				if (!(cbBack & (cbBack-1))) { // cbBack is a power of 2 
-					off = cbFile & ~(cbBack-1) - cbBack;
+				// test to see if cbBack is a power of 2, if it is, then set our
+				// seek to align on cbBack.
+				if (!(cbBack & (cbBack-1))) {
+					// seek to an even multiple of cbBack at least cbBack from the end of the file.
+					off = (cbFile - cbBack) & ~(cbBack-1);
 					cbToRead = cbFile - off;
 				}
 				cbToRead += 16;
-				expect_eof = true;
 			}
 
 			if ( ! buf.fread_at(file, off, cbToRead)) {
@@ -1332,68 +1338,71 @@ void print_log_info(LOG_INFO_MAP & info)
 }
 
 // make a DC config val query for a particular daemon.
-static char * get_daemon_param(std::string addr, char * param_name)
+static char * get_daemon_param(const char * addr, const char * param_name)
 {
 	char * value = NULL;
+	// sock.code needs write access to the string for some reason...
+	char * tmp_param_name = strdup(param_name);
+	ASSERT(tmp_param_name);
 
-	Daemon dae(DT_ANY, addr.c_str(), addr.c_str());
+	Daemon dae(DT_ANY, addr, addr);
 
 	ReliSock sock;
 	sock.timeout(20);   // years of research... :)
-	sock.connect(addr.c_str());
+	sock.connect(addr);
 
 	dae.startCommand(DC_CONFIG_VAL, &sock, 2);
 
 	sock.encode();
-	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr.c_str(), param_name); }
+	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr, param_name); }
 
-	if ( ! sock.code(param_name)) {
-		if (App.diagnostic) { fprintf( stderr, "Can't send DC_CONFIG_VAL for %s to %s\n", param_name, addr.c_str() ); }
+	if ( ! sock.code(tmp_param_name)) {
+		if (App.diagnostic) { fprintf(stderr, "Can't send DC_CONFIG_VAL for %s to %s\n", param_name, addr); }
 	} else if ( ! sock.end_of_message()) {
-		if (App.diagnostic) { fprintf( stderr, "Can't send end of message to %s\n", addr.c_str() ); }
+		if (App.diagnostic) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
 	} else {
 		sock.decode();
 		if ( ! sock.code(value)) {
-			if (App.diagnostic) { fprintf( stderr, "Can't receive reply from %s\n", addr.c_str() ); }
+			if (App.diagnostic) { fprintf(stderr, "Can't receive reply from %s\n", addr); }
 		} else if( ! sock.end_of_message()) {
-			if (App.diagnostic) { fprintf( stderr, "Can't receive end of message from %s\n", addr.c_str() ); }
+			if (App.diagnostic) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
 		} else if (App.diagnostic) {
-			printf("DC_CONFIG_VAL %s, %s = %s\n", addr.c_str(), param_name, value);
+			printf("DC_CONFIG_VAL %s, %s = %s\n", addr, param_name, value);
 		}
 	}
-
+	free(tmp_param_name);
 	sock.close();
 	return value;
 }
 
 #if 0
-static char * query_a_daemon2(std::string addr, std::string /*name*/)
+static char * query_a_daemon2(const char * addr, const char * /*name*/)
 {
 	char * value = NULL;
-	Daemon dae(DT_ANY, addr.c_str(), addr.c_str());
+	Daemon dae(DT_ANY, addr, addr);
 
 	ReliSock sock;
 	sock.timeout(20);   // years of research... :)
-	sock.connect(addr.c_str());
+	sock.connect(addr);
 	char * param_name = "PID";
 	dae.startCommand(DC_CONFIG_VAL, &sock, 2);
 	sock.encode();
 	if (App.diagnostic) {
-		printf("Querying %s for $(%s) param\n", addr.c_str(), param_name);
+		printf("Querying %s for $(%s) param\n", addr, param_name);
 	}
 	if ( ! sock.code(param_name)) {
-		if (App.diagnostic) fprintf( stderr, "Can't send request (param_name) to %s\n", param_name, addr.c_str() );
+		if (App.diagnostic) fprintf(stderr, "Can't send request (param_name) to %s\n", param_name, addr);
 	} else if ( ! sock.end_of_message()) {
-		if (App.diagnostic) fprintf( stderr, "Can't send end of message to %s\n", addr.c_str() );
+		if (App.diagnostic) fprintf(stderr, "Can't send end of message to %s\n", addr);
 	} else {
 		sock.decode();
 		char * val = NULL;
 		if ( ! sock.code(val)) {
-			if (App.diagnostic) fprintf( stderr, "Can't receive reply from %s\n", addr.c_str() );
+			if (App.diagnostic) fprintf(stderr, "Can't receive reply from %s\n", addr);
 		} else if( ! sock.end_of_message()) {
-			if (App.diagnostic) fprintf( stderr, "Can't receive end of message from %s\n", addr.c_str() );
+			if (App.diagnostic) fprintf(stderr, "Can't receive end of message from %s\n", addr);
 		} else if (App.diagnostic) {
-			printf("Recieved %s from %s for $(%s)\n", val, addr.c_str(), param_name);
+			printf("Recieved %s from %s for $(%s)\n", val, addr, param_name);
 		}
 		if (val) {
 			value = strdup(val);
@@ -1414,9 +1423,9 @@ static void query_daemons_for_pids(LOG_INFO_MAP & info)
 		LOG_INFO * pli = it->second;
 		if (pli->name == "Kbdd") continue;
 		if (pli->pid.empty() && ! pli->addr.empty()) {
-			char * pid = get_daemon_param(pli->addr, "PID");
+			char * pid = get_daemon_param(pli->addr.c_str(), "PID");
 			if (pid) {
-				pli->pid = pid;
+				pli->pid.insert(0,pid);
 				free(pid);
 			}
 		}
