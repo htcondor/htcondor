@@ -60,17 +60,21 @@ This bug was probably introduced in Condor version 7.6.5.
 \item Fixed several problems with the XML parsing class
 \Macro{ClassAdXMLParser} in the ClassAds library:
   \begin{itemize}
-  \item Several methods named \Macro{ParseClassAd} were declared, but never
-    implemented. \Ticket{3049}
-  \item The parser silently dropped leading white-space in string values.
-    \Ticket{3042}
+  \item Several methods named \Procedure{ParseClassAd} were declared, 
+  but never implemented. 
+\Ticket{3049}
+  \item The parser silently dropped leading white space in string values.
+\Ticket{3042}
   \item The parser could go into an infinite loop or leak memory when
-    reading a mal-formed ClassAd XML document. \Ticket{3045}
+    reading a malformed ClassAd XML document. 
+\Ticket{3045}
   \end{itemize}
 
-\item Fixed a bug that prevented the -f command line option of condor\_history
-from being recognised. The -f option was being interpreted as -forward. At least
-four letters are now required for the -forward option (-forw) to prevent ambiguity.
+\item Fixed a bug that prevented the \Opt{-f} command line option to
+\Condor{history} from being recognized.
+The \Opt{-f} option was being interpreted as \Opt{-forward}. 
+At least four letters are now required for the \Opt{-forward} option
+(\Opt{-forw}) to prevent ambiguity.
 \Ticket{3044}
 
 \end{itemize}
