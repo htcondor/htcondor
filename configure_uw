@@ -10,4 +10,13 @@ echo "*"
 echo "* Another option would be to run ccmake or cmake-gui"
 echo "-------------------------------------------------------------------"
 PWD=`pwd`
+if [ `uname` = "Darwin" ] ; then
+  # By default, cmake will use gcc and c++ for the C and C++ compilers.
+  # On newer macs, these invoke different compilers (llvm gnu and clang,
+  # respectively).
+  CC=gcc
+  export gcc
+  CXX=g++
+  export CXX
+fi
 cmake -DUW_BUILD:BOOL=TRUE -D_DEBUG:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir "$@"
