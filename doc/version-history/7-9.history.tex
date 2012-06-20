@@ -63,17 +63,15 @@ a given daemon to be evaluated with respect to that daemon's ClassAd.
 \item Condor now uses libraries from Globus 5.2.1.
 \Ticket{2838}
 
-\item When authenticating Condor daemons with GSI, Condor now checks
+\item When authenticating Condor daemons with GSI and
+\MacroNI{GSI\_DAEMON\_NAME} is undefined, Condor checks
 that the server name in the certificate matches the hostname that
-the client is connecting to.  For backward compatibility, any daemon
-certificates matching \MacroNI{GSI\_DAEMON\_NAME} are allowed,
-whether or not they satisfy the hostname check.  Therefore, if
-\MacroNI{GSI\_DAEMON\_NAME} is empty (the default), only
-certificates passing the hostname check are authenticated.  If
-\Expr{GSI\_DAEMON\_NAME=*} then no certificates will be rejected
-due to hostname checks.  Rather than using
-\MacroNI{GSI\_DAEMON\_NAME}, we recommend using the new
-configuration settings \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+the client is connecting to.  When \MacroNI{GSI\_DAEMON\_NAME} is
+defined, the old behavior is preserved: only certificates matching
+\MacroNI{GSI\_DAEMON\_NAME} pass the authentication step, and no
+hostname check is performed.  The behavior of the hostname check
+may be further controlled with the new configuration settings
+\MacroNI{GSI\_SKIP\_HOST\_CHECK} and
 \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
 
 \end{itemize}

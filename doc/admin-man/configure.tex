@@ -8722,16 +8722,14 @@ section~\ref{sec:Security} on Security.
   name(s) of the certificate(s) used by Condor daemons to
   which this configuration of Condor will connect.
   The \verb|*| character may be used as a wildcard character.
-  Any certificates matched by this setting are accepted whether
-  or not the daemon hostname matches the hostname in the
-  daemon's certificate.  Therefore, if
-  \MacroNI{GSI\_DAEMON\_NAME} is empty (the default), only
-  certificates passing the hostname check are authenticated.  If
-  \Expr{GSI\_DAEMON\_NAME=*} then no certificates will be rejected
-  due to hostname checks.  Rather than using
-  \MacroNI{GSI\_DAEMON\_NAME} to control this behavior, we
-  recommend using the new
-  configuration settings \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+  When \MacroNI{GSI\_DAEMON\_NAME} is
+  defined, only certificates matching
+  \MacroNI{GSI\_DAEMON\_NAME} pass the authentication step, and no
+  check is performed to require that the hostname of the daemon
+  matches the hostname in the daemon's certificate.  When
+  \MacroNI{GSI\_DAEMON\_NAME} is not defined, 
+  the hostname of the daemon and certificate must match unless
+  exempted by \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
   \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
 
 \label{param:GsiSkipHostCheck}
