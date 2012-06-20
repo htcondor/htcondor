@@ -142,7 +142,7 @@ void ViewServer::Init()
 
 void ViewServer::Config()
 {
-	MyString history_dir_buf;
+	string history_dir_buf;
 	char const *history_dir;
 	char* tmp;
 	dprintf(D_ALWAYS, "In ViewServer::Config()\n");
@@ -166,12 +166,12 @@ void ViewServer::Config()
 		if (!tmp) {
 			EXCEPT("No POOL_HISTORY_DIR or LOCAL_DIR directory specified in config file\n");
 		}
-		history_dir_buf.sprintf("%s/ViewHist",tmp);
+		sprintf(history_dir_buf, "%s/ViewHist", tmp);
 	}
 	else {
 		history_dir_buf = tmp;
 	}
-	history_dir = history_dir_buf.Value();
+	history_dir = history_dir_buf.c_str();
 	free(tmp);
 
 	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,history_dir);

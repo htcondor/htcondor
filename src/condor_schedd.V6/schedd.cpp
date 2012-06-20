@@ -6719,8 +6719,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			argbuf.sprintf("--schedd=%s", daemonCore->publicNetworkIpAddr());
 			args.AppendArg(argbuf.Value());
 
-			if( m_xfer_queue_contact.Length() ) {
-				argbuf.sprintf("--xfer-queue=%s",m_xfer_queue_contact.Value());
+			if( m_have_xfer_queue_contact ) {
+				argbuf.sprintf("--xfer-queue=%s", m_xfer_queue_contact.c_str());
 				args.AppendArg(argbuf.Value());
 			}
 
@@ -10653,7 +10653,7 @@ Scheduler::Init()
 	}
 
 	m_xfer_queue_mgr.InitAndReconfig();
-	m_xfer_queue_mgr.GetContactInfo(MyShadowSockName,m_xfer_queue_contact);
+	m_have_xfer_queue_contact = m_xfer_queue_mgr.GetContactInfo(MyShadowSockName, m_xfer_queue_contact);
 
 		/* Code to handle GRIDMANAGER_SELECTION_EXPR.  If set, we need to (a) restart
 		 * running gridmanagers if the setting changed value, and (b) parse the

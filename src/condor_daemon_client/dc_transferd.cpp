@@ -123,12 +123,11 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	int timeout = 60 * 60 * 8; // transfers take a long time...
 	int i;
 	ClassAd reqad, respad;
-	MyString cap;
+	std::string cap;
 	int ftp;
-	MyString jids;
 	int invalid;
 	int protocol;
-	MyString reason;
+	std::string reason;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Connect to the transferd and authenticate
@@ -193,7 +192,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 		// The transferd rejected my attempt to upload the fileset
 		delete rsock;
 		respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-		errstack->push("DC_TRANSFERD", 1, reason.Value());
+		errstack->push("DC_TRANSFERD", 1, reason.c_str());
 		return false;
 	}
 
@@ -270,7 +269,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
 	if ( invalid == TRUE ) {
 		respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-		errstack->push("DC_TRANSFERD", 1, reason.Value());
+		errstack->push("DC_TRANSFERD", 1, reason.c_str());
 		return false;
 	}
 
@@ -291,12 +290,11 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	int timeout = 60 * 60 * 8; // transfers take a long time...
 	int i;
 	ClassAd reqad, respad;
-	MyString cap;
+	std::string cap;
 	int ftp;
-	MyString jids;
 	int invalid;
 	int protocol;
-	MyString reason;
+	std::string reason;
 	int num_transfers;
 	ClassAd jad;
 	const char *lhstr = NULL;
@@ -367,7 +365,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 		// The transferd rejected my attempt to upload the fileset
 		delete rsock;
 		respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-		errstack->push("DC_TRANSFERD", 1, reason.Value());
+		errstack->push("DC_TRANSFERD", 1, reason.c_str());
 		return false;
 	}
 
@@ -467,7 +465,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
 	if ( invalid == TRUE ) {
 		respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-		errstack->push("DC_TRANSFERD", 1, reason.Value());
+		errstack->push("DC_TRANSFERD", 1, reason.c_str());
 		return false;
 	}
 

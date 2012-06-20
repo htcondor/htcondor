@@ -74,7 +74,7 @@ class TransferQueueManager: public Service {
 		// This is called to register a future call to CheckTransferQueue.
 	void TransferQueueChanged();
 
-	void GetContactInfo(char const *command_sock_addr,MyString &contact_str);
+	bool GetContactInfo(char const *command_sock_addr, std::string &contact_str);
 
 	int GetNumUploading() { return m_uploading; }
 	int GetNumDownloading() { return m_downloading; }

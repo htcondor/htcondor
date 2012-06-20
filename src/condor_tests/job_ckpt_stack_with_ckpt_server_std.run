@@ -56,7 +56,7 @@ $OutputTest = sub
 
 CondorTest::RegisterExitedSuccess( "CheckpointServer", $OutputTest);
 
-my $cmd = "job_ckpt_io-buffer-async_std.cmd";
+my $cmd = "job_ckpt_stack_with_ckpt_server_std.cmd";
 if( CondorTest::RunTest("CheckpointServer", $cmd, 1) ) {
     CondorTest::debug("CheckpointServer: SUCCESS\n",1);
 	CondorTest::Cleanup();

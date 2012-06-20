@@ -251,9 +251,6 @@ our %submit_info = (
 		},
 	},
 
-    'x86_64_sl_6.2' => 'x86_64_rhap_6.2',
-
-
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
