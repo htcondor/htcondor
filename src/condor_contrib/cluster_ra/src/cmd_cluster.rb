@@ -302,8 +302,9 @@ module Mrg
             args.each do |arg|
               pair = arg.split('=', 2)
               if pair.length > 1
-                exit!(1, "Argument #{pair[0]} is not valid") if not valid_args.include?(pair[0].to_sym)
-                @options[pair[0].to_sym] = pair[1]
+                arg_name = pair[0].downcase.to_sym
+                exit!(1, "Argument #{pair[0]} is not valid") if not valid_args.include?(arg_name)
+                @options[arg_name] = pair[1]
               else
                 @options.has_key?(:nodes) ? @options[:nodes].push(pair[0]) : @options[:nodes] = [pair[0]]
               end
