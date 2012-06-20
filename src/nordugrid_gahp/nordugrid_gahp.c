@@ -938,7 +938,7 @@ void nordugrid_submit_cwd1_callback( void *arg,
 		return;
 	}
 
-	if ( sscanf( (const char *) user_arg->buff, "250 \"jobs/%[0-9]", job_id ) != 1 ) {
+	if ( sscanf( (const char *) user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
