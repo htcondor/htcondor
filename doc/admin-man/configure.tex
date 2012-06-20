@@ -7254,10 +7254,17 @@ The following configuration macros affect negotiation for group users.
 
 \label{param:NegotiatorAllowQuotaOversubscription}
 \item[\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION}]
-  \fbox{This definition is not complete.}
-  A boolean value that when the default value of \Expr{True} gives
-  behavior of resource allocation when considering groups to be
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, 
+  the behavior of resource allocation when considering groups is
   more like it was in the 7.4 stable series of Condor.
+  In implementation, when \Expr{True}, the static quotas of subgroups
+  will \emph{not} be scaled when the sum of these static quotas of subgroups
+  sums to more than the group's static quota.
+  This behavior is desirable when using static quotas,
+  unless the sum of subgroup quotas is considerably less than the group's
+  quota, as scaling is currently based on the number of machines available,
+  not assigned quotas (for static quotas).
 
 \end{description}
 
