@@ -783,31 +783,22 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
         // are in different cases, then we will run into problems.
 		if( daemonNames ) {
 			status = daemonNames->contains_withwildcard(server) == TRUE? 1 : 0;
+
+			if( !status ) {
+				errstack->pushf("GSI", GSI_ERR_UNAUTHORIZED_SERVER,
+								"Failed to authenticate because the subject '%s' is not currently trusted by you.  "
+								"If it should be, add it to GSI_DAEMON_NAME or undefine GSI_DAEMON_NAME.", server);
+				dprintf(D_SECURITY,
+						"GSI_DAEMON_NAME is defined and the server %s is not specified in the GSI_DAEMON_NAME parameter\n",
+						server);
+			}
 		}
 		else {
-			status = 1;
-		}
-
-		bool host_check_failed = false;
-		if( !status || !daemonNames ) {
-				// DN not found in GSI_DAEMON_NAME
-
-			host_check_failed = !CheckServerName(fqh.c_str(),mySock_->peer_ip_str(),mySock_,errstack);
-
-			if( host_check_failed ) {
-				status = 0;
-			}
+			status = CheckServerName(fqh.c_str(),mySock_->peer_ip_str(),mySock_,errstack);
 		}
 
         if (status) {
             dprintf(D_SECURITY, "valid GSS connection established to %s\n", server);            
-        }
-        else if( !host_check_failed ) {
-			errstack->pushf("GSI", GSI_ERR_UNAUTHORIZED_SERVER,
-					"Failed to authenticate because the subject '%s' is not currently trusted by you.  "
-					"If it should be, add it to GSI_DAEMON_NAME in the condor_config, "
-					"or use the environment variable override (check the manual).", server);
-            dprintf(D_SECURITY, "The server %s is not specified in the GSI_DAEMON_NAME parameter\n", server);
         }
 
         mySock_->encode();
@@ -860,7 +851,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	ASSERT( ip );
 	if( !fqh || !fqh[0] ) {
 		std::string msg;
-		sprintf(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by either adding the DN to GSI_DAEMON_NAME or GSI_SKIP_HOST_CHECK_CERT_REGEX to make an exception, or by disabling all host name checks by setting GSI_SKIP_HOST_CHECK=true.",ip,server_dn);
+		sprintf(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by making GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or by disabling all hostname checks by setting GSI_SKIP_HOST_CHECK=true or defining GSI_DAEMON_NAME.",ip,server_dn);
 		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
 		return false;
 	}
@@ -900,7 +891,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 
 	if( !name_equal ) {
 		std::string msg;
-		sprintf(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If you wish to use a daemon certificate that does not match the daemon's host name, either add the DN to GSI_DAEMON_NAME or GSI_SKIP_HOST_CHECK_CERT_REGEX to make an exception, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true.\n",
+		sprintf(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If you wish to use a daemon certificate that does not match the daemon's host name, make GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true or by defining GSI_DAEMON_NAME.\n",
 				server_dn,
 				fqh,
 				ip,
