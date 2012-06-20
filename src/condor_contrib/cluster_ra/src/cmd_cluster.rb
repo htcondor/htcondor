@@ -162,11 +162,13 @@ module Mrg
 
           def activate_changes
             # Activate changes in the store
-            Mrg::Grid::Config::Shell::Activate.new(store, "").main([])
+            Mrg::Grid::Config::Shell::Activate.new(store, "").main([]) if not (@options.has_key?(:cluster_only))
 
             # Activate cluster changes
-            exit!(1, "Failed to synchronize cluster configuration") if not exec_ccs("--sync --activate")
-            exit!(1, "Failed to start cluster services") if not exec_ccs("--startall")
+            if not @options.has_key?(:wallaby_only)
+              exit!(1, "Failed to synchronize cluster configuration") if not exec_ccs("--sync --activate")
+              exit!(1, "Failed to start cluster services") if not exec_ccs("--startall")
+            end
           end
 
           def args_for_help(list)
@@ -300,8 +302,9 @@ module Mrg
             args.each do |arg|
               pair = arg.split('=', 2)
               if pair.length > 1
-                exit!(1, "Argument #{pair[0]} is not valid") if not valid_args.include?(pair[0].to_sym)
-                @options[pair[0].to_sym] = pair[1]
+                arg_name = pair[0].downcase.to_sym
+                exit!(1, "Argument #{pair[0]} is not valid") if not valid_args.include?(arg_name)
+                @options[arg_name] = pair[1]
               else
                 @options.has_key?(:nodes) ? @options[:nodes].push(pair[0]) : @options[:nodes] = [pair[0]]
               end
@@ -316,11 +319,21 @@ module Mrg
             ignore = "-i" if $?.exitstatus == 0
 
             password = "--password #{@options[:password]}" if @options.has_key?(:password)
-            @ccs = "ccs #{ignore} -h localhost #{password}"
             @name = @options[:name]
-            @daemon_name = (services.has_key?(@name) ? services[@name][:condor].collect {|d| d.name if d.type == @subsys}.compact.to_s : nil)
-            @service = (services.has_key?(@name) ? services[@name][:service] : "HA Schedd #{@name}")
-            @domain = (services.has_key?(@name) ? services[@name][:domain] : "Schedd #{@options[:name]} Failover Domain")
+            def_sname = "HA Schedd #{@name}"
+            def_dname = "Schedd #{@options[:name]} Failover Domain"
+
+            @ccs = "ccs #{ignore} -h localhost #{password}"
+            if not @options.has_key?(:wallaby_only)
+              @daemon_name = (services.has_key?(@name) ? services[@name][:condor].collect {|d| d.name if d.type == @subsys}.compact.to_s : nil)
+              @service = (services.has_key?(@name) ? services[@name][:service] : def_sname)
+              @domain = (services.has_key?(@name) ? services[@name][:domain] : def_dname)
+            else
+              @daemon_name = nil
+              @service = def_sname
+              @domain = def_dname
+            end
+
             @tag = "CLUSTER_NAMES"
           end
 
