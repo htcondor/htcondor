@@ -314,7 +314,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				// We need to append the DAGman default log file to
 				// the log file list
 			args.AppendArg( "-a" );
-			std::string dlog("log = $(log);");
+			std::string dlog("dagman_log = ");
 			dlog += defaultLog;
 			args.AppendArg(dlog.c_str());
 		}

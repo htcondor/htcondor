@@ -37,7 +37,6 @@
 #include "classad_helpers.h"
 #include "condor_getcwd.h"
 #include "structproc.h"
-#include "NameFinder.h"
 #include <vector>
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -102,29 +101,50 @@ initializeUserLog ()
 	MyString logfilename;
 	MyString gjid;
 	int use_xml;
+	bool have_a_log = false;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
+		have_a_log = true;	
 		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
 			gjid = "Unknown";
 		}
-		std::string logfiles(logfilename.Value());
-		NameFinder nf(logfiles);
-		while(nf) {
-			std::string logfile = nf.get();
-			WriteUserLog* ulogi = new WriteUserLog;
-			if( !ulogi ) {
-				EXCEPT("Out of memory!\n");
-			}
-			if (!ulogi->initialize (Proc->owner, NULL, logfilename.Value(),
-						Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
-				EXCEPT("Failed to initialize user log!\n");
-			}
-			ulogi->setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
-					&& use_xml);
-			dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
-			ULog.push_back(ulogi);
+		std::string logfile(logfilename.Value());
+		WriteUserLog* ulogi = new WriteUserLog;
+		if( !ulogi ) {
+			EXCEPT("Out of memory!\n");
 		}
-	} else {
-			dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		if (!ulogi->initialize (Proc->owner, NULL, logfilename.Value(),
+					Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
+			EXCEPT("Failed to initialize user log!\n");
+		}
+		ulogi->setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
+				&& use_xml);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
+		ULog.push_back(ulogi);
+	}
+	if ( getPathToUserLog(JobAd, logfilename, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		have_a_log = true;	
+		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
+			gjid = "Unknown";
+		}
+		std::string logfile(logfilename.Value());
+		WriteUserLog* ulogi = new WriteUserLog;
+		if( !ulogi ) {
+			EXCEPT("Out of memory!\n");
+		}
+		ulogi->setUseXML(false);
+		if (!ulogi->initialize (Proc->owner, NULL, logfilename.Value(),
+					Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
+			EXCEPT("Failed to initialize user log!\n");
+		}
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
+		if(!ULog.empty()){ // Only write to global event log once
+			ulogi->setEnableGlobalLog( false );	
+		}
+		ULog.push_back(ulogi);
+	}
+	if( !have_a_log ) {
+		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		dprintf(D_FULLDEBUG, "Also, no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 

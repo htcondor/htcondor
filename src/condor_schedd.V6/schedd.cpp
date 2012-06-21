@@ -35,7 +35,6 @@
 #include "condor_email.h"
 #include "condor_uid.h"
 #include "get_daemon_name.h"
-#include "NameFinder.h"
 #include "write_user_log.h"
 #include "access.h"
 #include "internet.h"
@@ -2595,9 +2594,16 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 {
 	std::vector<WriteUserLog*> ulogs;
 	MyString logfilename;
+	MyString dagmanNodeLog;
 	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
-	if( getPathToUserLog(ad, logfilename)==false )
-	{			
+	bool has_log = false;
+	if( getPathToUserLog(ad, logfilename) ) {
+		has_log = true;
+	}
+	if( getPathToUserLog(ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {			
+		has_log = true;
+	}
+	if(!has_log) {
 			// if there is no userlog file defined, then our work is
 			// done...  
 		return ulogs;
@@ -2613,25 +2619,19 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_GLOBAL_JOB_ID, gjid);
 
-	std::string logfiles(logfilename.Value());
-	NameFinder nf(logfiles);
-	while(nf) {
-		std::string logfile=nf.get();
-		if(logfile.empty()) {
-			continue;
-		}
+	std::string logfile(logfilename.Value());
+	if(!logfile.empty()) {
 		dprintf( D_FULLDEBUG,
 				"Writing record to user logfile=%s owner=%s\n",
 				logfile.c_str(), owner.Value() );
 
 		WriteUserLog* ULog=new WriteUserLog();
-			// Only allow the first entry to be an XML user log
 		ULog->setUseXML(0 <= GetAttributeBool(job_id.cluster, job_id.proc,
-					ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml && ulogs.empty() );
+					ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml);
 		ULog->setCreatorName( Name );
 		if (ULog->initialize(owner.Value(), domain.Value(),
-				logfile.c_str(), job_id.cluster, job_id.proc, 0,
-				gjid.Value())) {
+					logfile.c_str(), job_id.cluster, job_id.proc, 0,
+					gjid.Value())) {
 			ulogs.push_back(ULog);
 		} else {
 			// If the user log is in the spool directory, try writing to
@@ -2648,14 +2648,49 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 				ulogs.push_back(ULog);
 			} else {
 				dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: %s\n",
-							logfile.c_str());
+						logfile.c_str());
 				delete ULog;
 			}
 		}
 	}
+	logfile = dagmanNodeLog.Value();
+	if(!logfile.empty()) {
+		dprintf( D_FULLDEBUG,
+				"Writing record to user logfile=%s owner=%s\n",
+				logfile.c_str(), owner.Value() );
+
+		WriteUserLog* ULog=new WriteUserLog();
+		ULog->setUseXML(false); // Dagman log is never xml
+		ULog->setCreatorName( Name );
+		if(!ulogs.empty()) { // Only write the global log once
+			ULog->setEnableGlobalLog( false );
+		}
+		if (ULog->initialize(owner.Value(), domain.Value(),
+					logfile.c_str(), job_id.cluster, job_id.proc, 0,
+					gjid.Value())) {
+			ulogs.push_back(ULog);
+		} else {
+			// If the user log is in the spool directory, try writing to
+			// it as user condor. The spool directory spends some of its
+			// time owned by condor.
+			char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
+			std::string SpoolDir(tmp);
+			SpoolDir += DIR_DELIM_CHAR;
+			free( tmp );
+			if ( !strncmp( SpoolDir.c_str(), logfile.c_str(),
+						SpoolDir.length() ) &&
+					ULog->initialize( logfile.c_str(), job_id.cluster,
+						job_id.proc, 0, gjid.Value() ) ) {
+				ulogs.push_back(ULog);
+			} else {
+				dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: %s\n",
+						logfile.c_str());
+				delete ULog;
+			}
+		}
+	}	
 	return ulogs;
 }
-
 
 bool
 Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )

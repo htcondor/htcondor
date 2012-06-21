@@ -33,7 +33,6 @@
 #include "classad_helpers.h"
 #include "classad_merge.h"
 #include "dc_startd.h"
-#include "NameFinder.h"
 
 #include <math.h>
 
@@ -852,19 +851,15 @@ void BaseShadow::initUserLog()
 		}
 		uLog.clear();
 	}
-
+	bool have_a_log = false;
 	if ( getPathToUserLog(jobAd, logfilename) ) {
-		// Split the logfile name
-		// For each logfile, push it onto the vector
-		std::string logfiles(logfilename.Value());
-		NameFinder nf(logfiles);
-		while(nf) {
-			std::string logfile = nf.get();
-			WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
-			if(!uLogi) {
-				EXCEPT("Out of memory!");
-			}
-			result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
+		have_a_log = true;
+		std::string logfile(logfilename.Value());
+		WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
+		if(!uLogi) {
+			EXCEPT("Out of memory!");
+		}
+		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
 			// It is important to NOT ignore a failure to initialize the user log,
 			// since if we fail to initialize here, then all event logging
 			// in the shadow from this point forward are effectively ignored.
@@ -873,21 +868,54 @@ void BaseShadow::initUserLog()
 			// figure out -why- the initialization failed, allowing the shadow
 			// to retry automatically -vs- go on hold depending upon the details
 			// of the failure.
-			if ( result == false ) {
-				MyString hold_reason;
-				hold_reason.sprintf(
-						"Failed to initialize user log to %s", logfile.c_str());
-				dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-				holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-				// holdJobAndExit() should not return, but just in case it does EXCEPT
-				EXCEPT("Failed to initialize user log to %s",logfile.c_str());
-			}
-				// Only the first user log is allowed to be an xml log
-			uLogi->setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml && uLog.empty() );
-			uLog.push_back(uLogi);
-			dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
+		if ( !result ) {
+			MyString hold_reason;
+			hold_reason.sprintf(
+					"Failed to initialize user log to %s", logfile.c_str());
+			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
+			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJobAndExit() should not return, but just in case it does EXCEPT
+			EXCEPT("Failed to initialize user log to %s",logfile.c_str());
 		}
-	} else {
+			// Only the first user log is allowed to be an xml log
+		uLogi->setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+		uLog.push_back(uLogi);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
+	}
+	if ( getPathToUserLog(jobAd, logfilename, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		have_a_log = true;
+		std::string logfile(logfilename.Value());
+		WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
+		if(!uLogi) {
+			EXCEPT("Out of memory!");
+		}
+		if(!uLog.empty()) { // Write to the Global log at most once
+			uLogi->setEnableGlobalLog(false);
+		}
+		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
+			// It is important to NOT ignore a failure to initialize the user log,
+			// since if we fail to initialize here, then all event logging
+			// in the shadow from this point forward are effectively ignored.
+			// So if we fail to initialize the user log, put this job on hold.
+			// Future work: it would be good to pass use the error stack to
+			// figure out -why- the initialization failed, allowing the shadow
+			// to retry automatically -vs- go on hold depending upon the details
+			// of the failure.
+		if ( !result ) {
+			MyString hold_reason;
+			hold_reason.sprintf(
+					"Failed to initialize user log to %s", logfile.c_str());
+			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
+			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJobAndExit() should not return, but just in case it does EXCEPT
+			EXCEPT("Failed to initialize user log to %s",logfile.c_str());
+		}
+			// Only the first user log is allowed to be an xml log
+		uLogi->setUseXML(false); // Dagman log is never xml
+		uLog.push_back(uLogi);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
+	}
+	if(!have_a_log) {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
 	}
 }
