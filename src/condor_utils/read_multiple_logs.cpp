@@ -370,10 +370,9 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Note: this method should get speeded up (see Gnats PR 846).
-
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
-		const MyString &directory, bool &isXml)
+		const MyString &directory, bool &isXml, bool usingDefaultNode)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
@@ -408,64 +407,66 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			logFileName = tmpLogName;
 		}
 
-		MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
-				"initialdir");
-		if ( tmpInitialDir != "" ) {
-			initialDir = tmpInitialDir;
-		}
+			// If we are using the default node log, we don't care
+			// about these
+		if( !usingDefaultNode ) {
+			MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
+					"initialdir");
+			if ( tmpInitialDir != "" ) {
+				initialDir = tmpInitialDir;
+			}
 
-		MyString tmpLogXml = getParamFromSubmitLine(submitLine, "log_xml");
-		if ( tmpLogXml != "" ) {
-			isXmlLogStr = tmpLogXml;
+			MyString tmpLogXml = getParamFromSubmitLine(submitLine, "log_xml");
+			if ( tmpLogXml != "" ) {
+				isXmlLogStr = tmpLogXml;
+			}
 		}
 	}
 
-		//
-		// Check for macros in the log file name -- we currently don't
-		// handle those.
-		//
-	if ( logFileName != "" ) {
-		if ( strstr(logFileName.Value(), "$(") ) {
-			dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
+	if ( !usingDefaultNode ) {
+			//
+			// Check for macros in the log file name -- we currently don't
+			// handle those.
+			//
+			// If we are using the default node, we don't need to check this
+		if ( logFileName != "" ) {
+			if ( strstr(logFileName.Value(), "$(") ) {
+				dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
 						"in log file name (%s) in DAG node submit files\n",
 						logFileName.Value());
-			logFileName = "";
-		}
-	}
-
-	if ( logFileName != "" ) {
-			// Prepend initialdir to log file name if log file name is not
-			// an absolute path.
-		if ( initialDir != "" && !fullpath(logFileName.Value()) ) {
-			logFileName = initialDir + DIR_DELIM_STRING + logFileName;
+				logFileName = "";
+			}
 		}
 
-			// We do this in case the same log file is specified with a
-			// relative and an absolute path.  
-			// Note: we now do further checking that doesn't rely on
-			// comparing paths to the log files.  wenger 2004-05-27.
-		CondorError errstack;
-		if ( !makePathAbsolute( logFileName, errstack ) ) {
-			dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
-			return "";
+			// Do not need to prepend initialdir if we are using the 
+			// default node log
+		if ( logFileName != "" ) {
+				// Prepend initialdir to log file name if log file name is not
+				// an absolute path.
+			if ( initialDir != "" && !fullpath(logFileName.Value()) ) {
+				logFileName = initialDir + DIR_DELIM_STRING + logFileName;
+			}
+
+				// We do this in case the same log file is specified with a
+				// relative and an absolute path.  
+				// Note: we now do further checking that doesn't rely on
+				// comparing paths to the log files.  wenger 2004-05-27.
+			CondorError errstack;
+			if ( !makePathAbsolute( logFileName, errstack ) ) {
+				dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
+				return "";
+			}
+		}
+		isXmlLogStr.lower_case();
+		isXml = (isXmlLogStr == "true");
+		if ( directory != "" ) {
+			MyString	errMsg;
+			if ( !td.Cd2MainDir(errMsg) ) {
+				dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
+				return "";
+			}
 		}
 	}
-
-	isXmlLogStr.lower_case();
-	if ( isXmlLogStr == "true" ) {
-		isXml = true;
-	} else {
-		isXml = false;
-	}
-
-	if ( directory != "" ) {
-		MyString	errMsg;
-		if ( !td.Cd2MainDir(errMsg) ) {
-			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
-			return "";
-		}
-	}
-
 	return logFileName;
 }
 

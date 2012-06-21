@@ -116,14 +116,20 @@ MpiResource::resourceExit( int reason, int status )
 bool
 MpiResource::writeULogEvent( ULogEvent* event )
 {
-	bool rval;
+	bool rval = true;
 	// FIXME - we dont' have the gjid here (grr) so pass NULL to initialize
 	// the userlog
-	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), node_num, NULL );
+
+	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
+			p != shadow->uLog.end(); ++p) {
+		(*p)->initialize( shadow->getCluster(), shadow->getProc(), node_num, NULL );
+	}
+		// This loops over the logs too
 	rval = RemoteResource::writeULogEvent( event );
-	shadow->uLog.initialize( shadow->getCluster(), 
-							 shadow->getProc(), 0, NULL ); 
+	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
+			p != shadow->uLog.end(); ++p) {
+		(*p)->initialize( shadow->getCluster(), shadow->getProc(), 0, NULL );
+	}
 	return rval;
 }
 

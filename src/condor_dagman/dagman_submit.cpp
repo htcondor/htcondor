@@ -230,8 +230,8 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory, const char *logFile,
-			   bool prohibitMultiJobs, bool hold_claim )
+			   const char* directory, const char *defaultLog, bool appendDefaultLog,
+			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -307,11 +307,29 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
-	if ( logFile ) {
+		// logFile is null here if there was a log specified
+		// in the submit file
+	if ( !logFile ) {
+		if( appendDefaultLog ) {
+				// We need to append the DAGman default log file to
+				// the log file list
+			args.AppendArg( "-a" );
+			std::string dlog("dagman_log = ");
+			dlog += defaultLog;
+			args.AppendArg(dlog.c_str());
+		}
+	} else {
+			// Log was not specified in the submit file
+			// There is a single user log file for this job;
+			// That is, the default
 		args.AppendArg( "-a" );
-		MyString logFileArg = MyString(
-					"log = " ) + logFile;
-		args.AppendArg( logFileArg.Value() );
+		std::string dlog("log = ");
+		dlog += logFile;
+		args.AppendArg(dlog.c_str());
+			// We are using the default log
+			// Never let it be XML
+		args.AppendArg( "-a" );
+		args.AppendArg( "log_xml = False");
 	}
 
 	ArgList parentNameArgs;

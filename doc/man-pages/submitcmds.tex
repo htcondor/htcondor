@@ -2696,6 +2696,17 @@ miss their deferral time to begin execution.
 See section~\ref{sec:JobDeferral} for further details and examples.
 
 %%%%%%%%%%%%%%%%%%%
+%% dagman_log
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!dagman\_log}
+\label{condor-submit-dagman-log}
+\item[dagman\_log = $<$pathname$>$] 
+DAGMan inserts this command to specify an event log that it watches to maintain
+the state of the DAG. If the \SubmitCmd{log} command is not specified in the
+submit file, DAGMan uses the \SubmitCmd{log} command to specify the event log.
+
+%%%%%%%%%%%%%%%%%%%
 %% deferral_prep_time
 %%%%%%%%%%%%%%%%%%%
 

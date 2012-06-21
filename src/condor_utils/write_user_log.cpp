@@ -49,6 +49,7 @@
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
+#include <string>
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
