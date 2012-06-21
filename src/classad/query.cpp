@@ -58,7 +58,7 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
 	ViewMembers::iterator	vmi;
 	MatchClassAd			mad;
 	View					*view;
-	ClassAd					*ad; 
+	ClassAd					*ad=0; 
 	const ClassAd			*parent;
 	string					key;
 	bool					match;
@@ -84,7 +84,7 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
         } else {
             // setup evluation environment if a constraint was supplied
             parent = expr->GetParentScope( );
-            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr ) ) {
+            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr,false ) ) {
                 expr->SetParentScope( parent );
                 return( false );
             }

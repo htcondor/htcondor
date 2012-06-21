@@ -1123,7 +1123,7 @@ JobRouter::GetCandidateJobs() {
 
 	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
 
-	constraint_tree = parser.ParseExpression(umbrella_constraint.c_str());
+	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
 		EXCEPT("JobRouter: Failed to parse umbrella constraint: '%s'\n",umbrella_constraint.c_str());
 	}
