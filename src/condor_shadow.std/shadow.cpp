@@ -39,6 +39,7 @@
 #include "condor_holdcodes.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
+#include <vector>
 
 #include "user_job_policy.h"
 
@@ -115,7 +116,7 @@ char *strcpy();
 #endif
 
 #include "write_user_log.h"
-WriteUserLog ULog;
+std::vector<WriteUserLog*> ULog;
 
 char * My_Filesystem_Domain;
 char * My_UID_Domain;

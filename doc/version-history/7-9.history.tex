@@ -76,6 +76,35 @@ may be further controlled with the new configuration settings
 \MacroNI{GSI\_SKIP\_HOST\_CHECK} and
 \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
 
+\item Added new capability to \Condor{submit} to allow recursive macros in
+submit files. This facility allows one to update variables recursively.  An
+example of a construction that works is the following: \texttt{foo = bar},
+followed by \texttt{foo =  snap \$(foo)}.  Then the value of foo will be
+\texttt{foo = snap bar}.  Previously, this would send \Condor{submit} into an
+infinite loop of expanding the macro so that the expansion would be \texttt{foo
+= snap bar bar ...}, filling up memory with copies of ``\texttt{bar}''. Note
+that both left- and right- recursion works.  The construction \texttt{foo =
+\$(foo) bar} by itself will not work, as it does not have an initial base case.
+Mutually recursive constructions such as: \texttt{B = bar}, \texttt{C = \$(B)},
+and \texttt{B= \$(C) boo} will also fill memory with expansions.
+\Ticket{406}
+
+\item Removed restriction on having macros in the "log" directive in submit
+files for \Condor{dagman}
+\Ticket{2428}
+
+\item \Condor{dagman} now uses and watches, by default, only its default node
+userlog for events.  DAGman now requests the schedd and shadow to write each
+event to the default log, i.e., $\langle$DAG file$\rangle$.nodes.log, along
+with whatever log is specified by the user.  \Condor{dagman} only writes POST
+Script TERMINATE events to its default log, not to the user log. This can be
+turned off by setting the configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to False.  In particular,
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to false if this newer
+version of \Condor{dagman} is submitting jobs to an older version of
+\Condor{schedd} or using an older version of \Condor{submit}
+\Ticket{2807}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

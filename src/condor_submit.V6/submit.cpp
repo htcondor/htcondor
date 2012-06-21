@@ -249,7 +249,8 @@ const char	*NotifyUser		= "notify_user";
 const char	*EmailAttributes = "email_attributes";
 const char	*ExitRequirements = "exit_requirements";
 const char	*UserLogFile	= "log";
-const char    *UseLogUseXML   = "log_xml";
+const char	*UseLogUseXML	= "log_xml";
+const char	*DagmanLogFile	= "dagman_log";
 const char	*CoreSize		= "coresize";
 const char	*NiceUser		= "nice_user";
 
@@ -4875,58 +4876,69 @@ check_iwd( char const *iwd )
 void
 SetUserLog()
 {
-	char *ulog_entry = condor_param( UserLogFile, ATTR_ULOG_FILE );
-	MyString buffer;
+	static const char* submit_names[] = { UserLogFile, DagmanLogFile, 0 };
+	static const char* jobad_attribute_names[] = { ATTR_ULOG_FILE, ATTR_DAGMAN_WORKFLOW_LOG, 0 };
+	for(const char** p = &submit_names[0], **q = &jobad_attribute_names[0];
+			*p && *q; ++p, ++q) {
+		char *ulog_entry = condor_param( *p, *q );
 
-	if (ulog_entry) {
-		
-		MyString ulog = full_path(ulog_entry);
+		if(ulog_entry) {
+			std::string buffer;
+			std::string current_userlog(ulog_entry);
+			const char* ulog_pcc = full_path(current_userlog.c_str());
+			if(ulog_pcc) {
+				std::string ulog(ulog_pcc);
+				if ( !DumpClassAdToFile ) {
+					// check that the log is a valid path
+					if ( !DisableFileChecks ) {
+						FILE* test = safe_fopen_wrapper_follow(ulog.c_str(), "a+", 0664);
+						if (!test) {
+							fprintf(stderr,
+									"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.c_str(),
+									strerror(errno));
+							exit( 1 );
+						} else {
+							fclose(test);
+						}
+					}
 
-		if ( !DumpClassAdToFile ) {
-			
-			free(ulog_entry);
+					// Check that the log file isn't on NFS
+					BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
+					BOOLEAN	nfs = FALSE;
 
-			// check that the log is a valid path
-			if ( !DisableFileChecks ) {
-				FILE* test = safe_fopen_wrapper_follow(ulog.Value(), "a+", 0664);
-				if (!test) {
-					fprintf(stderr,
-						"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
-						strerror(errno));
-					exit( 1 );
-				} else {
-					fclose(test);
+					if ( nfs_is_error ) {
+						if ( fs_detect_nfs( ulog.c_str(), &nfs ) != 0 ) {
+							fprintf(stderr,
+									"\nWARNING: Can't determine whether log file %s is on NFS\n",
+									ulog.c_str() );
+						} else if ( nfs ) {
+
+							fprintf(stderr,
+									"\nERROR: Log file %s is on NFS.\nThis could cause"
+									" log file corruption. Condor has been configured to"
+									" prohibit log files on NFS.\n",
+									ulog.c_str() );
+
+							DoCleanup(0,0,NULL);
+							exit( 1 );
+
+						}
+					}
 				}
+
+				MyString mulog(ulog.c_str());
+				check_and_universalize_path(mulog);
+				buffer += mulog.Value();
+				UserLogSpecified = true;
 			}
-
-			// Check that the log file isn't on NFS
-			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
-			BOOLEAN	nfs = FALSE;
-
-			if ( nfs_is_error ) {
-				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-					fprintf(stderr,
-						"\nWARNING: Can't determine whether log file %s is on NFS\n",
-						ulog.Value() );
-				} else if ( nfs ) {
-
-					fprintf(stderr,
-						"\nERROR: Log file %s is on NFS.\nThis could cause"
-						" log file corruption. Condor has been configured to"
-						" prohibit log files on NFS.\n",
-						ulog.Value() );
-
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-
-				} 
-			}
+			std::string logExpr(*q);
+			logExpr += " = ";
+			logExpr += "\"";
+			logExpr += buffer;
+			logExpr += "\"";
+			InsertJobExpr(logExpr.c_str());
+			free(ulog_entry);
 		}
-
-		check_and_universalize_path(ulog);
-		buffer.sprintf( "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());
-		InsertJobExpr(buffer);
-		UserLogSpecified = true;
 	}
 }
 

@@ -67,7 +67,7 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and failure on completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and success on completion\n",1);
 };
 
 $failure = sub

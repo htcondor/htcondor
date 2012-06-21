@@ -624,14 +624,6 @@ log file by both the \Condor{schedd} daemon and the \Condor{dagman} job.
 Partially written events by the \Condor{schedd} cause errors
 for \Condor{dagman}.
 
-An additional restriction applies to the submit description file
-command \SubmitCmd{Log} specific to a Condor job within
-a DAG node.
-\emph{This command may not be defined in such a way that it uses macros.}
-Using a macro would violate the restriction that there be exactly
-one log file specified for the potentially multiple jobs 
-within a single cluster.
-
 Here is a modified version of the DAG input file
 for the diamond-shaped DAG. 
 The modification has each node use the same 
@@ -1082,8 +1074,6 @@ In the case where the submit description file for each node
 varies only in file naming, the use of a substitution macro
 within the submit description file reduces the need to
 a single submit description file.
-Note that the user log file for a job currently cannot be specified
-using a macro passed from the DAG.
 
 The example uses a single submit description file in the DAG input
 file, and uses the \Arg{VARS} entry to name output files.
