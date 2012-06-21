@@ -228,7 +228,7 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		int			lexBufferCount;				// current offset in lexBuffer
+		unsigned int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		int 		debug; 						// debug flag

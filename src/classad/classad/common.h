@@ -83,7 +83,6 @@
 #define isnan _isnan
 	// isinf() defined in util.h
 
-#include <hash_map>
 
 #define snprintf _snprintf
 
@@ -137,41 +136,27 @@ extern const char * const ATTR_RANK;
 
 #if defined(__cplusplus)
 struct CaseIgnLTStr {
-    bool operator( )( const std::string &s1, const std::string &s2 ) const {
+   inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
        return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
 	}
 };
 
 struct CaseIgnEqStr {
-	bool operator( )( const std::string &s1, const std::string &s2 ) const {
+	inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
 		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) == 0 );
 	}
 };
 
 class ExprTree;
 struct ExprHash {
-	size_t operator()( const ExprTree *const &x ) const {
+	inline size_t operator()( const ExprTree *const &x ) const {
 		return( (size_t)x );
 	}
 };
 
-struct StringHash {
-	size_t operator()( const std::string &s ) const {
-		unsigned long h = 0;
-		char const *ch;
-		for( ch = s.c_str(); *ch; ch++ ) {
-			h = 5*h + (unsigned char)*ch;
-		}
-		return (size_t)h;
-	}
-};
-
 struct StringCaseIgnHash
-#ifdef WIN32
-	: public stdext::hash_compare <std::string>
-#endif
 {
-	size_t operator()( const std::string &s ) const {
+	inline size_t operator()( const std::string &s ) const {
 		unsigned long h = 0;
 		char const *ch;
 		for( ch = s.c_str(); *ch; ch++ ) {
@@ -179,18 +164,13 @@ struct StringCaseIgnHash
 		}
 		return (size_t)h;
 	}
-#ifdef WIN32
-		// On Windows, the hash_map comparison operator is less-than,
-		// not equal-to.
-	bool operator( )( const std::string &s1, const std::string &s2 ) const {
-		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
-	}
-#endif
+
 };
 extern std::string       CondorErrMsg;
 #endif
 
 extern int 		CondorErrno;
+
 
 } // classad
 

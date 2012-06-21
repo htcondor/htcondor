@@ -411,7 +411,7 @@ static bool test_comparison_ops_lhs_MyString() {
 
 static bool test_lower_case_empty() {
 	emit_test("Test lower_case() on an empty std::string.");
-	std::string a;
+	std::string a="\0";
 	lower_case(a);
 	emit_output_expected_header();
 	emit_retval("%s", "");

@@ -218,8 +218,9 @@ LeaseManagerResources::restoreLeases( void )
 			  lease_iter != lease_states->end( );
 			  lease_iter++ ) {
 			classad::ExprTree	*state_expr = *lease_iter;
+			classad::ClassAd	*ad;
 			num_lease_states++;
-			if ( state_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+			if ( !state_expr->isClassad(&ad)) {
 				dprintf( D_ALWAYS,
 						 "restore: states isn't a ClassAd in %s!\n",
 						 key.c_str() );
@@ -227,8 +228,6 @@ LeaseManagerResources::restoreLeases( void )
 				continue;
 			}
 
-			// Finally, we have the individual lease state ad
-			classad::ClassAd	*ad = (classad::ClassAd *) state_expr;
 			int		lease_number = 01;
 			ad->EvaluateAttrInt( "LeaseNumber", lease_number );
 
@@ -472,14 +471,14 @@ LeaseManagerResources::GetLeases( classad::ClassAd &resource_ad,
 		  state_iter != lease_states->end( );
 		  state_iter++ ) {
 		classad::ExprTree	*state_expr = *state_iter;
-		if ( state_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+		classad::ClassAd	*ad;
+		if (!state_expr->isClassad(&ad) ) {
 			dprintf( D_ALWAYS,
 					 "GetLeases:Leases states isn't a ClassAd in %s!\n",
 					 resource_name.c_str() );
 			continue;
 		}
 
-		classad::ClassAd	*ad = (classad::ClassAd *) state_expr;
 		int		lease_number;
 		bool	lease_used, lease_valid;
 		if ( !ad->EvaluateAttrBool( "LeaseUsed", lease_used ) ||
@@ -882,11 +881,11 @@ LeaseManagerResources::SetLeaseStates(
 		  iter != lease_states->end( );
 		  iter++ ) {
 		classad::ExprTree	*state_expr = *iter;
-		if ( state_expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+		classad::ClassAd	*lease_ad;
+		if ( !state_expr->isClassad(&lease_ad) ) {
 			dprintf( D_ALWAYS, "Leases states item isn't a ClassAd!\n" );
 			continue;
 		}
-		classad::ClassAd	*lease_ad = (classad::ClassAd *) state_expr;
 		int		lease_number;
 		bool	old_valid;
 		if ( !lease_ad->EvaluateAttrInt(  "LeaseNumber", lease_number ) ||

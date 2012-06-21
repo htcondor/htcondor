@@ -24,9 +24,13 @@
    reliance on other Condor files to ease distribution.  -Jim B. */
 
 #include <stdio.h>              /* for FILE type */
+
 #if !defined(WIN32) 
 #include <time.h>
 #include <sys/resource.h>       /* for struct rusage */
+#elif (_MSC_VER >= 1600 )
+// fix vs2010 compiler issue
+#include <stdint.h> 
 #endif
 
 /* 

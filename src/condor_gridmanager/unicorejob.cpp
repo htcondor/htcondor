@@ -164,7 +164,8 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 
 	update_ad->ResetExpr();
 	while ( update_ad->NextExpr( new_name, new_expr ) ) {
-		job->newRemoteStatusAd->Insert( new_name, new_expr->Copy() );
+		ExprTree * pTree = new_expr->Copy();
+		job->newRemoteStatusAd->Insert( new_name, pTree );
 	}
 
 	job->SetEvaluateState();
@@ -781,7 +782,8 @@ void UnicoreJob::UpdateUnicoreState( ClassAd *update_ad )
 			}
 		}
 		next_expr = update_ad->LookupExpr( next_attr_name );
-		jobAd->Insert( next_attr_name, next_expr->Copy() );
+		ExprTree * pTree = next_expr->Copy();
+		jobAd->Insert( next_attr_name, pTree );
 	}
 }
 

@@ -473,10 +473,12 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
 				const char *new_attr_name = strchr(lhstr,'_');
+				ExprTree * pTree;
 				ASSERT(new_attr_name);
 				new_attr_name++;
 					// insert attribute
-				job.Insert(new_attr_name, tree->Copy());
+				pTree = tree->Copy();
+				job.Insert(new_attr_name, pTree);
 			}
 		}	// while next expr
 

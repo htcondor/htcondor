@@ -26,6 +26,7 @@
 #include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
+#include "classad/classadCache.h"
 
 using namespace std;
 
@@ -76,19 +77,21 @@ Reconfig()
 	}
 }
 
-static classad::AttributeReference *the_my_ref = NULL;
+// TSTCLAIR: this really needs to be killed off now.
+// static classad::AttributeReference *the_my_ref = NULL;
 static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
 {
 	ASSERT( !the_my_ref_in_use );
 	the_my_ref_in_use = true;
 
-	if( !the_my_ref ) {
-		the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-	}
+	//if( !the_my_ref ) {
+	//	the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+	//}
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Insert( "my", the_my_ref );
+		ExprTree * pExpr=0;
+		ad->Insert( "my", (pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" ) ) );
 	}
 }
 
@@ -97,7 +100,7 @@ void releaseTheMyRef( classad::ClassAd *ad )
 	ASSERT( the_my_ref_in_use );
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Remove( "my" );
+		ad->Delete("my"); //Remove( "my" ); 
 		ad->MarkAttributeClean( "my" );
 	}
 
@@ -799,29 +802,26 @@ ClassAdAttributeIsPrivate( char const *name )
 	return false;
 }
 
-bool ClassAd::
-Insert( const std::string &attrName, classad::ExprTree *expr )
+bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache )
 {
-	return classad::ClassAd::Insert( attrName, expr );
+	return classad::ClassAd::Insert( attrName, expr, bCache );
 }
 
-int ClassAd::
-Insert( const char *name, classad::ExprTree *expr )
+int ClassAd::Insert( const char *name, classad::ExprTree *& expr, bool bCache )
 {
 	string str = name;
-	return Insert( str, expr ) ? TRUE : FALSE;
+	return Insert( str, expr, bCache ) ? TRUE : FALSE;
 }
 
 int
 ClassAd::Insert( const char *str )
 {
 	classad::ClassAdParser parser;
-	classad::ClassAd *newAd;
 
 		// String escaping is different between new and old ClassAds.
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
-	string newAdStr = "[";
+	string newAdStr;
 	for ( int i = 0; str[i] != '\0'; i++ ) {
         if (str[i] == '\\') {
 			if ( ( str[i + 1] != '"') ||
@@ -832,32 +832,14 @@ ClassAd::Insert( const char *str )
 		}
 		newAdStr.append( 1, str[i] );
 	}
-	newAdStr += "]";
-	newAd = parser.ParseClassAd( newAdStr );
-	if ( newAd == NULL ) {
-		return FALSE;
-	}
-	if ( newAd->size() != 1 ) {
-		delete newAd;
-		return FALSE;
+	//newAdStr += "]";
+	
+	if (!classad::ClassAd::Insert(newAdStr))
+	{
+	  return FALSE;
 	}
 	
-	iterator itr = newAd->begin();
-	if ( !classad::ClassAd::Insert( itr->first, itr->second->Copy() ) ) {
-		delete newAd;
-		return FALSE;
-	}
-	delete newAd;
 	return TRUE;
-}
-
-int ClassAd::
-Insert(char const *expr,bool /*unused*/)
-{
-	dprintf(D_ALWAYS,"ERROR: Insert(expr,bool) called!\n");
-	dprintf_dump_stack();
-
-	return Insert( expr );
 }
 
 int ClassAd::
@@ -1693,9 +1675,10 @@ void ClassAd::AddExplicitTargetRefs(  )
 	}
 	
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
-			this->Insert( a->first,
-						  compat_classad::AddExplicitTargetRefs( a->second, definedAttrs )) ;
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
+		{
+		  classad::ExprTree * pTree = compat_classad::AddExplicitTargetRefs( a->second, definedAttrs );
+			this->Insert( a->first, pTree ) ;
 		}
 	}
 }
@@ -1703,9 +1686,10 @@ void ClassAd::AddExplicitTargetRefs(  )
 void ClassAd::RemoveExplicitTargetRefs( )
 {
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
-			this->Insert( a->first, 
-						  compat_classad::RemoveExplicitTargetRefs( a->second ) );
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
+		{
+		  classad::ExprTree * pTree = compat_classad::RemoveExplicitTargetRefs( a->second );
+			this->Insert( a->first, pTree );
 		}
 	}
 }  
@@ -1771,6 +1755,8 @@ AddExplicitConditionals( classad::ExprTree *expr )
 										 condExpr2, NULL, NULL );
 		return parenExpr2;
 	}
+	case classad::ExprTree::EXPR_ENVELOPE:
+		return ( AddExplicitConditionals( ( (classad::CachedExprEnvelope*)expr )->get() ) );
 	case classad::ExprTree::FN_CALL_NODE:
 	case classad::ExprTree::CLASSAD_NODE:
 	case classad::ExprTree::EXPR_LIST_NODE: {
@@ -2061,7 +2047,8 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 
 	classad::ExprTree *e = source_ad->Lookup( source_attr );
 	if ( e ) {
-		Insert( target_attr, e->Copy() );
+		e = e->Copy();
+		Insert( target_attr, e );
 	} else {
 		Delete( target_attr );
 	}

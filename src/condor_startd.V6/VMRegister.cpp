@@ -259,7 +259,8 @@ VMRegister::requestHostClassAds(void)
 		attr += name;
 
 		// Insert or Update an attribute to host_classAd in a VMRegister object
-		host_classad->Insert(attr.Value(), expr->Copy());
+		ExprTree * pTree = expr->Copy();
+		host_classad->Insert(attr.Value(), pTree);
 	}
 }
 

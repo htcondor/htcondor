@@ -17,8 +17,6 @@
  ###############################################################
 
 
-add_definitions(-D_FORTIFY_SOURCE=2)
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -119,6 +117,8 @@ if( NOT WINDOWS)
 	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
 	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
 	  else()
+
+            add_definitions(-D_FORTIFY_SOURCE=2)
 	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	  endif()
 	endif()
@@ -501,7 +501,7 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 endif()
 
 ###########################################
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
@@ -664,6 +664,7 @@ if(MSVC)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275")  #
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273")  # inconsistent dll linkage
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd6334") # inclusion warning from boost. 
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
@@ -694,10 +695,10 @@ else(MSVC)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-equal")
 	endif(cxx_Wfloat_equal)
 
-	check_cxx_compiler_flag(-Wshadow cxx_Wshadow)
-	if (cxx_Wshadow)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
-	endif(cxx_Wshadow)
+	#check_cxx_compiler_flag(-Wshadow cxx_Wshadow)
+	#if (cxx_Wshadow)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
+	#endif(cxx_Wshadow)
 
 	# someone else can enable this, as it overshadows all other warnings and can be wrong.
 	# check_cxx_compiler_flag(-Wunreachable-code cxx_Wunreachable_code)

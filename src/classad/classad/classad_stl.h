@@ -24,18 +24,8 @@
 #include <map>
 #include <list>
 
-#ifdef WIN32
-#include <hash_map>
-#define classad_hash_map stdext::hash_map
-#else
-#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 2)
-#include <tr1/unordered_map>
-#define classad_hash_map std::tr1::unordered_map
-#else
-#include <ext/hash_map>
-#define classad_hash_map __gnu_cxx::hash_map
-#endif
-#endif
+// Here is where we could do a compiler check
+#include <boost/unordered_map.hpp>
 
 #define classad_map   std::map 
 #define classad_slist std::list
