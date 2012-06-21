@@ -3329,18 +3329,18 @@ void DaemonCore::Driver()
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
             dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
-				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
+				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.\n");
 			}
 			async_pipe_signal = false;
 			while (int cb = async_pipe[0].bytes_available_to_read()) {
 				if (cb < 0) {
-					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d", 
+					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d\n", 
 							WSAGetLastError());
 					break;
 				}
 				char buf[16];
 				if (recv(async_pipe[0].get_socket(), buf, MIN(cb, COUNTOF(buf)), 0) == SOCKET_ERROR) {
-					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d", 
+					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d\n", 
 							WSAGetLastError());
 					break;
 				}
