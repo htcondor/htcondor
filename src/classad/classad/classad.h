@@ -38,7 +38,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef boost::unordered_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef classad_unordered<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);

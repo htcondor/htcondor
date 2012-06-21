@@ -24,8 +24,13 @@
 #include <map>
 #include <list>
 
-// Here is where we could do a compiler check
-#include <boost/unordered_map.hpp>
+#ifdef PREFER_TR1
+	#include <tr1/unordered_map>
+	#define classad_unordered std::tr1::unordered_map
+#else
+	#include <boost/unordered_map.hpp>
+	#define classad_unordered boost::unordered_map
+#endif
 
 #define classad_map   std::map 
 #define classad_slist std::list

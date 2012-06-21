@@ -41,11 +41,11 @@ class ClassAdCache
 {
 protected:
     
-        typedef boost::unordered_map<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr> AttrValues;
-        typedef boost::unordered_map<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr>::iterator value_iterator;
+        typedef classad_unordered<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr> AttrValues;
+        typedef classad_unordered<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr>::iterator value_iterator;
         
-	typedef boost::unordered_map<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr> AttrCache;
-	typedef boost::unordered_map<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr>::iterator cache_iterator;
+	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr> AttrCache;
+	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr>::iterator cache_iterator;
 
 	AttrCache m_Cache;		///< Data Store
 	unsigned long m_HitCount;	///< Hit Counter

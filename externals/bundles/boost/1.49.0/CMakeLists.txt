@@ -100,10 +100,30 @@
 
 	# Search for system's boost libraries.
 	set(Boost_USE_MULTITHREADED ON)
-	find_package( Boost 1.33.1 COMPONENTS thread program_options system regex filesystem)
+	find_package( Boost 1.33.1 )
 
 	# For proper builds use the .so/.dll's .
 	if(Boost_FOUND)
+		
+		check_cxx_source_compiles("
+		#include <boost/unordered_map.hpp>
+		int main() {
+			boost::unordered_map<int,int> foo;
+		return 0;
+		}
+		" HAVE_BOOST_UNORDER_MAP)
+                
+		if (NOT HAVE_BOOST_UNORDER_MAP)
+
+			if (HAVE_TR1_UNORDERED_MAP)
+				append_var (PREFER_TR1 TRUE)
+				message (STATUS "Configuring for tr1")
+			else()
+				message (FATAL_ERROR "Neither boost nor tr1 found, at least tr1 required")
+			endif()
+
+		endif()
+
 		append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 		set (BOOST_VER ${Boost_VERSION})
 		set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})

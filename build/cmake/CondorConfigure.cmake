@@ -502,6 +502,9 @@ endif()
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+if (PREFER_TR1)
+	add_definitions( -DPREFER_TR1 )
+endif()
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
