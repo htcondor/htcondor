@@ -2036,7 +2036,7 @@ int dc_main( int argc, char** argv )
 	MyString debug_wait_param;
 	debug_wait_param.sprintf("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
 	if (param_boolean(debug_wait_param.Value(), false, false)) {
-		int debug_wait = 1;
+		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
 				debug_wait_param.Value(), (int)::getpid());
