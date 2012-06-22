@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added configuration variable CLASSAD\_LOG\_STRICT\_PARSING, which defaults to 
+\Expr{True}, and can be used to control whether ClassAd log files such as the job queue
+log are read in with strict parse checking on ClassAd expressions.
+\Ticket{3069}
+
 \item \Condor{status} now returns the schedd ad directly from the schedd daemon
 if both -direct and -schedd are given on the command line.
 \Ticket{2492}
