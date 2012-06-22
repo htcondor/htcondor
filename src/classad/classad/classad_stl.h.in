@@ -24,6 +24,8 @@
 #include <map>
 #include <list>
 
+#cmakedefine PREFER_TR1
+
 #ifdef PREFER_TR1
 	#include <tr1/unordered_map>
 	#define classad_unordered std::tr1::unordered_map

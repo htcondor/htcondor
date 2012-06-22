@@ -15,6 +15,12 @@
  # limitations under the License. 
  # 
  ############################################################### 
+ 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/classad/classad_stl.h.in ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h.tmp)
+# only update config.h if it is necessary b/c it causes massive rebuilding.
+exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h.tmp ${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h )
+ 
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${BOOST_INCLUDE})
 
