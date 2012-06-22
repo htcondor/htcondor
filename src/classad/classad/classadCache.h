@@ -37,8 +37,8 @@ public:
 
 };
 
-typedef weak_ptr< CacheEntry > pCacheEntry;
-typedef shared_ptr< CacheEntry > pCacheData;
+typedef classad_weak_ptr< CacheEntry > pCacheEntry;
+typedef classad_shared_ptr< CacheEntry > pCacheData;
 
 /**
  * In order to cache elements the could not have pointers
