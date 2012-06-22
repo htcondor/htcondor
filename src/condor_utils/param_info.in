@@ -10649,6 +10649,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
 
+[CLASSAD_LOG_STRICT_PARSING]
+aliases=
+default=true
+version=7.9.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable strict parse checking of classad RHS expressions in classad log files
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad_log
+id=612
+
 [STARTER_RLIMIT_AS]
 aliases=
 default=0
