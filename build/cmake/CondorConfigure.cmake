@@ -251,14 +251,39 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
-	# Some early 4.0 g++'s have unordered maps, but their iterators don't work
-	check_cxx_source_compiles("
+	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
+
+	check_cxx_compiler_flag(-std=c++11 cxx_11)
+	if (cxx_11)
+
+		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+		#check_cxx_source_compiles("
+		##include <unordered_map>
+		##include <memory>
+		#int main() {
+		#	std::unordered_map<int, int> ci;
+		#	std::shared_ptr<int> foo;
+		#	return 0;
+		#}
+		#" PREFER_CPP11 )
+
+	endif (cxx_11)
+
+	if (NOT PREFER_CPP11)
+
+	  # Some early 4.0 g++'s have unordered maps, but their iterators don't work
+	  check_cxx_source_compiles("
 		#include <tr1/unordered_map>
 		int main() {
 			std::tr1::unordered_map<int, int>::const_iterator ci;
 			return 0;
 		}
-		" HAVE_TR1_UNORDERED_MAP )
+		" PREFER_TR1 )
+
+	endif(NOT PREFER_CPP11)
+	
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion

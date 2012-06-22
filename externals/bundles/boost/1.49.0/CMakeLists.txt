@@ -33,24 +33,22 @@ if (NOT WINDOWS)
     # always prefer system libraries where possible
     if(Boost_FOUND)
 
-        check_cxx_source_compiles("
-        #include <boost/unordered_map.hpp>
-        int main() {
-            boost::unordered_map<int,int> foo;
-            return 0;
-        }
-        " HAVE_BOOST_UNORDER_MAP )
+	if (NOT PREFER_CPP11 AND NOT PREFER_TR1)
+	  check_cxx_source_compiles("
+	  #include <boost/unordered_map.hpp>
+	  int main() {
+	      boost::unordered_map<int,int> foo;
+	      return 0;
+	  }
+	  " HAVE_BOOST_UNORDER_MAP )
+      
+	  # we don't have any unordered map?
+	  if (NOT HAVE_BOOST_UNORDER_MAP)
+	    message (STATUS "WARNING did not detect unordered_map")
+	    set ( SYSTEM_NOT_UP_TO_SNUFF TRUE )
+	  endif()
 
-        if (NOT HAVE_BOOST_UNORDER_MAP)
-
-            if (HAVE_TR1_UNORDERED_MAP)
-                append_var (PREFER_TR1 TRUE)
-                message (STATUS "Configuring for tr1")
-            else()
-                set (SYSTEM_NOT_UP_TO_SNUFF TRUE)
-            endif()
-
-        endif()
+	endif()
 
         # set vars b/c we are good to go.
         if (NOT SYSTEM_NOT_UP_TO_SNUFF)

@@ -17,7 +17,6 @@
  ***************************************************************/
 
 #include "classad/classadCache.h"
-#include <boost/weak_ptr.hpp>
 #include <assert.h>
 #include <stdio.h>
 #include <list>

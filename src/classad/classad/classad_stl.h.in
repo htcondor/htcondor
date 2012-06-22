@@ -24,14 +24,31 @@
 #include <map>
 #include <list>
 
+#cmakedefine PREFER_CPP11
 #cmakedefine PREFER_TR1
 
-#ifdef PREFER_TR1
+#ifdef PREFER_CPP11
+	#include <memory>
+	#include <unordered_map>
+	
+	#define classad_unordered std::unordered_map
+	#define weak_ptr std::weak_ptr
+	#define shared_ptr std::shared_ptr
+
+#elif defined(PREFER_TR1)
+	#include <tr1/memory>
 	#include <tr1/unordered_map>
+
 	#define classad_unordered std::tr1::unordered_map
+	#define weak_ptr std::tr1::weak_ptr
+	#define shared_ptr std::tr1::shared_ptr 
 #else
+	#include <boost/shared_ptr.hpp>
 	#include <boost/unordered_map.hpp>
+
 	#define classad_unordered boost::unordered_map
+	#define weak_ptr boost::weak_ptr
+	#define shared_ptr boost::shared_ptr
 #endif
 
 #define classad_map   std::map 
