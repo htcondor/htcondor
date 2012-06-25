@@ -126,14 +126,14 @@ ad is the "target" ad.
 \Ticket{1663}
 
 \item New configuration variables were added to to the \Condor{schedd} to
-define statistics that count subsets of jobs. These variables
-have the form \Macro{SCHEDD\_COLLECT\_STATS\_BY\_XXXX} and should contain
-a ClassAd expression that evaluates to a string.
-XXXX\_value\_ will be prefixed to the names of attributes in the \Condor{schedd} ad
-such as \Attr{XXXX\_string\_JobsStarted} which would be the count of jobs that have
-started that evaluate to "value".  An optional variable of the form
-\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_XXXX} can be used to set an expiration time in seconds
-for each set of statistics.
+define statistics that count subsets of jobs. 
+These variables have the form \Macro{SCHEDD\_COLLECT\_STATS\_BY\_<Name>},
+and should be defined by a ClassAd expression that evaluates to a string.
+See section~\ref{param:ScheddCollectStatsByName}
+for the complete definition.
+The optional configuration variable of the form
+\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>} can be used to set an expiration time,
+in seconds, for each set of statistics.
 \Ticket{2862}
 
 \item The new \SubmitCmd{batch\_queue} submit description file command

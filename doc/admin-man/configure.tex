@@ -5744,6 +5744,30 @@ SYSTEM_PERIODIC_REMOVE = \
   causes the creation of the set of statistics attributes with names such as
   \Attr{EinsteinJobsCompleted} and \Attr{EinsteinJobsCoredumped}.
 
+\label{param:ScheddCollectStatsByName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_BY\_<Name>}]
+  Defines a string expression.  The evaluated string is used in the naming of 
+  a set of \Condor{schedd} statistics ClassAd attributes.
+  The naming begins with \Expr{<Name>}, an underscore character, 
+  and the evaluated string.
+  Each character not permitted in an attribute name will be converted
+  to the underscore character.
+  For example,
+\footnotesize
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_BY_Host = splitSlotName(RemoteHost)[1]
+\end{verbatim}
+\normalsize
+  a set of statistics attributes will be created and kept. 
+  If the string expression were to evaluate to \AdStr{storm.04.cs.wisc.edu},
+  the names of two of these attributes will be
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCompleted} and 
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCoredumped}.
+  
+\label{param:ScheddExpireStatsByName}
+\item[\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>}]
+  \fbox{This definition is not complete.}
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
