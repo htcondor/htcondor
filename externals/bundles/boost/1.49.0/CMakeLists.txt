@@ -63,7 +63,7 @@ endif( NOT WINDOWS )
 
 
 # we only use our version of boost if the system is not good enough
-if (NOT PROPER AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
+if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
 	condor_pre_external( BOOST boost_1_49_0 "lib;include" "include/boost")
 	
