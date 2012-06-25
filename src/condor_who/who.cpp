@@ -1114,7 +1114,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// DaemonCore: private command socket at <sin>
 			ix = line.find(" DaemonCore: command socket at <");
 			if (ix != string::npos) {
-				size_t ix2 = line.find("<", ix);
+				//size_t ix2 = line.find("<", ix);
 				possible_master_addr = line.substr(line.find("<",ix));
 			}
 
