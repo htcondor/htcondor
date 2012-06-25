@@ -110,7 +110,14 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 		// Since the shadow runs as the submitting user, we
 		// let the OS enforce permissions instead of relying on
 		// the pesky perm object to get it right.
-	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
+		//
+		// Tell the FileTransfer object to create a file catalog if
+		// the job's files are spooled. This prevents FileTransfer
+		// from listing unmodified input files as intermediate files
+		// that need to be transferred back from the starter.
+	int spool_time = 0;
+	the_ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
+	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, spool_time != 0 );
 
 	// Add extra remaps for the canonical stdout/err filenames.
 	// If using the FileTransfer object, the starter will rename the

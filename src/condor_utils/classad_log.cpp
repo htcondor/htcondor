@@ -961,7 +961,11 @@ LogSetAttribute::ReadBody(FILE* fp)
     if (ParseClassAdRvalExpr(value, value_expr)) {
         if (value_expr) delete value_expr;
         value_expr = NULL;
-        return -1;
+        if (param_boolean("CLASSAD_LOG_STRICT_PARSING", true)) {
+            return -1;
+        } else {
+            dprintf(D_ALWAYS, "WARNING: strict classad parsing failed for expression: \"%s\"\n", value);
+        }
     }
 	return rval + rval1;
 }

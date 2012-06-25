@@ -1908,8 +1908,15 @@ RemoteResource::requestReconnect( void )
 		// FileTransfer server object right here.  No worries if
 		// one already exists, the FileTransfer object will just
 		// quickly and quietly return success in that case.
+		//
+		// Tell the FileTransfer object to create a file catalog if
+		// the job's files are spooled. This prevents FileTransfer
+		// from listing unmodified input files as intermediate files
+		// that need to be transferred back from the starter.
 	ASSERT(jobAd);
-	filetrans.Init( jobAd, true, PRIV_USER, false );
+	int spool_time = 0;
+	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
+	filetrans.Init( jobAd, true, PRIV_USER, spool_time != 0 );
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {

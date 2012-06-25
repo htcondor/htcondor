@@ -1111,6 +1111,17 @@ File System Configuration File Entries''.
   and this rotation would cause the number of backups to be larger
   the the maximum specified, the oldest file is removed.
 
+\label{param:ClassadLogStrictParsing}
+\item[\Macro{CLASSAD\_LOG\_STRICT\_PARSING}]
+  When this configuration variable is set to \Expr{True}, ClassAd log files
+  will be read using strict syntax checking for ClassAd expressions.  Classad
+  log files include the job queue log and the accountant log.  When set to 
+  \Expr{False}, ClassAd log files are read without strict expression syntax
+  checking, which allows some legacy ClassAd log data to be read in a backward
+  compatible manner.  Defaults to \Expr{True}.  This configuration variable
+  may be deprecated in future releases, eventually requiring all ClassAd log
+  files to pass strict ClassAd syntax checking. 
+
 \label{param:DefaultDomainName}
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}]
   The value to be appended to a machine's host name,
@@ -5712,12 +5723,50 @@ SYSTEM_PERIODIC_REMOVE = \
   STATISTICS_TO_PUBLISH = SCHEDD:2
 \end{verbatim}
   
-
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   The amount of time given in seconds defining the interval of time over
   which \Condor{schedd} daemon Statistics attributes are quantized.
   Defaults to 1200 seconds, which is 20 minutes.
+
+\label{param:ScheddCollectStatsForName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>}]
+  A boolean expression that when \Expr{True} creates a set of \Condor{schedd}
+  ClassAd attributes of statistics collected for a particular set.
+  These attributes are named using the prefix of \Expr{<Name>}.
+  The set includes each entity for which this expression is \Expr{True}.
+  As an example, assume that \Condor{schedd} statistics attributes are to
+  be created for only user Einstein's jobs.
+  Defining
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_FOR_Einstein = (Owner=="einstein")
+\end{verbatim}
+  causes the creation of the set of statistics attributes with names such as
+  \Attr{EinsteinJobsCompleted} and \Attr{EinsteinJobsCoredumped}.
+
+\label{param:ScheddCollectStatsByName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_BY\_<Name>}]
+  Defines a string expression.  The evaluated string is used in the naming of 
+  a set of \Condor{schedd} statistics ClassAd attributes.
+  The naming begins with \Expr{<Name>}, an underscore character, 
+  and the evaluated string.
+  Each character not permitted in an attribute name will be converted
+  to the underscore character.
+  For example,
+\footnotesize
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_BY_Host = splitSlotName(RemoteHost)[1]
+\end{verbatim}
+\normalsize
+  a set of statistics attributes will be created and kept. 
+  If the string expression were to evaluate to \AdStr{storm.04.cs.wisc.edu},
+  the names of two of these attributes will be
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCompleted} and 
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCoredumped}.
+  
+\label{param:ScheddExpireStatsByName}
+\item[\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>}]
+  \fbox{This definition is not complete.}
 
 \end{description}
 

@@ -20,7 +20,6 @@
 #define __CLASSAD_CACHE_H__
 
 #include "classad/exprTree.h"
-#include <boost/shared_ptr.hpp>
 #include <string>
 
 namespace classad {
@@ -38,8 +37,8 @@ public:
 
 };
 
-typedef boost::weak_ptr< CacheEntry > pCacheEntry;
-typedef boost::shared_ptr< CacheEntry > pCacheData;
+typedef classad_weak_ptr< CacheEntry > pCacheEntry;
+typedef classad_shared_ptr< CacheEntry > pCacheData;
 
 /**
  * In order to cache elements the could not have pointers
