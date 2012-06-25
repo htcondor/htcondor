@@ -5723,12 +5723,26 @@ SYSTEM_PERIODIC_REMOVE = \
   STATISTICS_TO_PUBLISH = SCHEDD:2
 \end{verbatim}
   
-
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   The amount of time given in seconds defining the interval of time over
   which \Condor{schedd} daemon Statistics attributes are quantized.
   Defaults to 1200 seconds, which is 20 minutes.
+
+\label{param:ScheddCollectStatsForName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>}]
+  A boolean expression that when \Expr{True} creates a set of \Condor{schedd}
+  ClassAd attributes of statistics collected for a particular set.
+  These attributes are named using the prefix of \Expr{<Name>}.
+  The set includes each entity for which this expression is \Expr{True}.
+  As an example, assume that \Condor{schedd} statistics attributes are to
+  be created for only user Einstein's jobs.
+  Defining
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_FOR_Einstein = (Owner=="einstein")
+\end{verbatim}
+  causes the creation of the set of statistics attributes with names such as
+  \Attr{EinsteinJobsCompleted} and \Attr{EinsteinJobsCoredumped}.
 
 \end{description}
 

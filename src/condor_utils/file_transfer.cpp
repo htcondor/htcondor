@@ -778,11 +778,9 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 			// we know that filelist has at least one entry, so
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
-			MyString intermediateFilesBuf;
-			intermediateFilesBuf.sprintf( "%s=\"%s\"",
-				ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.Value());
-			Ad->InsertOrUpdate(intermediateFilesBuf.Value());
-			dprintf(D_FULLDEBUG,"%s\n",buf);
+			Ad->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.Value());
+			dprintf(D_FULLDEBUG,"%s=\"%s\"\n",ATTR_TRANSFER_INTERMEDIATE_FILES,
+					filelist.Value());
 		}
 	}
 	if ( IsClient() && upload_changed_files ) {

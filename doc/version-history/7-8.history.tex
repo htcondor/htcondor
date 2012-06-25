@@ -52,6 +52,13 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
+\item Fixed a bug that caused Condor to transfer a job's input file from
+the execute machine as if they were output files. This would happen if the
+job's input files were stored in Condor's spool directory (i.e. if the
+job was submitted via Condor-C or via \Condor{submit} with the -spool
+or -remote options).
+\Ticket{2406}
+
 \item Fixed a bug that could cause the first grid-type cream jobs destined 
 for a particular CREAM server to never be submitted to that server.
 This bug was probably introduced in Condor version 7.6.5.
