@@ -5766,7 +5766,13 @@ SYSTEM_PERIODIC_REMOVE = \
   
 \label{param:ScheddExpireStatsByName}
 \item[\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>}]
-  \fbox{This definition is not complete.}
+  The number of seconds after which the \Condor{schedd} daemon will stop
+  collecting and discard the statistics for a subset 
+  identified by \Expr{<Name>},
+  if no event has occurred to cause any counter or statistic for the subset
+  to be updated. 
+  If this variable is not defined for a particular \Expr{<Name>},
+  then the default value will be \Expr{60*60*24*7}, which is one week's time.
 
 \end{description}
 
