@@ -411,7 +411,8 @@ CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
 		return NULL;
 	}
 
-	int n = snprintf(buf,buflen,"$CondorVersion: %d.%d.%d %s %d %d $",
+	int n = snprintf(buf,buflen,"$%s: %d.%d.%d %s %d %d $", 
+					 "CondorVersion", // avoid having false "$CondorVersion: ..." show up in strings
 					 ver.MajorVer, ver.MinorVer, ver.SubMinorVer,
 					 month, day, year);
 	if( n>=buflen || n<0 ) {
