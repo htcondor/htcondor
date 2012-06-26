@@ -2015,7 +2015,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			time_t current_time = time(NULL);
 			timewrap.actime = current_time;		// set access time to now
-			timewrap.modtime = current_time - 180;	// set modify time to 3 min ago
+			timewrap.modtime = current_time;	// set modify time to now
 
 			utime(fullname.Value(),&timewrap);
 		}
