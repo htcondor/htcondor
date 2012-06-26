@@ -945,7 +945,9 @@ public:
 		file = NULL;
 	}
 
-	int  LastError() { return error; }
+	int  LastError() { 
+		return error; 
+	}
 	bool AtEOF() { 
 		if ( ! file || (cbPos >= cbFile))
 			return true; 
@@ -955,6 +957,10 @@ public:
 		if ( ! file || (cbPos == 0))
 			return true; 
 		return false;
+	}
+	void Close() {
+		if ( file) fclose(file);
+		file = NULL;
 	}
 
 #if 0
@@ -1075,7 +1081,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		LOG_INFO * pliMaster = info["Master"];
 		std::string filename;
 		sprintf(filename, "%s%c%s", pliMaster->log_dir.c_str(), DIR_DELIM_CHAR, pliMaster->log.c_str());
-		if (App.diagnostic) printf("scanning master log file '%s' for pids\n", filename.c_str());
+		if (App.diagnostic) { printf("scanning master log file '%s' for pids\n", filename.c_str()); }
 
 		BackwardsReader reader(filename, O_RDONLY);
 		if (reader.LastError()) {
@@ -1083,7 +1089,6 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			if (App.diagnostic) {
 				fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
 			}
-			return;
 		}
 
 		std::string possible_master_pid;
@@ -1167,6 +1172,62 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 					}
 				}
 			}
+		}
+	}
+
+	// scan SCHEDD log for schedd address
+	if (info.find("Schedd") != info.end()) {
+		LOG_INFO * pliDaemon = info["Schedd"];
+		if ( ! pliDaemon->addr.empty() && ! pliDaemon->pid.empty() ) {
+			// don't scan this log
+		} else {
+			std::string filename;
+			sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
+			if (App.diagnostic) { printf("scanning %s log file '%s' for pids\n", "Schedd", filename.c_str()); }
+
+			BackwardsReader reader(filename, O_RDONLY);
+			if (reader.LastError()) {
+				// report error??
+				if (App.diagnostic) {
+					fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
+				}
+				return;
+			} else {
+
+				std::string possible_daemon_pid;
+				std::string possible_daemon_addr;
+				std::string line;
+				while (reader.PrevLine(line)) {
+					if (App.test_backwards) { printf("%s\n", line.c_str()); }
+
+					// " ** ([^\/\\><* \t]+) \(CONDOR_SCHEDD\) STARTING UP$"
+					if (line.find(" (CONDOR_SCHEDD) STARTING UP") != string::npos) {
+						if (App.diagnostic) {
+							printf("found %s startup banner with pid %s\n", "Schedd", possible_daemon_pid.c_str());
+							printf("quitting scan of %s log file\n\n", "Schedd");
+						}
+						if (pliDaemon->pid.empty())
+							pliDaemon->pid = possible_daemon_pid;
+						if (pliDaemon->addr.empty())
+							pliDaemon->addr = possible_daemon_addr;
+						if (!App.test_backwards) break;
+					}
+					// parse master header
+					size_t ix = line.find(" ** PID = ");
+					if (ix != string::npos) {
+						possible_daemon_pid = line.substr(ix+10);
+					}
+
+					// DaemonCore: command socket at <sin>
+					// DaemonCore: private command socket at <sin>
+					ix = line.find(" DaemonCore: command socket at <");
+					if (ix != string::npos) {
+						possible_daemon_addr = line.substr(line.find("<",ix));
+					}
+				}
+			}
+
+			reader.Close();
 		}
 	}
 
