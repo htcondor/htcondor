@@ -58,6 +58,9 @@ if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 		-DCLASSAD_VERSION_PATCH=${CMAKE_MATCH_3} )
 endif()
 
+file( GLOB Headers classad/*.h )
+set( Headers "${Headers};${CMAKE_CURRENT_BINARY_DIR}/classad/classad_stl.h" )
+
 ##
 #####################################################################
 
@@ -107,7 +110,7 @@ if (NOT WINDOWS)
   
   ###### Install elements with our distribution
   install( TARGETS classads DESTINATION ${C_LIB_PUBLIC} )
-  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE_PUBLIC} )
+  install( FILES ${Headers} DESTINATION ${C_INCLUDE_PUBLIC}/classad )
 
 else()	
 	# windows specific configuration.
@@ -146,7 +149,7 @@ if (NOT PROPER)
 	############################################################################## 
 	# the only reason this exists is b/c our externals depend on it
 	# (blahp & creame)
-	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${CLASSADS_INSTALL_LOC}/include )
+	file( COPY ${Headers} DESTINATION ${CLASSADS_INSTALL_LOC}/include/classad )
 	set_target_properties( classads
 		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
 		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib

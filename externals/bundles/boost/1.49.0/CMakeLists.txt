@@ -87,6 +87,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	set(BOOST_MIN_BUILD_DEP --with-thread)
 	set(BOOST_PATCH echo "nothing")
 	set(BOOST_INSTALL echo "nothing")
+	unset(BOOST_INCLUDE)
 
 	# so the idea of privately staging boost is silly.
 	ExternalProject_Add(boost
