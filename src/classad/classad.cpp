@@ -231,7 +231,51 @@ InsertAttr( const string &name, int value, Value::NumberFactor f )
 
 
 bool ClassAd::
+InsertAttr( const string &name, long value, Value::NumberFactor f )
+{
+	ExprTree* plit;
+	Value val;
+
+	val.SetIntegerValue( value );
+	plit = Literal::MakeLiteral( val, f );
+	return( Insert( name, plit ) );
+}
+
+
+bool ClassAd::
+InsertAttr( const string &name, long long value, Value::NumberFactor f )
+{
+	ExprTree* plit;
+	Value val;
+
+	val.SetIntegerValue( value );
+	plit = Literal::MakeLiteral( val, f );
+	return( Insert( name, plit ) );
+}
+
+
+bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value, 
+	Value::NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value, 
+	Value::NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value, 
 	Value::NumberFactor f )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
@@ -938,6 +982,20 @@ EvaluateAttrInt( const string &attr, int &i )  const
 }
 
 bool ClassAd::
+EvaluateAttrInt( const string &attr, long &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+}
+
+bool ClassAd::
+EvaluateAttrInt( const string &attr, long long &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+}
+
+bool ClassAd::
 EvaluateAttrReal( const string &attr, double &r )  const
 {
 	Value val;
@@ -946,6 +1004,20 @@ EvaluateAttrReal( const string &attr, double &r )  const
 
 bool ClassAd::
 EvaluateAttrNumber( const string &attr, int &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+}
+
+bool ClassAd::
+EvaluateAttrNumber( const string &attr, long &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+}
+
+bool ClassAd::
+EvaluateAttrNumber( const string &attr, long long &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );

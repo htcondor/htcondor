@@ -239,27 +239,38 @@ CachedExprEnvelope::~CachedExprEnvelope()
 
 ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 {
-	CachedExprEnvelope * pRet=0;
+	ExprTree * pRet=pTree;
+	string szValue;
+	NodeKind nk = pTree->GetKind();
 	
-	if (pTree->GetKind() == EXPR_ENVELOPE)
+	switch (nk)
 	{
-	  // This exists because there are so many wonky code paths that are hard to protect against.
-	  pRet = (CachedExprEnvelope *)pTree->Copy();
-	}
-	else
-	{	
-		pRet = new CachedExprEnvelope();
+	  case EXPR_ENVELOPE:
+	     pRet = pTree->Copy();
+	  break;
+	  
+	  case EXPR_LIST_NODE:
+	  case CLASSAD_NODE:
+	    // for classads the values are already cached but we still should string space the name
+	    check_hit (pName, szValue);
+	  break;
+	    
+	  default:
+	  {
+	    CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
 	
-                string szValue;
-		classad::val_str(szValue, pTree); 
+            
+	    classad::val_str(szValue, pTree); 
 	
-		pRet->nodeKind = EXPR_ENVELOPE;
-		if (!_cache)
-		{
-			_cache = new ClassAdCache();
-		}
+	    pNewEnv->nodeKind = EXPR_ENVELOPE;
+	    if (!_cache)
+	    {
+	      _cache = new ClassAdCache();
+	    }
 
-		pRet->m_pLetter = _cache->cache( pName, szValue, pTree);
+	    pNewEnv->m_pLetter = _cache->cache( pName, szValue, pTree);
+	    pRet = pNewEnv;
+	  }
 	}
 	
 	return ( pRet );

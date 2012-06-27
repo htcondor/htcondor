@@ -166,9 +166,9 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::INTEGER_VALUE: {
-			int	i;
+			long long	i;
 			val.IsIntegerValue( i );
-			sprintf( tempBuf, "%d", i );
+			sprintf( tempBuf, "%lld", i );
 			buffer += tempBuf;
 			return;
 		}
