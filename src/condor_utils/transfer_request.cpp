@@ -368,7 +368,7 @@ TransferRequest::set_peer_version(MyString &pv)
 }
 
 void
-TransferRequest::set_peer_version(char *pv)
+TransferRequest::set_peer_version(const char *pv)
 {
 	MyString str;
 	ASSERT(m_ip != NULL);
@@ -449,7 +449,11 @@ TreqAction
 TransferRequest::call_pre_push_callback(TransferRequest *treq, 
 	TransferDaemon *td)
 {
-	return (m_pre_push_func_this->*(m_pre_push_func))(treq, td);
+	if ( m_pre_push_func ) {
+		return (m_pre_push_func_this->*(m_pre_push_func))(treq, td);
+	} else {
+		return TREQ_ACTION_CONTINUE;
+	}
 }
 
 void
@@ -465,7 +469,11 @@ TreqAction
 TransferRequest::call_post_push_callback(TransferRequest *treq, 
 	TransferDaemon *td)
 {
-	return (m_post_push_func_this->*(m_post_push_func))(treq, td);
+	if ( m_post_push_func ) {
+		return (m_post_push_func_this->*(m_post_push_func))(treq, td);
+	} else {
+		return TREQ_ACTION_CONTINUE;
+	}
 }
 
 void 
@@ -481,7 +489,11 @@ TreqAction
 TransferRequest::call_update_callback(TransferRequest *treq, 
 	TransferDaemon *td, ClassAd *update)
 {
-	return (m_update_func_this->*(m_update_func))(treq, td, update);
+	if ( m_update_func ) {
+		return (m_update_func_this->*(m_update_func))(treq, td, update);
+	} else {
+		return TREQ_ACTION_TERMINATE;
+	}
 }
 
 void 
@@ -496,7 +508,11 @@ TransferRequest::set_reaper_callback(MyString desc,
 TreqAction
 TransferRequest::call_reaper_callback(TransferRequest *treq)
 {
-	return (m_reaper_func_this->*(m_reaper_func))(treq);
+	if ( m_reaper_func ) {
+		return (m_reaper_func_this->*(m_reaper_func))(treq);
+	} else {
+		return TREQ_ACTION_TERMINATE;
+	}
 }
 
 
