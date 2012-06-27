@@ -310,6 +310,8 @@ class Value
 		friend std::ostream& operator<<(std::ostream &stream, Value &value);
 
 	private:
+		void _Clear();
+
 		friend class Literal;
 		friend class ClassAd;
 		friend class ExprTree;
@@ -324,10 +326,9 @@ class Value
 			ExprList        *listValue;
 			ClassAd			*classadValue;
 			double			relTimeValueSecs;
-			abstime_t absTimeValueSecs;
-		  
+			abstime_t		*absTimeValueSecs;
+			std::string		*strValue;
 		};
-		std::string			strValue;		// has ctor/dtor cannot be in the union
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);
@@ -432,7 +433,7 @@ IsStringValue( const char *&s ) const
 	// So it best to only touch it if it exists.
 	// (Example: the strcat classad function)
 	if (valueType == STRING_VALUE) {
-		s = strValue.c_str( );
+		s = strValue->c_str( );
 		return true;
 	} else {
 		return false;
@@ -443,7 +444,7 @@ inline bool Value::
 IsStringValue( char *s, int len ) const
 {
 	if( valueType == STRING_VALUE ) {
-		strncpy( s, strValue.c_str( ), len );
+		strncpy( s, strValue->c_str( ), len );
 		return( true );
 	}
 	return( false );
@@ -453,7 +454,7 @@ inline bool Value::
 IsStringValue( std::string &s ) const
 {
 	if ( valueType == STRING_VALUE ) {
-		s = strValue;
+		s = *strValue;
 		return true;
 	} else {
 		return false;
@@ -464,7 +465,7 @@ inline bool Value::
 IsStringValue( int &size ) const
 {
     if (valueType == STRING_VALUE) {
-        size = strValue.size();
+        size = strValue->size();
         return true;
     } else {
         size = -1;
@@ -527,8 +528,12 @@ IsAbsoluteTimeValue( ) const
 inline bool Value::
 IsAbsoluteTimeValue( abstime_t &secs ) const
 {
-	secs = absTimeValueSecs;
-	return( valueType == ABSOLUTE_TIME_VALUE );
+	if ( valueType == ABSOLUTE_TIME_VALUE ) {
+		secs = *absTimeValueSecs;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 inline bool Value::

@@ -47,8 +47,6 @@ Value( )
 	listValue = NULL;
 	classadValue = NULL;
 	relTimeValueSecs = 0;
-	absTimeValueSecs.secs = 0;
-	absTimeValueSecs.offset = 0;
 }
 
 
@@ -62,6 +60,7 @@ Value(const Value &value)
 Value::
 ~Value()
 {
+	_Clear();
 }
 
 Value& Value::
@@ -77,6 +76,14 @@ operator=(const Value &value)
 void Value::
 Clear()
 {
+	_Clear();
+	valueType 	= UNDEFINED_VALUE;
+}
+
+
+void Value::
+_Clear()
+{
 	switch( valueType ) {
 		case LIST_VALUE:
 			// list values live in the evaluation environment, so they must
@@ -91,13 +98,18 @@ Clear()
 			break;
 
 		case STRING_VALUE:
-			strValue = "";
+			delete strValue;
+			strValue = NULL;
+			break;
+
+		case ABSOLUTE_TIME_VALUE:
+			delete absTimeValueSecs;
+			absTimeValueSecs = NULL;
 			break;
 
 		default:
-			valueType = UNDEFINED_VALUE;
+			; // noop
 	}
-	valueType 	= UNDEFINED_VALUE;
 }
 
 
@@ -190,10 +202,11 @@ IsBooleanValueEquiv(bool &b) const
 void Value::
 CopyFrom( const Value &val )
 {
+	_Clear();
 	valueType = val.valueType;
 	switch (val.valueType) {
 		case STRING_VALUE:
-			strValue = val.strValue;
+			strValue = new string( *val.strValue);
 			return;
 
 		case BOOLEAN_VALUE:
@@ -221,7 +234,8 @@ CopyFrom( const Value &val )
 			return;
 
 		case ABSOLUTE_TIME_VALUE:
-		  	absTimeValueSecs = val.absTimeValueSecs;
+			absTimeValueSecs = new abstime_t();
+		  	*absTimeValueSecs = *val.absTimeValueSecs;
 			return;
 
 		case RELATIVE_TIME_VALUE:
@@ -237,6 +251,7 @@ CopyFrom( const Value &val )
 void Value::
 SetRealValue (double r)
 {
+	_Clear();
     valueType=REAL_VALUE;
     realValue = r;
 }
@@ -244,6 +259,7 @@ SetRealValue (double r)
 void Value::
 SetBooleanValue( bool b )
 {
+	_Clear();
 	valueType = BOOLEAN_VALUE;
 	booleanValue = b;
 }
@@ -251,6 +267,7 @@ SetBooleanValue( bool b )
 void Value::
 SetIntegerValue (long long i)
 {
+	_Clear();
     valueType=INTEGER_VALUE;
     integerValue = i;
 }
@@ -258,32 +275,37 @@ SetIntegerValue (long long i)
 void Value::
 SetUndefinedValue (void)
 {
+	_Clear();
     valueType=UNDEFINED_VALUE;
 }
 
 void Value::
 SetErrorValue (void)
 {
+	_Clear();
     valueType=ERROR_VALUE;
 }
 
 void Value::
 SetStringValue( const string &s )
 {
+	_Clear();
 	valueType = STRING_VALUE;
-	strValue = s;
+	strValue = new string( s );
 }
 
 void Value::
 SetStringValue( const char *s )
 {
+	_Clear();
 	valueType = STRING_VALUE;
-	strValue = s;
+	strValue = new string( s );
 }
 
 void Value::
 SetListValue( ExprList *l)
 {
+	_Clear();
     valueType = LIST_VALUE;
     listValue = l;
 }
@@ -291,6 +313,7 @@ SetListValue( ExprList *l)
 void Value::
 SetClassAdValue( ClassAd *ad )
 {
+	_Clear();
 	valueType = CLASSAD_VALUE;
 	classadValue = ad;
 }
@@ -298,6 +321,7 @@ SetClassAdValue( ClassAd *ad )
 void Value::
 SetRelativeTimeValue( time_t rsecs ) 
 {
+	_Clear();
 	valueType = RELATIVE_TIME_VALUE;
 	relTimeValueSecs = (double) rsecs;
 }
@@ -305,6 +329,7 @@ SetRelativeTimeValue( time_t rsecs )
 void Value::
 SetRelativeTimeValue( double rsecs ) 
 {
+	_Clear();
 	valueType = RELATIVE_TIME_VALUE;
 	relTimeValueSecs = rsecs;
 }
@@ -312,8 +337,10 @@ SetRelativeTimeValue( double rsecs )
 void Value::
 SetAbsoluteTimeValue( abstime_t asecs ) 
 {
+	_Clear();
 	valueType = ABSOLUTE_TIME_VALUE;
-	absTimeValueSecs = asecs;
+	absTimeValueSecs = new abstime_t();
+	*absTimeValueSecs = asecs;
 }	
 
 bool Value::
@@ -348,11 +375,11 @@ SameAs(const Value &otherValue) const
             is_same = (relTimeValueSecs == otherValue.relTimeValueSecs);
             break;
         case Value::ABSOLUTE_TIME_VALUE:
-            is_same = (   absTimeValueSecs.secs   == otherValue.absTimeValueSecs.secs
-                       && absTimeValueSecs.offset == otherValue.absTimeValueSecs.offset);
+            is_same = (   absTimeValueSecs->secs   == otherValue.absTimeValueSecs->secs
+                       && absTimeValueSecs->offset == otherValue.absTimeValueSecs->offset);
             break;
         case Value::STRING_VALUE:
-            is_same = (strValue == otherValue.strValue);
+            is_same = (*strValue == *otherValue.strValue);
             break;
         }
     }
@@ -401,7 +428,7 @@ ostream& operator<<(ostream &stream, Value &value)
 		break;
 	}
 	case Value::STRING_VALUE:
-		stream << value.strValue;
+		stream << *value.strValue;
 		break;
 	}
 
