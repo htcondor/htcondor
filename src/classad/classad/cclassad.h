@@ -76,6 +76,8 @@ int cclassad_insert_expr( struct cclassad *c, const char *attr, const char *valu
 int cclassad_insert_string( struct cclassad *c, const char *attr, const char *value );
 int cclassad_insert_double( struct cclassad *c, const char *attr, double value );
 int cclassad_insert_int( struct cclassad *c, const char *attr, int value ); 
+int cclassad_insert_long( struct cclassad *c, const char *attr, long value );
+int cclassad_insert_long_long( struct cclassad *c, const char *attr, long long value );
 int cclassad_insert_bool( struct cclassad *c, const char *attr, int value );
 
 /*
@@ -98,6 +100,8 @@ int cclassad_evaluate_to_expr( struct cclassad *c, const char *expr, char **resu
 int cclassad_evaluate_to_string( struct cclassad *c, const char *expr, char **result );
 int cclassad_evaluate_to_double( struct cclassad *c, const char *expr, double *result );
 int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result );
+int cclassad_evaluate_to_long( struct cclassad *c, const char *expr, long *result );
+int cclassad_evaluate_to_long_long( struct cclassad *c, const char *expr, long long *result );
 int cclassad_evaluate_to_bool( struct cclassad *c, const char *expr, int *result );
 
 #ifdef __cplusplus
