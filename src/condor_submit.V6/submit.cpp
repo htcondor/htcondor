@@ -192,7 +192,7 @@ extern const int JOB_DEFERRAL_PREP_DEFAULT;
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
-List<char> extraLines;  // lines passed in via -a argument
+List<const char> extraLines;  // lines passed in via -a argument
 
 #define PROCVARSIZE	32
 BUCKET *ProcVars[ PROCVARSIZE ];
@@ -1382,7 +1382,7 @@ main( int argc, char *argv[] )
 	if (InteractiveJob &&  ClusterId != -1) {
 		char jobid[40];
 		int i,j,rval;
-		char* sshargs[15];
+		const char* sshargs[15];
 
 		for (i=0;i<15;i++) sshargs[i]=NULL; // init all points to NULL
 		i=0;
@@ -1404,7 +1404,7 @@ main( int argc, char *argv[] )
 		// direct access to the pseudo terminal. Since util functions like
 		// my_spawn, my_popen, my_system and friends all fork, we cannot use
 		// them. Since this is all specific to Unix anyhow, call exec directly.
-		rval = execvp("condor_ssh_to_job",sshargs);
+		rval = execvp("condor_ssh_to_job", const_cast<char *const*>(sshargs));
 		if (rval == -1 ) {
 			int savederr = errno;
 			fprintf( stderr, "ERROR: Failed to spawn condor_ssh_to_job" );
@@ -5955,6 +5955,7 @@ SetKillSig()
 int
 read_condor_file( FILE *fp )
 {
+	const char * cname;
 	char	*name, *value;
 	char	*ptr;
 	int		force = 0, queue_modifier = 0;
@@ -5974,8 +5975,8 @@ read_condor_file( FILE *fp )
 		// check if we've just seen a "queue" command and need to
 		// parse any extra lines passed in via -a first
 		if( justSeenQueue ) {
-			if( extraLines.Next( name ) ) {
-				name = strdup( name );
+			if( extraLines.Next( cname ) ) {
+				name = strdup( cname );
 				ExtraLineNo++;
 			}
 			else {
