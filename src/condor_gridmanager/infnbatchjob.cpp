@@ -25,6 +25,8 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "condor_config.h"
+#include "condor_transfer_request.h"
+#include "condor_version.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -46,9 +48,11 @@
 #define GM_START				12
 #define GM_POLL_ACTIVE			13
 #define GM_SAVE_SANDBOX_ID		14
-#define GM_TRANSFER_INPUT		15
-#define GM_TRANSFER_OUTPUT		16
-#define GM_DELETE_SANDBOX		17
+#define GM_TRANSFER_INPUT_BEGIN	15
+#define GM_TRANSFER_INPUT_FINISH	16
+#define GM_TRANSFER_OUTPUT_BEGIN	17
+#define GM_TRANSFER_OUTPUT_FINISH	18
+#define GM_DELETE_SANDBOX		19
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -66,8 +70,10 @@ static const char *GMStateNames[] = {
 	"GM_START",
 	"GM_POLL_ACTIVE",
 	"GM_SAVE_SANDBOX_ID",
-	"GM_TRANSFER_INPUT",
-	"GM_TRANSFER_OUTPUT",
+	"GM_TRANSFER_INPUT_BEGIN",
+	"GM_TRANSFER_INPUT_FINISH",
+	"GM_TRANSFER_OUTPUT_BEGIN",
+	"GM_TRANSFER_OUTPUT_FINISH",
 	"GM_DELETE_SANDBOX",
 };
 
@@ -84,9 +90,95 @@ static const char *GMStateNames[] = {
         procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
         func,error)
 
+class TDMgrMgr : public Service {
+public:
+	TdAction td_register_callback(TransferDaemon *);
+	TdAction td_reaper_callback(long, int, TransferDaemon *);
+
+	TransferDaemon *get_td( const char *name = NULL );
+
+	std::string m_err_msg;
+	TDMan td_mgr;
+};
+
+/* A callback notification from the TDMan object that we get when the
+ * registration of a transferd is complete and the transferd is considered
+ * open for business
+ */
+TdAction
+TDMgrMgr::td_register_callback(TransferDaemon *)
+{
+	dprintf(D_FULLDEBUG, "td_register_callback() called\n");
+
+	// TODO notify job objects waiting for transferd
+
+	return TD_ACTION_CONTINUE;
+}
+
+/* A callback notification from the TDMan object we get when the 
+ * transferd has died.
+ */
+TdAction
+TDMgrMgr::td_reaper_callback(long, int, TransferDaemon *)
+{
+	dprintf(D_FULLDEBUG, "td_reaper_callback() called\n");
+
+	// TODO Anything else we should do here?
+
+	return TD_ACTION_TERMINATE;
+}
+
+TDMgrMgr td_mgr_mgr;
+
+TransferDaemon*
+TDMgrMgr::get_td( const char *name )
+{
+	TransferDaemon *td = NULL;
+	if ( name == NULL ) {
+		name = myUserName;
+	}
+	td = td_mgr.find_td_by_user( name );
+	if ( td == NULL ) {
+		// No td found at all in any state, so start one.
+		MyString rand_id;
+		MyString desc;
+
+		// XXX fix this rand_id to be dealt with better, like maybe the tdman
+		// object assigns it or something.
+		rand_id.randomlyGenerateHex(64);
+		td = new TransferDaemon(name, rand_id, TD_PRE_INVOKED);
+		ASSERT(td != NULL);
+
+		// set up the default registration callback
+		desc = "Transferd Registration callback";
+		td->set_reg_callback(desc,
+			(TDRegisterCallback)
+			 	&TDMgrMgr::td_register_callback, &td_mgr_mgr);
+
+		// set up the default reaper callback
+		desc = "Transferd Reaper callback";
+		td->set_reaper_callback(desc,
+			(TDReaperCallback)
+				&TDMgrMgr::td_reaper_callback, &td_mgr_mgr);
+	
+		// Have the td manager object start this td up.
+		// XXX deal with failure here a bit better.
+		td_mgr.invoke_a_td(td);
+
+		// TODO Should have a backstop for if we can't get the transferd
+		//   running. We'd then notify all jobs.
+	}
+	if ( td->get_status() == TD_REGISTERED ) {
+		return td;
+	} else {
+		return NULL;
+	}
+}
 
 void INFNBatchJobInit()
 {
+		// The TDMan needs to register a cedar command
+	td_mgr_mgr.td_mgr.register_handlers();
 }
 
 void INFNBatchJobReconfig()
@@ -158,6 +250,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	pollNow = false;
 	myResource = NULL;
 	gahp = NULL;
+	m_xfer_gahp = NULL;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
 
@@ -241,6 +334,18 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
+	if ( gahp_args.Count() > 0 ) {
+		gahp_path = param( "TRANSFER_GAHP" );
+		if ( gahp_path == NULL ) {
+			sprintf( error_string, "TRANSFER_GAHP not defined" );
+			goto error_exit;
+		}
+
+		sprintf( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
+		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
+		free( gahp_path );
+	}
+
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
 														  gahp_args.GetArg(0) );
 	myResource->RegisterJob( this );
@@ -256,6 +361,13 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
+
+	ASSERT( gahp != NULL );
+	m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
+	m_xfer_gahp->setMode( GahpClient::normal );
+	// TODO: This can't be the normal gahp timeout value. Does it need to
+	//   be configurable?
+	m_xfer_gahp->setTimeout( 60*60 );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
@@ -296,6 +408,7 @@ INFNBatchJob::~INFNBatchJob()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
+	delete m_xfer_gahp;
 }
 
 void INFNBatchJob::Reconfig()
@@ -345,6 +458,34 @@ void INFNBatchJob::doEvaluateState()
 				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
+			}
+			if ( myResource->GahpIsRemote() ) {
+				// This job requires a transfer gahp
+				ASSERT( m_xfer_gahp );
+				if ( m_xfer_gahp->Startup() == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
+							 procID.cluster, procID.proc );
+
+					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start transfer GAHP" );
+					gmState = GM_HOLD;
+					break;
+				}
+				// This job requires a transferd
+				TransferDaemon *td = td_mgr_mgr.get_td();
+				if ( td == NULL ) {
+					if ( !td_mgr_mgr.m_err_msg.empty() ) {
+						std::string err;
+						sprintf( err, "Error starting transferd: %s",
+								 td_mgr_mgr.m_err_msg.c_str() );
+						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster,
+								 procID.proc, err.c_str() );
+						jobAd->Assign( ATTR_HOLD_REASON, err );
+						gmState = GM_HOLD;
+						break;
+					}
+					// Transferd isn't ready yet, but should be soon.
+					break;
+				}
 			}
 			if ( jobProxy ) {
 				if ( gahp->Initialize( jobProxy ) == false ) {
@@ -403,15 +544,50 @@ void INFNBatchJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
-			gmState = GM_TRANSFER_INPUT;
+			gmState = GM_TRANSFER_INPUT_BEGIN;
 		} break;
-		case GM_TRANSFER_INPUT: {
+		case GM_TRANSFER_INPUT_BEGIN: {
 			// Transfer input sandbox
-			// TODO implement
-			//   Construct TransferRequest(s)
-			//   Send requests to both sides
-			//   Wait for completion (maybe in another state)
-			gmState = GM_SUBMIT;
+			if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_SUBMIT;
+				break;
+			}
+			// First, send request to the local transferd
+			if ( !StartTransferRequest( true ) ) {
+				dprintf( D_ALWAYS, "(%d.%d) Failed to send transfer request to transferd: %s\n",
+						 procID.cluster, procID.proc, errorString.c_str() );
+				gmState = GM_HOLD;
+				break;
+			}
+			gmState = GM_TRANSFER_INPUT_FINISH;
+		} break;
+		case GM_TRANSFER_INPUT_FINISH: {
+			// Transfer input sandbox
+			// Now, send request to the remote transfer gahp
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			rc = m_xfer_gahp->blah_download_sandbox( gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_download_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_CLEAR_REQUEST;
+			} else {
+				gmState = GM_SUBMIT;
+			}
 		} break;
 		case GM_SUBMIT: {
 			// Start a new remote submission for this job.
@@ -471,7 +647,7 @@ void INFNBatchJob::doEvaluateState()
 							 gahp->getErrorString() );
 					errorString = gahp->getErrorString();
 					myResource->CancelSubmit( this );
-					gmState = GM_UNSUBMITTED;
+					gmState = GM_DELETE_SANDBOX;
 					reevaluate_state = true;
 				}
 				if ( job_id_string != NULL ) {
@@ -509,7 +685,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == COMPLETED ) {
-				gmState = GM_DONE_SAVE;
+				gmState = GM_TRANSFER_OUTPUT_BEGIN;
 			} else if ( remoteState == REMOVED ) {
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
@@ -585,13 +761,47 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 			}
 		} break;
-		case GM_TRANSFER_OUTPUT: {
+		case GM_TRANSFER_OUTPUT_BEGIN: {
+			if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_DONE_SAVE;
+				break;
+			}
 			// Transfer output sandbox
-			// TODO Implement
-			//   Construct TransferRequests
-			//   send request(s) to both ends
-			//   wait for completion (possible in another state)
-			gmState = GM_DONE_SAVE;
+			// First, send request to the local transferd
+			if ( !StartTransferRequest( false ) ) {
+				dprintf( D_ALWAYS, "(%d.%d) Failed to send transfer request to transferd: %s\n",
+						 procID.cluster, procID.proc, errorString.c_str() );
+				gmState = GM_HOLD;
+				break;
+			}
+			gmState = GM_TRANSFER_OUTPUT_FINISH;
+		} break;
+		case GM_TRANSFER_OUTPUT_FINISH: {
+			// Transfer output sandbox
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			rc = m_xfer_gahp->blah_upload_sandbox( gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_upload_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_DELETE_SANDBOX;
+			} else {
+				gmState = GM_DONE_SAVE;
+			}
 		} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
@@ -1118,6 +1328,13 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	return submit_ad;
 }
 
+ClassAd *INFNBatchJob::buildTransferAd()
+{
+	// TODO This will probably require some additional attributes
+	//   to be set.
+	return buildSubmitAd();
+}
+
 void INFNBatchJob::CreateSandboxId()
 {
 	// Build a name for the sandbox that will be unique to this job.
@@ -1145,4 +1362,102 @@ void INFNBatchJob::CreateSandboxId()
 	free( pool_name );
 
 	SetRemoteSandboxId( unique_id.c_str() );
+}
+
+bool INFNBatchJob::StartTransferRequest( bool is_input )
+{
+	int direction = is_input ? FTPD_DOWNLOAD : FTPD_UPLOAD;
+	MyString desc;
+	TransferDaemon *td = td_mgr_mgr.get_td();
+	ASSERT( td != NULL );
+
+	TransferRequest *treq = new TransferRequest();
+
+	// Set up the header which will get serialized to the transferd.
+	treq->set_direction( direction );
+	treq->set_used_constraint( false );
+	//  The transfer gahp's version should match our own
+	treq->set_peer_version( CondorVersion() );
+	treq->set_xfer_protocol( FTP_CFTP );
+	// TODO This next line may need to change...
+	treq->set_transfer_service("Passive");
+	treq->set_num_transfers( 1 );
+	treq->set_protocol_version( 0 ); // for the treq structure, not xfer protocol
+
+	// Set the callback handlers to work on this treq as it progresses through
+	// the process of going & comming back from the transferd.
+
+	// called just before the request is sent to the td itself.
+	// used to modify the jobads for starting of transfer time
+	desc = "Treq Upload Pre Push Callback Handler";
+	treq->set_pre_push_callback(desc,
+		(TreqPrePushCallback)&INFNBatchJob::TreqPrePushCb, this);
+
+	// called after the push and response from the schedd, gives schedd
+	// access to the treq capability string, the client was already
+	// notified.
+	desc = "Treq Upload Post Push Callback Handler";
+	treq->set_post_push_callback(desc,
+		(TreqPostPushCallback)&INFNBatchJob::TreqPostPushCb, this);
+
+	// called with an update status from the td about this request.
+	// (completed, not completed, etc, etc, etc)
+	// job ads are processed, job taken off hold, etc if a successful 
+	// completion had happend
+	desc = "Treq Upload update Callback Handler";
+	treq->set_update_callback(desc,
+		(TreqUpdateCallback)&INFNBatchJob::TreqUpdateCb, this);
+
+	// called when the td dies, if the td handles and updates and 
+	// everything correctly, this is not normally called.
+	desc = "Treq Upload Reaper Callback Handler";
+	treq->set_reaper_callback(desc,
+		(TreqReaperCallback)&INFNBatchJob::TreqReaperCb, this);
+
+	// The TransferRequest docs say it takes over management of the
+	// ClassAd pointer, but that appears to be lies.
+	treq->append_task( jobAd );
+
+	// queue the transfer request to the waiting td who will own the 
+	// transfer request memory which owns the socket.
+	td->add_transfer_request( treq );
+
+	// Push the request to the td itself, where the callbacks from the 
+	// transfer request will contact the client as needed.
+	td->push_transfer_requests();
+
+	return true;
+}
+
+TreqAction INFNBatchJob::TreqPrePushCb( TransferRequest*, TransferDaemon* )
+{
+	dprintf( D_FULLDEBUG, "(%d.%d) TreqPrePushCallback() called\n",
+			 procID.cluster, procID.proc );
+
+	return TREQ_ACTION_CONTINUE;
+}
+
+TreqAction INFNBatchJob::TreqPostPushCb( TransferRequest*, TransferDaemon* )
+{
+	dprintf( D_FULLDEBUG, "(%d.%d) TreqPostPushCallback() called\n",
+			 procID.cluster, procID.proc );
+
+	return TREQ_ACTION_CONTINUE;
+}
+
+TreqAction INFNBatchJob::TreqUpdateCb( TransferRequest*, TransferDaemon*,
+								   ClassAd * )
+{
+	dprintf( D_FULLDEBUG, "(%d.%d) TreqUpdateCallback() called\n",
+			 procID.cluster, procID.proc );
+
+	return TREQ_ACTION_TERMINATE;
+}
+
+TreqAction INFNBatchJob::TreqReaperCb( TransferRequest* )
+{
+	dprintf( D_FULLDEBUG, "(%d.%d) TreqReaperCallback() called\n",
+			 procID.cluster, procID.proc );
+
+	return TREQ_ACTION_TERMINATE;
 }
