@@ -249,6 +249,7 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 	     pRet = pTree->Copy();
 	  break;
 	  
+	  case EXPR_LIST_NODE:
 	  case CLASSAD_NODE:
 	    // for classads the values are already cached but we still should string space the name
 	    check_hit (pName, szValue);

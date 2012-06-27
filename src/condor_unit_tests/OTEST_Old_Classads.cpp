@@ -7637,11 +7637,11 @@ static bool test_nested_ads()
 	bool do_caching = true;
 
 	ad.InsertAttr( "A", 4 );
-	if ( !parser.ParseExpression( "[ Y = 1; Z = A; ]", tree ) ) {
+	if ( !parser.ParseExpression( "{ [ Y = 1; Z = A; ] }", tree ) ) {
 		FAIL;
 	}
 	ad.Insert( "B", tree, do_caching );
-	if ( !parser.ParseExpression( "B.Z", tree ) ) {
+	if ( !parser.ParseExpression( "B[0].Z", tree ) ) {
 		FAIL;
 	}
 	ad.Insert( "C", tree, do_caching );
