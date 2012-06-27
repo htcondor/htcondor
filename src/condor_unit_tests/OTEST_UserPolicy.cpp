@@ -174,7 +174,7 @@ static const char
 	"OnExitHold = true\n\t\tOnExitRemove = true\n\t\tJobStatus = 5",
 	*PERIODIC_REMOVE = 
 	"\tPeriodicHold = false\n\t\t"
-	"PeriodicRelease = false\n\t\tPeriodicRemove= true\n\t\t"
+	"PeriodicRelease = false\n\t\tPeriodicRemove = true\n\t\t"
 	"OnExitHold = true\n\t\tOnExitRemove = true\n\t\tJobStatus = 2",
 	*ON_EXIT_HOLD = 
 	"\tPeriodicHold = false\n\t\tPeriodicRemove = false\n\t\t"

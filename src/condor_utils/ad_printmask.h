@@ -94,6 +94,7 @@ class AttrListPrintMask
 	
 	// clear all formats
 	void clearFormats (void);
+	bool IsEmpty(void) { return formats.IsEmpty(); }
 
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *

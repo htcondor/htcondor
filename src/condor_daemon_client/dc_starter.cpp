@@ -103,14 +103,14 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 {
 	setCmdStr( "reconnectJob" );
 
-	MyString line;
+	std::string line;
 
 		// Add our own attributes to the request ad we're sending
 	line = ATTR_COMMAND;
 	line += "=\"";
 	line += getCommandString( CA_RECONNECT_JOB );
 	line += '"';
-	req->Insert( line.Value() );
+	req->Insert( line.c_str() );
 
 	return sendCACmd( req, reply, rsock, false, timeout, sec_session_id );
 	
@@ -348,9 +348,9 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	bool success = false;
 	result.LookupBool(ATTR_RESULT,success);
 	if( !success ) {
-		MyString remote_error_msg;
+		std::string remote_error_msg;
 		result.LookupString(ATTR_ERROR_STRING,remote_error_msg);
-		error_msg.sprintf("%s: %s",slot_name,remote_error_msg.Value());
+		error_msg.sprintf("%s: %s",slot_name,remote_error_msg.c_str());
 		retry_is_sensible = false;
 		result.LookupBool(ATTR_RETRY,retry_is_sensible);
 		return false;
@@ -358,12 +358,12 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 
 	result.LookupString(ATTR_REMOTE_USER,remote_user);
 
-	MyString public_server_key;
+	std::string public_server_key;
 	if( !result.LookupString(ATTR_SSH_PUBLIC_SERVER_KEY,public_server_key) ) {
 		error_msg = "No public ssh server key received in reply to START_SSHD";
 		return false;
 	}
-	MyString private_client_key;
+	std::string private_client_key;
 	if( !result.LookupString(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key) ) {
 		error_msg = "No ssh client key received in reply to START_SSHD";
 		return false;
@@ -373,7 +373,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 		// store the private client key
 	unsigned char *decode_buf = NULL;
 	int length = -1;
-	condor_base64_decode(private_client_key.Value(),&decode_buf,&length);
+	condor_base64_decode(private_client_key.c_str(),&decode_buf,&length);
 	if( !decode_buf ) {
 		error_msg = "Error decoding ssh client key.";
 		return false;
@@ -405,7 +405,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 
 		// store the public server key in the known_hosts file
 	length = -1;
-	condor_base64_decode(public_server_key.Value(),&decode_buf,&length);
+	condor_base64_decode(public_server_key.c_str(),&decode_buf,&length);
 	if( !decode_buf ) {
 		error_msg = "Error decoding ssh server key.";
 		return false;

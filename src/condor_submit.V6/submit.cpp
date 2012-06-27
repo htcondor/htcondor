@@ -82,7 +82,9 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 
+#include <algorithm>
 #include <string>
+#include <set>
 
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
@@ -131,7 +133,11 @@ int		Quiet = 1;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		JobDisableFileChecks = 0;
-int		SetDefaultMemoryUsage = 1;
+bool	RequestMemoryIsZero = false;
+bool	RequestDiskIsZero = false;
+bool	RequestCpusIsZeroOrOne = false;
+bool	already_warned_requirements_mem = false;
+bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -234,6 +240,8 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
+const string  RequestPrefix  = "request_";
+std::set<string> fixedReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -241,7 +249,8 @@ const char	*NotifyUser		= "notify_user";
 const char	*EmailAttributes = "email_attributes";
 const char	*ExitRequirements = "exit_requirements";
 const char	*UserLogFile	= "log";
-const char    *UseLogUseXML   = "log_xml";
+const char	*UseLogUseXML	= "log_xml";
+const char	*DagmanLogFile	= "dagman_log";
 const char	*CoreSize		= "coresize";
 const char	*NiceUser		= "nice_user";
 
@@ -256,6 +265,7 @@ const char	*KeystoreFile = "keystore_file";
 const char	*KeystoreAlias = "keystore_alias";
 const char	*KeystorePassphraseFile = "keystore_passphrase_file";
 const char  *CreamAttributes = "cream_attributes";
+const char  *BatchQueue = "batch_queue";
 
 const char	*FileRemaps = "file_remaps";
 const char	*BufferFiles = "buffer_files";
@@ -396,6 +406,7 @@ const char* EC2TagNames = "ec2_tag_names";
 const char* DeltacloudUsername = "deltacloud_username";
 const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
+const char* DeltacloudInstanceName = "deltacloud_instance_name";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
 const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
@@ -426,6 +437,7 @@ void 	SetExecutable();
 void 	SetUniverse();
 void	SetMachineCount();
 void 	SetImageSize();
+void    SetRequestResources();
 int64_t	calc_image_size_kb( const char *name);
 int 	find_cmd( char *name );
 char *	get_tok();
@@ -1334,6 +1346,7 @@ main( int argc, char *argv[] )
 				}
 			}
 		}
+        hash_iter_delete(&it);
 		
 	}
 
@@ -2104,6 +2117,7 @@ SetMachineCount()
 		InsertJobExpr (buffer);
 
 		request_cpus = 1;
+		RequestCpusIsZeroOrOne = true;
 	} else {
 		mach_count = condor_param( MachineCount, "MachineCount" );
 		if( mach_count ) { 
@@ -2120,22 +2134,35 @@ SetMachineCount()
 			InsertJobExpr (buffer);
 
 			request_cpus = tmp;
+			RequestCpusIsZeroOrOne = (request_cpus == 0 || request_cpus == 1);
 		}
 	}
 
 	if ((mach_count = condor_param(RequestCpus, ATTR_REQUEST_CPUS))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		if (MATCH == strcasecmp(mach_count, "undefined")) {
+			RequestCpusIsZeroOrOne = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+			InsertJobExpr(buffer);
+			RequestCpusIsZeroOrOne = ((MATCH == strcmp(mach_count, "0")) || (MATCH == strcmp(mach_count, "1")));
+		}
 		free(mach_count);
 	} else 
 	if (request_cpus > 0) {
 		buffer.sprintf("%s = %d", ATTR_REQUEST_CPUS, request_cpus);
+		InsertJobExpr(buffer);
 	} else 
 	if ((mach_count = param("JOB_DEFAULT_REQUESTCPUS"))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+		if (MATCH == strcasecmp(mach_count, "undefined")) {
+			RequestCpusIsZeroOrOne = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_CPUS, mach_count);
+			InsertJobExpr(buffer);
+			RequestCpusIsZeroOrOne = ((MATCH == strcmp(mach_count, "0")) || (MATCH == strcmp(mach_count, "1")));
+		}
 		free(mach_count);
 	}
 
-	InsertJobExpr(buffer);
 }
 
 struct SimpleExprInfo {
@@ -2310,6 +2337,9 @@ SetImageSize()
 		int64_t req_memory_mb = 0;
 		if (parse_int64_bytes(tmp, req_memory_mb, 1024*1024)) {
 			buffer.sprintf("%s = %"PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
+			RequestMemoryIsZero = (req_memory_mb == 0);
+		} else if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestMemoryIsZero = true;
 		} else {
 			buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		}
@@ -2321,9 +2351,14 @@ SetImageSize()
 		free(tmp);
 		InsertJobExpr(buffer);
 	} else if ( (tmp = param("JOB_DEFAULT_REQUESTMEMORY")) ) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+		if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestMemoryIsZero = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
+			RequestMemoryIsZero = (MATCH == strcmp(tmp, "0"));
+			InsertJobExpr(buffer);
+		}
 		free(tmp);
-		InsertJobExpr(buffer);
 	}
 
 	// set an initial value for RequestDisk
@@ -2334,15 +2369,23 @@ SetImageSize()
 		int64_t req_disk_kb = 0;
 		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
 			buffer.sprintf("%s = %"PRId64, ATTR_REQUEST_DISK, req_disk_kb);
+			RequestDiskIsZero = (req_disk_kb == 0);
+		} else if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestDiskIsZero = true;
 		} else {
 			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
 		}
 		free(tmp);
 		InsertJobExpr(buffer);
 	} else if ( (tmp = param("JOB_DEFAULT_REQUESTDISK")) ) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+		if (MATCH == strcasecmp(tmp,"undefined")) {
+			RequestDiskIsZero = true;
+		} else {
+			buffer.sprintf("%s = %s", ATTR_REQUEST_DISK, tmp);
+			RequestDiskIsZero = (MATCH == strcmp(tmp, "0"));
+			InsertJobExpr(buffer);
+		}
 		free(tmp);
-		InsertJobExpr(buffer);
 	}
 	
 }
@@ -2392,6 +2435,32 @@ void SetFileOptions()
 	InsertJobExpr(strbuffer.Value());
 	free(tmp);
 }
+
+
+void SetRequestResources() {
+    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    for (;  !hash_iter_done(it);  hash_iter_next(it)) {
+        string key = hash_iter_key(it);
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        // if key is not of form "request_xxx", ignore it:
+        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
+        // those have their own special handling:
+        if (fixedReqRes.count(key) > 0) continue;
+        string rname = key.substr(RequestPrefix.length());
+        // resource name should be nonempty
+        if (rname.size() <= 0) continue;
+        // CamelCase it!
+        *(rname.begin()) = toupper(*(rname.begin()));
+        // could get this from 'it', but this prevents unused-line warnings:
+        string val = condor_param(key.c_str());
+        string assign;
+        sprintf(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        InsertJobExpr(assign.c_str()); 
+    }
+    hash_iter_delete(&it);
+}
+
 
 
 /*
@@ -4807,58 +4876,69 @@ check_iwd( char const *iwd )
 void
 SetUserLog()
 {
-	char *ulog_entry = condor_param( UserLogFile, ATTR_ULOG_FILE );
-	MyString buffer;
+	static const char* submit_names[] = { UserLogFile, DagmanLogFile, 0 };
+	static const char* jobad_attribute_names[] = { ATTR_ULOG_FILE, ATTR_DAGMAN_WORKFLOW_LOG, 0 };
+	for(const char** p = &submit_names[0], **q = &jobad_attribute_names[0];
+			*p && *q; ++p, ++q) {
+		char *ulog_entry = condor_param( *p, *q );
 
-	if (ulog_entry) {
-		
-		MyString ulog = full_path(ulog_entry);
+		if(ulog_entry) {
+			std::string buffer;
+			std::string current_userlog(ulog_entry);
+			const char* ulog_pcc = full_path(current_userlog.c_str());
+			if(ulog_pcc) {
+				std::string ulog(ulog_pcc);
+				if ( !DumpClassAdToFile ) {
+					// check that the log is a valid path
+					if ( !DisableFileChecks ) {
+						FILE* test = safe_fopen_wrapper_follow(ulog.c_str(), "a+", 0664);
+						if (!test) {
+							fprintf(stderr,
+									"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.c_str(),
+									strerror(errno));
+							exit( 1 );
+						} else {
+							fclose(test);
+						}
+					}
 
-		if ( !DumpClassAdToFile ) {
-			
-			free(ulog_entry);
+					// Check that the log file isn't on NFS
+					BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
+					BOOLEAN	nfs = FALSE;
 
-			// check that the log is a valid path
-			if ( !DisableFileChecks ) {
-				FILE* test = safe_fopen_wrapper_follow(ulog.Value(), "a+", 0664);
-				if (!test) {
-					fprintf(stderr,
-						"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
-						strerror(errno));
-					exit( 1 );
-				} else {
-					fclose(test);
+					if ( nfs_is_error ) {
+						if ( fs_detect_nfs( ulog.c_str(), &nfs ) != 0 ) {
+							fprintf(stderr,
+									"\nWARNING: Can't determine whether log file %s is on NFS\n",
+									ulog.c_str() );
+						} else if ( nfs ) {
+
+							fprintf(stderr,
+									"\nERROR: Log file %s is on NFS.\nThis could cause"
+									" log file corruption. Condor has been configured to"
+									" prohibit log files on NFS.\n",
+									ulog.c_str() );
+
+							DoCleanup(0,0,NULL);
+							exit( 1 );
+
+						}
+					}
 				}
+
+				MyString mulog(ulog.c_str());
+				check_and_universalize_path(mulog);
+				buffer += mulog.Value();
+				UserLogSpecified = true;
 			}
-
-			// Check that the log file isn't on NFS
-			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
-			BOOLEAN	nfs = FALSE;
-
-			if ( nfs_is_error ) {
-				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-					fprintf(stderr,
-						"\nWARNING: Can't determine whether log file %s is on NFS\n",
-						ulog.Value() );
-				} else if ( nfs ) {
-
-					fprintf(stderr,
-						"\nERROR: Log file %s is on NFS.\nThis could cause"
-						" log file corruption. Condor has been configured to"
-						" prohibit log files on NFS.\n",
-						ulog.Value() );
-
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-
-				} 
-			}
+			std::string logExpr(*q);
+			logExpr += " = ";
+			logExpr += "\"";
+			logExpr += buffer;
+			logExpr += "\"";
+			InsertJobExpr(logExpr.c_str());
+			free(ulog_entry);
 		}
-
-		check_and_universalize_path(ulog);
-		buffer.sprintf( "%s = \"%s\"", ATTR_ULOG_FILE, ulog.Value());
-		InsertJobExpr(buffer);
-		UserLogSpecified = true;
 	}
 }
 
@@ -5108,6 +5188,11 @@ SetGridParams()
 
 	if( (tmp = condor_param(CreamAttributes, ATTR_CREAM_ATTRIBUTES)) ) {
 		InsertJobExprString ( ATTR_CREAM_ATTRIBUTES, tmp );
+		free( tmp );
+	}
+
+	if( (tmp = condor_param(BatchQueue, ATTR_BATCH_QUEUE)) ) {
+		InsertJobExprString ( ATTR_BATCH_QUEUE, tmp );
 		free( tmp );
 	}
 
@@ -5437,12 +5522,20 @@ SetGridParams()
 		exit( 1 );
 	}
 
+	bool bInstanceName=false;
+	if( (tmp = condor_param( DeltacloudInstanceName, ATTR_DELTACLOUD_INSTANCE_NAME )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_INSTANCE_NAME, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		bInstanceName = true;
+	}
+	
 	if ( (tmp = condor_param( DeltacloudImageId, ATTR_DELTACLOUD_IMAGE_ID )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_IMAGE_ID, tmp );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudImageId );
+	} else if ( JobGridType && !bInstanceName && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" or \"%s\" parameters\n", DeltacloudImageId, DeltacloudInstanceName );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
@@ -6238,6 +6331,7 @@ queue(int num)
         SetLoadProfile();
 		SetPerFileEncryption();  // must be called _before_ SetRequirements()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
+        SetRequestResources();
 
 		SetSimpleJobExprs();
 
@@ -6396,6 +6490,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_opsys = false;
 	bool	checks_arch = false;
 	bool	checks_disk = false;
+	bool	checks_cpus = false;
 	bool	checks_mem = false;
 	//bool	checks_reqmem = false;
 	bool	checks_fsdomain = false;
@@ -6477,6 +6572,7 @@ check_requirements( char const *orig, MyString &answer )
 	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
 	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS );
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
+	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
 #if defined(WIN32)
 	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
@@ -6578,7 +6674,9 @@ check_requirements( char const *orig, MyString &answer )
 
 	if( !checks_disk ) {
 		if (job->Lookup(ATTR_REQUEST_DISK)) {
-			answer += " && (TARGET.Disk >= RequestDisk)";
+			if ( ! RequestDiskIsZero) {
+				answer += " && (TARGET.Disk >= RequestDisk)";
+			}
 		}
 		else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 			// VM universe uses Total Disk 
@@ -6589,13 +6687,16 @@ check_requirements( char const *orig, MyString &answer )
 		}
 	} else {
 		if (JobUniverse != CONDOR_UNIVERSE_VM) {
-			if (job->Lookup(ATTR_REQUEST_DISK)) {
+			if ( ! RequestDiskIsZero && job->Lookup(ATTR_REQUEST_DISK)) {
 				answer += " && (TARGET.Disk >= RequestDisk)";
 			}
-			fprintf(stderr, 
-					"\nWARNING: Your Requirements expression refers to TARGET.Disk. "
-					"This is obsolete. Set request_disk and condor_submit will modify the "
-					"Requirements expression as needed.\n");
+			if ( ! already_warned_requirements_disk && param_boolean("ENABLE_DEPRECATION_WARNINGS", false)) {
+				fprintf(stderr, 
+						"\nWARNING: Your Requirements expression refers to TARGET.Disk. "
+						"This is obsolete. Set request_disk and condor_submit will modify the "
+						"Requirements expression as needed.\n");
+				already_warned_requirements_disk = true;
+			}
 		}
 	}
 
@@ -6603,14 +6704,17 @@ check_requirements( char const *orig, MyString &answer )
 		// The memory requirement for VM universe will be 
 		// added in SetVMRequirements 
 #if 1
-		if (job->Lookup(ATTR_REQUEST_MEMORY)) {
+		if ( ! RequestMemoryIsZero && job->Lookup(ATTR_REQUEST_MEMORY)) {
 			answer += " && (TARGET.Memory >= RequestMemory)";
 		}
 		if (checks_mem) {
-			fprintf(stderr, 
-					"\nWARNING: your Requirements expression refers to TARGET.Memory. "
-					"This is obsolete. Set request_memory and condor_submit will modify the "
-					"Requirements expression as needed.\n");
+			if ( ! already_warned_requirements_mem && param_boolean("ENABLE_DEPRECATION_WARNINGS", false)) {
+				fprintf(stderr, 
+						"\nWARNING: your Requirements expression refers to TARGET.Memory. "
+						"This is obsolete. Set request_memory and condor_submit will modify the "
+						"Requirements expression as needed.\n");
+				already_warned_requirements_mem = true;
+			}
 		}
 #else
 		if ( !checks_mem ) {
@@ -6621,6 +6725,33 @@ check_requirements( char const *orig, MyString &answer )
 		}
 #endif
 	}
+
+	if ( JobUniverse != CONDOR_UNIVERSE_GRID ) {
+		if ( ! checks_cpus && ! RequestCpusIsZeroOrOne && job->Lookup(ATTR_REQUEST_CPUS)) {
+			answer += " && (TARGET.Cpus >= RequestCpus)";
+		}
+	}
+
+    // identify any custom pslot resource reqs and add them in:
+    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    for (;  !hash_iter_done(it);  hash_iter_next(it)) {
+        string key = hash_iter_key(it);
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        // if key is not of form "request_xxx", ignore it:
+        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
+        // those have their own special handling:
+        if (fixedReqRes.count(key) > 0) continue;
+        string rname = key.substr(RequestPrefix.length());
+        // resource name should be nonempty
+        if (rname.size() <= 0) continue;
+        // CamelCase it!
+        *(rname.begin()) = toupper(*(rname.begin()));
+        string clause;
+        sprintf(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+        answer += clause;
+    }
+    hash_iter_delete(&it);
 
 	if( HasTDP && !checks_tdp ) {
 		answer += " && (TARGET.";
@@ -7063,6 +7194,12 @@ init_params()
 	WarnOnUnusedMacros =
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
 							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
+
+    // the special "fixed" request_xxx forms
+    fixedReqRes.clear();
+    fixedReqRes.insert(RequestCpus);
+    fixedReqRes.insert(RequestMemory);
+    fixedReqRes.insert(RequestDisk);
 }
 
 int

@@ -59,89 +59,6 @@ typedef enum {
 	TargetScheddAttrs
 } TargetAdType;
 
-// This enum is lifted directly from old ClassAds.
-typedef enum
-{
-  // Literals
-  LX_VARIABLE,
-  LX_INTEGER,
-  LX_FLOAT,
-  LX_STRING,
-  LX_BOOL,
-  LX_NULL,
-  LX_UNDEFINED,
-  LX_ERROR,
-
-  // Operators
-  LX_ASSIGN,
-  LX_AGGADD,
-  LX_AGGEQ,
-  LX_AND,
-  LX_OR,
-  LX_LPAREN,
-  LX_RPAREN,
-  LX_MACRO,
-  LX_META_EQ,
-  LX_META_NEQ,
-  LX_EQ,
-  LX_NEQ,
-  LX_LT,
-  LX_LE,
-  LX_GT,
-  LX_GE,
-  LX_ADD,
-  LX_SUB,
-  LX_MULT,
-  LX_DIV,
-  LX_EOF,
-
-  LX_EXPR,
-
-  LX_TIME,
-
-  LX_FUNCTION,
-  LX_SEMICOLON,
-  LX_COMMA,
-
-  NOT_KEYWORD
-} LexemeType;
-
-// This class is lifted directly from old ClassAds for EvalExprTree()
-class EvalResult
-{
-    public :
-
-    EvalResult();
-  	~EvalResult();
-
-		/// copy constructor
-	EvalResult(const EvalResult & copyfrom);
-		/// assignment operator
-	EvalResult & operator=(const EvalResult & rhs);
-
-		// free storage and reset to undefined value
-	void clear();
-
-	void fPrintResult(FILE *); // for debugging
-
-		/// convert to LX_STRING
-		/// if value is ERROR or UNDEFINED, do not convert unless force=true
-	void toString(bool force=false);
-
-   	union
-    	{
-   	    int i;
-   	    float f;
-   	    char* s;
-        };
-  	LexemeType type;
-
-	bool debug;
-
-	private :
-	void deepcopy(const EvalResult & copyfrom);
-};
-
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -163,21 +80,14 @@ class ClassAd : public classad::ClassAd
 		 * our own Insert() below, our parent's Insert() won't be found
 		 * by users of this class.
 		 */
-	bool Insert( const std::string &attrName, classad::ExprTree *expr );
+	bool Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache = true );
 
-	int Insert(const char *name, classad::ExprTree *expr );
+	int Insert(const char *name, classad::ExprTree *& expr, bool bCache = true );
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
 		 */
 	int Insert(const char *str);
-
-		/** This function should never be used.  Use Insert(char const *str)
-		 *  instead.  The second bool argument is deprecated but necessary to
-		 *  prevent implicit casting of false to NULL and therefore
-		 *  calling of the totally wrong Insert() method!
-		 */
-	int Insert(const char *str,bool unused);
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param expr A string of the form "Attribute = Value"
@@ -356,6 +266,14 @@ class ClassAd : public classad::ClassAd
 		value = ival;
 		return result;
 	}
+#if ! defined classad_int64_is_long
+	int EvalInteger (const char *name, classad::ClassAd *target, long & value) {
+		int ival;
+		int result = EvalInteger(name, target, ival);  // TJ: fix for int64 classad
+		value = ival;
+		return result;
+	}
+#endif
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute

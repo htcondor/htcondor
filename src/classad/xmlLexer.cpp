@@ -66,6 +66,7 @@ struct entity entities[] =
 XMLLexer::Token::
 Token()
 {
+	ClearToken();
 	return;
 }
 
@@ -212,6 +213,15 @@ GrabToken(void)
 	bool have_token;
 	bool have_character;
 	int  character;
+	bool in_string_tag = false;
+
+	// If the previous token was a starting string tag, then we don't
+	// want to skip whitespace.
+	if ( current_token.token_type == tokenType_Tag &&
+		 current_token.tag_type == tagType_Start &&
+		 current_token.tag_id == tagID_String ) {
+		in_string_tag = true;
+	}
 
 	current_token.ClearToken();
 	have_character = false;
@@ -222,7 +232,7 @@ GrabToken(void)
 	// whitespace, because we keep whitespace in strings.
 	while (!lexer_source->AtEnd()) {
 		character = lexer_source->ReadCharacter();
-		if (!isspace(character)) {
+		if (in_string_tag || !isspace(character)) {
 			have_character = true;
 			break;
 		}
@@ -408,11 +418,9 @@ BreakdownTag(const char *complete_tag)
 bool XMLLexer::
 GrabText(void)
 {
-	bool have_token;
-	bool have_nonspace;
+	bool have_token = false;
 
 	current_token.token_type = tokenType_Text;
-	have_nonspace = false;
 	current_token.text = "";
 
 	while (!lexer_source->AtEnd()) {
@@ -423,9 +431,9 @@ GrabText(void)
 			lexer_source->UnreadCharacter();
 			break;
 		} else {
-			if (character == '&') {
+			have_token = true;
 
-				have_nonspace = true;
+			if (character == '&') {
 
 				// Figure out if this is an entity. If it is, figure
 				// out what character should actually be put into the text;
@@ -470,20 +478,10 @@ GrabText(void)
 				}
 			} else {
 				current_token.text += character;
-				if (!isspace(character)) {
-					have_nonspace = true;
-				}
 			}
 		}
 	}
 	
-	if (!have_nonspace) {
-		// We know that we're at the end of the buffer, because
-		// otherwise GrabTag would have been called.
-		have_token = false;
-	} else {
-		have_token = true;
-	}
 	return have_token;
 }
 

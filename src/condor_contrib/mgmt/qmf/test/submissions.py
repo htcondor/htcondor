@@ -39,6 +39,7 @@ except:
 print "Current Submissions:"
 for submission in submissions:
 	print " ", submission.Name
+	print "  Qdate = %s" % submission.QDate
 	print "\tCompleted =\t%s" % submission.Completed
 	print "\tHeld\t=\t%s" % submission.Held
 	print "\tIdle\t=\t%s" % submission.Idle

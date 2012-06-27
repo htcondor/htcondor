@@ -46,6 +46,7 @@ extern const char * const  ATTR_AVAIL_TIME_ESTIMATE;
 extern const char * const  ATTR_BANDWIDTH_TO_SUBMIT_MACHINE;
 extern const char * const  ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER;
 extern const char * const  ATTR_BANDWIDTH_TO_CKPT_SERVER;
+extern const char * const  ATTR_BATCH_QUEUE;
 extern const char * const  ATTR_BUFFER_SIZE;
 extern const char * const  ATTR_BUFFER_FILES;
 extern const char * const  ATTR_BUFFER_BLOCK_SIZE;
@@ -79,6 +80,7 @@ extern const char * const  ATTR_AUTO_CLUSTER_ID;
 extern const char * const  ATTR_AUTO_CLUSTER_ATTRS;
 extern const char * const  ATTR_COMPLETION_DATE;
 extern const char * const  ATTR_MATCHED_CONCURRENCY_LIMITS;
+extern const char * const  ATTR_MATCHED_PSG;
 extern const char * const  ATTR_CONCURRENCY_LIMITS;
 extern const char * const  ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
@@ -110,12 +112,15 @@ extern const char * const  ATTR_DAEMON_START_TIME;
 extern const char * const  ATTR_DAEMON_SHUTDOWN;
 extern const char * const  ATTR_DAEMON_SHUTDOWN_FAST;
 extern const char * const  ATTR_DAG_NODE_NAME;
+extern const char * const  ATTR_DAGMAN_WORKFLOW_LOG;
 extern const char * const  ATTR_DAG_NODE_NAME_ALT;
 extern const char * const  ATTR_DAGMAN_JOB_ID;
 extern const char * const  ATTR_DEFERRAL_OFFSET;
 extern const char * const  ATTR_DEFERRAL_PREP_TIME;
 extern const char * const  ATTR_DEFERRAL_TIME;
 extern const char * const  ATTR_DEFERRAL_WINDOW;
+//--------------------------------------------------------------------
+// Deltacloud attributes
 extern const char * const  ATTR_DELTACLOUD_AVAILABLE_ACTIONS;
 extern const char * const  ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES;
 extern const char * const  ATTR_DELTACLOUD_PROVIDER_ID;
@@ -124,6 +129,7 @@ extern const char * const  ATTR_DELTACLOUD_RETRY_TIMEOUT;
 extern const char * const  ATTR_DELTACLOUD_USERNAME;
 extern const char * const  ATTR_DELTACLOUD_PASSWORD_FILE;
 extern const char * const  ATTR_DELTACLOUD_IMAGE_ID;
+extern const char * const  ATTR_DELTACLOUD_INSTANCE_NAME;
 extern const char * const  ATTR_DELTACLOUD_REALM_ID;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU;
@@ -132,6 +138,7 @@ extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE;
 extern const char * const  ATTR_DELTACLOUD_KEYNAME;
 extern const char * const  ATTR_DELTACLOUD_USER_DATA;
 extern const char * const  ATTR_DELTACLOUD_NEEDS_START;
+//--------------------------------------------------------------------
 extern const char * const  ATTR_DESTINATION;
 extern const char * const  ATTR_DISK;
 extern const char * const  ATTR_DISK_USAGE;
@@ -364,6 +371,7 @@ extern const char * const  ATTR_LAST_REJ_MATCH_REASON;
 extern const char * const  ATTR_LAST_PERIODIC_CHECKPOINT;
 extern const char * const  ATTR_LAST_RELEASE_REASON;
 extern const char * const  ATTR_LAST_REMOTE_HOST;
+extern const char * const  ATTR_LAST_REMOTE_POOL;
 extern const char * const  ATTR_LAST_REMOTE_STATUS_UPDATE;
 extern const char * const  ATTR_LAST_UPDATE;
 extern const char * const  ATTR_LOCAL_CREDD;
@@ -478,6 +486,8 @@ extern const char * const  ATTR_REMOVE_KILL_SIG;
 extern const char * const  ATTR_REMOVE_REASON;
 extern const char * const  ATTR_REQUEUE_REASON;
 extern const char * const  ATTR_REQUIREMENTS;
+extern const char * const  ATTR_SLOT_TYPE;
+extern const char * const  ATTR_SLOT_TYPE_ID;
 extern const char * const  ATTR_SLOT_WEIGHT;
 extern const char * const  ATTR_RESULT;
 extern const char * const  ATTR_RSC_BYTES_SENT;
@@ -837,6 +847,13 @@ extern const char * const ATTR_REQUEST_CPUS;
 extern const char * const ATTR_REQUEST_MEMORY;
 extern const char * const ATTR_REQUEST_DISK;
 
+// machine resource prefixes
+extern const char * const ATTR_REQUEST_PREFIX;
+extern const char * const ATTR_DETECTED_PREFIX;
+extern const char * const ATTR_TOTAL_PREFIX;
+extern const char * const ATTR_TOTAL_SLOT_PREFIX;
+extern const char * const ATTR_MACHINE_RESOURCES;
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the
@@ -948,6 +965,8 @@ extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
 extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
 extern const char* const ATTR_SORT_EXPR;
 extern const char* const ATTR_SORT_EXPR_STRING;
+
+extern const char* const ATTR_QUERY_EXPIRES;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

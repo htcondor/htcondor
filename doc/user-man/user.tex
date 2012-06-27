@@ -1303,6 +1303,73 @@ The complete submit description file for this example:
   Queue 
 \end{verbatim}
 
+
+%%%%%%%%%%%% 
+\subsubsection{Vanilla Universe Example for Execution on Differing Operating Systems} 
+%%%%%%%%%%%%
+
+The addition of several related OpSys attributes assists in selection of specific operating systems and versions in heterogeneous pools.
+
+
+\begin{verbatim}
+  ####################
+  #
+  # Example of submission targeting RedHat platforms in a heterogeneous Linux pool
+  #
+  ####################
+
+  universe     = vanilla
+  Executable   = /bin/date
+  Log          = distro.log
+  Output       = distro.out
+  Error        = distro.err
+
+  Requirements = (OpSysName == "RedHat")
+
+  Queue
+\end{verbatim}
+
+
+\begin{verbatim}
+  ####################
+  #
+  # Example of submission targeting RedHat 6 platforms in a heterogeneous Linux pool
+  #
+  ####################
+
+  universe     = vanilla
+  Executable   = /bin/date
+  Log          = distro.log
+  Output       = distro.out
+  Error        = distro.err
+
+  Requirements = ( OpSysName == "RedHat" && OpSysMajorVersion == 6)
+
+  Queue
+\end{verbatim}
+
+
+Here is a more compact way to specify a RedHat 6 platform.
+
+\begin{verbatim}
+  ####################
+  #
+  # Example of submission targeting RedHat 6 platforms in a heterogeneous Linux pool
+  #
+  ####################
+
+  universe     = vanilla
+  Executable   = /bin/date
+  Log          = distro.log
+  Output       = distro.out
+  Error        = distro.err
+
+  Requirements = ( OpSysAndVer == "RedHat6")
+
+  Queue
+\end{verbatim}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Managing a Job}
 \input{user-man/managing.tex}
@@ -1478,11 +1545,6 @@ the usual method to nicely terminate a Unix program.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\input{user-man/stork.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/logview.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

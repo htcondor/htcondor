@@ -110,6 +110,7 @@ const char * const ATTR_AVAIL_TIME_ESTIMATE		 = "AvailTimeEstimate";
 const char * const ATTR_BANDWIDTH_TO_SUBMIT_MACHINE= "BandwidthToSubmitMachine";
 const char * const ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER= "BandwidthToLastCkptServer";
 const char * const ATTR_BANDWIDTH_TO_CKPT_SERVER = "BandwidthToCkptServer";
+const char * const ATTR_BATCH_QUEUE				 = "BatchQueue";
 const char * const ATTR_BUFFER_SIZE				 = "BufferSize";
 const char * const ATTR_BUFFER_FILES				 = "BufferFiles";
 const char * const ATTR_BUFFER_BLOCK_SIZE		 = "BufferBlockSize";
@@ -142,6 +143,7 @@ const char * const ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char * const ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char * const ATTR_COMPLETION_DATE			 = "CompletionDate";
 const char * const ATTR_MATCHED_CONCURRENCY_LIMITS = "MatchedConcurrencyLimits";
+const char * const ATTR_MATCHED_PSG 			 = "Matched_PSG";
 const char * const ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
 const char * const ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
@@ -175,6 +177,7 @@ const char * const ATTR_DAEMON_SHUTDOWN_FAST	 = "DaemonShutdownFast";
 const char * const ATTR_DAG_NODE_NAME			 = "DAGNodeName";
 const char * const ATTR_DAG_NODE_NAME_ALT		 = "dag_node_name";
 const char * const ATTR_DAGMAN_JOB_ID			 = "DAGManJobId";
+const char * const ATTR_DAGMAN_WORKFLOW_LOG		 = "DAGManNodesLog";
 const char * const ATTR_DEFERRAL_OFFSET			 = "DeferralOffset";
 const char * const ATTR_DEFERRAL_PREP_TIME		 = "DeferralPrepTime";
 const char * const ATTR_DEFERRAL_TIME			 = "DeferralTime";
@@ -187,6 +190,7 @@ const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
 const char * const ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
 const char * const ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
 const char * const ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
+const char * const ATTR_DELTACLOUD_INSTANCE_NAME	 = "DeltacloudInstanceName";
 const char * const ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
 const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
 const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
@@ -430,6 +434,7 @@ const char * const ATTR_LAST_REJ_MATCH_REASON	 = "LastRejMatchReason";
 const char * const ATTR_LAST_PERIODIC_CHECKPOINT = "LastPeriodicCheckpoint";
 const char * const ATTR_LAST_RELEASE_REASON      = "LastReleaseReason";
 const char * const ATTR_LAST_REMOTE_HOST		 = "LastRemoteHost";
+const char * const ATTR_LAST_REMOTE_POOL		 = "LastRemotePool";
 const char * const ATTR_LAST_REMOTE_STATUS_UPDATE = "LastRemoteStatusUpdate";
 const char * const ATTR_LAST_UPDATE				 = "LastUpdate";
 const char * const ATTR_LOCAL_CREDD              = "LocalCredd";
@@ -541,6 +546,8 @@ const char * const ATTR_REMOVE_KILL_SIG          = "RemoveKillSig";
 const char * const ATTR_REMOVE_REASON            = "RemoveReason";
 const char * const ATTR_REQUEUE_REASON           = "RequeueReason";
 const char * const ATTR_REQUIREMENTS             = "Requirements";
+const char * const ATTR_SLOT_TYPE                = "SlotType";
+const char * const ATTR_SLOT_TYPE_ID             = "SlotTypeID";
 const char * const ATTR_SLOT_WEIGHT              = "SlotWeight";
 const char * const ATTR_RESULT                   = "Result";
 const char * const ATTR_RSC_BYTES_SENT			 = "RSCBytesSent";
@@ -876,6 +883,13 @@ const char * const ATTR_REQUEST_CPUS = "RequestCpus";
 const char * const ATTR_REQUEST_MEMORY = "RequestMemory";
 const char * const ATTR_REQUEST_DISK = "RequestDisk";
 
+// machine resource prefixes
+const char * const ATTR_REQUEST_PREFIX = "Request";
+const char * const ATTR_DETECTED_PREFIX = "Detected";
+const char * const ATTR_TOTAL_PREFIX = "Total";
+const char * const ATTR_TOTAL_SLOT_PREFIX = "TotalSlot";
+const char * const ATTR_MACHINE_RESOURCES = "MachineResources";
+
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
 const char * const MANAGED_EXTERNAL				 = "External";
@@ -1001,3 +1015,5 @@ const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";
 const char* const ATTR_GROUP_RESOURCES_IN_USE = "GroupResourcesInUse";
 const char* const ATTR_SORT_EXPR = "SortExpr";
 const char* const ATTR_SORT_EXPR_STRING = "SortExprString";
+
+const char* const ATTR_QUERY_EXPIRES = "Expires";

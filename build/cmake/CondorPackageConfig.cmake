@@ -22,7 +22,7 @@
 ##
 ## Start with the common section.
 ##################################################################
-set (PACKAGE_REVISION "1")
+set (PACKAGE_REVISION "${BUILDID}")
 set (CPACK_PACKAGE_NAME ${PACKAGE_NAME})
 set (CPACK_PACKAGE_VENDOR "Condor Team - University of Wisconsin Madison")
 set (CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})

@@ -17,12 +17,10 @@
  ###############################################################
 
 
-add_definitions(-D_FORTIFY_SOURCE=2)
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.6" AND ${SYS_ARCH} MATCHES "I386")
+  if(${TEST_VER} MATCHES "10.[67]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
 elseif(${OS_NAME} MATCHES "WIN")
@@ -119,6 +117,8 @@ if( NOT WINDOWS)
 	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
 	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
 	  else()
+
+            add_definitions(-D_FORTIFY_SOURCE=2)
 	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	  endif()
 	endif()
@@ -143,9 +143,11 @@ if( NOT WINDOWS)
     if( NOT "${LIBDL_PATH}" MATCHES "-NOTFOUND" )
       set(HAVE_LIBDL ON)
     endif()
+	find_library( LIBLTDL_PATH ltdl )
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
+	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)
@@ -249,14 +251,39 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
-	# Some early 4.0 g++'s have unordered maps, but their iterators don't work
-	check_cxx_source_compiles("
+	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
+
+	check_cxx_compiler_flag(-std=c++11 cxx_11)
+	if (cxx_11)
+
+		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+		#check_cxx_source_compiles("
+		##include <unordered_map>
+		##include <memory>
+		#int main() {
+		#	std::unordered_map<int, int> ci;
+		#	std::shared_ptr<int> foo;
+		#	return 0;
+		#}
+		#" PREFER_CPP11 )
+
+	endif (cxx_11)
+
+	if (NOT PREFER_CPP11)
+
+	  # Some early 4.0 g++'s have unordered maps, but their iterators don't work
+	  check_cxx_source_compiles("
 		#include <tr1/unordered_map>
 		int main() {
 			std::tr1::unordered_map<int, int>::const_iterator ci;
 			return 0;
 		}
-		" HAVE_TR1_UNORDERED_MAP )
+		" PREFER_TR1 )
+
+	endif(NOT PREFER_CPP11)
+	
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -474,49 +501,23 @@ endif(BUILD_TESTS)
 # are used in the construction of externals within
 # the condor build.  The point of main interest is
 # how "cacheing" is performed.
-if (PROPER)
-	message(STATUS "********* Configuring externals using [local env] a.k.a. PROPER *********")
-	option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
-else()
+
+if (NOT PROPER)
+	message(STATUS "********* Building with UW externals *********")
 	cmake_minimum_required(VERSION 2.8)
-	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
-	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
-endif(PROPER)
+endif()
 
+option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
+set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
+if (NOT EXTERNAL_STAGE)
+	if (CACHED_EXTERNALS AND NOT WINDOWS)
+		set( EXTERNAL_STAGE "/scratch/condor_externals")
+	else()
+		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
+	endif()
+endif()
 if (WINDOWS)
-
-	if (NOT EXTERNAL_STAGE)
-		# the environment variable CONDOR_BLD_EXTERNAL_STAGE will be set to the
-		# path for externals if the invoker wants shared externals. otherwise
-		# just build externals in a sub-directory of the project directory
-		#
-		set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
-		if (EXTERNAL_STAGE)
-			# cmake doesn't like windows paths, so make sure that this path separators are unix style
-			string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
-		else()
-			set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
-		endif()
-
-	endif()
-
-else()
-	
-	if (NOT EXTERNAL_STAGE)
-		# temporarily disable AFS cache. 
-		#if ( EXISTS /p/condor/workspaces/externals  )
-		#	set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake/${OS_NAME}/${SYS_ARCH})
-		#else()
-			# in case someone tries something funky insert OS & ARCH in path
-			set (EXTERNAL_STAGE /scratch/condor_externals) #${OS_NAME}/${SYS_ARCH})
-		#endif()
-	endif()
-
-endif(WINDOWS)
-
-# instead of clausing above over-ride if not defined.
-if (NOT CACHED_EXTERNALS)
-	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
+	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
@@ -525,7 +526,7 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 endif()
 
 ###########################################
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
@@ -554,7 +555,7 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
 
 	# globus is an odd *beast* which requires a bit more config.
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
@@ -645,6 +646,7 @@ include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
@@ -688,6 +690,7 @@ if(MSVC)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275")  #
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273")  # inconsistent dll linkage
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd6334") # inclusion warning from boost. 
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
@@ -718,10 +721,10 @@ else(MSVC)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-equal")
 	endif(cxx_Wfloat_equal)
 
-	check_cxx_compiler_flag(-Wshadow cxx_Wshadow)
-	if (cxx_Wshadow)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
-	endif(cxx_Wshadow)
+	#check_cxx_compiler_flag(-Wshadow cxx_Wshadow)
+	#if (cxx_Wshadow)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
+	#endif(cxx_Wshadow)
 
 	# someone else can enable this, as it overshadows all other warnings and can be wrong.
 	# check_cxx_compiler_flag(-Wunreachable-code cxx_Wunreachable_code)

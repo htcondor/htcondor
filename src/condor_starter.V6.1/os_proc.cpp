@@ -41,6 +41,7 @@
 #include "profile.WINDOWS.h"
 #include "access_desktop.WINDOWS.h"
 #endif
+#include "classad_oldnew.h"
 
 extern CStarter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
@@ -412,9 +413,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	// Check to see if we need to start this process paused, and if
 	// so, pass the right flag to DC::Create_Process().
-	int job_opt_mask = 0;
+	int job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
 	if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
-		job_opt_mask = 	DCJOBOPT_NO_ENV_INHERIT;
+		job_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
 	}
 	int suspend_job_at_exec = 0;
 	JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
@@ -436,6 +437,28 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_truncated ) ) {
 		core_size = (size_t)core_size_truncated;
 		core_size_ptr = &core_size;
+	}
+
+	long rlimit_as_hard_limit = 0;
+	char *rlimit_expr = param("STARTER_RLIMIT_AS");
+	if (rlimit_expr) {
+		classad::ClassAdParser parser;
+
+		classad::ExprTree *tree = parser.ParseExpression(rlimit_expr);
+		if (tree) {
+			classad::Value val;
+			int result;
+
+			if (EvalExprTree(tree, Starter->jic->machClassAd(), JobAd, val) && 
+				val.IsIntegerValue(result)) {
+					rlimit_as_hard_limit = ((long)result) * 1024 * 1024;
+					dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
+			} else {
+				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
+			}
+		} else {
+			dprintf(D_ALWAYS, "Can't parse STARTER_RLIMIT_AS expression: %s\n", rlimit_expr);
+		}
 	}
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
@@ -540,7 +563,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
                                              affinity_mask,
 											 NULL,
                                              &create_process_err_msg,
-                                             fs_remap);
+                                             fs_remap,
+											 rlimit_as_hard_limit);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.

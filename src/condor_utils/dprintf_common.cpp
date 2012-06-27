@@ -36,8 +36,12 @@
    actually request them somewhere, either in dprintf_config(), or the
    equivalent inside the user job.
 */
-int		DebugFlags			= 0;
-int		DebugVerbose		= 0;
+//int		DebugFlags			= 0;
+//int		DebugVerbose		= 0;
+unsigned int      DebugHeaderOptions = 0;
+DebugOutputChoice DebugBasic = 0;
+DebugOutputChoice DebugVerbose = 0;
+
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -54,9 +58,9 @@ const char *_condor_DebugFlagNames[] = {
 	"D_CONFIG", "D_UNUSED2", "D_UNUSED3", "D_PROTOCOL",	"D_PRIV",
 	"D_SECURITY", "D_DAEMONCORE", "D_COMMAND", "D_MATCH", "D_NETWORK",
 	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
-	"D_FAILURE", "D_PID", "D_FDS", "D_UNUSED3", "D_NOHEADER",
+	"D_FAILURE", "D_PID", "D_FDS", "D_LEVEL", "D_NOHEADER",
 #else
-	"D_ALWAYS", "D_FAILURE", "D_STATUS", "D_GENERAL",
+	"D_ALWAYS", "D_ERROR", "D_STATUS", "D_GENERAL",
 	"D_JOB", "D_MACHINE", "D_CONFIG", "D_PROTOCOL",
 	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
 	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
@@ -64,7 +68,7 @@ const char *_condor_DebugFlagNames[] = {
 	"D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE",
 	"D_LOAD", "D_PROC", "D_NFS",
 // these are flags rather than categories
-// "D_EXPR", "D_FULLDEBUG", "D_FAILURE", "D_PID", "D_FDS", "D_NOHEADER",
+// "D_EXPR", "D_FULLDEBUG", "D_PID", "D_FDS", "D_CAT", "D_NOHEADER",
 #endif
 };
 
@@ -90,37 +94,49 @@ dprintf(int flags, const char* fmt, ...)
 }
 
 
-/* If this were C++ code, we could use StringList instead of strtok().
+/* parse debug flags, but don't set any of the debug global variables.
+ *
+ * If this were C++ code, we could use StringList instead of strtok().
  * We don't use strtok_r() because it's not available on Windows.
  */
 void
-_condor_set_debug_flags( const char *strflags, int flags )
+_condor_parse_merge_debug_flags(
+	const char *strflags,
+	int cat_and_flags,
+	unsigned int & HeaderOpts,
+	DebugOutputChoice & basic,
+	DebugOutputChoice & verbose)
 {
-	char *tmp;
-	char *flag;
-	int flag_verbosity, bit, i;
-#ifdef D_CATEGORY_MASK
-	// this flag is set when strflags or flags has D_FULLDEBUG
+	unsigned int flag_verbosity, bit, hdr;
+
+	// this flag is set when strflags or cat_and_flags has D_FULLDEBUG
 	// 
-	bool fulldebug = (flags & D_FULLDEBUG) != 0;
+	bool fulldebug = (cat_and_flags & D_FULLDEBUG) != 0;
 
 	// this flag is set when D_FLAG:n syntax is used, 
 	// when true, D_FULLDEBUG is treated strictly as a category and 
 	// not as a verbosity modifier of other flags.
 	bool individual_verbosity = false;
-#endif
 
-		// Always set D_ALWAYS
-	DebugFlags |= D_ALWAYS;
-	DebugFlags |= flags;
+	// For backward compatibility reasons, we always listen to D_ALWAYS
+	// as well as whatever category was passed in, and we interprest D_FULLDEBUG
+	// as meaning verbose for the passed in category
+	// for possible future use, D_ERROR could be set instead of D_ALWAYS to indicate
+	// error messages, so listen to that as well.
+	bit = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<(cat_and_flags&D_CATEGORY_MASK));
+	basic |= bit;
+	if (fulldebug)
+		verbose |= bit;
+
+	HeaderOpts |= (cat_and_flags & ~(D_CATEGORY_RESERVED_MASK | D_FULLDEBUG | D_VERBOSE_MASK));
 
 	if (strflags) {
-		tmp = strdup( strflags );
+		char * tmp = strdup( strflags );
 		if ( tmp == NULL ) {
 			return;
 		}
 
-		flag = strtok( tmp, ", " );
+		char * flag = strtok( tmp, ", " );
 
 		while ( flag != NULL ) {
 			if( *flag == '-' ) {
@@ -131,7 +147,7 @@ _condor_set_debug_flags( const char *strflags, int flags )
 			}
 
 			bit = 0;
-	#ifdef D_CATEGORY_MASK
+			hdr = 0;
 			char * colon = strchr(flag, ':');
 			if (colon) {
 				colon[0] = 0; // null terminate at the ':' so we can use strcasecmp on the flag name.
@@ -141,22 +157,30 @@ _condor_set_debug_flags( const char *strflags, int flags )
 				}
 			}
 			if( strcasecmp(flag, "D_ALL") == 0 ) {
-				bit = D_PID | D_FDS | ((1 << D_CATEGORY_COUNT)-1);
+				hdr = D_PID | D_FDS | D_CAT;
+				bit = ((1 << D_CATEGORY_COUNT)-1);
 			} else if( strcasecmp(flag, "D_PID") == 0 ) {
-				bit = D_PID;
+				hdr = D_PID;
 			} else if( strcasecmp(flag, "D_FDS") == 0 ) {
-				bit = D_FDS;
+				hdr = D_FDS;
 			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
-				bit = D_EXPR;
+				hdr = D_EXPR;
+			} else if( (strcasecmp(flag, "D_LABEL") == 0) || (strcasecmp(flag, "D_CATEGORY") == 0) || (strcasecmp(flag, "D_CAT") == 0) ) {
+				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
 				fulldebug = (flag_verbosity > 0);
-				bit = D_GENERIC_VERBOSE;
-			} else for( i = 0; i < (int)COUNTOF(_condor_DebugFlagNames); i++ )
-	#else
-			if( strcasecmp(flag, "D_ALL") == 0 ) {
-				bit = D_ALL;
-			} else for( i = 0; i < D_MAXFLAGS; i++ )
-	#endif
+				flag_verbosity *= 2; // so D_FULLDEBUG:1 ends up as D_ALWAYS:2
+				bit = (1<<D_ALWAYS);
+			} else if( strcasecmp(flag, "D_FAILURE") == 0 ) {
+				// D_FAILURE is a special case because lots of condor code sets D_ALWAYS|D_FAILURE
+				// to indicate _either_ messages that should be output always OR messages that should
+				// show up in a 'failure' log. if D_FAILURE were a category rather than a flag, then
+				// when OR'd with D_ALWAYS, it would equal D_FAILURE and thus NOT output in D_ALWAYS logs
+				// so treat D_FAILURE as header flag from the dprintf side, and as a synonym for the D_ERROR
+				// category from the condor_config side.
+				hdr = D_FAILURE;
+				bit = (1<<D_ERROR);
+			} else for(unsigned int i = 0; i < COUNTOF(_condor_DebugFlagNames); i++ )
 			{
 				if( strcasecmp(flag, _condor_DebugFlagNames[i]) == 0 ) {
 					bit = (1 << i);
@@ -165,24 +189,36 @@ _condor_set_debug_flags( const char *strflags, int flags )
 			}
 
 			if (flag_verbosity) {
-				DebugFlags |= bit;
+				HeaderOpts |= hdr;
+				basic |= bit;
 				if (flag_verbosity > 1)
-					DebugVerbose |= bit;
+					verbose |= bit;
 			} else {
-				DebugFlags &= ~bit;
+				HeaderOpts &= ~hdr;
+				verbose &= ~bit;
 			}
 
 			flag = strtok( NULL, ", " );
 		}
 
-	free( tmp );
+		free( tmp );
 	}
 
-#ifdef D_CATEGORY_MASK
 	if ( ! individual_verbosity) {
-		DebugVerbose = (fulldebug) ? DebugFlags : 0;
+		verbose |= (fulldebug) ? basic : 0;
+	} else if (verbose & (1<<D_ALWAYS)) {
+		// special case so that D_ALWAYS:2 means the same thing as D_FULLDEBUG all by itself.
+		basic |= (1<<D_GENERIC_VERBOSE);
 	}
-#endif
+}
+
+// set debug global flags and header options
+//
+void
+_condor_set_debug_flags( const char *strflags, int cat_and_flags )
+{
+	// parse and merge strflags and cat_and_flags into dprintf global variables for the primary output
+	_condor_parse_merge_debug_flags( strflags, cat_and_flags, DebugHeaderOptions, DebugBasic, DebugVerbose);
 }
 
 #if defined(HAVE__FTIME)

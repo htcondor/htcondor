@@ -8,7 +8,7 @@ close (OUTPUT) or die "Condor_hold failed: $?";
 
 # job_dagman_recovery_event_check.log.dummy has events for nodes B1 and
 # B2, but not node A, so it violates the DAG semantics.
-system("cp -f job_dagman_recovery_event_check.log.dummy job_dagman_recovery_event_check.log");
+system("cp -f job_dagman_recovery_event_check.log.dummy job_dagman_recovery_event_check.dag.nodes.log");
 
 sleep 60;
 

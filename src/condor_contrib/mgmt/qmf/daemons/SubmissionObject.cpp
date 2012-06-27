@@ -51,7 +51,7 @@ SubmissionObject::SubmissionObject ( ManagementAgent *agent,
         SetOwner ( "Unknown" );
         ownerSet = false;
     }
-    mgmtObject->set_QDate(0);
+    mgmtObject->set_QDate((uint64_t) time(NULL)*1000000000);
 
     // By default the submission will be persistent.
     bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
@@ -220,7 +220,7 @@ SubmissionObject::SetOwner ( const char *owner )
 void
 SubmissionObject::UpdateQdate(int q_date) {
 	int old = mgmtObject->get_QDate();
-	if ((q_date < old) || (old <= 0)) {
+	if (q_date < old) {
 			mgmtObject->set_QDate((uint64_t) q_date*1000000000);
 	}
 }

@@ -121,6 +121,9 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-Priority" );
 		args.AppendArg( deepOpts.priority );
 	}
+	if( !deepOpts.always_use_node_log ) {
+		args.AppendArg( "-dont_use_default_node_log" );
+	}
 
 	args.AppendArg( dagFile );
 

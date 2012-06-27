@@ -34,6 +34,7 @@ FilesystemRemap::FilesystemRemap() :
 	m_mounts_shared()
 {
 	ParseMountinfo();
+	FixAutofsMounts();
 }
 
 int FilesystemRemap::AddMapping(std::string source, std::string dest) {
@@ -100,6 +101,28 @@ int FilesystemRemap::CheckMapping(const std::string & mount_point) {
 	}
 #endif
 
+	return 0;
+#endif
+}
+
+int FilesystemRemap::FixAutofsMounts() {
+#ifndef HAVE_UNSHARE
+	// An appropriate error message is printed in FilesystemRemap::CheckMapping;
+	// Not doing anything here.
+	return -1;
+#else
+
+#ifdef HAVE_MS_SHARED
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	for (std::list<pair_strings>::const_iterator it=m_mounts_autofs.begin(); it != m_mounts_autofs.end(); it++) {
+		if (mount(it->first.c_str(), it->second.c_str(), NULL, MS_SHARED, NULL)) {
+			dprintf(D_ALWAYS, "Marking %s->%s as a shared-subtree autofs mount failed. (errno=%d, %s)\n", it->first.c_str(), it->second.c_str(), errno, strerror(errno));
+			return -1;
+		} else {
+			dprintf(D_FULLDEBUG, "Marking %s as a shared-subtree autofs mount successful.\n", it->second.c_str());
+		}
+	}
+#endif
 	return 0;
 #endif
 }
@@ -209,6 +232,11 @@ void FilesystemRemap::ParseMountinfo() {
 			is_shared = is_shared || (strncmp(token, SHARED_STR, strlen(SHARED_STR)) == 0);
 			ADVANCE_TOKEN(token, str)
 		}
+		ADVANCE_TOKEN(token, str) // filesystem type
+		if ((!is_shared) && (strcmp(token, "autofs") == 0)) {
+			ADVANCE_TOKEN(token, str)
+			m_mounts_autofs.push_back(pair_strings(token, mp));
+		}
 		// This seems a bit too chatty - disabling for now.
 		// dprintf(D_FULLDEBUG, "Mount: %s, shared: %d.\n", mp.c_str(), is_shared);
 		m_mounts_shared.push_back(pair_str_bool(mp, is_shared));
@@ -248,5 +276,15 @@ root_dir_list()
 		}
 	}
 	return execute_dir_list;
+}
+
+bool
+is_trivial_rootdir(const std::string &root_dir)
+{
+	for (std::string::const_iterator it=root_dir.begin(); it!=root_dir.end(); it++) {
+		if (*it != '/')
+			return false;
+	}
+	return true;
 }
 

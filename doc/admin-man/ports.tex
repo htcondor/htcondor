@@ -1,9 +1,42 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Port-Details}Port Usage in Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \index{port usage}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:IPv4-Port-Specification}IPv4 Port Specification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{IPv4 port specification}
+\index{port usage!IPv4 port specification}
+The general form for IPv4 port specification is 
+\begin{verbatim}
+<IP:port?param1name=value1&param2name=value2&param3name=value3&...> 
+\end{verbatim}
+
+These parameters and values are URL-encoded.
+This means any special character is encoded with \Percent,
+followed by two hexadecimal digits specifying the ASCII value.
+Special characters are any non-alphanumeric character. 
+
+Condor currently recognizes the following parameters with an
+IPv4 port specification:
+\begin{description}
+\item[\Expr{CCBID}]
+  Provides contact information for forming a CCB connection to a daemon, 
+  or a space separated list, if the daemon is registered with more than 
+  one CCB server.
+  Each contact information is specified in the form of \verb|IP:port#ID|.
+  Note that spaces between list items will be URL encoded by \verb|%20|.
+\item[\Expr{PrivNet}]
+  Provides the name of the daemon's private network.
+  This value is specified in the configuration with 
+  \MacroNI{PRIVATE\_NETWORK\_NAME}.
+\item[\Expr{sock}]
+  Provides the name of \Condor{shared\_port} daemon named socket.
+\item[\Expr{PrivAddr}]
+  Provides the daemon's private address in form of
+  \Expr{IP:port}.
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-Standard}Default Port Usage}

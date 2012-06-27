@@ -26,40 +26,20 @@ endif ( LINUX )
 if ( WITH_BLAHP )
 
 	if ( NOT PROPER )
-		message(STATUS "TODO:TSTCLAIR BLAHP eval if linking correct popt w/o mundging Makefile.am")
-
-		########################################
-		condor_pre_external( POPT popt-1.14 "lib;include" "lib/libpopt.a")
-
-		ExternalProject_Add(popt
-						#-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${POPT_VER}.tar.gz ${CMD_TERM}
-						DOWNLOAD_DIR ${POPT_STAGE}/dl
-						URL http://parrot.cs.wisc.edu/externals/${POPT_VER}.tar.gz
-						#--Configure step ----------
-			    		CONFIGURE_COMMAND cd ${POPT_VER} && ./configure --prefix=${POPT_INSTALL_LOC}
-						#--Build Step ----------
-						BUILD_COMMAND cd ${POPT_VER} && make
-						BUILD_IN_SOURCE 1
-						#--install Step ----------
-						INSTALL_DIR ${POPT_INSTALL_LOC}
-						INSTALL_COMMAND cd ${POPT_VER} && make install )
-
-		condor_post_external( popt OFF OFF )
 
 		########################################
 		if ( BUILDING_OPENSSL )
-			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF} )
+			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4 )
 			set( OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC} )
 		else()
-			set( BLAHP_DEPENDS ${GLOBUS_REF} ${POPT_REF} )
+			set( BLAHP_DEPENDS ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4.openssl )
 			set( OPENSSL_FLAG "" )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p1 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p2 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -68,7 +48,8 @@ if ( WITH_BLAHP )
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------
-						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
+						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
@@ -83,6 +64,7 @@ if ( WITH_BLAHP )
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
+                                                        export CPPFLAGS=-I${BOOST_INCLUDE} &&
 							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}

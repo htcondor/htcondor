@@ -37,11 +37,11 @@
 #include "classad_helpers.h"
 #include "condor_getcwd.h"
 #include "structproc.h"
-
+#include <vector>
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
-extern WriteUserLog		ULog;
+extern std::vector<WriteUserLog*> ULog;
 
 extern int JobStatus;
 extern "C" PROC  *Proc;
@@ -76,10 +76,12 @@ log_execute (char *host)
 	// log execute event
 	ExecuteEvent event;
 	event.setExecuteHost(host);
-	if( !ULog.writeEvent(&event) ) {
-		dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
-	} else {
-		WroteExecuteEvent = 1;
+	WroteExecuteEvent = 1;
+	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
+		if( !(*p)->writeEvent(&event) ) {
+			dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
+			WroteExecuteEvent = 0;
+		}
 	}
 }
 	
@@ -99,23 +101,50 @@ initializeUserLog ()
 	MyString logfilename;
 	MyString gjid;
 	int use_xml;
+	bool have_a_log = false;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
+		have_a_log = true;	
 		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
-            gjid = "Unknown";
-        }
-		if (!ULog.initialize (Proc->owner, NULL, logfilename.Value(),
-							  Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
+			gjid = "Unknown";
+		}
+		std::string logfile(logfilename.Value());
+		WriteUserLog* ulogi = new WriteUserLog;
+		if( !ulogi ) {
+			EXCEPT("Out of memory!\n");
+		}
+		if (!ulogi->initialize (Proc->owner, NULL, logfilename.Value(),
+					Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
 			EXCEPT("Failed to initialize user log!\n");
 		}
-		if (JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
-			&& use_xml) {
-			ULog.setUseXML(true);
-		} else {
-			ULog.setUseXML(false);
+		ulogi->setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
+				&& use_xml);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
+		ULog.push_back(ulogi);
+	}
+	if ( getPathToUserLog(JobAd, logfilename, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		have_a_log = true;	
+		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
+			gjid = "Unknown";
+		}
+		std::string logfile(logfilename.Value());
+		WriteUserLog* ulogi = new WriteUserLog;
+		if( !ulogi ) {
+			EXCEPT("Out of memory!\n");
+		}
+		ulogi->setUseXML(false);
+		if (!ulogi->initialize (Proc->owner, NULL, logfilename.Value(),
+					Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
+			EXCEPT("Failed to initialize user log!\n");
 		}
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
-	} else {
+		if(!ULog.empty()){ // Only write to global event log once
+			ulogi->setEnableGlobalLog( false );	
+		}
+		ULog.push_back(ulogi);
+	}
+	if( !have_a_log ) {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		dprintf(D_FULLDEBUG, "Also, no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 
@@ -134,9 +163,12 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			// log the ULOG_EXECUTABLE_ERROR event
 			ExecutableErrorEvent event;
 			event.errType = CONDOR_EVENT_NOT_EXECUTABLE;
-			if (!ULog.writeEvent (&event))
-			{
-				dprintf (D_ALWAYS, "Unable to log NOT_EXECUTABLE event\n");
+			for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+					++p) {
+				if (!(*p)->writeEvent (&event))
+				{
+					dprintf (D_ALWAYS, "Unable to log NOT_EXECUTABLE event\n");
+				}
 			}
 		}
 		else
@@ -145,9 +177,11 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			// log the ULOG_EXECUTABLE_ERROR event
 			ExecutableErrorEvent event;
 			event.errType = CONDOR_EVENT_BAD_LINK;
-			if (!ULog.writeEvent (&event))
-			{
-				dprintf (D_ALWAYS, "Unable to log BAD_LINK event\n");
+			for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+					++p) {
+				if (!(*p)->writeEvent (&event)) {
+					dprintf (D_ALWAYS, "Unable to log BAD_LINK event\n");
+				}
 			}
 		}
 		else
@@ -171,9 +205,11 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			}
 			event.total_recvd_bytes = TotalBytesSent + event.recvd_bytes;
 			event.total_sent_bytes = TotalBytesRecvd + event.sent_bytes;
-			if (!ULog.writeEvent (&event))
-			{
-				dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
+			for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+					++p) {
+				if (!(*p)->writeEvent (&event)) {
+					dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
+				}
 			}
 		}
 		break;
@@ -195,9 +231,12 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 				event.recvd_bytes += syscall_sock->get_bytes_sent();
 				event.sent_bytes += syscall_sock->get_bytes_recvd();
 			}
-			if (!ULog.writeEvent (&event))
-			{
-				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+			for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+					++p) {
+				if (!(*p)->writeEvent (&event))
+				{
+					dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+				}
 			}
 		}
 		break;
@@ -219,9 +258,12 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 				event.recvd_bytes += syscall_sock->get_bytes_sent();
 				event.sent_bytes += syscall_sock->get_bytes_recvd();
 			}
-			if (!ULog.writeEvent (&event))
-			{
-				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+			for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+					++p) {
+				if (!(*p)->writeEvent (&event))
+				{
+					dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+				}
 			}
 		}
 		break;
@@ -272,9 +314,11 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 				event.recvd_bytes += syscall_sock->get_bytes_sent();
 				event.sent_bytes += syscall_sock->get_bytes_recvd();
 			}
-			if (!ULog.writeEvent (&event))
-			{
-				dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
+			for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+					++p) {
+				if (!(*p)->writeEvent (&event)) {
+					dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
+				}
 			}
 		}
 	}
@@ -288,9 +332,11 @@ log_checkpoint (struct rusage *localr, struct rusage *remoter)
 	CheckpointedEvent event;
 	event.run_local_rusage = *localr;
 	event.run_remote_rusage = *remoter;
-	if (!ULog.writeEvent (&event))
-	{	
-		dprintf (D_ALWAYS, "Could not log ULOG_CHECKPOINTED event\n");
+	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+			++p) {
+		if (!(*p)->writeEvent (&event)) {
+			dprintf (D_ALWAYS, "Could not log ULOG_CHECKPOINTED event\n");
+		}
 	}
 }
 
@@ -304,9 +350,11 @@ log_image_size (int size)
 	// log the event
 	JobImageSizeEvent event;
 	event.image_size_kb = size;
-	if (!ULog.writeEvent (&event))
-	{
-		dprintf (D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
+	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+			++p) {
+		if (!(*p)->writeEvent (&event)) {
+			dprintf (D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
+		}
 	}
 }
 
@@ -330,17 +378,19 @@ log_except (const char *msg)
 		event.sent_bytes += syscall_sock->get_bytes_recvd();
 	}
 
-	if (!ULog.writeEvent (&event))
-	{
-		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
+	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+			++p) {
+		if (!(*p)->writeEvent (&event)) {
+			dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
+		}
 	}
 }
 
 extern "C" void
 log_old_starter_shadow_suspend_event_hack (char *s1, char *s2)
 {
-	char *magic_suspend = "TISABH Starter: Suspended user job: ";
-	char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
+	const char *magic_suspend = "TISABH Starter: Suspended user job: ";
+	const char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
 
 	/* This should be bug enough to hold the two string params */
 	char buffer[BUFSIZ * 2 + 2];
@@ -360,11 +410,12 @@ log_old_starter_shadow_suspend_event_hack (char *s1, char *s2)
 		JobSuspendedEvent event;
 		sscanf(buffer,"TISABH Starter: Suspended user job: %d",&event.num_pids);
 
-		if (!ULog.writeEvent (&event))
-		{
-			dprintf (D_ALWAYS, "Unable to log ULOG_JOB_SUSPENDED event\n");
+		for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+				++p) {
+			if (!(*p)->writeEvent (&event)) {
+				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_SUSPENDED event\n");
+			}
 		}
-
 		record_suspension_hack(ULOG_JOB_SUSPENDED);
 		return;
 	}
@@ -375,9 +426,11 @@ log_old_starter_shadow_suspend_event_hack (char *s1, char *s2)
 
 		JobUnsuspendedEvent event;
 
-		if (!ULog.writeEvent (&event))
-		{
-			dprintf (D_ALWAYS, "Unable to log ULOG_JOB_UNSUSPENDED event\n");
+		for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end();
+				++p) {
+			if (!(*p)->writeEvent (&event)) {
+				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_UNSUSPENDED event\n");
+			}
 		}
 		record_suspension_hack(ULOG_JOB_UNSUSPENDED);
 		return;

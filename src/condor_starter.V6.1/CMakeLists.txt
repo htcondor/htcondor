@@ -19,7 +19,7 @@
 
 file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* )
 
-condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}" "${C_SBIN}" OFF)
+condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
 if (HAVE_EXT_GLOBUS)
 	clone_install( condor_starter "${C_SBIN}" "condor_gridshell" "${C_SBIN}" )
@@ -35,6 +35,6 @@ endif()
 
 if (HAVE_SSH_TO_JOB)
 	install ( FILES condor_ssh_to_job_sshd_setup condor_ssh_to_job_shell_setup DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	configure_file( condor_ssh_to_job_sshd_config_template.in condor_ssh_to_job_sshd_config_template @ONLY )
+	configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/condor_ssh_to_job_sshd_config_template.in ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template @ONLY )
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} )
 endif(HAVE_SSH_TO_JOB)

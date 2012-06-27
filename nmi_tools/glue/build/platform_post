@@ -61,6 +61,20 @@ my $mode = "regular"; # if workspace, try to do a workspace test
 print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
 
+# Since we succeeded, let's pull out any RPM and Deb files and push them to mirror.batlab.org
+if(!$ENV{_NMI_STEP_FAILED}) {
+    system("mkdir native-packages && cd native-packages && tar zxf ../results.tar.gz public/condor-*.{deb,rpm}");
+    print "\nNative packages to push to mirror.batlab.org:\n";
+    print map("\t$_", `find native-packages 2>&1`);
+    foreach my $file (glob("native-packages/public/*.rpm")) {
+	my $cmd = "scp $file mirror.batlab.org:public/html/repos/inbox/";
+	print "Executing command: '$cmd'\n";
+	system($cmd);
+    }
+    print "\n";
+}
+
+
 if( defined $opt_without_tests ) {
     print "--without-tests specified on command-line, NOT submitting tests\n";
     exit 0;
@@ -94,8 +108,6 @@ print "\n";
 chomp(my $runid = `nmi_gid2runid $gid`);
 
 if($failed) {
-    #my $cwd = dirname(rel2abs($0));
-    #system("$cwd/email_on_failure.py $runid");
     die "Stopping testing since step \"$failed\" failed\n";
 }
 

@@ -928,7 +928,10 @@ chown_func(const char *filename, const struct stat *buf, void *data)
        A job may hard link to something outside of its sandbox, which can
        even be owned by someone else. Therefore, we'll open and fstat (as
        the expected source user), then only fchown (as root) if the expected
-       source user is correct. Note that this function expects to be called
+       source user is correct. It is not an error if the file is already
+       owned by the target uid, which might happen if the job hardlinks
+	   two filenames togther, and the recursive chown already got one of
+	   them.  Note that this function expects to be called
        with our EUID set to the (expected) source user. Also, detect and skip
        symlinks since their ownership is inconsequential.
     */
@@ -945,7 +948,7 @@ chown_func(const char *filename, const struct stat *buf, void *data)
         return -1;
     }
     source_uid = geteuid();
-    if (stat_buf.st_uid != source_uid) {
+    if ((stat_buf.st_uid != source_uid) && (stat_buf.st_uid != ids->uid)) {
         close(fd);
         return -1;
     }

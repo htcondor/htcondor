@@ -57,6 +57,8 @@ int _sysapi_startd_has_bad_utmp = FALSE;
 
 #ifdef LINUX
 int _sysapi_count_hyperthread_cpus = FALSE;
+#elif defined WIN32
+int _sysapi_count_hyperthread_cpus = TRUE; // we can only detect hyperthreads until WinXP SP3
 #endif
 
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
@@ -173,6 +175,8 @@ sysapi_reconfig(void)
 	/* Should we count hyper threads? */
 	_sysapi_count_hyperthread_cpus = 
 		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
+#elif defined WIN32
+	_sysapi_count_hyperthread_cpus = param_boolean_int("COUNT_HYPERTHREAD_CPUS", _sysapi_count_hyperthread_cpus);
 #endif
 
 	/* tell the library I have configured myself */

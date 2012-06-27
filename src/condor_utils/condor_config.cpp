@@ -323,6 +323,17 @@ int param_names_matching(Regex & re, ExtArray<const char *>& names)
 	return cAdded;	
 }
 
+int param_names_matching(Regex& re, std::vector<std::string>& names) {
+    const int s0 = names.size();
+    HASHITER it = hash_iter_begin(ConfigTab, TABLESIZE);
+    for (;  !hash_iter_done(it);  hash_iter_next(it)) {
+		const char *name = hash_iter_key(it);
+		if (re.match(name)) names.push_back(name);
+	}
+    hash_iter_delete(&it);
+    return names.size() - s0;
+}
+
 
 static int ParamValueNameAscendingSort(const void *l, const void *r)
 {
@@ -1279,7 +1290,6 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
-#if ! defined WIN32
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.sprintf("%d", major_ver);
@@ -1307,6 +1317,7 @@ fill_attributes()
 		extra_info->AddInternalParam("OPSYS_LEGACY");
 	}
 
+#if ! defined WIN32
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
 		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );
@@ -2707,6 +2718,7 @@ param_functions* get_param_functions()
 	config_p_funcs.set_param_func(&param);
 	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
 	config_p_funcs.set_param_wo_default_func(&param_without_default);
+	config_p_funcs.set_param_int_func(&param_integer);
 
 	return &config_p_funcs;
 }

@@ -90,12 +90,18 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 	return buffer.c_str();
 }
 
+#define IS_DOUBLE_ZERO(_value_) \
+	(  ( (_value_) >= -0.000001 ) && ( (_value_) <= 0.000001 )  )
+
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
 	static classad::ExprTree *tree = NULL;
 	static char * saved_constraint = NULL;
-	compat_classad::EvalResult result;
+	classad::Value result;
 	bool constraint_changed = true;
+	double doubleVal;
+	int intVal;
+	bool boolVal;
 
 	if ( saved_constraint ) {
 		if ( strcmp(saved_constraint,constraint) == 0 ) {
@@ -126,12 +132,16 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, ad, NULL, &result ) ) {
+	if ( !EvalExprTree( tree, ad, NULL, result ) ) {
 		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
 		return false;
 	}
-	if ( result.type == compat_classad::LX_INTEGER ) {
-		return (bool)result.i;
+	if( result.IsBooleanValue( boolVal ) ) {
+		return boolVal;
+	} else if( result.IsIntegerValue( intVal ) ) {
+		return intVal != 0;
+	} else if( result.IsRealValue( doubleVal ) ) {
+		return !IS_DOUBLE_ZERO(doubleVal);
 	}
 	dprintf( D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
 		constraint );
@@ -140,16 +150,23 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 
 bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
-	compat_classad::EvalResult result;
+	classad::Value result;
+	double doubleVal;
+	int intVal;
+	bool boolVal;
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, ad, NULL, &result ) ) {        
+	if ( !EvalExprTree( tree, ad, NULL, result ) ) {        
 		return false;
 	}
 
-	if ( result.type == compat_classad::LX_INTEGER ) {
-		return (bool)result.i;
+	if( result.IsBooleanValue( boolVal ) ) {
+		return boolVal;
+	} else if( result.IsIntegerValue( intVal ) ) {
+		return intVal != 0;
+	} else if( result.IsRealValue( doubleVal ) ) {
+		return !IS_DOUBLE_ZERO(doubleVal);
 	}
 
 	return false;
@@ -198,14 +215,13 @@ bool ClassAdsAreSame( compat_classad::ClassAd *ad1, compat_classad::ClassAd * ad
 }
 
 int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
-				  compat_classad::ClassAd *target, compat_classad::EvalResult *result )
+				  compat_classad::ClassAd *target, classad::Value &result )
 {
 	int rc = TRUE;
-	if ( !expr || !source || !result ) {
+	if ( !expr || !source ) {
 		return FALSE;
 	}
 
-	classad::Value val;
 	const classad::ClassAd *old_scope = expr->GetParentScope();
 	classad::MatchClassAd *mad = NULL;
 
@@ -215,44 +231,7 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	} else {
 		compat_classad::getTheMyRef( source );
 	}
-	result->clear(); // avoid leaking memory
-	if ( source->EvaluateExpr( expr, val ) ) {
-		switch ( val.GetType() ) {
-		case classad::Value::ERROR_VALUE:
-			result->type = compat_classad::LX_ERROR;
-			break;
-		case classad::Value::UNDEFINED_VALUE:
-			result->type = compat_classad::LX_UNDEFINED;
-			break;
-		case classad::Value::BOOLEAN_VALUE: {
-			result->type = compat_classad::LX_INTEGER;
-			bool v;
-			val.IsBooleanValue( v );
-			result->i = v ? 1 : 0;
-			break;
-		}
-		case classad::Value::INTEGER_VALUE:
-			result->type = compat_classad::LX_INTEGER;
-			val.IsIntegerValue( result->i );
-			break;
-		case classad::Value::REAL_VALUE: {
-			result->type = compat_classad::LX_FLOAT;
-			double d;
-			val.IsRealValue( d );
-			result->f = d;
-			break;
-		}
-		case classad::Value::STRING_VALUE: {
-			result->type = compat_classad::LX_STRING;
-			std::string s;
-			val.IsStringValue( s );
-			result->s = strnewp( s.c_str() );
-			break;
-		}
-		default:
-			rc = FALSE;
-		}
-	} else {
+	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;
 	}
 

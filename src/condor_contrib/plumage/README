@@ -132,10 +132,10 @@ Print the stats for resource 'milo' over a given datetime range.
 $ ./plumage_stats --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
 slot1@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	205 	0.24 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	533 	0.00 	Claimed
-slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12 		0.33 	Claimed
+slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12  	0.33 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	603 	0.00 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:04:19.470000 	INTEL/LINUX 	653 	0.00 	Unclaimed
-slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30 		0.28 	Unclaimed
+slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30  	0.28 	Unclaimed
 
 Database Layout
 ---------------
@@ -164,3 +164,16 @@ respectively:
 
 NOTE: After the plumage collector plugin has been activated, it can take a default of 5 minutes for statistics 
 to become available to the tool.
+
+Additional sample tools
+-----------------------
+plumage_accounting: Query Condor ODS for accounting group data
+plumage_scheduler: Query Condor ODS for scheduler job totals
+plumage_utilization: Query Condor ODS for utilization efficency
+
+Please the consult the help info (--help) for details on using each of these.
+
+Sampled data schema
+-------------------
+An additional file called SCHEMA shows the name mapping between terse key 
+fields in the samples collections and their ClassAd counterparts.

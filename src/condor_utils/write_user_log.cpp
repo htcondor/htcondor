@@ -49,6 +49,7 @@
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
+#include <string>
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
@@ -1301,7 +1302,7 @@ void
 WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, ULogEvent *event, ClassAd *param_jobad, bool is_global_event )
 {
 	ExprTree *tree;
-	EvalResult result;
+	classad::Value result;
 	char *curr;
 
 	ClassAd *eventAd = event->toClassAd();
@@ -1313,18 +1314,28 @@ WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, ULogEvent *event, Cl
 		if ( (tree=param_jobad->LookupExpr(curr)) ) {
 				// found the attribute.  now evaluate it before
 				// we put it into the eventAd.
-			if ( EvalExprTree(tree,param_jobad,NULL,&result) ) {
+			if ( EvalExprTree(tree,param_jobad,NULL,result) ) {
 					// now inserted evaluated expr
-				switch (result.type) {
-				case LX_BOOL:
-				case LX_INTEGER:
-					eventAd->Assign( curr, result.i);
+				bool bval;
+				int ival;
+				double dval;
+				std::string sval;
+				switch (result.GetType()) {
+				case classad::Value::BOOLEAN_VALUE:
+					result.IsBooleanValue( bval );
+					eventAd->Assign( curr, bval );
 					break;
-				case LX_FLOAT:
-					eventAd->Assign( curr, result.f);
+				case classad::Value::INTEGER_VALUE:
+					result.IsIntegerValue( ival );
+					eventAd->Assign( curr, ival );
 					break;
-				case LX_STRING:
-					eventAd->Assign( curr, result.s);
+				case classad::Value::REAL_VALUE:
+					result.IsRealValue( dval );
+					eventAd->Assign( curr, dval );
+					break;
+				case classad::Value::STRING_VALUE:
+					result.IsStringValue( sval );
+					eventAd->Assign( curr, sval );
 					break;
 				default:
 					break;

@@ -15,10 +15,9 @@
  */
 
 #include "condor_common.h"
-
-#include "ODSPoolUtils.h"
-
 #include "condor_config.h"
+#include "ODSPoolUtils.h"
+#include "stl_string_utils.h"
 
 std::string
 getPoolName()

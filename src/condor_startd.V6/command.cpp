@@ -1202,13 +1202,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			char *tmp = param(knob.Value());
 			if( tmp ) {
 				ExprTree *tree = NULL;
-				EvalResult result;
+				classad::Value result;
+				int val;
 				ParseClassAdRvalExpr(tmp, tree);
 				if ( tree &&
-					 EvalExprTree(tree,req_classad,mach_classad,&result) &&
-					 result.type == LX_INTEGER )
+					 EvalExprTree(tree,req_classad,mach_classad,result) &&
+					 result.IsIntegerValue(val) )
 				{
-					req_classad->Assign(resources[i],result.i);
+					req_classad->Assign(resources[i],val);
 
 				}
 				if (tree) delete tree;
@@ -1247,6 +1248,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				}
 			}
 		} while (mach_requirements == 0);
+
+			// No longer need this, make sure to free the memory.
+		if (unmodified_req_classad) {
+			delete unmodified_req_classad;
+			unmodified_req_classad = NULL;
+		}
 
 			// Pull out the requested attribute values.  If specified, we go with whatever
 			// the schedd wants, which is in request attributes prefixed with
@@ -1298,11 +1305,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 
+        for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+            string reqname;
+            sprintf(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
+            int reqval = 0;
+            if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
+            string attr;
+            sprintf(attr, " %s=%d", j->first.c_str(), reqval);
+            type += attr;
+        }
+
 		rip->dprintf( D_FULLDEBUG,
 					  "Match requesting resources: %s\n", type.Value() );
 
 		type_list.initializeFromString( type.Value() );
-		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );
@@ -1331,7 +1348,21 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 			// And the partitionable parent needs a new claim
 		rip->r_cur = new Claim( rip );
-			// Stash this claim as the "leftover_claim", which 
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+			// Call update() in case we were never matched, i.e. no state change
+			// Note: update() may create a new claim if pass thru Owner state
+		rip->update();
+
+		resmgr->addResource( new_rip );
+
+			// XXX: This is overkill, but the best way, right now, to
+			// get many of the new_rip's attributes calculated.
+		resmgr->compute( A_ALL );
+		resmgr->compute( A_TIMEOUT | A_UPDATE );
+
+			// Stash pslot claim as the "leftover_claim", which
 			// we will send back directly to the schedd iff it supports
 			// receiving partitionable slot leftover info as part of the
 			// new-style extended claiming protocol. 
@@ -1346,17 +1377,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			leftover_claim = rip->r_cur;
 			ASSERT(leftover_claim);
 		}
-
-			// Recompute the partitionable slot's resources
-		rip->change_state( unclaimed_state );
-		rip->update(); // in case we were never matched, i.e. no state change
-
-		resmgr->addResource( new_rip );
-
-			// XXX: This is overkill, but the best way, right now, to
-			// get many of the new_rip's attributes calculated.
-		resmgr->compute( A_ALL );
-		resmgr->compute( A_TIMEOUT | A_UPDATE );
 
 			// Now we continue on with the newly spawned Resource
 			// getting claimed

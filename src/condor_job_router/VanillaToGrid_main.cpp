@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "VanillaToGrid.h"
 #include "submit_job.h"
-#include "classad_newold.h"
 #include "condor_attributes.h"
 #include "basename.h"
 #include "classad/classad_distribution.h"
@@ -80,33 +79,28 @@ int vanilla2grid(int argc, char **argv)
 
 
 	// Load old classad string.
-	MyString s_oldad = slurp_file(argv[1]);
-	// Convert to old class ad.
-	ClassAd oldad((char *)s_oldad.Value(),'\n');
-
-	classad::ClassAd newad;
-	if( ! old_to_new(oldad, newad) ) {
-		die("Failed to parse class ad\n");
-	}
+	MyString s_jobad = slurp_file(argv[1]);
+	// Read in as old ClassAds format
+	ClassAd jobad((char *)s_jobad.Value(),'\n');
 
 	int orig_cluster;
-	if( ! newad.EvaluateAttrInt(ATTR_CLUSTER_ID, orig_cluster) ) {
+	if( ! jobad.EvaluateAttrInt(ATTR_CLUSTER_ID, orig_cluster) ) {
 		dprintf(D_ALWAYS, "Vanilla job lacks a cluster\n");
 		return 1;
 	}
 	int orig_proc;
-	if( ! newad.EvaluateAttrInt(ATTR_PROC_ID, orig_proc) ) {
+	if( ! jobad.EvaluateAttrInt(ATTR_PROC_ID, orig_proc) ) {
 		dprintf(D_ALWAYS, "Vanilla job lacks a proc\n");
 		return 1;
 	}
 
 	//====================================================================
 	// Do something interesting:
-	VanillaToGrid::vanillaToGrid(&newad, argv[2]);
+	VanillaToGrid::vanillaToGrid(&jobad, argv[2]);
 
 	printf("Claiming job %d.%d\n", orig_cluster, orig_proc);
 	MyString errors;
-	switch(claim_job(newad, NULL, NULL, orig_cluster, orig_proc, &errors, MYID))
+	switch(claim_job(jobad, NULL, NULL, orig_cluster, orig_proc, &errors, MYID))
 	{
 		case CJR_OK:
 			break;
@@ -119,7 +113,7 @@ int vanilla2grid(int argc, char **argv)
 	}
 
 	int cluster,proc;
-	if( ! submit_job( newad, 0, 0, &cluster, &proc ) ) {
+	if( ! submit_job( jobad, 0, 0, &cluster, &proc ) ) {
 		fprintf(stderr, "Failed to submit job\n");
 	}
 	printf("Successfully submitted %d.%d\n",cluster,proc);
@@ -127,11 +121,9 @@ int vanilla2grid(int argc, char **argv)
 
 	if(0) // Print the transformed add.
 	{
-		ClassAd oldadout;
-		new_to_old(newad, oldadout); 
 		// Convert to old classad string
 		MyString out;
-		oldadout.sPrint(out);
+		jobad.sPrint(out);
 		printf("%s\n", out.Value());
 	}
 
@@ -139,13 +131,12 @@ int vanilla2grid(int argc, char **argv)
 	return 0;
 }
 
-bool load_classad_from_old_file(const char * filename, classad::ClassAd & ad_new) {
+bool load_classad_from_old_file(const char * filename, ClassAd & ad) {
 	// Load old classad strings.
 	MyString ad_string = slurp_file(filename);
-	// Convert to old class ads.
-	ClassAd ad_old((char *)ad_string.Value(),'\n');
-	// Convert to new class ads
-	return old_to_new(ad_old, ad_new);
+	// Read in as old ClassAds format
+	ClassAd ad((char *)ad_string.Value(),'\n');
+	return true;
 }
 
 int grid2vanilla(int argc, char **argv)
@@ -156,11 +147,11 @@ int grid2vanilla(int argc, char **argv)
 		return 1;
 	}
 
-	classad::ClassAd n_ad_van;
+	ClassAd n_ad_van;
 	if( ! load_classad_from_old_file(argv[1], n_ad_van) ) {
 		die("Failed to parse vanilla class ad\n");
 	}
-	classad::ClassAd n_ad_grid;
+	ClassAd n_ad_grid;
 	if( ! load_classad_from_old_file(argv[2], n_ad_grid) ) {
 		die("Failed to parse grid class ad\n");
 	}

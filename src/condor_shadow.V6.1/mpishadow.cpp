@@ -120,7 +120,6 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 	rr->setStartdInfo( job_ad );
 
-	job_ad->Assign( ATTR_JOB_STATUS, RUNNING );
     ResourceList[ResourceList.getlast()+1] = rr;
 
 }
@@ -1221,8 +1220,11 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 			// can finally log the execute event.
 		ExecuteEvent event;
 		event.setExecuteHost( "MPI_job" );
-		if ( !uLog.writeEvent( &event, jobAd )) {
-			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+		for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
+				p != uLog.end(); ++p){
+			if ( !(*p)->writeEvent( &event, jobAd )) {
+				dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+			}
 		}
 		
 			// Now that everything is started, we can finally invoke

@@ -352,10 +352,8 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 			
 	// only push an error if the error stack exists and is currently empty
 	if(problems_resolving && errstack && !errstack->code(0)) {
-		MyString errmsg;
 		char* tmplist = getCmHostFromConfig( "COLLECTOR" );
-		errmsg.sprintf ("Unable to resolve COLLECTOR_HOST (%s).",tmplist?tmplist:"(null)");
-		errstack->push("CONDOR_STATUS",1,errmsg.Value());
+		errstack->pushf("CONDOR_STATUS",1,"Unable to resolve COLLECTOR_HOST (%s).",tmplist?tmplist:"(null)");
 	}
 
 		// If we've gotten here, there are no good collectors

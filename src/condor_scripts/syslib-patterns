@@ -8,3 +8,4 @@ libexpat
 libpcre
 libldap
 liblber
+libltdl

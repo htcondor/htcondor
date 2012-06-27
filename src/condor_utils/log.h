@@ -20,6 +20,9 @@
 #if !defined(_LOG_H)
 #define _LOG_H
 
+#include <string>
+using std::string;
+
 /* 
    This defines a base class for logs of data structure operations.  
    The logs are meant to be strictly ascii (for example, no '\0' 
@@ -31,6 +34,15 @@
    the data structure passed in as an argument.  The argument is of
    type (void *) for generality.
 */
+
+#define CondorLogOp_NewClassAd			101
+#define CondorLogOp_DestroyClassAd		102
+#define CondorLogOp_SetAttribute		103
+#define CondorLogOp_DeleteAttribute		104
+#define CondorLogOp_BeginTransaction	105
+#define CondorLogOp_EndTransaction		106
+#define CondorLogOp_LogHistoricalSequenceNumber 107
+#define CondorLogOp_Error               999
 
 class LogRecord {
 public:
@@ -61,6 +73,27 @@ private:
 	int WriteTail(FILE *fp);
 };
 
-LogRecord *ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type));
-LogRecord *ReadLogEntry(FILE* fp, LogRecord* (*InstantiateLogEntry)(FILE *fp, int type));
+LogRecord *ReadLogEntry(FILE* fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(FILE *fp, unsigned long recnum, int type));
+
+bool valid_record_optype(int optype);
+
+class LogRecordError : public LogRecord {
+    public:
+    LogRecordError() : LogRecord(), body() {
+        op_type = CondorLogOp_Error;
+    }
+    ~LogRecordError() {}
+    virtual char const* get_key() { return NULL; }
+    virtual int ReadBody(FILE* fp) {
+        char* buf=NULL;
+        readline(fp, buf);
+        if (buf != NULL) {
+            body = buf;
+            free(buf);
+        }
+        return body.size();
+    }
+    string body;
+};
+
 #endif

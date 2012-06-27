@@ -286,6 +286,7 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+    accept_surplus = false;
     autoregroup = false;
     allow_quota_oversub = false;
 
@@ -1425,6 +1426,7 @@ negotiationTime ()
 
             if (autoregroup) {
                 dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
+                hgq_root_group->quota = hgq_total_quota;
                 hgq_root_group->allocated = hgq_total_quota;
             }
 
@@ -1442,7 +1444,8 @@ negotiationTime ()
                 allocated_total += group->allocated;
                 if (group->allocated > 0) served_groups += 1;
                 else if (group->requested > 0) unserved_groups += 1;
-                maxdelta = max(maxdelta, max(0.0, group->allocated - group->usage));
+                double target = (accept_surplus) ? group->allocated : group->quota;
+                maxdelta = max(maxdelta, max(0.0, target - group->usage));
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
@@ -1516,12 +1519,15 @@ negotiationTime ()
 		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
-                    double delta = max(0.0, group->allocated - group->usage);
+                    // if allocating surplus, use allocated, otherwise just use the group's quota directly
+                    double target = (accept_surplus) ? group->allocated : group->quota;
+
+                    double delta = max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
                     // we just got allocated, so just negotiate for what we were allocated.
-                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : group->allocated;
+                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
                     // Defensive -- do not exceed allocated slots
-                    slots = min(slots, group->allocated);
+                    slots = min(slots, target);
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
@@ -1658,7 +1664,7 @@ void Matchmaker::hgq_construct_tree() {
 
     allow_quota_oversub = param_boolean("NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION", false);
 
-    bool accept_surplus = false;
+    accept_surplus = false;
     autoregroup = false;
     const bool default_accept_surplus = param_boolean("GROUP_ACCEPT_SURPLUS", false);
     const bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
@@ -1738,10 +1744,6 @@ void Matchmaker::hgq_construct_tree() {
         group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
         if (group->autoregroup) autoregroup = true;
         if (group->accept_surplus) accept_surplus = true;
-    }
-
-    if (autoregroup && accept_surplus) {
-        EXCEPT("GROUP_AUTOREGROUP is not compatible with GROUP_ACCEPT_SURPLUS\n");
     }
 
     // Set the root group's autoregroup state to match the effective global value for autoregroup
@@ -1952,12 +1954,6 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
 
     // Nothing to allocate
     if (surplus <= 0) return 0;
-
-    // If we are in autoregroup mode, proportional surplus allocation is disabled
-    if (autoregroup) {
-        dprintf(D_ALWAYS, "group quotas: autoregroup mode: proportional surplus allocation disabled\n");
-        return surplus;
-    }
 
     // If entire subtree requests nothing, halt now
     if (group->subtree_requested <= 0) return surplus;
@@ -2533,7 +2529,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				negotiation_cycle_stats[0]->submitters_out_of_time.insert(scheddName.Value());
 				result = MM_DONE;
 			} else {
-				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
+				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 					result = MM_RESUME;
 				} else {
 					int numMatched = 0;
@@ -2840,7 +2836,7 @@ obtainAdsFromCollector (
 				ExprTree *expr = NULL;
 				::ParseClassAdRvalExpr(exprStr, expr); // expr will be null on error
 
-				int replace = true;
+				bool replace = true;
 				if (expr == NULL) {
 					// error evaluating expression
 					dprintf(D_ALWAYS, "Can't compile STARTD_AD_REEVAL_EXPR %s, treating as TRUE\n", exprStr);
@@ -2849,16 +2845,13 @@ obtainAdsFromCollector (
 
 						// Expression is valid, now evaluate it
 						// old ad is "my", new one is "target"
-					EvalResult er;
-					int evalRet = EvalExprTree(expr, oldAd, ad, &er);
+					classad::Value er;
+					int evalRet = EvalExprTree(expr, oldAd, ad, er);
 
-					if( !evalRet || (er.type != LX_BOOL && er.type != LX_INTEGER)) {
+					if( !evalRet || !er.IsBooleanValueEquiv(replace) ) {
 							// Something went wrong
 						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
 						replace = true;
-					} else {
-							// evaluation OK, result type bool
-						replace = er.i;
 					}
 
 						// But, if oldAd was null (i.e.. the first time), always replace
@@ -3049,7 +3042,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	time_t		currentTime;
 	ClassAd		request;
 	ClassAd*    offer = NULL;
-	bool		only_consider_startd_rank;
+	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
     string remoteUser;
@@ -3304,13 +3297,11 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 					   accountant.GetWeightedResourcesUsed ( scheddName ));
         string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
-		bool is_group = false;
 		if (getGroupInfoFromUserId(scheddName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
 			request.Assign(ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE,temp_groupUsage);
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
-			is_group = true;
 		}
 
 		OptimizeJobAdForMatchmaking( &request );
@@ -3366,13 +3357,8 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 							"PREEMPTION_REQUIREMENTS == False";
 					} else if (rejPreemptForPrio) {
 						diagnostic_message = "insufficient priority";
-					} else if (rejForSubmitterLimit) {
-						if( is_group ) {
-							diagnostic_message = "group quota exceeded";
-						}
-						else {
-							diagnostic_message = "fair share exceeded";
-						}
+					} else if (rejForSubmitterLimit && !ignore_schedd_limit) {
+                        diagnostic_message = "submitter limit exceeded";
 					} else {
 						diagnostic_message = "no match found";
 					}
@@ -3514,14 +3500,13 @@ float Matchmaker::
 EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
                         ClassAd &request,ClassAd *resource)
 {
-	EvalResult result;
+	classad::Value result;
 	float rank = -(FLT_MAX);
 
-	if(expr && EvalExprTree(expr,resource,&request,&result)) {
-		if( result.type == LX_FLOAT ) {
-			rank = result.f;
-		} else if( result.type == LX_INTEGER ) {
-			rank = result.i;
+	if(expr && EvalExprTree(expr,resource,&request,result)) {
+		double val;
+		if( result.IsNumber(val) ) {
+			rank = (float)val;
 		} else {
 			dprintf(D_ALWAYS, "Failed to evaluate %s "
 			                  "expression to a float.\n",expr_name);
@@ -3590,7 +3575,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	bool			newBestFound;
 		// to store results of evaluations
 	string remoteUser;
-	EvalResult		result;
+	classad::Value	result;
+	bool			val;
 	float			tmp;
 		// request attributes
 	int				requestAutoCluster = -1;
@@ -3783,8 +3769,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 						machine_name.Value(), cluster_id, proc_id);
 				continue;
 			}
-			if ( !(EvalExprTree(rankCondStd, candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE) ) {
+			if ( !(EvalExprTree(rankCondStd, candidate, &request, result) && 
+				   result.IsBooleanValue(val) && val) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 
@@ -3804,8 +3790,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		//       tested above for the only condition we care about.
 		if ( (remoteUser != "") &&
 			 (!only_for_startdrank) ) {
-			if( EvalExprTree(rankCondStd, candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE ) {
+			if( EvalExprTree(rankCondStd, candidate, &request, result) && 
+				result.IsBooleanValue(val) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -3818,8 +3804,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) {
+					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					  result.IsBooleanValue(val) && val) ) {
 					rejPreemptForPolicy++;
 					dprintf(D_MACHINE,
 							"PREEMPTION_REQUIREMENTS prevents job %d.%d from claiming %s.\n",
@@ -3829,8 +3815,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,&result)&&
-						result.type == LX_INTEGER && result.i == TRUE ) ) {
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
 					dprintf(D_MACHINE,
@@ -4335,6 +4321,7 @@ Matchmaker::calculateSubmitterLimit(
 			submitterLimitUnclaimed = maxAllowed;
 		}
 	}
+    if (!ConsiderPreemption) submitterLimit = submitterLimitUnclaimed;
 
 		// calculate this schedd's absolute fair-share for allocating
 		// resources other than CPUs (like network capacity and licenses)
@@ -4691,10 +4678,11 @@ cache_still_valid(ClassAd &request, ExprTree *preemption_req, ExprTree *preempti
 		}
 		
 		if ( next_entry->PreemptStateValue == PRIO_PREEMPTION ) {
-			EvalResult result;
+			classad::Value result;
+			bool val;
 			if (preemption_req && 
-				!(EvalExprTree(preemption_req,next_entry->ad,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) 
+				!(EvalExprTree(preemption_req,next_entry->ad,&request,result) &&
+				  result.IsBooleanValue(val) && val) ) 
 			{
 				dprintf(D_FULLDEBUG,
 					"Cache invalidated due to preemption_requirements\n");

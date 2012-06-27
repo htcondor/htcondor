@@ -118,6 +118,12 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
 	@return TRUE if valid FALSE if not */
     bool gss_is_valid();
 
+	/** See if host name in peer's certificate matches what we
+		are connecting to.
+		@return true if valid; false if not
+	 */
+	bool CheckServerName(char const *fqh,char const *ip,ReliSock *sock,CondorError *errstack);
+
     /** A specialized function that is needed for secure personal
         condor. When schedd and the user are running under the
         same userid we would still want the authentication process
@@ -136,6 +142,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     //------------------------------------------
     gss_cred_id_t       credential_handle;
     gss_ctx_id_t        context_handle ;
+    gss_name_t          m_gss_server_name;
     int                 token_status;
     //X509_Credential *   my_credential;
     OM_uint32	        ret_flags ;

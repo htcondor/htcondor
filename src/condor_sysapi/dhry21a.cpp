@@ -531,7 +531,7 @@ Boolean Func_3 (Enumeration Enum_Par_Val)
 static int
 mips_raw( void )
 {
-	static int	mips = -1;
+	static int	mips_ = -1;
 	int			quick_mips = -1;
 	int			loops;
 
@@ -543,10 +543,10 @@ mips_raw( void )
 	// If we haven't run before, get a quick measurement
 	// For slow machines, we'll use that quick measurement
 	while (quick_mips < 0 ) {
-		if ( mips < 0 ) {
+		if ( mips_ < 0 ) {
 			quick_mips = dhry_mips( QUICK_RUNS );
 		} else {
-			quick_mips = mips;
+			quick_mips = mips_;
 		}
 	}
 
@@ -554,18 +554,18 @@ mips_raw( void )
 	loops = int(floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST )));
 	while( true ) {
 		double t1 = UtcTime::getTimeDouble( );
-		mips = dhry_mips(loops);
+		mips_ = dhry_mips(loops);
 
 		double t2 = UtcTime::getTimeDouble( );
 
-		if ( mips > 0 ) {
+		if ( mips_ > 0 ) {
 			lloops = loops;
 			ldiff = t2-t1;
 #		  if(ENABLE_TIMING)
 			printf( "quick=%d, loops=%d, time=%0.3fs\n",
 					quick_mips, loops, t2-t1 );
 #		  endif
-			return mips;
+			return mips_;
 		}
 		else {
 			fprintf( stderr,

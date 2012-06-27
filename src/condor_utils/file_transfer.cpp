@@ -778,11 +778,9 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 			// we know that filelist has at least one entry, so
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
-			MyString intermediateFilesBuf;
-			intermediateFilesBuf.sprintf( "%s=\"%s\"",
-				ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.Value());
-			Ad->InsertOrUpdate(intermediateFilesBuf.Value());
-			dprintf(D_FULLDEBUG,"%s\n",buf);
+			Ad->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.Value());
+			dprintf(D_FULLDEBUG,"%s=\"%s\"\n",ATTR_TRANSFER_INTERMEDIATE_FILES,
+					filelist.Value());
 		}
 	}
 	if ( IsClient() && upload_changed_files ) {
@@ -2017,7 +2015,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			time_t current_time = time(NULL);
 			timewrap.actime = current_time;		// set access time to now
-			timewrap.modtime = current_time - 180;	// set modify time to 3 min ago
+			timewrap.modtime = current_time;	// set modify time to now
 
 			utime(fullname.Value(),&timewrap);
 		}
@@ -2313,7 +2311,7 @@ FileTransfer::CommitFiles()
 		}
 		// TODO: remove files specified in commit file
 
-		SpooledJobFiles::removeJobSwapSpoolDirectory(cluster,proc);
+		SpooledJobFiles::removeJobSwapSpoolDirectory(&jobAd);
 	}
 
 	// We have now commited the files in tmpspool, if we were supposed to.
