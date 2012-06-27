@@ -179,6 +179,11 @@ not match any certificates (even if they have an empty subject name).
 \item Made \Condor{negotiator} logic for computing submitter limits properly aware of \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
 \Ticket{2952}
 
+\item Condor no longer back-dates file modification times by 3 minutes
+when transferring job input files into the job spool directory or the job
+execute directory.
+\Ticket{2423}
+
 \end{itemize}
 
 \noindent Known Bugs:
