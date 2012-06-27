@@ -807,13 +807,13 @@ void CreamJob::doEvaluateState()
 				if ( m_xfer_request == NULL ) {
 					m_xfer_request = MakeStageInRequest();
 				}
-				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
+				if ( m_xfer_request->m_status == GridTransferRequest::TransferDone ) {
 					delete m_xfer_request;
 					m_xfer_request = NULL;
 					jobAd->Assign( ATTR_STAGE_IN_FINISH, (int)now );
 					requestScheddUpdate( this, false );
 					gmState = GM_SUBMIT_COMMIT;
-				} else if ( m_xfer_request->m_status == TransferRequest::TransferFailed ) {
+				} else if ( m_xfer_request->m_status == GridTransferRequest::TransferFailed ) {
 					dprintf( D_ALWAYS, "(%d.%d) Stage-in failed: %s\n",
 							 procID.cluster, procID.proc,
 							 m_xfer_request->m_errMsg.c_str() );
@@ -930,11 +930,11 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = MakeStageOutRequest();
 				}
 				// TODO: Add check for job lease renewal
-				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
+				if ( m_xfer_request->m_status == GridTransferRequest::TransferDone ) {
 					delete m_xfer_request;
 					m_xfer_request = NULL;
 					gmState = GM_DONE_SAVE;
-				} else if ( m_xfer_request->m_status == TransferRequest::TransferFailed ) {
+				} else if ( m_xfer_request->m_status == GridTransferRequest::TransferFailed ) {
 					dprintf( D_ALWAYS, "(%d.%d) Stage-out failed: %s\n",
 							 procID.cluster, procID.proc,
 							 m_xfer_request->m_errMsg.c_str() );
@@ -1710,7 +1710,7 @@ std::string CreamJob::getFullJobId(const char * resourceManager, const char * jo
 	return full_job_id;
 }
 
-TransferRequest *CreamJob::MakeStageInRequest()
+GridTransferRequest *CreamJob::MakeStageInRequest()
 {
 	std::string tmp_str = "";
 	std::string tmp_str2 = "";
@@ -1781,11 +1781,11 @@ TransferRequest *CreamJob::MakeStageInRequest()
 		}
 	}
 
-	return new TransferRequest( jobProxy, local_urls, remote_urls,
+	return new GridTransferRequest( jobProxy, local_urls, remote_urls,
 								evaluateStateTid );
 }
 
-TransferRequest *CreamJob::MakeStageOutRequest()
+GridTransferRequest *CreamJob::MakeStageOutRequest()
 {
 	StringList remote_urls;
 	StringList local_urls;
@@ -1870,6 +1870,6 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 		}
 	}
 
-	return new TransferRequest( jobProxy, remote_urls, local_urls,
-								evaluateStateTid );
+	return new GridTransferRequest( jobProxy, remote_urls, local_urls,
+									evaluateStateTid );
 }

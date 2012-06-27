@@ -24,7 +24,7 @@
 #include "transferrequest.h"
 
 
-TransferRequest::TransferRequest( Proxy *proxy, const StringList &src_list,
+GridTransferRequest::GridTransferRequest( Proxy *proxy, const StringList &src_list,
 								  const StringList &dst_list, int notify_tid )
 	: m_src_urls( src_list ), m_dst_urls( dst_list )
 {
@@ -32,11 +32,11 @@ TransferRequest::TransferRequest( Proxy *proxy, const StringList &src_list,
 	m_gahp = NULL;
 	m_status = TransferQueued;
 
-	m_proxy = AcquireProxy( proxy, (TimerHandlercpp)&TransferRequest::CheckRequest, this );
+	m_proxy = AcquireProxy( proxy, (TimerHandlercpp)&GridTransferRequest::CheckRequest, this );
 
 	m_CheckRequest_tid = daemonCore->Register_Timer( 0,
-							(TimerHandlercpp)&TransferRequest::CheckRequest,
-							"TransferRequest::CheckRequest", (Service*)this );
+							(TimerHandlercpp)&GridTransferRequest::CheckRequest,
+							"GridTransferRequest::CheckRequest", (Service*)this );
 
 	if ( m_src_urls.number() != m_dst_urls.number() ) {
 		sprintf( m_errMsg, "Unenven number of source and destination URLs" );
@@ -60,18 +60,18 @@ TransferRequest::TransferRequest( Proxy *proxy, const StringList &src_list,
 	free( gahp_path );
 }
 
-TransferRequest::~TransferRequest()
+GridTransferRequest::~GridTransferRequest()
 {
 	if ( m_CheckRequest_tid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_CheckRequest_tid );
 	}
 	if ( m_proxy ) {
-		ReleaseProxy( m_proxy, (TimerHandlercpp)&TransferRequest::CheckRequest, this );
+		ReleaseProxy( m_proxy, (TimerHandlercpp)&GridTransferRequest::CheckRequest, this );
 	}
 	delete m_gahp;
 }
 
-void TransferRequest::CheckRequest()
+void GridTransferRequest::CheckRequest()
 {
 	daemonCore->Reset_Timer( m_CheckRequest_tid, TIMER_NEVER );
 
