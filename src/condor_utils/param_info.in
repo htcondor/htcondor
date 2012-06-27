@@ -10681,4 +10681,18 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=611
 
-
+[INTERACTIVE_SUBMIT_FILE]
+aliases=
+default=$(LIBEXEC)/interactive.sub
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Location of default submit file for condor_submit -i
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit
+id=612

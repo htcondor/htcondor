@@ -129,6 +129,8 @@ char *	IckptName;	/* Pathname of spooled initial ckpt file */
 
 int64_t TransferInputSizeKb;	/* total size of files transfered to exec machine */
 const char	*MyName;
+int 	InteractiveJob = 0; /* true if job submitted with -interactive flag */
+int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 int		Quiet = 1;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
@@ -190,7 +192,7 @@ extern const int JOB_DEFERRAL_PREP_DEFAULT;
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
-List<char> extraLines;  // lines passed in via -a argument
+List<const char> extraLines;  // lines passed in via -a argument
 
 #define PROCVARSIZE	32
 BUCKET *ProcVars[ PROCVARSIZE ];
@@ -909,6 +911,12 @@ main( int argc, char *argv[] )
 
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
+#if !defined(WIN32)
+			if ( match_prefix( ptr[0], "-interactive" ) ) {
+				InteractiveJob = 1;
+				extraLines.Append( "+InteractiveJob=True" );
+			} else
+#endif
 			if ( match_prefix( ptr[0], "-verbose" ) ) {
 				Quiet = 0;
 			} else if ( match_prefix( ptr[0], "-disable" ) ) {
@@ -1127,7 +1135,25 @@ main( int argc, char *argv[] )
 		}
 	}
 #endif
-	
+
+	// if this is an interactive job, and no cmd_file was specified on the
+	// command line, use a default cmd file as specified in the config table.
+	if ( InteractiveJob ) {
+		if ( !cmd_file ) {
+			cmd_file = param("INTERACTIVE_SUBMIT_FILE");
+			if (cmd_file) {
+				InteractiveSubmitFile = 1;
+			} 
+		}
+		// If the user specified their own submit file for an interactive
+		// submit, "rewrite" the job to run /bin/sleep.
+		if ( !InteractiveSubmitFile ) {
+			extraLines.Append( "executable=/bin/sleep" );
+			extraLines.Append( "transfer_executable=false" );
+			extraLines.Append( "args=180" );
+		}
+	}
+
 	// open submit file
 	if ( !cmd_file ) {
 		// no file specified, read from stdin
@@ -1208,7 +1234,7 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if (Quiet) {
+	if (Quiet || InteractiveJob) {
 		int this_cluster = -1, job_count=0;
 		for (i=0; i <= CurrentSubmitInfo; i++) {
 			if (SubmitInfo[i].cluster != this_cluster) {
@@ -1349,6 +1375,48 @@ main( int argc, char *argv[] )
         hash_iter_delete(&it);
 		
 	}
+
+	// If this is an interactive job, spawn ssh_to_job -auto-retry -X, and also
+	// with pool and schedd names if they were passed into condor_submit
+#if !defined(WIN32)
+	if (InteractiveJob &&  ClusterId != -1) {
+		char jobid[40];
+		int i,j,rval;
+		const char* sshargs[15];
+
+		for (i=0;i<15;i++) sshargs[i]=NULL; // init all points to NULL
+		i=0;
+		sshargs[i++] = "condor_ssh_to_job"; // note: this must be in the PATH
+		sshargs[i++] = "-auto-retry";
+		sshargs[i++] = "-X";
+		if (PoolName) {
+			sshargs[i++] = "-pool";
+			sshargs[i++] = PoolName;
+		}
+		if (ScheddName) {
+			sshargs[i++] = "-pool";
+			sshargs[i++] = ScheddName;
+		}
+		sprintf(jobid,"%d.0",ClusterId);
+		sshargs[i++] = jobid;
+		sleep(3);	// with luck, schedd will start the job while we sleep
+		// We cannot fork before calling ssh_to_job, since ssh will want
+		// direct access to the pseudo terminal. Since util functions like
+		// my_spawn, my_popen, my_system and friends all fork, we cannot use
+		// them. Since this is all specific to Unix anyhow, call exec directly.
+		rval = execvp("condor_ssh_to_job", const_cast<char *const*>(sshargs));
+		if (rval == -1 ) {
+			int savederr = errno;
+			fprintf( stderr, "ERROR: Failed to spawn condor_ssh_to_job" );
+			// Display all args to ssh_to_job to stderr
+			for (j=0;j<i;j++) {
+				fprintf( stderr, " %s",sshargs[j] );
+			}
+			fprintf( stderr, " : %s\n",strerror(savederr));
+			exit(1);
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -5887,6 +5955,7 @@ SetKillSig()
 int
 read_condor_file( FILE *fp )
 {
+	const char * cname;
 	char	*name, *value;
 	char	*ptr;
 	int		force = 0, queue_modifier = 0;
@@ -5906,8 +5975,8 @@ read_condor_file( FILE *fp )
 		// check if we've just seen a "queue" command and need to
 		// parse any extra lines passed in via -a first
 		if( justSeenQueue ) {
-			if( extraLines.Next( name ) ) {
-				name = strdup( name );
+			if( extraLines.Next( cname ) ) {
+				name = strdup( cname );
 				ExtraLineNo++;
 			}
 			else {
@@ -5971,10 +6040,16 @@ read_condor_file( FILE *fp )
 				return( -1 );
 			}
 			int rval = sscanf(name+strlen("queue"), "%d", &queue_modifier); 
-			if( rval == EOF || rval == 0 ) {
+			// Default to queue 1 if not specified; always use queue 1 for
+			// interactive jobs, even if something else is specified.
+			if( rval == EOF || rval == 0 || InteractiveJob ) {
 				queue_modifier = 1;
 			}
 			queue(queue_modifier);
+			if (InteractiveJob && !InteractiveSubmitFile) {
+				// for interactive jobs, just one queue statement
+				break;
+			}
 			continue;
 		}	
 
@@ -7087,6 +7162,9 @@ usage()
 	fprintf( stderr, "Usage: %s [options] [cmdfile]\n", MyName );
 	fprintf( stderr, "	Valid options:\n" );
 	fprintf( stderr, "	-verbose\t\tverbose output\n" );
+#if !defined(WIN32)
+	fprintf( stderr, "	-interactive\t\tsubmit an interactive session job\n" );
+#endif
 	fprintf( stderr, 
 			 "	-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 			 "         \t\t\t(overrides config file; multiple -u flags ok)\n" );

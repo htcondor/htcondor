@@ -12,6 +12,15 @@ for dir in "${_CONDOR_JOB_IWD}" "${_CONDOR_SCRATCH_DIR}"; do
   fi
 done
 
+# kill the dummy sleep job if this is an interactive job
+if /bin/grep -q '^InteractiveJob = true' "${_CONDOR_SCRATCH_DIR}/.job.ad"; then
+  if [ "${_CONDOR_JOB_PIDS}" != "" ]; then
+    /bin/kill "${_CONDOR_JOB_PIDS}" 2>/dev/null
+	_CONDOR_JOB_PIDS=""
+  fi
+fi
+
+
 if [ "${SSH_ORIGINAL_COMMAND}" != "" ]; then
   # run the command specified by the user
   eval ${SSH_ORIGINAL_COMMAND}
@@ -21,6 +30,9 @@ else
   fi
   if [ "${_CONDOR_JOB_PIDS}" != "" ]; then
     echo "Your condor job is running with pid(s) ${_CONDOR_JOB_PIDS}."
+  fi
+  if [ "${TMOUT}" != "" ]; then
+    echo "You will be logged out after ${TMOUT} seconds of inactivity."
   fi
 
   # start a shell for the user
