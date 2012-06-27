@@ -295,6 +295,7 @@ static bool test_to_lower(void);
 static bool test_size_positive(void);
 static bool test_size_zero(void);
 static bool test_size_undefined(void);
+static bool test_nested_ads(void);
 
 
 bool OTEST_Old_Classads(void) {
@@ -563,6 +564,7 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_size_positive);
 	driver.register_function(test_size_zero);
 	driver.register_function(test_size_undefined);
+	driver.register_function(test_nested_ads);
 
 	return driver.do_all_functions();
 }
@@ -7619,6 +7621,48 @@ static bool test_size_undefined() {
 	if(retVal != 1 || actual != expect) {
 		FAIL;
 	}
+	PASS;
+}
+
+
+static bool test_nested_ads()
+{
+	classad::ClassAdParser parser;
+	classad::ClassAdUnParser unparser;
+	classad::ClassAd ad, ad2;
+	classad::ExprTree *tree;
+
+	emit_test("Testing classad caching with nested ads");
+	
+	bool do_caching = true;
+
+	ad.InsertAttr( "A", 4 );
+	if ( !parser.ParseExpression( "[ Y = 1; Z = A; ]", tree ) ) {
+		FAIL;
+	}
+	ad.Insert( "B", tree, do_caching );
+	if ( !parser.ParseExpression( "B.Z", tree ) ) {
+		FAIL;
+	}
+	ad.Insert( "C", tree, do_caching );
+
+	std::string str;
+	unparser.Unparse( str, &ad );
+	emit_input_header();
+	emit_param("ClassAd", str.c_str());
+	emit_output_expected_header();
+	emit_param("A =", "4");
+	emit_param("C =", "4");
+	
+	int result;
+	if ( !ad.EvaluateAttrInt( "A", result ) || result != 4 ) {
+		FAIL;
+	} 
+
+	if ( !ad.EvaluateAttrInt( "C", result ) || result != 4) {
+		FAIL;
+	}
+	
 	PASS;
 }
 
