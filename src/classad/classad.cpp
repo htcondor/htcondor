@@ -233,18 +233,24 @@ InsertAttr( const string &name, int value, Value::NumberFactor f )
 bool ClassAd::
 InsertAttr( const string &name, long value, Value::NumberFactor f )
 {
+	ExprTree* plit;
 	Value val;
+
 	val.SetIntegerValue( value );
-	return( Insert( name, Literal::MakeLiteral( val, f ) ) );
+	plit = Literal::MakeLiteral( val, f );
+	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
 InsertAttr( const string &name, long long value, Value::NumberFactor f )
 {
+	ExprTree* plit;
 	Value val;
+
 	val.SetIntegerValue( value );
-	return( Insert( name, Literal::MakeLiteral( val, f ) ) );
+	plit = Literal::MakeLiteral( val, f );
+	return( Insert( name, plit ) );
 }
 
 
