@@ -51,8 +51,12 @@ which causes Condor to include the logging level
 flags in effect for each line of logged output.
 \Ticket{2712}
 
-\item Added -autoformat option to \Condor{status}, behavior is the same as -autoformat option
-added to \Condor{q} in 7.7.6.
+\item \Condor{status} and \Condor{q} each have a new \Opt{-autoformat} option
+to make some output format specifications easier than the existing
+\Opt{-format} option.
+See the \Condor{status} manual page located on page~\pageref{man-condor-status}
+and the \Condor{q} manual page located on page~\pageref{man-condor-q} 
+for details.
 \Ticket{2941}
 
 \item Enhanced the classad log system (e.g. the job que log) to report the record number on parse failures, 
