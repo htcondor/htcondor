@@ -1762,13 +1762,13 @@ of the subsystem corresponding to the daemon.
     descriptors as it will generally track the number of file descriptors
     that Condor has open.
 
-  \label{dflag:level}
-  \item[\Dflag{LEVEL}]
-    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_LEVEL@\texttt{D\_LEVEL}}
+  \label{dflag:category}
+  \item[\Dflag{CATEGORY}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_CATEGORY@\texttt{D\_CATEGORY}}
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
-    If \Dflag{LEVEL} is set, Condor will include the debugging level flags 
+    If \Dflag{CATEGORY} is set, Condor will include the debugging level flags 
     that were in effect for each line of output.  
     This may be used to filter log output by the level or 
     tag it, for example, identifying all
