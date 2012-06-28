@@ -176,8 +176,11 @@ not match any certificates (even if they have an empty subject name).
 \item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
 \Ticket{2893}
 
-\item Made \Condor{negotiator} logic for computing submitter limits properly aware of \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
+\item Made logic in the \Condor{negotiator} that computes submitter limits 
+properly aware of the configuration variable
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
 \Ticket{2952}
+
 
 \item Condor no longer back-dates file modification times by 3 minutes
 when transferring job input files into the job spool directory or the job
