@@ -96,11 +96,6 @@ if both -direct and -schedd are given on the command line.
 \item Added status and echo command line options to \Condor{wait} command.
 \Ticket{2926}
 
-\item Changed default for USE\_PROCD setting to be true for the master.  This means that by
-default the master will start a \Condor{procd} to be used by it and all other daemons on
-that machine.
-\Ticket{2911}
-
 \item Added a \Expr{DEBUG} logging level output flag \Dflag{CATEGORY},
 which causes Condor to include the logging level
 flags in effect for each line of logged output.
@@ -175,6 +170,13 @@ version of \Condor{dagman} is submitting jobs to an older version of
 
 \begin{itemize}
 
+\item The default value for configuration variable \Macro{USE\_PROCD}
+is now \Expr{True} for the \Condor{master} daemon.  
+This means that by
+default the \Condor{master} will start a \Condor{procd} daemon to be used 
+by it and all other daemons on that machine.
+\Ticket{2911}
+
 \item There is a new configuration variable used by the \Condor{starter}.
 If \Macro{STARTER\_RLIMIT\_AS} is set to an integer value, the starter
 will use the setrlimit system call with the RLIMIT\_AS parameter to
@@ -231,8 +233,11 @@ not match any certificates (even if they have an empty subject name).
 \item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
 \Ticket{2893}
 
-\item Made \Condor{negotiator} logic for computing submitter limits properly aware of \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
+\item Made logic in the \Condor{negotiator} that computes submitter limits 
+properly aware of the configuration variable
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
 \Ticket{2952}
+
 
 \item Condor no longer back-dates file modification times by 3 minutes
 when transferring job input files into the job spool directory or the job
