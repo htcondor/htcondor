@@ -33,7 +33,7 @@ my $dagman_args = "-verbose";
 
 DagmanTest::register_event_handlers($testname);
 
-my @outfiles = ("0_B");
+my @outfiles = ("0_Q2");
 
 my $success = sub {
     CondorTest::debug("executed successfully\n",1);
