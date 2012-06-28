@@ -2566,6 +2566,23 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			fullname = filename;
 		}
 
+		MyString dest_filename;
+		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename)==0 )) {
+			// this file is the job executable
+			is_the_executable = true;
+			dest_filename = CONDOR_EXEC;
+		} else {
+			// this file is _not_ the job executable
+			is_the_executable = false;
+
+			if( dest_dir && *dest_dir ) {
+				dest_filename.sprintf("%s%c",dest_dir,DIR_DELIM_CHAR);
+			}
+
+			// condor_basename works for URLs
+			dest_filename.sprintf_cat( "%s", condor_basename(filename) );
+		}
+
 		// check for read permission on this file, if we are supposed to check.
 		// do not check the executable, since it is likely sitting in the SPOOL
 		// directory.
@@ -2705,23 +2722,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		}
 		else {
 			s->set_crypto_mode(socket_default_crypto);
-		}
-
-		MyString dest_filename;
-		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename)==0 )) {
-			// this file is the job executable
-			is_the_executable = true;
-			dest_filename = CONDOR_EXEC;
-		} else {
-			// this file is _not_ the job executable
-			is_the_executable = false;
-
-			if( dest_dir && *dest_dir ) {
-				dest_filename.sprintf("%s%c",dest_dir,DIR_DELIM_CHAR);
-			}
-
-			// condor_basename works for URLs
-			dest_filename.sprintf_cat( "%s", condor_basename(filename) );
 		}
 
 		// for command 999, this string must equal the Attribute "Filename" in
