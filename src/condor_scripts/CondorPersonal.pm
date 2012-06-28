@@ -1487,16 +1487,27 @@ sub IsRunningYet
                 print "Waiting for collector to see startd - ";
                 $loopcount = 0;
                 while(1) {
-                    $loopcount += 1;
+                    $loopcount++;
                     my $output = `condor_status -startd -format \"%s\\n\" name`;
                     
                     my $res = $?;
                     if ($res != 0) {
-                        print "\ncondor_status returned error code $res\n";
+			# This might mean that the collector isn't running - but we also sometimes have
+			# a condition where the collector isn't ready yet.  So we'll retry a few times.
+                        print "\n", timestamp(), "condor_status returned error code $res\n";
                         print timestamp(), " The collector probably is not running after all, giving up\n";
                         print timestamp(), " Output from condor_status:\n";
                         print $output;
-                        return 0;
+
+			if($loopcount < $runlimit) {
+			    print timestamp(), " Retrying...\n";
+			    sleep 1;
+			    next;
+			}
+			else {
+			    print timestamp(), " Hit the retry limit.  Erroring out.\n";
+			    return 0;
+			}
                     }
                     
                     if($output =~ /$currenthost/) {
