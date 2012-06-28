@@ -41,11 +41,6 @@ if both -direct and -schedd are given on the command line.
 \item Added status and echo command line options to \Condor{wait} command.
 \Ticket{2926}
 
-\item Changed default for USE\_PROCD setting to be true for the master.  This means that by
-default the master will start a \Condor{procd} to be used by it and all other daemons on
-that machine.
-\Ticket{2911}
-
 \item Added a \Expr{DEBUG} logging level output flag \Dflag{CATEGORY},
 which causes Condor to include the logging level
 flags in effect for each line of logged output.
@@ -119,6 +114,13 @@ version of \Condor{dagman} is submitting jobs to an older version of
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The default value for configuration variable \Macro{USE\_PROCD}
+is now \Expr{True} for the \Condor{master} daemon.  
+This means that by
+default the \Condor{master} will start a \Condor{procd} daemon to be used 
+by it and all other daemons on that machine.
+\Ticket{2911}
 
 \item There is a new configuration variable used by the \Condor{starter}.
 If \Macro{STARTER\_RLIMIT\_AS} is set to an integer value, the starter

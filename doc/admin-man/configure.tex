@@ -7393,8 +7393,8 @@ Configuration File Macros}
 
 \label{param:UseProcd}
 \item[\Macro{USE\_PROCD}]
-  This boolean parameter
-  is used to determine whether the \Condor{procd} will be used for
+  This boolean variable
+  determines whether the \Condor{procd} will be used for
   managing process families. If the \Condor{procd} is not used, each
   daemon will run the process family tracking logic on its own. Use of
   the \Condor{procd} results in improved scalability because only one
@@ -7403,8 +7403,10 @@ Configuration File Macros}
   group ID-based process tracking (see
   Section~\ref{sec:GroupTracking}). In either of these cases, the
   \MacroNI{USE\_PROCD} setting will be ignored and a \Condor{procd} will
-  always be used. By default, the \Condor{master} will start a
-  \Condor{procd} that all other daemons that need process family tracking will use.
+  always be used. 
+  By default, the \Condor{master} will start a
+  \Condor{procd} that all other daemons that need process family tracking 
+  will use.
   A daemon that uses the \Condor{procd} will start a \Condor{procd} for
   use by itself and all of its child daemons.
 
