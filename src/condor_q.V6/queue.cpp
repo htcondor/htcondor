@@ -2264,8 +2264,6 @@ usage (const char *myName)
 		"\t\t\tor to the schedd without falling back to the queue\n"
 		"\t\t\tlocation discovery algortihm, even in case of error\n"
 		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
-#else
-		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
 		"\t\t-stream-results \tProduce output as ads are fetched\n"
 		"\t\t-version\t\tPrint the Condor Version and exit\n"

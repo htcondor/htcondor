@@ -123,17 +123,23 @@ print "****************************************************\n";
 foreach my $task (sort keys %tasklist) {
     my $test_count = defined($RuncountChanges{$task}) ? $RuncountChanges{$task} : 1;
 
+    my $prefix = "";
+    my @parallel_platforms = qw/x86_64_sl_6.2 x86_freebsd_7.4 x86_sl_5.8 x86_64_fedora_15/;
+    if(grep $_ eq $ENV{NMI_PLATFORM}, @parallel_platforms) {
+	$prefix = "JOB ";
+    }
+
     if(defined($CustomTimeouts{"$task"})) {
         print "CustomTimeout:$task $CustomTimeouts{$task}\n";
         foreach(1..$test_count) {
-            print TASKFILE "$task-$_ $CustomTimeouts{$task}\n";
-            print USERTASKFILE "$task-$_ $CustomTimeouts{$task}\n";
+	    print TASKFILE "$prefix$task-$_ $CustomTimeouts{$task}\n";
+	    print USERTASKFILE "$prefix$task-$_ $CustomTimeouts{$task}\n";
         }
     }
     else {
         foreach(1..$test_count) {
-            print TASKFILE "$task-$_\n";
-            print USERTASKFILE "$task-$_\n";
+            print TASKFILE "$prefix$task-$_\n";
+            print USERTASKFILE "$prefix$task-$_\n";
         }
     }
 }

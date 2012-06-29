@@ -110,6 +110,7 @@ const char * const ATTR_AVAIL_TIME_ESTIMATE		 = "AvailTimeEstimate";
 const char * const ATTR_BANDWIDTH_TO_SUBMIT_MACHINE= "BandwidthToSubmitMachine";
 const char * const ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER= "BandwidthToLastCkptServer";
 const char * const ATTR_BANDWIDTH_TO_CKPT_SERVER = "BandwidthToCkptServer";
+const char * const ATTR_BATCH_QUEUE				 = "BatchQueue";
 const char * const ATTR_BUFFER_SIZE				 = "BufferSize";
 const char * const ATTR_BUFFER_FILES				 = "BufferFiles";
 const char * const ATTR_BUFFER_BLOCK_SIZE		 = "BufferBlockSize";
@@ -142,6 +143,7 @@ const char * const ATTR_AUTO_CLUSTER_ID			 = "AutoClusterId";
 const char * const ATTR_AUTO_CLUSTER_ATTRS		 = "AutoClusterAttrs";
 const char * const ATTR_COMPLETION_DATE			 = "CompletionDate";
 const char * const ATTR_MATCHED_CONCURRENCY_LIMITS = "MatchedConcurrencyLimits";
+const char * const ATTR_MATCHED_PSG 			 = "Matched_PSG";
 const char * const ATTR_CONCURRENCY_LIMITS = "ConcurrencyLimits";
 const char * const ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLimits";
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
@@ -1013,3 +1015,5 @@ const char* const ATTR_GROUP_RESOURCES_ALLOCATED = "GroupResourcesAllocated";
 const char* const ATTR_GROUP_RESOURCES_IN_USE = "GroupResourcesInUse";
 const char* const ATTR_SORT_EXPR = "SortExpr";
 const char* const ATTR_SORT_EXPR_STRING = "SortExprString";
+
+const char* const ATTR_QUERY_EXPIRES = "Expires";

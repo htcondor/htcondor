@@ -1491,7 +1491,7 @@ set_iwd()
 	char	*iwd = NULL;
 
 	if( REMOTE_CONDOR_get_iwd(iwd) < 0 ) {
-		REMOTE_CONDOR_report_error("Can't determine initial working directory");
+		REMOTE_CONDOR_report_error(const_cast<char*>("Can't determine initial working directory"));
 		exit( 4 );
 	}
 

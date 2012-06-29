@@ -38,7 +38,6 @@
       2) /etc/condor/
       3) /usr/local/etc/
       4) ~condor/
-      5) ${GLOBUS_LOCATION}/etc/
 
   If none of the above locations contain a config source, config()
   prints an error message and exits.
@@ -1108,7 +1107,7 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 5;
+		int locations_length = 4;
 		MyString locations[locations_length];
 			// 1) $HOME/.condor/condor_config
 		struct passwd *pw = getpwuid( geteuid() );
@@ -1123,11 +1122,6 @@ find_file(const char *env_name, const char *file_name)
 		if (tilde) {
 				// 4) ~condor/condor_config
 			locations[3].sprintf( "%s/%s", tilde, file_name );
-		}
-			// 5) ${GLOBUS_LOCATION}/etc/condor_config
-		char *globus_location;
-		if ((globus_location = getenv("GLOBUS_LOCATION"))) {
-			locations[4].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
 
 		int ctr;	
@@ -1290,7 +1284,6 @@ fill_attributes()
 		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
-#if ! defined WIN32
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.sprintf("%d", major_ver);
@@ -1318,6 +1311,7 @@ fill_attributes()
 		extra_info->AddInternalParam("OPSYS_LEGACY");
 	}
 
+#if ! defined WIN32
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
 		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );
@@ -2718,6 +2712,7 @@ param_functions* get_param_functions()
 	config_p_funcs.set_param_func(&param);
 	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
 	config_p_funcs.set_param_wo_default_func(&param_without_default);
+	config_p_funcs.set_param_int_func(&param_integer);
 
 	return &config_p_funcs;
 }

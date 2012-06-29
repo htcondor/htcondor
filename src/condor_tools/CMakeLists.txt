@@ -58,7 +58,16 @@ if (NOT WINDOWS)
 	if (STD_UNIVERSE)
 		clone_install(condor_vacate "${C_BIN}" "condor_checkpoint" "${C_BIN}")
 		src_target_ref( ckpt "maps" CKPT_REFS)
-		condor_exe(condor_ckpt_probe "probe_process.cpp;${CKPT_REFS}" "${C_LIBEXEC}" "${TOOL_LINK_LIBS}" OFF)
+		# condor_exe(condor_ckpt_probe "probe_process.cpp;${CKPT_REFS}" "${C_LIBEXEC}" "${TOOL_LINK_LIBS}" OFF)
+		#
+		# Statically link condor_ckpt_probe; see #2901.
+		#
+		# This is wasteful, since we've already built three of these source
+		# files, but it's a lot simpler than figuring out how to link the
+		# object files.
+		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.cpp )
+        set_property( TARGET condor_ckpt_probe PROPERTY COMPILE_FLAGS -static )
+        set_property( TARGET condor_ckpt_probe PROPERTY LINK_FLAGS -static )
 	endif(STD_UNIVERSE)
 else(NOT WINDOWS)
 	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")

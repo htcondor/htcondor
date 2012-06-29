@@ -104,7 +104,7 @@ public:
 	MessageClosureEnum messageSent( DCMessenger *messenger, Sock *sock );
 
 private:
-	MyString m_hold_reason;
+	std::string m_hold_reason;
 	int m_hold_code;
 	int m_hold_subcode;
 	bool m_soft;

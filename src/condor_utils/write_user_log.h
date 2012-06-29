@@ -31,6 +31,9 @@
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
+#ifndef WIN32
+#  include <unistd.h>
+#endif
 
 /* Predeclare some classes */
 class MyString;

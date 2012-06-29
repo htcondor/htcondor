@@ -22,7 +22,6 @@
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "classad_newold.h"
 #include "compat_classad.h"
 
 #include "classad/sink.h"

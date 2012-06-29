@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "classad_newold.h"
 
 #include "ClassAdLogReader.h"
 

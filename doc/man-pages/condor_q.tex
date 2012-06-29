@@ -20,12 +20,12 @@
 \oOpt{-xml}
 \oOptArg{-attributes} {Attr1 [,Attr2 \Dots]}
 \oOptArg{-format} {fmt attr}
+\oOptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}
 \oOpt{-cputime}
 \oOpt{-currentrun}
 \oOpt{-avgqueuetime}
 \oOptArg{-jobads}{file} 
 \oOptArg{-machineads}{file} 
-\oOptArg{-direct}{rdbms \Bar schedd} 
 \oOpt{-stream-results}
 \oOpt{-wide}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
@@ -265,6 +265,34 @@ per machine basis.
     A format without any conversion specifiers may be specified,
     but an attribute is still required.
     Include \Bs n to specify a line break. }
+
+  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}} {
+    (Custom option) Display machine ClassAd attribute values 
+    formatted in a default way according to their attribute types.  
+    This option takes an arbitrary number of attribute names as arguments,
+    and prints out their values.  It is like the \Opt{-format} option,
+    but no format strings are required.
+    It is assumed that no attribute names begin with a dash character,
+    so that the next word that begins with dash is the 
+    start of the next option.
+    The \Opt{autoformat} option may be followed by a colon character
+    and formatting qualifiers:
+
+    \textbf{t} add a tab character before each field instead of 
+    the default space character,
+
+    \textbf{n} add a newline character after each field,
+
+    \textbf{,} add a comma character after each field,
+
+    \textbf{l} label each field,
+
+    \textbf{V} use \%V rather than \%v for formatting,
+
+    \textbf{h} print headings before the first line of output.
+
+    The newline and comma characters may \emph{not} be used together.
+    }
   \OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
     display remote CPU time accumulated by the job to date in days,
     hours, minutes, and seconds.  (If the job is currently running, time
@@ -287,15 +315,6 @@ per machine basis.
     \Condor{collector} daemon. 
     This is most useful for debugging purposes. 
     The ClassAds appear as if \Condor{status} \Opt{-l} is used.}
-  \OptItem{\OptArg{-direct}{rdbms \Bar schedd}}{When the
-    use of Quill is enabled, this option allows a direct query to either
-    the rdbms or the \Condor{schedd}
-    daemon for the requested queue information.
-    It also prevents the queue location discovery algorithm
-    from failing over to alternate sources of information for the queue
-    in case of error. It is useful for debugging an installation
-    of Quill. One of the strings \Arg{rdbms} or
-    \Arg{schedd} is required with this option.}
   \OptItem{\Opt{-stream-results}}{Display results as jobs are fetched
     from the job queue rather than storing results in memory until all
     jobs have been fetched.  This can reduce memory consumption when fetching

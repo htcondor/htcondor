@@ -24,6 +24,7 @@
 #include "classad/sink.h"
 #include "classad/xmlLexer.h"
 #include "classad/util.h"
+#include "classad/classadCache.h"
 
 using namespace std;
 
@@ -111,6 +112,10 @@ Unparse(
 			break;
 		}
 		
+		case ExprTree::EXPR_ENVELOPE: {
+			Unparse( buffer, ((CachedExprEnvelope*)tree)->get(),indent ); 
+		}
+		
 		default:
 			buffer = "";
 			CondorErrno = ERR_BAD_EXPRESSION;
@@ -149,9 +154,9 @@ Unparse(
 			break;
 		}
 		case Value::INTEGER_VALUE: {
-			int	i;
+			long long i;
 			val.IsIntegerValue(i);
-			sprintf(tempBuf, "%d", i);
+			sprintf(tempBuf, "%lld", i);
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_Start);
 			buffer += tempBuf;
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_End);

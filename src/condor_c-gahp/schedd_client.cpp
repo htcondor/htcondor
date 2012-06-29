@@ -463,6 +463,8 @@ doContactSchedd()
 
 		if(error == FALSE && jobssent != jobsexpected) {
 			error = TRUE;
+			sprintf( error_msg, "Schedd %s didn't send expected files",
+					 ScheddAddr );
 			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.c_str());
 		}
   

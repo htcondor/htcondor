@@ -55,9 +55,17 @@ $| = 1;
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
     $externals_loc   = "c:/temp/condor";
-    $ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
+    #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
+}
+if ($ENV{NMI_PLATFORM} =~ /macos/) {
+    # Bad hack for now. By default, cmake will use gcc and c++ for the
+    # C and C++ compilers. On newer macs, these invoke different 
+    # compilers (llvm gnu and clang, respectively). Setting CC and CXX
+    # is the best way to pick a consistent set of compilers.
+    $ENV{CC} = "gcc";
+    $ENV{CXX} = "g++";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {

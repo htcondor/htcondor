@@ -5412,7 +5412,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=313
 
-[CLASSAD_LIB_PATH]
+[CLASSAD_USER_LIBS]
 aliases=
 default=
 version=0.0.0
@@ -7464,7 +7464,7 @@ id=454
 
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -9415,6 +9415,38 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
+[GSI_SKIP_HOST_CHECK_CERT_REGEX]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=GSI Skip Host Check Cert Regex
+usage=the directory that contains the public keys and signing policies of trusted certificate authorities
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=ccb,ccb
+id=555
+
+[GSI_SKIP_HOST_CHECK]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=GSI Skip Host Check
+usage=the directory that contains the public keys and signing policies of trusted certificate authorities
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=ccb,ccb
+id=555
+
 [TRUNC_MASTER_LOG_ON_OPEN]
 aliases=
 default=false
@@ -10395,7 +10427,7 @@ id=550
 
 [GROUP_SORT_EXPR]
 aliases=
-default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+default=ifThenElse(AccountingGroup=?="<none>",3.4e+38,ifThenElse(GroupQuota>0,GroupResourcesInUse/GroupQuota,3.3e+38))
 version=0.0.0
 range=.*
 state=default
@@ -10600,3 +10632,67 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
+
+[ENABLE_DEPRECATION_WARNINGS]
+aliases=
+default=true
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable warnings about the use of deprecated features
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
+
+[CLASSAD_LOG_STRICT_PARSING]
+aliases=
+default=true
+version=7.9.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable strict parse checking of classad RHS expressions in classad log files
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad_log
+id=612
+
+[STARTER_RLIMIT_AS]
+aliases=
+default=0
+version=7.8.1
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Classad expression used to set virtual memory rlimit for job
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=611
+
+[INTERACTIVE_SUBMIT_FILE]
+aliases=
+default=$(LIBEXEC)/interactive.sub
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Location of default submit file for condor_submit -i
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit
+id=612

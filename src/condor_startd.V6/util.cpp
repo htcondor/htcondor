@@ -438,9 +438,10 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 		target->Delete(new_attr.Value());
 		return false;
 	}
-	if ( !target->Insert(new_attr.Value(), tree->Copy()) ) {
-		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
-				 attr );
+	tree = tree->Copy();
+	if ( !target->Insert(new_attr.Value(), tree) ) {
+		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n", attr );
+		delete tree;
 		return false;
 	}
 	return true;

@@ -55,11 +55,16 @@ int utimes( const char*, const struct timeval* );
 int getdomainname( char*, size_t );
 END_C_DECLS
 
+/* Hack */
+#define getline hide_getline
+
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>
 #include <stdio.h>
 #include <signal.h>
 #include <sys/select.h>
+
+#undef getline
 
 #define BSD_COMP
 #include <sys/ioctl.h>

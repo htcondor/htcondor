@@ -3329,18 +3329,18 @@ void DaemonCore::Driver()
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
             dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
-				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
+				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.\n");
 			}
 			async_pipe_signal = false;
 			while (int cb = async_pipe[0].bytes_available_to_read()) {
 				if (cb < 0) {
-					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d", 
+					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d\n", 
 							WSAGetLastError());
 					break;
 				}
 				char buf[16];
 				if (recv(async_pipe[0].get_socket(), buf, MIN(cb, COUNTOF(buf)), 0) == SOCKET_ERROR) {
-					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d", 
+					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d\n", 
 							WSAGetLastError());
 					break;
 				}
@@ -5220,6 +5220,7 @@ public:
 		int the_want_command_port,
 		const sigset_t *the_sigmask,
 		size_t *core_hard_limit,
+		long    as_hard_limit,
 		int		*affinity_mask,
 		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
@@ -5236,6 +5237,7 @@ public:
 	   m_priv(the_priv), m_want_command_port(the_want_command_port),
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
 	   m_core_hard_limit(core_hard_limit),
+	   m_as_hard_limit(as_hard_limit),
 	   m_affinity_mask(affinity_mask),
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
@@ -5294,6 +5296,7 @@ private:
 	char **m_unix_args;
 	char **m_unix_env;
 	size_t *m_core_hard_limit;
+	long m_as_hard_limit;
 	const int    *m_affinity_mask;
 	Env m_envobject;
     FilesystemRemap *m_fs_remap;
@@ -5550,7 +5553,7 @@ void CreateProcessForkit::exec() {
 
 		// if I have brought in the parent's environment, then ensure that
 		// after the caller's changes have been enacted, this overrides them.
-	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
+	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(m_job_opt_mask) ) {
 
 			// add/override the inherit variable with the correct value
 			// for this process.
@@ -5956,6 +5959,11 @@ void CreateProcessForkit::exec() {
 		limit(RLIMIT_CORE, *m_core_hard_limit, CONDOR_HARD_LIMIT, "max core size");
 	}
 
+	if (m_as_hard_limit != 0L) {
+		limit(RLIMIT_AS, m_as_hard_limit, CONDOR_HARD_LIMIT, "max virtual adddress space");
+	}
+
+
 	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );
 
 		// !! !! !! !! !! !! !! !! !! !! !! !!
@@ -6097,7 +6105,8 @@ int DaemonCore::Create_Process(
 			int			  *affinity_mask,
 			char const    *daemon_sock,
 			MyString      *err_return_msg,
-			FilesystemRemap *remap
+			FilesystemRemap *remap,
+			long		  as_hard_limit
             )
 {
 	int i, j;
@@ -7149,6 +7158,7 @@ int DaemonCore::Create_Process(
 			want_command_port,
 			sigmask,
 			core_hard_limit,
+			as_hard_limit,
 			affinity_mask,
 			remap);
 
@@ -8888,7 +8898,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 		 */
 
 	if( dprintf_lock_delay > 0.01 ) {
-		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its debug file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
+		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its log file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
 	}
 	if( dprintf_lock_delay > 0.1 ) {
 			// things are looking serious, so let's send mail
@@ -8903,7 +8913,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 			if( mailer ) {
 				fprintf(mailer,
 						"\n\nThe %s's child process with pid %d has spent %.1f%% of its time waiting\n"
-						"for a lock to its debug file.  This could indicate a scalability limit\n"
+						"for a lock to its log file.  This could indicate a scalability limit\n"
 						"that could cause system stability problems.\n",
 						get_mySubSystem()->getName(),
 						child_pid,

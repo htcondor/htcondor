@@ -177,6 +177,33 @@ and this attribute would be the count of jobs that have started.
 \end{description}
 \Ticket{2366}
 
+\item New configuration variables have been added to provide default values for attributes needed to provision
+dynamic slots. \Condor{submit} will insert the values of these variables into the job ClassAd when the submit
+file does not provide a value for the attribute.
+\begin{description}
+\item [\AdAttr{RequestMemory}:] specified by \Macro{JOB\_DEFAULT\_REQUESTMEMORY}, defaults to \Attr{MemoryUsage}.
+\item [\AdAttr{RequestDisk}:] specified by \Macro{JOB\_DEFAULT\_REQUESTDISK}, defaults to \Attr{DiskUsage}.
+\item [\AdAttr{RequestCpus}:] specified by \Macro{JOB\_DEFAULT\_REQUESTCPUS}, defaults to 1.
+\end{description}
+\Ticket{2835}
+
+\item New configuration variables have been added for the \Condor{startd} to enable default rules for partitionable
+resources. The configuration variables are expected to be expressions that quantize or otherwise modify the job's
+requested sizes of resources.
+\begin{description}
+\item [\AdAttr{RequestMemory}:] modify with \Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY}.
+\item [\AdAttr{RequestDisk}:] modify with\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK}.
+\item [\AdAttr{RequestCpus}:] modify with \Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS}.
+\end{description}
+\item
+\Ticket{2850}
+
+\item There is a new configuration variable \Macro{MUST\_MODIFY\_REQUEST\_EXPRS} for the \Condor{startd}.
+If false, then \MacroNI{MODIFY\_REQUEST\_EXPRs} are only applied if the job claim still matches the partitionable
+slot after modification. If true, the modifications always take place, and if the modifications cause the claim
+to no longer match, then the startd will simply refuse the claim.  The default value is false.
+\Ticket{2850}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -535,6 +562,14 @@ refreshed proxy.
 The default value is 21600 seconds (6 hours).
 Previously, this value was not configurable.
 \Ticket{2792}
+
+\item New job ClassAd attributes were added to assist in tracking the time
+jobs spend transferring output.  \Attr{JobCurrentStartExecutingDate} is the
+time that execution actually begins, and \Attr{JobCurrentStartTransferOutputDate}
+is the time that transfer output begins (and execution ends).  In addition,
+\Attr{CumulativeTransferTime} is the total amount of time the job spent transferring
+data.  This includes input and output.
+\Ticket{2783}
 
 \end{itemize}
 
@@ -1031,7 +1066,7 @@ changes to the original DAG input file take effect when running a Rescue DAG.
 POST scripts will be run regardless of the return value from 
 the PRE script of the same node as described in section~\ref{dagman:SCRIPT}.  
 The previous behavior of not running the POST script can be restored by
-either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+either adding the \Opt{-DontAlwaysRunPost} option to the \Condor{submit\_dag}
 command line, 
 or by setting the new configuration variable
 \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 

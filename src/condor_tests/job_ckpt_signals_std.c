@@ -183,12 +183,12 @@ int check_sigs_received()
 	return ok;
 }
 
-void catch_sig( int sig, void (*handler)(int) )
+void catch_sig( int sig, void (*local_handler)(int) )
 {
 	struct sigaction vec;
 	memset(&vec, 0, sizeof(struct sigaction));
 
-	vec.sa_handler = handler;
+	vec.sa_handler = local_handler;
 
 	sigfillset(&vec.sa_mask); 
 	if ( sigaction(sig,&vec,NULL) < 0 ) {

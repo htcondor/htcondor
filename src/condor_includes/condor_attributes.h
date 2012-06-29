@@ -46,6 +46,7 @@ extern const char * const  ATTR_AVAIL_TIME_ESTIMATE;
 extern const char * const  ATTR_BANDWIDTH_TO_SUBMIT_MACHINE;
 extern const char * const  ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER;
 extern const char * const  ATTR_BANDWIDTH_TO_CKPT_SERVER;
+extern const char * const  ATTR_BATCH_QUEUE;
 extern const char * const  ATTR_BUFFER_SIZE;
 extern const char * const  ATTR_BUFFER_FILES;
 extern const char * const  ATTR_BUFFER_BLOCK_SIZE;
@@ -79,6 +80,7 @@ extern const char * const  ATTR_AUTO_CLUSTER_ID;
 extern const char * const  ATTR_AUTO_CLUSTER_ATTRS;
 extern const char * const  ATTR_COMPLETION_DATE;
 extern const char * const  ATTR_MATCHED_CONCURRENCY_LIMITS;
+extern const char * const  ATTR_MATCHED_PSG;
 extern const char * const  ATTR_CONCURRENCY_LIMITS;
 extern const char * const  ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
@@ -963,6 +965,8 @@ extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
 extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
 extern const char* const ATTR_SORT_EXPR;
 extern const char* const ATTR_SORT_EXPR_STRING;
+
+extern const char* const ATTR_QUERY_EXPIRES;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

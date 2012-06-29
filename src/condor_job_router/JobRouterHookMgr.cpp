@@ -19,7 +19,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "hook_utils.h"
-#include "classad_newold.h"
 #include "JobRouterHookMgr.h"
 #include "status_string.h"
 #include "JobRouter.h"
@@ -205,13 +204,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		return 1;
 	}
 
-	if (false == new_to_old(r_job->src_ad, temp_ad))
-	{
-		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookTranslateJob: "
-			"failed to convert classad\n");
-		return -1;
-	}
+	temp_ad = r_job->src_ad;
 
 	MyString hook_stdin;
 	hook_stdin = route_info.c_str();
@@ -277,13 +270,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	}
 
 
-	if (false == new_to_old(r_job->dest_ad, temp_ad))
-	{
-		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
-			"failed to convert classad\n");
-		return -1;
-	}
+	temp_ad = r_job->dest_ad;
 
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
@@ -347,25 +334,13 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		return 1;
 	}
 
-	if (false == new_to_old(r_job->src_ad, temp_ad))
-	{
-		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookJobExit: "
-			"failed to convert source job classad\n");
-		return -1;
-	}
+	temp_ad = r_job->src_ad;
 
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
 	hook_stdin += "\n------\n";
 
-	if (false == new_to_old(r_job->dest_ad, temp_ad))
-	{
-		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookJobExit: "
-			"failed to convert routed job classad\n");
-		return -1;
-	}
+	temp_ad = r_job->dest_ad;
 	temp_ad.sPrint(hook_stdin);
 
 	ExitClient *exit_client = new ExitClient(hook_job_exit, r_job);
@@ -432,13 +407,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	}
 
 
-	if (false == new_to_old(r_job->dest_ad, temp_ad))
-	{
-		dprintf(D_ALWAYS|D_FAILURE,
-			"ERROR in JobRouterHookMgr::hookJobCleanup: "
-			"failed to convert classad\n");
-		return -1;
-	}
+	temp_ad = r_job->dest_ad;
 
 	MyString hook_stdin;
 	temp_ad.sPrint(hook_stdin);
@@ -595,14 +564,13 @@ TranslateClient::hookExited(int exit_status)
 	}
 	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
 	{
-		ClassAd old_job_ad;
-		classad::ClassAd new_job_ad;
+		ClassAd job_ad;
 		const char* hook_line = NULL;
 
 		m_std_out.Tokenize();
 		while ((hook_line = m_std_out.GetNextToken("\n", true)))
 		{
-			if (!old_job_ad.Insert(hook_line))
+			if (!job_ad.Insert(hook_line))
 			{
 				dprintf(D_ALWAYS, "TranslateClient::hookExited "
 						"(%s): Failed to insert \"%s\" "
@@ -614,16 +582,7 @@ TranslateClient::hookExited(int exit_status)
 				return;
 			}
 		}
-		if (false == old_to_new(old_job_ad, new_job_ad))
-		{
-			dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
-					"Failed to convert ClassAd, "
-					"ignoring invalid hook output\n",
-					m_routed_job->JobDesc().c_str());
-			job_router->GracefullyRemoveJob(m_routed_job);
-			return;
-		}
-		m_routed_job->dest_ad = new_job_ad;
+		m_routed_job->dest_ad = job_ad;
 	}
 	else
 	{
@@ -688,8 +647,7 @@ StatusClient::hookExited(int exit_status)
 	}
 	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
 	{
-		ClassAd old_job_ad;
-		classad::ClassAd new_job_ad;
+		ClassAd job_ad;
 		const char* hook_line = NULL;
 		const char* attrs_to_delete[] = {
 			ATTR_MY_TYPE,
@@ -699,7 +657,7 @@ StatusClient::hookExited(int exit_status)
 		m_std_out.Tokenize();
 		while ((hook_line = m_std_out.GetNextToken("\n", true)))
 		{
-			if (!old_job_ad.Insert(hook_line))
+			if (!job_ad.Insert(hook_line))
 			{
 				dprintf(D_ALWAYS, "StatusClient::hookExited (%s): "
 						"Failed to insert \"%s\" into "
@@ -710,23 +668,13 @@ StatusClient::hookExited(int exit_status)
 				return;
 			}
 		}
-		if (false == old_to_new(old_job_ad, new_job_ad))
-		{
-			dprintf(D_ALWAYS, "StatusClient::hookExited (%s): "
-					"Failed to convert ClassAd, ignoring "
-					"invalid hook output.  Job status NOT "
-					"updated.\n", m_routed_job->JobDesc().c_str());
-			job_router->GracefullyRemoveJob(m_routed_job);
-			return;
-		}
-
 		// Delete attributes that may have been returned by the hook
 		// but should not be included in the update
 		for (int index = 0; attrs_to_delete[index] != NULL; ++index)
 		{
-			new_job_ad.Delete(attrs_to_delete[index]);
+			job_ad.Delete(attrs_to_delete[index]);
 		}
-		job_router->UpdateRoutedJobStatus(m_routed_job, new_job_ad);
+		job_router->UpdateRoutedJobStatus(m_routed_job, job_ad);
 	}
 	else
 	{
@@ -788,8 +736,7 @@ ExitClient::hookExited(int exit_status) {
 	{
 		if (0 == WEXITSTATUS(exit_status))
 		{
-			ClassAd old_job_ad;
-			classad::ClassAd new_job_ad;
+			ClassAd job_ad;
 			const char* hook_line = NULL;
 			classad::ClassAdCollection *ad_collection = job_router->GetScheduler()->GetClassAds();
 			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
@@ -797,7 +744,7 @@ ExitClient::hookExited(int exit_status) {
 			m_std_out.Tokenize();
 			while ((hook_line = m_std_out.GetNextToken("\n", true)))
 			{
-				if (!old_job_ad.Insert(hook_line))
+				if (!job_ad.Insert(hook_line))
 				{
 					dprintf(D_ALWAYS, "ExitClient::hookExited (%s): "
 							"Failed to insert \"%s\" into "
@@ -807,16 +754,7 @@ ExitClient::hookExited(int exit_status) {
 					return;
 				}
 			}
-			if (false == old_to_new(old_job_ad, new_job_ad))
-			{
-				dprintf(D_ALWAYS, "ExitClient::hookExited (%s):"
-						" Failed to convert ClassAd, "
-						"ignoring invalid hook output."
-						"  Job status NOT updated.\n", m_routed_job->JobDesc().c_str());
-				job_router->RerouteJob(m_routed_job);
-				return;
-			}
-			if (false == m_routed_job->src_ad.Update(new_job_ad))
+			if (false == m_routed_job->src_ad.Update(job_ad))
 			{
 				dprintf(D_ALWAYS, "ExitClient::hookExited (%s):"
 						" Failed to update source job "

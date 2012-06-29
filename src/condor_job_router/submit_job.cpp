@@ -25,7 +25,6 @@
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
 #include "proc.h"
-#include "classad_newold.h"
 #include "condor_uid.h"
 #include "condor_event.h"
 #include "write_user_log.h"
@@ -530,38 +529,8 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 
 bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
-	ClassAd src2;
-	if( ! new_to_old(src, src2) ) {
-		dprintf(D_ALWAYS, "submit_job failed to convert job ClassAd from new to old form\n");
-		return false;
-	}
+	ClassAd src2 = src;
 	return submit_job(src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
-}
-
-/*
-	Push the dirty attributes in src into the queue.  Does _not_ clear
-	the dirty attributes (use ClassAd::ClearAllDirtyFlags() if you want).
-	Assumes the existance of an open qmgr connection (via ConnectQ).
-*/
-bool push_dirty_attributes(int cluster, int proc, ClassAd & src)
-{
-	src.ResetExpr();
-	const char *lhstr = 0;
-	const char *rhstr = 0;
-	ExprTree * tree;
-	while( src.NextDirtyExpr(lhstr, tree) ) {
-		rhstr = ExprTreeToString( tree );
-		if( !lhstr || !rhstr) { 
-			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
-			return false;
-		}
-		dprintf(D_FULLDEBUG, "Setting %s = %s\n", lhstr, rhstr);
-		if( SetAttribute(cluster, proc, lhstr, rhstr) == -1 ) {
-			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to set %s = %s\n", cluster, proc, lhstr, rhstr);
-			return false;
-		}
-	}
-	return true;
 }
 
 /*
@@ -581,12 +550,27 @@ bool push_dirty_attributes(classad::ClassAd & src)
 		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
 		return false;
 	}
-	ClassAd src2;
-	if( ! new_to_old(src, src2) ) {
-		dprintf(D_ALWAYS, "push_dirty_attributes failed to convert job ClassAd from new to old form\n");
-		return false;
+	const char *rhstr = 0;
+	ExprTree * tree;
+	for( classad::ClassAd::dirtyIterator it = src.dirtyBegin();
+		 it != src.dirtyEnd(); ++it) {
+
+		rhstr = NULL;
+		tree = src.Lookup( *it );
+		if ( tree ) {
+			rhstr = ExprTreeToString( tree );
+		}
+		if( !rhstr) { 
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
+			return false;
+		}
+		dprintf(D_FULLDEBUG, "Setting %s = %s\n", it->c_str(), rhstr);
+		if( SetAttribute(cluster, proc, it->c_str(), rhstr) == -1 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to set %s = %s\n", cluster, proc, it->c_str(), rhstr);
+			return false;
+		}
 	}
-	return push_dirty_attributes(cluster, proc, src2);
+	return true;
 }
 
 static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
@@ -982,12 +966,7 @@ EmailTerminateEvent(ClassAd * job_ad, bool   /*exit_status_known*/)
 
 bool EmailTerminateEvent( classad::ClassAd const &ad )
 {
-	ClassAd old_ad;
-	classad::ClassAd ad_copy = ad;
-	if(!new_to_old(ad_copy,old_ad)) {
-		dprintf(D_ALWAYS, "EmailTerminateEvent failed to convert job ClassAd from new to old form\n");
-		return false;
-	}
+	ClassAd old_ad = ad;
 
 	EmailTerminateEvent( &old_ad, true );
 	return true;

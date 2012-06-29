@@ -32,28 +32,22 @@
 
 // GridManager job states
 #define GM_INIT					0
-#define GM_REGISTER				1
-#define GM_STDIO_UPDATE			2
-#define GM_UNSUBMITTED			3
-#define GM_SUBMIT				4
-#define GM_SUBMIT_SAVE			5
-#define GM_SUBMITTED			6
-#define GM_DONE_SAVE			7
-#define GM_DONE_COMMIT			8
-#define GM_CANCEL				9
-#define GM_FAILED				10
-#define GM_DELETE				11
-#define GM_CLEAR_REQUEST		12
-#define GM_HOLD					13
-#define GM_PROXY_EXPIRED		14
-#define GM_REFRESH_PROXY		15
-#define GM_START				16
-#define GM_POLL_ACTIVE			17
+#define GM_UNSUBMITTED			1
+#define GM_SUBMIT				2
+#define GM_SUBMIT_SAVE			3
+#define GM_SUBMITTED			4
+#define GM_DONE_SAVE			5
+#define GM_DONE_COMMIT			6
+#define GM_CANCEL				7
+#define GM_DELETE				8
+#define GM_CLEAR_REQUEST		9
+#define GM_HOLD					10
+#define GM_REFRESH_PROXY		11
+#define GM_START				12
+#define GM_POLL_ACTIVE			13
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
-	"GM_REGISTER",
-	"GM_STDIO_UPDATE",
 	"GM_UNSUBMITTED",
 	"GM_SUBMIT",
 	"GM_SUBMIT_SAVE",
@@ -61,11 +55,9 @@ static const char *GMStateNames[] = {
 	"GM_DONE_SAVE",
 	"GM_DONE_COMMIT",
 	"GM_CANCEL",
-	"GM_FAILED",
 	"GM_DELETE",
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
-	"GM_PROXY_EXPIRED",
 	"GM_REFRESH_PROXY",
 	"GM_START",
 	"GM_POLL_ACTIVE"
@@ -813,7 +805,8 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( attrs_to_copy[index], new_expr->Copy() );
+			ExprTree * pTree =  new_expr->Copy();
+			jobAd->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -870,7 +863,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //		ATTR_MIN_HOSTS,
 //		ATTR_JOB_PRIO,
 		ATTR_JOB_IWD,
-		ATTR_X509_USER_PROXY,
 		ATTR_GRID_RESOURCE,
 		NULL };		// list must end with a NULL
 
@@ -879,7 +871,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
-			submit_ad->Insert( attrs_to_copy[index], next_expr->Copy() );
+			ExprTree * pTree = next_expr->Copy();
+			submit_ad->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -887,6 +880,12 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	jobAd->LookupString( ATTR_JOB_REMOTE_IWD, expr );
 	if ( !expr.IsEmpty() ) {
 		submit_ad->Assign( ATTR_JOB_IWD, expr );
+	}
+
+	expr = "";
+	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
+	if ( !expr.IsEmpty() ) {
+		submit_ad->Assign( "Queue", expr );
 	}
 
 	// The blahp expects the Cmd attribute to contain the full pathname
@@ -899,6 +898,18 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
 	} else {
 		submit_ad->Assign( ATTR_JOB_CMD, expr );
+	}
+
+	// The blahp expects the proxy attribute to contain the full pathname
+	// of the proxy file.
+	jobAd->LookupString( ATTR_X509_USER_PROXY, expr );
+	if ( expr[0] != '/' ) {
+		std::string fullpath;
+		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
+		sprintf_cat( fullpath, "/%s", expr.Value() );
+		submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
+	} else {
+		submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
 	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
@@ -1023,7 +1034,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->Insert( attr_name, next_expr->Copy() );
+			ExprTree * pTree = next_expr->Copy();
+			submit_ad->Insert( attr_name, pTree );
 		}
 	}
 

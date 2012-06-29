@@ -33,7 +33,7 @@
 
 \SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-config}
 
-\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-dump} \oOpt{-expand} \oOpt{-evaluate}
+\SynProg{\Condor{config\_val}} \Opt{-dump} \oOpt{-expand}
 \oOpt{-verbose}
 
 \index{Condor commands!condor\_config\_val}
@@ -116,9 +116,6 @@ in a future revision of Condor.
 If the \Opt{-expand} option is given in addition to the \Opt{-dump} option,
 then variable values in the configuration files are expanded before
 being printed out.
-If the \Opt{-evaluate} option is provided when querying the configuration of
-a given daemon, the value of the requested parameter will be evaluated with 
-respect to the classad of that daemon.
 
 \begin{Options}
   \OptItem{\OptArg{-name}{machine\_name}}{ Query the specified
@@ -134,6 +131,9 @@ respect to the classad of that daemon.
     {The specific daemon to query. }
   \OptItem{\Opt{-local-name}}
     {Inspect the values of attributes that use local names.}
+  \OptItem{\Opt{-evaluate}}
+    { The value of the requested parameter will be evaluated with 
+    respect to the ClassAd of that daemon.  }
 \end{Options}
 
 \ExitStatus

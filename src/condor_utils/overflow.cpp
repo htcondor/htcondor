@@ -17,27 +17,16 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "overflow.h"
 
-#ifndef __CLASSAD_CLASSAD_STL_H__
-#define __CLASSAD_CLASSAD_STL_H__
-
-#include <map>
-#include <list>
-
-#ifdef WIN32
-#include <hash_map>
-#define classad_hash_map stdext::hash_map
-#else
-#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 2)
-#include <tr1/unordered_map>
-#define classad_hash_map std::tr1::unordered_map
-#else
-#include <ext/hash_map>
-#define classad_hash_map __gnu_cxx::hash_map
-#endif
-#endif
-
-#define classad_map   std::map 
-#define classad_slist std::list
-
-#endif /* __CLASSAD_CLASSAD_STL_H__ */
+int cap_int(long long ll)
+{
+	if( ll > INT_MAX ) {
+		return INT_MAX;
+	}
+	if( ll < INT_MIN ) {
+		return INT_MIN;
+	}
+	return (int)ll;
+}

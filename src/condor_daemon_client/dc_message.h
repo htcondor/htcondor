@@ -130,7 +130,7 @@ public:
 	bool getDeadlineExpired();
 	bool getRawProtocol() {return m_raw_protocol;}
 	char const *getSecSessionId() {
-		return m_sec_session_id.Value()[0] ? m_sec_session_id.Value() : NULL;
+		return m_sec_session_id.c_str()[0] ? m_sec_session_id.c_str() : NULL;
 	}
 	int getCommand() {return m_cmd;}
 
@@ -233,7 +233,6 @@ public:
 private:
 	int m_cmd;
 	char const *m_cmd_str;
-	MyString m_cmd_str_buf;
 	classy_counted_ptr<DCMsgCallback> m_cb;
 	int m_msg_success_debug_level;
 	int m_msg_failure_debug_level;
@@ -247,7 +246,7 @@ private:
 	int m_timeout;
 	time_t m_deadline;
 	bool m_raw_protocol;
-	MyString m_sec_session_id;
+	std::string m_sec_session_id;
 
 
 	void connectFailure( DCMessenger *messenger );
@@ -426,7 +425,7 @@ public:
 	bool readMsg( DCMessenger *messenger, Sock *sock );
 
 private:
-	MyString m_str;
+	std::string m_str;
 };
 
 /*

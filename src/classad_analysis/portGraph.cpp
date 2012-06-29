@@ -822,13 +822,11 @@ Initialize( std::vector<classad::ClassAd*>& ads )
 
 				// make sure expression is a ClassAd
 			if( !(expr = l.CurrentExpr( ) ) ||
-				expr->GetKind() != classad::ExprTree::CLASSAD_NODE ) {
+				!expr->isClassad(portAd) ) {
 				cout << "error: Port is not a classad\n" << endl;
 				return false;
 			}
 
-				// create port node
-			portAd = ( classad::ClassAd* )expr;
 			pNode = new PortNode( ad, adNum, portNum );
 
 				// look up port label ***CHANGE WHEN LABEL IS ATTRREF***

@@ -48,7 +48,7 @@ class ClassAdXMLParser
         ClassAdXMLParser(const ClassAdXMLParser &)            { return;       }
         ClassAdXMLParser &operator=(const ClassAdXMLParser &) { return *this; }
 
-		ClassAd  *ParseClassAd(void);
+		ClassAd  *ParseClassAd(ClassAd *classad_in = NULL);
 		ExprTree *ParseAttribute(std::string &attribute_name);
 		ExprTree *ParseThing(void);
 		ExprTree *ParseList(void);

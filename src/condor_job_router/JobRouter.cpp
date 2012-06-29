@@ -35,7 +35,6 @@
 #include "util_lib_proto.h"
 #include "my_popen.h"
 #include "file_lock.h"
-#include "classad_newold.h"
 #include "user_job_policy.h"
 #include "get_daemon_name.h"
 #include "filename_tools.h"
@@ -455,12 +454,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	int reason_subcode;
 	bool ret_val = false;
 
-	if (false == new_to_old(job->src_ad, converted_ad))
-	{
-		dprintf(D_ALWAYS, "JobRouter::EvalSrcJobPeriodicExpr(%s): "
-				"Failed to convert ClassAd.", job->JobDesc().c_str());
-		return false;
-	}
+	converted_ad = job->src_ad;
 	user_policy.Init(&converted_ad);
 
 	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
@@ -1129,7 +1123,7 @@ JobRouter::GetCandidateJobs() {
 
 	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
 
-	constraint_tree = parser.ParseExpression(umbrella_constraint.c_str());
+	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
 		EXCEPT("JobRouter: Failed to parse umbrella constraint: '%s'\n",umbrella_constraint.c_str());
 	}

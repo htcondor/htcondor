@@ -70,7 +70,7 @@ FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
-void _condor_set_debug_flags( const char *strflags, int flags );
+void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
 struct saved_dprintf {
@@ -81,8 +81,13 @@ struct saved_dprintf {
 static struct saved_dprintf* saved_list = NULL;
 static struct saved_dprintf* saved_list_tail = NULL;
 
+char * DebugLogDir = NULL; // set to the value of the $(LOG) macro
+
 extern	DLL_IMPORT_MAGIC int		errno;
-extern  int		DebugFlags;
+extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
+extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
+extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
+//extern  int		DebugFlags;
 extern param_functions *dprintf_param_funcs;
 
 /*
@@ -122,6 +127,7 @@ time_t	DebugLastMod = 0;
  * instead of the standard date format in all the log messages
  */
 int		DebugUseTimestamps = 0;
+char *	DebugTimeFormat = NULL;
 
 /*
  * When true, don't exit even if we fail to open the debug output file.
@@ -137,6 +143,7 @@ int      DebugContinueOnOpenFailure = 0;
 ** at index 0.
 */
 char	*DebugLock = NULL;
+int		DebugLockIsMutex = -1;
 
 int		(*DebugId)(char **buf,int *bufpos,int *buflen);
 int		SetSyscalls(int mode);
@@ -158,7 +165,6 @@ static int lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block);
 extern int vprintf_length(const char *format, va_list args);
 static HANDLE debug_win32_mutex = NULL;
 #endif
-static int use_kernel_mutex = -1;
 static int dprintf_count = 0;
 /*
 ** Note: setting this to true will avoid blocking signal handlers from running
@@ -173,14 +179,6 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
-DebugFileInfo::DebugFileInfo(const DebugFileInfo &debugFileInfo)
-{
-	this->debugFlags = debugFileInfo.debugFlags;
-	this->logPath = std::string(debugFileInfo.logPath);
-	this->maxLog = debugFileInfo.maxLog;
-	this->maxLogNum = debugFileInfo.maxLogNum;
-	this->debugFP = NULL;
-}
 
 DebugFileInfo::~DebugFileInfo()
 {
@@ -191,36 +189,31 @@ DebugFileInfo::~DebugFileInfo()
 	}
 }
 
-bool DebugFileInfo::MatchesFlags(int flags) const
+DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
+	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice),
+	maxLog(p.maxLog), maxLogNum(p.maxLogNum),
+	want_truncate(p.want_truncate), accepts_all(p.accepts_all) {}
+
+bool DebugFileInfo::MatchesCatAndFlags(int cat_and_flags) const
 {
-	if ( ! flags) return true;
-	if ( ! this->debugFlags) return (DebugFlags & flags) != 0;
-	return (this->debugFlags & flags) != 0;
+	if ( ! (cat_and_flags & D_CATEGORY_MASK)) return accepts_all;
+	if ( ! this->choice) return IsDebugCatAndVerbosity(cat_and_flags);
+	//if ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)))
+	//	return (this->verbose & (1<<(cat&D_CATEGORY_MASK))) != 0;
+	return (this->choice & (1<<(cat_and_flags&D_CATEGORY_MASK))) != 0;
 }
 
 static char *formatTimeHeader(struct tm *tm) {
 	static char timebuf[80];
-	static char *timeFormat = 0;
 	static int firstTime = 1;
 
 	if (firstTime) {
 		firstTime = 0;
-		timeFormat = dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
-		if (!timeFormat) {
-			timeFormat = strdup("%m/%d/%y %H:%M:%S ");
-		} else {
-			// Skip enclosing quotes
-			char *p;
-			if (*timeFormat == '"') {
-				timeFormat++;
-			}
-			p = timeFormat;
-			while (*p++) {
-				if (*p == '"') *p = '\0';
-			}
+		if (!DebugTimeFormat) {
+			DebugTimeFormat = strdup("%m/%d/%y %H:%M:%S ");
 		}
 	}
-	strftime(timebuf, 80, timeFormat, tm);
+	strftime(timebuf, 80, DebugTimeFormat, tm);
 	return timebuf;
 }
 
@@ -240,7 +233,7 @@ static char *formatTimeHeader(struct tm *tm) {
  * a copy of the args.
  */
 static void
-_condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm, FILE *fp, const char* fmt, va_list args )
+_condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, FILE *fp, const char* fmt, va_list args )
 {
 		// static buffer to avoid frequent memory allocation
 	static char *buf = NULL;
@@ -255,9 +248,15 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 	FILE *local_fp;
 	int fopen_rc = 1;
 
+#ifdef D_CATEGORY_MASK
+	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK);
+	unsigned char cat = (unsigned char)(cat_and_flags & D_CATEGORY_MASK);
+	bool UseTimestamps = DebugUseTimestamps;
+#endif
+
 		/* Print the message with the time and a nice identifier */
-	if( ((mask_flags|flags) & D_NOHEADER) == 0 ) {
-		if ( DebugUseTimestamps ) {
+	if( ! (hdr_flags & D_NOHEADER)) {
+		if ( UseTimestamps ) {
 				// Casting clock_now to int to get rid of compile
 				// warning.  Probably format should be %ld, and
 				// we should cast to long int, but I'm afraid of
@@ -273,7 +272,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 			}
 		}
 
-		if ( (mask_flags|flags) & D_FDS ) {
+		if (hdr_flags & D_FDS) {
 			//Regardless of whether we're keeping the log file open our not, we open
 			//the NULL file for the FD number.
 			if( (local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644)) == NULL )
@@ -291,7 +290,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 			}
 		}
 
-		if( (mask_flags|flags) & D_PID ) {
+		if (hdr_flags & D_PID) {
 #ifdef WIN32
 			my_pid = (int) GetCurrentProcessId();
 #else
@@ -312,7 +311,10 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 			}
 		}
 
-        if ((mask_flags | flags) & D_LEVEL) {
+#ifdef D_LEVEL //  with the switch from flags to enum, this code doesn't work anymore.
+               // it's not a very good idea to expose debug flags into the log file
+               // anyway, this code should probably just be removed rather than fixed.
+        if (hdr_flags & D_LEVEL) {
             rc = sprintf_realloc(&buf, &bufpos, &buflen, "(");
             if (rc < 0) sprintf_errno = errno;
 
@@ -332,6 +334,22 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
             rc = sprintf_realloc(&buf, &bufpos, &buflen, ") ");
             if (rc < 0) sprintf_errno = errno;
         }
+#endif
+#ifdef D_CAT
+		if ((hdr_flags & D_CAT) && /*cat > 0 &&*/ cat < D_CATEGORY_COUNT) {
+			char verbosity[10] = "";
+			if (cat_and_flags & (D_VERBOSE_MASK | D_FULLDEBUG)) {
+				int verb = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
+				if (cat_and_flags & D_FULLDEBUG) verb = 2;
+				sprintf(verbosity, ":%d", verb);
+			}
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%s%s) ", 
+					_condor_DebugFlagNames[cat], verbosity);
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
+		}
+#endif
 
 		if( DebugId ) {
 			rc = (*DebugId)( &buf, &bufpos, &buflen );
@@ -391,7 +409,7 @@ _condor_dfprintf( FILE *fp, const char* fmt, ... )
 	}
 
     va_start( args, fmt );
-	_condor_dfprintf_va(D_ALWAYS,D_ALWAYS|DebugFlags,clock_now,tm,fp,fmt,args);
+	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,fp,fmt,args);
     va_end( args );
 }
 
@@ -410,7 +428,7 @@ int dprintf_getCount(void)
 struct tm *localtime();
 
 void
-_condor_dprintf_va( int flags, const char* fmt, va_list args )
+_condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 {
 	struct tm *tm=0;
 	time_t clock_now;
@@ -420,7 +438,6 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #endif
 	int saved_errno;
 	priv_state	priv;
-	FILE *debug_file_ptr = NULL;
 	std::vector<DebugFileInfo>::iterator it;
 
 		/* DebugFP should be static initialized to stderr,
@@ -435,18 +452,17 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		   See if dprintf_config() has been called.  if not, save the
 		   message into a list so we can dump them out all at once
 		   when we've got a working log file.  we need to do this
-		   before we check the debug flags since they won't be
+		   before we check the debug cat_and_flags since they won't be
 		   initialized until we call dprintf_config().
 		*/
 	if( ! _condor_dprintf_works ) {
-		_condor_save_dprintf_line( flags, fmt, args );
+		_condor_save_dprintf_line( cat_and_flags, fmt, args );
 		return; 
 	} 
 
 		/* See if this is one of the messages we are logging */
-	if( !(flags&DebugFlags) ) {
+	if ( ! IsDebugCatAndVerbosity(cat_and_flags))
 		return;
-	}
 
 
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
@@ -536,45 +552,65 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			/* registered for other debug levels */
 		if(!DebugLogs->size())
 		{
-			debug_file_ptr = stderr;
+			FILE * debug_file_ptr = stderr;
 #ifdef va_copy
 			va_list copyargs;
 			va_copy(copyargs, args);
-			_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
 			va_end(copyargs);
 #else
-			_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,args);
 #endif
 		}
-		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+
+		unsigned int basic_flag = (cat_and_flags & D_FULLDEBUG) ? 0 : (1<<(cat_and_flags&D_CATEGORY_MASK));
+		unsigned int verbose_flag = 1<<(cat_and_flags&D_CATEGORY_MASK);
+		int ixOutput = 0;
+
+		PRAGMA_REMIND("TJ: fix this to work correctly for verbose")
+		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
 		{
-			int debugFlags = (*it).debugFlags;
-			/*
-			 * if debugFlags for the file is 0, print everything
-			 * otherwise print only messages that match at least one of the flags.
-			 * note: this means that D_ALWAYS will go only to slots where debugFlags == 0
-			 */
-			if (debugFlags && !(debugFlags & flags))
+			unsigned int choice = (*it).choice;
+			if (choice && !(choice & basic_flag) && !(choice & verbose_flag))
 				continue;
 
 			// for log files other than the first one, dont panic if we
 			// fail to write to the file.
-			bool dont_panic = (debugFlags != 0) || DebugContinueOnOpenFailure;
+			PRAGMA_REMIND("TJ: move dont_panic flag into debug output vector")
+			bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
 
 			/* Open and lock the log file */
-			debug_file_ptr = debug_lock_it(&(*it), NULL, 0, dont_panic);
+			FILE * debug_file_ptr = NULL;
+			bool   funlock_it = false;
+			switch ((*it).outputTarget) {
+				case STD_ERR: debug_file_ptr = stderr; break;
+				case STD_OUT: debug_file_ptr = stdout; break;
+				default:
+				case FILE_OUT:
+					debug_file_ptr = debug_lock_it(&(*it), NULL, 0, dont_panic);
+					funlock_it = true;
+					break;
+			   #ifdef WIN32
+				case OUTPUT_DEBUG_STR:
+
+					continue;
+					break;
+			   #endif
+			}
+
 			if (debug_file_ptr) {
 #ifdef va_copy
 				va_list copyargs;
 				va_copy(copyargs, args);
-				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
+				_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
 				va_end(copyargs);
 #else
-				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
+				_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,args);
 #endif
 			}
-
-			debug_unlock_it(&(*it));
+			if (funlock_it) {
+				debug_unlock_it(&(*it));
+			}
 		}
 
 			/* restore privileges */
@@ -702,23 +738,23 @@ debug_open_lock(void)
 	struct stat fstatus;
 	time_t start_time,end_time;
 
-	if ( use_kernel_mutex == -1 ) {
+	if ( DebugLockIsMutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		use_kernel_mutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
 		// Use file locking by default on Unix.  We should 
 		// call param_boolean_int here, but since locking via
 		// a mutex is not yet implemented on Unix, we will force it
 		// to always be FALSE no matter what the config file says.
-		// use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", FALSE);
-		use_kernel_mutex = FALSE;
+		// DebugLockIsMutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", FALSE);
+		DebugLockIsMutex = FALSE;
 #endif
 	}
 
 		/* Acquire the lock */
 	if( DebugLock ) {
-		if( use_kernel_mutex == FALSE) {
+		if ( ! DebugLockIsMutex) {
 			if (LockFd > 0 ) {
 				fstat(LockFd, &fstatus);
 				if (fstatus.st_nlink == 0){
@@ -779,24 +815,25 @@ double dprintf_get_lock_delay(void) {
 	return ((double)DebugLockDelay)/(now-DebugLockDelayPeriodStarted);
 }
 
+PRAGMA_REMIND("TJ: can we kill this? or maybe fix it so it doesn't assume debug_flags == debug_file_index")
 FILE *
 debug_lock(int debug_flags, const char *mode, int force_lock)
 {
-	std::vector<DebugFileInfo>::iterator it;
+	DebugOutputChoice choice(debug_flags);
 
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	for(std::vector<DebugFileInfo>::iterator it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
 		/*
 		 * debug_level is being treated by the caller as an INDEX into
 		 * the DebugLogs vector, this it nuts, but it works as long as
 		 * each file has a unique set of flags which is true for now...
 		 */
-		if(it->debugFlags != debug_flags)
+		if (it->choice != choice)
 			continue;
 
 		// for log files other than the first one, dont panic if we
 		// fail to write to the file.
-		bool dont_panic = (it->debugFlags != 0) || DebugContinueOnOpenFailure;
+		bool dont_panic = (it->choice != 0) || DebugContinueOnOpenFailure;
 
 		return debug_lock_it(&(*it), mode, force_lock, dont_panic);
 	}
@@ -993,18 +1030,20 @@ debug_close_all_files()
 	}
 }
 
+PRAGMA_REMIND("TJ: can we kill this, or fix it so it doesn't assume debug_flags == debug_file_index")
 void
 debug_unlock(int debug_flags)
 {
-	std::vector<DebugFileInfo>::iterator it;
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	DebugOutputChoice choice(debug_flags);
+
+	for(std::vector<DebugFileInfo>::iterator it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
 		/*
 		 * debug_level is being treated by the caller as an INDEX into
 		 * the DebugLogs vector, this it nuts, but it works as long as
 		 * each file has a unique set of flags which is true for now...
 		 */
-		if(it->debugFlags != debug_flags)
+		if (it->choice != choice)
 			continue;
 		debug_unlock_it(&(*it));
 		break;
@@ -1143,7 +1182,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 
 		save_errno = errno;
 		snprintf( msg_buf, sizeof(msg_buf), "Can't open file for debug level %d\n",
-				 it->debugFlags ); 
+				 it->choice ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
@@ -1327,7 +1366,6 @@ bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic)
 void
 _condor_dprintf_exit( int error_code, const char* msg )
 {
-	char* tmp;
 	FILE* fail_fp;
 	char buf[DPRINTF_ERR_MAX];
 	char header[DPRINTF_ERR_MAX];
@@ -1371,10 +1409,9 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		strcat( tail, buf );
 #endif
 
-		tmp = dprintf_param_funcs->param( "LOG" );
-		if( tmp ) {
+		if( DebugLogDir ) {
 			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
-					  tmp, get_mySubSystemName() );
+					  DebugLogDir, get_mySubSystemName() );
 			fail_fp = safe_fopen_wrapper_follow( buf, "wN",0644 );
 			if( fail_fp ) {
 				fprintf( fail_fp, "%s", header );
@@ -1385,7 +1422,6 @@ _condor_dprintf_exit( int error_code, const char* msg )
 				fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
 				wrote_warning = TRUE;
 			} 
-			free( tmp );
 		}
 		if( ! wrote_warning ) {
 			fprintf( stderr, "%s", header );
@@ -1424,9 +1460,9 @@ _condor_dprintf_exit( int error_code, const char* msg )
   the code in both places. -Derek Wright 9/29/99
 */
 void
-set_debug_flags( const char *strflags, int flags )
+set_debug_flags( const char *strflags, int cat_and_flags )
 {
-	_condor_set_debug_flags( strflags, flags );
+	_condor_set_debug_flags( strflags, cat_and_flags );
 }
 
 
@@ -1602,7 +1638,7 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		return 0;
 	}
 
-	if ( use_kernel_mutex == FALSE ) {
+	if ( ! DebugLockIsMutex) {
 			// use a filesystem lock
 		return lock_file_plain(fd,type,do_block);
 	}

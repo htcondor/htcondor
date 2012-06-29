@@ -39,7 +39,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p2 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -48,7 +48,8 @@ if ( WITH_BLAHP )
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------
-						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
+						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
@@ -63,6 +64,7 @@ if ( WITH_BLAHP )
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
+                                                        export CPPFLAGS=-I${BOOST_INCLUDE} &&
 							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}

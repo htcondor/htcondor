@@ -58,17 +58,16 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
 	ViewMembers::iterator	vmi;
 	MatchClassAd			mad;
 	View					*view;
-	ClassAd					*ad; 
+	ClassAd					*ad=0; 
 	const ClassAd			*parent;
 	string					key;
 	bool					match;
-    bool                    given_classad;
+    bool                    given_classad=false;
     
-    if (expr && expr->GetKind() == ExprTree::CLASSAD_NODE) {
-        given_classad = true;
-    } else {
-        given_classad = false;
-    }
+	if (expr && expr->isClassad(&ad))
+	{
+		given_classad = true;
+	}
 
     parent = NULL;
 
@@ -81,11 +80,11 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
 
 	if( expr ) {
         if (given_classad) {
-            mad.ReplaceLeftAd((ClassAd*)expr);
+            mad.ReplaceLeftAd(ad);
         } else {
             // setup evluation environment if a constraint was supplied
             parent = expr->GetParentScope( );
-            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr ) ) {
+            if( !( ad=mad.GetLeftAd() ) || !ad->Insert(ATTR_REQUIREMENTS,expr,false ) ) {
                 expr->SetParentScope( parent );
                 return( false );
             }

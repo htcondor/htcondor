@@ -48,6 +48,10 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 	int rc;
 	INFNBatchResource *resource = NULL;
 
+	if ( resource_name == NULL ) {
+		resource_name = "";
+	}
+
 	rc = ResourcesByName.lookup( HashKey( HashName( batch_type, resource_name ) ), resource );
 	if ( rc != 0 ) {
 		resource = new INFNBatchResource( batch_type, resource_name );
