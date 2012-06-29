@@ -235,7 +235,9 @@ not match any certificates (even if they have an empty subject name).
 
 \begin{itemize}
 
-\item The EC2 GAHP will now respect X509\_CERT\_DIR for all (secure) connections.
+\item The EC2 GAHP will now respect the value of the environment variable
+\Env{X509\_CERT\_DIR} and the configuration variable
+\Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR} for \emph{all} secure connections.
 \Ticket{2823}
 
 \item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
