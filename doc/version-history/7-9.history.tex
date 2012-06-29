@@ -88,6 +88,9 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 
 \begin{itemize}
 
+\item Added support for classad caching to reduce memory footprint. 
+\Ticket{2541}
+
 \item Added configuration variable CLASSAD\_LOG\_STRICT\_PARSING, which defaults to 
 \Expr{True}, and can be used to control whether ClassAd log files such as the job queue
 log are read in with strict parse checking on ClassAd expressions.
