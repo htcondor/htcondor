@@ -383,53 +383,56 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const string &value )
 bool ClassAd::Insert( std::string& serialized_nvp)
 {
 
-  bool bRet = true;
+  bool bRet = false;
   string name, szValue;
   size_t pos, npos, vpos;
   
   // comes in as "name = value" "name= value" or "name =value"
-  npos=pos = serialized_nvp.find("=");
-  if (serialized_nvp[pos-1] == ' ')
+  npos=pos=serialized_nvp.find("=");
+  
+  // only try to process if the string is valid 
+  if ( pos != string::npos  )
   {
-    npos--;
-  }
-  name = serialized_nvp.substr(0, npos);
-
-  vpos=pos+1;
-  if (serialized_nvp[vpos] == ' ')
-  {
-    vpos++;
-  }
-
-  szValue = serialized_nvp.substr(vpos);
-
-  // here is the special logic to check
-  CachedExprEnvelope * cache_check = CachedExprEnvelope::check_hit( name, szValue );
-  if ( cache_check ) 
-  {
-      ExprTree * in = cache_check;
-      bRet = Insert( name, in, false );
-  }
-  else
-  {
-    ClassAdParser parser;
-    ExprTree * newTree=0;
-
-    // we did not hit in the cache... parse the expression
-    newTree = parser.ParseExpression(szValue);
-
-    // invert default flow logic for else case.
-    bRet = false;
-
-    if ( newTree )
+    if (serialized_nvp[pos-1] == ' ')
     {
-      if ( Insert( name, newTree ) ) 
-      {
-	bRet = true;
-      }
+      npos--;
+    }
+    name = serialized_nvp.substr(0, npos);
+
+    vpos=pos+1;
+    if (serialized_nvp[vpos] == ' ')
+    {
+      vpos++;
     }
 
-  }
+    szValue = serialized_nvp.substr(vpos);
+
+    // here is the special logic to check
+    CachedExprEnvelope * cache_check = CachedExprEnvelope::check_hit( name, szValue );
+    if ( cache_check ) 
+    {
+	ExprTree * in = cache_check;
+	bRet = Insert( name, in, false );
+    }
+    else
+    {
+      ClassAdParser parser;
+      ExprTree * newTree=0;
+
+      // we did not hit in the cache... parse the expression
+      newTree = parser.ParseExpression(szValue);
+
+      if ( newTree )
+      {
+	if ( Insert( name, newTree ) ) 
+	{
+	  bRet = true;
+	}
+      }
+
+    }
+    
+  } // end if pos != string::npos
 
   return bRet;
 }
