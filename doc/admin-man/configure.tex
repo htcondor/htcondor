@@ -1505,8 +1505,7 @@ of the subsystem corresponding to the daemon.
   that defaults to \Expr{True}. 
   This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
   is \Expr{True}.
-  When \Expr{True}, job user logs and the global job event log are
-  written to a directory named \File{condorLocks},
+  When \Expr{True}, lock files are written to a directory named \File{condorLocks},
   thereby using a local drive to avoid known problems with locking on NFS.
   The location of the \File{condorLocks} directory is determined by
   \begin{enumerate}
@@ -8423,6 +8422,8 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
   node job submit description files with user log files on NFS.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is true and
+  \MacroNI{ENABLE\_USERLOG\_LOCKING} is true.
   If a DAG references such a submit description file and
   \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
   the DAG will abort during the initialization process. 
