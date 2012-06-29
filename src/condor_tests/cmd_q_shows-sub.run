@@ -55,7 +55,7 @@ my $submit = sub {
     foreach (@adarray) {
         if(/^\s*([\w\-]+)\s+ClusterId\s+=\s+$cluster/) {
             CondorTest::debug("Matching line -> $_\n", $debuglevel);
-            CondorTest::debug("submitter = $1  -  cluster = $2\n", $debuglevel);
+            CondorTest::debug("submitter = $1  -  cluster = $cluster\n", $debuglevel);
             $whoami = $1;
         }
         else {
