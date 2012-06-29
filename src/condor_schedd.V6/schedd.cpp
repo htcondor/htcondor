@@ -89,7 +89,7 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "condor_email.h"
-
+#include "NameFinder.h"
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
@@ -2665,6 +2665,14 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		ULog->setCreatorName( Name );
 		if(!ulogs.empty()) { // Only write the global log once
 			ULog->setEnableGlobalLog( false );
+			MyString msk; // Mask only the dagman log
+			GetAttributeString(job_id.cluster, job_id.proc, ATTR_DAGMAN_WORKFLOW_MASK,
+				msk);
+			NameFinder nf(std::string(msk.Value()),',');
+			while(nf) {
+				std::string mask = nf.get();
+				ULog->AddToMask(ULogEventNumber(atoi(mask.c_str())));
+			}
 		}
 		if (ULog->initialize(owner.Value(), domain.Value(),
 					logfile.c_str(), job_id.cluster, job_id.proc, 0,

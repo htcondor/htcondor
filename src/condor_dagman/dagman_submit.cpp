@@ -317,6 +317,34 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			std::string dlog("dagman_log = ");
 			dlog += defaultLog;
 			args.AppendArg(dlog.c_str());
+			debug_printf( DEBUG_VERBOSE, "Adding a DAGMan auxiliary log %s\n", defaultLog );
+				// Now append the mask
+			args.AppendArg( "-a" );
+			std::string dmask("+");
+			dmask += ATTR_DAGMAN_WORKFLOW_MASK;
+			dmask += " = \"";
+			debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN auxiliary log\n" );
+			std::stringstream dmaskstrm;
+			int mask[] = {
+				ULOG_SUBMIT,
+				ULOG_EXECUTE,
+				ULOG_JOB_TERMINATED,
+				ULOG_JOB_ABORTED,
+				ULOG_JOB_HELD,
+				ULOG_JOB_RELEASED,
+				ULOG_POST_SCRIPT_TERMINATED,
+				-1
+			};
+			for(const int*p = &mask[0]; *p != -1; ++p) {
+				if(p != &mask[0]) {
+					dmaskstrm << ",";
+				}
+				dmaskstrm << *p;
+			}
+			dmask += dmaskstrm.str();
+			debug_printf( DEBUG_VERBOSE, "Mask for auxiliary log is %s\n", dmaskstrm.str().c_str() );
+			dmask += "\"";
+			args.AppendArg(dmask.c_str());
 		}
 	} else {
 			// Log was not specified in the submit file

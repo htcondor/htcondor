@@ -33,7 +33,7 @@
 #include "classad_helpers.h"
 #include "classad_merge.h"
 #include "dc_startd.h"
-
+#include "NameFinder.h"
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -844,7 +844,7 @@ void BaseShadow::initUserLog()
 		// during the lifetime of the shadow.  We clear uLog so
 		// we do not write events more than once.
 
-	if(uLog.size() > 0) {
+	if(!uLog.empty()) {
 		for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
 				p != uLog.end(); ++p) {
 			delete *p;
@@ -891,6 +891,13 @@ void BaseShadow::initUserLog()
 		}
 		if(!uLog.empty()) { // Write to the Global log at most once
 			uLogi->setEnableGlobalLog(false);
+			MyString msk; // Mask only the dagman log
+			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
+			NameFinder nf(std::string(msk.Value()),',');
+			while(nf) {
+				std::string mask = nf.get();
+				uLogi->AddToMask(ULogEventNumber(atoi(mask.c_str())));
+			}
 		}
 		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
 			// It is important to NOT ignore a failure to initialize the user log,

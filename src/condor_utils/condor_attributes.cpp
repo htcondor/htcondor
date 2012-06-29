@@ -178,6 +178,7 @@ const char * const ATTR_DAG_NODE_NAME			 = "DAGNodeName";
 const char * const ATTR_DAG_NODE_NAME_ALT		 = "dag_node_name";
 const char * const ATTR_DAGMAN_JOB_ID			 = "DAGManJobId";
 const char * const ATTR_DAGMAN_WORKFLOW_LOG		 = "DAGManNodesLog";
+const char * const ATTR_DAGMAN_WORKFLOW_MASK	 = "DAGManNodesMask";
 const char * const ATTR_DEFERRAL_OFFSET			 = "DeferralOffset";
 const char * const ATTR_DEFERRAL_PREP_TIME		 = "DeferralPrepTime";
 const char * const ATTR_DEFERRAL_TIME			 = "DeferralTime";
