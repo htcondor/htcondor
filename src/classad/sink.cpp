@@ -720,7 +720,7 @@ identifierNeedsQuoting( const string &str )
 
 	// must start with [a-zA-Z_]
 	if( !isalpha( *ch ) && *ch != '_' ) {
-		needs_quoting = false;
+		needs_quoting = true;
 	} else {
 
 		// all other characters must be [a-zA-Z0-9_]
