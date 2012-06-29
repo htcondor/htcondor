@@ -616,7 +616,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform RHEL 5 on x86
 	##########################################################################
-	'x86_rhap_5'		=> {
+	'x86_rhap_5.8'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
