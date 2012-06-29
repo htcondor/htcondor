@@ -1285,8 +1285,9 @@ sub IsPersonalRunning
 #
 #################################################################
 
-sub IsRunningYet
-{
+sub IsRunningYet {
+    print "Testing if Condor is up.\n";
+    print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
 	my $daemonlist = `condor_config_val daemon_list`;
 	CondorUtils::fullchomp($daemonlist);
 	my $collector = 0;
