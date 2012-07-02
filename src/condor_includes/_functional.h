@@ -32,8 +32,8 @@
 #else
 	#include <boost/bind.hpp>
 	#include <boost/function.hpp>
-	#define _weak_ptr boost::bind
-	#define _shared_ptr boost::function
+	#define _bind boost::bind
+	#define _function boost::function
 #endif
 
 #endif
