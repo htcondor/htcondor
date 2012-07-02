@@ -186,12 +186,15 @@ by it and all other daemons on that machine.
 \Ticket{2911}
 
 \item There is a new configuration variable used by the \Condor{starter}.
-If \Macro{STARTER\_RLIMIT\_AS} is set to an integer value, the starter
-will use the setrlimit system call with the RLIMIT\_AS parameter to
-limit the virtual size of each process in the user job.  The value of
-this parameter is a ClassAd expression, evaluated in the context of both
-the machine and job ads, where the machine ad is the "my" ad, and the job 
-ad is the "target" ad.
+If \Macro{STARTER\_RLIMIT\_AS} is set to an integer value, 
+the \Condor{starter}
+will use the \Procedure{setrlimit} system call with the 
+\Code{RLIMIT\_AS} parameter to
+limit the virtual memory size of each process in the user job.  
+The value of this configuration variable is a ClassAd expression, 
+evaluated in the context of both the machine and job ClassAds, 
+where the machine ClassAd is the \Expr{my} ClassAd, 
+and the job ClassAd is the \Expr{target} ClassAd.
 \Ticket{1663}
 
 \item New configuration variables were added to to the \Condor{schedd} to
