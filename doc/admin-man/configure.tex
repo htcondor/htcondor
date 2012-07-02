@@ -6164,6 +6164,18 @@ which contain whitespace.
   A ClassAd expression that produces an initial value for the job ClassAd
   attribute \Attr{MemoryUsage} in vm universe jobs.
 
+\label{param:StarterRlimitAs} 
+\item[ \Macro{STARTER\_RLIMIT\_AS}]
+  An integer ClassAd expression, 
+  evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
+  of the \Procedure{setrlimit} system call.
+  This limits the virtual memory size of each process in the user job.  
+  The expression is
+  evaluated in the context of both the machine and job ClassAds,
+  where the machine ClassAd is the \Expr{my} ClassAd,
+  and the job ClassAd is the \Expr{target} ClassAd.
+  There is no default value for this variable.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
