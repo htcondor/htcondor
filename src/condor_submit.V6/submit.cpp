@@ -5435,9 +5435,11 @@ SetGridParams()
 		}
 	}
 
-	buffer.sprintf("%s = \"%s\"",
-				   ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
-	InsertJobExpr(buffer.Value());
+	if ( !tagNames.isEmpty() ) {
+		buffer.sprintf("%s = \"%s\"",
+					ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
+		InsertJobExpr(buffer.Value());
+	}
 
 
 	//
