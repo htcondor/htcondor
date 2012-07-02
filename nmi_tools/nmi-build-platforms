@@ -8,7 +8,7 @@ x86_64_rhap_5.7
 x86_64_rhap_6.2
 x86_64_winnt_6.1
 x86_rhap_5.8
-x86_rhap_6.2
+x86_rhap_6.3
 
 # We want to build all branches on Fedora because it is our "warning check" platform
 x86_64_fedora_15
