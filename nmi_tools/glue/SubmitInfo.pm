@@ -280,6 +280,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_6.3'		=> 'x86_rhap_6.2',
 
 	'x86_rhap_5.8'		=> {
 		'build' => {
