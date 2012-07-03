@@ -6014,7 +6014,7 @@ These settings affect the \Condor{starter}.
 \end{verbatim}
 
 	These precise syntaxes are needed to correctly handle program arguments
-which contain whitespace.
+which contain dispose.
 
 
   For Windows machines, the wrapper will either be
@@ -8810,36 +8810,38 @@ section~\ref{sec:Security} on Security.
   a comma separated list of the subject
   name(s) of the certificate(s) used by Condor daemons to
   which this configuration of Condor will connect.
-  The \verb|*| character may be used as a wildcard character.
-  When \MacroNI{GSI\_DAEMON\_NAME} is
-  defined, only certificates matching
+  The \verb|*| character may be used as a wild card character.
+  When \MacroNI{GSI\_DAEMON\_NAME} is defined, 
+  only certificates matching
   \MacroNI{GSI\_DAEMON\_NAME} pass the authentication step, and no
-  check is performed to require that the hostname of the daemon
-  matches the hostname in the daemon's certificate.  When
-  \MacroNI{GSI\_DAEMON\_NAME} is not defined, 
-  the hostname of the daemon and certificate must match unless
-  exempted by \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+  check is performed to require that the host name of the daemon
+  matches the host name in the daemon's certificate.  
+  When \MacroNI{GSI\_DAEMON\_NAME} is not defined, 
+  the host name of the daemon and certificate must match unless
+  exempted by the use of \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
   \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
 
-\label{param:GsiSkipHostCheck}
+\label{param:GSISkipHostCheck}
 \item[\Macro{GSI\_SKIP\_HOST\_CHECK}]
-This is a boolean setting that controls whether a check is performed during
-GSI authentication of a Condor daemon.  When false (the default),
-the check is not skipped, so the daemon hostname must match the
-hostname in the daemon's certificate, unless otherwise exempted
-by \MacroNI{GSI\_DAEMON\_NAME} or
-\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
-When true, this check is skipped, and hosts will not be rejected
-due to a mismatch of certificate and hostname.
+  A boolean variable that controls whether a check is performed during
+  GSI authentication of a Condor daemon.  
+  When the default value of \Expr{False},
+  the check is not skipped, so the daemon host name must match the
+  host name in the daemon's certificate, 
+  unless otherwise exempted by the use of \Macro{GSI\_DAEMON\_NAME} or
+  \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+  When \Expr{True}, this check is skipped, and hosts will not be rejected
+  due to a mismatch of certificate and host name.
 
-\label{param:GsiSkipHostCheckCertRegex}
+\label{param:GSISkipHostCheckCertRegex}
 \item[\Macro{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}]
-This may be set to a regular expression.  GSI certificates of Condor
-daemons with a subject name that are matched in full by this regular
-expression are not required to have a matching daemon hostname and
-certificate hostname.  The default is an empty regular expression,
-which will not match any certificates (even if they have an empty
-subject name).
+  This may be set to a regular expression.  GSI certificates of Condor
+  daemons with a subject name that are matched in full by this regular
+  expression are not required to have a matching daemon host name and
+  certificate host name.  
+  The default is an empty regular expression,
+  which will not match any certificates,
+  even if they have an empty subject name.
 
 \label{param:GSIDaemonDirectory}
 \item[\Macro{GSI\_DAEMON\_DIRECTORY}]
