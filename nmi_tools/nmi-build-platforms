@@ -8,7 +8,7 @@ x86_64_rhap_5.7
 x86_64_rhap_6.2
 x86_64_winnt_6.1
 x86_rhap_5.8
-x86_rhap_6.2
+x86_rhap_6.3
 
 # This Windows machine has only 2 slots so we are only building on master currently
 x86_winnt_5.1
