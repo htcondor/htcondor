@@ -1,0 +1,12 @@
+diff -u -r org.glite.ce.blahp/src/scripts/sge_status.sh org.glite.ce.blahp.patched/src/scripts/sge_status.sh
+--- org.glite.ce.blahp/src/scripts/sge_status.sh	2011-06-09 06:21:02.000000000 -0500
++++ org.glite.ce.blahp.patched/src/scripts/sge_status.sh	2012-07-03 17:46:16.000000000 -0500
+@@ -62,7 +62,7 @@
+ tmpid=`echo "$@"|sed 's/.*\/.*\///g'`
+ 
+ # ASG Keith way
+-jobid=${tmpid}.default
++jobid=${tmpid}.${sge_cellname:-default}
+ 
+ 
+ blahp_status=`exec ${sge_helper_path:-/opt/glite/bin}/sge_helper --status $getwn $jobid`
