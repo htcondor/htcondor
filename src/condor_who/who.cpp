@@ -838,11 +838,12 @@ protected:
 	int    cbData;
 	int    cbAlloc;
 	bool   at_eof;
+	bool   text_mode;
 	int    error;
 
 public:
 	BWReaderBuffer(int cb=0, char * input = NULL) 
-		: data(input), cbData(cb), cbAlloc(cb), at_eof(false), error(0) {
+		: data(input), cbData(cb), cbAlloc(cb), at_eof(false), text_mode(false), error(0) {
 		if (input) {
 			cbAlloc = cbData = cb;
 		} else if (cb > 0) {
@@ -865,6 +866,8 @@ public:
 	int capacity() { return cbAlloc-1; }
 	int LastError() { return error; }
 	bool AtEOF() { return at_eof; }
+	bool IsTextMode() { return text_mode; }
+	void SetTextMode(bool text) { text_mode = text; }
 	char operator[](int ix) const { return data[ix]; }
 	char& operator[](int ix) { return data[ix]; }
 
@@ -898,12 +901,12 @@ public:
 			error = 0;
 		}
 
-		// on windows we can consume more than we read because of \r
+		// on windows in text mode we can consume more than we read because of \r
 		// but since we are scanning backwards this can cause us to re-read
 		// the same bytes more than once. So lop off the end of the buffer so
 		// so we only get back the unique bytes
 		at_eof = feof(file);
-		if ( ! at_eof) {
+		if (text_mode && ! at_eof) {
 			off_t end_offset = ftell(file);
 			int extra = (int)(end_offset - (offset + ret));
 			ret -= extra;
@@ -1029,6 +1032,7 @@ private:
 			fseek(file, 0, SEEK_END);
 			cbFile = cbPos = ftell(file);
 			error = 0;
+			buf.SetTextMode( ! strchr(open_options,'b'));
 		}
 		return error != 0;
 	}
@@ -1043,8 +1047,17 @@ private:
 			return false;
 
 		// if buffer ends in a newline, convert it to a \0
-		if (buf[--cb] == '\n') {
-			buf[cb] = 0;
+		if (buf[cb-1] == '\n') {
+			buf[--cb] = 0;
+			// if the input string is not empty, then the previous
+			// buffer ended _exactly_ at a newline boundary, so return
+			// the string rather than concatinating it to the newline.
+			if ( ! str.empty()) {
+				if (buf[cb-1] == '\r')
+					buf[--cb] = 0;
+				buf.setsize(cb);
+				return true;
+			}
 		}
 		// because of windows style \r\n, we also tolerate a \r at the end of the line
 		if (buf[cb-1] == '\r') {
