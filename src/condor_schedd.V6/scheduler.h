@@ -615,7 +615,8 @@ private:
 
 	// Information to pass to shadows for contacting file transfer queue
 	// manager.
-	MyString m_xfer_queue_contact;
+	bool m_have_xfer_queue_contact;
+	std::string m_xfer_queue_contact;
 
 	// useful names
 	char*			CondorAdministrator;

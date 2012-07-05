@@ -9415,6 +9415,38 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
+[GSI_SKIP_HOST_CHECK_CERT_REGEX]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=GSI Skip Host Check Cert Regex
+usage=the directory that contains the public keys and signing policies of trusted certificate authorities
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=ccb,ccb
+id=555
+
+[GSI_SKIP_HOST_CHECK]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=GSI Skip Host Check
+usage=the directory that contains the public keys and signing policies of trusted certificate authorities
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=ccb,ccb
+id=555
+
 [TRUNC_MASTER_LOG_ON_OPEN]
 aliases=
 default=false

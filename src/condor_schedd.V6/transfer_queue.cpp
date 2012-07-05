@@ -424,12 +424,12 @@ TransferQueueManager::CheckTransferQueue() {
 	}
 }
 
-void
-TransferQueueManager::GetContactInfo(char const *command_sock_addr,MyString &contact_str)
+bool
+TransferQueueManager::GetContactInfo(char const *command_sock_addr, std::string &contact_str)
 {
 	TransferQueueContactInfo contact(
 		command_sock_addr,
 		m_max_uploads == 0,
 		m_max_downloads == 0);
-	contact_str = contact.GetStringRepresentation();
+	return contact.GetStringRepresentation(contact_str);
 }
