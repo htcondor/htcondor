@@ -805,7 +805,8 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( attrs_to_copy[index], new_expr->Copy() );
+			ExprTree * pTree =  new_expr->Copy();
+			jobAd->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -870,7 +871,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
-			submit_ad->Insert( attrs_to_copy[index], next_expr->Copy() );
+			ExprTree * pTree = next_expr->Copy();
+			submit_ad->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -900,14 +902,15 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
-	jobAd->LookupString( ATTR_X509_USER_PROXY, expr );
-	if ( expr[0] != '/' ) {
-		std::string fullpath;
-		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-		sprintf_cat( fullpath, "/%s", expr.Value() );
-		submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
-	} else {
-		submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+	if ( jobAd->LookupString( ATTR_X509_USER_PROXY, expr ) ) {
+		if ( expr[0] != '/' ) {
+			std::string fullpath;
+			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
+			sprintf_cat( fullpath, "/%s", expr.Value() );
+			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
+		} else {
+			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+		}
 	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
@@ -1032,7 +1035,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->Insert( attr_name, next_expr->Copy() );
+			ExprTree * pTree = next_expr->Copy();
+			submit_ad->Insert( attr_name, pTree );
 		}
 	}
 

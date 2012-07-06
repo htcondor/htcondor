@@ -89,6 +89,7 @@ static struct {
 	bool   full_ads;
 	bool   job_ad;		     // debugging
 	bool   ping_all_addrs;	 // 
+	int    test_backwards;   // test backwards reading code.
 	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
 	vector<const char *> query_addrs;
@@ -109,6 +110,7 @@ void InitAppGlobals(const char * argv0)
 	App.full_ads = false;
 	App.job_ad = false;     // debugging
 	App.ping_all_addrs = false;
+	App.test_backwards = false;
 }
 
 	// Tell folks how to use this program
@@ -386,6 +388,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, IntCusto
 }
 
 #define IsArg is_arg_prefix
+#define IsArgColon is_arg_colon_prefix
 
 void parse_args(int /*argc*/, char *argv[])
 {
@@ -411,7 +414,7 @@ void parse_args(int /*argc*/, char *argv[])
 		}
 
 		if (*parg != '-') {
-			// arg without leaging - is a target
+			// arg without leading - is a target
 			App.target_names.Append(parg);
 		} else {
 			// arg with leading '-' is an option
@@ -448,8 +451,8 @@ void parse_args(int /*argc*/, char *argv[])
 			} else if (IsArg(parg, "long", 1)) {
 				App.full_ads = true;
 			} else if (IsArg(parg, "format", 1)) {
-			} else if (is_arg_colon_prefix(parg, "autoformat", &pcolon, 5) ||
-			           is_arg_colon_prefix(parg, "af", &pcolon, 2)) {
+			} else if (IsArgColon(parg, "autoformat", &pcolon, 5) ||
+			           IsArgColon(parg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
 				if ( !argv[ixArg+1] || *(argv[ixArg+1]) == '-') {
 					fprintf (stderr, "Error: Argument %s requires "
@@ -517,6 +520,8 @@ void parse_args(int /*argc*/, char *argv[])
 				App.job_ad = true;
 			} else if (IsArg(parg, "ping_all_addrs", 4)) {
 				App.ping_all_addrs = true;
+			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
+				App.test_backwards = pcolon ? atoi(pcolon) : 1;
 			}
 		}
 	}
@@ -941,7 +946,9 @@ public:
 		file = NULL;
 	}
 
-	int  LastError() { return error; }
+	int  LastError() { 
+		return error; 
+	}
 	bool AtEOF() { 
 		if ( ! file || (cbPos >= cbFile))
 			return true; 
@@ -951,6 +958,10 @@ public:
 		if ( ! file || (cbPos == 0))
 			return true; 
 		return false;
+	}
+	void Close() {
+		if ( file) fclose(file);
+		file = NULL;
 	}
 
 #if 0
@@ -971,7 +982,7 @@ public:
 		if (AtBOF())
 			return false;
 
-		const int cbBack = 128;
+		const int cbBack = 512;
 		while (true) {
 			int off = cbPos > cbBack ? cbPos - cbBack : 0;
 			int cbToRead = (int)(cbPos - off);
@@ -1062,8 +1073,305 @@ private:
 	}
 };
 
+// scan backwards through a daemon log file and extract PID and Address information
+// this code looks as the LAST daemon startup banner and a few lines after it to get
+// this information.  it scan's backwards from the end of the file and quits as soon
+// as it gets to the startup banner. this code looks for:
+//		" (CONDOR_DAEMON) STARTING UP"  (where DAEMON is MASTER, SCHEDD, etc)
+//		" ** Log last touched "
+//		" ** PID = NNNN"                (between Log last touched and STARTING UP)
+//		" DaemonCore: command socket at <"
+//
+// for the master log, it also parses some other lines to more efficiently pick up
+// pids and addresses when they are mentioned in the master log.  this code looks for:
+//		"Sent signal NNN to DAEMON (pid NNNN)"
+//		"Started DaemonCore process PATH, pid and pgroup = NNNN"
+//
+// for starter log, it also builds a job_to_pid map for jobs that are still alive
+// according to the log file.  this code looks for:
+//		" (condor_STARTER) pid NNNN EXITING WITH STATUS N"  (this stops scanning of the starter log)
+//		" Starting a UUUUUU universe job with ID: JJJJJ"    (JJJJ scraped from this line and mapped to possible_pid)
+//		"Create_Process succeeded, pid=NNNN"                (NNNN is possible_pid if NNNN is not in dead pids list)
+//		"Process exited, pid=NNNN"                          (NNNN added to dead_pids list)
+//
+//
+static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LOG_INFO_MAP::const_iterator & it)
+{
+	std::string daemon_name_all_caps;  // e.g. "MASTER"
+	std::string startup_banner_text;  // e.g. " (CONDOR_MASTER) STARTING UP"
+
+	// set flags to trigger special scraping rules for certain log files
+	bool bSlotLog = false;
+	bool bMasterLog = (it->first == "Master");
+	if (bMasterLog) {
+		daemon_name_all_caps = "MASTER";
+		startup_banner_text = " (CONDOR_MASTER) STARTING UP";
+	} else {
+		bSlotLog = starts_with(it->first.c_str(),"Slot",NULL);
+		if (bSlotLog) {
+			daemon_name_all_caps = "STARTER";
+			startup_banner_text = " (CONDOR_STARTER) STARTING UP";
+		} else {
+			daemon_name_all_caps = it->first;
+			upper_case(daemon_name_all_caps);
+			startup_banner_text = " (CONDOR_";
+			startup_banner_text += daemon_name_all_caps;
+			startup_banner_text += ") STARTING UP";
+		}
+	}
+
+	const char * pszDaemon = it->first.c_str();
+	LOG_INFO * pliDaemon = it->second;
+
+	std::string filename;
+	sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
+	if (App.diagnostic) { 
+		printf("scanning %s log file '%s' for pids and addresses\n", pszDaemon, filename.c_str()); 
+		printf("using '%s' as banner\n", startup_banner_text.c_str());
+	}
+
+	BackwardsReader reader(filename, O_RDONLY);
+	if (reader.LastError()) {
+		// report error??
+		if (App.diagnostic) {
+			fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
+		}
+	}
+
+	std::map<pid_t,bool> dead_pids;
+	std::string possible_job_id;
+	std::string possible_job_pid;
+	std::string possible_daemon_pid;
+	std::string possible_daemon_addr;
+	bool bInsideBanner = false;
+	bool bInsideJobStartup = false;
+	bool bEchoLines = App.test_backwards != 0;
+
+	std::string line;
+	while (reader.PrevLine(line)) {
+		if (bEchoLines) { printf("%s\n", line.c_str()); }
+
+		/* the daemon startup banner looks like this.
+		05/22/12 14:19:40 ******************************************************
+		05/22/12 14:19:40 ** condor_master (CONDOR_MASTER) STARTING UP
+		05/22/12 14:19:40 ** D:\scratch\condor\master\test\bin\condor_master.exe
+		05/22/12 14:19:40 ** SubsystemInfo: name=MASTER type=MASTER(2) class=DAEMON(1)
+		05/22/12 14:19:40 ** Configuration: subsystem:MASTER local:<NONE> class:DAEMON
+		05/22/12 14:19:40 ** $CondorVersion: 7.8.0 Apr 30 2012 PRE-RELEASE-UWCS $
+		05/22/12 14:19:40 ** $CondorPlatform: X86-WINDOWS_6.1 $
+		05/22/12 14:19:40 ** PID = 5460
+		05/22/12 14:19:40 ** Log last touched time unavailable (No such file or directory)
+		05/22/12 14:19:40 ******************************************************
+		*/
+
+		if (line.find(startup_banner_text) != string::npos) {
+			if (App.diagnostic) {
+				printf("found %s startup banner with pid %s\n", pszDaemon, possible_daemon_pid.c_str());
+				printf("quitting scan of %s log file\n\n", pszDaemon);
+			}
+			if (pliDaemon->pid.empty())
+				pliDaemon->pid = possible_daemon_pid;
+			if (pliDaemon->addr.empty())
+				pliDaemon->addr = possible_daemon_addr;
+
+			bInsideBanner = false;
+			// found daemon startup header, everything before this is from a different invocation
+			// of the daemon, so stop searching. 
+			break;
+		}
+		// are we inside the banner?
+		if (line.find(" ** Log last touched ") != string::npos) {
+			if (App.diagnostic) { printf("inside banner\n"); }
+			bInsideBanner = true;
+			continue;
+		}
+		if (bInsideBanner) {
+			// parse PID from banner
+			size_t ix = line.find(" ** PID = ");
+			if (ix != string::npos) {
+				possible_daemon_pid = line.substr(ix+10);
+			}
+			continue;
+		}
+
+		// if we get to here, we are not inside the banner.
+
+		// DaemonCore: command socket at <sin>
+		// DaemonCore: private command socket at <sin>
+		size_t ix = line.find(" DaemonCore: command socket at <");
+		if (ix != string::npos) {
+			possible_daemon_addr = line.substr(line.find("<",ix));
+			continue;
+		}
+
+		// special parsing for master log.
+		if (bMasterLog) {
+
+			// parse "Sent signal NNN to DAEMON (pid NNNN)"
+			ix = line.find("Sent signal");
+			if (ix != string::npos) {
+				size_t ix2 = line.find(" to ", ix);
+				if (ix2 != string::npos) {
+					ix2 += 4;  // 4 == sizeof " to "
+					size_t ix3 = line.find(" (pid ", ix2);
+					if (ix3 != string::npos) {
+						size_t ix4 = line.find(")", ix3);
+						std::string daemon = line.substr(ix2, ix3-ix2);
+						std::string pid = line.substr(ix3+6, ix4-ix3-6);
+						lower_case(daemon);
+						daemon[0] = toupper(daemon[0]);
+						if (App.diagnostic)
+							printf("From Sent Signal: %s = %s\n", daemon.c_str(), pid.c_str());
+						if (info.find(daemon) != info.end()) {
+							LOG_INFO * pliTemp = info[daemon];
+							if (pliTemp->pid.empty())
+								pliTemp->pid = pid;
+						}
+					}
+				}
+				continue;
+			}
+
+			// parse "Started DaemonCore process PATH, pid and pgroup = NNNN"
+			ix = line.find("Started DaemonCore process");
+			if (ix != string::npos) {
+				size_t ix2 = line.find(", pid and pgroup = ", ix);
+				if (ix2 != string::npos) {
+					std::string pid = line.substr(ix2+sizeof(", pid and pgroup = ")-1);
+					size_t ix3 = line.rfind("condor_");
+					if (ix3 > ix && ix3 < ix2) {
+						size_t ix4 = line.find_first_of("\".", ix3);
+						if (ix4 > ix3 && ix4 < ix2) {
+							std::string daemon = line.substr(ix3+7,ix4-ix3-7);
+							lower_case(daemon);
+							daemon[0] = toupper(daemon[0]);
+							if (App.diagnostic)
+								printf("From Started DaemonCore process: %s = %s\n", daemon.c_str(), pid.c_str());
+							if (info.find(daemon) != info.end()) {
+								LOG_INFO * pliDaemon = info[daemon];
+								if (pliDaemon->pid.empty())
+									info[daemon]->pid = pid;
+							}
+						}
+					}
+				}
+			}
+
+		} else if (bSlotLog) { // special parsing for StarterLog.slotN
+
+			// if we find an exited message for the starter, then nothing before that in the log will be 
+			// 'live' anymore, so we can quit scanning.
+			if (line.find(" (condor_STARTER) pid") != string::npos &&
+				line.find("EXITING WITH STATUS") != string::npos) {
+				if (App.diagnostic) {
+					printf("found EXITING line for starter\nquitting scan of %s log file\n\n", it->first.c_str());
+				}
+				break;
+			}
+
+			// top line of JobStartup is " Communicating with shadow <"
+			//
+			size_t ix = line.find(" Communicating with shadow <");
+			if (ix != string::npos) {
+				bInsideJobStartup = false;
+				//possible_job_shadow_addr = line.substr(line.find("<",ix));
+			}
+
+			if (bInsideJobStartup) {
+
+				// parse jobid  "Starting a %s universe job with ID: %d.%d\n"
+				ix = line.find(" Starting a ");
+				if (ix != string::npos) {
+					size_t ix2 = line.find(" universe job with ID: ", ix);
+					if (ix2 != string::npos) {
+						possible_job_id = line.substr(line.find(": ", ix2)+2);
+						if (App.diagnostic) { printf("found JobId %s\n", possible_job_id.c_str()); }
+						if ( ! possible_job_pid.empty()) {
+							pid_t pid = atoi(possible_job_pid.c_str());
+							if (App.diagnostic) { printf("Adding %s = %s to job->pid map\n", possible_job_id.c_str(), possible_job_pid.c_str()); }
+							job_to_pid[possible_job_id] = pid;
+						}
+					}
+				}
+
+				ix = line.find(" About to exec ");
+				if (ix != string::npos) {
+					pid_t pid = atoi(possible_job_pid.c_str());
+					//possible_job_exe = line.substring(ix+sizeof(" About to exec ")-1);
+					App.pid_to_program[pid] = line.substr(ix+sizeof(" About to exec ")-1);
+				}
+			}
+
+			// bottom line of JobStartup is "Create_Process succeeded, pid=%d"
+			//
+			ix = line.find("Create_Process succeeded, pid=");
+			if (ix != string::npos) {
+				possible_job_pid = line.substr(line.find("=",ix)+1);
+				if (App.diagnostic) { printf("found JobPID %s\n", possible_job_pid.c_str()); }
+				pid_t pid = atoi(possible_job_pid.c_str());
+				std::map<pid_t,bool>::iterator it_pids = dead_pids.find(pid);
+				if (it_pids != dead_pids.end()) {
+					possible_job_pid.clear();
+					dead_pids.erase(it_pids);
+				} else {
+					// running_pids.push_back(pid);
+					bInsideJobStartup = true;
+				}
+			}
+
+			ix = line.find("Process exited, pid=");
+			if (ix != string::npos) {
+				std::string exited_pid = line.substr(line.find("=",ix)+1);
+				if (App.diagnostic) { printf("found PID exited %s\n", exited_pid.c_str()); }
+				pid_t pid = atoi(exited_pid.c_str());
+				dead_pids[pid] = true;
+			}
+
+		}
+	}
+
+	if (App.test_backwards > 1) {
+		printf("------- scanning complete -------\n");
+		while (reader.PrevLine(line)) {
+			printf("%s\n", line.c_str());
+		}
+	}
+
+	reader.Close();
+}
+
+// scan the log files found in the log info map for PIDS and ADDRESSES
+// and use that information to populate the info map and to build a mapping
+// of jobid to pid.
+//
 static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 {
+#if 1
+	// scan the master log first
+	LOG_INFO_MAP::const_iterator it = info.find("Master");
+	if (it != info.end()) {
+		scan_a_log_for_info(info, job_to_pid, it);
+	}
+	for (it = info.begin(); it != info.end(); ++it) {
+		// scan starter logs.
+		if (starts_with(it->first.c_str(),"Slot",NULL)) {
+			scan_a_log_for_info(info, job_to_pid, it);
+			continue;
+		}
+
+		// scan schedd and startd logs only if we don't already
+		// have their pid and/or addresses
+		LOG_INFO * pliDaemon = it->second;
+		if ( ! pliDaemon->pid.empty() && ! pliDaemon->addr.empty())
+			continue;
+
+		if (it->first != "Schedd" && it->first != "Startd")
+			continue;
+
+		scan_a_log_for_info(info, job_to_pid, it);
+	}
+
+#else
 	// scan the masterlog backwards until we find the STARTING UP banner
 	// looking for places where the log mentions the PIDS of the daemons.
 	//
@@ -1071,7 +1379,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		LOG_INFO * pliMaster = info["Master"];
 		std::string filename;
 		sprintf(filename, "%s%c%s", pliMaster->log_dir.c_str(), DIR_DELIM_CHAR, pliMaster->log.c_str());
-		if (App.diagnostic) printf("scanning master log file '%s' for pids\n", filename.c_str());
+		if (App.diagnostic) { printf("scanning master log file '%s' for pids\n", filename.c_str()); }
 
 		BackwardsReader reader(filename, O_RDONLY);
 		if (reader.LastError()) {
@@ -1079,27 +1387,38 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			if (App.diagnostic) {
 				fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
 			}
-			return;
 		}
 
 		std::string possible_master_pid;
+		std::string possible_master_addr;
 		std::string line;
 		while (reader.PrevLine(line)) {
-			// printf("%s\n", line.c_str());
+			if (App.test_backwards) { printf("%s\n", line.c_str()); }
 
-			if (line.find("** condor_master (CONDOR_MASTER) STARTING UP") != string::npos) {
+			// " ** ([^\/\\><* \t]+) \(CONDOR_MASTER\) STARTING UP$"
+			if (line.find(" (CONDOR_MASTER) STARTING UP") != string::npos) {
 				if (App.diagnostic) {
 					printf("found master startup banner with pid %s\n", possible_master_pid.c_str());
 					printf("quitting scan of master log file\n\n");
 				}
 				if (pliMaster->pid.empty())
 					pliMaster->pid = possible_master_pid;
-				break;
+				if (pliMaster->addr.empty())
+					pliMaster->addr = possible_master_addr;
+				if (!App.test_backwards) break;
 			}
 			// parse master header
 			size_t ix = line.find(" ** PID = ");
 			if (ix != string::npos) {
 				possible_master_pid = line.substr(ix+10);
+			}
+
+			// DaemonCore: command socket at <sin>
+			// DaemonCore: private command socket at <sin>
+			ix = line.find(" DaemonCore: command socket at <");
+			if (ix != string::npos) {
+				//size_t ix2 = line.find("<", ix);
+				possible_master_addr = line.substr(line.find("<",ix));
 			}
 
 			// parse "Sent signal NNN to DAEMON (pid NNNN)"
@@ -1154,6 +1473,62 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		}
 	}
 
+	// scan SCHEDD log for schedd address
+	if (info.find("Schedd") != info.end()) {
+		LOG_INFO * pliDaemon = info["Schedd"];
+		if ( ! pliDaemon->addr.empty() && ! pliDaemon->pid.empty() ) {
+			// don't scan this log
+		} else {
+			std::string filename;
+			sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
+			if (App.diagnostic) { printf("scanning %s log file '%s' for pids\n", "Schedd", filename.c_str()); }
+
+			BackwardsReader reader(filename, O_RDONLY);
+			if (reader.LastError()) {
+				// report error??
+				if (App.diagnostic) {
+					fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
+				}
+				return;
+			} else {
+
+				std::string possible_daemon_pid;
+				std::string possible_daemon_addr;
+				std::string line;
+				while (reader.PrevLine(line)) {
+					if (App.test_backwards) { printf("%s\n", line.c_str()); }
+
+					// " ** ([^\/\\><* \t]+) \(CONDOR_SCHEDD\) STARTING UP$"
+					if (line.find(" (CONDOR_SCHEDD) STARTING UP") != string::npos) {
+						if (App.diagnostic) {
+							printf("found %s startup banner with pid %s\n", "Schedd", possible_daemon_pid.c_str());
+							printf("quitting scan of %s log file\n\n", "Schedd");
+						}
+						if (pliDaemon->pid.empty())
+							pliDaemon->pid = possible_daemon_pid;
+						if (pliDaemon->addr.empty())
+							pliDaemon->addr = possible_daemon_addr;
+						if (!App.test_backwards) break;
+					}
+					// parse master header
+					size_t ix = line.find(" ** PID = ");
+					if (ix != string::npos) {
+						possible_daemon_pid = line.substr(ix+10);
+					}
+
+					// DaemonCore: command socket at <sin>
+					// DaemonCore: private command socket at <sin>
+					ix = line.find(" DaemonCore: command socket at <");
+					if (ix != string::npos) {
+						possible_daemon_addr = line.substr(line.find("<",ix));
+					}
+				}
+			}
+
+			reader.Close();
+		}
+	}
+
 	// scan the Starter.slotNN logs backwards until we find the STARTING UP banner
 	// looking for the starter PIDS, and job PIDS & job IDs
 	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
@@ -1192,7 +1567,8 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 				}
 				break;
 			}
-			if (line.find("** condor_starter (CONDOR_STARTER) STARTING UP") != string::npos) {
+			// " ** ([^\/\\><* \t]+) \(CONDOR_STARTER\) STARTING UP$"
+			if (line.find(" (CONDOR_STARTER) STARTING UP") != string::npos) {
 				if (App.diagnostic) {
 					printf("found startup banner with pid %s\n", possible_starter_pid.c_str());
 					printf("quitting scan of %s log file\n\n", it->first.c_str());
@@ -1253,7 +1629,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			}
 		}
 	}
-
+#endif
 }
 
 static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)

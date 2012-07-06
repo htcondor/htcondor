@@ -398,10 +398,12 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 							// this attr name starts with SUBMIT_
 							// compute new lhs (strip off the SUBMIT_)
 						const char *new_attr_name = strchr(lhstr,'_');
+						ExprTree * pTree;
 						ASSERT(new_attr_name);
 						new_attr_name++;
 							// insert attribute
-						jad.Insert(new_attr_name, tree->Copy());
+						pTree = tree->Copy();
+						jad.Insert(new_attr_name, pTree);
 					}
 				}	// while next expr
 		

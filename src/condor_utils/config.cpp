@@ -432,7 +432,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	register BUCKET	*ptr;
 	int		loc;
 	BUCKET	*bucket;
-	char	tmp_name[ MAX_PARAM_LEN ];
+	char	tmp_name[ MAX_PARAM_LEN ],*tvalue;
 
 		/* Make sure not already in hash table */
 	snprintf( tmp_name, MAX_PARAM_LEN, "%s", name);
@@ -441,8 +441,9 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
+			tvalue = expand_macro(value,table,table_size,name,true);
 			FREE( ptr->value );
-			ptr->value = strdup( value );
+			ptr->value = tvalue;
 			return;
 		}
 	}
@@ -628,7 +629,7 @@ char *
 expand_macro( const char *value,
 			  BUCKET **table,
 			  int table_size,
-			  char *self,
+			  const char *self,
 			  bool use_default_param_table )
 {
 	char *tmp = strdup( value );

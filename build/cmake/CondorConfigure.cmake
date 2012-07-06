@@ -17,8 +17,6 @@
  ###############################################################
 
 
-add_definitions(-D_FORTIFY_SOURCE=2)
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -119,6 +117,8 @@ if( NOT WINDOWS)
 	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
 	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
 	  else()
+
+            add_definitions(-D_FORTIFY_SOURCE=2)
 	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	  endif()
 	endif()
@@ -251,14 +251,39 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
-	# Some early 4.0 g++'s have unordered maps, but their iterators don't work
-	check_cxx_source_compiles("
+	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
+
+	check_cxx_compiler_flag(-std=c++11 cxx_11)
+	if (cxx_11)
+
+		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+		#check_cxx_source_compiles("
+		##include <unordered_map>
+		##include <memory>
+		#int main() {
+		#	std::unordered_map<int, int> ci;
+		#	std::shared_ptr<int> foo;
+		#	return 0;
+		#}
+		#" PREFER_CPP11 )
+
+	endif (cxx_11)
+
+	if (NOT PREFER_CPP11)
+
+	  # Some early 4.0 g++'s have unordered maps, but their iterators don't work
+	  check_cxx_source_compiles("
 		#include <tr1/unordered_map>
 		int main() {
 			std::tr1::unordered_map<int, int>::const_iterator ci;
 			return 0;
 		}
-		" HAVE_TR1_UNORDERED_MAP )
+		" PREFER_TR1 )
+
+	endif(NOT PREFER_CPP11)
+	
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -501,7 +526,7 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 endif()
 
 ###########################################
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
@@ -621,6 +646,7 @@ include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
@@ -664,6 +690,7 @@ if(MSVC)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275")  #
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273")  # inconsistent dll linkage
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd6334") # inclusion warning from boost. 
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
@@ -694,10 +721,10 @@ else(MSVC)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-equal")
 	endif(cxx_Wfloat_equal)
 
-	check_cxx_compiler_flag(-Wshadow cxx_Wshadow)
-	if (cxx_Wshadow)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
-	endif(cxx_Wshadow)
+	#check_cxx_compiler_flag(-Wshadow cxx_Wshadow)
+	#if (cxx_Wshadow)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wshadow")
+	#endif(cxx_Wshadow)
 
 	# someone else can enable this, as it overshadows all other warnings and can be wrong.
 	# check_cxx_compiler_flag(-Wunreachable-code cxx_Wunreachable_code)

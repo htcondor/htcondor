@@ -817,8 +817,8 @@ static void test_collection(const Parameters &, Results &results)
     success = collection->AddClassAd("machine3", machine3);
     TEST("Added machine3 to collection", success == true);
     /* ----- Put in one machine twice, to make sure it doesn't break ----- */
-    success = collection->AddClassAd("machine3", machine3);
-    TEST("Added machine3 to collection", success == true);
+    //success = collection->AddClassAd("machine3", machine3);
+    //TEST("Added machine3 to collection", success == true);
 
 
     /* ----- Make sure that they are in the collection ----- */

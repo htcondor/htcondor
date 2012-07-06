@@ -57,9 +57,7 @@ getOldClassAd( Stream *sock )
 bool
 getOldClassAd( Stream *sock, classad::ClassAd& ad )
 {
-	classad::ClassAdParser	parser;
 	int 					numExprs;
-	string					buffer;
 	MyString				inputLine;
 
 
@@ -70,10 +68,10 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 
 		// pack exprs into classad
-	buffer = "[";
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
-		if( !sock->get_string_ptr( strptr ) ) {
+		string buffer;
+		if( !sock->get_string_ptr( strptr ) || !strptr ) {
 			return( false );	 
 		}		
 
@@ -90,30 +88,34 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 			compat_classad::ConvertEscapingOldToNew(strptr,buffer);
 		}
 
-		buffer += ";";
-	}
-	buffer += "]";
-
-		// parse ad
-	if( !parser.ParseClassAd( buffer, ad ) ) {
-		return( false );
+		// inserts expression at a time
+		if ( !ad.Insert(buffer) )
+		{
+		  dprintf(D_FULLDEBUG, "FAILED to insert %s\n", buffer.c_str() );
+		  return false;
+		}
+		
 	}
 
 		// get type info
 	if (!sock->get(inputLine)) {
+		 dprintf(D_FULLDEBUG, "FAILED to get(inputLine)\n" );
 		return false;
 	}
 	if (inputLine != "" && inputLine != "(unknown type)") {
 		if (!ad.InsertAttr("MyType",(string)inputLine.Value())) {
+			dprintf(D_FULLDEBUG, "FAILED to insert MyType\n" );
 			return false;
 		}
 	}
 
 	if (!sock->get(inputLine)) {
+		 dprintf(D_FULLDEBUG, "FAILED to get(inputLine) 2\n" );
 		return false;
 	}
 	if (inputLine != "" && inputLine != "(unknown type)") {
 		if (!ad.InsertAttr("TargetType",(string)inputLine.Value())) {
+		dprintf(D_FULLDEBUG, "FAILED to insert TargetType\n" );
 			return false;
 		}
 	}

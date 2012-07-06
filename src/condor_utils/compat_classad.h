@@ -80,21 +80,14 @@ class ClassAd : public classad::ClassAd
 		 * our own Insert() below, our parent's Insert() won't be found
 		 * by users of this class.
 		 */
-	bool Insert( const std::string &attrName, classad::ExprTree *expr );
+	bool Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache = true );
 
-	int Insert(const char *name, classad::ExprTree *expr );
+	int Insert(const char *name, classad::ExprTree *& expr, bool bCache = true );
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param str A string of the form "Attribute = Value"
 		 */
 	int Insert(const char *str);
-
-		/** This function should never be used.  Use Insert(char const *str)
-		 *  instead.  The second bool argument is deprecated but necessary to
-		 *  prevent implicit casting of false to NULL and therefore
-		 *  calling of the totally wrong Insert() method!
-		 */
-	int Insert(const char *str,bool unused);
 
 		/** Insert an attribute/value into the ClassAd 
 		 *  @param expr A string of the form "Attribute = Value"

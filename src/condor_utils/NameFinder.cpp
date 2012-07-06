@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,27 +17,32 @@
  *
  ***************************************************************/
 
+#include "NameFinder.h"
+#include <cctype>
+#include <algorithm>
+#include <iterator>
+NameFinder::NameFinder(const std::string& logname, const char d) :
+       delim(d), log(logname)
+{
+       it = log.begin();       
+}
 
-#ifndef __CLASSAD_CLASSAD_STL_H__
-#define __CLASSAD_CLASSAD_STL_H__
+namespace {
+bool not_space(char ch)
+{
+	return !std::isspace(ch);
+}
+}
 
-#include <map>
-#include <list>
+std::string NameFinder::get()
+{
+	std::string entry;
+	it = std::find_if(it,log.end(),not_space);
+	if(it != log.end()) {
+		std::string::iterator p = std::find(it,log.end(),delim);
+		entry.assign(it,p);
+		it = p + ( p == log.end() ? 0 : 1 );
+	}
+	return entry;
+}
 
-#ifdef WIN32
-#include <hash_map>
-#define classad_hash_map stdext::hash_map
-#else
-#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 2)
-#include <tr1/unordered_map>
-#define classad_hash_map std::tr1::unordered_map
-#else
-#include <ext/hash_map>
-#define classad_hash_map __gnu_cxx::hash_map
-#endif
-#endif
-
-#define classad_map   std::map 
-#define classad_slist std::list
-
-#endif /* __CLASSAD_CLASSAD_STL_H__ */

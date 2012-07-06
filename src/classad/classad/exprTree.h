@@ -80,7 +80,9 @@ class ExprTree
 			/// ClassAd node 
 			CLASSAD_NODE,
 			/// Expression list node 
-			EXPR_LIST_NODE
+			EXPR_LIST_NODE,
+			/// Expression envelope.
+			EXPR_ENVELOPE
 		};
 
 		/// Virtual destructor
@@ -113,6 +115,17 @@ class ExprTree
 			@see NodeKind
 		*/
 		NodeKind GetKind (void) const { return nodeKind; }
+		
+		/**
+		 * To eliminate the mass of external checks to see if the ExprTree is 
+		 * a classad.
+		 */ 
+		virtual bool isClassad(ClassAd ** ptr=0);
+		
+		/**
+		 * Return a ptr to the raw exprtree below the interface
+		 */ 
+		virtual const ExprTree* self();
 
 		/// A debugging method; send expression to stdout
 		void Puke( ) const;
@@ -171,14 +184,15 @@ class ExprTree
 		};
 
 
-  	private:
+  	private: 
 		friend class Operation;
 		friend class AttributeReference;
 		friend class FunctionCall;
 		friend class FunctionTable;
 		friend class ExprList;
 		friend class ExprListIterator;
-		friend class ClassAd; 
+		friend class ClassAd;
+		friend class CachedExprEnvelope;
 
 		/// Copy constructor
         ExprTree(const ExprTree &tree);
@@ -196,7 +210,7 @@ class ExprTree
 		static void (*user_debug_function)(const char *);
 };
 
-std::ostream& operator<<(std::ostream &os, const ExprTree &expr);
+std::ostream& operator<<(std::ostream &os, const ExprTree *expr);
 
 } // classad
 

@@ -328,7 +328,8 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 		}else if( strcasecmp(attr_name, ATTR_VM_NETWORKING) == MATCH ) {
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
-			ad->Insert(attr_name, expr->Copy());
+			ExprTree * pTree =  expr->Copy();
+			ad->Insert(attr_name, pTree);
 		}
 	}
 
