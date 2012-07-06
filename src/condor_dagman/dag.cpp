@@ -629,6 +629,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessIsIdleEvent(job);
 				break;
 
+			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_EXECUTE:
 				ProcessNotIdleEvent(job);
 				break;
@@ -637,7 +638,6 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessReleasedEvent(job);
 				break;
 
-			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
