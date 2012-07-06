@@ -194,7 +194,7 @@ test_cluster () {
     log_file=$submit_dir/logfile
     cat > $submit_file << End_of_Submit
 universe = grid
-grid_resource = $cluster_type $remote_host
+grid_resource = batch $cluster_type $remote_host
 output = /dev/null
 error = /dev/null
 transfer_executable=false
