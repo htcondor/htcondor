@@ -902,14 +902,15 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
-	jobAd->LookupString( ATTR_X509_USER_PROXY, expr );
-	if ( expr[0] != '/' ) {
-		std::string fullpath;
-		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-		sprintf_cat( fullpath, "/%s", expr.Value() );
-		submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
-	} else {
-		submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+	if ( jobAd->LookupString( ATTR_X509_USER_PROXY, expr ) ) {
+		if ( expr[0] != '/' ) {
+			std::string fullpath;
+			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
+			sprintf_cat( fullpath, "/%s", expr.Value() );
+			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
+		} else {
+			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+		}
 	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
