@@ -327,9 +327,6 @@ GLExecPrivSepHelper::create_process(const char* path,
 	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
-	MyString user_proxy;
-	char const *condor_proxy;
-
 		// At the very least, we need to pass the condor daemon's
 		// X509_USER_PROXY to condor_glexec_run.  Currently, we just
 		// pass all daemon environment.  We do _not_ run
