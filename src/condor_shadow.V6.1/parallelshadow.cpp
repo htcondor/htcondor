@@ -82,13 +82,11 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
     MpiResource *rr = new MpiResource( this );
 	parallelMasterResource = rr;
 
-	char buffer[1024];
 	char *lspool = param("SPOOL");
 	char *dir = gen_ckpt_name(lspool, getCluster(), 0, 0);
 	free(lspool);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 	free(dir); dir = NULL;
-	job_ad->Insert(buffer);
 
     snprintf( buf, 256, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if( !job_ad->Insert(buf) ) {
@@ -299,13 +297,11 @@ ParallelShadow::getResources( void )
 					 daemonCore->InfoCommandSinfulString() );
 			job_ad->InsertOrUpdate( buf );
 
-			char buffer[1024];
 			char *lspool = param("SPOOL");
 			char *dir = gen_ckpt_name(lspool, job_cluster, 0, 0);
 			free(lspool);
 			job_ad->Assign(ATTR_REMOTE_SPOOL_DIR, dir);
 			free(dir); dir = NULL;
-			job_ad->Insert(buffer);
 
 				// Put the correct claim id into this ad's ClaimId attribute.
 				// Otherwise, it is the claim id of the master proc.
@@ -965,8 +961,10 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 			// can finally log the execute event.
 		ExecuteEvent event;
 		event.setExecuteHost( "MPI_job" );
-		if ( !uLog.writeEvent( &event, jobAd )) {
-			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+		for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
+			if ( !(*p)->writeEvent( &event, jobAd )) {
+				dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+			}
 		}
 		
 			// Now that everything is started, we can finally invoke
@@ -1024,10 +1022,11 @@ ParallelShadow::logReconnectedEvent( void )
 	starter = NULL;
 
 */
-	if( !uLog.writeEvent(&event,jobAd) ) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
+	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
+		if( !(*p)->writeEvent(&event,jobAd) ) {
+			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
+		}
 	}
-
 }
 
 
@@ -1046,8 +1045,10 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 	event.setStartdName( dc_startd->name() );
 */
 
-	if( !uLog.writeEvent(&event,jobAd) ) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
+	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
+		if( !(*p)->writeEvent(&event,jobAd) ) {
+			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
+		}
 	}
 		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }

@@ -105,7 +105,7 @@ class Lexer
 					tt = t;
 				}
 
-				void SetIntValue( int i, Value::NumberFactor f) {
+				void SetIntValue( long long i, Value::NumberFactor f) {
 					intValue = i;
 					factor = f;
 				}
@@ -135,7 +135,7 @@ class Lexer
 					return tt;
 				}
 
-				void GetIntValue( int& i, Value::NumberFactor& f) {
+				void GetIntValue( long long& i, Value::NumberFactor& f) {
 					i = intValue;
 					f = factor;
 				}
@@ -175,7 +175,7 @@ class Lexer
 			private:
 				TokenType 			tt;
 				Value::NumberFactor factor;
-				int 				intValue;
+				long long			intValue;
 				double 				realValue;
 				bool 				boolValue;
 				std::string			strValue;
@@ -228,7 +228,7 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		int			lexBufferCount;				// current offset in lexBuffer
+		unsigned int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		int 		debug; 						// debug flag

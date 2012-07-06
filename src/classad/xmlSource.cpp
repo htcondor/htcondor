@@ -335,8 +335,8 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		lexer.ConsumeToken(&token);
 		Value value;
 		if (tag_id == XMLLexer::tagID_Integer) {
-			int number;
-			sscanf(token.text.c_str(), "%d", &number);
+			long long number;
+			sscanf(token.text.c_str(), "%lld", &number);
 			value.SetIntegerValue(number);
 		}
 		else if (tag_id == XMLLexer::tagID_Real) {

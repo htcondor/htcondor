@@ -60,7 +60,7 @@ AC_DEFUN(AC_BOOST,
 
     BOOST_CFLAGS=""
 
-    BOOST_FS_LIBS="-lboost_fs"
+    BOOST_FS_LIBS="-lboost_filesystem"
     BOOST_THREAD_LIBS="-lboost_thread -lpthread"
     BOOST_REGEX_LIBS="-lboost_regex"
     BOOST_PYTHON_LIBS="-lboost_python"

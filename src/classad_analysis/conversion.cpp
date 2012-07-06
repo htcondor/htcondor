@@ -98,145 +98,6 @@ toOldClassAd( classad::ClassAd * ad )
 	return oldAd;
 }
 
-/*
-classad::ExprTree *
-AddExplicitConditionals( classad::ExprTree *expr )
-{
-	if( expr == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree *currentExpr = expr;
-	classad::ExprTree::NodeKind nKind = expr->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-		classad::ExprTree *fnExpr = NULL;
-		vector< classad::ExprTree * > params( 1 );
-		params[0] = expr->Copy( );
-		classad::ExprTree *condExpr = NULL;
-		classad::ExprTree *parenExpr = NULL;
-		classad::ExprTree *condExpr2 = NULL;
-		classad::ExprTree *parenExpr2 = NULL;
-		classad::Value val0, val1;
-		val0.SetIntegerValue( 0 );
-		val1.SetIntegerValue( 1 );
-		fnExpr = classad::FunctionCall::MakeFunctionCall( "IsBoolean", params);
-		condExpr = classad::Operation::MakeOperation( classad::Operation::TERNARY_OP,
-											 expr->Copy( ), 
-											 classad::Literal::MakeLiteral( val1 ),
-											 classad::Literal::MakeLiteral( val0 ) );
-		parenExpr = classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-											  condExpr, NULL, NULL );
-		condExpr2 = classad::Operation::MakeOperation( classad::Operation::TERNARY_OP,
-											  fnExpr, parenExpr, 
-											  expr->Copy( ) );
-		parenExpr2 = classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-										 condExpr2, NULL, NULL );
-		return parenExpr2;
-	}
-	case classad::ExprTree::FN_CALL_NODE:
-	case classad::ExprTree::CLASSAD_NODE:
-	case classad::ExprTree::EXPR_LIST_NODE: {
-		return NULL;
-	}
-	case classad::ExprTree::LITERAL_NODE: {
-		classad::Value val;
-		( ( classad::Literal *)expr )->GetValue( val );
-		bool b;
-		if( val.IsBooleanValue( b ) ) {
-			if( b ) {
-				val.SetIntegerValue( 1 );
-			}
-			else {
-				val.SetIntegerValue( 0 );
-			}
-			return classad::Literal::MakeLiteral( val );
-		}
-		else {
-			return NULL;
-		}
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		( ( classad::Operation * )expr )->GetComponents( oKind, expr1, expr2, expr3 );
-		while( oKind == classad::Operation::PARENTHESES_OP ) {
-			currentExpr = expr1;
-			( ( classad::Operation * )expr1 )->GetComponents(oKind,expr1,expr2,expr3);
-		}
-		if( ( classad::Operation::__COMPARISON_START__ <= oKind &&
-			  oKind <= classad::Operation::__COMPARISON_END__ ) ||
-			( classad::Operation::__LOGIC_START__ <= oKind &&
-			  oKind <= classad::Operation::__LOGIC_END__ ) ) {
-			classad::Value val0, val1;
-			val0.SetIntegerValue( 0 );
-			val1.SetIntegerValue( 1 );
-			classad::ExprTree *tern = NULL;
-			tern = classad::Operation::MakeOperation( classad::Operation::TERNARY_OP,
-											 expr->Copy( ),
-											 classad::Literal::MakeLiteral( val1 ),
-											 classad::Literal::MakeLiteral( val0 ) );
-			return classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-											 tern, NULL, NULL );
-		}
-		else if( classad::Operation::__ARITHMETIC_START__ <= oKind &&
-				 oKind <= classad::Operation::__ARITHMETIC_END__ ) {
-			classad::ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
-			if( oKind == classad::Operation::UNARY_PLUS_OP || 
-				oKind == classad::Operation::UNARY_MINUS_OP ) {
-				if( newExpr1 != NULL ) {
-					return classad::Operation::MakeOperation(oKind,newExpr1,NULL,NULL);
-				}
-				else {
-					return NULL;
-				}
-			}
-			else {
-				classad::ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
-				if( newExpr1 != NULL || newExpr2 != NULL ) {
-					if( newExpr1 == NULL ) {
-						newExpr1 = expr1->Copy( );
-					}
-					if( newExpr2 == NULL ) {
-						newExpr2 = expr2->Copy( );
-					}
-					return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2,
-													 NULL );
-				}
-				else {
-					return NULL;
-				}
-			}
-		}
-		else if( oKind == classad::Operation::TERNARY_OP ) {
-			classad::ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
-			classad::ExprTree *newExpr3 = AddExplicitConditionals( expr3 );
-			if( newExpr2 != NULL || newExpr3 != NULL ) {
-				if( newExpr2 == NULL ) {
-					newExpr2 = expr2->Copy( );
-				}
-				if( newExpr3 == NULL ) {
-					newExpr3 = expr3->Copy( );
-				}
-				return classad::Operation::MakeOperation( oKind, expr1->Copy( ), 
-												 newExpr2, newExpr3 );
-			}
-			else {
-				return NULL;
-			}
-		}
-		return NULL;
-	}
-	default: {
-		return NULL;
-	}
-	}
-		
-	return NULL;
-}
-*/
-
 classad::ClassAd *
 AddExplicitTargets( classad::ClassAd *ad )
 {
@@ -248,8 +109,9 @@ AddExplicitTargets( classad::ClassAd *ad )
 	}
 
 	classad::ClassAd *newAd = new classad::ClassAd( );
+	ExprTree * pExpr;
 	for( classad::ClassAd::iterator a = ad->begin( ); a != ad->end( ); a++ ) {
-		newAd->Insert( a->first,AddExplicitTargets( a->second, definedAttrs ));
+		newAd->Insert( a->first,(pExpr=AddExplicitTargets( a->second, definedAttrs )));
 	}
 	return newAd;
 }

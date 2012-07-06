@@ -49,6 +49,7 @@ runcmd("touch job_dagman_abnormal_term_recovery_retries.dag.lock");
 
 # Copy in dummy log with signal 11 abnormal termination for node A.
 runcmd("cp job_dagman_abnormal_term_recovery_retries-nodeA.dummy_log job_dagman_abnormal_term_recovery_retries-nodeA.log");
+runcmd("cp job_dagman_abnormal_term_recovery_retries-nodeA.dummy_log job_dagman_abnormal_term_recovery_retries.dag.nodes.log");
 
 $abnormal = sub 
 {

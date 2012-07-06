@@ -45,6 +45,7 @@
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
+#include "classad/classadCache.h"
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
@@ -1351,11 +1352,27 @@ unix_sigusr1(int)
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
 	}
+	
 }
 
 void
 unix_sigusr2(int)
 {
+	// This is a debug only param not to be advertised.
+	if (param_boolean( "DEBUG_CLASSAD_CACHE", false))
+	{
+	  std::string szFile = param("LOG");
+	  szFile +="/";
+	  szFile += get_mySubSystem()->getName();
+	  szFile += "_classad_cache";
+	  
+	  if (!classad::CachedExprEnvelope::_debug_dump_keys(szFile))
+	  {
+	    dprintf( D_FULLDEBUG, "FAILED to write file %s\n",szFile.c_str() );
+	  }
+	}
+	
+  
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
 	}
@@ -2036,7 +2053,7 @@ int dc_main( int argc, char** argv )
 	MyString debug_wait_param;
 	debug_wait_param.sprintf("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
 	if (param_boolean(debug_wait_param.Value(), false, false)) {
-		int debug_wait = 1;
+		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
 				debug_wait_param.Value(), (int)::getpid());

@@ -147,6 +147,14 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 	}
 	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
 		requirements = 0;
+		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
+		classad::PrettyPrint pp;
+		std::string szbuff;
+		pp.Unparse(szbuff,job_ad);
+		dprintf( D_ALWAYS, "job_ad\n%s\n",szbuff.c_str());
+		pp.Unparse(szbuff,merged_ad);
+		dprintf( D_ALWAYS, "merged_ad\n%s\n",szbuff.c_str());
+		
 	}
 	delete( merged_ad );
 	return (bool)requirements;
@@ -231,15 +239,17 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
 	}
 
-	ExprTree *tree;
+	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
 	s_ad->ResetExpr();
 	while( s_ad->NextExpr(lhstr, tree) ) {
-
+		pCopy=0;
+	
 		if (ignored_attr_list) {
 				// insert every attr that's not in the ignored_attr_list
 			if (!ignored_attr_list->contains(lhstr)) {
-				ad->Insert(lhstr, tree->Copy());
+				pCopy = tree->Copy();
+				ad->Insert(lhstr, pCopy);
 				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
 					list->append(lhstr);
 				}
@@ -248,12 +258,14 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		else {
 				// no list of attrs to ignore - fallback on old behavior
 			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
-				ad->Insert( lhstr, tree->Copy() );
+				pCopy = tree->Copy();
+				ad->Insert( lhstr, pCopy );
 				if( list ) {
 					list->append( lhstr );
 				}
 			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
-				ad->Insert( lhstr, tree->Copy() );
+				pCopy = tree->Copy();
+				ad->Insert( lhstr, pCopy );
 			}
 		}
 	}

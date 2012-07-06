@@ -38,7 +38,6 @@
       2) /etc/condor/
       3) /usr/local/etc/
       4) ~condor/
-      5) ${GLOBUS_LOCATION}/etc/
 
   If none of the above locations contain a config source, config()
   prints an error message and exits.
@@ -1108,7 +1107,7 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 5;
+		int locations_length = 4;
 		MyString locations[locations_length];
 			// 1) $HOME/.condor/condor_config
 		struct passwd *pw = getpwuid( geteuid() );
@@ -1123,11 +1122,6 @@ find_file(const char *env_name, const char *file_name)
 		if (tilde) {
 				// 4) ~condor/condor_config
 			locations[3].sprintf( "%s/%s", tilde, file_name );
-		}
-			// 5) ${GLOBUS_LOCATION}/etc/condor_config
-		char *globus_location;
-		if ((globus_location = getenv("GLOBUS_LOCATION"))) {
-			locations[4].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
 
 		int ctr;	

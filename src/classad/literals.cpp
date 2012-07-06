@@ -454,7 +454,7 @@ MakeLiteral( const Value& val, Value::NumberFactor f )
 void Literal::
 GetValue( Value &val ) const 
 {
-	int		i;
+	long long	i;
 	double	r;
 
 	val.CopyFrom( value );
@@ -506,7 +506,7 @@ operator==(Literal &literal1, Literal &literal2)
 bool Literal::
 _Evaluate (EvalState &, Value &val) const
 {
-	int		i;
+	long long	i;
 	double	r;
 
 	val.CopyFrom( value );

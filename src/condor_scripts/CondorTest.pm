@@ -2276,7 +2276,8 @@ sub AddRunningTest {
     my $test = shift;
     my $runningfile = FindControlFile();
     debug( "Adding <$test> to running tests\n",$debuglevel);
-    runcmd("touch $runningfile/$test");
+    open(OUT, '>', '$runningfile/$test');
+    close(OUT);
 }
 
 sub RemoveRunningTest {

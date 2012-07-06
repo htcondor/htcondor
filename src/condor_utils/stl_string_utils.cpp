@@ -187,7 +187,7 @@ void trim( std::string &str )
 
 void upper_case( std::string &str )
 {
-	for ( int i = 0; str[i]; i++ ) {
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
 		if ( str[i] >= 'a' && str[i] <= 'z' ) {
 			str[i] = _toupper( str[i] );
 		}
@@ -196,7 +196,7 @@ void upper_case( std::string &str )
 
 void lower_case( std::string &str )
 {
-	for ( int i = 0; str[i]; i++ ) {
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
 		if ( str[i] >= 'A' && str[i] <= 'Z' ) {
 			str[i] = _tolower( str[i] );
 		}
