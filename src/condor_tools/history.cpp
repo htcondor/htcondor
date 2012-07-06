@@ -139,28 +139,25 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
 
   for(i=1; i<argc; i++) {
-    if (strcmp(argv[i],"-l")==0) {
+    if (is_dash_arg_prefix(argv[i],"long",1)) {
       longformat=TRUE;   
     }
-
-    else if (strcmp(argv[i],"-long")==0) {
-		longformat = true;
-	}
     
-    else if (match_prefix(argv[i],"-xml")) {
+    else if (is_dash_arg_prefix(argv[i],"xml",3)) {
 		use_xml = true;	
 		longformat = true;
 	}
     
-    else if (match_prefix(argv[i],"-backwards")) {
+    else if (is_dash_arg_prefix(argv[i],"backwards",1)) {
         backwards=TRUE;
     }
 
-    else if (match_prefix(argv[i],"-forwards")) {
+	// must be at least -forw to avoid conflict with -f (for file) and -format
+    else if (is_dash_arg_prefix(argv[i],"forwards",4)) {
         backwards=FALSE;
     }
 
-    else if (match_prefix(argv[i],"-match")) {
+    else if (is_dash_arg_prefix(argv[i],"match",1)) {
         i++;
         if (argc <= i) {
             fprintf(stderr,
@@ -172,7 +169,7 @@ main(int argc, char* argv[])
     }
 
 #ifdef HAVE_EXT_POSTGRESQL
-    else if(match_prefix(argv[i], "-name")) {
+    else if(is_dash_arg_prefix(argv[i], "name",1)) {
 		i++;
 		if (argc <= i) {
 			fprintf( stderr,
@@ -209,16 +206,16 @@ main(int argc, char* argv[])
 		readfromfile = false;
     }
 #endif /* HAVE_EXT_POSTGRESQL */
-    else if (strcmp(argv[i],"-f")==0) {
+    else if (is_dash_arg_prefix(argv[i],"file",1)) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
     }
-    else if (match_prefix(argv[i],"-help")) {
+    else if (is_dash_arg_prefix(argv[i],"help",1)) {
 		Usage(argv[0],0);
     }
-    else if (match_prefix(argv[i],"-format")) {
+    else if (is_dash_arg_prefix(argv[i],"format",1)) {
 		if (argc <= i + 2) {
 			fprintf(stderr,
 					"Error: Argument -format requires a spec and "
@@ -231,14 +228,14 @@ main(int argc, char* argv[])
 		customFormat = true;
 		i += 2;
     }
-    else if (match_prefix(argv[i],"-constraint")) {
+    else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
 		if (i+1==argc || constraint!="") break;
 		sprintf(constraint,"(%s)",argv[i+1]);
 		i++;
 		//readfromfile = true;
     }
 #ifdef HAVE_EXT_POSTGRESQL
-    else if (match_prefix(argv[i],"-completedsince")) {
+    else if (is_dash_arg_prefix(argv[i],"completedsince",3)) {
 		i++;
 		if (argc <= i) {
 			fprintf(stderr,
@@ -283,7 +280,7 @@ main(int argc, char* argv[])
 		queryver.setQuery(HISTORY_CLUSTER_VER, parameters);
 #endif /* HAVE_EXT_POSTGRESQL */
     }
-    else if (strcmp(argv[i],"-debug")==0) {
+    else if (is_dash_arg_prefix(argv[i],"debug",1)) {
           // dprintf to console
           Termlog = 1;
 		  p_funcs = get_param_functions();

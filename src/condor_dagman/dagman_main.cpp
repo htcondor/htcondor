@@ -232,6 +232,7 @@ Dagman::Config()
 				m_user_log_scan_interval );
 	_defaultPriority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
 		INT_MAX, false);
+	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
 
 
 		// Event checking setup...
@@ -769,6 +770,8 @@ void main_init (int argc, char ** const argv) {
 			Usage();
 		}
 		dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
+			dagman._submitDagDeepOpts.always_use_node_log = false;
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );

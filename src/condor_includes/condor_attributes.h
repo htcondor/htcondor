@@ -112,6 +112,8 @@ extern const char * const  ATTR_DAEMON_START_TIME;
 extern const char * const  ATTR_DAEMON_SHUTDOWN;
 extern const char * const  ATTR_DAEMON_SHUTDOWN_FAST;
 extern const char * const  ATTR_DAG_NODE_NAME;
+extern const char * const  ATTR_DAGMAN_WORKFLOW_LOG;
+extern const char * const  ATTR_DAGMAN_WORKFLOW_MASK;
 extern const char * const  ATTR_DAG_NODE_NAME_ALT;
 extern const char * const  ATTR_DAGMAN_JOB_ID;
 extern const char * const  ATTR_DEFERRAL_OFFSET;

@@ -230,8 +230,8 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory, const char *logFile,
-			   bool prohibitMultiJobs, bool hold_claim )
+			   const char* directory, const char *defaultLog, bool appendDefaultLog,
+			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -307,11 +307,57 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
-	if ( logFile ) {
+		// logFile is null here if there was a log specified
+		// in the submit file
+	if ( !logFile ) {
+		if( appendDefaultLog ) {
+				// We need to append the DAGman default log file to
+				// the log file list
+			args.AppendArg( "-a" );
+			std::string dlog("dagman_log = ");
+			dlog += defaultLog;
+			args.AppendArg(dlog.c_str());
+			debug_printf( DEBUG_VERBOSE, "Adding a DAGMan auxiliary log %s\n", defaultLog );
+				// Now append the mask
+			args.AppendArg( "-a" );
+			std::string dmask("+");
+			dmask += ATTR_DAGMAN_WORKFLOW_MASK;
+			dmask += " = \"";
+			debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN auxiliary log\n" );
+			std::stringstream dmaskstrm;
+			int mask[] = {
+				ULOG_SUBMIT,
+				ULOG_EXECUTE,
+				ULOG_JOB_TERMINATED,
+				ULOG_JOB_ABORTED,
+				ULOG_JOB_HELD,
+				ULOG_JOB_RELEASED,
+				ULOG_POST_SCRIPT_TERMINATED,
+				-1
+			};
+			for(const int*p = &mask[0]; *p != -1; ++p) {
+				if(p != &mask[0]) {
+					dmaskstrm << ",";
+				}
+				dmaskstrm << *p;
+			}
+			dmask += dmaskstrm.str();
+			debug_printf( DEBUG_VERBOSE, "Mask for auxiliary log is %s\n", dmaskstrm.str().c_str() );
+			dmask += "\"";
+			args.AppendArg(dmask.c_str());
+		}
+	} else {
+			// Log was not specified in the submit file
+			// There is a single user log file for this job;
+			// That is, the default
 		args.AppendArg( "-a" );
-		MyString logFileArg = MyString(
-					"log = " ) + logFile;
-		args.AppendArg( logFileArg.Value() );
+		std::string dlog("log = ");
+		dlog += logFile;
+		args.AppendArg(dlog.c_str());
+			// We are using the default log
+			// Never let it be XML
+		args.AppendArg( "-a" );
+		args.AppendArg( "log_xml = False");
 	}
 
 	ArgList parentNameArgs;

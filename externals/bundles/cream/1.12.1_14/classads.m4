@@ -23,7 +23,7 @@ AC_DEFUN(AC_CLASSADS,
 
             ac_classads_prefix=$with_classads_prefix
 
-            CLASSAD_CFLAGS="-I$with_classads_prefix/include"
+            CLASSAD_CFLAGS="-I$with_classads_prefix/include -I$with_boost_prefix/include"
             CLASSAD_LIBS="-L$with_classads_prefix/lib $CLASSAD_LIBS"
 	    CLASSAD_DL_LIBS="-L$with_classads_prefix/lib $CLASSAD_DL_LIBS"
     fi
