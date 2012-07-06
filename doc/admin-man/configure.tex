@@ -1113,14 +1113,17 @@ File System Configuration File Entries''.
 
 \label{param:ClassadLogStrictParsing}
 \item[\Macro{CLASSAD\_LOG\_STRICT\_PARSING}]
-  When this configuration variable is set to \Expr{True}, ClassAd log files
-  will be read using strict syntax checking for ClassAd expressions.  Classad
-  log files include the job queue log and the accountant log.  When set to 
-  \Expr{False}, ClassAd log files are read without strict expression syntax
-  checking, which allows some legacy ClassAd log data to be read in a backward
-  compatible manner.  Defaults to \Expr{True}.  This configuration variable
-  may be deprecated in future releases, eventually requiring all ClassAd log
-  files to pass strict ClassAd syntax checking. 
+  A boolean value that defaults to \Expr{True}. 
+  When \Expr{True}, ClassAd log files will be read using 
+  a strict syntax checking for ClassAd expressions.  
+  ClassAd log files include the job queue log and the accountant log.
+  When \Expr{False}, 
+  ClassAd log files are read without strict expression syntax checking, 
+  which allows some legacy ClassAd log data to be read in a backward
+  compatible manner.  
+  This configuration variable may no longer be supported in future releases, 
+  eventually requiring all ClassAd log files to pass strict 
+  ClassAd syntax checking. 
 
 \label{param:DefaultDomainName}
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}]
