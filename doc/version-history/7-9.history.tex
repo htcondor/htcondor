@@ -92,16 +92,13 @@ the log referred to by \Attr{DAGManNodesLog}.
 \item Added support for classad caching to reduce memory footprint. 
 \Ticket{2541}
 
-\item Added configuration variable CLASSAD\_LOG\_STRICT\_PARSING, which defaults to 
-\Expr{True}, and can be used to control whether ClassAd log files such as the job queue
-log are read in with strict parse checking on ClassAd expressions.
-\Ticket{3069}
-
 \item \Condor{status} now returns the schedd ad directly from the schedd daemon
 if both -direct and -schedd are given on the command line.
 \Ticket{2492}
 
-\item Added status and echo command line options to \Condor{wait} command.
+\item The new \Opt{-status} and \Opt{-echo} command line options to 
+\Condor{wait} command cause it to show job start and terminate information,
+and to print events to \Code{stdout}.
 \Ticket{2926}
 
 \item Added a \Expr{DEBUG} logging level output flag \Dflag{CATEGORY},
@@ -180,6 +177,11 @@ version of \Condor{dagman} is submitting jobs to an older version of
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \Macro{CLASSAD\_LOG\_STRICT\_PARSING}
+controls whether ClassAd log files such as the job queue
+log are read with strict parse checking on ClassAd expressions.
+\Ticket{3069}
 
 \item The default value for configuration variable \Macro{USE\_PROCD}
 is now \Expr{True} for the \Condor{master} daemon.  
