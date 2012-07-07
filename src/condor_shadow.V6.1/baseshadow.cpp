@@ -33,7 +33,6 @@
 #include "classad_helpers.h"
 #include "classad_merge.h"
 #include "dc_startd.h"
-#include "NameFinder.h"
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -893,10 +892,9 @@ void BaseShadow::initUserLog()
 			uLogi->setEnableGlobalLog(false);
 			MyString msk; // Mask only the dagman log
 			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			NameFinder nf(std::string(msk.Value()),',');
-			while(nf) {
-				std::string mask = nf.get();
-				uLogi->AddToMask(ULogEventNumber(atoi(mask.c_str())));
+			Tokenize(msk.Value());
+			while(const char* mask = GetNextToken(",",true)) {
+				uLogi->AddToMask(ULogEventNumber(atoi(mask)));
 			}
 		}
 		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
