@@ -88,6 +88,15 @@ At least four letters are now required for the \Opt{-forward} option
 properly recognized.
 \Ticket{3062}
 
+\item Fixed a bug that caused an invalid proxy to be delegated when
+refreshing the job's X509 proxy when configuration parameter
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} was set to 0.
+\Ticket{3059}
+
+\item Fixed a bug where DAGMan did not account properly for jobs being
+suspended and then unsuspended.
+\Ticket{3108}
+
 \end{itemize}
 
 \noindent Known Bugs:

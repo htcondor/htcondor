@@ -1220,7 +1220,7 @@ x509_send_delegation( const char *source_file,
 			*result_expiration_time = orig_expiration_time;
 		}
 
-		if( orig_expiration_time > expiration_time ) {
+		if( expiration_time && orig_expiration_time > expiration_time ) {
 			int time_valid = (expiration_time - now)/60;
 
 			result = globus_gsi_proxy_handle_set_time_valid( new_proxy, time_valid );
