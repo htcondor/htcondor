@@ -38,7 +38,7 @@ skip_filechecks = True
 PeriodicRemove = (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*1)
 GlobusRSL = 
 
-Grid_Resource = $(REMOTE_SCHEDULER) $(REMOTE_CLUSTER)
+Grid_Resource = batch $(REMOTE_SCHEDULER) $(REMOTE_CLUSTER)
 +GlideinJob=TRUE
 +BOSCOCluster="$(BOSCOCluster)"
 
