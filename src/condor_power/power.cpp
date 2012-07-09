@@ -97,12 +97,12 @@ usage( void )
 	fprintf ( stderr, "\n" );
 	fprintf ( stderr, "-d      Enables debugging\n" );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "-i      Use standard input and output\n" );
+	fprintf ( stderr, "-i      Read a classad that is piped in through standard input" );
+	fprintf ( stderr, "        This is achieved on the command line like so: condor_power -i < [INPUT-CLASSAD-FILE]\n" );
 	fprintf ( stderr, "-m      Hardware address (MAC address)\n" );
 	fprintf ( stderr, "-p      Port (default: %d)\n", port );
 	fprintf ( stderr, "-s      Subnet mask (default: %s)\n", mask );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "With -i, read standard input.\n" );
 
 	exit ( 0 );
 
