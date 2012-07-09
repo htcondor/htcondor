@@ -928,6 +928,7 @@ LookupString(const char *name, char *value, int max_len) const
 		return 0;
 	}
 	strncpy( value, strVal.c_str( ), max_len );
+	if ( value && max_len && value[max_len - 1] ) value[max_len - 1] = '\0';
 	return 1;
 }
 
