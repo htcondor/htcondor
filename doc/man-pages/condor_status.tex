@@ -58,8 +58,10 @@ options} may be specified.
     \OptItem{\Opt{-collector}}{(Query option) Query \Condor{collector} ClassAds
       and display attributes}
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
-      the given host name to get the ClassAds to display.  By default, returns the
-      startd ad.  If \Opt{-schedd} is also given, return the schedd ad on that host.}
+      the given host name to get the ClassAds to display.  
+      By default, returns the \Condor{startd} ClassAd.  
+      If \Opt{-schedd} is also given, return the \Condor{schedd} ClassAd
+      on that host.}
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-license}}{(Query option) Display license attributes.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ClassAds 
@@ -366,7 +368,7 @@ chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
 
 \underline{-format option example}
 To display the name and memory attributes of each job ClassAd in a format
-that is easily parseable by other tools:
+that is easily parsable by other tools:
 \begin{verbatim}
 % condor_status -format "%s " Name -format "%d\n" Memory
 \end{verbatim}
