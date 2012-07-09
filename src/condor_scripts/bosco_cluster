@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/bash
 # bosco_add_host: Used to install ssh keys and blahp on remote hosts.
 
 # Bosco key location
