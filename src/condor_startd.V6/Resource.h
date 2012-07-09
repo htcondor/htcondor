@@ -319,4 +319,28 @@ private:
 };
 
 
+/* Initialize resource for this claim/job
+
+Arguments
+
+- rip - Input: Resource this job has been matched to.
+
+- req_classad - Input: The ClassAd for the job to run
+
+- leftover_claim - Output: If a partitionable slot was carved up,
+  this will hold the claim to the leftovers.  Otherwise, it will be
+  unchanged.
+
+Return
+
+Returns the Resource the job will actually be running on.  It does not need to
+be deleted.  The returned Resource might be different than the Resource passed
+in!  In particular, if the passed in Resource is a partitionable slow, we will
+carve out a new dynamic slot for his job.
+
+The job may be rejected, in which case the returned Resource will be null.
+*/
+Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim);
+
+
 #endif /* _STARTD_RESOURCE_H */
