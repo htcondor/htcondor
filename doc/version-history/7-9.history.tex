@@ -85,16 +85,13 @@ may be further controlled with the new configuration variables
 \Ticket{1605}
 
 \item Added new capability to \Condor{submit} to allow recursive macros in
-submit files. This facility allows one to update variables recursively.  An
-example of a construction that works is the following: \texttt{foo = bar},
-followed by \texttt{foo =  snap \$(foo)}.  Then the value of foo will be
-\texttt{foo = snap bar}.  Previously, this would send \Condor{submit} into an
-infinite loop of expanding the macro so that the expansion would be \texttt{foo
-= snap bar bar ...}, filling up memory with copies of ``\texttt{bar}''. Note
-that both left- and right- recursion works.  The construction \texttt{foo =
-\$(foo) bar} by itself will not work, as it does not have an initial base case.
-Mutually recursive constructions such as: \texttt{B = bar}, \texttt{C = \$(B)},
-and \texttt{B= \$(C) boo} will also fill memory with expansions.
+submit description files. 
+This facility allows one to update variables recursively. 
+Before this new capability was added,
+recursive definition would send \Condor{submit} into an
+infinite loop of expanding the macro,
+such that the expansion would fill up memory.
+See section~\ref{macro-in-submit-description-file} for details.
 \Ticket{406}
 
 \item Removed restriction on having macros in the "log" directive in submit

@@ -3236,6 +3236,7 @@ when file transfer is enabled.
 \end{description} 
 
 
+\label{macro-in-submit-description-file}
 \index{macro!in submit description file}
 In addition to commands, the submit description file can contain macros
 and comments:
@@ -3272,6 +3273,34 @@ as parallel universe jobs.
 It is a unique value assigned for the duration of the job
 that essentially identifies the machine on which a program is
 executing.
+
+Recursive definition of macros is permitted.
+An example of a construction that works is the following: 
+\begin{verbatim}
+foo = bar
+foo =  snap $(foo)
+\end{verbatim}
+As a result, \Expr{foo = snap bar}.
+
+Note that both left- and right- recursion works, so 
+\begin{verbatim}
+foo = bar
+foo =  $(foo) snap
+\end{verbatim}
+has as its result \Expr{foo = bar snap}.
+
+The construction 
+\begin{verbatim}
+foo = $(foo) bar 
+\end{verbatim}
+by itself will \emph{not} work, as it does not have an initial base case.
+Mutually recursive constructions such as: 
+\begin{verbatim}
+B = bar 
+C = $(B)
+B = $(C) boo
+\end{verbatim}
+will \emph{not} work, and will fill memory with expansions.
 
 \index{\$!as a literal character in a submit description file}
 To use the dollar sign character (\verb@$@) as a literal,
