@@ -2090,7 +2090,7 @@ SetImageSize()
 	// we should only call calc_image_size on the first
 	// proc in the cluster, since the executable cannot change.
 	if ( ProcId < 1 ) {
-		ASSERT (job->LookupString (ATTR_JOB_CMD, buff));
+		ASSERT (job->LookupString (ATTR_JOB_CMD, buff, sizeof(buff)));
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) { 
 			executablesize = 0;
 		}else {

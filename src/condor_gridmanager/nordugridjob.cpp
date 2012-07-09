@@ -215,7 +215,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	gahp_path = NULL;
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -248,7 +248,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( strrchr( buff, ' ' ) ) {
 		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
 		myResource->AlreadySubmitted( this );

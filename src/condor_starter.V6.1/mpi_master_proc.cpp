@@ -180,7 +180,7 @@ MPIMasterProc::alterEnv()
 		   referrs to the shadow.  Really. */
     char shad[128], foo[128];
     shad[0] = foo[0] = 0;
-	if ( JobAd->LookupString( ATTR_MY_ADDRESS, shad ) < 1 ) {
+	if ( JobAd->LookupString( ATTR_MY_ADDRESS, shad, sizeof(shad) ) < 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_MY_ADDRESS );
 		free( condor_rsh );

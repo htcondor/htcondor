@@ -1076,7 +1076,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 	if( DebugFlags & D_FULLDEBUG ) { 
 		char name_buf[256];
 		name_buf[0] = '\0';
-		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
+		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
 		dprintf( D_FULLDEBUG, "DedicatedScheduler: releasing claim on %s\n", 
 				 name_buf );
 	}
@@ -2892,13 +2892,13 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		/* it may be that the mpi shadow crashed and left around a 
 		   file named 'procgroup' in the IWD of the job.  We should 
 		   check and delete it here. */
-	char pg_file[512];
+	std::string pg_file;
 	((*alloc->jobs)[0])->LookupString( ATTR_JOB_IWD, pg_file );  
-	strcat ( pg_file, "/procgroup" );
-	if ( unlink ( pg_file ) == -1 ) {
+	pg_file += "/procgroup";
+	if ( unlink ( pg_file.c_str() ) == -1 ) {
 		if ( errno != ENOENT ) {
 			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
-					  pg_file, errno );
+					  pg_file.c_str(), errno );
 		}
 	}
 
@@ -3287,7 +3287,7 @@ DedicatedScheduler::DelMrec( char const* id )
 	}
 
 		// Now, we can delete it from the main table hashed on name.
-	rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
+	rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
 	HashKey key2( name_buf );
 	all_matches->remove(key2);
 
@@ -3591,7 +3591,7 @@ DedicatedScheduler::checkSanity( void )
 		if( tmp >= unused_timeout ) {
 			char namebuf[1024];
 			namebuf[0] = '\0';
-			mrec->my_match_ad->LookupString( ATTR_NAME, namebuf );
+			mrec->my_match_ad->LookupString( ATTR_NAME, namebuf, sizeof(namebuf) );
 			dprintf( D_ALWAYS, "Resource %s has been unused for %d seconds, "
 					 "limit is %d, releasing\n", namebuf, tmp,
 					 unused_timeout );
@@ -3684,7 +3684,7 @@ DedicatedScheduler::getMrec( ClassAd* ad, char* buf )
 	}
 	match_name[0] = '\0';
 
-	if( ! ad->LookupString(ATTR_NAME, match_name) ) {
+	if( ! ad->LookupString(ATTR_NAME, match_name, sizeof(match_name)) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::getMrec(): "
 				 "No %s in ClassAd!\n", ATTR_NAME );
 		return NULL;
@@ -3730,7 +3730,7 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 				candidate_resources.DeleteCurrent();
 				matchCount++;
 				name_buf[0] = '\0';
-				candidate->LookupString( ATTR_NAME, name_buf );
+				candidate->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
 				names.append( name_buf );
 				jobs->DeleteCurrent();
 
@@ -3913,7 +3913,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	ads.Open();
 	while ((machine = ads.Next()) ) {
 		char buf[256];
-		machine->LookupString(ATTR_NAME, buf);
+		machine->LookupString(ATTR_NAME, buf, sizeof(buf));
 		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job (%d.%d)\n", 
 				buf, id.cluster, id.proc);
 		machines.Append(machine);
@@ -4210,7 +4210,7 @@ findAvailTime( match_rec* mrec )
 		EXCEPT( "Unknown status in match rec %p (%d)", mrec, mrec->status );
 	}
 
-	resource->LookupString( ATTR_STATE, state );
+	resource->LookupString( ATTR_STATE, state, sizeof(state) );
 	s = string_to_state( state );
 	switch( s ) {
 
@@ -4227,7 +4227,7 @@ findAvailTime( match_rec* mrec )
 
 	case claimed_state:
 			// In the claimed_state, activity matters
-		resource->LookupString( ATTR_ACTIVITY, state );
+		resource->LookupString( ATTR_ACTIVITY, state, sizeof(state) );
 		act = string_to_activity( state );
 		if( act == idle_act ) {
 				// We're available now
@@ -4318,9 +4318,9 @@ void
 displayResource( ClassAd* ad, char* str, int debug_level )
 {
 	char arch[128], opsys[128], name[128];
-	ad->LookupString( ATTR_NAME, name );
-	ad->LookupString( ATTR_OPSYS, opsys );
-	ad->LookupString( ATTR_ARCH, arch );
+	ad->LookupString( ATTR_NAME, name, sizeof(name) );
+	ad->LookupString( ATTR_OPSYS, opsys, sizeof(opsys) );
+	ad->LookupString( ATTR_ARCH, arch, sizeof(arch) );
 	dprintf( debug_level, "%s%s\t%s\t%s\n", str, opsys, arch, name );
 }
 

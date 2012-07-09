@@ -213,7 +213,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -251,7 +251,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( strrchr( buff, ' ' )+1 );
 		job_already_submitted = true;
@@ -260,7 +260,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		char *ptr = strchr( buff, '#' );
 		if ( ptr != NULL ) {

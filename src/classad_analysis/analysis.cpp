@@ -144,7 +144,7 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
     return;
   }
 
-  if (! offer->LookupString( ATTR_REMOTE_USER, remote_user )) {
+  if (! offer->LookupString( ATTR_REMOTE_USER, remote_user, sizeof(remote_user) )) {
     if ( satisfied_std_rank )  {
       // Machine satisfies job requirements, job satisfies machine
       // constraints, no remote user

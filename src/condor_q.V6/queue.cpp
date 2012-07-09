@@ -202,7 +202,7 @@ static	AttrListPrintMask 	mask;
 static CollectorList * Collectors = NULL;
 
 // for run failure analysis
-static  int			findSubmittor( char * );
+static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
 static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd*, Daemon* );
@@ -637,7 +637,7 @@ int main (int argc, char **argv)
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
-				 ad->LookupString(ATTR_MACHINE, scheddMachine) &&
+				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine)) &&
 				 ad->LookupString(ATTR_VERSION, scheddVersion) ) ) 
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */
@@ -1583,13 +1583,13 @@ format_remote_host (char *, AttrList *ad)
 			return unknownHost;
 		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
-		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
+		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
 			return host_result;
 		else
 			return unknownHost;
 	}
 
-	if (ad->LookupString(ATTR_REMOTE_HOST, host_result) == 1) {
+	if (ad->LookupString(ATTR_REMOTE_HOST, host_result, sizeof(host_result)) == 1) {
 		if( is_valid_sinful(host_result) && 
 			(string_to_sin(host_result, &sin) == 1) ) {  
 			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
@@ -2507,7 +2507,7 @@ setupAnalysis()
 	char		buffer[64];
 	char		*preq;
 	ClassAd		*ad;
-	char		remoteUser[128];
+	string		remoteUser;
 	int			index;
 
 	// fetch startd ads
@@ -2530,7 +2530,7 @@ setupAnalysis()
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
 		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
+			if( ( index = findSubmittor( remoteUser.c_str() ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
 							prioTable[index].prio );
 				ad->Insert( buffer );
@@ -2613,7 +2613,7 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !al.LookupString( attrName, name ) || 
+    	if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, priority ) )
             break;
 
@@ -2638,7 +2638,7 @@ static const char *
 doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
-	char	remoteUser[128];
+	string	remoteUser;
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
@@ -2670,7 +2670,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		snprintf( return_buff, sizeof(return_buff), "%s", buf.Value() );
 	}
 
-	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
+	if( !request->LookupString( ATTR_OWNER , owner, sizeof(owner) ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
@@ -2736,9 +2736,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
-		remoteUser[0] = '\0';
 		totalMachines++;
-		offer->LookupString( ATTR_NAME , buffer );
+		offer->LookupString( ATTR_NAME , buffer, sizeof(buffer) );
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
@@ -2837,7 +2836,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
 									return_buff,
-									remoteUser);
+									 remoteUser.c_str());
 						}
 						continue;
 					} else {
@@ -2845,7 +2844,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 						if( verbose ) {
 							sprintf( return_buff,
 								"%sAvailable (can preempt %s)\n",
-								return_buff, remoteUser);
+									 return_buff, remoteUser.c_str());
 						}
 						available++;
 					}
@@ -2875,7 +2874,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			if( verbose ) {
 				sprintf( return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
-					return_buff, remoteUser );
+						 return_buff, remoteUser.c_str() );
 			}
 			continue;
 		}
@@ -3044,7 +3043,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 
 static int
-findSubmittor( char *name ) 
+findSubmittor( const char *name ) 
 {
 	MyString 	sub(name);
 	int			last = prioTable.getlast();

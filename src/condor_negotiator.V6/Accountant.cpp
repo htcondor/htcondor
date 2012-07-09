@@ -1204,15 +1204,15 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
   if (state!=claimed_state && state!=preempting_state) return 0;
   
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser, sizeof(RemoteUser))) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser, sizeof(RemoteUser))) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
 		return 0;
 	  }
   }
   if(DiscountSuspendedResources) {
     char RemoteActivity[512];
-    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity, sizeof(RemoteActivity))) {
        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
        return 0;
     }
@@ -1247,8 +1247,8 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser, sizeof(RemoteUser))) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser, sizeof(RemoteUser))) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
 		return 0;
 	  }
@@ -1274,7 +1274,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
 
   if(DiscountSuspendedResources) {
     char RemoteActivity[512];
-    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity, sizeof(RemoteActivity))) {
         dprintf(D_ALWAYS, "Could not lookup remote activity\n");
         return 0;
     }

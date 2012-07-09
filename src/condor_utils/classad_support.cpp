@@ -35,7 +35,7 @@ void SetAttrDirty(ClassAd *ad, char *attr)
 	StringList sl;
 	char *tmp, *tmp2;
 
-	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
+	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty, sizeof(dirty)))
 	{
 		/* doesn't exist, so I'll add it */
 		sl.initializeFromString(attr);
@@ -86,7 +86,7 @@ void SetAttrClean(ClassAd *ad, char *attr)
 	char *tmp, *tmp2;
 
 	/* no dirty list means this is automatically clean */
-	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
+	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty, sizeof(dirty)))
 	{
 		return;
 	}
@@ -140,7 +140,7 @@ bool IsAttrDirty(ClassAd *ad, char *attr)
 	StringList sl;
 	
 	/* no dirty list means this is automatically clean */
-	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
+	if (!ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty, sizeof(dirty)))
 	{
 		return false;
 	}
@@ -162,7 +162,7 @@ bool AnyAttrDirty(ClassAd *ad)
 	char dirty[DIRTY_ATTR_SIZE];
 	
 	/* no dirty list means this is automatically clean */
-	if (ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty))
+	if (ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty, sizeof(dirty)))
 	{
 		return true;
 	}
@@ -179,7 +179,7 @@ void EmitDirtyAttrList(int mode, ClassAd *ad)
 
 	if (AnyAttrDirty(ad) == true)
 	{
-		ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty);
+		ad->LookupString(ATTR_DIRTY_ATTR_LIST, dirty, sizeof(dirty));
 
 		dprintf(mode, "%s = %s\n", ATTR_DIRTY_ATTR_LIST, dirty);
 	}
