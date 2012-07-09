@@ -279,7 +279,8 @@ End_of_Submit
     fi
     
     # Check the remote job state
-    echo -n "Checking the current GridJobStatus, this could take a very long time... "
+    echo "Checking the test job's status to change from idle to running"
+    echo -n "This could take a very long time... "
     check_condor_q_classad "(ClusterId == $condor_jobid) && (isUndefined(GridJobStatus) =!= TRUE)" 60
     if [ $? -eq 0 ]; then
         echo "Failed"
