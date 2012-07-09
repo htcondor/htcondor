@@ -279,17 +279,18 @@ End_of_Submit
     fi
     
     # Check the remote job state
-    echo "Checking the test job's status to change from idle to running"
-    echo -n "This could take a very long time... "
-    check_condor_q_classad "(ClusterId == $condor_jobid) && (isUndefined(GridJobStatus) =!= TRUE)" 60
-    if [ $? -eq 0 ]; then
-        echo "Failed"
-        echo "GridManager did not update status of remote job"
-        echo "See GridManager log for information, located at `condor_config_val GRIDMANAGER_LOG`"
-        exit 1
-    else
-        condor_q -const "(ClusterId == '$condor_jobid')" -format '%s\n' GridJobStatus
-    fi
+    # GridJobStatus is not properly implemented for PBS
+    #echo "Checking the test job's status to change from idle to running"
+    #echo -n "This could take a very long time... "
+    #check_condor_q_classad "(ClusterId == $condor_jobid) && (isUndefined(GridJobStatus) =!= TRUE)" 60
+    #if [ $? -eq 0 ]; then
+    #    echo "Failed"
+    #    echo "GridManager did not update status of remote job"
+    #    echo "See GridManager log for information, located at `condor_config_val GRIDMANAGER_LOG`"
+    #    exit 1
+    #else
+    #    condor_q -const "(ClusterId == '$condor_jobid')" -format '%s\n' GridJobStatus
+    #fi
 
     # Check for job to run
     echo -n "Waiting for job to run... this could take a while (waiting 60 seconds)..."
