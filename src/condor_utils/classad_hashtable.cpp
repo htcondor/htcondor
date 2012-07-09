@@ -22,11 +22,6 @@
 
 #include "classad_hashtable.h"
 
-void HashKey::sprint(char *s)
-{
-	strcpy(s, key);
-}
-
 void HashKey::sprint(MyString &s)
 {
 	s.sprintf("%s", key);
