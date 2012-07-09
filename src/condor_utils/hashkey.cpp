@@ -144,7 +144,6 @@ adLookup( const char *ad_type,
 		}
 	}
 
-	buf[sizeof(buf)-1] = '\0';
 	string = buf;
 
 	return rval;

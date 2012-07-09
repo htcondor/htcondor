@@ -888,7 +888,7 @@ void DCloudJob::doEvaluateState()
 					char holdReason[1024];
 					holdReason[0] = '\0';
 					holdReason[sizeof(holdReason)-1] = '\0';
-					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) - 1 );
+					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) );
 					if ( holdReason[0] == '\0' && errorString != "" ) {
 						strncpy( holdReason, errorString.Value(), sizeof(holdReason) - 1 );
 					} else if ( holdReason[0] == '\0' ) {
