@@ -301,6 +301,8 @@ End_of_Submit
         echo "This doesn't always mean there is something wrong, maybe the remote queue is long..."
         echo "Here is the current status of the job:"
         condor_q $condor_jobid
+        echo "You can look at job's log file at $log_file"
+        echo "for the job's current status"
         exit 1
     else
         echo "Passed!"
