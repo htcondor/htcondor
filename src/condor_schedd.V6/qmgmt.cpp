@@ -4443,9 +4443,7 @@ int mark_idle(ClassAd *job)
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
 		if ( universe == CONDOR_UNIVERSE_GRID ) {
-			char grid_job_id[20];
-			if ( job->LookupString( ATTR_GRID_JOB_ID, grid_job_id,
-									sizeof(grid_job_id) ) )
+			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.

@@ -1591,9 +1591,7 @@ count( ClassAd *job )
 		// if the gridmanager has set Managed="ScheddDone", then it's done
 		// with the job and doesn't want to see it again.
 		if ( status == REMOVED && job_managed_done == false ) {
-			char job_id[20];
-			if ( job->LookupString( ATTR_GRID_JOB_ID, job_id,
-									sizeof(job_id) ) )
+			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.
@@ -1819,9 +1817,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			// delete ATTR_GRID_JOB_ID from the ad and set Managed to
 			// ScheddDone.
 		if ( !job_managed && !job_managed_done && mode==REMOVED ) {
-			char jobID[20];
-			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, jobID,
-									   sizeof(jobID) ) )
+			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.

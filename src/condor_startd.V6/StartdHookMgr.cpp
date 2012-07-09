@@ -200,8 +200,7 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 
 		// Make sure that the job classad defines ATTR_HOOK_KEYWORD,
 		// and if not, insert this slot's keyword.
-	char buf[1];	// We don't care what it is, just if it's there.
-	if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, buf, 1)) {
+	if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, NULL, 0)) {
 		char* keyword = rip->getHookKeyword();
 		ASSERT(keyword && keyword != UNDEFINED);
 		MyString keyword_attr;
