@@ -77,7 +77,7 @@ static const char				*fn_in	= NULL;  /* name of input file */
 static char				*fn_out	= NULL;  /* name of output file */
 static const char		*name	= NULL;  /* program name */
 static const char				*mac	= NULL;  /* hardware address */
-static const char				*mask	= "255.255.255.255"; /*subnet to broadcast on*/
+static const char				*mask	= "0.0.0.0"; /*subnet to broadcast on*/
 static int				port	= 9;	 /* port number to use */
 static bool				stdio	= false; /* if true, use stdin and stdout. */
 static ClassAd			*ad		= NULL;  /* machine class-ad */
@@ -97,12 +97,12 @@ usage( void )
 	fprintf ( stderr, "\n" );
 	fprintf ( stderr, "-d      Enables debugging\n" );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "-i      Use standard input and output\n" );
+	fprintf ( stderr, "-i      Read a classad that is piped in through standard input" );
+	fprintf ( stderr, "        This is achieved on the command line like so: condor_power -i < [INPUT-CLASSAD-FILE]\n" );
 	fprintf ( stderr, "-m      Hardware address (MAC address)\n" );
 	fprintf ( stderr, "-p      Port (default: %d)\n", port );
 	fprintf ( stderr, "-s      Subnet mask (default: %s)\n", mask );
 	fprintf ( stderr, "\n" );
-	fprintf ( stderr, "With -i, read standard input.\n" );
 
 	exit ( 0 );
 
@@ -234,7 +234,7 @@ serialize_input( void )
 	if ( !stdio ) {
 
 		/**	Contrive a sinful string based on our IP address */
-		sprintf ( sinful, "<%s:1234>", my_ip_string () );
+		sprintf ( sinful, "<255.255.255.255:1234>" );
 
 		/**	We were give all the raw data, so we're going to create
 			a fake machine ad that we will use when invoking the waking

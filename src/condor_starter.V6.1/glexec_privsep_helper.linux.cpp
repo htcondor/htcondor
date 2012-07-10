@@ -327,40 +327,20 @@ GLExecPrivSepHelper::create_process(const char* path,
 	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
-	Env glexec_env;
-	MyString user_proxy;
-	char const *condor_proxy;
-
-		// Set up the environment to be used when invoking glexec.  I
-		// do not know why we use the job's environment for this
-		// purpose, because we also pass the job's environment to
-		// condor's glexec job wrapper, which sets up the job
-		// environment as desired without relying on environment
-		// inherited from glexec.  (In fact, glexec clears the
-		// environment.)  
-
-	glexec_env.MergeFrom(env);
-
-	if( glexec_env.GetEnv("X509_USER_PROXY",user_proxy))
-	{
-		if ((condor_proxy = getenv("X509_USER_PROXY"))) {
-			// glexec versions >= 0.7.0 may use X509_USER_PROXY to
-			// authenticate to the mapping service.  We are expected to
-			// set this to the glidein (aka pilot) proxy rather than the
-			// end-user proxy when invoking glexec.  Since we are invoking
-			// glexec with the job environment (see comment above), we
-			// must treat X509_USER_PROXY specially.
-
-			glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
-		}
-	}
+		// At the very least, we need to pass the condor daemon's
+		// X509_USER_PROXY to condor_glexec_run.  Currently, we just
+		// pass all daemon environment.  We do _not_ run
+		// condor_glexec_run in the job environment, because that
+		// would be a security risk and would serve no purpose, since
+		// glexec cleanses the environment anyway.
+	dc_job_opts &= ~(DCJOBOPT_NO_ENV_INHERIT);
 
 	int pid = daemonCore->Create_Process(m_run_script.Value(),
 	                                     modified_args,
 	                                     PRIV_USER_FINAL,
 	                                     reaper_id,
 	                                     FALSE,
-	                                     &glexec_env,
+	                                     NULL,
 	                                     iwd,
 	                                     fi_ptr,
 	                                     NULL,
