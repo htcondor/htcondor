@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef CONDOR_TRANSFER_REQUEST_H
-#define CONDOR_TRANSFER_REQUEST_H
+#ifndef TRANSFER_REQUEST_H
+#define TRANSFER_REQUEST_H
 
 #include "extArray.h"
 #include "MyString.h"
@@ -114,7 +114,7 @@ class TransferRequest
 		// This could be the empty string if there is no version.
 		// this will make a copy when you assign it to something.
 		void set_peer_version(MyString &pv);
-		void set_peer_version(const char *pv);
+		void set_peer_version(char *pv);
 		MyString get_peer_version(void);
 
 		// what version is the info packet
