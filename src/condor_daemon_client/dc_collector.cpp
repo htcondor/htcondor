@@ -632,10 +632,12 @@ DCCollector::initDestinationStrings( void )
 		// this... just see what useful info we have and use it. 
 	if( _full_hostname ) {
 		dest = _full_hostname;
-		dest += ' ';
-		dest += _addr;
+		if ( _addr) {
+			dest += ' ';
+			dest += _addr;
+		}
 	} else {
-		dest = _addr;
+		if (_addr) dest = _addr;
 	}
 	udp_update_destination = strnewp( dest.c_str() );
 
@@ -660,7 +662,7 @@ DCCollector::initDestinationStrings( void )
 			// we're using (which either came from them, or is the
 			// default COLLECTOR_PORT if unspecified).
 
-		sprintf(dest, "%s (port: %d)", tcp_collector_host, tcp_collector_port);
+		sprintf(dest, "%s (port: %d)", tcp_collector_addr ? tcp_collector_addr : "", tcp_collector_port);
 		tcp_update_destination = strnewp( dest.c_str() );
 	}
 }
