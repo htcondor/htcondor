@@ -26,7 +26,6 @@
 #include "MyString.h"
 #include "globus_utils.h"
 #include "classad_hashtable.h"
-#include "tdman.h"
 
 #include "basejob.h"
 #include "infnbatchresource.h"
@@ -84,7 +83,6 @@ class INFNBatchJob : public BaseJob
 
 	INFNBatchResource *myResource;
 	GahpClient *gahp;
-	GahpClient *m_xfer_gahp;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );
 
@@ -92,16 +90,7 @@ class INFNBatchJob : public BaseJob
 	void SetRemoteJobId( const char *job_id );
 	void SetRemoteIds( const char *sandbox_id, const char *job_id );
 	ClassAd *buildSubmitAd();
-	ClassAd *buildTransferAd();
 	void CreateSandboxId();
-
-	bool StartTransferRequest( bool is_input );
-
-	TreqAction TreqPrePushCb( TransferRequest*, TransferDaemon* );
-	TreqAction TreqPostPushCb( TransferRequest*, TransferDaemon* );
-	TreqAction TreqUpdateCb( TransferRequest*, TransferDaemon*,
-							 ClassAd *update );
-	TreqAction TreqReaperCb( TransferRequest* );
 
 		// If we're in the middle of a condor call that requires a ClassAd,
 		// the ad is stored here (so that we don't have to reconstruct the
