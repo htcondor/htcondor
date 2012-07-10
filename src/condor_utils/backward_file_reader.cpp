@@ -101,6 +101,9 @@ int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int 
 BackwardFileReader::BackwardFileReader(std::string filename, int open_flags)
 	: error(0), file(NULL), cbFile(0), cbPos(0) 
 {
+#ifdef WIN32
+	open_flags |= O_BINARY;
+#endif
 	int fd = safe_open_wrapper_follow(filename.c_str(), open_flags);
 	if (fd < 0)
 		error = errno;
