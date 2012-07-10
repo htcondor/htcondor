@@ -24,8 +24,10 @@
 #include "dc_transferd.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "qmgmt.h"
+#include "condor_qmgr.h"
+#include "scheduler.h"
 #include "basename.h"
-#include "tdman.h"
 
 TransferDaemon::TransferDaemon(MyString fquser, MyString id, TDMode status) :
 	m_treqs_in_progress(200, hashFuncMyString)
