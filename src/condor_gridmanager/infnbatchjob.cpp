@@ -158,6 +158,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	pollNow = false;
 	myResource = NULL;
 	gahp = NULL;
+	m_xfer_gahp = NULL;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
 
@@ -241,6 +242,18 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
+	if ( gahp_args.Count() > 0 ) {
+		gahp_path = param( "TRANSFER_GAHP" );
+		if ( gahp_path == NULL ) {
+			sprintf( error_string, "TRANSFER_GAHP not defined" );
+			goto error_exit;
+		}
+
+		sprintf( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
+		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
+		free( gahp_path );
+	}
+
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
 														  gahp_args.GetArg(0) );
 	myResource->RegisterJob( this );
@@ -256,6 +269,13 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
+
+	ASSERT( gahp != NULL );
+	m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
+	m_xfer_gahp->setMode( GahpClient::normal );
+	// TODO: This can't be the normal gahp timeout value. Does it need to
+	//   be configurable?
+	m_xfer_gahp->setTimeout( 60*60 );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
@@ -296,6 +316,7 @@ INFNBatchJob::~INFNBatchJob()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
+	delete m_xfer_gahp;
 }
 
 void INFNBatchJob::Reconfig()
@@ -345,6 +366,18 @@ void INFNBatchJob::doEvaluateState()
 				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 				gmState = GM_HOLD;
 				break;
+			}
+			if ( myResource->GahpIsRemote() ) {
+				// This job requires a transfer gahp
+				ASSERT( m_xfer_gahp );
+				if ( m_xfer_gahp->Startup() == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
+							 procID.cluster, procID.proc );
+
+					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start transfer GAHP" );
+					gmState = GM_HOLD;
+					break;
+				}
 			}
 			if ( jobProxy ) {
 				if ( gahp->Initialize( jobProxy ) == false ) {
@@ -407,11 +440,35 @@ void INFNBatchJob::doEvaluateState()
 		} break;
 		case GM_TRANSFER_INPUT: {
 			// Transfer input sandbox
-			// TODO implement
-			//   Construct TransferRequest(s)
-			//   Send requests to both sides
-			//   Wait for completion (maybe in another state)
-			gmState = GM_SUBMIT;
+			if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_SUBMIT;
+				break;
+			}
+
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			rc = m_xfer_gahp->blah_download_sandbox( gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_download_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_CLEAR_REQUEST;
+			} else {
+				gmState = GM_SUBMIT;
+			}
 		} break;
 		case GM_SUBMIT: {
 			// Start a new remote submission for this job.
@@ -471,7 +528,7 @@ void INFNBatchJob::doEvaluateState()
 							 gahp->getErrorString() );
 					errorString = gahp->getErrorString();
 					myResource->CancelSubmit( this );
-					gmState = GM_UNSUBMITTED;
+					gmState = GM_DELETE_SANDBOX;
 					reevaluate_state = true;
 				}
 				if ( job_id_string != NULL ) {
@@ -509,7 +566,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == COMPLETED ) {
-				gmState = GM_DONE_SAVE;
+				gmState = GM_TRANSFER_OUTPUT;
 			} else if ( remoteState == REMOVED ) {
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
@@ -586,12 +643,35 @@ void INFNBatchJob::doEvaluateState()
 			}
 		} break;
 		case GM_TRANSFER_OUTPUT: {
+			if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_DONE_SAVE;
+				break;
+			}
 			// Transfer output sandbox
-			// TODO Implement
-			//   Construct TransferRequests
-			//   send request(s) to both ends
-			//   wait for completion (possible in another state)
-			gmState = GM_DONE_SAVE;
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			rc = m_xfer_gahp->blah_upload_sandbox( gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_upload_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_DELETE_SANDBOX;
+			} else {
+				gmState = GM_DONE_SAVE;
+			}
 		} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
@@ -1116,6 +1196,13 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
 
 	return submit_ad;
+}
+
+ClassAd *INFNBatchJob::buildTransferAd()
+{
+	// TODO This will probably require some additional attributes
+	//   to be set.
+	return buildSubmitAd();
 }
 
 void INFNBatchJob::CreateSandboxId()

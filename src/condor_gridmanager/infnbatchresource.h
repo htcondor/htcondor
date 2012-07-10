@@ -56,12 +56,15 @@ public:
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
+	bool GahpIsRemote() { return m_gahpIsRemote; };
+
 private:
 	void DoPing(time_t & ping_delay, 
 				bool & ping_complete, 
 				bool & ping_succeeded  );
 
 	std::string m_batchType;
+	bool m_gahpIsRemote;
 };    
   
 #endif
