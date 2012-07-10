@@ -119,15 +119,15 @@ class CreamJob : public BaseJob
 
 	char * delegatedCredentialURI;
 	char *leaseId;
-	GridTransferRequest *m_xfer_request;
+	TransferRequest *m_xfer_request;
 
 private:
 	// If true, we should poll for status ourselves, _once_
 	// instead of relying on CreamResource to handle it.
 	bool doActivePoll;
 
-	GridTransferRequest *MakeStageInRequest();
-	GridTransferRequest *MakeStageOutRequest();
+	TransferRequest *MakeStageInRequest();
+	TransferRequest *MakeStageOutRequest();
 };
 
 #endif

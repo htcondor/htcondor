@@ -29,12 +29,12 @@
 #define TRANSFER_DONE		3
 #define TRANSFER_FAILED		4
 
-class GridTransferRequest : public Service
+class TransferRequest : public Service
 {
  public:
-	GridTransferRequest( Proxy *proxy, const StringList &src_list,
-						 const StringList &dst_list, int notify_tid );
-	virtual ~GridTransferRequest();
+	TransferRequest( Proxy *proxy, const StringList &src_list,
+					 const StringList &dst_list, int notify_tid );
+	virtual ~TransferRequest();
 
 	enum TransferStatus {
 		TransferQueued,
