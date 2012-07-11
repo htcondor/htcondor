@@ -24,7 +24,6 @@
 #include "condor_daemon_core.h"
 #include <list>
 #include "condor_cron_job.h"
-using namespace std;
 
 // Define a simple class to run child tasks periodically.
 class CronJobMgr;
@@ -58,7 +57,7 @@ class CondorCronJobList
 	void DeleteUnmarked( void );
 
   private:
-	list<CronJob *>		 m_job_list;
+	std::list<CronJob *>		 m_job_list;
 	CronJobMgr			&m_mgr;			// My manager
 
 };

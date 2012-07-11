@@ -245,7 +245,7 @@ void Job::Dump ( const Dag *dag ) const {
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
 
-		set<JobID_t>::const_iterator qit;
+		std::set<JobID_t>::const_iterator qit;
 		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
 			Job *node = dag->Dag::FindNodeByNodeID( *qit );
 			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
@@ -482,7 +482,7 @@ Job::TerminateFailure()
 bool
 Job::Add( const queue_t queue, const JobID_t jobID )
 {
-	pair<set<JobID_t>::iterator, bool> ret;
+	std::pair<std::set<JobID_t>::iterator, bool> ret;
 
 	ret = _queues[queue].insert(jobID);
 
@@ -580,7 +580,7 @@ Job::GetStatusName() const
 bool
 Job::HasChild( Job* child ) {
 	JobID_t cid;
-	set<JobID_t>::iterator it;
+	std::set<JobID_t>::iterator it;
 
 	if( !child ) {
 		return false;
@@ -599,7 +599,7 @@ Job::HasChild( Job* child ) {
 bool
 Job::HasParent( Job* parent ) {
 	JobID_t pid;
-	set<JobID_t>::iterator it;
+	std::set<JobID_t>::iterator it;
 
 	if( !parent ) {
 		return false;
@@ -1014,8 +1014,8 @@ Job::GetPreSkip() const
 void
 Job::FixPriority(Dag& dag)
 {
-	set<JobID_t> parents = GetQueueRef(Q_PARENTS);
-	for(set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
+	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
+	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
 		Job* parent = dag.FindNodeByNodeID(*p);
 		if( parent->_hasNodePriority ) {
 			// Nothing to do if parent priority is small
