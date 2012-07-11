@@ -26,20 +26,9 @@
 #include "gahp_common.h"
 #include "PipeBuffer.h"
 
-/*
-#define GAHP_COMMAND_JOB_SUBMIT "CONDOR_JOB_SUBMIT"
-#define GAHP_COMMAND_JOB_REMOVE "CONDOR_JOB_REMOVE"
-#define GAHP_COMMAND_JOB_COMPLETE "CONDOR_JOB_COMPLETE"
-#define GAHP_COMMAND_JOB_STATUS_CONSTRAINED "CONDOR_JOB_STATUS_CONSTRAINED"
-#define GAHP_COMMAND_JOB_UPDATE_CONSTRAINED "CONDOR_JOB_UPDATE_CONSTRAINED"
-#define GAHP_COMMAND_JOB_UPDATE "CONDOR_JOB_UPDATE" // Update by job id
-#define GAHP_COMMAND_JOB_HOLD "CONDOR_JOB_HOLD"
-#define GAHP_COMMAND_JOB_RELEASE "CONDOR_JOB_RELEASE"
-#define GAHP_COMMAND_JOB_STAGE_IN "CONDOR_JOB_STAGE_IN"
-#define GAHP_COMMAND_JOB_STAGE_OUT "CONDOR_JOB_STAGE_OUT"
-#define GAHP_COMMAND_JOB_REFRESH_PROXY "CONDOR_JOB_REFRESH_PROXY"
-#define GAHP_COMMAND_JOB_UPDATE_LEASE "CONDOR_JOB_UPDATE_LEASE"
-*/
+#define GAHP_COMMAND_DOWNLOAD_SANDBOX "DOWNLOAD_SANDBOX"
+#define GAHP_COMMAND_UPLOAD_SANDBOX "UPLOAD_SANDBOX"
+#define GAHP_COMMAND_DESTROY_SANDBOX "DESTROY_SANDBOX"
 
 #define GAHP_COMMAND_ASYNC_MODE_ON "ASYNC_MODE_ON"
 #define GAHP_COMMAND_ASYNC_MODE_OFF "ASYNC_MODE_OFF"
@@ -55,17 +44,16 @@
 #define GAHP_RESULT_FAILURE "F"
 
 
+/*
 struct inter_thread_io_t {
   int request_pipe[2];
   int result_pipe[2];
 
 };
+*/
 
 int stdin_pipe_handler(Service*, int);
 void handle_results( std::string line );
-
-// int result_pipe_handler(int);
-
 
 
 void gahp_output_return (const char ** , const int );
@@ -82,32 +70,5 @@ int verify_class_ad (const char *);
 int verify_constraint (const char * s);
 int verify_number (const char*);
 int verify_number_args (const int, const int);
-
-// void flush_request (int worker_id, const char * request);
-// void flush_pending_requests();
-
-// int worker_thread_reaper (Service*, int pid, int exit_status);
-
-/*
-class Worker : public Service {
- public:
-	void Init (int _id) { id = _id; }
-
-	int result_handler (int) {
-		return result_pipe_handler(id);
-	}
-				   
-	PipeBuffer request_buffer;
-	PipeBuffer result_buffer;
-
-	int result_pipe[2];
-	int request_pipe[2];
-
-    int flush_request_tid;
-	int pid;
-
-	int id;
-};
-*/
 
 #endif
