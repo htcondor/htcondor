@@ -65,7 +65,8 @@ typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
 typedef HashTable <MyString, MyString> PluginHashTable;
 
-typedef int		(Service::*FileTransferHandler)(FileTransfer *);
+typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
+typedef int		(*FileTransferHandler)(FileTransfer *);
 
 
 class FileTransfer {
@@ -135,9 +136,13 @@ class FileTransfer {
 			last transfer.  It is safe for the handler to deallocate the
 			FileTransfer object.
 		*/
-	void RegisterCallback(FileTransferHandler handler, Service* handlerclass)
+	void RegisterCallback(FileTransferHandler handler)
 		{ 
 			ClientCallback = handler; 
+		}
+	void RegisterCallback(FileTransferHandlerCpp handler, Service* handlerclass)
+		{ 
+			ClientCallbackCpp = handler; 
 			ClientCallbackClass = handlerclass;
 		}
 
@@ -333,6 +338,7 @@ class FileTransfer {
 	time_t TransferStart;
 	int TransferPipe[2];
 	FileTransferHandler ClientCallback;
+	FileTransferHandlerCpp ClientCallbackCpp;
 	Service* ClientCallbackClass;
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table;

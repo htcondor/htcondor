@@ -1969,7 +1969,7 @@ JICShadow::beginFileTransfer( void )
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->RegisterCallback(
-				  (FileTransferHandler)&JICShadow::transferCompleted,this );
+				  (FileTransferHandlerCpp)&JICShadow::transferCompleted,this );
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );

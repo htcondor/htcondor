@@ -157,6 +157,7 @@ FileTransfer::FileTransfer()
 	TransferStart = 0;
 	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = (time_t)-1;
 	ClientCallback = 0;
+	ClientCallbackCpp = 0;
 	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
 	bytesSent = 0.0;
@@ -1462,7 +1463,12 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	if (transobject->ClientCallback) {
 		dprintf(D_FULLDEBUG,
 				"Calling client FileTransfer handler function.\n");
-		((transobject->ClientCallbackClass)->*(transobject->ClientCallback))(transobject);
+		(*(transobject->ClientCallback))(transobject);
+	}
+	if (transobject->ClientCallbackCpp) {
+		dprintf(D_FULLDEBUG,
+				"Calling client FileTransfer handler function.\n");
+		((transobject->ClientCallbackClass)->*(transobject->ClientCallbackCpp))(transobject);
 	}
 
 	return TRUE;
