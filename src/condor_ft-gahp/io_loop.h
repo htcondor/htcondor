@@ -84,7 +84,7 @@ void enqueue_result (int req_id, const char ** results, const int argc);
 void define_sandbox_path(std::string sid, std::string &path);
 
 void define_path(std::string sid, std::string &path);
-bool create_sandbox (std::string sid, std::string &iwd);
+bool create_sandbox_dir (std::string sid, std::string &iwd);
 bool destroy_sandbox(std::string sid, std::string err);
 
 #endif

@@ -222,7 +222,7 @@ stdin_pipe_handler(Service*, int) {
 					// directory created.
 					std::string iwd;
 					bool success;
-					success = create_sandbox(sid, iwd);
+					success = create_sandbox_dir(sid, iwd);
 					if (!success) {
 						// the dir wasn't created.  report that in the results.
 						std::string err = "couldn't create sandbox " + iwd;
@@ -304,10 +304,83 @@ stdin_pipe_handler(Service*, int) {
 				}
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_UPLOAD_SANDBOX) == 0) {
-				// TODO: implement
-				// will be ridiculously simple once the DOWNLOAD_SANDBOX is working
+				// yes, it would be nice to put this all in a separate function.
 
 				dprintf(D_ALWAYS, "FTGAHP: upload sandbox\n");
+
+				// first two args: result id and sandbox id:
+				std::string rid = args.argv[1];
+				std::string sid = args.argv[2];
+
+				// third arg: job ad
+				ClassAd ad;
+				classad::ClassAdParser my_parser;
+
+				// TODO check return val
+				if (my_parser.ParseClassAd(args.argv[3], ad)) {
+
+					// this is a "success" in the sense that the gahp command was
+					// well-formatted.  whether or not the file transfer works or
+					// not is not what we are reporting here.
+					gahp_output_return_success();
+
+					// rewrite the IWD to the newly created sandbox dir
+					std::string iwd;
+					define_sandbox_path(sid, iwd);
+					ad.Assign(ATTR_JOB_IWD, iwd.c_str());
+					char ATTR_SANDBOX_ID[] = "SandboxId";
+					ad.Assign(ATTR_SANDBOX_ID, sid.c_str());
+
+					// directory (hopefully!) already exists.
+					// the FileTransfer object
+					SandboxEnt e;
+					e.sandbox_id = sid;
+					e.request_id = rid;
+					e.ft = new FileTransfer();
+
+					if (e.ft->Init(&ad)) {
+						// lookup ATTR_VERSION and set it.  this changes the wire
+						// protocol and it is important that this happens before
+						// calling DownloadFiles.
+						char* peer_version = NULL;
+						ad.LookupString(ATTR_VERSION, &peer_version);
+						e.ft->setPeerVersion(peer_version);
+						free (peer_version);
+
+						// Register callback for when transfer completes
+						e.ft->RegisterCallback( &ftgahp_reaper );
+
+						dprintf(D_ALWAYS, "ZKM: calling Upload files");
+						// the "false" param to UploadFiles here means "non-blocking"
+						// TODO: i put true in just for fun. zkm.
+						if (e.ft->UploadFiles(true)) {
+							// transfer started, record the entry in the map
+							std::pair<std::string, struct SandboxEnt> p(sid, e);
+							sandbox_map.insert(p);
+
+							// we report no results now.
+							// ftgahp_reaper() will take care of that when the
+							// transfer is done.
+
+						} else {
+							// clean up
+							delete e.ft;
+
+							std::string err = "DownloadFiles failed";
+							const char * res[2] = {
+								err.c_str(),
+								"NULL"
+							};
+
+							// failed to init and start.  put this into the results.
+							enqueue_result(rid, res, 2);
+						}
+					}
+				} else {
+					// failed to parse classad
+					gahp_output_return_error();
+				}
+
 				gahp_output_return_error();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DESTROY_SANDBOX) == 0) {
 				// TODO: implement
@@ -573,7 +646,7 @@ enqueue_result (int req_id, const char ** results, const int argc)
 
 
 bool
-create_sandbox(std::string sid, std::string &iwd)
+create_sandbox_dir(std::string sid, std::string &iwd)
 {
 	define_sandbox_path(sid, iwd);
 
