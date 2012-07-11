@@ -64,6 +64,13 @@ usage()
 	DC_Exit( 1 );
 }
 
+int
+default_reaper(Service *, int pid, int exit_status)
+{
+	dprintf( D_ALWAYS, "child %d exited with status %d\n", pid, exit_status );
+	return 0;
+}
+
 void
 main_init( int, char ** const)
 {
@@ -123,10 +130,10 @@ main_init( int, char ** const)
 	fflush(stdout);
 
 	// register the reaper now so it just happens once
-//	int g_reaper_id = daemonCore->Register_Reaper("FTGahp::Reaper",
-//									(ReaperHandler)&ftgahp_reaper,
-//									"ftgahp_reaper()",
-//									NULL);
+	int g_reaper_id = daemonCore->Register_Reaper("default_reaper",
+									(ReaperHandler)&default_reaper,
+									"ftgahp_reaper()",
+									NULL);
 //	dprintf (D_ALWAYS, "BOSCO: reaper id: %i\n", g_reaper_id);
 
 	dprintf (D_FULLDEBUG, "FT-GAHP IO initialized\n");
