@@ -26,6 +26,7 @@
 #include "MyString.h"
 #include "globus_utils.h"
 #include "classad_hashtable.h"
+#include "file_transfer.h"
 
 #include "basejob.h"
 #include "infnbatchresource.h"
@@ -84,6 +85,8 @@ class INFNBatchJob : public BaseJob
 	INFNBatchResource *myResource;
 	GahpClient *gahp;
 	GahpClient *m_xfer_gahp;
+	FileTransfer *m_filetrans;
+	std::string m_sandboxPath;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );
 

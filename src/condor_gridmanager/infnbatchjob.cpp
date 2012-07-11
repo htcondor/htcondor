@@ -161,6 +161,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	m_xfer_gahp = NULL;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
+	m_filetrans = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -317,6 +318,7 @@ INFNBatchJob::~INFNBatchJob()
 		delete gahp;
 	}
 	delete m_xfer_gahp;
+	delete m_filetrans;
 }
 
 void INFNBatchJob::Reconfig()
@@ -451,6 +453,12 @@ void INFNBatchJob::doEvaluateState()
 			if ( gahpAd == NULL ) {
 				gmState = GM_HOLD;
 				break;
+			}
+			m_filetrans = new FileTransfer();
+			// TODO Do we really not want a file catalog?
+			if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
+				errorString = "Failed to initialized FileTransfer";
+				gmState = GM_HOLD;
 			}
 
 			std::string sandbox_path;
@@ -658,6 +666,13 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 
+			m_filetrans = new FileTransfer();
+			// TODO Do we really not want a file catalog?
+			if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
+				errorString = "Failed to initialized FileTransfer";
+				gmState = GM_HOLD;
+			}
+
 			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -782,6 +797,7 @@ void INFNBatchJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
+			m_sandboxPath = "";
 			remoteProxyExpireTime = 0;
 			submitLogged = false;
 			executeLogged = false;
@@ -851,6 +867,10 @@ void INFNBatchJob::doEvaluateState()
 			if ( gahpAd ) {
 				delete gahpAd;
 				gahpAd = NULL;
+			}
+			if ( m_filetrans ) {
+				delete m_filetrans;
+				m_filetrans = NULL;
 			}
 		}
 
