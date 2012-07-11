@@ -458,11 +458,16 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			m_filetrans = new FileTransfer();
-			// TODO Do we really not want a file catalog?
-			if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
-				errorString = "Failed to initialized FileTransfer";
-				gmState = GM_HOLD;
+			if ( m_filetrans == NULL ) {
+				m_filetrans = new FileTransfer();
+				// TODO Do we really not want a file catalog?
+				if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
+					errorString = "Failed to initialize FileTransfer";
+					gmState = GM_HOLD;
+				}
+				// TODO Can we determine the ft-gahp's Condor version?
+				CondorVersionInfo ver_info;
+				m_filetrans->setPeerVersion( ver_info );
 			}
 
 			std::string sandbox_path;
@@ -670,11 +675,16 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 
-			m_filetrans = new FileTransfer();
-			// TODO Do we really not want a file catalog?
-			if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
-				errorString = "Failed to initialized FileTransfer";
-				gmState = GM_HOLD;
+			if ( m_filetrans == NULL ) {
+				m_filetrans = new FileTransfer();
+				// TODO Do we really not want a file catalog?
+				if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
+					errorString = "Failed to initialize FileTransfer";
+					gmState = GM_HOLD;
+				}
+				// TODO Can we determine the ft-gahp's Condor version?
+				CondorVersionInfo ver_info;
+				m_filetrans->setPeerVersion( ver_info );
 			}
 
 			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
@@ -749,9 +759,29 @@ void INFNBatchJob::doEvaluateState()
 			} break;
 		case GM_DELETE_SANDBOX: {
 			// Delete the remote sandbox
-			// TODO implement
-			//   send delete command to remote side
-			//   wait for completion (possibly in another state)
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			rc = m_xfer_gahp->blah_destroy_sandbox( remoteSandboxId, gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_destroy_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_HOLD;
+				break;
+			}
 			SetRemoteSandboxId( NULL );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1157,8 +1187,9 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
 
-		submit_ad->LookupString( ATTR_JOB_CMD, old_value );
-		sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+		//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
+		//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+		sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
 		submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
 
 		old_value = "";
