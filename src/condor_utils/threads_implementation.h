@@ -48,6 +48,7 @@ public:
 	ThreadInfo() { pt_ = pthread_self(); }
 	ThreadInfo(pthread_t pt) { pt_ = pt; }	
 	pthread_t get_pthread() const { return pt_; }
+	bool operator==(const ThreadInfo &o) const { return pt_ == o.pt_; }
 private:
 	pthread_t pt_;
 };
