@@ -240,18 +240,21 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	buff = batchType;
 	if ( gahp_args.Count() > 0 ) {
 		sprintf_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
+		gahp_args.InsertArg( "batch_gahp", 1 );
 	}
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
 	if ( gahp_args.Count() > 0 ) {
-		gahp_path = param( "TRANSFER_GAHP" );
+		gahp_path = param( "REMOTE_GAHP" );
 		if ( gahp_path == NULL ) {
-			sprintf( error_string, "TRANSFER_GAHP not defined" );
+			sprintf( error_string, "REMOTE_GAHP not defined" );
 			goto error_exit;
 		}
 
 		sprintf( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
+		gahp_args.RemoveArg( 1 );
+		gahp_args.InsertArg( "condor_ft-gahp", 1 );
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 		free( gahp_path );
 	}
