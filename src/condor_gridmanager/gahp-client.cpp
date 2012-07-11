@@ -3696,7 +3696,8 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 }
 
 int
-GahpClient::blah_download_sandbox(const ClassAd *job_ad)
+GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
+								  std::string &sandbox_path)
 {
 	static const char* command = "DOWNLOAD_SANDBOX";
 
@@ -3715,8 +3716,8 @@ GahpClient::blah_download_sandbox(const ClassAd *job_ad)
 		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
-	int x = sprintf( reqline, "%s", escapeGahpString(ad_string.c_str()) );
-	ASSERT( x > 0 );
+	sprintf( reqline, "%s", escapeGahpString( sandbox_id ) );
+	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -3736,7 +3737,7 @@ GahpClient::blah_download_sandbox(const ClassAd *job_ad)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if ( result->argc != 2 ) {
+		if ( result->argc != 3 ) {
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc;
@@ -3746,6 +3747,11 @@ GahpClient::blah_download_sandbox(const ClassAd *job_ad)
 		} else {
 			rc = 1;
 			error_string = result->argv[1];
+		}
+		if ( strcasecmp ( result->argv[2], NULLSTRING ) ) {
+			sandbox_path = "";
+		} else {
+			sandbox_path = result->argv[2];
 		}
 		delete result;
 		return rc;
@@ -3763,7 +3769,7 @@ GahpClient::blah_download_sandbox(const ClassAd *job_ad)
 }
 
 int
-GahpClient::blah_upload_sandbox(const ClassAd *job_ad)
+GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 {
 	static const char* command = "UPLOAD_SANDBOX";
 
@@ -3782,8 +3788,8 @@ GahpClient::blah_upload_sandbox(const ClassAd *job_ad)
 		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
-	int x = sprintf( reqline, "%s", escapeGahpString(ad_string.c_str()) );
-	ASSERT( x > 0 );
+	sprintf( reqline, "%s", escapeGahpString( sandbox_id ) );
+	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -3830,7 +3836,7 @@ GahpClient::blah_upload_sandbox(const ClassAd *job_ad)
 }
 
 int
-GahpClient::blah_destroy_sandbox(const ClassAd *job_ad)
+GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 {
 	static const char* command = "DESTROY_SANDBOX";
 
@@ -3849,8 +3855,8 @@ GahpClient::blah_destroy_sandbox(const ClassAd *job_ad)
 		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
-	int x = sprintf( reqline, "%s", escapeGahpString(ad_string.c_str()) );
-	ASSERT( x > 0 );
+	sprintf( reqline, "%s", escapeGahpString( sandbox_id ) );
+	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make

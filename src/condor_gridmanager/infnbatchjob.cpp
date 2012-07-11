@@ -453,7 +453,9 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 
-			rc = m_xfer_gahp->blah_download_sandbox( gahpAd );
+			std::string sandbox_path;
+			rc = m_xfer_gahp->blah_download_sandbox( remoteSandboxId, gahpAd,
+													 m_sandboxPath );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -656,7 +658,7 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 
-			rc = m_xfer_gahp->blah_upload_sandbox( gahpAd );
+			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
