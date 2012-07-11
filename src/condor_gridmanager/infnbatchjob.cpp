@@ -464,10 +464,21 @@ void INFNBatchJob::doEvaluateState()
 				if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
 					errorString = "Failed to initialize FileTransfer";
 					gmState = GM_HOLD;
+					break;
 				}
 				// TODO Can we determine the ft-gahp's Condor version?
 				CondorVersionInfo ver_info;
 				m_filetrans->setPeerVersion( ver_info );
+
+				MyString hole;
+				sprintf( hole, "*/%s", myResource->RemoteHostname() );
+				dprintf( D_FULLDEBUG, "(%d.%d) JEF Punching hole '%s'\n", 
+						 procID.cluster, procID.proc, hole.Value() );
+				if ( !daemonCore->getIpVerify()->PunchHole( WRITE, hole ) ) {
+					errorString = "Failed to punch hole in CEDAR";
+					gmState = GM_HOLD;
+					break;
+				}
 			}
 
 			std::string sandbox_path;
@@ -681,10 +692,21 @@ void INFNBatchJob::doEvaluateState()
 				if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
 					errorString = "Failed to initialize FileTransfer";
 					gmState = GM_HOLD;
+					break;
 				}
 				// TODO Can we determine the ft-gahp's Condor version?
 				CondorVersionInfo ver_info;
 				m_filetrans->setPeerVersion( ver_info );
+
+				MyString hole;
+				sprintf( hole, "*/%s", myResource->RemoteHostname() );
+				dprintf( D_FULLDEBUG, "(%d.%d) JEF Punching hole '%s'\n", 
+						 procID.cluster, procID.proc, hole.Value() );
+				if ( !daemonCore->getIpVerify()->PunchHole( WRITE, hole ) ) {
+					errorString = "Failed to punch hole in CEDAR";
+					gmState = GM_HOLD;
+					break;
+				}
 			}
 
 			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );

@@ -57,6 +57,7 @@ public:
 	void PublishResourceAd( ClassAd *resource_ad );
 
 	bool GahpIsRemote() { return m_gahpIsRemote; };
+	const char *RemoteHostname() { return m_remoteHostname.c_str(); };
 
 private:
 	void DoPing(time_t & ping_delay, 
@@ -65,6 +66,7 @@ private:
 
 	std::string m_batchType;
 	bool m_gahpIsRemote;
+	std::string m_remoteHostname;
 };    
   
 #endif

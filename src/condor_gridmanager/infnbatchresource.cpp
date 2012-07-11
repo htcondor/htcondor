@@ -72,6 +72,12 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 {
 	m_batchType = batch_type;
 	m_gahpIsRemote = false;
+
+	m_remoteHostname = resource_name;
+	size_t pos = m_remoteHostname.find( '@' );
+	if ( pos != m_remoteHostname.npos ) {
+		m_remoteHostname.erase( 0, pos + 1 );
+	}
 	
 	gahp = NULL;
 
