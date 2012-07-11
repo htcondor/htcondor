@@ -25,11 +25,15 @@
    reliance on other Condor files to ease distribution.  -Jim B. */
 
 #include "condor_event.h"
-
+#include <string>
+#include <vector>
 #define XML_USERLOG_DEFAULT 0
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
+#endif
+#ifndef WIN32
+#  include <unistd.h>
 #endif
 
 /* Predeclare some classes */
@@ -259,7 +263,10 @@ class WriteUserLog
 	bool isGlobalEnabled( void ) const {
 		return ( ( m_global_disable == false ) && ( NULL != m_global_path ) );
 	};
-
+	
+	void AddToMask(ULogEventNumber e) {
+		mask.push_back(e);
+	}
 
   private:
 
@@ -347,6 +354,7 @@ class WriteUserLog
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
+	/** Mask for events              */  std::vector<ULogEventNumber> mask;
 };
 
 #endif /* __cplusplus */

@@ -1372,7 +1372,8 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		new_expr = remote_ad->LookupExpr( attrs_to_copy[index] );
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
-			jobAd->Insert( attrs_to_copy[index], new_expr->Copy() );
+			ExprTree * pTree = new_expr->Copy();
+			jobAd->Insert( attrs_to_copy[index], pTree );
 		}
 	}
 
@@ -1600,7 +1601,8 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			submit_ad->Insert( attr_name, next_expr->Copy() );
+			ExprTree * pTree = next_expr->Copy();
+			submit_ad->Insert( attr_name, pTree );
 		}
 	}
 

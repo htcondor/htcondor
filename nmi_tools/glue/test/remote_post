@@ -47,49 +47,6 @@ else {
 
 
 ######################################################################
-# kill test suite personal condor daemons
-######################################################################
-
-
-print "Seeing if personal condor needs killing\n";
-
-my $personal_condor_dir = File::Spec->catdir($BaseDir, "condor_tests", "TestingPersonalCondor");
-my $sentinel = File::Spec->catfile($personal_condor_dir, "local", "log", ".scheduler_address");
-if( -f $sentinel ) {
-    #  Came up and had a scheduler running. good
-    $ENV{CONDOR_CONFIG} = File::Spec->catfile($personal_condor_dir, "condor_config");
-    if( defined $ENV{_NMI_STEP_FAILED} ) { 
-        print "Not calling condor_off for $ENV{CONDOR_CONFIG}\n";
-    }
-    else {
-        print "Calling condor_off for $ENV{CONDOR_CONFIG}\n";
-        my $condor_off = File::Spec->catfile($BaseDir, "condor", "sbin", "condor_off");
-        system("$condor_off -master");
-
-        # give some time for condor to shutdown
-        sleep(30);
-        print "Done calling condor_off for $ENV{CONDOR_CONFIG}\n";
-    }
-}
-else {
-    # if there's no pid_file, there must be no personal condor running
-    # which we'd have to kill.  this would be caused by an empty
-    # tasklist.  so, make sure the tasklist is empty.  if so, we can
-    # move on with success.  if there are tasks but no pid_file,
-    # that's a weird fatal error and we should propagate that.
-    if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
-        # our tasklist is empty, good.
-        print "tasklist.nmi is empty and there's no condor_master_pid file.\n";
-        print "Nothing to cleanup, returning SUCCESS.\n";
-    }
-    else {
-        print "ERROR: tasklist.nmi contains data but condor_master_pid does not exist!\n";
-        $exit_status = 1;
-    }
-}
-    
-
-######################################################################
 # save and tar up test results
 ######################################################################
 

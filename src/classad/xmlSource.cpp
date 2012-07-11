@@ -53,9 +53,38 @@ ParseClassAd( const string &buffer, ClassAd &classad)
 }
 
 bool ClassAdXMLParser::
-ParseClassAd( const string &, ClassAd &, int &)
+ParseClassAd( const string &buffer, ClassAd &classad, int &offset)
 {
-	return false;
+	ClassAd          *classad_out;
+	StringLexerSource lexer_source(&buffer, offset);
+
+	lexer.SetLexerSource(&lexer_source);
+	classad_out = ParseClassAd(&classad);
+	offset = lexer_source.GetCurrentLocation();
+
+	return classad_out != NULL;
+}
+
+bool ClassAdXMLParser::
+ParseClassAd( FILE *file, ClassAd &ad )
+{
+	ClassAd *classad_out;
+	FileLexerSource lexer_source(file);
+
+	lexer.SetLexerSource(&lexer_source);
+	classad_out = ParseClassAd(&ad);
+	return classad_out != NULL;
+}
+
+bool ClassAdXMLParser::
+ParseClassAd( std::istream& stream, ClassAd &ad )
+{
+	ClassAd *classad_out;
+	InputStreamLexerSource lexer_source(stream);
+
+	lexer.SetLexerSource(&lexer_source);
+	classad_out = ParseClassAd(&ad);
+	return classad_out != NULL;
 }
 
 ClassAd *ClassAdXMLParser::
@@ -103,10 +132,11 @@ ParseClassAd( istream& stream)
 
 
 ClassAd *ClassAdXMLParser::
-ParseClassAd(void)
+ParseClassAd(ClassAd *classad_in)
 {
 	bool             in_classad;
-	ClassAd          *classad;
+	ClassAd          *classad = NULL;
+	ClassAd          *local_ad = NULL;
 	XMLLexer::Token  token;
 
 	classad = NULL;
@@ -121,7 +151,13 @@ ParseClassAd(void)
 				// We have a ClassAd tag
 				if (token.tag_type   == XMLLexer::tagType_Start) {
 					in_classad = true;
-					classad = new ClassAd();
+					if ( classad_in ) {
+						classad_in->Clear();
+						classad = classad_in;
+					} else {
+						local_ad = new ClassAd();
+						classad = local_ad;
+					}
 					classad->DisableDirtyTracking();
 				} else {
 					// We're done, return the ClassAd we got, if any.
@@ -133,6 +169,7 @@ ParseClassAd(void)
 			if (token.token_type == XMLLexer::tokenType_Tag) {
 			  if (token.tag_id   == XMLLexer::tagID_Attribute) {
 			    if (token.tag_type == XMLLexer::tagType_Invalid) {
+				  delete local_ad;
 			      return NULL;
 			    } else if( token.tag_type == XMLLexer::tagType_Start) {
 					string attribute_name;
@@ -143,9 +180,12 @@ ParseClassAd(void)
 						classad->Insert(attribute_name, tree);
 					}
 					else {
+					  delete local_ad;
 					  return NULL;
 					}
-			    } 
+			    } else {
+					lexer.ConsumeToken(NULL);
+				}
               } else if (token.tag_id   == XMLLexer::tagID_ClassAd) {
                   lexer.ConsumeToken(NULL);
                   if (token.tag_type == XMLLexer::tagType_End) {
@@ -164,6 +204,8 @@ ParseClassAd(void)
 					lexer.ConsumeToken(NULL);
 					break;
 				}
+			} else {
+				lexer.ConsumeToken(NULL);
 			}
 		}
 	}
@@ -293,8 +335,8 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		lexer.ConsumeToken(&token);
 		Value value;
 		if (tag_id == XMLLexer::tagID_Integer) {
-			int number;
-			sscanf(token.text.c_str(), "%d", &number);
+			long long number;
+			sscanf(token.text.c_str(), "%lld", &number);
 			value.SetIntegerValue(number);
 		}
 		else if (tag_id == XMLLexer::tagID_Real) {

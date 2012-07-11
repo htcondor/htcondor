@@ -250,9 +250,7 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-
-    'x86_64_sl_6.2' => 'x86_64_rhap_6.2',
-
+	'x86_64_rhap_6.3'	=> 'x86_64_rhap_6.2',
 
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
@@ -283,6 +281,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_6.3'		=> 'x86_rhap_6.2',
 
 	'x86_rhap_5.8'		=> {
 		'build' => {

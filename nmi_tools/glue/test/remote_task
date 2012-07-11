@@ -158,7 +158,7 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 # personal condor configured from release generic config files.
 out("About to run batch_test.pl");
 
-system("$perl_exe batch_test.pl -d $compiler -t $testname -b");
+system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
@@ -253,6 +253,6 @@ sub c_die {
 
 sub out {
     my ($msg) = @_;
-    my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: $msg\n";
 }

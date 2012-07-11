@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 IS_BOSCO=`condor_config_val IS_BOSCO`
 echo "$IS_BOSCO" | grep -q -i true 

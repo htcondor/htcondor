@@ -451,6 +451,18 @@ if ($opt_bosco) {
 	$local_config{IS_BOSCO}="True";
 
 	$daemon_list{SCHEDD} = 1;
+    $daemon_list{COLLECTOR} = 1;
+    $daemon_list{NEGOTIATOR} = 1;
+    $daemon_list{STARTD} = 1;
+
+    $cm=set_central_manager($fullhost);
+    $local_config{COLLECTOR_NAME}="Personal Condor at $fullhost";
+
+    # Campus Factory configuration
+    my $config_dir=$local_dir . "/config";
+    system("mkdir -p $config_dir && cp $opt_prefix_dir/etc/condor/config.d/condor_config.factory $config_dir ");
+
+
 }
 elsif ($opt_make_personal_condor ||
     (defined($opt_release_dir) && !$opt_type)) {

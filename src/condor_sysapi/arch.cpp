@@ -580,39 +580,51 @@ sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release)
 const char *
 sysapi_get_linux_info(void)
 {
-        char* info_str;
-        FILE *my_fp;
-        const char * etc_issue_path = "/etc/issue";
+	char* info_str;
+	FILE *my_fp;
+	const char * etc_issue_path = "/etc/issue";
 
-        // read the first line only
-        my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
-        if ( my_fp != NULL ) {
+	// read the first line only
+	my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
+	if ( my_fp != NULL ) {
 		char tmp_str[200] = {0};
 		char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
 		if (ret == 0) {
-	        	dprintf(D_FULLDEBUG, "Result of reading /etc/issue:  %s \n", ret);
-			strcpy( tmp_str, "Unknown" );			
+			dprintf(D_FULLDEBUG, "Result of reading /etc/issue:  %s \n", ret);
+			strcpy( tmp_str, "Unknown" );
 		}
 		fclose(my_fp);
 
+		// trim trailing spaces and other cruft
 		int len = strlen(tmp_str);
-		if ( len > 0 ) {
-			if( tmp_str[len-1] == '\n' )
-			{
-    				tmp_str[len-1] = 0;
+		while (len > 0) {
+			while (len > 0 && 
+				   (isspace((int)(tmp_str[len-1])) || tmp_str[len-1] == '\n') ) {
+				tmp_str[--len] = 0;
+			}
+
+			// Ubuntu and Debian have \n \l at the end of the issue string
+			// this looks like a bug, in any case, we want to strip it
+			if (len > 2 && 
+				tmp_str[len-2] == '\\' && (tmp_str[len-1] == 'n' || tmp_str[len-1] == 'l')) {
+				tmp_str[--len] = 0;
+				tmp_str[--len] = 0;
+			} else {
+				break;
 			}
 		}
+
 		info_str = strdup( tmp_str );
-        } else 
-	{
+
+	} else {
 		info_str = strdup( "Unknown" );
 	}
-  
-	if( !info_str ) {
-               	EXCEPT( "Out of memory!" );
-       	}
 
-        return info_str;
+	if( !info_str ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	return info_str;
 }
 
 const char *
@@ -648,15 +660,15 @@ sysapi_find_linux_name( const char *info_str )
 	}
    	else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "cern") )
         {
-                distro = strdup("ScientificLinuxCern");
+                distro = strdup("SLCern");
         }
         else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "slf") )
         {
-                distro = strdup("ScientificLinuxFermi");
+                distro = strdup("SLFermi");
         }
    	else if ( strstr(distro_name_lc, "scientific") )
         {
-                distro = strdup("ScientificLinux");
+                distro = strdup("SL");
         }
         else if ( strstr(distro_name_lc, "centos") )
         {

@@ -370,7 +370,7 @@ class Scheduler : public Service
 	bool			availableTransferd( int cluster, int proc, 
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
-	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
+	std::vector<WriteUserLog*> InitializeUserLog( PROC_ID job_id );
 	bool			WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
@@ -615,7 +615,8 @@ private:
 
 	// Information to pass to shadows for contacting file transfer queue
 	// manager.
-	MyString m_xfer_queue_contact;
+	bool m_have_xfer_queue_contact;
+	std::string m_xfer_queue_contact;
 
 	// useful names
 	char*			CondorAdministrator;

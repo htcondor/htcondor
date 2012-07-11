@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,121 +18,95 @@
 ##
 ##**************************************************************
 
+use strict;
+use warnings;
+
 use CondorTest;
 
 my $cmd = 'cmd_q_shows-sub.cmd';
-my $cmdout = $cmd . ".out";
-my $testdesc =  'cmd_q_shows-sub  ';
+my $testdesc =  'cmd_q_shows-sub';
 my $testname = "cmd_q_shows-sub";
 
-my $whoami = "";
 my $debuglevel = 2;
 
-@adarray;
+my $whoami;
+my $cluster;
 
-$submit = sub {
-	my %info = @_;
-	CondorTest::debug("Looking for submitter $whoami\n",$debuglevel);
-	my $search = 0;
+my $submit = sub {
+    my @adarray;
+    CondorTest::debug("Determining submitter and cluster\n", $debuglevel);
 
-	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+    open(CMD, '<', "$cmd.out") || die "Can not find submit output:$!\n";
+    while(<CMD>) {
+        if(/submitted to cluster\s+(\d+)/) {
+            $cluster = $1;
+            CondorTest::debug("Cluster = $cluster!\n", $debuglevel);
+        }
+    }
+    close(CMD);
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+    my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+    if(!CondorTest::runCondorTool($cmd, \@adarray, 2)) {
+        CondorTest::debug("ERROR - cannot determine submitted and cluster.", $debuglevel);
+        CondorTest::debug("Command failed: $cmd\n", $debuglevel);
+        exit(1)
+    }
 
-	my $submitline = "";
-	my $cluster = "";
-	
-	print "Looking for my cluster - ";
-	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
-	while(<CMD>) {
-		chomp($_);
-		$submitline = $_;
-		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
-			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
-		}
-		CondorTest::debug("$_\n",$debuglevel);
-	}
-	print "$cluster\n";
-
-
-	print "Looking for who I am -";
-	foreach $line (@adarray) {
-        chomp($line);
-        CondorTest::debug("$line\n",$debuglevel);
-        if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$cluster.*$/) {
-                CondorTest::debug("Bingo: found <$line> shows I am $1\n",$debuglevel);
-				$whoami = $1;
-        } else {
-            CondorTest::debug("<<<$line>>>\n",$debuglevel);
+    foreach (@adarray) {
+        if(/^\s*([\w\-]+)\s+ClusterId\s+=\s+$cluster/) {
+            CondorTest::debug("Matching line -> $_\n", $debuglevel);
+            CondorTest::debug("submitter = $1  -  cluster = $cluster\n", $debuglevel);
+            $whoami = $1;
+        }
+        else {
+            CondorTest::debug("Non-matching line -> $_\n", $debuglevel);
         }
     }
 
-	if( $whoami eq "" ) {
-		die "Can not find out who I am to use in condor_q -sub <$whoami>\n";
-		# other wise we can never finish and might hang.....
-	}
-	print "$whoami\n";
-	
-	# Give collector time to update submitter records
-	# TODO This is a crude hack and should be fixed.
-	sleep(10);
+    if(!$whoami) {
+        die "Can not find out who I am to use in condor_q -sub <submitter>\n";
+    }
 
-	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		system("condor_rm $cluster"); # bail but pull job which never dies...
-		exit(1)
-	}
-
-	print "Looking for condor_q with submitter $whoami matches $cluster - ";
-	foreach $line (@adarray) {
-	    CondorTest::debug("output: $line\n",$debuglevel);
-		chomp($line);
-
-		if($line =~ /^\s*(\d+).\d+\s+([\w\-]+).*$/) {
-			if(($cluster eq $1) && ($whoami eq $2)){
-				CondorTest::debug("condor_q -sub $whoami found my job matching $cluster\n",$debuglevel);
-				$cmd = "condor_rm $cluster";
-				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-				$search = 1;
-				print "ok\n";
-				return(0);
-			}
-		}
-	}
-
-	print "bad\n";
-	$cmd = "condor_rm $cluster";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-	die "We never found ourselves with <condor_q -sub $whoami>\n"
+    # Re-scheduling might get the job running sooner
+    CondorTest::runCondorTool("condor_reschedule", \@adarray, 2);
 };
 
-$aborted = sub {
-	CondorTest::debug("Cleaning held job.......\n",$debuglevel);
+my $execute = sub {
+    # Once the job is running we know that the collector will have received submitter ads
+
+    my @adarray;
+    my $cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
+
+    if(!CondorTest::runCondorTool($cmd,\@adarray,2)) {
+        CondorTest::debug("ERROR - failed to run command: $cmd\n", $debuglevel);
+        system("condor_rm $cluster"); # bail but pull job which never dies...
+        exit(1)
+    }
+
+    print "Looking for condor_q with submitter '$whoami' and cluster $cluster - ";
+    foreach (@adarray) {
+        if(/^\s*(\d+).\d+\s+([\w\-]+)/) {
+            if(($cluster eq $1) && ($whoami eq $2)){
+                CondorTest::debug("condor_q -sub $whoami found my job matching $cluster\n", $debuglevel);
+                CondorTest::runCondorTool("condor_rm $cluster", \@adarray, 8);
+                print "ok\n";
+                exit(0);
+            }
+        }
+    }
+
+    print "bad\n";
+    CondorTest::runCondorTool("condor_rm $cluster", \@adarray, 8);
+    die "We never found ourselves with <condor_q -sub $whoami>\n"
 };
 
-$ExitSuccess = sub {
-	my %info = @_;
-};
-
-CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterSubmit($testname, $submit);
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+CondorTest::RegisterExecute($testname, $execute);
 
 if( CondorTest::RunTest($testname, "cmd_q_shows-sub.cmd", 0)) {
-	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+    CondorTest::debug("$testname: SUCCESS\n", $debuglevel);
+    exit(0);
 }
-
-
+else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}

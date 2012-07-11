@@ -193,14 +193,10 @@ For example,
 the ports that Condor may use can be restricted to a range 
 using the \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} configuration
 variables.
-If the range of intended ports is different for specific
-daemons, this syntax may be used.
 
 \begin{verbatim}
   MASTER.LOWPORT   = 20000
   MASTER.HIGHPORT  = 20100
-  NEGOTIATOR.LOWPORT   =  22000 
-  NEGOTIATOR.HIGHPORT  =  22100
 \end{verbatim}
 
 Note that all configuration variables may utilize this syntax,
@@ -1115,6 +1111,17 @@ File System Configuration File Entries''.
   and this rotation would cause the number of backups to be larger
   the the maximum specified, the oldest file is removed.
 
+\label{param:ClassadLogStrictParsing}
+\item[\Macro{CLASSAD\_LOG\_STRICT\_PARSING}]
+  When this configuration variable is set to \Expr{True}, ClassAd log files
+  will be read using strict syntax checking for ClassAd expressions.  Classad
+  log files include the job queue log and the accountant log.  When set to 
+  \Expr{False}, ClassAd log files are read without strict expression syntax
+  checking, which allows some legacy ClassAd log data to be read in a backward
+  compatible manner.  Defaults to \Expr{True}.  This configuration variable
+  may be deprecated in future releases, eventually requiring all ClassAd log
+  files to pass strict ClassAd syntax checking. 
+
 \label{param:DefaultDomainName}
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}]
   The value to be appended to a machine's host name,
@@ -1509,8 +1516,7 @@ of the subsystem corresponding to the daemon.
   that defaults to \Expr{True}. 
   This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
   is \Expr{True}.
-  When \Expr{True}, job user logs and the global job event log are
-  written to a directory named \File{condorLocks},
+  When \Expr{True}, lock files are written to a directory named \File{condorLocks},
   thereby using a local drive to avoid known problems with locking on NFS.
   The location of the \File{condorLocks} directory is determined by
   \begin{enumerate}
@@ -1755,16 +1761,17 @@ of the subsystem corresponding to the daemon.
     descriptors as it will generally track the number of file descriptors
     that Condor has open.
 
-  \label{dflag:level}
-  \item[\Dflag{LEVEL}]
-    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_LEVEL@\texttt{D\_LEVEL}}
+  \label{dflag:category}
+  \item[\Dflag{CATEGORY}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_CATEGORY@\texttt{D\_CATEGORY}}
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
-    If \Dflag{LEVEL} is set, Condor will include the debugging level flags 
-    that were in effect for each line of output.  This may be used to filter 
-    log output by the level or tag it was output under, e.g. identifying all
-    logging output at level D\_SECURITY, or D\_ACCOUNTANT, etc.
+    If \Dflag{CATEGORY} is set, Condor will include the debugging level flags 
+    that were in effect for each line of output.  
+    This may be used to filter log output by the level or 
+    tag it, for example, identifying all
+    logging output at level \Dflag{SECURITY}, or \Dflag{ACCOUNTANT}.
 
   \end{description}
 
@@ -5564,7 +5571,8 @@ SYSTEM_PERIODIC_REMOVE = \
 \item[\Macro{ParallelSchedulingGroup}]
   For parallel jobs which must be assigned within a group
   of machines (and not cross group boundaries),
-  this configuration variable identifies members of a group. 
+  this configuration variable is a string which 
+  identifies a group of which this machine is a member. 
   Each machine within a group sets this configuration variable with 
   a string that identifies the group.
 
@@ -5714,12 +5722,56 @@ SYSTEM_PERIODIC_REMOVE = \
   STATISTICS_TO_PUBLISH = SCHEDD:2
 \end{verbatim}
   
-
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   The amount of time given in seconds defining the interval of time over
   which \Condor{schedd} daemon Statistics attributes are quantized.
   Defaults to 1200 seconds, which is 20 minutes.
+
+\label{param:ScheddCollectStatsForName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>}]
+  A boolean expression that when \Expr{True} creates a set of \Condor{schedd}
+  ClassAd attributes of statistics collected for a particular set.
+  These attributes are named using the prefix of \Expr{<Name>}.
+  The set includes each entity for which this expression is \Expr{True}.
+  As an example, assume that \Condor{schedd} statistics attributes are to
+  be created for only user Einstein's jobs.
+  Defining
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_FOR_Einstein = (Owner=="einstein")
+\end{verbatim}
+  causes the creation of the set of statistics attributes with names such as
+  \Attr{EinsteinJobsCompleted} and \Attr{EinsteinJobsCoredumped}.
+
+\label{param:ScheddCollectStatsByName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_BY\_<Name>}]
+  Defines a string expression.  The evaluated string is used in the naming of 
+  a set of \Condor{schedd} statistics ClassAd attributes.
+  The naming begins with \Expr{<Name>}, an underscore character, 
+  and the evaluated string.
+  Each character not permitted in an attribute name will be converted
+  to the underscore character.
+  For example,
+\footnotesize
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_BY_Host = splitSlotName(RemoteHost)[1]
+\end{verbatim}
+\normalsize
+  a set of statistics attributes will be created and kept. 
+  If the string expression were to evaluate to \AdStr{storm.04.cs.wisc.edu},
+  the names of two of these attributes will be
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCompleted} and 
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCoredumped}.
+  
+\label{param:ScheddExpireStatsByName}
+\item[\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>}]
+  The number of seconds after which the \Condor{schedd} daemon will stop
+  collecting and discard the statistics for a subset 
+  identified by \Expr{<Name>},
+  if no event has occurred to cause any counter or statistic for the subset
+  to be updated. 
+  If this variable is not defined for a particular \Expr{<Name>},
+  then the default value will be \Expr{60*60*24*7}, which is one week's time.
 
 \end{description}
 
@@ -5962,7 +6014,7 @@ These settings affect the \Condor{starter}.
 \end{verbatim}
 
 	These precise syntaxes are needed to correctly handle program arguments
-which contain whitespace.
+which contain white space.
 
 
   For Windows machines, the wrapper will either be
@@ -6110,6 +6162,18 @@ which contain whitespace.
 \item[\Macro{MEMORY\_USAGE\_METRIC\_VM}]
   A ClassAd expression that produces an initial value for the job ClassAd
   attribute \Attr{MemoryUsage} in vm universe jobs.
+
+\label{param:StarterRlimitAs} 
+\item[ \Macro{STARTER\_RLIMIT\_AS}]
+  An integer ClassAd expression, 
+  evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
+  of the \Procedure{setrlimit} system call.
+  This limits the virtual memory size of each process in the user job.  
+  The expression is
+  evaluated in the context of both the machine and job ClassAds,
+  where the machine ClassAd is the \Expr{my} ClassAd,
+  and the job ClassAd is the \Expr{target} ClassAd.
+  There is no default value for this variable.
 
 \end{description}
 
@@ -7241,31 +7305,32 @@ The following configuration macros affect negotiation for group users.
   machine ClassAd attribute \Attr{SlotWeight}. 
   When \Expr{False}, each slot effectively has a weight of 1.
 
-%\label{param:GroupSortExpr}
-%\item[\Macro{GROUP\_SORT\_EXPR}]
-%  A classad expression which evaluates to a numeric value that is used
-%  to sort accounting groups to determine which order they negotiate in.
-%  The classad expression for \Macro{GROUP\_SORT\_EXPR} may involve any of
-%  the following:
-%  \begin{itemize}
-%      \item AccountingGroup -- the name of the accounting group
-%      \item GroupQuota -- the resource quota assigned to the group for the current negotiation cycle
-%      \item GroupResourcesAllocated -- the resources allocated to this group by the HGQ algorithm
-%      \item GroupResourcesInUse -- the resources currently in use by jobs associated with this group
-%  \end{itemize}
-%  An example group sorting expression that causes the root group (``<none>'') to always negotiate 
-%  last, and other groups to negotiate in order of quota-based starvation:
+\label{param:GroupSortExpr}
+\item[\Macro{GROUP\_SORT\_EXPR}]
+  \fbox{This definition is not complete.}
+  A ClassAd expression that controls the order in which the 
+  \Condor{negotiator} considers groups when allocating resources.
+  The default value is set such that group \Expr{<none>} always
+  goes last when considering hierarchical group quotas.
+%  The default value uses the expression
+%\footnotesize
 %\begin{verbatim}
-%GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="<none>", 3.4e+38,
-%  ifThenElse(GroupQuota > 0, GroupResourcesInUse/GroupQuota, 3.3e+38))
 %\end{verbatim}
-%  If an expression fails to evaluate to a numeric value for a group, then
-%  that group's sorting value will default to FLT\_MAX (3.40282e+38).
-%  GROUP\_SORT\_EXPR defaults to the backward compatible starvation ratio:
-%\begin{verbatim}
-%GROUP_SORT_EXPR = ifThenElse(GroupResourcesAllocated>0.0,
-%  GroupResourcesInUse/GroupResourcesAllocated, 3.40282e+38)
-%\end{verbatim}
+%\normalsize
+
+\label{param:NegotiatorAllowQuotaOversubscription}
+\item[\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION}]
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, 
+  the behavior of resource allocation when considering groups is
+  more like it was in the 7.4 stable series of Condor.
+  In implementation, when \Expr{True}, the static quotas of subgroups
+  will \emph{not} be scaled when the sum of these static quotas of subgroups
+  sums to more than the group's static quota.
+  This behavior is desirable when using static quotas,
+  unless the sum of subgroup quotas is considerably less than the group's
+  quota, as scaling is currently based on the number of machines available,
+  not assigned quotas (for static quotas).
 
 \end{description}
 
@@ -7339,8 +7404,8 @@ Configuration File Macros}
 
 \label{param:UseProcd}
 \item[\Macro{USE\_PROCD}]
-  This boolean parameter
-  is used to determine whether the \Condor{procd} will be used for
+  This boolean variable
+  determines whether the \Condor{procd} will be used for
   managing process families. If the \Condor{procd} is not used, each
   daemon will run the process family tracking logic on its own. Use of
   the \Condor{procd} results in improved scalability because only one
@@ -7349,8 +7414,10 @@ Configuration File Macros}
   group ID-based process tracking (see
   Section~\ref{sec:GroupTracking}). In either of these cases, the
   \MacroNI{USE\_PROCD} setting will be ignored and a \Condor{procd} will
-  always be used. By default, the \Condor{master} will start a
-  \Condor{procd} that all other daemons that need process family tracking will use.
+  always be used. 
+  By default, the \Condor{master} will start a
+  \Condor{procd} that all other daemons that need process family tracking 
+  will use.
   A daemon that uses the \Condor{procd} will start a \Condor{procd} for
   use by itself and all of its child daemons.
 
@@ -7720,19 +7787,36 @@ These macros affect the \Condor{gridmanager}.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/gahp\_server}.
 
+\label{param:BatchGAHP}
+\item[\Macro{BATCH\_GAHP}]
+  The complete path and file name of the batch GAHP executable,
+  to be used for PBS, LSF, SGE, and similar batch systems.
+  The default location is
+  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+
 \label{param:PBSGAHP}
 \item[\Macro{PBS\_GAHP}]
   The complete path and file name of the PBS GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \label{param:LSFGAHP}
 \item[\Macro{LSF\_GAHP}]
   The complete path and file name of the LSF GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \label{param:UnicoreGAHP}
 \item[\Macro{UNICORE\_GAHP}]
@@ -7765,9 +7849,14 @@ These macros affect the \Condor{gridmanager}.
 \label{param:SGEGAHP}
 \item[\Macro{SGE\_GAHP}]
   The complete path and file name of the SGE GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \end{description}
 
@@ -8399,6 +8488,8 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
   node job submit description files with user log files on NFS.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is true and
+  \MacroNI{ENABLE\_USERLOG\_LOCKING} is true.
   If a DAG references such a submit description file and
   \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
   the DAG will abort during the initialization process. 
@@ -8663,6 +8754,17 @@ in section~\ref{sec:DAG-configuration}.
   The default value is 20. 
   A value of 0 causes \Condor{dagman} not to set the job ClassAd attribute.
 
+\label{param:DAGmanAlwaysUseNodeLog}
+\item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
+  A boolean value defining whether \Condor{dagman} watches for events in the
+  default node log--that is, the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
+  The boolean value defaults to true.  If set to true, then \Condor{dagman}
+  writes POST script terminate events to the default log, and not to the user log
+  specified in the submit file; \Condor{dagman} will also only read events from
+  the default log file.  This must be set to false if a \Condor{dagman} from
+  version 7.9.0 or later is submitting jobs to a \Condor{schedd} that is older
+  than version 7.9.0.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -8706,7 +8808,40 @@ section~\ref{sec:Security} on Security.
   Instead use \Macro{ALLOW\_CLIENT} or \Macro{DENY\_CLIENT} as
   appropriate. When used, this variable defined
   a comma separated list of the subject
-  name(s) of the certificate(s) that the daemons use.
+  name(s) of the certificate(s) used by Condor daemons to
+  which this configuration of Condor will connect.
+  The \verb|*| character may be used as a wild card character.
+  When \MacroNI{GSI\_DAEMON\_NAME} is defined, 
+  only certificates matching
+  \MacroNI{GSI\_DAEMON\_NAME} pass the authentication step, and no
+  check is performed to require that the host name of the daemon
+  matches the host name in the daemon's certificate.  
+  When \MacroNI{GSI\_DAEMON\_NAME} is not defined, 
+  the host name of the daemon and certificate must match unless
+  exempted by the use of \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+  \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+
+\label{param:GSISkipHostCheck}
+\item[\Macro{GSI\_SKIP\_HOST\_CHECK}]
+  A boolean variable that controls whether a check is performed during
+  GSI authentication of a Condor daemon.  
+  When the default value of \Expr{False},
+  the check is not skipped, so the daemon host name must match the
+  host name in the daemon's certificate, 
+  unless otherwise exempted by the use of \Macro{GSI\_DAEMON\_NAME} or
+  \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+  When \Expr{True}, this check is skipped, and hosts will not be rejected
+  due to a mismatch of certificate and host name.
+
+\label{param:GSISkipHostCheckCertRegex}
+\item[\Macro{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}]
+  This may be set to a regular expression.  GSI certificates of Condor
+  daemons with a subject name that are matched in full by this regular
+  expression are not required to have a matching daemon host name and
+  certificate host name.  
+  The default is an empty regular expression,
+  which will not match any certificates,
+  even if they have an empty subject name.
 
 \label{param:GSIDaemonDirectory}
 \item[\Macro{GSI\_DAEMON\_DIRECTORY}]
@@ -8781,7 +8916,7 @@ section~\ref{sec:Security} on Security.
   A value of 0 indicates that the delegated proxy should be valid for as
   long as allowed by the credential used to create the proxy.  
   The job may override this configuration setting by using the
-  \SubmitCmd{delegated\_job\_GSI\_credentials\_lifetime} submit file
+  \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
   command.  This configuration variable currently only applies to
   proxies delegated for non-grid jobs and Condor-C jobs.  It does not
   currently apply to globus grid jobs, which always behave as though

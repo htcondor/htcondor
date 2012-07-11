@@ -26,7 +26,6 @@
 #include "condor_io.h"
 #include "enum_utils.h"
 #include "daemon.h"
-#include "MyString.h"
 #include "simplelist.h"
 
 class Credential;

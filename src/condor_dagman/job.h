@@ -222,9 +222,11 @@ class Job {
 
 	/** Check whether the submit file for this job has a log file
 	    defined.
+		@param usingDefault is true if DAGman is watching the
+			default node log
 		@return true iff the submit file defines a log file
 	*/
-	bool CheckForLogFile() const;
+	bool CheckForLogFile(bool usingDefault) const;
 
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
@@ -357,7 +359,7 @@ class Job {
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-				bool recovery, const char *defaultNodeLog );
+				bool recovery, const char *defaultNodeLog, bool usingDefault );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -369,7 +371,7 @@ class Job {
 				ReadMultipleUserLogs &storkLogReader );
 
 		// Whether this node is using the default node log file.
-	bool UsingDefaultLog() { return _useDefaultLog; }
+	bool UsingDefaultLog() const { return _useDefaultLog; }
 
 	/** Get the log file for this node.
 		@return the name of this node's log file.
@@ -493,6 +495,7 @@ class Job {
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
+	bool UseDefaultLog() const { return append_default_log; }
 
 private:
 		// Mark this node as failed because of an error in monitoring
@@ -606,6 +609,7 @@ private:
 
 	// whether this is a final job
 	bool _final;
+	bool append_default_log;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

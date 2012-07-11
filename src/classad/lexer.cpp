@@ -121,7 +121,10 @@ mark (void)
 void  Lexer::
 cut (void)
 {
-	lexBuffer[lexBufferCount] = '\0';
+	if (lexBufferCount<lexBuffer.length())
+	{
+		lexBuffer[lexBufferCount] = '\0';
+	}
 	accumulating = false;
 	return;
 }
@@ -274,7 +277,7 @@ tokenizeNumber (void)
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
 	Value::NumberFactor f;
-	int		integer=0;
+	long long integer=0;
 	double	real=0;
 	int 	och;
 
@@ -393,20 +396,19 @@ tokenizeNumber (void)
 
 	if( numberType == INTEGER ) {
 		cut( );
-		long l;
+		long long l;
+		int base = 0;
 		if ( _useOldClassAdSemantics ) {
 			// Old ClassAds don't support octal or hexidecimal
 			// representations for integers.
-			l = strtol( lexBuffer.c_str(), NULL, 10 );
-		} else {
-			l = strtol( lexBuffer.c_str(), NULL, 0 );
+			base = 10;
 		}
-		if ( l > INT_MAX ) {
-			l = INT_MAX;
-		} else if ( l < INT_MIN ) {
-			l = INT_MIN;
-		}
-		integer = (int) l;
+#ifdef WIN32
+		l = _strtoi64( lexBuffer.c_str(), NULL, base );
+#else
+		l = strtoll( lexBuffer.c_str(), NULL, base );
+#endif
+		integer = l;
 	} else if( numberType == REAL ) {
 		cut( );
 		real = strtod( lexBuffer.c_str(), NULL );

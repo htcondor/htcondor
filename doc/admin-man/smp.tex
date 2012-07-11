@@ -582,7 +582,15 @@ To enable dynamic provisioning,
 set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
 to \Expr{True}.
 The string \MacroNI{N} within the configuration variable name
-is the slot number.
+is the slot number.  For the most common cases the machine should
+be configured for one slot, managing all the resources on the machine.
+To do so, set the following configuration variables:
+
+\begin{verbatim}
+NUM_SLOTS=1
+NUM_SLOTS_TYPE_1=1
+SLOT_TYPE_1_PARTITIONABLE=true
+\end{verbatim}
 
 In a pool using dynamic provisioning, 
 jobs can have extra, and desired, resources specified in the submit
@@ -629,6 +637,61 @@ Because it has been effectively broken up into smaller slots,
 these will show as running jobs directly.
 These dynamic slots can also be preempted in the same way as 
 nonpartitioned slots.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-resource-defaults}
+Defaults for Partitionable Slot Sizes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If a job does not specify the required number of CPUs, amount of memory,
+or disk space, there are ways for the administrator to set default
+values for all of these parameters.
+
+First, if any of these attributes are not set in the submit description file,
+there are three variables in the configuration file that \condor{submit}
+will use to fill in default values.  These are
+
+\begin{description}
+  \item{\Macro{JOB\_DEFAULT\_REQUESTMEMORY}}
+  \item{\Macro{JOB\_DEFAULT\_REQUESTDISK}}
+  \item{\Macro{JOB\_DEFAULT\_REQUESTCPUS}}
+\end{description}
+
+The value of these variables can be ClassAd expressions.  
+The default values for these variables, should they not be set are
+
+\begin{description}
+  \item{\Macro{JOB\_DEFAULT\_REQUEST\_MEMORY} = \Expr{ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)}}
+  \item{\Macro{JOB\_DEFAULT\_REQUEST\_CPUS} = \Expr{1}}
+  \item{\Macro{JOB\_DEFAULT\_REQUEST\_DISK} = \Expr{DiskUsage}}
+\end{description}
+
+Note that these default values are chosen such that 
+jobs matched to partitionable slots function similar to static slots.
+
+Once the job has been matched, 
+and has made it to the execute machine, 
+the \Condor{startd} has the ability to modify these 
+resource requests before using them to size the
+actual dynamic slots carved out of the partitionable slot.  
+Clearly, for the job to work,
+the \Condor{startd} daemon must create slots with at least 
+as many resources as the job needs.  
+However,
+it may be valuable to create dynamic slots somewhat bigger 
+than the job's request, 
+as subsequent jobs may be more likely to reuse the newly created slot 
+when the initial job is done using it.
+
+The \Condor{startd} configuration variables which control this 
+and their defaults are
+
+\begin{description}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS} = \Expr{quantize(RequestCpus, \{1\})}}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY} = \Expr{quantize(RequestMemory, \{TotalSlotMem / TotalSlotCpus / 4\}) }}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK} = \Expr{quantize(RequestDisk, \{1024\}) }}
+\end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-defrag}

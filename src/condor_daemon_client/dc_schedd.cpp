@@ -401,18 +401,18 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	free( nc_constraint );
 
 	if ( !rsock.end_of_message() ) {
-		MyString errmsg;
-		errmsg.sprintf(
-			"Can't send initial message (version + constraint) to schedd (%s)",
-			_addr );
+		std::string errmsg;
+		sprintf(errmsg,
+				"Can't send initial message (version + constraint) to schedd (%s)",
+				_addr);
 
-		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.Value() );
+		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.c_str());
 
 		if( errstack ) {
 			errstack->push(
 				"DCSchedd::receiveJobSandbox",
 				CEDAR_ERR_EOM_FAILED,
-				errmsg.Value());
+				errmsg.c_str());
 		}
 		return false;
 	}
@@ -420,17 +420,18 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		// Now, read how many jobs matched the constraint.
 	rsock.decode();
 	if ( !rsock.code(JobAdsArrayLen) ) {
-		MyString errmsg;
-		errmsg.sprintf( "Can't receive JobAdsArrayLen from the schedd (%s)",
-						_addr );
+		std::string errmsg;
+		sprintf(errmsg,
+				"Can't receive JobAdsArrayLen from the schedd (%s)",
+				_addr);
 
-		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.Value() );
+		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.c_str());
 
 		if( errstack ) {
 			errstack->push(
 				"DCSchedd::receiveJobSandbox",
 				CEDAR_ERR_GET_FAILED,
-				errmsg.Value());
+				errmsg.c_str());
 		}
 		return false;
 	}
@@ -448,16 +449,16 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 
 			// grab job ClassAd
 		if ( !job.initFromStream(rsock) ) {
-			MyString errmsg;
-			errmsg.sprintf( "Can't receive job ad %d from the schedd", i );
+			std::string errmsg;
+			sprintf(errmsg, "Can't receive job ad %d from the schedd", i);
 
-			dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.Value() );
+			dprintf(D_ALWAYS, "DCSchedd::receiveJobSandbox: %s\n", errmsg.c_str());
 
 			if( errstack ) {
 				errstack->push(
 							   "DCSchedd::receiveJobSandbox",
 							   CEDAR_ERR_GET_FAILED,
-							   errmsg.Value());
+							   errmsg.c_str());
 			}
 			return false;
 		}
@@ -472,10 +473,12 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)
 				const char *new_attr_name = strchr(lhstr,'_');
+				ExprTree * pTree;
 				ASSERT(new_attr_name);
 				new_attr_name++;
 					// insert attribute
-				job.Insert(new_attr_name, tree->Copy());
+				pTree = tree->Copy();
+				job.Insert(new_attr_name, pTree);
 			}
 		}	// while next expr
 
@@ -542,8 +545,8 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 	int invalid_request = 0;
 	ClassAd regad;
 	ClassAd respad;
-	MyString errstr;
-	MyString reason;
+	std::string errstr;
+	std::string reason;
 
 	if (regsock_ptr != NULL) {
 		// Our caller wants a pointer to the socket we used to succesfully
@@ -612,8 +615,7 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 	}
 
 	respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-	errstr.sprintf("Schedd refused registration: %s", reason.Value());
-	errstack->push("DC_SCHEDD", 1, errstr.Value());
+	errstack->pushf("DC_SCHEDD", 1, "Schedd refused registration: %s", reason.c_str());
 
 	return false;
 }
@@ -644,7 +646,7 @@ DCSchedd::requestSandboxLocation(int direction,
 {
 	StringList sl;
 	ClassAd reqad;
-	MyString str;
+	std::string str;
 	int i;
 	int cluster, proc;
 	char *tmp = NULL;
@@ -670,10 +672,10 @@ DCSchedd::requestSandboxLocation(int direction,
 			return false;
 		}
 		
-		str.sprintf("%d.%d", cluster, proc);
+		sprintf(str, "%d.%d", cluster, proc);
 
 		// make something like: 1.0, 1.1, 1.2, ....
-		sl.append(str.Value());
+		sl.append(str.c_str());
 	}
 
 	tmp = sl.print_to_string();
@@ -892,15 +894,15 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 	rsock.timeout(20);   // years of research... :)
 	if( ! rsock.connect(_addr) ) {
-		MyString errmsg;
-		errmsg.sprintf("Failed to connect to schedd (%s)", _addr );
+		std::string errmsg;
+		sprintf(errmsg, "Failed to connect to schedd (%s)", _addr);
 
-		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: %s\n", errmsg.Value() );
+		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: %s\n", errmsg.c_str() );
 
 		if( errstack ) {
 			errstack->push(
 				"DCSchedd::spoolJobFiles",CEDAR_ERR_CONNECT_FAILED,
-				errmsg.Value() );
+				errmsg.c_str() );
 		}
 		return false;
 	}
@@ -955,18 +957,18 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	}
 
 	if( !rsock.end_of_message() ) {
-		MyString errmsg;
-		errmsg.sprintf(
-			"Can't send initial message (version + count) to schedd (%s)",
-			_addr );
+		std::string errmsg;
+		sprintf(errmsg,
+				"Can't send initial message (version + count) to schedd (%s)",
+				_addr);
 
-		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.Value() );
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
 
 		if( errstack ) {
 			errstack->push(
 				"DCSchedd::spoolJobFiles",
 				CEDAR_ERR_EOM_FAILED,
-				errmsg.Value());
+				errmsg.c_str());
 		}
 		return false;
 	}
@@ -988,16 +990,16 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	}
 
 	if( !rsock.end_of_message() ) {
-		MyString errmsg;
-		errmsg.sprintf("Failed while sending job ids to schedd (%s)", _addr);
+		std::string errmsg;
+		sprintf(errmsg, "Failed while sending job ids to schedd (%s)", _addr);
 
-		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.Value());
+		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
 
 		if( errstack ) {
 			errstack->push(
 				"DCSchedd::spoolJobFiles",
 				CEDAR_ERR_EOM_FAILED,
-				errmsg.Value());
+				errmsg.c_str());
 		}
 		return false;
 	}
@@ -1730,12 +1732,12 @@ bool DCSchedd::getJobConnectInfo(
 	}
 
 	if( IsFulldebug(D_FULLDEBUG) ) {
-		MyString adstr;
+		std::string adstr;
 		output.SetPrivateAttributesInvisible(true);
 		output.sPrint(adstr);
 		output.SetPrivateAttributesInvisible(false);
 		dprintf(D_FULLDEBUG,"Response for GET_JOB_CONNECT_INFO:\n%s\n",
-				adstr.Value());
+				adstr.c_str());
 	}
 
 	bool result=false;

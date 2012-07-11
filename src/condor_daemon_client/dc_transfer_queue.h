@@ -57,21 +57,19 @@ class TransferQueueContactInfo {
 
 		// serializes all contact information into a string suitable for
 		// passing on a command line etc.
-	char const *GetStringRepresentation();
+	bool GetStringRepresentation(std::string &str);
 
 		// returns NULL if unlimited, o.w. sinful string of transfer
 		// queue server
-	char const *GetAddress() { return m_addr.Value(); }
+	char const *GetAddress() { return m_addr.c_str(); }
 
 	bool GetUnlimitedUploads() { return m_unlimited_uploads; }
 	bool GetUnlimitedDownloads() { return m_unlimited_downloads; }
 
  private:
-	MyString m_addr;
+	std::string m_addr;
 	bool m_unlimited_uploads;
 	bool m_unlimited_downloads;
-
-	MyString m_str_representation;
 };
 
 class DCTransferQueue : public Daemon {
@@ -109,15 +107,15 @@ public:
 		// as we are in the transfer queue.
 	ReliSock *m_xfer_queue_sock;
 
-	MyString m_xfer_fname;      // name of file involved in current request
-	MyString m_xfer_jobid;      // job id associated with current request
+	std::string m_xfer_fname;      // name of file involved in current request
+	std::string m_xfer_jobid;      // job id associated with current request
 	                            // (for information purposes only)
 
 	bool m_xfer_downloading;    // true if request was for download
 	bool m_xfer_queue_pending;  // true if status of request is pending
 	bool m_xfer_queue_go_ahead; // true if it is ok to go ahead with transfer
 
-	MyString m_xfer_rejected_reason;
+	std::string m_xfer_rejected_reason;
 
 		// Verify that transfer queue server hasn't revoked our slot.
 	bool CheckTransferQueueSlot();

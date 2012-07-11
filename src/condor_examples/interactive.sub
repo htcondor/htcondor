@@ -1,0 +1,31 @@
+#
+# This is the default job submit file used by
+# "condor_submit -interactive". Essnetially, it runs
+# /bin/sleep on the execute node for 3 minutes. The idea
+# is to run some job that uses no cpu/memory just just until the ssh
+# client connects. 
+#
+universe = vanilla
+executable = /bin/sleep
+#
+# Sleep for 180 seconds (3 minutes), which should be plenty of time for
+# the ssh client to connect. If it does not connect before
+# the three minutes are up, it likely never will.  So in the
+# event that the user simply kills the ssh client before the job 
+# is launched, the job will only consume the slot for three minutes.
+#
+arguments = 180
+#
+# Most shells (such as bash) will honor the TMOUT environment variable,
+# which tells the shell to exit after TMOUT seconds of inactivity.
+# 7200 seconds = 2 hours.
+#
+environment = "TMOUT=7200"
+#
+# 
+transfer_executable = false
+copy_to_spool = false
+notification = never
+priority = 1000
+should_transfer_files = NO
+queue

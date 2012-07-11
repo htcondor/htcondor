@@ -109,7 +109,13 @@ struct SubmitDagDeepOptions
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool importEnv; // explicitly import environment into .condor.sub file
 	int priority; // Priority of parent of DAG node
-	
+
+		// Use the default node log (<DAGfile>.nodes.log) for events
+		// Defaults to true
+		// Set to false if this dagman is going to be communicating
+		// with pre-7.9.0 schedd/shadow/submit
+	bool always_use_node_log;		 	
+
 	SubmitDagDeepOptions() 
 	{ 
 		bVerbose = false;
@@ -124,6 +130,7 @@ struct SubmitDagDeepOptions
 		updateSubmit = false;
 		importEnv = false;
 		priority = 0;
+		always_use_node_log = true;
 	}
 };
 

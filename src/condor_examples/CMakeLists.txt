@@ -55,9 +55,12 @@ install (FILES
 	 DESTINATION ${C_ETC_EXAMPLES}
 	 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-
-install (FILES condor_limits_wrapper.sh condor_schedd.init DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
-
+install (FILES 
+	condor_limits_wrapper.sh
+	condor_schedd.init
+	interactive.sub
+	DESTINATION ${C_LIBEXEC}
+	PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 
 #Prepare OS specific config file
 

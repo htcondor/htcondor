@@ -59,7 +59,7 @@ sub SRC 	{ 0; };
 ######################################################################
 
 # Root of the GIT Source repository
-my $GITROOT_SRC = $ENV{'GIT_DIR'} || ( is_new_batlab() ? "/home/condorauto/condor.git" : "/space/git/CONDOR_SRC.git") ;
+my $GITROOT_SRC = $ENV{'GIT_DIR'} || "/home/condorauto/condor.git";
 
 # Root of the GIT Manual repository
 # my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
@@ -74,10 +74,10 @@ my $submit_info = "nmi_tools/glue/$submit_info_basename";
 my $cvs_condor_nmi_submit = "nmi_tools/condor_nmi_submit";
 
 # Default location to check for NMI tools (if NMI_BIN isn't set)
-my $default_nmi_bin =  ( is_new_batlab() ? "/usr/local/nmi/bin" : "/nmi/bin") ;
+my $default_nmi_bin =  "/usr/local/nmi/bin";
 
 # Find where the Condor binaries we should use are located
-my $default_condor_bin = is_new_batlab() ? "/usr/bin" : "/usr/local/condor/bin";
+my $default_condor_bin = "/usr/bin";
 
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf;
@@ -385,8 +385,7 @@ sub parseOptions
     if( defined $opt_platforms ) {
         foreach $platform ( split(/\s*,\s*/, $opt_platforms) ) {
             if( $platform eq "all" ) {
-		if($runtype eq "build" and is_new_batlab()) {
-		    # For new Batlab, "all" means build on the set of defined build platforms
+		if($runtype eq "build") {
 		    my $file = dirname($0) . "/nmi-build-platforms";
 		    open(IN, '<', $file) or die("Cannot open $file for reading: $!");
 		    while(<IN>) {
@@ -398,11 +397,7 @@ sub parseOptions
 		    close(IN);
 		    next;
 		}
-		else {
-		    if( $runtype ne "test" ) {
-			print "ERROR: --platforms=all only works with --test\n";
-			printUsage( 1 );
-		    }
+		elsif($runtype eq "test") {
 		    if( ! defined $opt_buildid ) {
 			print "ERROR: --platforms=all only works with --buildid\n";
 			printUsage( 1 );
@@ -2286,11 +2281,4 @@ sub parseError
 {
     my $err = shift;
     die "ERROR (line $orig_lineno): $err!\n";
-}
-
-#----------------------------------------------------------------------
-# Helper method to determine if we are running in new Batlab
-#----------------------------------------------------------------------
-sub is_new_batlab {
-    return `hostname -f` eq "submit-2.batlab.org\n";
 }

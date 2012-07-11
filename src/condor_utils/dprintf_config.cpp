@@ -176,11 +176,12 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		 * 2) O_APPEND doesn't guarantee atomic writes in Windows
 		 */
 	DebugShouldLockToAppend = 1;
+	DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
 	DebugShouldLockToAppend = dprintf_param_funcs->param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugLockIsMutex = FALSE;
 #endif
 
-	DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 	(void)sprintf(pname, "%s_LOCK", subsys);
 	if (DebugLock) {
 		free(DebugLock);
@@ -417,46 +418,34 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 
 			if(!logPath.empty())
 			{
-				bool file_found = false;
-				if(!DebugLogs->empty())
+				// merge flags if we see the same log file name more than once.
+				// we don't really expect this to happen, but things get wierd of
+				// it does happen and we don't check for it.
+				//
+				for(it = DebugLogs->begin(); it != DebugLogs->end(); ++it)
 				{
-					// merge flags if we see the same log file name more than once.
-					// we don't really expect this to happen, but things get wierd of
-					// it does happen and we don't check for it.
-					//
-					for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-					{
-						if(it->logPath != logPath)
-							continue;
-						it->choice |= p_info[ii].choice;
-						file_found = true;
-						break;
-					}
+					if(it->logPath != logPath)
+						continue;
+					it->choice |= p_info[ii].choice;
+					break;
 				}
 
-				if(!file_found)
+				if(it == DebugLogs->end()) // We did not find the logPath in our DebugLogs
 				{
-					DebugFileInfo logFileInfo;
-					logFileInfo.outputTarget  = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
-					logFileInfo.choice        = p_info[ii].choice;
-					logFileInfo.logPath       = logPath;
-					logFileInfo.maxLog        = p_info[ii].maxLog;
-					logFileInfo.maxLogNum     = p_info[ii].maxLogNum;
-					logFileInfo.accepts_all   = p_info[ii].accepts_all;
-					logFileInfo.want_truncate = p_info[ii].want_truncate;
-					it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
-				}
-
-				if (ii == 0 && first_time) {
-					struct stat stat_buf;
-					if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
-						DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
-					} else {
-						DebugLastMod = -errno;
-					}
+					it = DebugLogs->insert(DebugLogs->end(),p_info[ii]);
+					it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
+					it->logPath = logPath;
 				}
 
 				if (ii == 0) {
+					if(first_time) {
+						struct stat stat_buf;
+						if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
+							DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
+						} else {
+							DebugLastMod = -errno;
+						}
+					}
 					PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
 					DebugBasic = p_info[0].choice;
 					DebugVerbose = p_info[0].VerboseCats;
