@@ -123,11 +123,11 @@ main_init( int, char ** const)
 	fflush(stdout);
 
 	// register the reaper now so it just happens once
-	int g_reaper_id = daemonCore->Register_Reaper("FTGahp::Reaper",
-									(ReaperHandler)&ftgahp_reaper,
-									"ftgahp_reaper()",
-									NULL);
-	dprintf (D_ALWAYS, "BOSCO: reaper id: %i\n", g_reaper_id);
+//	int g_reaper_id = daemonCore->Register_Reaper("FTGahp::Reaper",
+//									(ReaperHandler)&ftgahp_reaper,
+//									"ftgahp_reaper()",
+//									NULL);
+//	dprintf (D_ALWAYS, "BOSCO: reaper id: %i\n", g_reaper_id);
 
 	dprintf (D_FULLDEBUG, "FT-GAHP IO initialized\n");
 }
@@ -254,6 +254,8 @@ stdin_pipe_handler(Service*, int) {
 							e.ft->setPeerVersion(peer_version);
 							free (peer_version);
 
+							// Register callback for when transfer completes
+							e.ft->RegisterCallback( &ftgahp_reaper );
 
 							dprintf(D_ALWAYS, "ZKM: calling Download files");
 							// the "false" param to DownloadFiles here means "non-blocking"
@@ -455,9 +457,9 @@ gahp_output_return_error() {
 }
 
 
-void
-ftgahp_reaper(int p) {
-	dprintf(D_ALWAYS, "BOSCO: reaper %i\n", p);
+int
+ftgahp_reaper(FileTransfer *filetrans) {
+	dprintf(D_ALWAYS, "BOSCO: reaper %p\n", filetrans);
 }
 
 void

@@ -76,7 +76,7 @@ int verify_constraint (const char * s);
 int verify_number (const char*);
 int verify_number_args (const int, const int);
 
-void ftgahp_reaper(int pid);
+int ftgahp_reaper(FileTransfer *);
 
 void enqueue_result (std::string req_id, const char ** results, const int argc);
 void enqueue_result (int req_id, const char ** results, const int argc);
