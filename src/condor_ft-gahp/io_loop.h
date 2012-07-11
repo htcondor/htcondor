@@ -25,6 +25,8 @@
 #include "condor_daemon_core.h" // For Stream decl
 #include "gahp_common.h"
 #include "PipeBuffer.h"
+#include "file_transfer.h"
+#include "_unordered_map.h"
 
 #define GAHP_COMMAND_DOWNLOAD_SANDBOX "DOWNLOAD_SANDBOX"
 #define GAHP_COMMAND_UPLOAD_SANDBOX "UPLOAD_SANDBOX"
@@ -43,14 +45,17 @@
 #define GAHP_RESULT_ERROR "E"
 #define GAHP_RESULT_FAILURE "F"
 
-
-/*
-struct inter_thread_io_t {
-  int request_pipe[2];
-  int result_pipe[2];
-
+// the struct we store per-sandbox
+struct SandboxEnt {
+	std::string sandbox_id;
+	std::string request_id;
+	FileTransfer *ft;
 };
-*/
+
+// our map of <sandbox_id> to <sandbox_struct>
+typedef _unordered_map<std::string, struct SandboxEnt> SandboxMap;
+SandboxMap sandbox_map;
+
 
 int stdin_pipe_handler(Service*, int);
 void handle_results( std::string line );
@@ -70,5 +75,16 @@ int verify_class_ad (const char *);
 int verify_constraint (const char * s);
 int verify_number (const char*);
 int verify_number_args (const int, const int);
+
+void ftgahp_reaper(int pid);
+
+void enqueue_result (std::string req_id, const char ** results, const int argc);
+void enqueue_result (int req_id, const char ** results, const int argc);
+
+void define_sandbox_path(std::string sid, std::string &path);
+
+void define_path(std::string sid, std::string &path);
+bool create_sandbox (std::string sid, std::string &iwd);
+bool destroy_sandbox(std::string sid, std::string err);
 
 #endif

@@ -27,9 +27,14 @@
 #include "PipeBuffer.h"
 #include "globus_utils.h"
 #include "subsystem_info.h"
+#include "file_transfer.h"
+#include "openssl/md5.h"
+#include "directory.h"
+#include "_unordered_map.h"
+// #include "iterator.h"
+
 
 const char * version = "$GahpVersion 2.0.1 Jul 30 2012 Condor_FT_GAHP $";
-
 
 int async_mode = 0;
 int new_results_signaled = 0;
@@ -62,7 +67,8 @@ usage()
 void
 main_init( int, char ** const)
 {
-	dprintf(D_FULLDEBUG, "FT-GAHP IO thread\n");
+	dprintf(D_ALWAYS, "FT-GAHP IO thread\n");
+	dprintf(D_SECURITY | D_FULLDEBUG, "FT-GAHP IO thread\n");
 
 	int stdin_pipe = -1;
 #if defined(WIN32)
@@ -115,6 +121,13 @@ main_init( int, char ** const)
 		// now we're ready to roll
 	printf ("%s\n", version);
 	fflush(stdout);
+
+	// register the reaper now so it just happens once
+	int g_reaper_id = daemonCore->Register_Reaper("FTGahp::Reaper",
+									(ReaperHandler)&ftgahp_reaper,
+									"ftgahp_reaper()",
+									NULL);
+	dprintf (D_ALWAYS, "BOSCO: reaper id: %i\n", g_reaper_id);
 
 	dprintf (D_FULLDEBUG, "FT-GAHP IO initialized\n");
 }
@@ -185,19 +198,135 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_COMMANDS};
 				gahp_output_return (commands, 10);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DOWNLOAD_SANDBOX) == 0) {
-				// TODO: implement
+				// yes, it would be nice to put this all in a separate function.
+
 				dprintf(D_ALWAYS, "FTGAHP: download sandbox\n");
-				gahp_output_return_error();
+
+				// first two args: result id and sandbox id:
+				std::string rid = args.argv[1];
+				std::string sid = args.argv[2];
+
+				// third arg: job ad
+				ClassAd ad;
+				classad::ClassAdParser my_parser;
+
+				// TODO check return val
+				if (my_parser.ParseClassAd(args.argv[3], ad)) {
+
+					// this is a "success" in the sense that the gahp command was
+					// well-formatted.  whether or not the file transfer works or
+					// not is not what we are reporting here.
+					gahp_output_return_success();
+
+					// first, create the directory that will be IWD.  returns the
+					// directory created.
+					std::string iwd;
+					bool success;
+					success = create_sandbox(sid, iwd);
+					if (!success) {
+						// the dir wasn't created.  report that in the results.
+						std::string err = "couldn't create sandbox " + iwd;
+						const char * res[2] = {
+							err.c_str(),
+							"NULL"
+						};
+
+						// we can report results immediately
+						enqueue_result(sid, res, 2);
+
+					} else {
+
+						// rewrite the IWD to the newly created sandbox dir
+						ad.Assign(ATTR_JOB_IWD, iwd.c_str());
+
+						// directory was created, let's set up the FileTransfer object
+						SandboxEnt e;
+						e.sandbox_id = sid;
+						e.request_id = rid;
+						e.ft = new FileTransfer();
+
+						if (e.ft->Init(&ad)) {
+							// lookup ATTR_VERSION and set it.  this changes the wire
+							// protocol and it is important that this happens before
+							// calling DownloadFiles.
+							char* peer_version = NULL;
+							ad.LookupString(ATTR_VERSION, &peer_version);
+							e.ft->setPeerVersion(peer_version);
+							free (peer_version);
+
+
+							dprintf(D_ALWAYS, "ZKM: calling Download files");
+							// the "false" param to DownloadFiles here means "non-blocking"
+							// TODO: i put true in just for fun. zkm.
+							if (e.ft->DownloadFiles(true)) {
+								// transfer started, record the entry in the map
+								std::pair<std::string, struct SandboxEnt> p(sid, e);
+								sandbox_map.insert(p);
+
+								// we report no results now.
+								// ftgahp_reaper() will take care of that when the
+								// transfer is done.
+
+							} else {
+								// clean up
+								delete e.ft;
+
+								std::string err = "DownloadFiles failed";
+								const char * res[2] = {
+									err.c_str(),
+									"NULL"
+								};
+
+								// failed to init and start.  put this into the results.
+								enqueue_result(rid, res, 2);
+							}
+						} else {
+							// clean up
+							delete e.ft;
+
+							std::string err = "FileTransfer::Init failed";
+							const char * res[2] = {
+								err.c_str(),
+								"NULL"
+							};
+
+							// failed to init and start.  put this into the results.
+							enqueue_result(rid, res, 2);
+						}
+					}
+				} else {
+					// failed to parse classad
+					gahp_output_return_error();
+				}
+
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_UPLOAD_SANDBOX) == 0) {
 				// TODO: implement
+				// will be ridiculously simple once the DOWNLOAD_SANDBOX is working
+
 				dprintf(D_ALWAYS, "FTGAHP: upload sandbox\n");
 				gahp_output_return_error();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DESTROY_SANDBOX) == 0) {
 				// TODO: implement
 				dprintf(D_ALWAYS, "FTGAHP: destroy sandbox\n");
-				gahp_output_return_error();
+
+				// so long as it parsed, this command will always succeed.
+				gahp_output_return_success();
+
+				// args: 0: cmd, 1: rid, 2: sid, 3: ad (ignored in this implementation)
+				std::string rid = args.argv[1];
+				std::string sid = args.argv[2];
+
+				std::string err;
+				destroy_sandbox(sid, err);
+
+				// success -- sandbox is gone (whether it existed or not)
+				const char * res[1] = {
+					"NULL"
+				};
+				enqueue_result(sid, res, 1);
 			} else {
 				// should never get here if verify does its job
+				dprintf(D_ALWAYS, "FTGAHP: got bad command: %s\n", args.argv[0]);
 				gahp_output_return_error();
 			}
 			
@@ -327,6 +456,11 @@ gahp_output_return_error() {
 
 
 void
+ftgahp_reaper(int p) {
+	dprintf(D_ALWAYS, "BOSCO: reaper %i\n", p);
+}
+
+void
 main_config()
 {
 }
@@ -375,3 +509,212 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 
 	return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
 }
+
+void
+enqueue_result (std::string req_id, const char ** results, const int argc)
+{
+	std::string buffer;
+
+	buffer = req_id;
+
+	for ( int i = 0; i < argc; i++ ) {
+		buffer += ' ';
+		if ( results[i] == NULL ) {
+			buffer += "NULL";
+		} else {
+			for ( int j = 0; results[i][j] != '\0'; j++ ) {
+				switch ( results[i][j] ) {
+				case ' ':
+				case '\\':
+				case '\r':
+				case '\n':
+					buffer += '\\';
+				default:
+					buffer += results[i][j];
+				}
+			}
+		}
+	}
+	handle_results( buffer );
+}
+
+void
+enqueue_result (int req_id, const char ** results, const int argc)
+{
+	std::string buffer;
+
+	// how is this legit??!?  ZKM
+	sprintf( buffer, "%d", req_id );
+
+	for ( int i = 0; i < argc; i++ ) {
+		buffer += ' ';
+		if ( results[i] == NULL ) {
+			buffer += "NULL";
+		} else {
+			for ( int j = 0; results[i][j] != '\0'; j++ ) {
+				switch ( results[i][j] ) {
+				case ' ':
+				case '\\':
+				case '\r':
+				case '\n':
+					buffer += '\\';
+				default:
+					buffer += results[i][j];
+				}
+			}
+		}
+	}
+	handle_results( buffer );
+}
+
+
+bool
+create_sandbox(std::string sid, std::string &iwd)
+{
+	define_sandbox_path(sid, iwd);
+
+	dprintf(D_ALWAYS, "BOSCO: create, sandbox path: %s\n", iwd.c_str());
+
+	// who are we? need to change priv?
+	if (mkdir_and_parents_if_needed(iwd.c_str(), 0700)) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+// IT IS legitimate for the command DESTROY_SANDBOX to happen while a file
+// transfer is currently happening.  so, tear it down properly to avoid any
+// memory leaks.  this means looking it up in our map, which should be O(1),
+// and then removing the actual filesystem portion.
+bool
+destroy_sandbox(std::string sid, std::string err)
+{
+
+	// map sid to the SandboxEnt stucture we have recorded
+
+	// how does find() work?
+//	void * some_result = (void*) (&(sandbox_map.find(sid)));
+ 	std::pair<const std::string, struct SandboxEnt> p;
+	SandboxMap::iterator i;
+ 	i = sandbox_map.find(sid);
+
+	if(i == sandbox_map.end()) {
+		// not found:
+		// this is a success actually, the thing we want to remove is gone.
+		// so, we are done.  it is gone.
+		dprintf(D_ALWAYS, "BOSCO: destroy, sandbox id: %s\n", sid.c_str());
+	}	
+
+//	p = *i;
+
+	// map sid to SandboxEnt
+	// CODE
+
+	// somehow, we get the SandboxEnt from this.  let's call it 'e'
+	SandboxEnt e;
+
+
+	// we found in memory the thing to destroy... should be no problem cleaning
+	// up from here.
+	
+	std::string iwd;
+	define_sandbox_path(sid, iwd);
+
+	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
+
+
+	// + remove (rm -rf) the sandbox dir
+	dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
+
+	Directory d( iwd.c_str() );
+	//d.Remove_Current_File();
+
+	
+	// if the filetransfer object still exists, delete it.
+	if (e.ft) {
+		delete (e.ft);
+		e.ft = NULL;
+	}
+
+	sandbox_map.erase(sid);
+
+	return false;
+}
+
+
+// input:
+//   sid:  the sandbox id as a string
+// in/output:
+//   &path: the path it would result in
+void
+define_sandbox_path(std::string sid, std::string &path)
+{
+
+	// find a suitable path for our sandbox
+	char* t_path = NULL;
+	if(!t_path) {
+		t_path = param("BOSCO_SANDBOX_DIR");
+	}
+	if(!t_path) {
+		// this is probably stupid, as it may get "cleaned up" by condor_preen
+		// and it it assumes that execute dir is writable by the end user.  and
+		// probably we can't write to it as a user, so hopefully it is defined
+		// per-user, or not at all.
+		t_path = param("EXECUTE");
+	}
+	if(!t_path) {
+		// this is probably stupid as well, since it may quickly fill up.  and
+		// without username as part of the path, there are potential collisions
+		// on sandbox ids.  when someone has a better default, please insert.
+
+		t_path = strdup("/tmp");
+//		t_path += DIR_DELIM_CHAR
+//		t_path += <username>
+
+	}
+
+	// whatever path we decided will reside in the reference-passwed "path"
+	path = t_path;
+	free(t_path);
+
+
+	// hash the id into ascii.  MD5 is fine here, because we use the actual
+	// sandbox id as part of the path, thus making it immune to MD5 collisions.
+	// we're only using it to keep filesystems free of directories that contain
+	// too many files.  in the year 2040, when 2^16 files exist in a single
+	// directory, feel free to extend this to 3, or (log_v2 n)
+	unsigned char hash_buf[MD5_DIGEST_LENGTH];
+	MD5((unsigned char*)(sid.c_str()), sid.length(), hash_buf);
+
+	char c_hex_md5[MD5_DIGEST_LENGTH*2+1];
+	for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+		sprintf(&(c_hex_md5[i*2]), "%0x", hash_buf[i]);
+	}
+	c_hex_md5[MD5_DIGEST_LENGTH*2] = 0;
+
+	// now construct a two-level directory from the hash.  this potential loop
+	// is unrolled, because MD5_DIGEST_LENGTH is currently (and likely always
+	// will be 16).  see above comment.
+	path += DIR_DELIM_CHAR;
+	path += c_hex_md5[0];
+	path += c_hex_md5[1];
+	path += c_hex_md5[2];
+	path += c_hex_md5[3];
+	path += DIR_DELIM_CHAR;
+	path += c_hex_md5[0];
+	path += c_hex_md5[1];
+	path += c_hex_md5[2];
+	path += c_hex_md5[3];
+	path += c_hex_md5[4];
+	path += c_hex_md5[5];
+	path += c_hex_md5[6];
+	path += c_hex_md5[7];
+	path += DIR_DELIM_CHAR;
+	path += sid;
+
+	// no return value.  setting the passed-by-reference parameter 'path'
+	// is all we do in this function
+}
+
