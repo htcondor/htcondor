@@ -1107,7 +1107,7 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 4;
+		const int locations_length = 4;
 		MyString locations[locations_length];
 			// 1) $HOME/.condor/condor_config
 		struct passwd *pw = getpwuid( geteuid() );
