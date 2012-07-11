@@ -3742,16 +3742,16 @@ GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
 		}
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
-			rc = 0;
-			error_string = "";
-		} else {
 			rc = 1;
 			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
 		}
 		if ( strcasecmp ( result->argv[2], NULLSTRING ) ) {
-			sandbox_path = "";
-		} else {
 			sandbox_path = result->argv[2];
+		} else {
+			sandbox_path = "";
 		}
 		delete result;
 		return rc;
@@ -3814,11 +3814,11 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 		}
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
-			rc = 0;
-			error_string = "";
-		} else {
 			rc = 1;
 			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
 		}
 		delete result;
 		return rc;
@@ -3881,11 +3881,11 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 		}
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
-			rc = 0;
-			error_string = "";
-		} else {
 			rc = 1;
 			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
 		}
 		delete result;
 		return rc;
