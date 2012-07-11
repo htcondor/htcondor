@@ -25,6 +25,7 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "condor_config.h"
+#include "nullfile.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -1018,7 +1019,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	int index;
 	const char *attrs_to_copy[] = {
-//		ATTR_JOB_CMD,
 		ATTR_JOB_ARGUMENTS1,
 		ATTR_JOB_ARGUMENTS2,
 		ATTR_JOB_ENVIRONMENT1,
@@ -1030,15 +1030,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_REMAPS,
-//		ATTR_REQUIREMENTS,
-//		ATTR_RANK,
-//		ATTR_OWNER,
-//		ATTR_DISK_USAGE,
-//		ATTR_IMAGE_SIZE,
-//		ATTR_EXECUTABLE_SIZE,
-//		ATTR_MAX_HOSTS,
-//		ATTR_MIN_HOSTS,
-//		ATTR_JOB_PRIO,
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
 		NULL };		// list must end with a NULL
@@ -1098,39 +1089,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( "gridtype", batchType );
 	}
 
-//	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );
-//submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
-
-//	submit_ad->Assign( ATTR_Q_DATE, now );
-//	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-//	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
-//	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
-//	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
-//	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
-//	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
-//	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
-//	submit_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
-//	submit_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
-//	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
-//	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
-//	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
-//	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-//	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-//	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
-//	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
-//	submit_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, true );
-//	submit_ad->Assign( ATTR_SHOULD_TRANSFER_FILES, false );
-
-//	expr.sprintf( "%s = (%s >= %s) =!= True && time() > %s + %d",
-//				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
-//				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
-//	submit_ad->Insert( expr.Value() );
-
 	bool cleared_environment = false;
 	bool cleared_arguments = false;
 
@@ -1189,16 +1147,116 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
-		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
+	if ( myResource->GahpIsRemote() ) {
+		// Rewrite ad so that everything is relative to m_sandboxPath
+		std::string old_value;
+		std::string new_value;
+
+		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
+
+		submit_ad->LookupString( ATTR_JOB_CMD, old_value );
+		sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+		submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
+
+		old_value = "";
+		submit_ad->LookupString( ATTR_JOB_INPUT, old_value );
+		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+			submit_ad->InsertAttr( ATTR_JOB_INPUT, condor_basename( old_value.c_str() ) );
+		}
+
+		old_value = "";
+		submit_ad->LookupString( ATTR_X509_USER_PROXY, old_value );
+		if ( !old_value.empty() ) {
+			submit_ad->InsertAttr( ATTR_X509_USER_PROXY, condor_basename( old_value.c_str() ) );
+		}
+
+		old_value = "";
+		submit_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, old_value );
+		if ( !old_value.empty() ) {
+			StringList old_paths( NULL, "," );
+			StringList new_paths( NULL, "," );
+			const char *old_path;
+			old_paths.initializeFromString( old_value.c_str() );
+
+			old_paths.rewind();
+			while ( (old_path = old_paths.next()) ) {
+				new_paths.append( condor_basename( old_path ) );
+			}
+
+			char *new_list = new_paths.print_to_string();
+			submit_ad->InsertAttr( ATTR_TRANSFER_INPUT_FILES, new_list );
+			free( new_list );
+		}
+
+		submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
+	}
 
 	return submit_ad;
 }
 
 ClassAd *INFNBatchJob::buildTransferAd()
 {
-	// TODO This will probably require some additional attributes
-	//   to be set.
-	return buildSubmitAd();
+	int index;
+	const char *attrs_to_copy[] = {
+		ATTR_JOB_CMD,
+		ATTR_JOB_INPUT,
+		ATTR_JOB_OUTPUT,
+		ATTR_JOB_ERROR,
+		ATTR_TRANSFER_INPUT_FILES,
+		ATTR_TRANSFER_OUTPUT_FILES,
+		ATTR_TRANSFER_OUTPUT_REMAPS,
+		ATTR_X509_USER_PROXY,
+		ATTR_OUTPUT_DESTINATION,
+		ATTR_ENCRYPT_INPUT_FILES,
+		ATTR_ENCRYPT_OUTPUT_FILES,
+		ATTR_DONT_ENCRYPT_INPUT_FILES,
+		ATTR_DONT_ENCRYPT_OUTPUT_FILES,
+		ATTR_JOB_IWD,
+		NULL };		// list must end with a NULL
+	// TODO Here are other attributes the FileTransfer object looks at.
+	//   They may be important:
+	//   ATTR_OWNER
+	//   ATTR_NT_DOMAIN
+	//   ATTR_ULOG_FILE
+	//   ATTR_CLUSTER_ID
+	//   ATTR_PROC_ID
+	//   ATTR_TRANSFER_EXECUTABLE
+	//   ATTR_SPOOLED_OUTPUT_FILES
+	//   ATTR_STREAM_OUTPUT
+	//   ATTR_STREAM_ERROR
+	//   ATTR_ENCRYPT_INPUT_FILES
+	//   ATTR_ENCRYPT_OUTPUT_FILES
+	//   ATTR_STAGE_IN_FINISH
+	//   ATTR_TRANSFER_INTERMEDIATE_FILES
+	//   ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME
+
+	ClassAd *xfer_ad = new ClassAd();
+	ExprTree *next_expr;
+	const char *next_name;
+
+	index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
+			ExprTree * pTree = next_expr->Copy();
+			xfer_ad->Insert( attrs_to_copy[index], pTree );
+		}
+	}
+
+	jobAd->ResetExpr();
+	while ( jobAd->NextExpr(next_name, next_expr) ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
+
+			char const *attr_name = &(next_name[7]);
+
+			ExprTree * pTree = next_expr->Copy();
+			xfer_ad->Insert( attr_name, pTree );
+		}
+	}
+
+	// TODO This may require some additional attributes to be set.
+
+	return xfer_ad;
 }
 
 void INFNBatchJob::CreateSandboxId()
