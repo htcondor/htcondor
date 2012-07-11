@@ -1015,19 +1015,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	MyString expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
-	bool use_new_args_env = false;
-
-		// Older versions of the blahp don't know about the new
-		// Arguments and Environment job attributes. Newer version
-		// put "new_esc_format" in their version string to indicate
-		// that they understand these new attributes. If we're
-		// talking to an old blahp, convert to the old Args and Env
-		// attributes.
-	if ( strstr( gahp->getVersion(), "new_esc_format" ) ) {
-		use_new_args_env = true;
-	} else {
-		use_new_args_env = false;
-	}
 
 	int index;
 	const char *attrs_to_copy[] = {
@@ -1109,34 +1096,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		//   'gridtype' for non-glite users.
 	if ( strcmp( batchType, "blah" ) != 0 ) {
 		submit_ad->Assign( "gridtype", batchType );
-	}
-
-	if ( !use_new_args_env ) {
-		MyString error_str;
-		MyString value_str;
-		ArgList args;
-		Env env;
-
-		submit_ad->Delete( ATTR_JOB_ARGUMENTS2 );
-		submit_ad->Delete( ATTR_JOB_ENVIRONMENT1_DELIM );
-		submit_ad->Delete( ATTR_JOB_ENVIRONMENT2 );
-
-		if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
-			 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str.Value();
-			delete submit_ad;
-			return NULL;
-		}
-		submit_ad->Assign( ATTR_JOB_ARGUMENTS1, value_str.Value() );
-
-		value_str = "";
-		if ( !env.MergeFrom( jobAd, &error_str ) ||
-			 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str.Value();
-			delete submit_ad;
-			return NULL;
-		}
-		submit_ad->Assign( ATTR_JOB_ENVIRONMENT1, value_str.Value() );
 	}
 
 //	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );
