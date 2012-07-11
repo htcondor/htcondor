@@ -354,11 +354,14 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_OPENSSL:BOOL' => 'OFF',
+			# we can use ssh_to_job on solaris if we use the proper kerberose
+			# this is OK since we build kerberose only for batlab.
+			'configure_args' => { @default_build_configure_args,
+								  '-DWITH_KRB5:BOOL' => 'OFF',
+								  '-DWITH_GSOAP:BOOL' => 'OFF', 
 								  '-DWITH_CURL:BOOL' => 'OFF',
-								  '-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
-								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
+								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
+								  #'-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 			},
 			'prereqs'	=> [],
 			'xtests'	=> undef,
