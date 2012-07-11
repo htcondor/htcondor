@@ -27,7 +27,6 @@ msgstr "Inställningar för Condor"
 #. Type: boolean
 #. Description
 #: ../condor.templates:2001
-#| msgid "Manage initial configuration with Debconf?"
 msgid "Manage initial Condor configuration automatically?"
 msgstr "Ska initiell inställning av Condor utföras automatiskt?"
 
@@ -60,20 +59,12 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../condor.templates:3001
-#| msgid "Enabled submission of usage statistics?"
 msgid "Enable submission of usage statistics?"
 msgstr "Aktivera sändande av användningsstatistik?"
 
 #. Type: boolean
 #. Description
 #: ../condor.templates:3001
-#| msgid ""
-#| "The Condor authors kindly ask that each Condor pool sends them periodic "
-#| "updates with basic information about the status of the pool. Updates "
-#| "include only the number of total machines, the number of jobs submitted, "
-#| "the number of machines running jobs, the host name of the central "
-#| "manager, and the name of the pool. These updates help the Condor Team see "
-#| "how Condor is being used around the world."
 msgid ""
 "The Condor authors politely request that each Condor pool sends them "
 "periodic updates with basic information about the status of the pool. "
@@ -98,10 +89,6 @@ msgstr "Adress till den centrala resursen:"
 #. Type: string
 #. Description
 #: ../condor.templates:4001
-#| msgid ""
-#| "If this machine is supposed to join an existing Condor pool, the address "
-#| "of the central manager machine has to be specified. Any address format "
-#| "supported by Condor can be used, including macro expressions."
 msgid ""
 "If this machine is intended to join an existing Condor pool, the address of "
 "the central manager machine has to be specified. Any address format "
@@ -154,13 +141,6 @@ msgstr ""
 #. Type: multiselect
 #. Description
 #: ../condor.templates:5002
-#| msgid ""
-#| "A machine in a Condor pool can have multiple roles. In general there is "
-#| "one central manager and multiple nodes that run jobs. Often the central "
-#| "manager is also the machine from which users submit jobs. However, it is "
-#| "also possible to have multiple machines available for job submission. By "
-#| "indicating the intended roles of this machine the Debian package will "
-#| "enable the corresponding daemons to be started automatically."
 msgid ""
 "A machine in a Condor pool can have multiple roles. In general there is one "
 "central manager and multiple nodes that run jobs. Often the central manager "
@@ -181,9 +161,6 @@ msgstr "E-post-adress till den lokala Condor-administratören:"
 #. Type: string
 #. Description
 #: ../condor.templates:6001
-#| msgid ""
-#| "The condor administrator will receive error messages when something goes "
-#| "wrong with Condor on this machine."
 msgid ""
 "The Condor administrator will receive error messages if something goes wrong "
 "with Condor on this machine."
@@ -194,7 +171,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../condor.templates:7001
-#| msgid "File system domain label:"
 msgid "user directory domain label:"
 msgstr "användarkatalogens domänettikett:"
 
@@ -240,14 +216,6 @@ msgstr "Domänettikett för filsystemet:"
 #. Type: string
 #. Description
 #: ../condor.templates:8001
-#| msgid ""
-#| "This label is an arbitrary string that is used to decide if two machines "
-#| "(a submitting machine and an execute machine) share the same file system. "
-#| "Note that if you leave this parameter blank, Condor will automatically "
-#| "set the value to be the fully qualified hostname of the local machine, "
-#| "and consequently assume that any two machines don't share a file system. "
-#| "In a dedicated cluster all machines will most likely use a shared file "
-#| "system and hence should carry the same label."
 msgid ""
 "This label is an arbitrary string that is used to decide if a submitting "
 "machine and an execute machine share the same file system. In a dedicated "
@@ -266,25 +234,18 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../condor.templates:8001
-#| msgid "Example: my_super_computer"
 msgid "Example: my_shared_volume"
 msgstr "Exempel: min_delade_volym"
 
 #. Type: boolean
 #. Description
 #: ../condor.templates:9001
-#| msgid "Perform a \"Personal Condor\" installation?"
 msgid "Perform a \"Personal Condor installation\"?"
 msgstr "Ska en \"Personlig Condor-intallation\" genomföras?"
 
 #. Type: boolean
 #. Description
 #: ../condor.templates:9001
-#| msgid ""
-#| "A personal condor installation is a fully functional Condor pool on a "
-#| "single machine. Condor will automatically configure and advertise as many "
-#| "slots as it detects CPU cores on this machine. Condor daemons will not be "
-#| "available through external network interfaces."
 msgid ""
 "A Personal Condor installation is a fully functional Condor pool on a single "
 "machine. Condor will automatically configure and advertise as many slots as "
@@ -327,7 +288,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../condor.templates:10001
-#| msgid "Example setting to reserve 1GB: 1024"
 msgid "Example (to reserve 1 GB): 1024"
 msgstr "Exempel (för att reservera 1GB): 1024"
 
@@ -340,11 +300,6 @@ msgstr "Maskiner med skrivrättighet för den här värden:"
 #. Type: string
 #. Description
 #: ../condor.templates:11001
-#| msgid ""
-#| "All machines that shall participate in the Condor pool need to be listed "
-#| "here. This setting can be a plain list, a domain with wildcards or a "
-#| "macro expression. By default only the localhost is allows to access "
-#| "Condor daemons on this machine."
 msgid ""
 "All machines that are to participate in the Condor pool need to be listed "
 "here. This setting can be a plain comma-separated list, a domain with "
@@ -391,9 +346,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../condor.templates:12001
-#| msgid ""
-#| "If it is planned to compose a custom policy it is best to keep Condor's "
-#| "default here."
 msgid ""
 "If you plan to compose a custom policy it is best to keep Condor's default "
 "here."
