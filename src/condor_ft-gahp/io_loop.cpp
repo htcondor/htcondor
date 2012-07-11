@@ -238,6 +238,8 @@ stdin_pipe_handler(Service*, int) {
 
 						// rewrite the IWD to the newly created sandbox dir
 						ad.Assign(ATTR_JOB_IWD, iwd.c_str());
+						char ATTR_SANDBOX_ID[] = "SandboxId";
+						ad.Assign(ATTR_SANDBOX_ID, sid.c_str());
 
 						// directory was created, let's set up the FileTransfer object
 						SandboxEnt e;
@@ -593,9 +595,6 @@ destroy_sandbox(std::string sid, std::string err)
 {
 
 	// map sid to the SandboxEnt stucture we have recorded
-
-	// how does find() work?
-//	void * some_result = (void*) (&(sandbox_map.find(sid)));
  	std::pair<const std::string, struct SandboxEnt> p;
 	SandboxMap::iterator i;
  	i = sandbox_map.find(sid);
@@ -605,42 +604,36 @@ destroy_sandbox(std::string sid, std::string err)
 		// this is a success actually, the thing we want to remove is gone.
 		// so, we are done.  it is gone.
 		dprintf(D_ALWAYS, "BOSCO: destroy, sandbox id: %s\n", sid.c_str());
-	}	
+	} else {
 
-//	p = *i;
+		SandboxEnt e = i->second;
 
-	// map sid to SandboxEnt
-	// CODE
+		// we found in memory the thing to destroy... should be no problem cleaning
+		// up from here.
+		
+		std::string iwd;
+		define_sandbox_path(sid, iwd);
 
-	// somehow, we get the SandboxEnt from this.  let's call it 'e'
-	SandboxEnt e;
-
-
-	// we found in memory the thing to destroy... should be no problem cleaning
-	// up from here.
-	
-	std::string iwd;
-	define_sandbox_path(sid, iwd);
-
-	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
+		dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
 
 
-	// + remove (rm -rf) the sandbox dir
-	dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
+		// + remove (rm -rf) the sandbox dir
+		dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
 
-	Directory d( iwd.c_str() );
-	//d.Remove_Current_File();
+		Directory d( iwd.c_str() );
+		//d.Remove_Current_File();
 
-	
-	// if the filetransfer object still exists, delete it.
-	if (e.ft) {
-		delete (e.ft);
-		e.ft = NULL;
+		
+		// if the filetransfer object still exists, delete it.
+		if (e.ft) {
+			delete (e.ft);
+			e.ft = NULL;
+		}
+
+		sandbox_map.erase(sid);
 	}
 
-	sandbox_map.erase(sid);
-
-	return false;
+	return true;
 }
 
 
