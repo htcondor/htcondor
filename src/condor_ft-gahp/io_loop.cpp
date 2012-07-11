@@ -134,8 +134,6 @@ main_init( int, char ** const)
 									(ReaperHandler)&default_reaper,
 									"ftgahp_reaper()",
 									NULL);
-//	dprintf (D_ALWAYS, "BOSCO: reaper id: %i\n", g_reaper_id);
-
 	dprintf (D_FULLDEBUG, "FT-GAHP IO initialized\n");
 }
 
@@ -217,7 +215,6 @@ stdin_pipe_handler(Service*, int) {
 				ClassAd ad;
 				classad::ClassAdParser my_parser;
 
-				// TODO check return val
 				if (my_parser.ParseClassAd(args.argv[3], ad)) {
 
 					// this is a "success" in the sense that the gahp command was
@@ -268,8 +265,7 @@ stdin_pipe_handler(Service*, int) {
 
 							dprintf(D_ALWAYS, "ZKM: calling Download files");
 							// the "false" param to DownloadFiles here means "non-blocking"
-							// TODO: i put true in just for fun. zkm.
-							if (e.ft->DownloadFiles(true)) {
+							if (e.ft->DownloadFiles(false)) {
 								// transfer started, record the entry in the map
 								std::pair<std::string, struct SandboxEnt> p(sid, e);
 								sandbox_map.insert(p);
@@ -359,8 +355,7 @@ stdin_pipe_handler(Service*, int) {
 
 						dprintf(D_ALWAYS, "ZKM: calling Upload files");
 						// the "false" param to UploadFiles here means "non-blocking"
-						// TODO: i put true in just for fun. zkm.
-						if (e.ft->UploadFiles(true)) {
+						if (e.ft->UploadFiles(false)) {
 							// transfer started, record the entry in the map
 							std::pair<std::string, struct SandboxEnt> p(sid, e);
 							sandbox_map.insert(p);
@@ -373,7 +368,7 @@ stdin_pipe_handler(Service*, int) {
 							// clean up
 							delete e.ft;
 
-							std::string err = "DownloadFiles failed";
+							std::string err = "UploadFiles failed";
 							const char * res[2] = {
 								err.c_str(),
 								"NULL"
@@ -542,6 +537,8 @@ gahp_output_return_error() {
 int
 ftgahp_reaper(FileTransfer *filetrans) {
 	dprintf(D_ALWAYS, "BOSCO: reaper %p\n", filetrans);
+	// lookup the sandbox id and DEAL WITH IT
+
 }
 
 void
