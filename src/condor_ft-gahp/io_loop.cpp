@@ -766,6 +766,7 @@ destroy_sandbox(std::string sid, std::string err)
 	Directory d( parent_dir.c_str() );
 	if ( !d.Remove_Full_Path( iwd.c_str() ) ) {
 		dprintf(D_ALWAYS, "Failed to remove %s\n", iwd.c_str());
+		// TODO Should we return failure?
 	}
 	d.Rewind();
 	if ( d.Next() == NULL ) {
@@ -773,40 +774,16 @@ destroy_sandbox(std::string sid, std::string err)
 		Directory d2( gparent_dir.c_str() );
 		if ( !d2.Remove_Full_Path( parent_dir.c_str() ) ) {
 			dprintf(D_ALWAYS, "Failed to remove %s\n", parent_dir.c_str());
+			// TODO Should we return failure?
 		}
 		d2.Rewind();
 		if ( d2.Next() == NULL ) {
 			dprintf(D_FULLDEBUG, "Removing empty directory %s\n", gparent_dir.c_str());
 			if ( !d2.Remove_Full_Path( gparent_dir.c_str() ) ) {
 				dprintf(D_ALWAYS, "Failed to remove %s\n", gparent_dir.c_str());
+				// TODO Should we return failure?
 			}
 		}
-	}
-
-	// map sid to the SandboxEnt stucture we have recorded
-	// Now see if there's an active transfer associated with this sandbox
-	SandboxMap::iterator i;
- 	i = sandbox_map.find(sid);
-
-	if(i == sandbox_map.end()) {
-		// not found:
-		// this is a success actually, the thing we want to remove is gone.
-		// so, we are done.  it is gone.
-	} else {
-
-		SandboxEnt e = i->second;
-
-		// we found in memory the thing to destroy... should be no problem cleaning
-		// up from here.
-		
-		
-		// if the filetransfer object still exists, delete it.
-		if (e.ft) {
-			delete (e.ft);
-			e.ft = NULL;
-		}
-
-		sandbox_map.erase(sid);
 	}
 
 	return true;
