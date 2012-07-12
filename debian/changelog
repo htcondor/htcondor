@@ -1,3 +1,19 @@
+condor (7.8.1~dfsg.1-2) unstable; urgency=low
+
+  * Remove dangling symlink /usr/sbin/condor -> ../bin/condor. This file no
+    longer exists (Closes: #678425).
+  * Add Debconf template translations:
+    - Czech -- courtesy of Martin Å Ãn <martin.sin@zshk.cz>
+      (Closes: #678952)
+    - Spanish -- courtesy of Fernando C. Estrada <fcestrada@fcestrada.com>
+      (Closes: #680201)
+  * Only issue 'condor_restart' command in postinst, when condor_master is
+    actually running. If that is not the case, for example when daemon
+    startup is prevented by system policy, package installation would fail
+    otherwise. Thanks to Andreas Beckmann for the report. (Closes: #681144)
+
+ -- Michael Hanke <mih@debian.org>  Thu, 21 Jun 2012 18:40:11 +0200
+
 condor (7.8.1~dfsg.1-1) unstable; urgency=low
 
   * New upstream bugfix release:
