@@ -32,7 +32,7 @@
 #include "directory.h"
 #include "_unordered_map.h"
 #include "basename.h"
-// #include "iterator.h"
+#include "my_username.h"
 
 
 const char * version = "$GahpVersion 2.0.1 Jul 30 2012 Condor_FT_GAHP $";
@@ -637,9 +637,10 @@ define_sandbox_path(std::string sid, std::string &path)
 		// on sandbox ids.  when someone has a better default, please insert.
 
 		t_path = strdup("/tmp");
-//		t_path += DIR_DELIM_CHAR
-//		t_path += <username>
-
+		t_path += DIR_DELIM_CHAR;
+		char * u = my_username();
+		t_path += u;
+		free(u);
 	}
 
 	// whatever path we decided will reside in the reference-passwed "path"
