@@ -134,6 +134,8 @@ main_init( int, char ** const)
 									(ReaperHandler)&default_reaper,
 									"ftgahp_reaper()",
 									NULL);
+	dprintf(D_FULLDEBUG, "registered reaper ftgahp_reaper() at %i\n", g_reaper_id);
+
 	dprintf (D_FULLDEBUG, "FT-GAHP IO initialized\n");
 }
 
@@ -540,13 +542,9 @@ ftgahp_reaper(FileTransfer *filetrans) {
 
 	ClassAd ad = filetrans->job_ad();
 
-	// TODO
-	//
-	// what?
-
 	ad.dPrint( D_ALWAYS );
 
-	// need to know the request id
+	// 
 	char* tmp = NULL;
 	char ATTR_SANDBOX_ID[] = "SandboxId";
 
@@ -556,34 +554,50 @@ ftgahp_reaper(FileTransfer *filetrans) {
 	ad.LookupString(ATTR_SANDBOX_ID, &tmp);
 	sid = tmp;
 	free (tmp);
+	tmp = NULL;
+
+	// extract request id
+	std::string rid;
+	tmp = NULL;
+	ad.LookupString(ATTR_REQUEST_ID, &tmp);
+	rid = tmp;
+	free (tmp);
+	tmp = NULL;
+
+	std::string path;
+	path = "/tmp/condor";
 
 	// map sid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
-	SandboxEnt e;
 	i = sandbox_map.find(sid);
+
+	// part 2
+	SandboxEnt e;
+	e = i->second;
 
 	if(i == sandbox_map.end()) {
 		// not found:
 		dprintf(D_ALWAYS, "ZKM-WTF: sandbox %s not found in ftgahp_reaper\n", sid.c_str());
 	} else {
-		e = i->second;
+		ClassAd myad = e.ft->job_ad();
+		myad.LookupString(ATTR_JOB_IWD, path);
 	}
 
-	// extract the request id
-	std::string rid;
-	tmp = NULL;
-	ad.LookupString(ATTR_SANDBOX_ID, &tmp);
-	sid = tmp;
-	free (tmp);
 
-	// TODO ZKM THIS IS WRONG
+//	if(d_vs_u){
+//		// figure it out
+//	}
+
+	// TODO ZKM THIS IS WRONG, but a good start.
 	const char * res[2] = {
-		"NULL"
-		"NULL"
+		//err.c_str(),
+		"NULL",
+		path.c_str()
 	};
 
-	// we can report results immediately
-	enqueue_result(sid, res, 2);
+
+	enqueue_result(rid, res, 2);
+
 
 	sandbox_map.erase(sid);
 
