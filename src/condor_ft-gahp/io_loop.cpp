@@ -542,8 +542,10 @@ int
 ftgahp_reaper(FileTransfer *filetrans) {
 	dprintf(D_ALWAYS, "BOSCO: reaper %p\n", filetrans);
 
+
 	ClassAd ad = filetrans->job_ad();
 
+	dprintf(D_ALWAYS, "ad we are reaping:");
 	ad.dPrint( D_ALWAYS );
 
 	// 
@@ -552,19 +554,11 @@ ftgahp_reaper(FileTransfer *filetrans) {
 
 	// extract the sandbox id
 	std::string sid;
-	tmp = NULL;
-	ad.LookupString(ATTR_SANDBOX_ID, &tmp);
-	sid = tmp;
-	free (tmp);
-	tmp = NULL;
+	ad.LookupString(ATTR_SANDBOX_ID, sid);
 
 	// extract request id
 	std::string rid;
-	tmp = NULL;
-	ad.LookupString(ATTR_REQUEST_ID, &tmp);
-	rid = tmp;
-	free (tmp);
-	tmp = NULL;
+	ad.LookupString(ATTR_REQUEST_ID, rid);
 
 	// map sid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
@@ -577,14 +571,15 @@ ftgahp_reaper(FileTransfer *filetrans) {
 		dprintf(D_ALWAYS, "ZKM-WTF: sandbox %s not found in ftgahp_reaper\n", sid.c_str());
 	} else {
 		std::string path;
+
+		// set a shitty default
 		path = "/tmp/condor";
 
-		// part 2
 		SandboxEnt e;
 		e = i->second;
 
-		ClassAd myad = e.ft->job_ad();
-		myad.LookupString(ATTR_JOB_IWD, path);
+		// need to know the actual path
+		ad.LookupString(ATTR_JOB_IWD, path);
 
 		if (e.is_download) {
 			// with download, return sandbox_path
@@ -608,7 +603,6 @@ ftgahp_reaper(FileTransfer *filetrans) {
 
 	sandbox_map.erase(sid);
 
-	// what does zero mean?  idk.  idfc.
 	return 0;
 }
 
