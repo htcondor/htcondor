@@ -8759,14 +8759,17 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  A boolean value defining whether \Condor{dagman} watches for events in the
-  default node log--that is, the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
-  The boolean value defaults to true.  If set to true, then \Condor{dagman}
-  writes POST script terminate events to the default log, and not to the user log
-  specified in the submit file; \Condor{dagman} will also only read events from
-  the default log file.  This must be set to false if a \Condor{dagman} from
-  version 7.9.0 or later is submitting jobs to a \Condor{schedd} that is older
-  than version 7.9.0.
+  A boolean value defining whether \Condor{dagman} watches for events in its
+  default node log.
+  The default log is defined by the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
+  The default value is \Expr{True}.
+  If \Expr{True},
+  then \Condor{dagman} writes POST script terminate events to the default log,
+  and not to the user log specified in the submit description file.
+  \Condor{dagman} will also only read events from the default log file.
+  This variable must be \Expr{False} if \Condor{dagman} from Condor
+  version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
+  or using a \Condor{submit} executable that is older than Condor version 7.9.0.
 
 \end{description}
 

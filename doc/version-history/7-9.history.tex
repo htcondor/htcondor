@@ -157,20 +157,26 @@ such that the expansion would fill up memory.
 See section~\ref{macro-in-submit-description-file} for details.
 \Ticket{406}
 
-\item Removed restriction on having macros in the "log" directive in submit
-files for \Condor{dagman}
+\item A DAGMan limitation and restriction has been removed.  
+It is now permitted to define a \SubmitCmd{log} command using a macro,
+within a node job's submit description file.
 \Ticket{2428}
 
-\item \Condor{dagman} now uses and watches, by default, only its default node
-userlog for events.  DAGman now requests the schedd and shadow to write each
-event to the default log, i.e., $\langle$DAG file$\rangle$.nodes.log, along
-with whatever log is specified by the user.  \Condor{dagman} only writes POST
-Script TERMINATE events to its default log, not to the user log. This can be
-turned off by setting the configuration variable
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to False.  In particular,
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to false if this newer
-version of \Condor{dagman} is submitting jobs to an older version of
-\Condor{schedd} or using an older version of \Condor{submit}
+\item To enforce the dependencies of a DAG,
+DAGMan now uses and watches only the default node
+user log of the \Condor{dagman} job for events.  
+DAGMan requests the \Condor{schedd} and \Condor{shadow} daemons to write each
+event to this default log, 
+in addition to writing to a log specified by the node job.
+\Condor{dagman} writes POST script terminate events only to its default log;
+these terminate events are not written to the user log.
+This behavior can be turned off by setting the configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}.
+For correct behavior,
+\MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to \Expr{False}
+if \Condor{dagman} version 7.9.0 or later is submitting jobs 
+to an older version of
+a \Condor{schedd} daemon or of a \Condor{submit} executable.
 \Ticket{2807}
 
 \end{itemize}
