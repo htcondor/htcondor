@@ -542,10 +542,10 @@ ftgahp_reaper(FileTransfer *filetrans) {
 	dprintf(D_ALWAYS, "BOSCO: reaper %p\n", filetrans);
 
 
-	ClassAd ad = filetrans->job_ad();
+	ClassAd *ad = filetrans->GetJobAd();
 
 	dprintf(D_ALWAYS, "ad we are reaping:");
-	ad.dPrint( D_ALWAYS );
+	ad->dPrint( D_ALWAYS );
 
 	// 
 	char* tmp = NULL;
@@ -553,11 +553,11 @@ ftgahp_reaper(FileTransfer *filetrans) {
 
 	// extract the sandbox id
 	std::string sid;
-	ad.LookupString(ATTR_SANDBOX_ID, sid);
+	ad->LookupString(ATTR_SANDBOX_ID, sid);
 
 	// extract request id
 	std::string rid;
-	ad.LookupString(ATTR_REQUEST_ID, rid);
+	ad->LookupString(ATTR_REQUEST_ID, rid);
 
 	// map sid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
@@ -578,7 +578,7 @@ ftgahp_reaper(FileTransfer *filetrans) {
 		e = i->second;
 
 		// need to know the actual path
-		ad.LookupString(ATTR_JOB_IWD, path);
+		ad->LookupString(ATTR_JOB_IWD, path);
 
 		if (e.is_download) {
 			// with download, return sandbox_path

@@ -278,7 +278,7 @@ class FileTransfer {
 		return true;
 	}
 
-	ClassAd job_ad();
+	ClassAd *GetJobAd();
 
   protected:
 

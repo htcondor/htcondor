@@ -4241,8 +4241,8 @@ FileTransfer::outputFileIsSpooled(char const *fname) {
 	return false;
 }
 
-ClassAd
-FileTransfer::job_ad() {
-	return jobAd;
+ClassAd*
+FileTransfer::GetJobAd() {
+	return &jobAd;
 }
 
