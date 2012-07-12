@@ -537,8 +537,58 @@ gahp_output_return_error() {
 int
 ftgahp_reaper(FileTransfer *filetrans) {
 	dprintf(D_ALWAYS, "BOSCO: reaper %p\n", filetrans);
-	// lookup the sandbox id and DEAL WITH IT
 
+	ClassAd ad = filetrans->job_ad();
+
+	// TODO
+	//
+	// what?
+
+	ad.dPrint( D_ALWAYS );
+
+	// need to know the request id
+	char* tmp = NULL;
+	char ATTR_SANDBOX_ID[] = "SandboxId";
+
+	// extract the sandbox id
+	std::string sid;
+	tmp = NULL;
+	ad.LookupString(ATTR_SANDBOX_ID, &tmp);
+	sid = tmp;
+	free (tmp);
+
+	// map sid to the SandboxEnt stucture we have recorded
+	SandboxMap::iterator i;
+	SandboxEnt e;
+	i = sandbox_map.find(sid);
+
+	if(i == sandbox_map.end()) {
+		// not found:
+		dprintf(D_ALWAYS, "ZKM-WTF: sandbox %s not found in ftgahp_reaper\n", sid.c_str());
+	} else {
+		e = i->second;
+	}
+
+	// extract the request id
+	std::string rid;
+	tmp = NULL;
+	ad.LookupString(ATTR_SANDBOX_ID, &tmp);
+	sid = tmp;
+	free (tmp);
+
+	// TODO ZKM THIS IS WRONG
+	const char * res[2] = {
+		"NULL"
+		"NULL"
+	};
+
+	// we can report results immediately
+	enqueue_result(sid, res, 2);
+
+	sandbox_map.erase(sid);
+
+	// what does zero mean?  idk.  idfc.
+	return 0;
 }
 
 void
@@ -694,7 +744,6 @@ destroy_sandbox(std::string sid, std::string err)
 		define_sandbox_path(sid, iwd);
 
 		dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
-
 
 		// + remove (rm -rf) the sandbox dir
 		dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
