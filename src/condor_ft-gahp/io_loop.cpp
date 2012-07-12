@@ -737,9 +737,23 @@ create_sandbox_dir(std::string sid, std::string &iwd)
 bool
 destroy_sandbox(std::string sid, std::string err)
 {
+	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox id: %s\n", sid.c_str());
+
+	std::string iwd;
+	define_sandbox_path(sid, iwd);
+
+	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
+
+	// + remove (rm -rf) the sandbox dir
+	dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
+
+	Directory d( iwd.c_str() );
+	if ( !d.Remove_Entire_Directory() ) {
+		dprintf(D_ALWAYS, "Failed to remove contents of %s\n", iwd.c_str());
+	}
 
 	// map sid to the SandboxEnt stucture we have recorded
- 	std::pair<const std::string, struct SandboxEnt> p;
+	// Now see if there's an active transfer associated with this sandbox
 	SandboxMap::iterator i;
  	i = sandbox_map.find(sid);
 
@@ -747,7 +761,6 @@ destroy_sandbox(std::string sid, std::string err)
 		// not found:
 		// this is a success actually, the thing we want to remove is gone.
 		// so, we are done.  it is gone.
-		dprintf(D_ALWAYS, "BOSCO: destroy, sandbox id: %s\n", sid.c_str());
 	} else {
 
 		SandboxEnt e = i->second;
@@ -755,17 +768,6 @@ destroy_sandbox(std::string sid, std::string err)
 		// we found in memory the thing to destroy... should be no problem cleaning
 		// up from here.
 		
-		std::string iwd;
-		define_sandbox_path(sid, iwd);
-
-		dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
-
-		// + remove (rm -rf) the sandbox dir
-		dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
-
-		Directory d( iwd.c_str() );
-		//d.Remove_Current_File();
-
 		
 		// if the filetransfer object still exists, delete it.
 		if (e.ft) {
