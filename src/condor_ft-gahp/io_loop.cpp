@@ -31,6 +31,7 @@
 #include "openssl/md5.h"
 #include "directory.h"
 #include "_unordered_map.h"
+#include "basename.h"
 // #include "iterator.h"
 
 
@@ -752,9 +753,34 @@ destroy_sandbox(std::string sid, std::string err)
 	// + remove (rm -rf) the sandbox dir
 	dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
 
-	Directory d( iwd.c_str() );
-	if ( !d.Remove_Entire_Directory() ) {
-		dprintf(D_ALWAYS, "Failed to remove contents of %s\n", iwd.c_str());
+	char *buff = condor_dirname( iwd.c_str() );
+	std::string parent_dir = buff;
+	free( buff );
+	buff = condor_dirname( parent_dir.c_str() );
+	std::string gparent_dir = buff;
+	free( buff );
+
+	dprintf( D_FULLDEBUG, "parent_dir: %s\n", parent_dir.c_str() );
+	dprintf( D_FULLDEBUG, "gparent_dir: %s\n", gparent_dir.c_str() );
+
+	Directory d( parent_dir.c_str() );
+	if ( !d.Remove_Full_Path( iwd.c_str() ) ) {
+		dprintf(D_ALWAYS, "Failed to remove %s\n", iwd.c_str());
+	}
+	d.Rewind();
+	if ( d.Next() == NULL ) {
+		dprintf(D_FULLDEBUG, "Removing empty directory %s\n", parent_dir.c_str());
+		Directory d2( gparent_dir.c_str() );
+		if ( !d2.Remove_Full_Path( parent_dir.c_str() ) ) {
+			dprintf(D_ALWAYS, "Failed to remove %s\n", parent_dir.c_str());
+		}
+		d2.Rewind();
+		if ( d2.Next() == NULL ) {
+			dprintf(D_FULLDEBUG, "Removing empty directory %s\n", gparent_dir.c_str());
+			if ( !d2.Remove_Full_Path( gparent_dir.c_str() ) ) {
+				dprintf(D_ALWAYS, "Failed to remove %s\n", gparent_dir.c_str());
+			}
+		}
 	}
 
 	// map sid to the SandboxEnt stucture we have recorded
