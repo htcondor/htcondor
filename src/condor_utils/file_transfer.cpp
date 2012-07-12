@@ -4226,3 +4226,9 @@ FileTransfer::outputFileIsSpooled(char const *fname) {
 	}
 	return false;
 }
+
+ClassAd
+FileTransfer::job_ad() {
+	return jobAd;
+}
+

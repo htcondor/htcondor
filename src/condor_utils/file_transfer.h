@@ -278,6 +278,8 @@ class FileTransfer {
 		return true;
 	}
 
+	ClassAd job_ad();
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
