@@ -434,76 +434,6 @@ gahp_output_return_error() {
 	gahp_output_return (result, 1);
 }
 
-
-/*
-int
-ftgahp_reaper(FileTransfer *filetrans) {
-	dprintf(D_ALWAYS, "BOSCO: reaper %p\n", filetrans);
-
-
-	ClassAd *ad = filetrans->GetJobAd();
-
-	dprintf(D_ALWAYS, "ad we are reaping:");
-	ad->dPrint( D_ALWAYS );
-
-	char ATTR_SANDBOX_ID[] = "SandboxId";
-
-	// extract the sandbox id
-	std::string sid;
-	ad->LookupString(ATTR_SANDBOX_ID, sid);
-
-	// extract request id
-	std::string rid;
-	ad->LookupString(ATTR_REQUEST_ID, rid);
-
-	// map sid to the SandboxEnt stucture we have recorded
-	// TODO
-	SandboxMap::iterator i;
-	i = sandbox_map.find(sid);
-
-	// is this an UP or DOWN load
-
-	if(i == sandbox_map.end()) {
-		// not found:
-		dprintf(D_ALWAYS, "ZKM-WTF: sandbox %s not found in ftgahp_reaper\n", sid.c_str());
-	} else {
-		std::string path;
-
-		// set a shitty default
-		path = "/tmp/condor";
-
-		SandboxEnt e;
-		e = i->second;
-
-		// need to know the actual path
-		ad->LookupString(ATTR_JOB_IWD, path);
-
-		if (e.is_download) {
-			// with download, return sandbox_path
-			const char * res[2] = {
-				//err.c_str(),
-				"NULL",
-				path.c_str()
-			};
-
-			enqueue_result(e.request_id, res, 2);
-		} else {
-			// with upload, do not
-			const char * res[1] = {
-				"NULL"
-			};
-
-			enqueue_result(e.request_id, res, 1);
-		}
-
-	}
-
-	sandbox_map.erase(sid);
-
-	return 0;
-}
-*/
-
 void
 main_config()
 {
@@ -643,8 +573,6 @@ destroy_sandbox(std::string sid, std::string &err)
 	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
 
 	// remove (rm -rf) the sandbox dir
-	dprintf(D_ALWAYS, "ZKM: about to remove: %s\n", iwd.c_str());
-
 	char *buff = condor_dirname( iwd.c_str() );
 	std::string parent_dir = buff;
 	free( buff );
