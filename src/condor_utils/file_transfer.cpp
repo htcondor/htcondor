@@ -816,20 +816,6 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		}
 	}
 
-	char zkmbuf[255];
-	sprintf(zkmbuf, "/tmp/%s.%s", get_mySubSystem()->getName(), TransKey);
-	dprintf( D_ALWAYS, "creating %s\n", zkmbuf);
-
-	FILE* zkm_f = fopen(zkmbuf, "w");
-	classad::ClassAdUnParser myp;
-	std::string s;
-	myp.Unparse(s, Ad);
-	fputs(s.c_str(), zkm_f);
-	fclose(zkm_f);
-
-	dprintf( D_ALWAYS, "text %s:\n", s.c_str());
-	dprintf( D_ALWAYS, "done\n");
-
 	did_init = true;
 	
 	return 1;
