@@ -637,10 +637,6 @@ define_sandbox_path(std::string sid, std::string &path)
 		// on sandbox ids.  when someone has a better default, please insert.
 
 		t_path = strdup("/tmp");
-		t_path += DIR_DELIM_CHAR;
-		char * u = my_username();
-		t_path += u;
-		free(u);
 	}
 
 	// whatever path we decided will reside in the reference-passwed "path"
