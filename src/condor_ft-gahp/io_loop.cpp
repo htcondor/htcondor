@@ -266,7 +266,7 @@ stdin_pipe_handler(Service*, int) {
 							// Register callback for when transfer completes
 							e.ft->RegisterCallback( &ftgahp_reaper );
 
-							dprintf(D_ALWAYS, "ZKM: calling Download files");
+							dprintf(D_ALWAYS, "ZKM: calling Download files\n");
 							// the "false" param to DownloadFiles here means "non-blocking"
 							if (e.ft->DownloadFiles(false)) {
 								// transfer started, record the entry in the map
@@ -357,7 +357,7 @@ stdin_pipe_handler(Service*, int) {
 						// Register callback for when transfer completes
 						e.ft->RegisterCallback( &ftgahp_reaper );
 
-						dprintf(D_ALWAYS, "ZKM: calling Upload files");
+						dprintf(D_ALWAYS, "ZKM: calling Upload files\n");
 						// the "false" param to UploadFiles here means "non-blocking"
 						if (e.ft->UploadFiles(false)) {
 							// transfer started, record the entry in the map
@@ -387,7 +387,6 @@ stdin_pipe_handler(Service*, int) {
 					gahp_output_return_error();
 				}
 
-				gahp_output_return_error();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DESTROY_SANDBOX) == 0) {
 				// TODO: implement
 				dprintf(D_ALWAYS, "FTGAHP: destroy sandbox\n");
@@ -406,7 +405,7 @@ stdin_pipe_handler(Service*, int) {
 				const char * res[1] = {
 					"NULL"
 				};
-				enqueue_result(sid, res, 1);
+				enqueue_result(rid, res, 1);
 			} else {
 				// should never get here if verify does its job
 				dprintf(D_ALWAYS, "FTGAHP: got bad command: %s\n", args.argv[0]);
@@ -589,14 +588,14 @@ ftgahp_reaper(FileTransfer *filetrans) {
 				path.c_str()
 			};
 
-			enqueue_result(rid, res, 2);
+			enqueue_result(e.request_id, res, 2);
 		} else {
 			// with upload, do not
 			const char * res[1] = {
 				"NULL"
 			};
 
-			enqueue_result(rid, res, 1);
+			enqueue_result(e.request_id, res, 1);
 		}
 
 	}
