@@ -91,6 +91,11 @@ bool create_sandbox_dir (std::string sid, std::string &iwd);
 bool destroy_sandbox(std::string sid, std::string &err);
 
 int do_command_download_sandbox(void *arg, Stream*);
+int do_command_upload_sandbox(void *arg, Stream*);
+int do_command_destroy_sandbox(void *arg, Stream*);
+
 int download_sandbox_reaper(Service*, int, int);
+int upload_sandbox_reaper(Service*, int, int);
+int destroy_sandbox_reaper(Service*, int, int);
 
 #endif
