@@ -26,6 +26,8 @@
 #include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "nullfile.h"
+#include "ipv6_hostname.h"
+#include "condor_netaddr.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -85,6 +87,24 @@ static const char *GMStateNames[] = {
         procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
         func,error)
 
+static void
+PunchCedarHole( const char *host )
+{
+	condor_netaddr netaddr;
+
+	if ( !host || netaddr.from_net_string( host ) ) {
+		return; // not a valid hostname, so don't bother trying to look it up
+	}
+
+	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
+	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
+		 iter != addrs.end();
+		 ++iter) {
+		const condor_sockaddr& addr = *iter;
+		MyString addr_str = addr.to_ip_string();
+		daemonCore->getIpVerify()->PunchHole( WRITE, addr_str );
+	}
+}
 
 void INFNBatchJobInit()
 {
@@ -470,15 +490,8 @@ void INFNBatchJob::doEvaluateState()
 				CondorVersionInfo ver_info;
 				m_filetrans->setPeerVersion( ver_info );
 
-				MyString hole;
-				sprintf( hole, "*/%s", myResource->RemoteHostname() );
-				dprintf( D_FULLDEBUG, "(%d.%d) JEF Punching hole '%s'\n", 
-						 procID.cluster, procID.proc, hole.Value() );
-				if ( !daemonCore->getIpVerify()->PunchHole( WRITE, hole ) ) {
-					errorString = "Failed to punch hole in CEDAR";
-					gmState = GM_HOLD;
-					break;
-				}
+				// TODO Should we ever fill the hole?
+				PunchCedarHole( myResource->RemoteHostname() );
 			}
 
 			std::string sandbox_path;
@@ -698,15 +711,8 @@ void INFNBatchJob::doEvaluateState()
 				CondorVersionInfo ver_info;
 				m_filetrans->setPeerVersion( ver_info );
 
-				MyString hole;
-				sprintf( hole, "*/%s", myResource->RemoteHostname() );
-				dprintf( D_FULLDEBUG, "(%d.%d) JEF Punching hole '%s'\n", 
-						 procID.cluster, procID.proc, hole.Value() );
-				if ( !daemonCore->getIpVerify()->PunchHole( WRITE, hole ) ) {
-					errorString = "Failed to punch hole in CEDAR";
-					gmState = GM_HOLD;
-					break;
-				}
+				// TODO Should we ever fill the hole?
+				PunchCedarHole( myResource->RemoteHostname() );
 			}
 
 			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
