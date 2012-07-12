@@ -1214,13 +1214,17 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// Rewrite ad so that everything is relative to m_sandboxPath
 		std::string old_value;
 		std::string new_value;
+		bool xfer_exec = true;
 
 		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
 
-		//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
-		//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
-		sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
-		submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
+		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
+		if ( xfer_exec ) {
+			//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
+			//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+			sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
+			submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
+		}
 
 		old_value = "";
 		submit_ad->LookupString( ATTR_JOB_INPUT, old_value );
@@ -1266,6 +1270,7 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,
+		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_REMAPS,
@@ -1284,7 +1289,6 @@ ClassAd *INFNBatchJob::buildTransferAd()
 	//   ATTR_ULOG_FILE
 	//   ATTR_CLUSTER_ID
 	//   ATTR_PROC_ID
-	//   ATTR_TRANSFER_EXECUTABLE
 	//   ATTR_SPOOLED_OUTPUT_FILES
 	//   ATTR_STREAM_OUTPUT
 	//   ATTR_STREAM_ERROR
