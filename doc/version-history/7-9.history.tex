@@ -50,7 +50,10 @@ the log referred to by \Attr{DAGManNodesLog}.
 
 \begin{itemize}
 
-\item None.
+\item The ClassAd functions \Procedure{splitUserName} and \Procedure{splitSlotName}
+leaked a small amount of memory every time they were evaluated.  This bug was
+introduced when these functions were added in 7.7.6.
+\Ticket{3082}
 
 \end{itemize}
 
