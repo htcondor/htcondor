@@ -128,6 +128,7 @@ main_init( int, char ** const)
 		// now we're ready to roll
 	printf ("%s\n", version);
 	fflush(stdout);
+	dprintf(D_FULLDEBUG,"put stdout: %s\n",version);
 
 	// register the reaper now so it just happens once
 	int g_reaper_id = daemonCore->Register_Reaper("default_reaper",
@@ -171,6 +172,7 @@ stdin_pipe_handler(Service*, int) {
 				while ((next = result_list.next()) != NULL) {
 					printf ("%s\n", next);
 					fflush(stdout);
+					dprintf(D_FULLDEBUG,"put stdout: %s\n",next);
 					result_list.deleteCurrent();
 				}
 
@@ -178,6 +180,7 @@ stdin_pipe_handler(Service*, int) {
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
 				printf ("S %s\n", version);
 				fflush (stdout);
+				dprintf(D_FULLDEBUG,"put stdout: S %s\n",version);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
 				gahp_output_return_success();
 				DC_Exit(0);
@@ -438,6 +441,7 @@ handle_results( std::string line ) {
 		if (!new_results_signaled) {
 			printf ("R\n");
 			fflush (stdout);
+			dprintf(D_FULLDEBUG,"put stdout: R\n");
 		}
 		new_results_signaled = TRUE;	// So that we only do it once
 	}
@@ -511,17 +515,19 @@ verify_number (const char * s) {
 void
 gahp_output_return (const char ** results, const int count) {
 	int i=0;
+	std::string buff;
 
 	for (i=0; i<count; i++) {
-		printf ("%s", results[i]);
+		buff+=results[i];
 		if (i < (count - 1 )) {
-			printf (" ");
+			buff+=' ';
 		}
 	}
 
-
-	printf ("\n");
+	buff += '\n';
+	printf ("%s", buff.c_str());
 	fflush(stdout);
+	dprintf(D_FULLDEBUG,"put stdout: %s",buff.c_str());
 }
 
 void
