@@ -8118,6 +8118,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=491
 
+[QUEUE_SUPER_USER_MAY_IMPERSONATE]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Queue Super Users
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd,qmgmt
+id=491
+
 [QUEUE_ALL_USERS_TRUSTED]
 aliases=
 default=false
