@@ -432,10 +432,12 @@ void INFNBatchJob::doEvaluateState()
 			errorString = "";
 			if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
-			} else if ( remoteJobId == NULL ) {
-				gmState = GM_CLEAR_REQUEST;
-			} else {
+			} else if ( remoteJobId != NULL ) {
 				gmState = GM_SUBMITTED;
+			} else if ( remoteSandboxId != NULL ) {
+				gmState = GM_TRANSFER_INPUT;
+			} else {
+				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
 		case GM_UNSUBMITTED: {
