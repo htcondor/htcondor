@@ -672,6 +672,8 @@ static void test_exprlist(const Parameters &, Results &results)
     can_evaluate = classad->EvaluateExpr("member(foo, {1, 2, blah, 3})", value);
     TEST("Can evaluate list in member() outside of ClassAd", can_evaluate == true);
 
+	delete classad;
+
     return;
 }
 
@@ -753,13 +755,21 @@ static void test_value(const Parameters &, Results &results)
     TEST("GetType gives LIST_VALUE", (v.GetType() == Value::LIST_VALUE));
     delete l;
 
+    classad_shared_ptr<ExprList> sl(new ExprList());
+    ll = NULL;
+    v.SetListValue(sl);
+    is_expected_type = v.IsListValue(ll);
+    TEST("Value is list value", is_expected_type);
+    TEST("List value is correct", sl.get() == ll);
+    TEST("GetType gives SLIST_VALUE", (v.GetType() == Value::SLIST_VALUE));
+
     ClassAd *c = new ClassAd();
     ClassAd *cc = NULL;
     v.SetClassAdValue(c);
     is_expected_type = v.IsClassAdValue(cc);
     TEST("Value is ClassAd value", is_expected_type);
     TEST("ClassAd value is correct", c == cc);
-    TEST("GetType gives LIST_VALUE", (v.GetType() == Value::CLASSAD_VALUE));
+    TEST("GetType gives CLASSAD_VALUE", (v.GetType() == Value::CLASSAD_VALUE));
     delete c;
 
     return;

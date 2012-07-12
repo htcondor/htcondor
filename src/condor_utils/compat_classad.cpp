@@ -481,7 +481,7 @@ bool splitAt_func( const char * name,
 		second.SetStringValue(str.substr(ix+1));
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 	lst->push_back(classad::Literal::MakeLiteral(first));
 	lst->push_back(classad::Literal::MakeLiteral(second));
