@@ -44,6 +44,17 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
 
+\item The new configuration variable
+\MacroNI{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
+expression that matches the usernames (i.e. job owner names) that
+the queue super user may impersonate when managing jobs.  When not
+set, the default behavior is to allow impersonation of any user who
+has had a job in the queue during the life of the schedd.  For
+proper functioning of \Condor{shadow}, \Condor{gridmanager}, and
+\Condor{job\_router}, this expression, if set, must match the owner
+names of all jobs that these daemons will manage.
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
