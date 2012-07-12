@@ -251,6 +251,7 @@ stdin_pipe_handler(Service*, int) {
 						SandboxEnt e;
 						e.sandbox_id = sid;
 						e.request_id = rid;
+						e.is_download = true;
 						e.ft = new FileTransfer();
 
 						if (e.ft->Init(&ad)) {
@@ -341,6 +342,7 @@ stdin_pipe_handler(Service*, int) {
 					SandboxEnt e;
 					e.sandbox_id = sid;
 					e.request_id = rid;
+					e.is_download = false;
 					e.ft = new FileTransfer();
 
 					if (e.ft->Init(&ad)) {
@@ -564,40 +566,45 @@ ftgahp_reaper(FileTransfer *filetrans) {
 	free (tmp);
 	tmp = NULL;
 
-	std::string path;
-	path = "/tmp/condor";
-
 	// map sid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
 	i = sandbox_map.find(sid);
 
-	// part 2
-	SandboxEnt e;
-	e = i->second;
+	// is this an UP or DOWN load
 
 	if(i == sandbox_map.end()) {
 		// not found:
 		dprintf(D_ALWAYS, "ZKM-WTF: sandbox %s not found in ftgahp_reaper\n", sid.c_str());
 	} else {
+		std::string path;
+		path = "/tmp/condor";
+
+		// part 2
+		SandboxEnt e;
+		e = i->second;
+
 		ClassAd myad = e.ft->job_ad();
 		myad.LookupString(ATTR_JOB_IWD, path);
+
+		if (e.is_download) {
+			// with download, return sandbox_path
+			const char * res[2] = {
+				//err.c_str(),
+				"NULL",
+				path.c_str()
+			};
+
+			enqueue_result(rid, res, 2);
+		} else {
+			// with upload, do not
+			const char * res[1] = {
+				"NULL"
+			};
+
+			enqueue_result(rid, res, 1);
+		}
+
 	}
-
-
-//	if(d_vs_u){
-//		// figure it out
-//	}
-
-	// TODO ZKM THIS IS WRONG, but a good start.
-	const char * res[2] = {
-		//err.c_str(),
-		"NULL",
-		path.c_str()
-	};
-
-
-	enqueue_result(rid, res, 2);
-
 
 	sandbox_map.erase(sid);
 

@@ -49,6 +49,7 @@
 struct SandboxEnt {
 	std::string sandbox_id;
 	std::string request_id;
+	bool is_download;
 	FileTransfer *ft;
 };
 
