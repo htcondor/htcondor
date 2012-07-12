@@ -47,14 +47,16 @@
 
 // the struct we store per-sandbox
 struct SandboxEnt {
+	int pid;
 	std::string sandbox_id;
 	std::string request_id;
-	bool is_download;
-	FileTransfer *ft;
+//	bool is_download;
+//	FileTransfer *ft;
 };
 
 // our map of <sandbox_id> to <sandbox_struct>
-typedef _unordered_map<std::string, struct SandboxEnt> SandboxMap;
+//typedef _unordered_map<std::string, struct SandboxEnt> SandboxMap;
+typedef _unordered_map<int, struct SandboxEnt> SandboxMap;
 SandboxMap sandbox_map;
 
 
@@ -86,6 +88,9 @@ void define_sandbox_path(std::string sid, std::string &path);
 
 void define_path(std::string sid, std::string &path);
 bool create_sandbox_dir (std::string sid, std::string &iwd);
-bool destroy_sandbox(std::string sid, std::string err);
+bool destroy_sandbox(std::string sid, std::string &err);
+
+int do_command_download_sandbox(void *arg, Stream*);
+int download_sandbox_reaper(Service*, int, int);
 
 #endif
