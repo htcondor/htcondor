@@ -535,7 +535,7 @@ fi
 echo "Installing BOSCO on $remote_host..."
 
 # Make the necessary remote directories
-ssh $remote_host "mkdir -p bosco/glite/lib"
+ssh $remote_host "mkdir -p bosco/glite/lib; mkdir bosco/glite/log; mkdir bosco/sandbox"
 
 # Copy over blahp
 rsync -aq $glite_location/[^l]* $remote_host:bosco/glite/
@@ -548,6 +548,12 @@ rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/libcondor_utils* $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
 rsync -aq  $release_dir/libexec/campus_factory/share $remote_host:bosco/campus_factory/
+rsync -aq  $release_dir/sbin/condor_ft-gahp $remote_host:bosco/glite/bin
+ssh $remote_host "cat >bosco/glite/etc/condor_config.ft-gahp" <<EOF
+BOSCO_SANDBOX_DIR=\$ENV(HOME)/bosco/sandbox
+LOG=\$ENV(HOME)/bosco/glite/log
+FT_GAHP_LOG=\$(LOG)/FTGahpLog
+EOF
 
 # Generate the password file, if it doesn't already exist 
 bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
