@@ -2688,6 +2688,9 @@ bool param(MyString &buf,char const *param_name,char const *default_value)
 	else if( default_value ) {
 		buf = default_value;
 	}
+	else {
+		buf = "";
+	}
 	free( param_value );
 	return found;
 }
@@ -2702,6 +2705,9 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	}
 	else if( default_value ) {
 		buf = default_value;
+	}
+	else {
+		buf = "";
 	}
 	free( param_value );
 	return found;
