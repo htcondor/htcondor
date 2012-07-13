@@ -8046,6 +8046,52 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   the \Condor{job\_router} does not attempt to reset the original job
   ClassAd to a pre-claimed state upon yielding control of the job.
 
+\label{JobRouterSchedd1Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to
+  \Macro{SPOOL}.  If specified, this parameter must point to the spool
+  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}.
+
+\label{JobRouterSchedd2Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  \Macro{SPOOL}.  If specified, this parameter must point to the spool
+  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}.
+
+\label{JobRouterSchedd1Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
+  The advertised daemon name of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+  will also need to be set.
+
+\label{JobRouterSchedd2Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_NAME}]
+  The advertised daemon name of the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  the local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+  will also need to be set.
+
+\label{JobRouterSchedd1Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
+  The Condor pool (collector address) of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local pool.
+
+\label{JobRouterSchedd2Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
+  The Condor pool (collector address) of the \Condor{schedd} to which
+  the routed copy of the jobs are submitted.  If not specified, this
+  defaults to the local pool.
+
 \end{description}
 
 

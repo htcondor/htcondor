@@ -33,7 +33,22 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{job\_router} can now submit the routed copy of jobs to a
+different \Condor{schedd} than the one that serves as the source of
+jobs to be routed.  The spool directories of the two
+\Condor{schedds} must still be directly accessible to
+\Condor{job\_router}.  This feature is enabled by using the new
+optional configuration settings:
+
+\begin{itemize}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+\end{itemize}
+\Ticket{3030}
 
 \end{itemize}
 
@@ -55,6 +70,51 @@ the \Condor{job\_router}, this expression, if set, must match the owner
 names of all jobs that these daemons will manage.
 \Ticket{3030}
 
+\label{JobRouterSchedd1Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to
+  \Macro{SPOOL}.  If specified, this parameter must point to the spool
+  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}.
+
+\label{JobRouterSchedd2Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  \Macro{SPOOL}.  If specified, this parameter must point to the spool
+  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}.
+
+\label{JobRouterSchedd1Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
+  The advertised daemon name of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+  will also need to be set.
+
+\label{JobRouterSchedd2Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_NAME}]
+  The advertised daemon name of the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  the local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+  will also need to be set.
+
+\label{JobRouterSchedd1Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
+  The Condor pool (collector address) of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local pool.
+
+\label{JobRouterSchedd2Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
+  The Condor pool (collector address) of the \Condor{schedd} to which
+  the routed copy of the jobs are submitted.  If not specified, this
+  defaults to the local pool.
 
 \end{itemize}
 
