@@ -38,6 +38,8 @@
 #include "historyFileFinder.h"
 
 #include "history_utils.h"
+#include "backward_file_reader.h"
+#include <fcntl.h>  // for O_BINARY
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -45,7 +47,6 @@
 #endif /* HAVE_EXT_POSTGRESQL */
 
 #define NUM_PARAMETERS 3
-
 
 void Usage(char* name, int iExitCode=1);
 
@@ -79,8 +80,10 @@ static bool checkDBconfig();
 static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static void readHistoryFromFiles(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
-static void readHistoryFromFile(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFiles(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
+
 
 //------------------------------------------------------------------------
 
@@ -153,7 +156,8 @@ main(int argc, char* argv[])
     }
 
 	// must be at least -forw to avoid conflict with -f (for file) and -format
-    else if (is_dash_arg_prefix(argv[i],"forwards",4)) {
+    else if (is_dash_arg_prefix(argv[i],"nobackwards",3) ||
+			 is_dash_arg_prefix(argv[i],"forwards",4)) {
         backwards=FALSE;
     }
 
@@ -565,7 +569,7 @@ static char * getDBConnStr(char *&quillName,
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFiles(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
     // Print header
     if ((!longformat) && (!customFormat)) {
@@ -574,7 +578,7 @@ static void readHistoryFromFiles(char *JobHistoryFileName, const char* constrain
 
     if (JobHistoryFileName) {
         // If the user specified the name of the file to read, we read that file only.
-        readHistoryFromFile(JobHistoryFileName, constraint, constraintExpr);
+        readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
     } else {
         // The user didn't specify the name of the file to read, so we read
         // the history file, and any backups (rotated versions). 
@@ -596,13 +600,13 @@ static void readHistoryFromFiles(char *JobHistoryFileName, const char* constrain
             int fileIndex;
             if (backwards) { // Reverse reading of history files array
                 for(fileIndex = numHistoryFiles - 1; fileIndex >= 0; fileIndex--) {
-                    readHistoryFromFile(historyFiles[fileIndex], constraint, constraintExpr);
+                    readHistoryFromFileEx(historyFiles[fileIndex], constraint, constraintExpr, backwards);
                     free(historyFiles[fileIndex]);
                 }
             }
             else {
                 for (fileIndex = 0; fileIndex < numHistoryFiles; fileIndex++) {
-                    readHistoryFromFile(historyFiles[fileIndex], constraint, constraintExpr);
+                    readHistoryFromFileEx(historyFiles[fileIndex], constraint, constraintExpr, backwards);
                     free(historyFiles[fileIndex]);
                 }
             }
@@ -615,7 +619,7 @@ static void readHistoryFromFiles(char *JobHistoryFileName, const char* constrain
 // Given a history file, returns the position offset of the last delimiter
 // The last delimiter will be found in the last line of file, 
 // and will start with the "***" character string 
-static long findLastDelimiter(FILE *fd, char *filename)
+static long findLastDelimiter(FILE *fd, const char *filename)
 {
     int         i;
     bool        found;
@@ -661,7 +665,7 @@ static long findLastDelimiter(FILE *fd, char *filename)
 // previous delimiter offset position.
 // If clusterId and procId is specified, it will not return the immediately
 // previous delimiter, but the nearest previous delimiter that matches
-static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
+static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 {
     MyString buf;
     char *owner;
@@ -730,7 +734,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
 } 
 
 // Read the history from a single file and print it out. 
-static void readHistoryFromFile(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
     int EndFlag   = 0;
     int ErrorFlag = 0;
@@ -872,3 +876,162 @@ static void readHistoryFromFile(char *JobHistoryFileName, const char* constraint
     fclose(LogFile);
     return;
 }
+
+// return true if p1 starts with p2
+// if ppEnd is not NULL, return a pointer to the first non-matching char of p1
+static bool starts_with(const char * p1, const char * p2, const char ** ppEnd = NULL)
+{
+	if ( ! p2 || ! *p2)
+		return false;
+
+	const char * p1e = p1;
+	const char * p2e = p2;
+	while (*p2e) {
+		if (*p1e != *p2e)
+			return false;
+		++p2e; ++p1e;
+	}
+	if (ppEnd)
+		*ppEnd = p1e;
+	return true;
+}
+
+// convert list of expressions into a classad
+//
+static void printJobIfConstraint(std::vector<std::string> & exprs, const char* constraint, ExprTree *constraintExpr)
+{
+	if ( ! exprs.size())
+		return;
+
+	ClassAd ad;
+	size_t ix;
+
+	// convert lines vector into classad.
+	while ((ix = exprs.size()) > 0) {
+		const char * pexpr = exprs[ix-1].c_str();
+		if ( ! ad.Insert(pexpr)) {
+			dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", pexpr);
+			printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
+			exprs.clear();
+			return;
+		}
+		exprs.pop_back();
+	}
+
+	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
+		if (longformat) {
+			if (use_xml) {
+				ad.fPrintAsXML(stdout);
+			} else {
+				ad.fPrint(stdout);
+			}
+			printf("\n");
+		} else {
+			if (customFormat) {
+				mask.display(stdout, &ad);
+			} else {
+				displayJobShort(&ad);
+			}
+		}
+		matchCount++; // if control reached here, match has occured
+	}
+}
+
+static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards)
+{
+	// In case of rotated history files, check if we have already reached the number of 
+	// matches specified by the user before reading the next file
+	if ((specifiedMatch != 0) && (matchCount == specifiedMatch)) {
+		return;
+	}
+
+	// the old function doesn't work for backwards, but it does work for forwards so go ahead and call it.
+	//
+	if ( ! read_backwards) {
+		readHistoryFromFileOld(JobHistoryFileName, constraint, constraintExpr);
+		return;
+	}
+
+	// do backwards reading.
+	BackwardFileReader reader(JobHistoryFileName, O_RDONLY);
+	if (reader.LastError()) {
+		// report error??
+		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(reader.LastError()));
+		exit(1);
+	}
+
+	if(longformat && use_xml) {
+		ClassAdXMLUnparser unparser;
+		MyString out;
+		unparser.AddXMLFileHeader(out);
+		printf("%s\n", out.Value());
+	}
+
+	std::string line;        // holds the current line from the log file.
+	std::string banner_line; // the contents of the "*** " banner line for the job we are scanning
+
+	// the last line in the file should be a "*** " banner line.
+	// we want to scan backwards until we find it, what is above that in the file is the job
+	// information for that banner line.
+	while (reader.PrevLine(line)) {
+		if (starts_with(line.c_str(), "*** ")) {
+			banner_line = line;
+			break;
+		}
+	}
+
+	std::vector<std::string> exprs;
+	while (reader.PrevLine(line)) {
+
+		// the banner is at the end of the job information, so when we get to on, we 
+		// know that we are done accumulating expressions into the vector.
+		if (starts_with(line.c_str(), "*** ")) {
+
+			// TODO: extract information from banner line and use it to skip parsing 
+			// the job ad for the simple query for Cluster, Proc, or Owner.
+
+			if (exprs.size() > 0) {
+				printJobIfConstraint(exprs, constraint, constraintExpr);
+				exprs.clear();
+			}
+
+			// the current line is the banner that starts (ends) the next job record
+			// if we already hit our match count, we can stop now.
+			banner_line = line;
+			if ((specifiedMatch != 0) && (matchCount == specifiedMatch))
+				break;
+
+		} else {
+
+			// we have to parse the lines in from the start of the file to the end
+			// to handle chained ads correctly, so here we just push the lines into
+			// a vector as they arrive.  note that this puts them in the vector backwards
+			// comments can be discarded at this point.
+			if ( ! line.empty()) {
+				const char * psz = line.c_str();
+				while (*psz == ' ' || *psz == '\t') ++psz;
+				if (*psz != '#') {
+					exprs.push_back(line);
+				}
+			}
+		}
+	}
+
+	// when we hit the start of the file, we may still have 1 job record to print out.
+	// TODO: verify that the Offset in the banner is 0 at this point. 
+	if (exprs.size() > 0) {
+		if ((specifiedMatch <= 0) || (matchCount < specifiedMatch))
+			printJobIfConstraint(exprs, constraint, constraintExpr);
+		exprs.clear();
+	}
+
+	if(longformat && use_xml) {
+		ClassAdXMLUnparser unparser;
+		MyString out;
+		unparser.AddXMLFileFooter(out);
+		printf("%s\n", out.Value());
+	}
+	reader.Close();
+}
+
+

@@ -112,7 +112,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   hgq_root_group = root_group;
   hgq_submitter_group_map.clear();
   // Pre-set mapping from all defined group names to themselves.
-  deque<GroupEntry*> grpq;
+  std::deque<GroupEntry*> grpq;
   grpq.push_back(hgq_root_group);
   while (!grpq.empty()) {
       GroupEntry* group = grpq.front();
@@ -1065,7 +1065,7 @@ ClassAd* Accountant::ReportState(bool rollup) {
     // assign acct group index numbers first, breadth first ordering
     int EntryNum=1;
     map<string, int> gnmap;
-    deque<GroupEntry*> grpq;
+    std::deque<GroupEntry*> grpq;
     grpq.push_back(hgq_root_group);
     while (!grpq.empty()) {
         GroupEntry* group = grpq.front();
@@ -1291,13 +1291,13 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     ad->LookupInteger(tmp.c_str(), BeginUsageTime);
     sprintf(tmp, "BeginUsageTime%d", pnum);
     ad->LookupInteger(tmp.c_str(), ival);
-    ad->Assign(tmp.c_str(), min(ival, BeginUsageTime));
+    ad->Assign(tmp.c_str(), std::min(ival, BeginUsageTime));
 
     sprintf(tmp, "LastUsageTime%d", gnum);
     ad->LookupInteger(tmp.c_str(), LastUsageTime);
     sprintf(tmp, "LastUsageTime%d", pnum);
     ad->LookupInteger(tmp.c_str(), ival);
-    ad->Assign(tmp.c_str(), max(ival, LastUsageTime));
+    ad->Assign(tmp.c_str(), std::max(ival, LastUsageTime));
 }
 
 

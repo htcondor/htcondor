@@ -242,8 +242,8 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
-const string  RequestPrefix  = "request_";
-std::set<string> fixedReqRes;
+const std::string  RequestPrefix  = "request_";
+std::set<std::string> fixedReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -2508,21 +2508,21 @@ void SetFileOptions()
 void SetRequestResources() {
     HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        string key = hash_iter_key(it);
+        std::string key = hash_iter_key(it);
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         // if key is not of form "request_xxx", ignore it:
         if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        string rname = key.substr(RequestPrefix.length());
+        std::string rname = key.substr(RequestPrefix.length());
         // resource name should be nonempty
         if (rname.size() <= 0) continue;
         // CamelCase it!
         *(rname.begin()) = toupper(*(rname.begin()));
         // could get this from 'it', but this prevents unused-line warnings:
-        string val = condor_param(key.c_str());
-        string assign;
+        std::string val = condor_param(key.c_str());
+        std::string assign;
         sprintf(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
         InsertJobExpr(assign.c_str()); 
     }
@@ -5520,14 +5520,14 @@ SetGridParams()
 	}
 	hash_iter_delete(&it);
 
-	stringstream ss;
+	std::stringstream ss;
 	char *tagName;
 	tagNames.rewind();
 	while ((tagName = tagNames.next())) {
 			// XXX: Check that tagName does not contain an equal sign (=)
-		string tag;
-		string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
-		string tagCmd("ec2_tag_"); tagCmd.append(tagName);
+		std::string tag;
+		std::string tagAttr(ATTR_EC2_TAG_PREFIX); tagAttr.append(tagName);
+		std::string tagCmd("ec2_tag_"); tagCmd.append(tagName);
 		char *value = NULL;
 		if ((value = condor_param(tagCmd.c_str(), tagAttr.c_str()))) {
 			buffer.sprintf("%s = \"%s\"", tagAttr.c_str(), value);
@@ -6812,19 +6812,19 @@ check_requirements( char const *orig, MyString &answer )
     // identify any custom pslot resource reqs and add them in:
     HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        string key = hash_iter_key(it);
+        std::string key = hash_iter_key(it);
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         // if key is not of form "request_xxx", ignore it:
         if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        string rname = key.substr(RequestPrefix.length());
+        std::string rname = key.substr(RequestPrefix.length());
         // resource name should be nonempty
         if (rname.size() <= 0) continue;
         // CamelCase it!
         *(rname.begin()) = toupper(*(rname.begin()));
-        string clause;
+        std::string clause;
         sprintf(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
         answer += clause;
     }

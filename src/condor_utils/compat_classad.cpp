@@ -58,6 +58,8 @@ Reconfig()
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::_useOldClassAdSemantics = !m_strictEvaluation;
 
+	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", true) );
+
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
 		StringList new_libs_list( new_libs );
@@ -481,7 +483,7 @@ bool splitAt_func( const char * name,
 		second.SetStringValue(str.substr(ix+1));
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 	lst->push_back(classad::Literal::MakeLiteral(first));
 	lst->push_back(classad::Literal::MakeLiteral(second));

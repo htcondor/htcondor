@@ -552,7 +552,7 @@ void MachAttributes::init_machine_resources() {
         const string invprefix = "INVENTORY_";
         const string restr = prefix + "(.+)";
         ASSERT(re.compile(restr.c_str(), &pszMsg, &err, PCRE_CASELESS));
-        vector<string> resdef;
+	std::vector<std::string> resdef;
         const int n = param_names_matching(re, resdef);
         for (int j = 0;  j < n;  ++j) {
             string rname = resdef[j].substr(prefix.length());

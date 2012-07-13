@@ -85,6 +85,7 @@ public:
 	friend class SecMan;
 	friend class SecManStartCommand;
 	friend class SharedPortListener;
+	friend class SharedPortEndpoint;
 
 	/*
 	**	Methods

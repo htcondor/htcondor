@@ -236,6 +236,7 @@ Unparse(
 			UnparseAux(buffer, attrs, indent);
 			break;
 		}
+		case Value::SLIST_VALUE:
 		case Value::LIST_VALUE: {
 			const ExprList *el = NULL;
 			vector<ExprTree*> exprs;

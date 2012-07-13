@@ -42,7 +42,7 @@ StartdNamedClassAdList::Register( StartdNamedClassAd *ad )
 int
 StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id )
 {
-	list<NamedClassAd *>::iterator iter;
+	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		NamedClassAd		*nad = *iter;
 		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);

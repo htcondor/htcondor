@@ -32,8 +32,6 @@
 #include "CondorError.h"
 #include <set>
 
-using namespace std;
-
 class ThrottleByCategory;
 class Dag;
 
@@ -193,7 +191,7 @@ class Job {
 	Script * _scriptPost;
 
     ///
-    inline set<JobID_t> & GetQueueRef (const queue_t queue) {
+    inline std::set<JobID_t> & GetQueueRef (const queue_t queue) {
         return _queues[queue];
     }
 
@@ -542,7 +540,7 @@ private:
 		waiting -> Jobs on which the current Job is waiting for output
     */ 
 	
-	set<JobID_t> _queues[3];
+	std::set<JobID_t> _queues[3];
 
     /*	The ID of this job.  This serves as a primary key for Jobs, where each
 		Job's ID is unique from all the rest 

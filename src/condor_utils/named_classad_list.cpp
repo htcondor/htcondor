@@ -33,7 +33,7 @@ NamedClassAdList::NamedClassAdList( void )
 
 NamedClassAdList::~NamedClassAdList( void )
 {
-	list<NamedClassAd *>::iterator iter;
+	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		delete *iter;
 	}
@@ -43,7 +43,7 @@ NamedClassAdList::~NamedClassAdList( void )
 NamedClassAd *
 NamedClassAdList::Find( const char *name )
 {
-	list<NamedClassAd *>::iterator iter;
+	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		NamedClassAd	*nad = *iter;
 		if ( ! strcmp( nad->GetName( ), name ) ) {
@@ -125,7 +125,7 @@ NamedClassAdList::Replace( const char *name, ClassAd *newAd,
 int
 NamedClassAdList::Delete( const char *name )
 {
-	list<NamedClassAd *>::iterator iter;
+	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		NamedClassAd	*ad = *iter;
 		if ( ! strcmp( ad->GetName( ), name ) ) {
@@ -142,7 +142,7 @@ NamedClassAdList::Delete( const char *name )
 int
 NamedClassAdList::Publish( ClassAd *merged_ad )
 {
-	list<NamedClassAd *>::iterator iter;
+	std::list<NamedClassAd *>::iterator iter;
 	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
 		NamedClassAd	*nad = *iter;
 		ClassAd			*ad = nad->GetAd( );

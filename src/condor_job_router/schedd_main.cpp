@@ -28,9 +28,7 @@
 #include "JobRouter.h"
 
 
-Scheduler *schedd;
 JobRouter *job_router;
-NewClassAdJobLogConsumer *log_consumer;
 
 //-------------------------------------------------------------
 
@@ -38,13 +36,7 @@ void main_init(int   /*argc*/, char ** /*argv*/)
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-	log_consumer = new NewClassAdJobLogConsumer();
-
-	schedd = new Scheduler(log_consumer);
-
-	schedd->init();
-
-	job_router = new JobRouter(schedd);
+	job_router = new JobRouter();
 	job_router->init();
 }
 
@@ -55,16 +47,12 @@ main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 
-	schedd->config();
 	job_router->config();
 }
 
 static void Stop()
 {
 	// JobRouter creates an instance lock, so delete it now to clean up.
-	schedd->stop();
-	delete schedd;
-	schedd = NULL;
 	delete job_router;
 	job_router = NULL;
 	DC_Exit(0);

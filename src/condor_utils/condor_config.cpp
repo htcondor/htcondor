@@ -1107,7 +1107,7 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 4;
+		const int locations_length = 4;
 		MyString locations[locations_length];
 			// 1) $HOME/.condor/condor_config
 		struct passwd *pw = getpwuid( geteuid() );
@@ -2688,6 +2688,9 @@ bool param(MyString &buf,char const *param_name,char const *default_value)
 	else if( default_value ) {
 		buf = default_value;
 	}
+	else {
+		buf = "";
+	}
 	free( param_value );
 	return found;
 }
@@ -2702,6 +2705,9 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	}
 	else if( default_value ) {
 		buf = default_value;
+	}
+	else {
+		buf = "";
 	}
 	free( param_value );
 	return found;

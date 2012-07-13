@@ -45,6 +45,8 @@
 #include <map>
 #include <iostream>
 
+#include "backward_file_reader.h"
+
 using std::vector;
 using std::map;
 using std::string;
@@ -89,7 +91,7 @@ static struct {
 	bool   full_ads;
 	bool   job_ad;		     // debugging
 	bool   ping_all_addrs;	 // 
-	int    test_backwards;   // test backwards reading code.
+	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
 	vector<const char *> query_addrs;
@@ -110,7 +112,7 @@ void InitAppGlobals(const char * argv0)
 	App.full_ads = false;
 	App.job_ad = false;     // debugging
 	App.ping_all_addrs = false;
-	App.test_backwards = false;
+	App.test_backward = false;
 }
 
 	// Tell folks how to use this program
@@ -521,7 +523,7 @@ void parse_args(int /*argc*/, char *argv[])
 			} else if (IsArg(parg, "ping_all_addrs", 4)) {
 				App.ping_all_addrs = true;
 			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
-				App.test_backwards = pcolon ? atoi(pcolon) : 1;
+				App.test_backward = pcolon ? atoi(pcolon) : 1;
 			}
 		}
 	}
@@ -831,251 +833,10 @@ static void read_address_file(const char * filename, std::string & addr)
 	addr = buf;
 }
 
-class BWReaderBuffer {
 
-protected:
-	char * data;
-	int    cbData;
-	int    cbAlloc;
-	bool   at_eof;
-	int    error;
-
-public:
-	BWReaderBuffer(int cb=0, char * input = NULL) 
-		: data(input), cbData(cb), cbAlloc(cb), at_eof(false), error(0) {
-		if (input) {
-			cbAlloc = cbData = cb;
-		} else if (cb > 0) {
-			data = (char*)malloc(cb);
-			memset(data, 17, cb);
-			cbData = 0;
-		}
-	}
-
-	~BWReaderBuffer() {
-		if (data)
-			free(data);
-		data = NULL;
-		cbData = cbAlloc = 0;
-	}
-
-	void clear() { cbData = 0; }
-	void setsize(int cb) { cbData = cb; ASSERT(cbData <= cbAlloc); }
-	int size() { return cbData; }
-	int capacity() { return cbAlloc-1; }
-	int LastError() { return error; }
-	bool AtEOF() { return at_eof; }
-	char operator[](int ix) const { return data[ix]; }
-	char& operator[](int ix) { return data[ix]; }
-
-	bool reserve(int cb) {
-		if (data && cbAlloc >= cb)
-			return true;
-		void * pv = realloc(data, cb);
-		if (pv) {
-			data = (char*)pv;
-			cbAlloc = cb;
-			return true;
-		}
-		return false;
-	}
-
-	/* returns number of characters read. or 0 on error use LastError & AtEOF methods to know which.
-	*/
-	int fread_at(FILE * file, off_t offset, int cb) {
-		if ( ! reserve(((cb + 16) & ~15) + 16))
-			return 0;
-
-		fseek(file, offset, SEEK_SET);
-
-		int ret = fread(data, 1, cb, file);
-		cbData = ret;
-
-		if (ret <= 0) {
-			error = ferror(file);
-			return 0;
-		} else {
-			error = 0;
-		}
-
-		// on windows we can consume more than we read because of \r
-		// but since we are scanning backwards this can cause us to re-read
-		// the same bytes more than once. So lop off the end of the buffer so
-		// so we only get back the unique bytes
-		at_eof = feof(file);
-		if ( ! at_eof) {
-			off_t end_offset = ftell(file);
-			int extra = (int)(end_offset - (offset + ret));
-			ret -= extra;
-		}
-
-		if (ret < cbAlloc) {
-			data[ret] =  0; // force null terminate.
-		} else {
-			// this should NOT happen
-			EXCEPT("BWReadBuffer is unexpectedly too small!");
-		}
-
-		return ret;
-	}
-};
-
-class BackwardsReader {
-protected:
-	int error;
-	FILE * file;
-	filesize_t cbFile;
-	off_t      cbPos;
-	BWReaderBuffer buf;
-
-public:
-	BackwardsReader(std::string filename, int open_flags) 
-		: error(0), file(NULL), cbFile(0), cbPos(0) {
-		int fd = safe_open_wrapper_follow(filename.c_str(), open_flags);
-		if (fd < 0)
-			error = errno;
-		else
-			OpenFile(fd, "rb");
-	}
-	BackwardsReader(int fd, const char * open_options) 
-		: error(0), file(NULL), cbFile(0), cbPos(0) {
-		OpenFile(fd, open_options);
-	}
-	~BackwardsReader() {
-		if (file) fclose(file);
-		file = NULL;
-	}
-
-	int  LastError() { 
-		return error; 
-	}
-	bool AtEOF() { 
-		if ( ! file || (cbPos >= cbFile))
-			return true; 
-		return false;
-	}
-	bool AtBOF() { 
-		if ( ! file || (cbPos == 0))
-			return true; 
-		return false;
-	}
-	void Close() {
-		if ( file) fclose(file);
-		file = NULL;
-	}
-
-#if 0
-	bool NextLine(std::string & str) {
-		// write this
-		return false;
-	}
-#endif
-	bool PrevLine(std::string & str) {
-		str.clear();
-
-		// can we get a previous line out of our existing buffer?
-		// then do that.
-		if (PrevLineFromBuf(str))
-			return true;
-
-		// no line in the buffer? then return false
-		if (AtBOF())
-			return false;
-
-		const int cbBack = 512;
-		while (true) {
-			int off = cbPos > cbBack ? cbPos - cbBack : 0;
-			int cbToRead = (int)(cbPos - off);
-
-			// we want to read in cbBack chunks at cbBack aligment, of course
-			// this only makes sense to do if cbBack is a power of 2. 
-			// also, in order to get EOF to register, we have to read a little 
-			// so we may want the first read (from the end, of course) to be a bit 
-			// larger than cbBack so that we read at least cbBack but also end up
-			// on cbBack alignment. 
-			if (cbFile == cbPos) {
-				// test to see if cbBack is a power of 2, if it is, then set our
-				// seek to align on cbBack.
-				if (!(cbBack & (cbBack-1))) {
-					// seek to an even multiple of cbBack at least cbBack from the end of the file.
-					off = (cbFile - cbBack) & ~(cbBack-1);
-					cbToRead = cbFile - off;
-				}
-				cbToRead += 16;
-			}
-
-			if ( ! buf.fread_at(file, off, cbToRead)) {
-				if (buf.LastError()) {
-					error = buf.LastError();
-					return false;
-				}
-			}
-
-			cbPos = off;
-
-			// try again to get some data from the buffer
-			if (PrevLineFromBuf(str) || AtBOF())
-				return true;
-		}
-	}
-
-private:
-	bool OpenFile(int fd, const char * open_options) {
-		file = fdopen(fd, open_options);
-		if ( ! file) {
-			error = errno;
-		} else {
-			// seek to the end of the file.
-			fseek(file, 0, SEEK_END);
-			cbFile = cbPos = ftell(file);
-			error = 0;
-		}
-		return error != 0;
-	}
-
-	// prefixes or part of a line into str, and updates internal
-	// variables to keep track of what parts of the buffer have been returned.
-	bool PrevLineFromBuf(std::string & str)
-	{
-		// if we have no buffered data, then there is nothing to do
-		int cb = buf.size();
-		if (cb <= 0)
-			return false;
-
-		// if buffer ends in a newline, convert it to a \0
-		if (buf[--cb] == '\n') {
-			buf[cb] = 0;
-		}
-		// because of windows style \r\n, we also tolerate a \r at the end of the line
-		if (buf[cb-1] == '\r') {
-			buf[--cb] = 0;
-		}
-
-		// now we walk backward through the buffer until we encounter another newline
-		// returning all of the characters that we found.
-		while (cb > 0) {
-			if (buf[--cb] == '\n') {
-				str.insert(0, &buf[cb+1]);
-				buf[cb] = 0;
-				buf.setsize(cb);
-				return true;
-			}
-		}
-
-		// we hit the start of the buffer without finding another newline,
-		// so return that text, but only return true if we are also at the start
-		// of the file.
-		str.insert(0, &buf[0]);
-		buf[0] = 0;
-		buf.clear();
-
-		return (0 == cbPos);
-	}
-};
-
-// scan backwards through a daemon log file and extract PID and Address information
+// scan backward through a daemon log file and extract PID and Address information
 // this code looks as the LAST daemon startup banner and a few lines after it to get
-// this information.  it scan's backwards from the end of the file and quits as soon
+// this information.  It scans backwards from the end of the file and quits as soon
 // as it gets to the startup banner. this code looks for:
 //		" (CONDOR_DAEMON) STARTING UP"  (where DAEMON is MASTER, SCHEDD, etc)
 //		" ** Log last touched "
@@ -1130,7 +891,7 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LO
 		printf("using '%s' as banner\n", startup_banner_text.c_str());
 	}
 
-	BackwardsReader reader(filename, O_RDONLY);
+	BackwardFileReader reader(filename, O_RDONLY);
 	if (reader.LastError()) {
 		// report error??
 		if (App.diagnostic) {
@@ -1145,7 +906,7 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LO
 	std::string possible_daemon_addr;
 	bool bInsideBanner = false;
 	bool bInsideJobStartup = false;
-	bool bEchoLines = App.test_backwards != 0;
+	bool bEchoLines = App.test_backward != 0;
 
 	std::string line;
 	while (reader.PrevLine(line)) {
@@ -1330,7 +1091,7 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LO
 		}
 	}
 
-	if (App.test_backwards > 1) {
+	if (App.test_backward > 1) {
 		printf("------- scanning complete -------\n");
 		while (reader.PrevLine(line)) {
 			printf("%s\n", line.c_str());
@@ -1372,7 +1133,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 	}
 
 #else
-	// scan the masterlog backwards until we find the STARTING UP banner
+	// scan the masterlog backward until we find the STARTING UP banner
 	// looking for places where the log mentions the PIDS of the daemons.
 	//
 	if (info.find("Master") != info.end()) {
@@ -1381,7 +1142,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		sprintf(filename, "%s%c%s", pliMaster->log_dir.c_str(), DIR_DELIM_CHAR, pliMaster->log.c_str());
 		if (App.diagnostic) { printf("scanning master log file '%s' for pids\n", filename.c_str()); }
 
-		BackwardsReader reader(filename, O_RDONLY);
+		BackwardReader reader(filename, O_RDONLY);
 		if (reader.LastError()) {
 			// report error??
 			if (App.diagnostic) {
@@ -1393,7 +1154,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		std::string possible_master_addr;
 		std::string line;
 		while (reader.PrevLine(line)) {
-			if (App.test_backwards) { printf("%s\n", line.c_str()); }
+			if (App.test_backward) { printf("%s\n", line.c_str()); }
 
 			// " ** ([^\/\\><* \t]+) \(CONDOR_MASTER\) STARTING UP$"
 			if (line.find(" (CONDOR_MASTER) STARTING UP") != string::npos) {
@@ -1405,7 +1166,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 					pliMaster->pid = possible_master_pid;
 				if (pliMaster->addr.empty())
 					pliMaster->addr = possible_master_addr;
-				if (!App.test_backwards) break;
+				if (!App.test_backward) break;
 			}
 			// parse master header
 			size_t ix = line.find(" ** PID = ");
@@ -1483,7 +1244,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
 			if (App.diagnostic) { printf("scanning %s log file '%s' for pids\n", "Schedd", filename.c_str()); }
 
-			BackwardsReader reader(filename, O_RDONLY);
+			BackwardReader reader(filename, O_RDONLY);
 			if (reader.LastError()) {
 				// report error??
 				if (App.diagnostic) {
@@ -1496,7 +1257,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 				std::string possible_daemon_addr;
 				std::string line;
 				while (reader.PrevLine(line)) {
-					if (App.test_backwards) { printf("%s\n", line.c_str()); }
+					if (App.test_backward) { printf("%s\n", line.c_str()); }
 
 					// " ** ([^\/\\><* \t]+) \(CONDOR_SCHEDD\) STARTING UP$"
 					if (line.find(" (CONDOR_SCHEDD) STARTING UP") != string::npos) {
@@ -1508,7 +1269,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 							pliDaemon->pid = possible_daemon_pid;
 						if (pliDaemon->addr.empty())
 							pliDaemon->addr = possible_daemon_addr;
-						if (!App.test_backwards) break;
+						if (!App.test_backward) break;
 					}
 					// parse master header
 					size_t ix = line.find(" ** PID = ");
@@ -1529,7 +1290,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		}
 	}
 
-	// scan the Starter.slotNN logs backwards until we find the STARTING UP banner
+	// scan the Starter.slotNN logs backward until we find the STARTING UP banner
 	// looking for the starter PIDS, and job PIDS & job IDs
 	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
 	{
@@ -1543,7 +1304,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 		sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
 		if (App.diagnostic) printf("scanning %s log file '%s' for pids\n", it->first.c_str(), filename.c_str());
 
-		BackwardsReader reader(filename, O_RDONLY);
+		BackwardReader reader(filename, O_RDONLY);
 		if (reader.LastError()) {
 			// report error??
 			if (App.diagnostic) {

@@ -23,7 +23,7 @@ if (WANT_CONTRIB)
   string(REGEX REPLACE "-Werror" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   #dprint( "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 
-  if (HAVE_EXT_POSTGRESQL)
+  if (HAVE_EXT_POSTGRESQL AND WANT_FULL_DEPLOYMENT)
     option(WANT_QUILL "Support for quill" ON)
   endif()
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/utils")

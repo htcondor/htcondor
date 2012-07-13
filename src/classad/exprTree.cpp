@@ -106,6 +106,9 @@ void ExprTree::debug_format_value(Value &value) const {
 			case Value::LIST_VALUE:
 				result += "LIST\n";
 				break;
+			case Value::SLIST_VALUE:
+				result += "SLIST\n";
+				break;
 		}
 		debug_print(result.c_str());
 }

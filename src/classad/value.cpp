@@ -45,6 +45,7 @@ Value( )
 	integerValue = 0;
 	realValue = 0.0;
 	listValue = NULL;
+	slistValue = NULL;
 	classadValue = NULL;
 	relTimeValueSecs = 0;
 }
@@ -90,7 +91,10 @@ _Clear()
 			// never be explicitly destroyed
 			listValue = NULL;
 			break;
-
+		case SLIST_VALUE:
+			delete slistValue;
+			slistValue = NULL;
+			break;
 		case CLASSAD_VALUE:
 			// classad values live in the evaluation environment, so they must 
 			// never be explicitly destroyed
@@ -229,6 +233,10 @@ CopyFrom( const Value &val )
 			listValue = val.listValue;
 			return;
 
+		case SLIST_VALUE:
+			slistValue = new classad_shared_ptr<ExprList>(*val.slistValue);
+			return;
+
 		case CLASSAD_VALUE:
 			classadValue = val.classadValue;
 			return;
@@ -311,6 +319,14 @@ SetListValue( ExprList *l)
 }
 
 void Value::
+SetListValue( classad_shared_ptr<ExprList> l)
+{
+	_Clear();
+    valueType = SLIST_VALUE;
+    slistValue = new classad_shared_ptr<ExprList>(l);
+}
+
+void Value::
 SetClassAdValue( ClassAd *ad )
 {
 	_Clear();
@@ -368,6 +384,9 @@ SameAs(const Value &otherValue) const
         case Value::LIST_VALUE:
             is_same = listValue->SameAs(otherValue.listValue);
             break;
+        case Value::SLIST_VALUE:
+            is_same = (*slistValue)->SameAs(otherValue.slistValue->get());
+            break;
         case Value::CLASSAD_VALUE:
             is_same = classadValue->SameAs(otherValue.classadValue);
             break;
@@ -420,6 +439,7 @@ ostream& operator<<(ostream &stream, Value &value)
 		stream << value.realValue;
 		break;
 	case Value::LIST_VALUE:
+	case Value::SLIST_VALUE:
 	case Value::CLASSAD_VALUE:
 	case Value::RELATIVE_TIME_VALUE: 
 	case Value::ABSOLUTE_TIME_VALUE: {
@@ -458,6 +478,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 			realValue.SetErrorValue();
 			could_convert = false;
             break;
@@ -556,6 +577,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 			integerValue.SetErrorValue();
 			could_convert = false;
             break;
@@ -651,6 +673,7 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
 
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
 		case Value::INTEGER_VALUE:
 		case Value::REAL_VALUE:
@@ -679,6 +702,28 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
             break;
     }
     return could_convert;
+}
+
+bool Value::
+IsSListValue(classad_shared_ptr<ExprList>& l)
+{
+    if (valueType == SLIST_VALUE) {
+        l = (*slistValue);
+        return true;
+    } else if (valueType == LIST_VALUE) {
+            // we must copy our list, because it does not belong
+            // to a shared_ptr
+        l = classad_shared_ptr<ExprList>( (ExprList*)listValue->Copy() );
+        if( !l ) {
+            return false;
+        }
+            // in case we are called multiple times, stash a shared_ptr
+            // to the copy of the list
+        SetListValue(l);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 } // classad

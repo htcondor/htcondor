@@ -46,7 +46,7 @@ typedef HashTable<std::string,JobRoute *> RoutingTable;
 
 class JobRouter: public Service {
  public:
-	JobRouter(Scheduler *scheduler);
+	JobRouter();
 	virtual ~JobRouter();
 
 	// Add a new job to be managed by JobRouter.
@@ -108,11 +108,25 @@ class JobRouter: public Service {
 		// ClassAdCollection
 	Scheduler *GetScheduler() { return m_scheduler; }
 
+	classad::ClassAdCollection *GetSchedd1ClassAds();
+	classad::ClassAdCollection *GetSchedd2ClassAds();
+
  private:
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
 
 	Scheduler *m_scheduler;        // provides us with a mirror of the real schedd's job collection
+	Scheduler *m_scheduler2;       // if non-NULL, mirror of job queue in destination schedd
+
+	char const *m_schedd2_name;
+	char const *m_schedd2_pool;
+	std::string m_schedd2_name_buf;
+	std::string m_schedd2_pool_buf;
+
+	char const *m_schedd1_name;
+	char const *m_schedd1_pool;
+	std::string m_schedd1_name_buf;
+	std::string m_schedd1_pool_buf;
 
 	std::string m_constraint;
 	int m_max_jobs;

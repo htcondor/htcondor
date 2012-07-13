@@ -33,7 +33,22 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{job\_router} can now submit the routed copy of jobs to a
+different \Condor{schedd} than the one that serves as the source of
+jobs to be routed.  The spool directories of the two
+\Condor{schedds} must still be directly accessible to
+\Condor{job\_router}.  This feature is enabled by using the new
+optional configuration settings:
+
+\begin{itemize}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+\end{itemize}
+\Ticket{3030}
 
 \end{itemize}
 
@@ -44,13 +59,73 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
 
+\item The new configuration variable
+\Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
+expression that matches the user names that
+the queue super user may impersonate when managing jobs.  When not
+set, the default behavior is to allow impersonation of any user who
+has had a job in the queue during the life of the \Condor{schedd}.  For
+proper functioning of the \Condor{shadow}, the \Condor{gridmanager}, and
+the \Condor{job\_router}, this expression, if set, must match the owner
+names of all jobs that these daemons will manage.
+\Ticket{3030}
+
+\label{JobRouterSchedd1Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to
+  \Macro{SPOOL}.  If specified, this parameter must point to the spool
+  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}.
+
+\label{JobRouterSchedd2Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  \Macro{SPOOL}.  If specified, this parameter must point to the spool
+  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}.
+
+\label{JobRouterSchedd1Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
+  The advertised daemon name of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+  will also need to be set.
+
+\label{JobRouterSchedd2Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_NAME}]
+  The advertised daemon name of the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  the local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+  will also need to be set.
+
+\label{JobRouterSchedd1Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
+  The Condor pool (collector address) of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local pool.
+
+\label{JobRouterSchedd2Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
+  The Condor pool (collector address) of the \Condor{schedd} to which
+  the routed copy of the jobs are submitted.  If not specified, this
+  defaults to the local pool.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item The ClassAd functions \Procedure{splitUserName} and \Procedure{splitSlotName}
+leaked a small amount of memory every time they were evaluated.  This bug was
+introduced when these functions were added in 7.7.6.
+\Ticket{3082}
 
 \end{itemize}
 
@@ -89,19 +164,20 @@ the log referred to by \Attr{DAGManNodesLog}.
 
 \begin{itemize}
 
-\item Added support for classad caching to reduce memory footprint. 
+\item Condor now supports and implements the caching of ClassAds 
+to reduce memory footprints. The use of caching can be controlled via
+the new configuration parameter \MacroNI{ENABLE\_CLASSAD\_CACHING}.
 \Ticket{2541}
+\Ticket{3127}
 
-\item Added configuration variable CLASSAD\_LOG\_STRICT\_PARSING, which defaults to 
-\Expr{True}, and can be used to control whether ClassAd log files such as the job queue
-log are read in with strict parse checking on ClassAd expressions.
-\Ticket{3069}
-
-\item \Condor{status} now returns the schedd ad directly from the schedd daemon
-if both -direct and -schedd are given on the command line.
+\item \Condor{status} now returns the \Condor{schedd} ClassAd directly 
+from the \Condor{schedd} daemon,
+if both options \Opt{-direct} and \Opt{-schedd} are given on the command line.
 \Ticket{2492}
 
-\item Added status and echo command line options to \Condor{wait} command.
+\item The new \Opt{-status} and \Opt{-echo} command line options to 
+\Condor{wait} command cause it to show job start and terminate information,
+and to print events to \Code{stdout}.
 \Ticket{2926}
 
 \item Added a \Expr{DEBUG} logging level output flag \Dflag{CATEGORY},
@@ -117,8 +193,10 @@ and the \Condor{q} manual page located on page~\pageref{man-condor-q}
 for details.
 \Ticket{2941}
 
-\item Enhanced the classad log system (e.g. the job que log) to report the record number on parse failures, 
-and improved its ability to detect parse failures closer to the point of corruption.
+\item Enhanced the ClassAd log system to report the log line number 
+on parse failures, 
+and improved the ability to detect parse failures closer to 
+the point of corruption.
 \Ticket{2934}
 
 \item Added an \Opt{-evaluate} option to \Condor{config\_val}, which causes the configured value queried from
@@ -147,32 +225,35 @@ may be further controlled with the new configuration variables
 \Ticket{1605}
 
 \item Added new capability to \Condor{submit} to allow recursive macros in
-submit files. This facility allows one to update variables recursively.  An
-example of a construction that works is the following: \texttt{foo = bar},
-followed by \texttt{foo =  snap \$(foo)}.  Then the value of foo will be
-\texttt{foo = snap bar}.  Previously, this would send \Condor{submit} into an
-infinite loop of expanding the macro so that the expansion would be \texttt{foo
-= snap bar bar ...}, filling up memory with copies of ``\texttt{bar}''. Note
-that both left- and right- recursion works.  The construction \texttt{foo =
-\$(foo) bar} by itself will not work, as it does not have an initial base case.
-Mutually recursive constructions such as: \texttt{B = bar}, \texttt{C = \$(B)},
-and \texttt{B= \$(C) boo} will also fill memory with expansions.
+submit description files. 
+This facility allows one to update variables recursively. 
+Before this new capability was added,
+recursive definition would send \Condor{submit} into an
+infinite loop of expanding the macro,
+such that the expansion would fill up memory.
+See section~\ref{macro-in-submit-description-file} for details.
 \Ticket{406}
 
-\item Removed restriction on having macros in the "log" directive in submit
-files for \Condor{dagman}
+\item A DAGMan limitation and restriction has been removed.  
+It is now permitted to define a \SubmitCmd{log} command using a macro,
+within a node job's submit description file.
 \Ticket{2428}
 
-\item \Condor{dagman} now uses and watches, by default, only its default node
-userlog for events.  DAGman now requests the schedd and shadow to write each
-event to the default log, i.e., $\langle$DAG file$\rangle$.nodes.log, along
-with whatever log is specified by the user.  \Condor{dagman} only writes POST
-Script TERMINATE events to its default log, not to the user log. This can be
-turned off by setting the configuration variable
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to False.  In particular,
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to false if this newer
-version of \Condor{dagman} is submitting jobs to an older version of
-\Condor{schedd} or using an older version of \Condor{submit}
+\item To enforce the dependencies of a DAG,
+DAGMan now uses and watches only the default node
+user log of the \Condor{dagman} job for events.  
+DAGMan requests the \Condor{schedd} and \Condor{shadow} daemons to write each
+event to this default log, 
+in addition to writing to a log specified by the node job.
+\Condor{dagman} writes POST script terminate events only to its default log;
+these terminate events are not written to the user log.
+This behavior can be turned off by setting the configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}.
+For correct behavior,
+\MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to \Expr{False}
+if \Condor{dagman} version 7.9.0 or later is submitting jobs 
+to an older version of
+a \Condor{schedd} daemon or of a \Condor{submit} executable.
 \Ticket{2807}
 
 \end{itemize}
@@ -180,6 +261,16 @@ version of \Condor{dagman} is submitting jobs to an older version of
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \MacroNI{ENABLE\_CLASSAD\_CACHING}
+controls whether the new caching feature of ClassAds is used.
+The default value is \Expr{True}.
+\Ticket{3127}
+
+\item The new configuration variable \Macro{CLASSAD\_LOG\_STRICT\_PARSING}
+controls whether ClassAd log files such as the job queue
+log are read with strict parse checking on ClassAd expressions.
+\Ticket{3069}
 
 \item The default value for configuration variable \Macro{USE\_PROCD}
 is now \Expr{True} for the \Condor{master} daemon.  
@@ -277,7 +368,9 @@ execute directory.
 
 \begin{itemize}
 
-\item None.
+\item Machine ClassAd attribute string values relating to \Attr{OpSys} have
+been documented for Scientific Linux platforms.
+\Ticket{2366}
 
 \end{itemize}
 

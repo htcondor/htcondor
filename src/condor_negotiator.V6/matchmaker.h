@@ -33,8 +33,6 @@
 #include <map>
 #include <algorithm>
 
-using namespace std;
-
 /* FILESQL include */
 #include "file_sql.h"
 

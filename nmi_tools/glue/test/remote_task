@@ -40,12 +40,6 @@ use File::Copy;
 use File::Basename;
 use POSIX qw/strftime/;
 
-print STDERR "------------------------- ENV DUMP ------------------------\n";
-foreach my $key (sort { uc($a) cmp uc($b) } keys %ENV) {
-    print STDERR "$key=$ENV{$key}\n";
-}
-print STDERR "------------------------- ENV DUMP ------------------------\n";
-
 my $force_cygwin = 1;
 my $dir = dirname($0);
 unshift @INC, $dir;
