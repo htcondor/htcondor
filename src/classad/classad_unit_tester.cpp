@@ -402,6 +402,7 @@ static void test_classad(const Parameters &, Results &results)
     TEST("Have attribute D", (have_attribute == true));
     TEST("D is true", (b == true));
 
+/* These functions removed
     have_attribute = basic->EvaluateAttrList("E", l);
     TEST("Have attribute E", (have_attribute == true));
     TEST("E is list of size ", (l->size() == 1));
@@ -410,6 +411,7 @@ static void test_classad(const Parameters &, Results &results)
     TEST("Have attribute F", (have_attribute == true));
     have_attribute = c->EvaluateAttrInt("AA", i);
     TEST("F looks correct", (i == 3));
+*/
 
     /* ----- Test basic insert and delete ----- */
     success = basic->InsertAttr("new", 4);
