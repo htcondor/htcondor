@@ -17,8 +17,6 @@
  ###############################################################
 
 
-add_definitions(-D_FORTIFY_SOURCE=2)
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -119,6 +117,8 @@ if( NOT WINDOWS)
 	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
 	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
 	  else()
+
+		add_definitions(-D_FORTIFY_SOURCE=2)
 	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	  endif()
 	endif()
