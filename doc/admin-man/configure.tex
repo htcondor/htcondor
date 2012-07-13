@@ -5250,19 +5250,20 @@ MAX_JOBS_RUNNING	= \
   \Login{administrator} are given the ability to remove other user's jobs,
   in addition to user \Login{condor}.
 
-\label{param:QueueSuperUsers}
+\label{param:QueueSuperUserMayImpersonate}
 \item[\Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE}]
-  A regular expression that matches the usernames (i.e. job owner
-  names) that the queue super user may impersonate when managing jobs.
+  A regular expression that matches the user names 
+  (that is, job owner names) 
+  that the queue super user may impersonate when managing jobs.
   When not set, the default behavior is to allow impersonation of any
-  user who has had a job in the queue during the life of the schedd.
-  For proper functioning of \Condor{shadow}, \Condor{gridmanager}, and
-  \Condor{job\_router}, this expression, if set, must match the owner
-  names of all jobs that these daemons will manage.  Note that a
-  regular expression that matches only part of the username is still
-  considered a match.  If acceptance of partial matches is not
-  desired, the regular expression should begin with \verb|^| and end
-  with \verb|$|.
+  user who has had a job in the queue during the life of the \Condor{schedd}.
+  For proper functioning of the \Condor{shadow}, the \Condor{gridmanager}, and
+  the \Condor{job\_router}, this expression, if set, must match the owner
+  names of all jobs that these daemons will manage.  
+  Note that a regular expression that matches only part of the user name 
+  is still considered a match.  
+  If acceptance of partial matches is not desired, 
+  the regular expression should begin with \verb|^| and end with \verb|$|.
 
 \label{param:SystemJobMachineAttrs}
 \item[\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}]
