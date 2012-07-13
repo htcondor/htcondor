@@ -318,7 +318,10 @@ log_except (const char *msg)
 
 	// log shadow exception event
 	ShadowExceptionEvent event;
-	sprintf(event.message, msg);
+	if(!msg) msg = "";
+	snprintf(event.message, sizeof(event.message), "%s", msg);
+	event.message[sizeof(event.message)-1] = '\0';
+
 	// we want to log the events from the perspective of the
 	// user job, so if the shadow *sent* the bytes, then that
 	// means the user job *received* the bytes
