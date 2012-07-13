@@ -8059,6 +8059,13 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   routed copy of the jobs are submitted.  If not specified, this defaults to
   \Macro{SPOOL}.  If specified, this parameter must point to the spool
   directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}.
+  Note that when \Condor{job\_router} is running as root and is
+  submitting routed jobs to a different \Condor{schedd} than the
+  source \Condor{schedd}, it is required that \Condor{job\_router}
+  have permission to impersonate the job owners of the routed jobs.
+  It is therefore usually necessary to configure
+  \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
+  of the target \Condor{schedd}.
 
 \label{JobRouterSchedd1Name}
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
@@ -8079,6 +8086,13 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
   not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
   will also need to be set.
+  Note that when \Condor{job\_router} is running as root and is
+  submitting routed jobs to a different \Condor{schedd} than the
+  source \Condor{schedd}, it is required that \Condor{job\_router}
+  have permission to impersonate the job owners of the routed jobs.
+  It is therefore usually necessary to configure
+  \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
+  of the target \Condor{schedd}.
 
 \label{JobRouterSchedd1Pool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
