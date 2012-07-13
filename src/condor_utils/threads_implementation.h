@@ -53,8 +53,6 @@ private:
 };
 
 
-bool operator==(const ThreadInfo &lhs, const ThreadInfo &rhs);
-
 /** Class to implement the CondorThreads public interface.  
 	We it this way so that the condor_threads.h header file does not have
 	any implementation code so we only have to pull in pthreads.h into this
