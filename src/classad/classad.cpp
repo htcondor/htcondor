@@ -35,6 +35,19 @@ namespace classad {
 // semantics. It will be removed without warning in a future release.
 bool _useOldClassAdSemantics = false;
 
+// Should parsed expressions be cached and shared between multiple ads.
+// The default is false.
+static bool doExpressionCaching = false;
+
+void ClassAdSetExpressionCaching(bool do_caching) {
+	doExpressionCaching = do_caching;
+}
+
+bool ClassAdGetExpressionCaching()
+{
+	return doExpressionCaching;
+}
+
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
@@ -408,7 +421,10 @@ bool ClassAd::Insert( std::string& serialized_nvp)
     szValue = serialized_nvp.substr(vpos);
 
     // here is the special logic to check
-    CachedExprEnvelope * cache_check = CachedExprEnvelope::check_hit( name, szValue );
+    CachedExprEnvelope * cache_check = NULL;
+	if ( doExpressionCaching ) {
+		cache_check = CachedExprEnvelope::check_hit( name, szValue );
+	}
     if ( cache_check ) 
     {
 	ExprTree * in = cache_check;
@@ -466,7 +482,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		return( false );
 	}
 
-	if (cache)
+	if (doExpressionCaching && cache)
 	{
 	  tree = CachedExprEnvelope::cache(szName, pRef);
 	  // what goes in may be destroyed in preference for cache.

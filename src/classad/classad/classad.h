@@ -44,6 +44,11 @@ typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
 void ClassAdLibraryVersion(std::string &version_string);
 
+// Should parsed expressions be cached and shared between multiple ads.
+// The default is false.
+void ClassAdSetExpressionCaching(bool do_caching);
+bool ClassAdGetExpressionCaching();
+
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
 // semantics. It will be removed without warning in a future release.

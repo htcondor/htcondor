@@ -105,8 +105,10 @@ introduced when these functions were added in 7.7.6.
 \begin{itemize}
 
 \item Condor now supports and implements the caching of ClassAds 
-to reduce memory footprints. 
+to reduce memory footprints. The use of caching can be controlled via
+the new configuration parameter \MacroNI{ENABLE\_CLASSAD\_CACHING}.
 \Ticket{2541}
+\Ticket{3127}
 
 \item \Condor{status} now returns the \Condor{schedd} ClassAd directly 
 from the \Condor{schedd} daemon,
@@ -199,6 +201,11 @@ a \Condor{schedd} daemon or of a \Condor{submit} executable.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \MacroNI{ENABLE\_CLASSAD\_CACHING}
+controls whether the new caching feature of ClassAds is used.
+The default value is \Expr{True}.
+\Ticket{3127}
 
 \item The new configuration variable \Macro{CLASSAD\_LOG\_STRICT\_PARSING}
 controls whether ClassAd log files such as the job queue

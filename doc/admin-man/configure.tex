@@ -1348,6 +1348,13 @@ File System Configuration File Entries''.
   page~\pageref{sec:windows-scripts-as-executables} for a more complete
   description.
 
+\label{param:EnableClassadCaching}
+\item[\Macro{ENABLE\_CLASSAD\_CACHING}]
+  A boolean value that controls whether the recent caching feature of
+  ClassAds is used. Caching saves memory when a Condor process contains
+  many ClassAds with the same expressions.
+  The default value is \Expr{True}, i.e. use caching.
+
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
   A boolean value that controls how ClassAd expressions are evaluated. 
