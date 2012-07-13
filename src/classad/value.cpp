@@ -704,4 +704,26 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
     return could_convert;
 }
 
+bool Value::
+IsSListValue(classad_shared_ptr<ExprList>& l)
+{
+    if (valueType == SLIST_VALUE) {
+        l = (*slistValue);
+        return true;
+    } else if (valueType == LIST_VALUE) {
+            // we must copy our list, because it does not belong
+            // to a shared_ptr
+        l = classad_shared_ptr<ExprList>( (ExprList*)listValue->Copy() );
+        if( !l ) {
+            return false;
+        }
+            // in case we are called multiple times, stash a shared_ptr
+            // to the copy of the list
+        SetListValue(l);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 } // classad

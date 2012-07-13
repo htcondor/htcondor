@@ -242,11 +242,14 @@ class Value
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue(ExprList*& l);
-		/** Checks if the value is an expression list that was set via a shared_ptr.
-			@param l The expression list if the value is an expression list set via a shared_ptr. 
-			@return true iff the value is an expression list set via a shared_ptr.
+		/** Checks if the value is an expression list.
+			@param l A shared_ptr to the expression list if the value is an expression list.
+			         Note that if the list was not set via a shared_ptr, a copy of the
+			         list will be made and this Value will convert from type LIST_VALUE
+			         to SLIST_VALUE as a side-effect.
+			@return true iff the value is an expression list
 		*/
-		inline bool IsSListValue(classad_shared_ptr<ExprList>& l);
+		bool IsSListValue(classad_shared_ptr<ExprList>& l);
 		/** Checks if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
@@ -428,17 +431,6 @@ IsListValue( ExprList *&l)
         return true;
     } else if (valueType == SLIST_VALUE) {
         l = slistValue->get();
-        return true;
-    } else {
-        return false;
-    }
-}
-
-inline bool Value::
-IsSListValue(classad_shared_ptr<ExprList>& l)
-{
-    if (valueType == SLIST_VALUE) {
-        l = (*slistValue);
         return true;
     } else {
         return false;
