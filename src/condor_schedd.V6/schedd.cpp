@@ -2867,79 +2867,6 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 
 
 int
-Scheduler::abort_job(int, Stream* s)
-{
-	PROC_ID	job_id;
-	int nToRemove = -1;
-
-	// First grab the number of jobs to remove/hold
-	if ( !s->code(nToRemove) ) {
-		dprintf(D_ALWAYS,"abort_job() can't read job count\n");
-		return FALSE;
-	}
-
-	if ( nToRemove > 0 ) {
-		// We are being told how many and which jobs to abort
-
-		dprintf(D_FULLDEBUG,"abort_job: asked to abort %d jobs\n",nToRemove);
-
-		while ( nToRemove > 0 ) {
-			if( !s->code(job_id) ) {
-				dprintf( D_ALWAYS, "abort_job() can't read job_id #%d\n",
-					nToRemove);
-				return FALSE;
-			}
-			abort_job_myself(job_id, JA_REMOVE_JOBS, false, true );
-			nToRemove--;
-		}
-		s->end_of_message();
-	} else {
-		// We are being told to scan the queue ourselves and abort
-		// any jobs which have a status = REMOVED or HELD
-		ClassAd *job_ad;
-		static bool already_removing = false;	// must be static!!!
-		char constraint[120];
-
-		// This could take a long time if the queue is large; do the
-		// end_of_message first so condor_rm does not timeout. We do not
-		// need any more info off of the socket anyway.
-		s->end_of_message();
-
-		dprintf(D_FULLDEBUG,"abort_job: asked to abort all status REMOVED/HELD jobs\n");
-
-		// if already_removing is true, it means the user sent a second condor_rm
-		// command before the first condor_rm command completed, and we are
-		// already in the below job scan/removal loop in a different stack frame.
-		// so we should just return here.
-		if ( already_removing ) {
-			return TRUE;
-		}
-
-		snprintf(constraint,120,"%s == %d || %s == %d",ATTR_JOB_STATUS,REMOVED,
-				 ATTR_JOB_STATUS,HELD);
-
-		job_ad = GetNextJobByConstraint(constraint,1);
-		if ( job_ad ) {
-			already_removing = true;
-		}
-		while ( job_ad ) {
-			if ( (job_ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
-				 (job_ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
-
-				 abort_job_myself(job_id, JA_REMOVE_JOBS, false, true );
-
-			}
-			FreeJobAd(job_ad);
-
-			job_ad = GetNextJobByConstraint(constraint,0);
-		}
-		already_removing = false;
-	}
-
-	return TRUE;
-}
-
-int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
@@ -10324,9 +10251,6 @@ Scheduler::Register()
 	 daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)&Scheduler::reschedule_negotiator, 
 			"reschedule_negotiator", this, WRITE);
-	 daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
-			(CommandHandlercpp)&Scheduler::abort_job, 
-			"abort_job", this, WRITE);
 	 daemonCore->Register_Command(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
 			"actOnJobs", this, WRITE, D_COMMAND,
