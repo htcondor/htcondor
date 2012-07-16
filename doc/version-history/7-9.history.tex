@@ -50,6 +50,11 @@ optional configuration settings:
 \end{itemize}
 \Ticket{3030}
 
+\item \Condor{defrag} now has a policy option to cancel draining
+of a machine that is in draining mode.  This can be used to effect
+partial draining of machines.
+\Ticket{2993}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -115,6 +120,14 @@ names of all jobs that these daemons will manage.
   The Condor pool (collector address) of the \Condor{schedd} to which
   the routed copy of the jobs are submitted.  If not specified, this
   defaults to the local pool.
+
+\label{JobRouterSchedd2Pool}
+\item[\Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}]
+  This new configuration value is an expression that specifies
+  which draining machines should have draining be canceled.  This defaults
+  to \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  This could be used to drain
+  partial rather than whole machines.
+\Ticket{2993}
 
 \end{itemize}
 
