@@ -19,6 +19,7 @@
 ################################################################################
 
 #Defaults
+REMOTE_CMD=""
 REMOTE_HOSTNAME=""
 REMOTE_USER=`whoami`
 # Fix the home directory when spawned from a root process
@@ -57,7 +58,7 @@ REMOTE_HOSTS=(
 
 # Parse command line arguments 
 PROG_NAME=$0
-USAGE="Usage: $PROG_NAME [options] remote_hostname [remote options and arguments]\n \
+USAGE="Usage: $PROG_NAME [options] remote_hostname remote_cmd [remote options and arguments]\n \
  --rgahp-user REMOTE_USER \tuser name on the remote host\n \
  --rgahp-key PRIVATE-KEY-PATH \tlocation of ssh private key (~/.ssh/id_rsa)\n \
  --rgahp-nokey  \t\tno ssh private key or key already enabled (same as empty rgahp-key)\n \
@@ -77,12 +78,16 @@ eval set -- "$TEMP"
 tmp_found=1
 for i; do
 	if [ $tmp_found -eq 0 ] ; then 
-		REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
-		echo "$i" | grep -q '@'
-		if [ $? -eq 0 ] ; then
-		    REMOTE_USER=`echo "$i" | sed 's/@.*//'`
+		if [ "x${REMOTE_HOSTNAME}" = "x" ] ; then
+		    REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
+		    echo "$i" | grep -q '@'
+		    if [ $? -eq 0 ] ; then
+		        REMOTE_USER=`echo "$i" | sed 's/@.*//'`
+		    fi
+		else
+		    REMOTE_CMD="$i"
+		    break
 		fi
-		break
 	fi
 	if [ "$i" = "--" ]; then tmp_found=0; fi
 done
@@ -156,7 +161,13 @@ shift
 
 # use BatchMode so we fail if a password is requested
 #echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
-ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -i -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+if [ "${REMOTE_CMD}" = "batch_gahp" ] ; then
+    ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -i -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
+    ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -i -c "'CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+else
+    echo "Unknown remote command" 1>&2
+fi
 
 SSH_STATUS=$?
 

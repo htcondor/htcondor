@@ -25,6 +25,9 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "condor_config.h"
+#include "nullfile.h"
+#include "ipv6_hostname.h"
+#include "condor_netaddr.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -45,6 +48,10 @@
 #define GM_REFRESH_PROXY		11
 #define GM_START				12
 #define GM_POLL_ACTIVE			13
+#define GM_SAVE_SANDBOX_ID		14
+#define GM_TRANSFER_INPUT		15
+#define GM_TRANSFER_OUTPUT		16
+#define GM_DELETE_SANDBOX		17
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -60,7 +67,11 @@ static const char *GMStateNames[] = {
 	"GM_HOLD",
 	"GM_REFRESH_PROXY",
 	"GM_START",
-	"GM_POLL_ACTIVE"
+	"GM_POLL_ACTIVE",
+	"GM_SAVE_SANDBOX_ID",
+	"GM_TRANSFER_INPUT",
+	"GM_TRANSFER_OUTPUT",
+	"GM_DELETE_SANDBOX",
 };
 
 #define JOB_STATE_UNKNOWN				-1
@@ -76,6 +87,24 @@ static const char *GMStateNames[] = {
         procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
         func,error)
 
+static void
+PunchCedarHole( const char *host )
+{
+	condor_netaddr netaddr;
+
+	if ( !host || netaddr.from_net_string( host ) ) {
+		return; // not a valid hostname, so don't bother trying to look it up
+	}
+
+	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
+	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
+		 iter != addrs.end();
+		 ++iter) {
+		const condor_sockaddr& addr = *iter;
+		MyString addr_str = addr.to_ip_string();
+		daemonCore->getIpVerify()->PunchHole( WRITE, addr_str );
+	}
+}
 
 void INFNBatchJobInit()
 {
@@ -93,6 +122,8 @@ void INFNBatchJobReconfig()
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	INFNBatchJob::setConnectFailureRetry( tmp_int );
+
+	FileTransfer::SetServerShouldBlock( false );
 }
 
 bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
@@ -144,13 +175,16 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	enteredCurrentRemoteState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
+	remoteSandboxId = NULL;
 	remoteJobId = NULL;
 	lastPollTime = 0;
 	pollNow = false;
 	myResource = NULL;
 	gahp = NULL;
+	m_xfer_gahp = NULL;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
+	m_filetrans = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -182,7 +216,24 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	buff = "";
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
 	if ( buff != "" ) {
-		SetRemoteJobId( strchr( buff.c_str(), ' ' ) + 1 );
+		const char *token;
+		Tokenize( buff );
+
+			// TODO Do we want to handle values from older versions
+			//   i.e. ones with no sandbox id?
+
+			// This should be 'batch'
+		token = GetNextToken( " ", false );
+			// This should be the batch system type
+		token = GetNextToken( " ", false );
+			// This should be the sandbox id
+		if ( (token = GetNextToken( " ", false )) ) {
+			SetRemoteSandboxId( token );
+		}
+			// This should be the batch system job id
+		if ( (token = GetNextToken( " ", false )) ) {
+			SetRemoteJobId( token );
+		}
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
@@ -211,9 +262,24 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	buff = batchType;
 	if ( gahp_args.Count() > 0 ) {
 		sprintf_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
+		gahp_args.InsertArg( "batch_gahp", 1 );
 	}
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
+
+	if ( gahp_args.Count() > 0 ) {
+		gahp_path = param( "REMOTE_GAHP" );
+		if ( gahp_path == NULL ) {
+			sprintf( error_string, "REMOTE_GAHP not defined" );
+			goto error_exit;
+		}
+
+		sprintf( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
+		gahp_args.RemoveArg( 1 );
+		gahp_args.InsertArg( "condor_ft-gahp", 1 );
+		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
+		free( gahp_path );
+	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
 														  gahp_args.GetArg(0) );
@@ -230,6 +296,13 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
+
+	ASSERT( gahp != NULL );
+	m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
+	m_xfer_gahp->setMode( GahpClient::normal );
+	// TODO: This can't be the normal gahp timeout value. Does it need to
+	//   be configurable?
+	m_xfer_gahp->setTimeout( 60*60 );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
@@ -260,6 +333,7 @@ INFNBatchJob::~INFNBatchJob()
 	if ( batchType != NULL ) {
 		free( batchType );
 	}
+	free( remoteSandboxId );
 	if ( remoteJobId != NULL ) {
 		free( remoteJobId );
 	}
@@ -269,6 +343,8 @@ INFNBatchJob::~INFNBatchJob()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
+	delete m_xfer_gahp;
+	delete m_filetrans;
 }
 
 void INFNBatchJob::Reconfig()
@@ -319,6 +395,18 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+			if ( myResource->GahpIsRemote() ) {
+				// This job requires a transfer gahp
+				ASSERT( m_xfer_gahp );
+				if ( m_xfer_gahp->Startup() == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
+							 procID.cluster, procID.proc );
+
+					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start transfer GAHP" );
+					gmState = GM_HOLD;
+					break;
+				}
+			}
 			if ( jobProxy ) {
 				if ( gahp->Initialize( jobProxy ) == false ) {
 					dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
@@ -346,10 +434,12 @@ void INFNBatchJob::doEvaluateState()
 			errorString = "";
 			if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
-			} else if ( remoteJobId == NULL ) {
-				gmState = GM_CLEAR_REQUEST;
-			} else {
+			} else if ( remoteJobId != NULL ) {
 				gmState = GM_SUBMITTED;
+			} else if ( remoteSandboxId != NULL ) {
+				gmState = GM_TRANSFER_INPUT;
+			} else {
+				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
 		case GM_UNSUBMITTED: {
@@ -363,9 +453,70 @@ void INFNBatchJob::doEvaluateState()
 			} else if ( condorState == COMPLETED ) {
 				gmState = GM_DELETE;
 			} else {
-				gmState = GM_SUBMIT;
+				gmState = GM_SAVE_SANDBOX_ID;
 			}
 			} break;
+		case GM_SAVE_SANDBOX_ID: {
+			// Create and save sandbox id for bosco
+			if ( remoteSandboxId == NULL ) {
+				CreateSandboxId();
+			}
+			jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+			if ( attr_exists && attr_dirty ) {
+				requestScheddUpdate( this, true );
+				break;
+			}
+			gmState = GM_TRANSFER_INPUT;
+		} break;
+		case GM_TRANSFER_INPUT: {
+			// Transfer input sandbox
+			if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_SUBMIT;
+				break;
+			}
+
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+			if ( m_filetrans == NULL ) {
+				m_filetrans = new FileTransfer();
+				// TODO Do we really not want a file catalog?
+				if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
+					errorString = "Failed to initialize FileTransfer";
+					gmState = GM_HOLD;
+					break;
+				}
+				// TODO Can we determine the ft-gahp's Condor version?
+				CondorVersionInfo ver_info;
+				m_filetrans->setPeerVersion( ver_info );
+
+				// TODO Should we ever fill the hole?
+				PunchCedarHole( myResource->RemoteHostname() );
+			}
+
+			std::string sandbox_path;
+			rc = m_xfer_gahp->blah_download_sandbox( remoteSandboxId, gahpAd,
+													 m_sandboxPath );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_download_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_CLEAR_REQUEST;
+			} else {
+				gmState = GM_SUBMIT;
+			}
+		} break;
 		case GM_SUBMIT: {
 			// Start a new remote submission for this job.
 
@@ -424,7 +575,7 @@ void INFNBatchJob::doEvaluateState()
 							 gahp->getErrorString() );
 					errorString = gahp->getErrorString();
 					myResource->CancelSubmit( this );
-					gmState = GM_UNSUBMITTED;
+					gmState = GM_DELETE_SANDBOX;
 					reevaluate_state = true;
 				}
 				if ( job_id_string != NULL ) {
@@ -462,7 +613,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == COMPLETED ) {
-				gmState = GM_DONE_SAVE;
+				gmState = GM_TRANSFER_OUTPUT;
 			} else if ( remoteState == REMOVED ) {
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
@@ -538,6 +689,53 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_SUBMITTED;
 			}
 		} break;
+		case GM_TRANSFER_OUTPUT: {
+			if ( !myResource->GahpIsRemote() ) {
+				gmState = GM_DONE_SAVE;
+				break;
+			}
+			// Transfer output sandbox
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			if ( m_filetrans == NULL ) {
+				m_filetrans = new FileTransfer();
+				// TODO Do we really not want a file catalog?
+				if ( m_filetrans->Init( gahpAd, false, PRIV_USER, false ) == 0 ) {
+					errorString = "Failed to initialize FileTransfer";
+					gmState = GM_HOLD;
+					break;
+				}
+				// TODO Can we determine the ft-gahp's Condor version?
+				CondorVersionInfo ver_info;
+				m_filetrans->setPeerVersion( ver_info );
+
+				// TODO Should we ever fill the hole?
+				PunchCedarHole( myResource->RemoteHostname() );
+			}
+
+			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_upload_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_DELETE_SANDBOX;
+			} else {
+				gmState = GM_DONE_SAVE;
+			}
+		} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
 			JobTerminated();
@@ -555,15 +753,15 @@ void INFNBatchJob::doEvaluateState()
 
 			// Nothing to do for this job type
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
-				gmState = GM_DELETE;
+				// noop
 			} else {
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				SetRemoteJobId( NULL );
+				SetRemoteIds( NULL, NULL );
 				requestScheddUpdate( this, false );
 				myResource->CancelSubmit( this );
-				gmState = GM_CLEAR_REQUEST;
 			}
+			gmState = GM_DELETE_SANDBOX;
 			} break;
 		case GM_CANCEL: {
 			// We need to cancel the job submission.
@@ -589,12 +787,40 @@ void INFNBatchJob::doEvaluateState()
 				SetRemoteJobId( NULL );
 				myResource->CancelSubmit( this );
 			}
-			if ( condorState == REMOVED ) {
+			gmState = GM_DELETE_SANDBOX;
+			} break;
+		case GM_DELETE_SANDBOX: {
+			// Delete the remote sandbox
+			if ( gahpAd == NULL ) {
+				gahpAd = buildTransferAd();
+			}
+			if ( gahpAd == NULL ) {
+				gmState = GM_HOLD;
+				break;
+			}
+
+			rc = m_xfer_gahp->blah_destroy_sandbox( remoteSandboxId, gahpAd );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != 0 ) {
+				// Failure!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_destroy_sandbox() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_HOLD;
+				break;
+			}
+			SetRemoteSandboxId( NULL );
+			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
 				gmState = GM_CLEAR_REQUEST;
 			}
-			} break;
+		} break;
 		case GM_DELETE: {
 			// We are done with the job. Propagate any remaining updates
 			// to the schedd, then delete this object.
@@ -614,7 +840,7 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 			errorString = "";
-			SetRemoteJobId( NULL );
+			SetRemoteIds( NULL, NULL );
 			myResource->CancelSubmit( this );
 			JobIdle();
 			if ( submitLogged ) {
@@ -637,6 +863,7 @@ void INFNBatchJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
+			m_sandboxPath = "";
 			remoteProxyExpireTime = 0;
 			submitLogged = false;
 			executeLogged = false;
@@ -707,23 +934,52 @@ void INFNBatchJob::doEvaluateState()
 				delete gahpAd;
 				gahpAd = NULL;
 			}
+			if ( m_filetrans ) {
+				delete m_filetrans;
+				m_filetrans = NULL;
+			}
 		}
 
 	} while ( reevaluate_state );
 }
 
+void INFNBatchJob::SetRemoteSandboxId( const char *sandbox_id )
+{
+	SetRemoteIds( sandbox_id, remoteJobId );
+}
+
 void INFNBatchJob::SetRemoteJobId( const char *job_id )
 {
-	free( remoteJobId );
-	if ( job_id ) {
-		remoteJobId = strdup( job_id );
-	} else {
-		remoteJobId = NULL;
+	SetRemoteIds( remoteSandboxId, job_id );
+}
+
+void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
+{
+	if ( sandbox_id != remoteSandboxId ) {
+		free( remoteSandboxId );
+		if ( sandbox_id ) {
+			remoteSandboxId = strdup( sandbox_id );
+		} else {
+			remoteSandboxId = NULL;
+		}
+	}
+
+	if ( job_id != remoteJobId ) {
+		free( remoteJobId );
+		if ( job_id ) {
+			ASSERT( remoteSandboxId );
+			remoteJobId = strdup( job_id );
+		} else {
+			remoteJobId = NULL;
+		}
 	}
 
 	std::string full_job_id;
-	if ( job_id ) {
-		sprintf( full_job_id, "%s %s", batchType, job_id );
+	if ( remoteSandboxId ) {
+		sprintf( full_job_id, "batch %s %s", batchType, remoteSandboxId );
+	}
+	if ( remoteJobId ) {
+		sprintf_cat( full_job_id, " %s", remoteJobId );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
@@ -825,23 +1081,9 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	MyString expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
-	bool use_new_args_env = false;
-
-		// Older versions of the blahp don't know about the new
-		// Arguments and Environment job attributes. Newer version
-		// put "new_esc_format" in their version string to indicate
-		// that they understand these new attributes. If we're
-		// talking to an old blahp, convert to the old Args and Env
-		// attributes.
-	if ( strstr( gahp->getVersion(), "new_esc_format" ) ) {
-		use_new_args_env = true;
-	} else {
-		use_new_args_env = false;
-	}
 
 	int index;
 	const char *attrs_to_copy[] = {
-//		ATTR_JOB_CMD,
 		ATTR_JOB_ARGUMENTS1,
 		ATTR_JOB_ARGUMENTS2,
 		ATTR_JOB_ENVIRONMENT1,
@@ -853,15 +1095,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_REMAPS,
-//		ATTR_REQUIREMENTS,
-//		ATTR_RANK,
-//		ATTR_OWNER,
-//		ATTR_DISK_USAGE,
-//		ATTR_IMAGE_SIZE,
-//		ATTR_EXECUTABLE_SIZE,
-//		ATTR_MAX_HOSTS,
-//		ATTR_MIN_HOSTS,
-//		ATTR_JOB_PRIO,
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
 		NULL };		// list must end with a NULL
@@ -921,67 +1154,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( "gridtype", batchType );
 	}
 
-	if ( !use_new_args_env ) {
-		MyString error_str;
-		MyString value_str;
-		ArgList args;
-		Env env;
-
-		submit_ad->Delete( ATTR_JOB_ARGUMENTS2 );
-		submit_ad->Delete( ATTR_JOB_ENVIRONMENT1_DELIM );
-		submit_ad->Delete( ATTR_JOB_ENVIRONMENT2 );
-
-		if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
-			 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str.Value();
-			delete submit_ad;
-			return NULL;
-		}
-		submit_ad->Assign( ATTR_JOB_ARGUMENTS1, value_str.Value() );
-
-		value_str = "";
-		if ( !env.MergeFrom( jobAd, &error_str ) ||
-			 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str.Value();
-			delete submit_ad;
-			return NULL;
-		}
-		submit_ad->Assign( ATTR_JOB_ENVIRONMENT1, value_str.Value() );
-	}
-
-//	submit_ad->Assign( ATTR_JOB_STATUS, IDLE );
-//submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
-
-//	submit_ad->Assign( ATTR_Q_DATE, now );
-//	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-//	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
-//	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
-//	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
-//	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
-//	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
-//	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
-//	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
-//	submit_ad->Assign( ATTR_COMMITTED_SLOT_TIME, 0 );
-//	submit_ad->Assign( ATTR_CUMULATIVE_SLOT_TIME, 0 );
-//	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
-//	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
-//	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
-//	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-//	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-//	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
-//	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
-//	submit_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, true );
-//	submit_ad->Assign( ATTR_SHOULD_TRANSFER_FILES, false );
-
-//	expr.sprintf( "%s = (%s >= %s) =!= True && time() > %s + %d",
-//				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
-//				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
-//	submit_ad->Insert( expr.Value() );
-
 	bool cleared_environment = false;
 	bool cleared_arguments = false;
 
@@ -1040,7 +1212,148 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
-		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
+	if ( myResource->GahpIsRemote() ) {
+		// Rewrite ad so that everything is relative to m_sandboxPath
+		std::string old_value;
+		std::string new_value;
+		bool xfer_exec = true;
+
+		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
+
+		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
+		if ( xfer_exec ) {
+			//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
+			//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+			sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
+			submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
+		}
+
+		old_value = "";
+		submit_ad->LookupString( ATTR_JOB_INPUT, old_value );
+		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+			submit_ad->InsertAttr( ATTR_JOB_INPUT, condor_basename( old_value.c_str() ) );
+		}
+
+		old_value = "";
+		submit_ad->LookupString( ATTR_X509_USER_PROXY, old_value );
+		if ( !old_value.empty() ) {
+			submit_ad->InsertAttr( ATTR_X509_USER_PROXY, condor_basename( old_value.c_str() ) );
+		}
+
+		old_value = "";
+		submit_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, old_value );
+		if ( !old_value.empty() ) {
+			StringList old_paths( NULL, "," );
+			StringList new_paths( NULL, "," );
+			const char *old_path;
+			old_paths.initializeFromString( old_value.c_str() );
+
+			old_paths.rewind();
+			while ( (old_path = old_paths.next()) ) {
+				new_paths.append( condor_basename( old_path ) );
+			}
+
+			char *new_list = new_paths.print_to_string();
+			submit_ad->InsertAttr( ATTR_TRANSFER_INPUT_FILES, new_list );
+			free( new_list );
+		}
+
+		submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
+	}
 
 	return submit_ad;
+}
+
+ClassAd *INFNBatchJob::buildTransferAd()
+{
+	int index;
+	const char *attrs_to_copy[] = {
+		ATTR_JOB_CMD,
+		ATTR_JOB_INPUT,
+		ATTR_JOB_OUTPUT,
+		ATTR_JOB_ERROR,
+		ATTR_TRANSFER_EXECUTABLE,
+		ATTR_TRANSFER_INPUT_FILES,
+		ATTR_TRANSFER_OUTPUT_FILES,
+		ATTR_TRANSFER_OUTPUT_REMAPS,
+		ATTR_X509_USER_PROXY,
+		ATTR_OUTPUT_DESTINATION,
+		ATTR_ENCRYPT_INPUT_FILES,
+		ATTR_ENCRYPT_OUTPUT_FILES,
+		ATTR_DONT_ENCRYPT_INPUT_FILES,
+		ATTR_DONT_ENCRYPT_OUTPUT_FILES,
+		ATTR_JOB_IWD,
+		NULL };		// list must end with a NULL
+	// TODO Here are other attributes the FileTransfer object looks at.
+	//   They may be important:
+	//   ATTR_OWNER
+	//   ATTR_NT_DOMAIN
+	//   ATTR_ULOG_FILE
+	//   ATTR_CLUSTER_ID
+	//   ATTR_PROC_ID
+	//   ATTR_SPOOLED_OUTPUT_FILES
+	//   ATTR_STREAM_OUTPUT
+	//   ATTR_STREAM_ERROR
+	//   ATTR_ENCRYPT_INPUT_FILES
+	//   ATTR_ENCRYPT_OUTPUT_FILES
+	//   ATTR_STAGE_IN_FINISH
+	//   ATTR_TRANSFER_INTERMEDIATE_FILES
+	//   ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME
+
+	ClassAd *xfer_ad = new ClassAd();
+	ExprTree *next_expr;
+	const char *next_name;
+
+	index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
+			ExprTree * pTree = next_expr->Copy();
+			xfer_ad->Insert( attrs_to_copy[index], pTree );
+		}
+	}
+
+	jobAd->ResetExpr();
+	while ( jobAd->NextExpr(next_name, next_expr) ) {
+		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
+			 strlen( next_name ) > 7 ) {
+
+			char const *attr_name = &(next_name[7]);
+
+			ExprTree * pTree = next_expr->Copy();
+			xfer_ad->Insert( attr_name, pTree );
+		}
+	}
+
+	// TODO This may require some additional attributes to be set.
+
+	return xfer_ad;
+}
+
+void INFNBatchJob::CreateSandboxId()
+{
+	// Build a name for the sandbox that will be unique to this job.
+	// Our pattern is <collector name>_<GlobalJobId>
+
+	// get condor pool name
+	// In case there are multiple collectors, strip out the spaces
+	// If there's no collector, insert a dummy name
+	char* pool_name = param( "COLLECTOR_HOST" );
+	if ( pool_name ) {
+		StringList collectors( pool_name );
+		free( pool_name );
+		pool_name = collectors.print_to_string();
+	} else {
+		pool_name = strdup( "NoPool" );
+	}
+
+	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
+	std::string job_id;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+
+	std::string unique_id;
+	sprintf( unique_id, "%s_%s", pool_name, job_id.c_str() );
+
+	free( pool_name );
+
+	SetRemoteSandboxId( unique_id.c_str() );
 }

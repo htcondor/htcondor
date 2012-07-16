@@ -1947,7 +1947,7 @@ SetUniverse()
 		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
-			//    gt2, gt5, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    gt2, gt5, blah, pbs, lsf, nqs, naregi, condor,
 			//    unicore, cream, deltacloud, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1956,7 +1956,6 @@ SetUniverse()
 			//   Condor 6.7.12.
 			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
-				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
 				(strcasecmp (JobGridType, "batch") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||

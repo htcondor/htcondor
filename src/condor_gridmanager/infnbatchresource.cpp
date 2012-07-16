@@ -71,12 +71,20 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 	: BaseResource( resource_name )
 {
 	m_batchType = batch_type;
+	m_gahpIsRemote = false;
+
+	m_remoteHostname = resource_name;
+	size_t pos = m_remoteHostname.find( '@' );
+	if ( pos != m_remoteHostname.npos ) {
+		m_remoteHostname.erase( 0, pos + 1 );
+	}
 	
 	gahp = NULL;
 
 	std::string gahp_name = batch_type;
 	if ( resource_name && *resource_name ) {
 		sprintf_cat( gahp_name, "/%s", resource_name );
+		m_gahpIsRemote = true;
 	}
 
 	gahp = new GahpClient( gahp_name.c_str() );

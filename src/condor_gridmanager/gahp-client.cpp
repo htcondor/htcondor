@@ -3696,6 +3696,213 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 }
 
 int
+GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
+								  std::string &sandbox_path)
+{
+	static const char* command = "DOWNLOAD_SANDBOX";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	sprintf( reqline, "%s", escapeGahpString( sandbox_id ) );
+	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 3 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		if ( strcasecmp ( result->argv[2], NULLSTRING ) ) {
+			sandbox_path = result->argv[2];
+		} else {
+			sandbox_path = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
+{
+	static const char* command = "UPLOAD_SANDBOX";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	sprintf( reqline, "%s", escapeGahpString( sandbox_id ) );
+	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
+{
+	static const char* command = "DESTROY_SANDBOX";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	sprintf( reqline, "%s", escapeGahpString( sandbox_id ) );
+	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
 GahpClient::nordugrid_submit(const char *hostname, const char *rsl,
 							 char *&job_id)
 {
