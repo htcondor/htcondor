@@ -66,6 +66,7 @@ TransThreadHashTable *FileTransfer::TransThreadTable = NULL;
 int FileTransfer::CommandsRegistered = FALSE;
 int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
+bool FileTransfer::ServerShouldBlock = true;
 
 class FileTransferItem {
 public:
@@ -1296,11 +1297,11 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
-			transobject->Upload(sock,true);		// blocking = true for now...
+			transobject->Upload(sock,ServerShouldBlock);
 			}
 			break;
 		case FILETRANS_DOWNLOAD:
-			transobject->Download(sock,true);	// blocking = true for now...
+			transobject->Download(sock,ServerShouldBlock);
 			break;
 		default:
 			dprintf(D_ALWAYS,
@@ -1315,12 +1316,20 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 }
 
 
+bool
+FileTransfer::SetServerShouldBlock( bool block )
+{
+	bool old_value = ServerShouldBlock;
+	ServerShouldBlock = block;
+	return old_value;
+}
+
 int
 FileTransfer::Reaper(Service *, int pid, int exit_status)
 {
 	FileTransfer *transobject;
 	bool read_failed = false;
-	if ( TransThreadTable->lookup(pid,transobject) < 0) {
+	if (!TransThreadTable || TransThreadTable->lookup(pid,transobject) < 0) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
 	}

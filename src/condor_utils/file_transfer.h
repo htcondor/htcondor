@@ -179,6 +179,8 @@ class FileTransfer {
 
 	static int Reaper(Service *, int pid, int exit_status);
 
+	static bool SetServerShouldBlock( bool block );
+
 	int Suspend();
 
 	int Continue();
@@ -355,6 +357,7 @@ class FileTransfer {
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
+	static bool ServerShouldBlock;
 	int clientSockTimeout;
 	bool did_init;
 	bool simple_init;
