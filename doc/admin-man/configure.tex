@@ -8422,8 +8422,9 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
   node job submit description files with user log files on NFS.
-  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is true and
-  \MacroNI{ENABLE\_USERLOG\_LOCKING} is true.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
+  \Expr{True} and
+  \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
   If a DAG references such a submit description file and
   \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
   the DAG will abort during the initialization process. 
