@@ -52,6 +52,10 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
+\item Fixed a bug where a slot might become stuck in the Preempting state
+when a \Condor{startd} is configured with a hook to fetch work (\Macro{<Keyword>\_HOOK\_FETCH\_WORK}).
+\Ticket{3076}
+
 \item Fixed a bug that caused Condor to transfer a job's input file from
 the execute machine as if they were output files. This would happen if the
 job's input files were stored in Condor's spool directory (i.e. if the
