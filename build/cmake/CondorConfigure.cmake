@@ -17,8 +17,6 @@
  ###############################################################
 
 
-add_definitions(-D_FORTIFY_SOURCE=2)
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -119,6 +117,8 @@ if( NOT WINDOWS)
 	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
 	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
 	  else()
+
+		add_definitions(-D_FORTIFY_SOURCE=2)
 	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
 	  endif()
 	endif()
@@ -382,7 +382,7 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(BUILD_TESTS "Will build internal test applications" ON)
-option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
