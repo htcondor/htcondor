@@ -617,9 +617,11 @@ A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
 Nodes specifying a log file and other nodes using the default log
 file can be mixed in a single DAG.
 
-Log files for node jobs should not be placed on NFS, unless
-\MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \MacroNI{ENABLE\_USERLOG\_LOCKING}
-is true. Without these settings, NFS file locking is not reliable,
+Log files for node jobs should not be placed on NFS, 
+unless both configuration variables
+\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
+are \Expr{True}. 
+Without these settings, NFS file locking is not reliable,
 occasionally resulting in simultaneous acquisition of locks on a single
 log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
 Partially written events by the \Condor{schedd} cause errors
