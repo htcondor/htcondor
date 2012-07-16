@@ -495,26 +495,18 @@ ExpandHostAddresses(char const *host,StringList *list)
 void
 IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 {
-    NetStringList * whichHostList = NULL;
-    UserHash_t * whichUserHash = NULL;
-    StringList * slist;
-
     assert(pentry);
 
-    if (whichHostList == NULL) {
-        whichHostList = new NetStringList();
-    }
-    if (whichUserHash == NULL) {
-        whichUserHash = new UserHash_t(1024, compute_host_hash);
-    }
+	NetStringList * whichHostList = new NetStringList();
+    UserHash_t * whichUserHash = new UserHash_t(1024, compute_host_hash);
 
-    slist = new StringList(list);
+    StringList slist(list);
 	char *entry, * host, * user;
-	slist->rewind();
-	while ( (entry=slist->next()) ) {
+	slist.rewind();
+	while ( (entry=slist.next()) ) {
 		if (!*entry) {
 			// empty string?
-			slist->deleteCurrent();
+			slist.deleteCurrent();
 			continue;
 		}
 		split_entry(entry, &host, &user);
@@ -555,7 +547,6 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
         pentry->deny_hosts = whichHostList;
         pentry->deny_users = whichUserHash;
     }
-    delete slist;
 }
 
 void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
