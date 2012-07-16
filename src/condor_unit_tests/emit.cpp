@@ -149,9 +149,9 @@ void Emitter::emit_output_actual_header() {
 /* Prints out a message saying that the test succeeded. The function should
  * be called via the PASS macro."
  */
-void Emitter::emit_result_success(int line) {
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n",
-		line, time(0) - start);
+void Emitter::emit_result_success(int line, const char * file) {
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at %s:%d (%ld seconds)\n",
+		file, line, time(0) - start);
 	print_now_if_possible();
 	if(print_successes && !print_failures) {
 		if(!test_buf->IsEmpty()) {
@@ -167,9 +167,9 @@ void Emitter::emit_result_success(int line) {
 /* Prints out a message saying that the test failed. The function should
  * be called via the PASS macro."
  */
-void Emitter::emit_result_failure(int line) {
-	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds)\n", 
-		line, time(0) - start);
+void Emitter::emit_result_failure(int line, const char * file) {
+	buf->sprintf_cat("RESULT:  FAILURE, test failed at %s:%d (%ld seconds)\n", 
+		file, line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	failed_tests++;
@@ -179,9 +179,9 @@ void Emitter::emit_result_failure(int line) {
  * reason, probably given by emit_abort() before this function call.  The
  * function should be called via the ABORT macro."
  */
-void Emitter::emit_result_abort(int line) {
-	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d (%ld seconds)\n", 
-		line, time(0) - start);
+void Emitter::emit_result_abort(int line, const char * file) {
+	buf->sprintf_cat("RESULT:  ABORTED, test failed at %s:%d (%ld seconds)\n", 
+		file, line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	aborted_tests++;
@@ -297,16 +297,16 @@ void emit_output_actual_header(void) {
 	e.emit_output_actual_header();
 }
 
-void emit_result_success(int line) {
-	e.emit_result_success(line);
+void emit_result_success(int line, const char * file) {
+	e.emit_result_success(line, file);
 }
 
-void emit_result_failure(int line) {
-	e.emit_result_failure(line);
+void emit_result_failure(int line, const char * file) {
+	e.emit_result_failure(line, file);
 }
 
-void emit_result_abort(int line) {
-	e.emit_result_abort(line);
+void emit_result_abort(int line, const char * file) {
+	e.emit_result_abort(line, file);
 }
 
 void emit_alert(const char* alert) {
