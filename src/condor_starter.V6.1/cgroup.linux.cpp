@@ -185,13 +185,6 @@ int CgroupManager::create(const std::string &cgroup_string, Cgroup &cgroup,
 			has_cgroup, changed_cgroup)) {
 		return -1;
 	}
-        if ((preferred_controllers & CPUACCT_CONTROLLER) &&
-                initialize_controller(*cgroupp, CPUACCT_CONTROLLER,
-                        CPUACCT_CONTROLLER_STR,
-                        required_controllers & CPUACCT_CONTROLLER,
-                        has_cgroup, changed_cgroup)) {
-		return -1;
-        }
 	if ((preferred_controllers & BLOCK_CONTROLLER) &&
 		initialize_controller(*cgroupp, BLOCK_CONTROLLER,
 			BLOCK_CONTROLLER_STR,
