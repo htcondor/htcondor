@@ -32,6 +32,8 @@
 #include "dc_schedd.h"
 #include "MyString.h"
 
+bool has_proc;
+
 void
 usage(char name[])
 {
@@ -53,6 +55,9 @@ ProtectedAttribute(char attr[])
 int
 main(int argc, char *argv[])
 {
+
+	has_proc = false;
+
 	MyString constraint;
 	Qmgr_connection *q;
 	int nextarg = 1, cluster=0, proc=0;
@@ -139,15 +144,7 @@ main(int argc, char *argv[])
 		usage(argv[0]);
 	}
 
-	if (match_prefix(argv[nextarg], "-constraint")) {
-		nextarg++;
-		if (argc <= nextarg) {
-			usage(argv[0]);
-		}
-		constraint = argv[nextarg];
-		nextarg++;
-		UseConstraint = true;
-	} else if (isdigit(argv[nextarg][0])) {
+	if (isdigit(argv[nextarg][0])) {
 		char *tmp;
 		cluster = strtol(argv[nextarg], &tmp, 10);
 		if (cluster <= 0) {
@@ -161,13 +158,39 @@ main(int argc, char *argv[])
 				exit(1);
 			}
 			UseConstraint = false;
+			has_proc = true;
 		} else {
 			constraint.formatstr("(%s == %d)", ATTR_CLUSTER_ID, cluster);
 			UseConstraint = true;
 		}
 		nextarg++;
-	} else {
+	} else if (!match_prefix(argv[nextarg], "-constraint")) {
 		constraint.formatstr("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
+		nextarg++;
+		UseConstraint = true;
+	}
+
+	while (match_prefix(argv[nextarg], "-constraint")) {
+
+		if ( has_proc ){
+			fprintf(stderr, "condor_qedit: proc_id specified. Ignoring constraint option\n");
+			nextarg+=2;
+			continue;
+		}
+
+		nextarg++;
+		
+		if (argc <= nextarg) {
+			usage(argv[0]);
+		}
+
+		if ( !UseConstraint ){
+			constraint = argv[nextarg];
+		}
+		else{
+			constraint = "( " + constraint + " ) && " + argv[nextarg];
+		}
+
 		nextarg++;
 		UseConstraint = true;
 	}

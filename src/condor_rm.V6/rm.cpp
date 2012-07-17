@@ -44,29 +44,37 @@ char	*MyName;
 char 	*actionReason = NULL;
 char    *holdReasonSubCode = NULL;
 JobAction mode;
-bool All = false;
-bool ConstraintArg = false;
-bool UserJobIdArg = false;
 bool had_error = false;
+bool dash_long = false;
+bool dash_totals = false;
 
 DCSchedd* schedd = NULL;
 
 StringList* job_ids = NULL;
 
 	// Prototypes of local interest
-void addConstraint(const char *);
+typedef enum {
+	CT_NONE = FALSE,
+	CT_ALL,
+	CT_CLUSTER,
+	CT_USER,
+	CT_SIMPLE,
+	CT_COMPLEX,
+} CONSTRAINT_TYPE;
+void addConstraint(const char * constraint, CONSTRAINT_TYPE type=CT_COMPLEX);
+void addUserConstraint(const char * user);
+void addClusterConstraint(int clust);
 void procArg(const char*);
 void usage(int iExitCode=1);
-void handleAll();
 void handleConstraints( void );
 ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
 void printNewMessages( ClassAd* result_ad, StringList* ids );
 bool mayUserForceRm( );
 
-bool has_constraint;
-
+CONSTRAINT_TYPE has_constraint = CT_NONE;
 MyString global_constraint;
-StringList global_id_list;
+CONSTRAINT_TYPE has_usercluster = CT_NONE;
+MyString usercluster_constraint;
 
 const char* 
 actionWord( JobAction action, bool past )
@@ -89,8 +97,11 @@ actionWord( JobAction action, bool past )
 		break;
 
 	case JA_REMOVE_JOBS:
+		return past ? "marked for removal" : "remove";
+		break;
+
 	case JA_REMOVE_X_JOBS:
-		return past ? "removed" : "remove";
+		return past ? "removed locally (remote state unknown)" : "remove";
 		break;
 
 	case JA_VACATE_JOBS:
@@ -119,6 +130,8 @@ usage(int iExitCode)
 	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );
 	fprintf( stderr, "  -version            Display version information and exit\n" );
+	fprintf( stderr, "  -long               Display full result classad\n" );
+	fprintf( stderr, "  -totals             Display success/failure totals\n" );
 
 // i'm not sure we want -debug documented.  if we change our minds, we
 // should just uncomment the next line
@@ -168,16 +181,10 @@ int
 main( int argc, char *argv[] )
 {
 	char	*arg;
-	char	**args = (char **)malloc(sizeof(char *)*(argc - 1)); // args 
-	int					nArgs = 0;				// number of args 
-	int					i;
 	char*	cmd_str;
 	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
-
-		// Initialize our global variables
-	has_constraint = false;
 
 	myDistro->Init( argc, argv );
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
@@ -194,34 +201,22 @@ main( int argc, char *argv[] )
 	// for condor_hold.
 
 	if (cmd_str && strncasecmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
-
 		mode = JA_HOLD_JOBS;
-
 	} else if ( cmd_str && 
 			strncasecmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {
-
 		mode = JA_RELEASE_JOBS;
-
 	} else if ( cmd_str && 
 			strncasecmp( cmd_str, "_suspend", strlen("_suspend") ) == MATCH ) {
-
 		mode = JA_SUSPEND_JOBS;
-
 	} else if ( cmd_str && 
 			strncasecmp( cmd_str, "_continue", strlen("_continue") ) == MATCH ) {
-
 		mode = JA_CONTINUE_JOBS;
-
 	}else if ( cmd_str && 
 			strncasecmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
-
 		mode = JA_REMOVE_JOBS;
-
 	} else if( cmd_str && ! strncasecmp(cmd_str, "_vacate_job",
 									strlen("_vacate_job")) ) {  
-
 		mode = JA_VACATE_JOBS;
-
 	} else {
 		// don't know what mode we're using, so bail.
 		fprintf( stderr, "Unrecognized command name, \"%s\"\n", MyName ); 
@@ -243,32 +238,36 @@ main( int argc, char *argv[] )
 
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
-            if (match_prefix(arg, "-debug")) {
+			if (is_dash_arg_prefix(arg, "debug", 1)) {
 				// dprintf to console
 				dprintf_set_tool_debug("TOOL", 0);
-            } else if (match_prefix(arg, "-constraint")) {
-				args[nArgs] = arg;
-				nArgs++;
-				argv++;
-				if( ! *argv ) {
+			} else if (is_dash_arg_prefix(arg, "long", 1)) {
+				dash_long = true;
+			} else if (is_dash_arg_prefix(arg, "totals", 3)) {
+				dash_totals = true;
+			} else if (is_dash_arg_prefix(arg, "constraint", 1)) {
+				++argv; arg = *argv;
+				if( ! arg || *arg == '-') {
 					fprintf( stderr, 
 							 "%s: -constraint requires another argument\n", 
 							 MyName);
 					exit(1);
-				}				
-				args[nArgs] = *argv;
-				nArgs++;
-				ConstraintArg = true;
-            } else if (match_prefix(arg, "-all")) {
-                All = true;
-            } else if (match_prefix(arg, "-addr")) {
-                argv++;
-                if( ! *argv ) {
+				}
+				addConstraint(*argv, CT_SIMPLE);
+			} else if (is_dash_arg_prefix(arg, "all", 1)) {
+				if (has_constraint || has_usercluster) {
+					fprintf( stderr, "%s: can't mix -all with other constraints\n", MyName);
+					exit(1);
+				}
+				addConstraint(ATTR_CLUSTER_ID " >= 0", CT_ALL);
+			} else if (is_dash_arg_prefix(arg, "addr", 2)) {
+				++argv; arg = *argv;
+				if( ! arg || *arg == '-') {
                     fprintf( stderr, 
                              "%s: -addr requires another argument\n", 
                              MyName);
                     exit(1);
-                }				
+                }
                 if( is_valid_sinful(*argv) ) {
                     scheddAddr = strdup(*argv);
                     if( ! scheddAddr ) {
@@ -285,7 +284,7 @@ main( int argc, char *argv[] )
                              "For example: <123.456.789.123:6789>\n" );
                     exit( 1 );
                 }
-			} else if (match_prefix(arg, "-reason")) {
+			} else if (is_dash_arg_prefix(arg, "reason", 1)) {
 				argv++;
 				if( ! *argv ) {
 					fprintf( stderr, 
@@ -298,7 +297,7 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "Out of memory!\n" );
 					exit(1);
 				}
-			} else if (match_prefix(arg, "-subcode")) {
+			} else if (is_dash_arg_prefix(arg, "subcode", 1)) {
 				argv++;
 				if( ! *argv ) {
 					fprintf( stderr, 
@@ -314,7 +313,7 @@ main( int argc, char *argv[] )
 				}
 				holdReasonSubCode = strdup(*argv);
 				ASSERT( holdReasonSubCode );
-            } else if (match_prefix(arg, "-forcex")) {
+			} else if (is_dash_arg_prefix(arg, "forcex", (mode == JA_REMOVE_JOBS) ? 1 : 2)) {
 				if( mode == JA_REMOVE_JOBS ) {
 					mode = JA_REMOVE_X_JOBS;
 				} else {
@@ -322,7 +321,7 @@ main( int argc, char *argv[] )
                              "-forcex is only valid with condor_rm\n" );
 					usage();
 				}
-            } else if (match_prefix(arg, "-fast")) {
+			} else if (is_dash_arg_prefix(arg, "fast", (mode == JA_VACATE_JOBS) ? 1 : 2)) {
 				if( mode == JA_VACATE_JOBS ) {
 					mode = JA_VACATE_FAST_JOBS;
 				} else {
@@ -330,7 +329,7 @@ main( int argc, char *argv[] )
                              "-fast is only valid with condor_vacate_job\n" );
 					usage();
 				}
-            } else if (match_prefix(arg, "-name")) {
+			} else if (is_dash_arg_prefix(arg, "name", 1)) {
 				// use the given name as the schedd name to connect to
 				argv++;
 				if( ! *argv ) {
@@ -343,7 +342,7 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
-            } else if (match_prefix(arg, "-pool")) {
+			} else if (is_dash_arg_prefix(arg, "pool", 1)) {
 				// use the given name as the central manager to query
 				argv++;
 				if( ! *argv ) {
@@ -359,34 +358,27 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
 					exit(1);
 				}
-            } else if (match_prefix(arg, "-version")) {
+			} else if (is_dash_arg_prefix(arg, "version", 1)) {
 				version();
-            } else if (match_prefix(arg, "-help")) {
+			} else if (is_dash_arg_prefix(arg, "help", 1)) {
 				usage(0);
-            } else {
+			} else {
 				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
 				usage();
 			}
 		} else {
-			if( All ) {
+			if (has_constraint == CT_ALL) {
 					// If -all is set, there should be no other
 					// constraint arguments.
 				usage();
 			}
-			args[nArgs] = arg;
-			nArgs++;
-			UserJobIdArg = true;
+			procArg(arg);
 		}
 	}
 
-	if( ! (All || nArgs) ) {
+	if( ! has_constraint && ! has_usercluster && ! job_ids ) {
 			// We got no indication of what to act on
 		fprintf( stderr, "You did not specify any jobs\n" ); 
-		usage();
-	}
-
-	if ( ConstraintArg && UserJobIdArg ) {
-		fprintf( stderr, "You can't use both -constraint and usernames or job ids\n" );
 		usage();
 	}
 
@@ -442,26 +434,11 @@ main( int argc, char *argv[] )
 		}
 	}
 
-		// Process the args so we do the work.
-	if( All ) {
-		handleAll();
-	} else {
-		for(i = 0; i < nArgs; i++) {
-			if( match_prefix( args[i], "-constraint" ) ) {
-				i++;
-				addConstraint( args[i] );
-			} else {
-				procArg(args[i]);
-			}
+		// do the actual work for fully qualified job ids
+	if (job_ids) {
+		if (has_constraint) {
+			fprintf(stderr, "Warning, -constraint is ignored for fully qualified job ids\n");
 		}
-	}
-
-		// Deal with all the -constraint constraints
-	handleConstraints();
-
-		// Finally, do the actual work for all our args which weren't
-		// constraints...
-	if( job_ids ) {
 		CondorError errstack;
 		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
 		if (had_error) {
@@ -470,6 +447,9 @@ main( int argc, char *argv[] )
 		printNewMessages( result_ad, job_ids );
 		delete( result_ad );
 	}
+
+		// do the work for all constraint based commands, including usernames and clusters
+	handleConstraints();
 
 		// If releasing jobs, and no errors happened, do a 
 		// reschedule command now.
@@ -496,30 +476,31 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 	ClassAd* ad = 0;
 	int total_jobs = -1;
 	bool rval = true;
+	action_result_type_t result_type = (dash_long && ! dash_totals) ? AR_LONG : AR_TOTALS;
 	switch( mode ) {
 	case JA_RELEASE_JOBS:
-		ad = schedd->releaseJobs( constraint, actionReason, errstack );
+		ad = schedd->releaseJobs( constraint, actionReason, errstack, result_type );
 		break;
 	case JA_REMOVE_X_JOBS:
-		ad = schedd->removeXJobs( constraint, actionReason, errstack );
+		ad = schedd->removeXJobs( constraint, actionReason, errstack, result_type );
 		break;
 	case JA_VACATE_JOBS:
-		ad = schedd->vacateJobs( constraint, VACATE_GRACEFUL, errstack );
+		ad = schedd->vacateJobs( constraint, VACATE_GRACEFUL, errstack, result_type );
 		break;
 	case JA_VACATE_FAST_JOBS:
-		ad = schedd->vacateJobs( constraint, VACATE_FAST, errstack );
+		ad = schedd->vacateJobs( constraint, VACATE_FAST, errstack, result_type );
 		break;
 	case JA_REMOVE_JOBS:
-		ad = schedd->removeJobs( constraint, actionReason, errstack );
+		ad = schedd->removeJobs( constraint, actionReason, errstack, result_type );
 		break;
 	case JA_HOLD_JOBS:
-		ad = schedd->holdJobs( constraint, actionReason, holdReasonSubCode, errstack );
+		ad = schedd->holdJobs( constraint, actionReason, holdReasonSubCode, errstack, result_type );
 		break;
 	case JA_SUSPEND_JOBS:
-		ad = schedd->suspendJobs( constraint, actionReason, errstack );
+		ad = schedd->suspendJobs( constraint, actionReason, errstack, result_type );
 		break;
 	case JA_CONTINUE_JOBS:
-		ad = schedd->continueJobs( constraint, actionReason, errstack );
+		ad = schedd->continueJobs( constraint, actionReason, errstack, result_type );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByConstraint" );
@@ -528,6 +509,20 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		had_error = true;
 		rval = false;
 	} else {
+		if (dash_long) {
+			fPrintAd (stdout, *ad);
+			fputc ('\n', stdout);
+		} else if (dash_totals) {
+			JobActionResults jar;
+			jar.readResults(ad);
+			fprintf(stdout, "%d Succeeded, %d Failed, %d Not Found, %d Bad Status, %d Already Done, %d Permission Denied\n"
+				, jar.numSuccess()
+				, jar.numError()
+				, jar.numNotFound()
+				, jar.numBadStatus()
+				, jar.numAlreadyDone()
+				, jar.numPermissionDenied());
+		}
 		int result = FALSE;
 		if( !ad->LookupInteger(ATTR_ACTION_RESULT, result) ) {
 			had_error = true;
@@ -537,7 +532,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 			// There were no ads acted upon, but that doesn't
 			// mean there was an error.  It's possible the schedd
 			// had no jobs
-		        if( !ad->LookupInteger(ATTR_TOTAL_JOB_ADS, total_jobs) || total_jobs > 0 ) {
+			if( !ad->LookupInteger(ATTR_TOTAL_JOB_ADS, total_jobs) || total_jobs > 0 ) {
 				had_error = true;
 			} else {
 				// There were no jobs in the queue, so add a
@@ -586,6 +581,20 @@ doWorkByList( StringList* ids, CondorError *errstack )
 	if( ! rval ) {
 		had_error = true;
 	} else {
+		if (dash_long) {
+			fPrintAd (stdout, *rval);
+			fputc ('\n', stdout);
+		} else if (dash_totals) {
+			JobActionResults jar;
+			jar.readResults(rval);
+			fprintf(stdout, "%d Succeeded, %d Failed, %d Not Found, %d Bad Status, %d Already Done, %d Permission Denied\n"
+				, jar.numSuccess()
+				, jar.numError()
+				, jar.numNotFound()
+				, jar.numBadStatus()
+				, jar.numAlreadyDone()
+				, jar.numPermissionDenied());
+		}
 		int result = FALSE;
 		if( !rval->LookupInteger(ATTR_ACTION_RESULT, result) || !result ) {
 			had_error = true;
@@ -601,8 +610,6 @@ procArg(const char* arg)
 	int		c, p;								// cluster/proc #
 	char*	tmp;
 
-	MyString constraint;
-
 	if( str_isint(arg) || str_isreal(arg,true) )
 	// process by cluster/proc #
 	{
@@ -616,25 +623,7 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			CondorError errstack;
-			constraint.formatstr( "%s == %d", ATTR_CLUSTER_ID, c );
-			if( doWorkByConstraint(constraint.Value(), &errstack) ) {
-				fprintf( stdout, 
-						 "Cluster %d %s.\n", c,
-						 (mode == JA_REMOVE_JOBS) ?
-						 "has been marked for removal" :
-						 (mode == JA_REMOVE_X_JOBS) ?
-						 "has been removed locally (remote state unknown)" :
-						 actionWord(mode,true) );
-			} else {
-				fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
-				if (had_error)
-				{
-					fprintf( stderr, 
-						 "Couldn't find/%s all jobs in cluster %d.\n",
-						 actionWord(mode,false), c );
-				}
-			}
+			addClusterConstraint(c);
 			return;
 		}
 		if(*tmp == '.')
@@ -661,42 +650,50 @@ procArg(const char* arg)
 	}
 	// process by user name
 	else {
-		CondorError errstack;
-		constraint.formatstr("%s == \"%s\"", ATTR_OWNER, arg );
-		if( doWorkByConstraint(constraint.Value(), &errstack) ) {
-			fprintf( stdout, "User %s's job(s) %s.\n", arg,
-					 (mode == JA_REMOVE_JOBS) ?
-					 "have been marked for removal" :
-					 (mode == JA_REMOVE_X_JOBS) ?
-					 "have been removed locally (remote state unknown)" :
-					 actionWord(mode,true) );
-		} else {
-			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
-			if (had_error)
-			{
-				fprintf( stderr, 
-					 "Couldn't find/%s all of user %s's job(s).\n",
-					 actionWord(mode,false), arg );
-			}
-		}
+		addUserConstraint(arg);
 	}
 }
 
+void
+addClusterConstraint(int clust)
+{
+	if ( ! has_usercluster) {
+		usercluster_constraint.formatstr(ATTR_CLUSTER_ID " == %d", clust);
+		has_usercluster = CT_CLUSTER;
+	} else {
+		usercluster_constraint.formatstr_cat(" || " ATTR_CLUSTER_ID " == %d", clust);
+		has_usercluster = CT_COMPLEX;
+	}
+}
 
 void
-addConstraint( const char *constraint )
+addUserConstraint(const char * user)
 {
-	static bool has_clause = false;
-	if( has_clause ) {
-		global_constraint += " && (";
+	if ( ! has_usercluster) {
+		usercluster_constraint.formatstr(ATTR_OWNER " == \"%s\"", user);
+		has_usercluster = CT_USER;
 	} else {
-		global_constraint += "(";
+		usercluster_constraint.formatstr_cat(" || " ATTR_OWNER " == \"%s\"", user);
+		has_usercluster = CT_COMPLEX;
 	}
-	global_constraint += constraint;
-	global_constraint += ")";
+}
 
-	has_clause = true;
-	has_constraint = true;
+void
+addConstraint(const char *constraint, CONSTRAINT_TYPE ct_type)
+{
+	if (CT_NONE == has_constraint || CT_ALL == has_constraint) {
+		global_constraint = constraint;
+		has_constraint = ct_type;
+	} else if (CT_COMPLEX == has_constraint) {
+		global_constraint.formatstr_cat(" && (%s)", constraint);
+	} else {
+		// if we get here, has_constraint is CT_CLUSTER, CT_USER or CT_SIMPLE,
+		// wrap current (single) constraint with (), and && with new constraint.
+		// and promote constraint type to complex.
+		MyString one = global_constraint.Value();
+		global_constraint.formatstr("(%s) && (%s)", one.Value(), constraint);
+		has_constraint = CT_COMPLEX;
+	}
 }
 
 bool
@@ -732,54 +729,39 @@ mayUserForceRm( )
 
 
 void
-handleAll()
-{
-	char constraint[128];
-	sprintf( constraint, "%s >= 0", ATTR_CLUSTER_ID );
-
-	CondorError errstack;
-	if( doWorkByConstraint(constraint, &errstack) ) {
-		fprintf( stdout, "All jobs %s.\n",
-				 (mode == JA_REMOVE_JOBS) ?
-				 "marked for removal" :
-				 (mode == JA_REMOVE_X_JOBS) ?
-				 "removed locally (remote state unknown)" :
-				 actionWord(mode,true) );
-	} else {
-		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
-		if (had_error)
-		{
-			fprintf( stderr, "Could not %s all jobs.\n",
-				 actionWord(mode,false) );
-		}
-	}
-}
-
-
-void
 handleConstraints( void )
 {
-	if( ! has_constraint ) {
+	if (has_usercluster) {
+		addConstraint(usercluster_constraint.Value(), has_usercluster);
+	}
+	if ( ! has_constraint) {
 		return;
 	}
+
 	const char* tmp = global_constraint.Value();
+	MyString cmsg;
+	switch(has_constraint) {
+		case CT_USER:
+			cmsg.formatstr(" of user %s", strstr(tmp, " == ")+4);
+			break;
+		case CT_CLUSTER:
+			cmsg.formatstr(" in cluster %s", strstr(tmp, " == ")+4);
+			break;
+		case CT_ALL:
+			cmsg = "";
+			break;
+		default:
+			cmsg.formatstr(" matching constraint (%s)", tmp);
+			break;
+	}
 
 	CondorError errstack;
 	if( doWorkByConstraint(tmp, &errstack) ) {
-		fprintf( stdout, "Jobs matching constraint %s %s\n", tmp,
-				 (mode == JA_REMOVE_JOBS) ?
-				 "have been marked for removal" :
-				 (mode == JA_REMOVE_X_JOBS) ?
-				 "have been removed locally (remote state unknown)" :
-				 actionWord(mode,true) );
-
+		fprintf(stdout, "All jobs%s have been %s\n", cmsg.Value(), actionWord(mode,true));
 	} else {
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
-		if (had_error)
-		{
-			fprintf( stderr, 
-				 "Couldn't find/%s all jobs matching constraint %s\n",
-				 actionWord(mode,false), tmp );
+		if (had_error) {
+			fprintf(stderr, "Couldn't find/%s all jobs%s\n", actionWord(mode,false), cmsg.Value());
 		}
 	}
 }
