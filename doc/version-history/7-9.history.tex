@@ -30,8 +30,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Condor now supports and implements the caching of ClassAds 
-to reduce memory footprints. The use of caching can be controlled via
-the new configuration parameter \MacroNI{ENABLE\_CLASSAD\_CACHING}.
+to reduce memory footprints. Caching may be disabled by setting
+the new configuration variable \Macro{ENABLE\_CLASSAD\_CACHING}
+to \Expr{False}.
+Third party use of the ClassAd library does not enable the
+caching of ClassAds by default; 
+Condor does enable the caching of ClassAds by default.
 \Ticket{2541}
 \Ticket{3127}
 
