@@ -359,8 +359,12 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	check_include_files("linux/nfsd/const.h" HAVE_LINUX_NFSD_CONST_H)
 	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
+	check_include_files("X11/Xlib.h" HAVE_XLIB_H)
 
-	find_library(HAVE_X11 X11)
+	if (HAVE_XLIB_H)
+	  find_library(HAVE_X11 X11)
+	endif()
+
 	dprint("Threaded functionality only enable in Linux and Windows")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
