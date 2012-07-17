@@ -217,6 +217,14 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 		// No matter what, if the reply fetch hook is configured, invoke it.
 	hookReplyFetch(willing, job_ad, rip);
 
+	if (willing) {
+		Claim* leftover_claim = NULL; 
+		Resource * new_rip = initialize_resource(rip, job_ad, leftover_claim);
+		if (new_rip) { rip = new_rip; }
+		else { willing = false; }
+	}
+
+
 	if (!willing) {
 			// TODO-fetch: matchmaking on other slots?
 		if (idle_fetch_claim) {

@@ -52,6 +52,9 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
+\item Jobs from a hook to fetch work (\MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}) now correctly receive dynamic slots from a partitionable slot instead of claiming the entire partitionable slot.
+\Ticket{2819}
+
 \item Fixed a bug in which a slot might become stuck in the Preempting state
 when a \Condor{startd} is configured with a hook to fetch work,
 as defined by \Macro{<Keyword>\_HOOK\_FETCH\_WORK}.
