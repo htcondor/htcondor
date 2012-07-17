@@ -539,8 +539,12 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	if (image > m_max_image_size) {
 		m_max_image_size = image/1024;
 	}
+	// XXX: Try again at using this at a later date.
+	// Currently, it reports the max size *including* the page cache.
+	// Doh!
+	//
 	// Try updating the max size using cgroups
-	update_max_image_size_cgroup();
+	//update_max_image_size_cgroup();
 
 	// Update CPU
 	*handle = NULL;
