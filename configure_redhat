@@ -1,0 +1,29 @@
+#!/bin/sh
+
+echo "-------------------------------------------------------------------"
+echo "* NOTE: Attempting to configure a Red Hat-esk build"
+echo "* which builds against system libs and selectively "
+echo "* enables and disables portions of condor"
+echo "* If you are unsurei, you should run \"cmake .\""
+echo "*"
+echo "* Another option would be to run ccmake or cmake-gui"
+echo "* and select the options you care to build with"
+echo "-------------------------------------------------------------------"
+cmake -D_DEBUG:BOOL=TRUE \
+  -DNO_PHONE_HOME:BOOL=TRUE \
+  -DHAVE_BACKFILL:BOOL=FALSE \
+  -DHAVE_BOINC:BOOL=FALSE \
+  -DWITH_GSOAP:BOOL=FALSE \
+  -DWITH_POSTGRESQL:BOOL=FALSE \
+  -DHAVE_KBDD:BOOL=TRUE \
+  -DHAVE_HIBERNATION:BOOL=TRUE \
+  -DWANT_LEASE_MANAGER:BOOL=FALSE \
+  -DWANT_CONTRIB:BOOL=ON \
+  -DWANT_MAN_PAGES:BOOL=TRUE \
+  -DWANT_FULL_DEPLOYMENT:BOOL=FALSE \
+  -DWANT_GLEXEC:BOOL=FALSE \
+  -D_VERBOSE:BOOL=TRUE \
+  -DBUILDID:STRING=RH_development \
+  -DWITH_GLOBUS:BOOL=FALSE \
+  -DWITH_VOMS:BOOL=FALSE \
+  -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir "$@"

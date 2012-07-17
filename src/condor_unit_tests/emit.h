@@ -23,19 +23,19 @@
 // Why wrap these in do{}while? http://c-faq.com/cpp/multistmt.html
 #define FAIL \
 	do { \
-		e.emit_result_failure(__LINE__); \
+		e.emit_result_failure(__LINE__,__FILE__); \
 		return false; \
 	} while(0)
 
 #define PASS \
 	do { \
-		e.emit_result_success(__LINE__); \
+		e.emit_result_success(__LINE__,__FILE__); \
 		return true; \
 	} while(0)
 
 #define ABORT \
 	do { \
-		e.emit_result_abort(__LINE__); \
+		e.emit_result_abort(__LINE__,__FILE__); \
 		return false; \
 	} while(0)
 
@@ -58,6 +58,8 @@ private:
 	bool print_successes;
 
 	MyString *buf, *test_buf;
+
+	MyString *cur_test_name;
 
 	time_t start, global_start;
 
@@ -121,18 +123,18 @@ public:
 	/* Prints out a message saying that the test succeeded.  The function should
 	 * be called via the PASS macro."
 	 */
-	void emit_result_success(int line);
+	void emit_result_success(int line, const char * file);
 
 	/* Prints out a message saying that the test failed.  The function should
 	 * be called via the FAIL macro."
 	 */
-	void emit_result_failure(int line);
+	void emit_result_failure(int line, const char * file);
 
 	/* Prints out a message saying that the test was aborted for some unknown
 	 * reason, probably given by emit_abort() before this function call.  The
 	 * function should be called via the ABORT macro."
 	 */
-	void emit_result_abort(int line);
+	void emit_result_abort(int line, const char * file);
 
 	/* Prints out an alert.  This could be a reason for why the test is being
 	 * aborted or just a warning that something happened but the test will continue
@@ -176,11 +178,11 @@ void emit_output_expected_header(void);
 
 void emit_output_actual_header(void);
 
-void emit_result_success(int line);
+void emit_result_success(int line, const char * file);
 
-void emit_result_failure(int line);
+void emit_result_failure(int line, const char * file);
 
-void emit_result_abort(int line);
+void emit_result_abort(int line, const char * file);
 
 void emit_alert(const char* alert);
 

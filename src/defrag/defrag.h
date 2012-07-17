@@ -40,11 +40,11 @@ class Defrag: public Service {
 	void stop();
 
 	void poll(); // do the periodic policy evaluation
-	bool drain(ClassAd *startd_ad);
 
 	typedef std::set< std::string > MachineSet;
 
  private:
+
 	int m_polling_interval; // delay between evaluations of the policy
 	int m_polling_timer;
 	double m_draining_per_hour;
@@ -58,6 +58,7 @@ class Defrag: public Service {
 	ClassAd m_rank_ad;
 	int m_draining_schedule;
 	std::string m_draining_schedule_str;
+	std::string m_cancel_requirements; // Requirements to stop a drain.
 
 	time_t m_last_poll;
 
@@ -69,6 +70,11 @@ class Defrag: public Service {
 	int m_public_ad_update_timer;
 	ClassAd m_public_ad;
 	DefragStats m_stats;
+
+	void poll_cancel(MachineSet &); // Cancel any machines that match DEFRAG_CANCEL_REQUIREMENTS
+
+	bool drain(const ClassAd &startd_ad);
+	bool cancel_drain(const ClassAd &startd_ad);
 
 	void validateExpr(char const *constraint,char const *constraint_source);
 	bool queryMachines(char const *constraint,char const *constraint_source,ClassAdList &startdAds);
