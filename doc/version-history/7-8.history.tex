@@ -52,8 +52,9 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
-\item Fixed a bug where a slot might become stuck in the Preempting state
-when a \Condor{startd} is configured with a hook to fetch work (\Macro{<Keyword>\_HOOK\_FETCH\_WORK}).
+\item Fixed a bug in which a slot might become stuck in the Preempting state
+when a \Condor{startd} is configured with a hook to fetch work,
+as defined by \Macro{<Keyword>\_HOOK\_FETCH\_WORK}.
 \Ticket{3076}
 
 \item Fixed a bug that caused Condor to transfer a job's input files from
@@ -102,8 +103,8 @@ refreshing the job's X.509 proxy when configuration variable
 suspended and then unsuspended.
 \Ticket{3108}
 
-\item Fixed a bug where Condor wouldn't mark grid-type nordugrid jobs
-as running in some instances.
+\item Fixed a bug in which Condor would not mark grid-type nordugrid jobs
+as Running due to variation in the format of the job status value.
 \Ticket{3118}
 
 \end{itemize}
