@@ -20,7 +20,7 @@ CgroupLimits::CgroupLimits(std::string &cgroup) : m_cgroup_string(cgroup)
 int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
 {
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::MEMORY_CONTROLLER)) {
-		dprintf(D_ALWAYS, "Unable to set memory limit because cgroup is invalid.");
+		dprintf(D_ALWAYS, "Unable to set memory limit because cgroup is invalid.\n");
 		return 1;
 	}
 
@@ -55,7 +55,7 @@ int CgroupLimits::set_memory_limit_bytes(uint64_t mem_bytes, bool soft)
 int CgroupLimits::set_cpu_shares(uint64_t shares)
 {
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::CPU_CONTROLLER)) {
-		dprintf(D_ALWAYS, "Unable to set CPU shares because cgroup is invalid.");
+		dprintf(D_ALWAYS, "Unable to set CPU shares because cgroup is invalid.\n");
 		return 1;
 	}
 
@@ -89,7 +89,7 @@ int CgroupLimits::set_cpu_shares(uint64_t shares)
 int CgroupLimits::set_blockio_weight(uint64_t weight)
 {
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::BLOCK_CONTROLLER)) {
-		dprintf(D_ALWAYS, "Unable to set blockio weight because cgroup is invalid.");
+		dprintf(D_ALWAYS, "Unable to set blockio weight because cgroup is invalid.\n");
 		return 1;
 	}
 
