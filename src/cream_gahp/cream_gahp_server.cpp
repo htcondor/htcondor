@@ -37,6 +37,9 @@
 using namespace std;
 using namespace glite::ce::cream_client_api::soap_proxy;
 
+// This symbol is necessary to prevent errors when dynamically linking
+SOAP_NMAC struct Namespace namespaces[] = { { NULL, NULL } };
+
 #define USE_QUICKLOG 0
 
 #if USE_QUICKLOG
