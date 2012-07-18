@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryQuery_GETSUBMISSIONID_H
-        #define AviaryQuery_GETSUBMISSIONID_H
-
+          #ifndef AviaryQuery_GETSUBMISSIONID_H
+          #define AviaryQuery_GETSUBMISSIONID_H
+        
+      
        /**
         * GetSubmissionID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,10 +20,10 @@
         
 
         
-       #include "AviaryCommon_ScanMode.h"
-          
-       #include "AviaryCommon_SubmissionID.h"
-          
+                #include "AviaryCommon_ScanMode.h"
+              
+                #include "AviaryCommon_SubmissionID.h"
+              
         #include <axutil_qname.h>
         
 
@@ -101,6 +101,11 @@ namespace AviaryQuery
          */
         GetSubmissionID(int arg_Size,AviaryCommon::ScanMode* arg_Mode,AviaryCommon::SubmissionID* arg_Offset);
         
+
+        /**
+         * resetAll for GetSubmissionID
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

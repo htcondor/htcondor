@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_ATTRIBUTETYPE_H
-        #define AviaryCommon_ATTRIBUTETYPE_H
-
+          #ifndef AviaryCommon_ATTRIBUTETYPE_H
+          #define AviaryCommon_ATTRIBUTETYPE_H
+        
+      
        /**
         * AttributeType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -89,7 +89,13 @@ namespace AviaryCommon
          * @return newly created AttributeType object
          */
         AttributeType(std::string arg_AttributeType);
+        AttributeType(const ADBAttributeTypeEnum arg_AttributeType);
         
+
+        /**
+         * resetAll for AttributeType
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

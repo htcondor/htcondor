@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_JOBSUMMARY_H
-        #define AviaryCommon_JOBSUMMARY_H
-
+          #ifndef AviaryCommon_JOBSUMMARY_H
+          #define AviaryCommon_JOBSUMMARY_H
+        
+      
        /**
         * JobSummary.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,12 +20,12 @@
         
 
         
-       #include "AviaryCommon_JobID.h"
-          
-       #include "AviaryCommon_Status.h"
-          
-       #include "AviaryCommon_JobStatusType.h"
-          
+                #include "AviaryCommon_JobID.h"
+              
+                #include "AviaryCommon_Status.h"
+              
+                #include "AviaryCommon_JobStatusType.h"
+              
         #include <axutil_date_time.h>
           
 
@@ -173,6 +173,11 @@ namespace AviaryCommon
          */
         JobSummary(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,axutil_date_time_t* arg_Queued,axutil_date_time_t* arg_Last_update,AviaryCommon::JobStatusType* arg_Job_status,std::string arg_Cmd,std::string arg_Args1,std::string arg_Args2,std::string arg_Held,std::string arg_Released,std::string arg_Removed);
         
+
+        /**
+         * resetAll for JobSummary
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryJob_RELEASEJOBRESPONSE_H
-        #define AviaryJob_RELEASEJOBRESPONSE_H
-
+          #ifndef AviaryJob_RELEASEJOBRESPONSE_H
+          #define AviaryJob_RELEASEJOBRESPONSE_H
+        
+      
        /**
         * ReleaseJobResponse.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryJob_ControlJobResponse.h"
-          
+                #include "AviaryJob_ControlJobResponse.h"
+              
         #include <axutil_qname.h>
         
 
@@ -81,6 +81,11 @@ namespace AviaryJob
          */
         ReleaseJobResponse(AviaryJob::ControlJobResponse* arg_ReleaseJobResponse);
         
+
+        /**
+         * resetAll for ReleaseJobResponse
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         
