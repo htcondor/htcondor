@@ -212,6 +212,7 @@
 #define ATTR_MYPROXY_REFRESH_THRESHOLD  "MyProxyRefreshThreshold"
 #define ATTR_MYPROXY_NEW_PROXY_LIFETIME  "MyProxyNewProxyLifetime"
 // END ckireyev myproxy
+<<<<<<< HEAD
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
 #define ATTR_HAS_FILE_TRANSFER  "HasFileTransfer"
@@ -264,6 +265,7 @@
 #define ATTR_JOB_ARGUMENTS1  "Args"
 #define ATTR_JOB_ARGUMENTS2  "Arguments"
 #define ATTR_JOB_CMD  "Cmd"
+#define ATTR_JOB_DESCRIPTION "JobDescription"
 #define ATTR_STACK_SIZE  "StackSize"
 #define ATTR_JOB_CMD_HASH  "CmdHash"
 #define ATTR_JOB_CMD_MD5  "CmdMD5"
