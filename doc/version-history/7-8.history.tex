@@ -52,6 +52,11 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
+\item Fixed a bug in which usage of cgroups incorrectly included the
+page cache in the maximum memory usage.
+This bug fix is also included in Condor version 7.9.0.
+\Ticket{3003}
+
 \item Jobs from a hook to fetch work (\MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}) now correctly receive dynamic slots from a partitionable slot instead of claiming the entire partitionable slot.
 \Ticket{2819}
 
