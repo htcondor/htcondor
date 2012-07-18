@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_STATUSCODETYPE_H
-        #define AviaryCommon_STATUSCODETYPE_H
-
+          #ifndef AviaryCommon_STATUSCODETYPE_H
+          #define AviaryCommon_STATUSCODETYPE_H
+        
+      
        /**
         * StatusCodeType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -88,7 +88,13 @@ namespace AviaryCommon
          * @return newly created StatusCodeType object
          */
         StatusCodeType(std::string arg_StatusCodeType);
+        StatusCodeType(const ADBStatusCodeTypeEnum arg_StatusCodeType);
         
+
+        /**
+         * resetAll for StatusCodeType
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

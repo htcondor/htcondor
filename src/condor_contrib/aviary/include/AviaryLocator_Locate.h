@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryLocator_LOCATE_H
-        #define AviaryLocator_LOCATE_H
-
+          #ifndef AviaryLocator_LOCATE_H
+          #define AviaryLocator_LOCATE_H
+        
+      
        /**
         * Locate.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_ResourceID.h"
-          
+                #include "AviaryCommon_ResourceID.h"
+              
         #include <axutil_qname.h>
         
 
@@ -86,6 +86,11 @@ namespace AviaryLocator
          */
         Locate(AviaryCommon::ResourceID* arg_Id,bool arg_PartialMatches);
         
+
+        /**
+         * resetAll for Locate
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

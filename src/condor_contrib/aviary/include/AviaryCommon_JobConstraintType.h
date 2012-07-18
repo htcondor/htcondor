@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_JOBCONSTRAINTTYPE_H
-        #define AviaryCommon_JOBCONSTRAINTTYPE_H
-
+          #ifndef AviaryCommon_JOBCONSTRAINTTYPE_H
+          #define AviaryCommon_JOBCONSTRAINTTYPE_H
+        
+      
        /**
         * JobConstraintType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -85,7 +85,13 @@ namespace AviaryCommon
          * @return newly created JobConstraintType object
          */
         JobConstraintType(std::string arg_JobConstraintType);
+        JobConstraintType(const ADBJobConstraintTypeEnum arg_JobConstraintType);
         
+
+        /**
+         * resetAll for JobConstraintType
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

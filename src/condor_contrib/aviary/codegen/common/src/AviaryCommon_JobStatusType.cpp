@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_JobStatusType.h"
+          
 
-        #include "AviaryCommon_JobStatusType.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -56,7 +68,22 @@
         }
         AviaryCommon::JobStatusType::~JobStatusType()
         {
-            axutil_qname_free(qname,Environment::getEnv());
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::JobStatusType::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+          if(qname != NULL)
+          {
+            axutil_qname_free( qname, Environment::getEnv());
+            qname = NULL;
+          }
+        
+            return true;
+
         }
 
         
@@ -306,31 +333,45 @@
                    {
                      
                        case JobStatusType_IDLE :
-                            property_JobStatusType = ("IDLE");
+                            
+                            
+                            property_JobStatusType = "IDLE";
                           break;
                      
                        case JobStatusType_RUNNING :
-                            property_JobStatusType = ("RUNNING");
+                            
+                            
+                            property_JobStatusType = "RUNNING";
                           break;
                      
                        case JobStatusType_REMOVED :
-                            property_JobStatusType = ("REMOVED");
+                            
+                            
+                            property_JobStatusType = "REMOVED";
                           break;
                      
                        case JobStatusType_COMPLETED :
-                            property_JobStatusType = ("COMPLETED");
+                            
+                            
+                            property_JobStatusType = "COMPLETED";
                           break;
                      
                        case JobStatusType_HELD :
-                            property_JobStatusType = ("HELD");
+                            
+                            
+                            property_JobStatusType = "HELD";
                           break;
                      
                        case JobStatusType_TRANSFERRING_OUTPUT :
-                            property_JobStatusType = ("TRANSFERRING_OUTPUT");
+                            
+                            
+                            property_JobStatusType = "TRANSFERRING_OUTPUT";
                           break;
                      
                        case JobStatusType_SUSPENDED :
-                            property_JobStatusType = ("SUSPENDED");
+                            
+                            
+                            property_JobStatusType = "SUSPENDED";
                           break;
                      
                      
@@ -350,6 +391,24 @@
                 
                 return true;
              }
+
+
+             /**
+             * specialized enum constructor for JobStatusType.
+             */
+            AviaryCommon::JobStatusType::JobStatusType(const ADBJobStatusTypeEnum  arg_JobStatusType)
+             {             
+                   qname = NULL;
+             
+                 qname =  axutil_qname_create (Environment::getEnv(),
+                       "JobStatusType",
+                       "http://common.aviary.grid.redhat.com",
+                       NULL);
+               
+
+            isValidJobStatusType  = setJobStatusTypeEnum( arg_JobStatusType );
+            }
+
              
 
            /**

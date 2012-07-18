@@ -230,7 +230,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	::SetAttribute(cluster, proc, ATTR_CLUSTER_ID, buf);
 	snprintf(buf, 22, "%d", proc);
 	::SetAttribute(cluster, proc, ATTR_PROC_ID, buf);
-	snprintf(buf, 22, "%d", time(NULL));
+	snprintf(buf, 22, "%ld", time(NULL));
 	::SetAttribute(cluster, proc, ATTR_Q_DATE, buf);
 
 		// Could check for some invalid attributes, e.g
@@ -372,7 +372,7 @@ SchedulerObject::remove(std::string key, std::string &reason, std::string &text)
 }
 
 bool
-SchedulerObject::suspend(std::string key, std::string &reason, std::string &text)
+SchedulerObject::suspend(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
 	if (id.cluster < 0 || id.proc < 0) {
@@ -387,7 +387,7 @@ SchedulerObject::suspend(std::string key, std::string &reason, std::string &text
 }
 
 bool
-SchedulerObject::_continue(std::string key, std::string &reason, std::string &text)
+SchedulerObject::_continue(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
 	if (id.cluster < 0 || id.proc < 0) {
