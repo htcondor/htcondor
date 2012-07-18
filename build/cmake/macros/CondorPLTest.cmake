@@ -18,7 +18,7 @@
 
 MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 
-	if (BUILD_TESTS)
+	if (BUILD_TESTING)
 
 		foreach(test ${_TEST_RUNS})
 			file (APPEND ${TEST_TARGET_DIR}/list_${test} "${_TARGET}\n")
@@ -30,6 +30,6 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 		# I'm not certain but it appears that the description files are not gen'd
 		# file ( APPEND ${TEST_TARGET_DIR}/${_TARGET}.desc ${_DESC} )
 
-	endif (BUILD_TESTS)
+	endif (BUILD_TESTING)
 
 ENDMACRO ( CONDOR_PL_TEST )

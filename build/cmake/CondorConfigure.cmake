@@ -16,7 +16,6 @@
  #
  ###############################################################
 
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -343,12 +342,6 @@ if (${OS_NAME} STREQUAL "SUNOS")
 elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
-
-	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-		set(CMAKE_PREFIX_PATH /usr/kerberos)
-		include_directories(/usr/kerberos/include)
-	endif()
-
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 
 	set(DOES_SAVE_SIGSTATE ON)
@@ -391,14 +384,6 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( IOKIT_FOUND IOKit )
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
-elseif(${OS_NAME} STREQUAL "HPUX")
-	set(HPUX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
-elseif(${OS_NAME} STREQUAL "HPUX")
-	set(HPUX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
 ##################################################
@@ -411,7 +396,6 @@ option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
-option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
@@ -467,13 +451,12 @@ else()
 endif()
 
 #####################################
-# KBDD option
-if (NOT HPUX)
-	option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
-	if (NOT WINDOWS)
-		set (HAVE_SCM_RIGHTS_PASSFD ON)
-	endif()
-endif(NOT HPUX)
+# Shared port option
+option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
+if (NOT WINDOWS)
+	set (HAVE_SCM_RIGHTS_PASSFD ON)
+endif()
+
 
 #####################################
 # ssh_to_job option
@@ -490,9 +473,9 @@ if ( HAVE_SSH_TO_JOB )
     endif()
 endif()
 
-if (BUILD_TESTS)
+if (BUILD_TESTING)
 	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
-endif(BUILD_TESTS)
+endif(BUILD_TESTING)
 
 ##################################################
 ##################################################
@@ -549,13 +532,7 @@ add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 if (NOT WINDOWS)
 
-	if (${SYSTEM_NAME} MATCHES "rhel3")
-		# The new version of 2011.05.24-r31 doesn't compile on rhel3/x86_64
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
-	else ()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
-	endif()
-
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)

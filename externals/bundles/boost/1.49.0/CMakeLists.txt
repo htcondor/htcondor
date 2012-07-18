@@ -24,9 +24,17 @@ if (NOT WINDOWS)
     if (NOT PROPER) 
         set (BOOST_COMPONENTS thread) 
     else()
-        dprint("TSTCLAIR: Add support for internal unit testing") 
-        #set (BOOST_COMPONENTS test)
+
+        if (BUILD_TESTING) 
+	  set (BOOST_COMPONENTS unit_test_framework ${BOOST_COMPONENTS})
+	endif()
+
     endif()
+
+    # The following is helpful if you are trying to debug cmake find module
+    #if (_VERBOSE)
+    #  set (Boost_DEBUG TRUE)
+    #endif()
 
     find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
@@ -84,7 +92,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
             set(EXEC ./)
         endif()
 
-	set(BOOST_MIN_BUILD_DEP --with-thread)
+	set(BOOST_MIN_BUILD_DEP --with-thread --with-test)
 	set(BOOST_PATCH echo "nothing")
 	set(BOOST_INSTALL echo "nothing")
 	unset(BOOST_INCLUDE)

@@ -16,9 +16,15 @@
  # 
  ############################################################### 
 
-MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
+MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 	if (BUILD_TESTING)
+
+		enable_testing()
+
+		# we are dependent on boost unit testing framework.
+		include_directories(${BOOST_INCLUDE})
+		add_definitions(-DBOOST_TEST_DYN_LINK)
 
 		set ( LOCAL_${_CNDR_TARGET} ${_CNDR_TARGET} )
 
@@ -26,9 +32,7 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 			string (REPLACE ".exe" "" ${LOCAL_${_CNDR_TARGET}} ${LOCAL_${_CNDR_TARGET}})
 		endif( WINDOWS )
 
-		add_executable( ${LOCAL_${_CNDR_TARGET}} EXCLUDE_FROM_ALL ${_SRCS})
-
-		set_target_properties( ${LOCAL_${_CNDR_TARGET}} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR} )
+		add_executable( ${LOCAL_${_CNDR_TARGET}} ${_SRCS})
 		
 		if ( WINDOWS )
 			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
@@ -36,15 +40,11 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS}" )
 
-		if ( DARWIN )
-			add_custom_command( TARGET ${LOCAL_${_CNDR_TARGET}}
-				POST_BUILD
-				WORKING_DIRECTORY ${TEST_TARGET_DIR}
-				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ${LOCAL_${_CNDR_TARGET}} )
-		endif()
+		add_test ( ${LOCAL_${_CNDR_TARGET}}_unit_test
+			   ${LOCAL_${_CNDR_TARGET}} )
 
 		APPEND_VAR( CONDOR_TESTS ${_CNDR_TARGET} )
 
 	endif(BUILD_TESTING)
 
-ENDMACRO(CONDOR_EXE_TEST)
+ENDMACRO(CONDOR_UNIT_TEST)

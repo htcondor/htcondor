@@ -24,11 +24,7 @@ if ( WITH_CREAM )
 
 if ( NOT PROPER )
 
-	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-		set( KERBEROS_INCLUDE_FLAG -I/usr/kerberos/include )
-	else()
-		set( KERBEROS_INCLUDE_FLAG "" )
-	endif()
+	set( KERBEROS_INCLUDE_FLAG "" )
 
 		# we define cream 1st because other externals will place bits there.
 		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14-p6 "lib;include;include/glite/security;opt" "done")

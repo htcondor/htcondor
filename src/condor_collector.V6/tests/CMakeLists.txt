@@ -16,22 +16,4 @@
  # 
  ############################################################### 
 
-
-if (NOT WIN_EXEC_NODE_ONLY)
-
-	include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-	## create targets
-	file( GLOB collectorRmvElements Example* )
-	condor_daemon ( collector
-					"${collectorRmvElements}"
-					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF}"
-					${C_SBIN}
-					ON )
-	if (HAVE_EXT_GSOAP)
-		install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
-	endif(HAVE_EXT_GSOAP)
-
-	add_subdirectory(tests)
-
-endif(NOT WIN_EXEC_NODE_ONLY)
+condor_unit_test ( _collector collector_tests.cpp "-lboost_unit_test_framework" )
