@@ -253,6 +253,7 @@ extern const char * const  ATTR_JOB_ACTION;
 extern const char * const  ATTR_JOB_ARGUMENTS1;
 extern const char * const  ATTR_JOB_ARGUMENTS2;
 extern const char * const  ATTR_JOB_CMD;
+extern const char * const  ATTR_JOB_DESCRIPTION;
 extern const char * const  ATTR_STACK_SIZE;
 extern const char * const  ATTR_JOB_CMD_HASH;
 extern const char * const  ATTR_JOB_CMD_MD5;

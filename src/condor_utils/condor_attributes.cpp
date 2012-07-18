@@ -314,6 +314,7 @@ const char * const ATTR_JOB_ACTION               = "JobAction";
 const char * const ATTR_JOB_ARGUMENTS1			 = "Args";
 const char * const ATTR_JOB_ARGUMENTS2			 = "Arguments";
 const char * const ATTR_JOB_CMD					 = "Cmd";
+const char * const ATTR_JOB_DESCRIPTION		 = "JobDescription";
 const char * const ATTR_JOB_CMD_HASH				 = "CmdHash";
 const char * const ATTR_JOB_CMD_MD5				 = "CmdMD5";
 const char * const ATTR_ORIG_JOB_CMD				= "OrigCmd"; 
