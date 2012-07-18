@@ -322,13 +322,11 @@ sub StartCondorWithParams
 
 sub debug {
     my $string = shift;
-    my $markedstring = "CP:" . $string;
     my $level = shift;
-    if(!(defined $level)) {
-        print( "", timestamp(), ": $markedstring" ) if $DEBUG;
-    }
-    elsif($level <= $DEBUGLEVEL) {
-        print( "", timestamp(), ": $markedstring" ) if $DEBUG;
+    if($DEBUG) {
+        if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
+            print( "", timestamp(), ":<CondorPersonal> $string" );
+        }
     }
 }
 

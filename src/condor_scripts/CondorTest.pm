@@ -1734,7 +1734,7 @@ sub findOutput
 sub debug {
     my $string = shift;
     my $level = shift;
-    Condor::debug("<CondorTest.pm> $string", $level);
+    Condor::debug("<CondorTest> $string", $level);
 }
 
 
