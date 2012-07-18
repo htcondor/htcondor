@@ -501,7 +501,7 @@ void INFNBatchJob::doEvaluateState()
 						 "(%d.%d) blah_job_status() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			ProcessRemoteAd( status_ad );
