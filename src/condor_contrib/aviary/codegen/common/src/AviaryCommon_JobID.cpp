@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_JobID.h"
+          
 
-        #include "AviaryCommon_JobID.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -75,7 +87,17 @@
         }
         AviaryCommon::JobID::~JobID()
         {
-            if (property_Submission) delete property_Submission;
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::JobID::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+             resetSubmission();//AviaryCommon::SubmissionID
+            return true;
+
         }
 
         

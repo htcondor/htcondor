@@ -61,6 +61,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&

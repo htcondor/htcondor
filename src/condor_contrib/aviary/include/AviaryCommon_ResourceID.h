@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_RESOURCEID_H
-        #define AviaryCommon_RESOURCEID_H
-
+          #ifndef AviaryCommon_RESOURCEID_H
+          #define AviaryCommon_RESOURCEID_H
+        
+      
        /**
         * ResourceID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_ResourceType.h"
-          
+                #include "AviaryCommon_ResourceType.h"
+              
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -104,6 +104,11 @@ namespace AviaryCommon
          */
         ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Sub_type);
         
+
+        /**
+         * resetAll for ResourceID
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

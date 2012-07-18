@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_JobSummary.h"
+          
 
-        #include "AviaryCommon_JobSummary.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -145,11 +157,21 @@
         }
         AviaryCommon::JobSummary::~JobSummary()
         {
-            if (property_Id) delete property_Id;
-            if (property_Status) delete property_Status;
-            if (property_Job_status) delete property_Job_status;
-            axutil_date_time_free(property_Queued,Environment::getEnv());
-            axutil_date_time_free(property_Last_update,Environment::getEnv());
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::JobSummary::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+             resetId();//AviaryCommon::JobID
+             resetStatus();//AviaryCommon::Status
+             resetQueued();//axutil_date_time_t*
+             resetLast_update();//axutil_date_time_t*
+             resetJob_status();//AviaryCommon::JobStatusType
+            return true;
+
         }
 
         
@@ -1650,7 +1672,6 @@
                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,text_value_3);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
                  } 
 
@@ -1708,7 +1729,6 @@
                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,text_value_4);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
                  } 
 

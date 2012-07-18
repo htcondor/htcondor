@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryJob_SUBMITJOBRESPONSE_H
-        #define AviaryJob_SUBMITJOBRESPONSE_H
-
+          #ifndef AviaryJob_SUBMITJOBRESPONSE_H
+          #define AviaryJob_SUBMITJOBRESPONSE_H
+        
+      
        /**
         * SubmitJobResponse.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,10 +20,10 @@
         
 
         
-       #include "AviaryCommon_JobID.h"
-          
-       #include "AviaryCommon_Status.h"
-          
+                #include "AviaryCommon_JobID.h"
+              
+                #include "AviaryCommon_Status.h"
+              
         #include <axutil_qname.h>
         
 
@@ -92,6 +92,11 @@ namespace AviaryJob
          */
         SubmitJobResponse(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status);
         
+
+        /**
+         * resetAll for SubmitJobResponse
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

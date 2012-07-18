@@ -34,6 +34,10 @@
 #endif
 #endif
 
+#ifndef max
+#define max(x,y) (((x) < (y)) ? (y) : (x))
+#endif
+
 extern FILESQL *FILEObj;
 
 Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
@@ -2719,3 +2723,218 @@ Resource::compute_rank( ClassAd* req_classad ) {
 
 
 #endif /* HAVE_JOB_HOOKS */
+
+
+Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+{
+	ASSERT(rip);
+	ASSERT(req_classad);
+	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
+		ClassAd	*mach_classad = rip->r_classad;
+		CpuAttributes *cpu_attrs;
+		MyString type;
+		StringList type_list;
+		int cpus, memory, disk;
+		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
+		ClassAd *unmodified_req_classad = NULL;
+
+			// Modify the requested resource attributes as per config file.
+			// If must_modify_request is false (the default), then we only modify the request _IF_
+			// the result still matches.  So is must_modify_request is false, we first backup
+			// the request classad before making the modification - if after modification matching fails,
+			// fall back on the original backed-up ad.
+		if ( !must_modify_request ) {
+				// save an unmodified backup copy of the req_classad
+			unmodified_req_classad = new ClassAd( *req_classad );  
+		}
+
+			// Now make the modifications.
+		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
+		for (int i=0; resources[i]; i++) {
+			MyString knob("MODIFY_REQUEST_EXPR_");
+			knob += resources[i];
+			char *tmp = param(knob.Value());
+			if( tmp ) {
+				ExprTree *tree = NULL;
+				classad::Value result;
+				int val;
+				ParseClassAdRvalExpr(tmp, tree);
+				if ( tree &&
+					 EvalExprTree(tree,req_classad,mach_classad,result) &&
+					 result.IsIntegerValue(val) )
+				{
+					req_classad->Assign(resources[i],val);
+
+				}
+				if (tree) delete tree;
+				free(tmp);
+			}
+		}
+
+			// Now make sure the partitionable slot itself is satisfied by
+			// the job. If not there is no point in trying to
+			// partition it. This check also prevents
+			// over-partitioning. The acceptability of the dynamic
+			// slot and job will be checked later, in the normal
+			// course of accepting the claim.
+		int mach_requirements = 1;
+		do {
+			rip->r_reqexp->restore();
+			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+			}
+				// If the pslot cannot support this request, ABORT iff there is not
+				// an unmodified_req_classad backup copy we can try on the next iteration of
+				// the while loop
+			if (mach_requirements == 0) {
+				if (unmodified_req_classad) {
+					// our modified req_classad no longer matches, put back the original
+					// so we can try again.
+					dprintf(D_ALWAYS, 
+						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
+					if ( req_classad ) delete req_classad;	// delete modified ad
+					req_classad = unmodified_req_classad;	// put back original					
+					unmodified_req_classad = NULL;
+				} else {
+					rip->dprintf(D_ALWAYS, 
+					  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
+					return NULL;
+				}
+			}
+		} while (mach_requirements == 0);
+
+			// No longer need this, make sure to free the memory.
+		if (unmodified_req_classad) {
+			delete unmodified_req_classad;
+			unmodified_req_classad = NULL;
+		}
+
+			// Pull out the requested attribute values.  If specified, we go with whatever
+			// the schedd wants, which is in request attributes prefixed with
+			// "_condor_".  This enables to schedd to request something different than
+			// what the end user specified, and yet still preserve the end-user's
+			// original request. If the schedd does not specify, go with whatever the user
+			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
+			// not exist, we either cons up a default or refuse the claim.
+		MyString schedd_requested_attr;
+
+			// Look to see how many CPUs are being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_CPUS;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, cpus ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+				cpus = 1; // reasonable default, for sure
+			}
+		}
+		type.sprintf_cat( "cpus=%d ", cpus );
+
+			// Look to see how much MEMORY is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_MEMORY;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, memory ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
+					// some memory size must be available else we cannot
+					// match, plus a job ad without ATTR_MEMORY is sketchy
+				rip->dprintf( D_ALWAYS,
+						  "No memory request in incoming ad, aborting...\n" );
+				return NULL;
+			}
+		}
+		type.sprintf_cat( "memory=%d ", memory );
+
+
+			// Look to see how much DISK is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_DISK;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, disk ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
+					// some disk size must be available else we cannot
+					// match, plus a job ad without ATTR_DISK is sketchy
+				rip->dprintf( D_FULLDEBUG,
+						  "No disk request in incoming ad, aborting...\n" );
+				return NULL;
+			}
+		}
+		type.sprintf_cat( "disk=%d%%",
+			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
+
+
+        for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+            string reqname;
+            sprintf(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
+            int reqval = 0;
+            if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
+            string attr;
+            sprintf(attr, " %s=%d", j->first.c_str(), reqval);
+            type += attr;
+        }
+
+		rip->dprintf( D_FULLDEBUG,
+					  "Match requesting resources: %s\n", type.Value() );
+
+		type_list.initializeFromString( type.Value() );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
+		if( ! cpu_attrs ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to parse attributes for request, aborting\n" );
+			return NULL;
+		}
+
+		Resource * new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
+		if( ! new_rip ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to build new resource for request, aborting\n" );
+			return NULL;
+		}
+
+			// Initialize the rest of the Resource
+		new_rip->compute( A_ALL );
+		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
+		new_rip->init_classad();
+		new_rip->refresh_classad( A_EVALUATED ); 
+		new_rip->refresh_classad( A_SHARED_SLOT ); 
+
+			// The new resource needs the claim from its
+			// parititionable parent
+		delete new_rip->r_cur;
+		new_rip->r_cur = rip->r_cur;
+		new_rip->r_cur->setResource( new_rip );
+
+			// And the partitionable parent needs a new claim
+		rip->r_cur = new Claim( rip );
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+			// Call update() in case we were never matched, i.e. no state change
+			// Note: update() may create a new claim if pass thru Owner state
+		rip->update();
+
+		resmgr->addResource( new_rip );
+
+			// XXX: This is overkill, but the best way, right now, to
+			// get many of the new_rip's attributes calculated.
+		resmgr->compute( A_ALL );
+		resmgr->compute( A_TIMEOUT | A_UPDATE );
+
+			// Stash pslot claim as the "leftover_claim", which
+			// we will send back directly to the schedd iff it supports
+			// receiving partitionable slot leftover info as part of the
+			// new-style extended claiming protocol. 
+		bool scheddWantsLeftovers = false;
+			// presence of this attr in request ad tells us in a 
+			// backwards/forwards compatible way if the schedd understands
+			// the claim protocol enhancement to accept leftovers
+		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
+		if ( scheddWantsLeftovers && 
+			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
+		{
+			leftover_claim = rip->r_cur;
+			ASSERT(leftover_claim);
+		}
+
+		return new_rip;
+	} else {
+		// Basic slot.
+		return rip;
+	}
+}

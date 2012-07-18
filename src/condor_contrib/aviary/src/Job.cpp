@@ -460,7 +460,7 @@ void
     }
     if ( fseek ( hFile , m_he.start , SEEK_SET ) )
     {
-		sprintf(_text,"bad seek in '%s' at index %d", m_he.file.c_str(),m_he.start);
+		sprintf(_text,"bad seek in '%s' at index %ld", m_he.file.c_str(),m_he.start);
         dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
         return;
