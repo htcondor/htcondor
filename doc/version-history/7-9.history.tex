@@ -360,6 +360,11 @@ not match any certificates, even if they have an empty subject name.
 
 \begin{itemize}
 
+\item Fixed a bug in which usage of cgroups incorrectly included the page cache 
+in the maximum memory usage.
+This bug fix is also included in Condor version 7.8.2.
+\Ticket{3003}
+
 \item The EC2 GAHP will now respect the value of the environment variable
 \Env{X509\_CERT\_DIR} and the configuration variable
 \Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR} for \emph{all} secure connections.
