@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -27,6 +27,9 @@ my $test_passed = 0;
 
 
 sub timed_callback {
+    my %args = @_;
+    my $cluster = $args{"cluster"};
+
     my $stat = `condor_status -format "%s" 'ifThenElse(PartitionableSlot =?= TRUE, "P", ifThenElse(DynamicSlot =?= TRUE, "D", "S"))' -format " %s" State -format " %s" Activity -format " %s\n" Cpus`;
 
     my $expected_pslots = 0;
@@ -51,12 +54,28 @@ sub timed_callback {
     # and there should be no other slots
     if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
         $test_passed = 1;
-    } else {
-		print "Haven't seen expected condor_status output (yet).  What I saw was...\n";
-		print $stat;
-		print "condor_status shows\n";
-		runcmd("condor_status");
+	print "SUCCESS!  Saw the correct breakdown of slots.\n";
+	print "Will now condor_rm job.\n";
+
+        # Remove this or it might run again, which will cause a failure the second time condor_rm runs
+        CondorTest::RemoveTimed($testname);
+
+	# Now remove 
+	my @adarray;
+	my $cmd = "condor_rm $cluster";
+	my $status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status) {
+	    print "bad\n";
+	    CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n", 1);
+	    exit(1)
 	}
+    }
+    else {
+	print "Haven't seen expected condor_status output (yet).  What I saw was...\n";
+	print $stat;
+	print "condor_status shows\n";
+	runcmd("condor_status");
+    }
 }
 
 
@@ -66,6 +85,16 @@ sub exit_success_callback {
         die "Failed to find expected pattern of partitionable and dynamic slots";
     }
 }
+
+my $abort = sub {
+    # We will hit this if we condor_rm the job, which we do after seeing the correct pattern.
+    if($test_passed) {
+	CondorTest::debug("Job successfully condor_rm'ed after seeing correct pattern.\n", 1);
+    }
+    else {
+	die "Job aborted, but \$test_passed is not True\n";
+    }
+};
 
 # personal condor, with 5 partitionable slots, 4 cpus each (total 20 cpus)
 # set the negotiator interval down to so test runs faster.
@@ -109,10 +138,12 @@ close(SUBMIT);
 
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExitedSuccess($testname, \&exit_success_callback);
+CondorTest::RegisterAbort($testname, $abort);
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);
     exit(0);
-} else {
+}
+else {
     die "$testname: CondorTest::RunTest() failed\n";
 }

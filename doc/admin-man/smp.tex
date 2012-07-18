@@ -692,6 +692,86 @@ and their defaults are
   \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK} = \Expr{quantize(RequestDisk, \{1024\}) }}
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-Local-Machine-Resources}
+Configuring Customized Local Machine Resources}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+In addition to standard slot resources (cpus, memory, disk and swap) the
+administrator may also define custom resources on a localized per-machine basis.
+First, a list of local machine resources is defined using configuration 
+variable \Macro{MACHINE\_RESOURCE\_NAMES}, as in this example that
+declares resource names for GPUs and an actuator:
+\begin{verbatim}
+MACHINE_RESOURCE_NAMES = gpu, actuator
+\end{verbatim}
+
+Next the available resources quantities are defined using configuration
+variables of the form \Macro{MACHINE\_RESOURCE\_<name>}:
+\begin{verbatim}
+MACHINE_RESOURCE_gpu = 16
+MACHINE_RESOURCE_actuator = 8
+\end{verbatim}
+
+Local machine resource names defined in this way may now be used in conjunction 
+with \Macro{SLOT\_TYPE\_<N>}, using all the same syntax available for cpus, 
+memory, disk and swap, as described in section~\ref{sec:Slot-Type-Define} and
+section~\ref{sec:SMP-dynamicprovisioning}.  The following example demonstrates
+the definition of static and partitionable slot types with local machine 
+resources:
+\begin{verbatim}
+# declare a partitionable slot with half of the gpus, 6 actuators, and
+# 50% of all other resources (cpus, memory, etc):
+SLOT_TYPE_1 = gpu=50%,actuator=6,50%
+SLOT_TYPE_1_PARTITIONABLE = TRUE
+NUM_SLOTS_TYPE_1 = 1
+
+# declare two static slots, each with 25% of the gpus, 1 actuator and
+# 25% of all other resources: 
+SLOT_TYPE_2 = gpu=25%,actuator=1,25%
+SLOT_TYPE_2_PARTITIONABLE = FALSE
+NUM_SLOTS_TYPE_2 = 2
+\end{verbatim}
+
+A submitted job may request local machine resources using the same request\_<name>
+syntax described in section~\ref{sec:SMP-dynamicprovisioning}.  This example
+shows a portion of a job submission description file that requests GPUs and actuators:
+\begin{verbatim}
+universe = vanilla
+
+# request two GPUs and one actuator:
+request_gpu = 2
+request_actuator = 1
+
+queue
+\end{verbatim}
+
+A note on the representation of local machine resources in classads:  A declared resource
+will be represented on a slot ad with the following:
+\begin{description}
+\item{TotalXxx: the total quantity of resource xxx}
+\item{DetectedXxx: quantity of xxx detected (currently equivalent to TotalXxx)}
+\item{TotalSlotXxx: the quantity of xxx allocated to this slot}
+\item{Xxx: the amount of xxx available to be used on this slot}
+\end{description}
+
+From the examples above, the resource 'gpu' would be represented by:
+\begin{description}
+\item{TotalGpu}
+\item{DetectedGpu}
+\item{TotalSlotGpu}
+\item{Gpu}
+\end{description}
+
+On a job ad, requested machine resources appear via:
+\begin{description}
+\item{RequestXxx: amount of xxx requested}
+\end{description}
+
+From the example:
+\begin{description}
+\item{RequestGpu}
+\item{RequestActuator}
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-defrag}

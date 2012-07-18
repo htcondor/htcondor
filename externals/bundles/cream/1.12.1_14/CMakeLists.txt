@@ -16,11 +16,13 @@
  # 
  ############################################################### 
 
-if (NOT PROPER AND LINUX) #OR DARWIN
+if (LINUX)
   option( WITH_CREAM "Compiling with support for CREAM" ON )
-endif()
+endif(LINUX)
   
 if ( WITH_CREAM )
+
+if ( NOT PROPER )
 
 	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
 		set( KERBEROS_INCLUDE_FLAG -I/usr/kerberos/include )
@@ -247,8 +249,34 @@ if ( WITH_CREAM )
 
 		condor_post_external( cream include OFF )
 
-		message (STATUS "external configured (CREAM_FOUND=${CREAM_FOUND})")
+else( NOT PROPER )
 
-else()
+        # If there are sub-packages to cream you may wish to breakout as was done below
+	find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2713_cxx;glite_security_gss;gridsite" CREAM_FOUND )
+        
+        if (CREAM_FOUND)
+            find_multiple("log4cpp" LOG4CPP)
+            find_multiple("boost_thread" B_THREAD)
+            find_multiple("boost_regex" B_REGEX)
+            if (LOG4CPP )
+                set (CREAM_FOUND "${CREAM_FOUND};${LOG4CPP};${B_THREAD};${B_REGEX}")
+            else()
+                message ( STATUS "missing cream dependencies (LOG4CPP=${LOG4CPP} BOOST_THREAD=${B_THREAD} BOOST_REGEX=${B_REGEX})" )
+                unset (CREAM_FOUND)
+            endif()
+        endif()
+
+endif( NOT PROPER )
+
+else(WITH_CREAM)
 	message (STATUS "external skipped (cream)")
-endif()
+endif(WITH_CREAM)
+
+if (CREAM_FOUND)
+        set( CREAM_FOUND ${CREAM_FOUND} PARENT_SCOPE )
+        set( HAVE_EXT_CREAM ON PARENT_SCOPE )
+        message ( STATUS "external configured (CREAM_FOUND=${CREAM_FOUND})" )
+else(CREAM_FOUND)
+        message (STATUS "external skipped (cream)")
+endif(CREAM_FOUND)
+

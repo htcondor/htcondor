@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_JobDataType.h"
+          
 
-        #include "AviaryCommon_JobDataType.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -56,7 +68,22 @@
         }
         AviaryCommon::JobDataType::~JobDataType()
         {
-            axutil_qname_free(qname,Environment::getEnv());
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::JobDataType::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+          if(qname != NULL)
+          {
+            axutil_qname_free( qname, Environment::getEnv());
+            qname = NULL;
+          }
+        
+            return true;
+
         }
 
         
@@ -294,15 +321,21 @@
                    {
                      
                        case JobDataType_ERR :
-                            property_JobDataType = ("ERR");
+                            
+                            
+                            property_JobDataType = "ERR";
                           break;
                      
                        case JobDataType_LOG :
-                            property_JobDataType = ("LOG");
+                            
+                            
+                            property_JobDataType = "LOG";
                           break;
                      
                        case JobDataType_OUT :
-                            property_JobDataType = ("OUT");
+                            
+                            
+                            property_JobDataType = "OUT";
                           break;
                      
                      
@@ -322,6 +355,24 @@
                 
                 return true;
              }
+
+
+             /**
+             * specialized enum constructor for JobDataType.
+             */
+            AviaryCommon::JobDataType::JobDataType(const ADBJobDataTypeEnum  arg_JobDataType)
+             {             
+                   qname = NULL;
+             
+                 qname =  axutil_qname_create (Environment::getEnv(),
+                       "JobDataType",
+                       "http://common.aviary.grid.redhat.com",
+                       NULL);
+               
+
+            isValidJobDataType  = setJobDataTypeEnum( arg_JobDataType );
+            }
+
              
 
            /**

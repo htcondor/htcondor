@@ -1731,12 +1731,10 @@ sub findOutput
 
 # Call down to Condor Perl Module for now
 
-sub debug
-{
+sub debug {
     my $string = shift;
-	my $level = shift;
-	my $newstring = "CT:$string";
-	Condor::debug($newstring,$level);
+    my $level = shift;
+    Condor::debug("<CondorTest> $string", $level);
 }
 
 

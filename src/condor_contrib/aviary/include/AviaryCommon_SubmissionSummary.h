@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_SUBMISSIONSUMMARY_H
-        #define AviaryCommon_SUBMISSIONSUMMARY_H
-
+          #ifndef AviaryCommon_SUBMISSIONSUMMARY_H
+          #define AviaryCommon_SUBMISSIONSUMMARY_H
+        
+      
        /**
         * SubmissionSummary.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,12 +20,12 @@
         
 
         
-       #include "AviaryCommon_SubmissionID.h"
-          
-       #include "AviaryCommon_Status.h"
-          
-       #include "AviaryCommon_JobSummary.h"
-          
+                #include "AviaryCommon_SubmissionID.h"
+              
+                #include "AviaryCommon_Status.h"
+              
+                #include "AviaryCommon_JobSummary.h"
+              
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -160,9 +160,13 @@ namespace AviaryCommon
          * @param Jobs std::vector<AviaryCommon::JobSummary*>*
          * @return newly created SubmissionSummary object
          */
-        SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
-
+        SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
         
+
+        /**
+         * resetAll for SubmissionSummary
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
@@ -748,7 +752,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for running by property number (8)
+         * Getter for suspended by property number (8)
          * @return int
          */
 
@@ -759,7 +763,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for suspended by property number (9)
+         * Getter for transferring_output by property number (9)
          * @return int
          */
 
@@ -770,23 +774,13 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for transferring_output by property number (10)
-         * @return int
-         */
-
-        int WSF_CALL
-        getProperty10();
-
-    
-        
-
-        /**
-         * Getter for jobs by property number (11)
+         * Getter for jobs by property number (10)
          * @return Array of AviaryCommon::JobSummarys.
          */
 
         std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-        getProperty11();
+        getProperty10();
+
     
 
 };

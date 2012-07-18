@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_RESOURCELOCATION_H
-        #define AviaryCommon_RESOURCELOCATION_H
-
+          #ifndef AviaryCommon_RESOURCELOCATION_H
+          #define AviaryCommon_RESOURCELOCATION_H
+        
+      
        /**
         * ResourceLocation.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,10 +20,8 @@
         
 
         
-       #include "AviaryCommon_ResourceID.h"
-          
-       #include "AviaryCommon_Status.h"
-          
+                #include "AviaryCommon_ResourceID.h"
+              
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -46,10 +44,6 @@ namespace AviaryCommon
 
                 
                 bool isValidLocation;
-            AviaryCommon::Status* property_Status;
-
-                
-                bool isValidStatus;
             
 
         /*** Private methods ***/
@@ -61,10 +55,6 @@ namespace AviaryCommon
 
         bool WSF_CALL
         setLocationNil();
-            
-
-        bool WSF_CALL
-        setStatusNil();
             
 
 
@@ -92,11 +82,15 @@ namespace AviaryCommon
          * @param 
          * @param Id AviaryCommon::ResourceID*
          * @param Location std::vector<axutil_uri_t*>*
-         * @param Status AviaryCommon::Status*
          * @return newly created ResourceLocation object
          */
-        ResourceLocation(AviaryCommon::ResourceID* arg_Id,std::vector<axutil_uri_t*>* arg_Location,AviaryCommon::Status* arg_Status);
+        ResourceLocation(AviaryCommon::ResourceID* arg_Id,std::vector<axutil_uri_t*>* arg_Location);
         
+
+        /**
+         * resetAll for ResourceLocation
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
@@ -148,30 +142,6 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetLocation();
-        
-        
-
-        /**
-         * Getter for status. 
-         * @return AviaryCommon::Status*
-         */
-        WSF_EXTERN AviaryCommon::Status* WSF_CALL
-        getStatus();
-
-        /**
-         * Setter for status.
-         * @param arg_Status AviaryCommon::Status*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setStatus(AviaryCommon::Status*  arg_Status);
-
-        /**
-         * Re setter for status
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetStatus();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -270,16 +240,6 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isLocationNil();
-
-
-        
-
-        /**
-         * Check whether status is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isStatusNil();
 
 
         
@@ -384,17 +344,6 @@ namespace AviaryCommon
 
         std::vector<axutil_uri_t*>* WSF_CALL
         getProperty2();
-
-    
-        
-
-        /**
-         * Getter for status by property number (3)
-         * @return AviaryCommon::Status
-         */
-
-        AviaryCommon::Status* WSF_CALL
-        getProperty3();
 
     
 

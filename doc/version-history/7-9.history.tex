@@ -50,6 +50,11 @@ optional configuration settings:
 \end{itemize}
 \Ticket{3030}
 
+\item \Condor{defrag} now has a policy option to cancel draining
+of a machine that is in draining mode.  This can be used to effect
+partial draining of machines.
+\Ticket{2993}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -116,6 +121,14 @@ names of all jobs that these daemons will manage.
   the routed copy of the jobs are submitted.  If not specified, this
   defaults to the local pool.
 
+\label{JobRouterSchedd2Pool}
+\item[\Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}]
+  This new configuration value is an expression that specifies
+  which draining machines should have draining be canceled.  This defaults
+  to \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  This could be used to drain
+  partial rather than whole machines.
+\Ticket{2993}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -164,9 +177,21 @@ introduced when these functions were added in 7.7.6.
 
 \begin{itemize}
 
+\item Condor slots can now be configured with customized local 
+machine resources via \Macro{MACHINE\_RESOURCE\_NAMES} and 
+\Macro{MACHINE\_RESOURCE\_<name>}, then including local resource
+names on \Macro{SLOT\_TYPE\_<N>}.  Submitted jobs may request
+these resources using the standard request\_<name> syntax.
+See section~\ref{sec:SMP-Local-Machine-Resources}.
+\Ticket{2905}
+
 \item Condor now supports and implements the caching of ClassAds 
-to reduce memory footprints. The use of caching can be controlled via
-the new configuration parameter \MacroNI{ENABLE\_CLASSAD\_CACHING}.
+to reduce memory footprints. Caching may be disabled by setting
+the new configuration variable \Macro{ENABLE\_CLASSAD\_CACHING}
+to \Expr{False}.
+Third party use of the ClassAd library does not enable the
+caching of ClassAds by default; 
+Condor does enable the caching of ClassAds by default.
 \Ticket{2541}
 \Ticket{3127}
 

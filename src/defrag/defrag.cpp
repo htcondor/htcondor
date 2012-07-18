@@ -34,7 +34,8 @@
 #include "get_daemon_name.h"
 #include "defrag.h"
 
-char const * const ATTR_LAST_POLL = "LastPoll";
+static char const * const ATTR_LAST_POLL = "LastPoll";
+static char const * const DRAINING_CONSTRAINT = "Draining && Offline=!=True";
 
 Defrag::Defrag():
 	m_polling_interval(-1),
@@ -183,6 +184,12 @@ void Defrag::config()
 				"Defrag::updateCollector",
 				this);
 		}
+	}
+
+	if (param(m_cancel_requirements, "DEFRAG_CANCEL_REQUIREMENTS")) {
+		validateExpr( m_cancel_requirements.c_str(), "DEFRAG_CANCEL_REQUIREMENTS" );
+	} else {
+		m_cancel_requirements = "";
 	}
 
 	param(m_defrag_name,"DEFRAG_NAME");
@@ -448,6 +455,64 @@ static int prorate(int n,int time_remaining,int period,int granularity)
 	return answer;
 }
 
+void Defrag::poll_cancel(MachineSet &cancelled_machines)
+{
+	if (!m_cancel_requirements.size())
+	{
+		return;
+	}
+
+	MachineSet draining_whole_machines;
+	std::stringstream draining_whole_machines_ss;
+	draining_whole_machines_ss << "(" <<  m_cancel_requirements << ") && (" << DRAINING_CONSTRAINT << ")";
+	int num_draining_whole_machines = countMachines(draining_whole_machines_ss.str().c_str(),
+		"<DEFRAG_CANCEL_REQUIREMENTS>", &draining_whole_machines);
+
+	if (num_draining_whole_machines)
+	{
+		dprintf(D_ALWAYS, "Of the whole machines, %d are in the draining state.\n", num_draining_whole_machines);
+	}
+	else
+	{	// Early exit: nothing to do.
+		return;
+	}
+
+	ClassAdList startdAds;
+	if (!queryMachines(DRAINING_CONSTRAINT, "DRAINING_CONSTRAINT <all draining slots>",startdAds))
+	{
+		return;
+	}
+
+	startdAds.Shuffle();
+	startdAds.Sort(StartdSortFunc,&m_rank_ad);
+
+	startdAds.Open();
+
+	unsigned int cancel_count = 0;
+	ClassAd *startd_ad_ptr;
+	while ( (startd_ad_ptr=startdAds.Next()) )
+	{
+		if (!startd_ad_ptr) continue;
+
+		ClassAd &startd_ad = *startd_ad_ptr;
+		std::string machine;
+		std::string name;
+		startd_ad.LookupString(ATTR_NAME,name);
+		slotNameToDaemonName(name,machine);
+
+		if( !cancelled_machines.count(machine) && draining_whole_machines.count(machine) ) {
+			cancel_drain(startd_ad);
+			cancelled_machines.insert(machine);
+			cancel_count ++;
+		}
+	}
+
+	startdAds.Close();
+
+
+	dprintf(D_ALWAYS, "Cancelled draining of %u whole machines.\n", cancel_count);
+}
+
 void Defrag::poll()
 {
 	dprintf(D_FULLDEBUG,"Evaluating defragmentation policy.\n");
@@ -479,8 +544,7 @@ void Defrag::poll()
 		num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval);
 	}
 
-	char const *draining_constraint = "Draining && Offline=!=True";
-	int num_draining = countMachines(draining_constraint,"<InternalDrainingConstraint>");
+	int num_draining = countMachines(DRAINING_CONSTRAINT,"<InternalDrainingConstraint>");
 	m_stats.MachinesDraining = num_draining;
 
 	MachineSet whole_machines;
@@ -491,6 +555,10 @@ void Defrag::poll()
 			num_draining,num_whole_machines);
 
 	queryDrainingCost();
+
+	// If possible, cancel some drains.
+	MachineSet cancelled_machines;
+	poll_cancel(cancelled_machines);
 
 	if( num_to_drain <= 0 ) {
 		dprintf(D_ALWAYS,"Doing nothing, because number to drain in next %ds is calculated to be 0.\n",
@@ -559,13 +627,25 @@ void Defrag::poll()
 
 	startdAds.Open();
 	int num_drained = 0;
-	ClassAd *startd_ad;
+	ClassAd *startd_ad_ptr;
 	MachineSet machines_done;
-	while( (startd_ad=startdAds.Next()) ) {
+	while( (startd_ad_ptr=startdAds.Next()) ) {
+
+		if (!startd_ad_ptr) continue;
+		ClassAd &startd_ad = *startd_ad_ptr;
+
 		std::string machine;
 		std::string name;
-		startd_ad->LookupString(ATTR_NAME,name);
+		startd_ad.LookupString(ATTR_NAME,name);
 		slotNameToDaemonName(name,machine);
+
+		// If we have already cancelled draining on this machine, ignore it for this cycle.
+		if( cancelled_machines.count(machine) ) {
+			dprintf(D_FULLDEBUG,
+					"Skipping %s: already cancelled draining of %s in this cycle.\n",
+					name.c_str(),machine.c_str());
+			continue;
+		}
 
 		if( machines_done.count(machine) ) {
 			dprintf(D_FULLDEBUG,
@@ -601,26 +681,24 @@ void Defrag::poll()
 }
 
 bool
-Defrag::drain(ClassAd *startd_ad)
+Defrag::drain(const ClassAd &startd_ad)
 {
-	ASSERT( startd_ad );
-
 	std::string name;
-	startd_ad->LookupString(ATTR_NAME,name);
+	startd_ad.LookupString(ATTR_NAME,name);
 
 	dprintf(D_ALWAYS,"Initiating %s draining of %s.\n",
 			m_draining_schedule_str.c_str(),name.c_str());
 
-	DCStartd startd( startd_ad );
+	DCStartd startd( &startd_ad );
 
 	int graceful_completion = 0;
-	startd_ad->LookupInteger(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION,graceful_completion);
+	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION,graceful_completion);
 	int quick_completion = 0;
-	startd_ad->LookupInteger(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION,quick_completion);
+	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION,quick_completion);
 	int graceful_badput = 0;
-	startd_ad->LookupInteger(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT,graceful_badput);
+	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT,graceful_badput);
 	int quick_badput = 0;
-	startd_ad->LookupInteger(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT,quick_badput);
+	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT,quick_badput);
 
 	time_t now = time(NULL);
 	std::string draining_check_expr;
@@ -657,6 +735,27 @@ Defrag::drain(ClassAd *startd_ad)
 	m_stats.DrainSuccesses += 1;
 
 	return true;
+}
+
+bool
+Defrag::cancel_drain(const ClassAd &startd_ad)
+{
+
+	std::string name;
+	startd_ad.LookupString(ATTR_NAME,name);
+
+	dprintf(D_ALWAYS,"Initiating %s draining of %s.\n",
+		m_draining_schedule_str.c_str(),name.c_str());
+
+	DCStartd startd( &startd_ad );
+
+	bool rval = startd.cancelDrainJobs( NULL );
+	if ( rval ) {
+		dprintf(D_FULLDEBUG, "Sent request to cancel draining on %s\n", startd.name());
+	} else {
+		dprintf(D_ALWAYS, "Unable to cancel draining on %s: %s\n", startd.name(), startd.error());
+	}
+	return rval;
 }
 
 void

@@ -83,10 +83,15 @@ static const char *GMStateNames[] = {
 #define REMOTE_STATE_PREPARED		"PREPARED"
 #define REMOTE_STATE_SUBMITTING		"SUBMITTING"
 #define REMOTE_STATE_INLRMS_R		"INLRMS: R"
+#define REMOTE_STATE_INLRMS_R2		"INLRMS:R"
 #define REMOTE_STATE_INLRMS_Q		"INLRMS: Q"
+#define REMOTE_STATE_INLRMS_Q2		"INLRMS:Q"
 #define REMOTE_STATE_INLRMS_S		"INLRMS: S"
+#define REMOTE_STATE_INLRMS_S2		"INLRMS:S"
 #define REMOTE_STATE_INLRMS_E		"INLRMS: E"
+#define REMOTE_STATE_INLRMS_E2		"INLRMS:E"
 #define REMOTE_STATE_INLRMS_O		"INLRMS: O"
+#define REMOTE_STATE_INLRMS_O2		"INLRMS:O"
 #define REMOTE_STATE_KILLING		"KILLING"
 #define REMOTE_STATE_EXECUTED		"EXECUTED"
 #define REMOTE_STATE_FINISHING		"FINISHING"
@@ -1221,7 +1226,9 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 
 		if ( condorState == IDLE &&
 			 ( remoteJobState == REMOTE_STATE_INLRMS_R ||
+			   remoteJobState == REMOTE_STATE_INLRMS_R2 ||
 			   remoteJobState == REMOTE_STATE_INLRMS_E ||
+			   remoteJobState == REMOTE_STATE_INLRMS_E2 ||
 			   remoteJobState == REMOTE_STATE_EXECUTED ||
 			   remoteJobState == REMOTE_STATE_FINISHING ||
 			   remoteJobState == REMOTE_STATE_FINISHED ||
@@ -1229,7 +1236,9 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 			JobRunning();
 		} else if ( condorState == RUNNING &&
 					( remoteJobState == REMOTE_STATE_INLRMS_Q ||
-					  remoteJobState == REMOTE_STATE_INLRMS_S ) ) {
+					  remoteJobState == REMOTE_STATE_INLRMS_Q2 ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S2 ) ) {
 			JobIdle();
 		}
 	}

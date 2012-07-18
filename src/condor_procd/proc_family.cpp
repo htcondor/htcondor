@@ -36,6 +36,10 @@
 
 #include <unistd.h>
 long ProcFamily::clock_tick = sysconf( _SC_CLK_TCK );
+
+// Swap accounting is sometimes turned off.  We use this variable so we
+// warn about that situation only once.
+bool ProcFamily::have_warned_about_memsw = false;
 #endif
 
 ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
@@ -54,7 +58,9 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	m_member_list(NULL)
 #if defined(HAVE_EXT_LIBCGROUP)
 	, m_cgroup_string(""),
-	m_cm(CgroupManager::getInstance())
+	m_cm(CgroupManager::getInstance()),
+	m_initial_user_cpu(0),
+	m_initial_sys_cpu(0)
 #endif
 {
 #if !defined(WIN32)
@@ -188,6 +194,7 @@ after_migrate:
 		cgroup_free(&orig_cgroup);
 	}
 
+
 after_restore:
 	if (orig_cgroup_string != NULL) {
 		free(orig_cgroup_string);
@@ -229,6 +236,27 @@ ProcFamily::set_cgroup(const std::string &cgroup_string)
 	while (member != NULL) {
 		migrate_to_cgroup(member->get_proc_info()->pid);
 		member = member->m_next;
+	}
+
+	// Record the amount of pre-existing CPU usage here.
+	m_initial_user_cpu = 0;
+	m_initial_sys_cpu = 0;
+	get_cpu_usage_cgroup(m_initial_user_cpu, m_initial_sys_cpu);
+
+	// Reset block IO controller
+	if (m_cm.isMounted(CgroupManager::BLOCK_CONTROLLER)) {
+		struct cgroup *tmp_cgroup = cgroup_new_cgroup(m_cgroup_string.c_str());
+		struct cgroup_controller *blkio_controller = cgroup_add_controller(tmp_cgroup, BLOCK_CONTROLLER_STR);
+		ASSERT (blkio_controller != NULL); // Block IO controller should already exist.
+		cgroup_add_value_uint64(blkio_controller, "blkio.reset_stats", 0);
+		int err;
+		if ((err = cgroup_modify_cgroup(tmp_cgroup))) {
+			// Not allowed to reset stats?
+			dprintf(D_ALWAYS,
+				"Unable to reset cgroup %s block IO statistics. "
+				"Some block IO accounting will be inaccurate (ProcFamily %u): %u %s\n",
+				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
+		}
 	}
 
 	return 0;
@@ -425,10 +453,19 @@ ProcFamily::update_max_image_size_cgroup()
 		return;
 	}
 	if ((err = cgroup_get_value_uint64(memct, "memory.memsw.max_usage_in_bytes", &max_image))) {
-		dprintf(D_PROCFAMILY,
-			"Unable to load max memory usage for cgroup %s (ProcFamily %u): %u %s\n",
-			m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
-		return;
+		// On newer nodes, swap accounting is disabled by default.
+		// In some cases, swap accounting causes a kernel oops at the time of writing.
+		// So, we check memory.max_usage_in_bytes instead.
+		int err2 = cgroup_get_value_uint64(memct, "memory.max_usage_in_bytes", &max_image);
+		if (err2) {
+			dprintf(D_PROCFAMILY,
+				"Unable to load max memory usage for cgroup %s (ProcFamily %u): %u %s\n",
+				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
+			return;
+		} else if (!have_warned_about_memsw) {
+			have_warned_about_memsw = true;
+			dprintf(D_ALWAYS, "Swap acounting is not available; only doing RAM accounting.\n");
+		}
 	}
 	m_max_image_size = max_image/1024;
 }
@@ -486,6 +523,40 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 	return 0;
 }
 
+int ProcFamily::get_cpu_usage_cgroup(long &user_time, long &sys_time) {
+
+	if (!m_cm.isMounted(CgroupManager::CPUACCT_CONTROLLER)) {
+		return 1;
+	}
+
+	void * handle = NULL;
+	u_int64_t tmp = 0;
+	struct cgroup_stat stats;
+	int err = cgroup_read_stats_begin(CPUACCT_CONTROLLER_STR, m_cgroup_string.c_str(), &handle, &stats);
+	while (err != ECGEOF) {
+		if (err > 0) {
+			dprintf(D_PROCFAMILY,
+				"Unable to read cgroup %s cpuacct stats (ProcFamily %u): %s.\n",
+				m_cgroup_string.c_str(), m_root_pid, cgroup_strerror(err));
+			break;
+		}
+		if (_check_stat_uint64(stats, "user", &tmp)) {
+			user_time = tmp/clock_tick-m_initial_user_cpu;
+		} else if (_check_stat_uint64(stats, "system", &tmp)) {
+			sys_time = tmp/clock_tick-m_initial_sys_cpu;
+		}
+			err = cgroup_read_stats_next(&handle, &stats);
+	}
+	if (handle != NULL) {
+		cgroup_read_stats_end(&handle);
+	}
+	if (err != ECGEOF) {
+		dprintf(D_ALWAYS, "Internal cgroup error when retrieving CPU statistics: %s\n", cgroup_strerror(err));
+		return 1;
+	}
+	return 0;
+}
+
 int
 ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 {
@@ -496,16 +567,13 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 
 	int err;
 	struct cgroup_stat stats;
-	void **handle;
+	void *handle = NULL;
 	u_int64_t tmp = 0, image = 0;
 	bool found_rss = false;
 
 	// Update memory
-	handle = (void **)malloc(sizeof(void*));
-	ASSERT (handle != NULL);
-	*handle = NULL;
 
-	err = cgroup_read_stats_begin(MEMORY_CONTROLLER_STR, m_cgroup_string.c_str(), handle, &stats);
+	err = cgroup_read_stats_begin(MEMORY_CONTROLLER_STR, m_cgroup_string.c_str(), &handle, &stats);
 	while (err != ECGEOF) {
 		if (err > 0) {
 			dprintf(D_PROCFAMILY,
@@ -522,10 +590,10 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 		} else if (_check_stat_uint64(stats, "total_swap", &tmp)) {
 			image += tmp;
 		}
-		err = cgroup_read_stats_next(handle, &stats);
+		err = cgroup_read_stats_next(&handle, &stats);
 	}
-	if (*handle != NULL) {
-		cgroup_read_stats_end(handle);
+	if (handle != NULL) {
+		cgroup_read_stats_end(&handle);
 	}
 	if (found_rss) {
 		usage->total_image_size = image/1024;
@@ -539,30 +607,15 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	if (image > m_max_image_size) {
 		m_max_image_size = image/1024;
 	}
+	// XXX: Try again at using this at a later date.
+	// Currently, it reports the max size *including* the page cache.
+	// Doh!
+	//
 	// Try updating the max size using cgroups
-	update_max_image_size_cgroup();
+	//update_max_image_size_cgroup();
 
 	// Update CPU
-	*handle = NULL;
-	err = cgroup_read_stats_begin(CPUACCT_CONTROLLER_STR, m_cgroup_string.c_str(), handle, &stats);
-	while (err != ECGEOF) {
-		if (err > 0) {
-			dprintf(D_PROCFAMILY,
-				"Unable to read cgroup %s cpuacct stats (ProcFamily %u): %s.\n",
-				m_cgroup_string.c_str(), m_root_pid, cgroup_strerror(err));
-			break;
-		}
-		if (_check_stat_uint64(stats, "user", &tmp)) {
-			usage->user_cpu_time = tmp/clock_tick;
-		} else if (_check_stat_uint64(stats, "system", &tmp)) {
-			usage->sys_cpu_time = tmp/clock_tick;
-		}
-		err = cgroup_read_stats_next(handle, &stats);
-	}
-	if (*handle != NULL) {
-		cgroup_read_stats_end(handle);
-	}
-	free(handle);
+	get_cpu_usage_cgroup(usage->user_cpu_time, usage->sys_cpu_time);
 
 	aggregate_usage_cgroup_blockio(usage);
 

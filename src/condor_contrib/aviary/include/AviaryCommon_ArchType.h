@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_ARCHTYPE_H
-        #define AviaryCommon_ARCHTYPE_H
-
+          #ifndef AviaryCommon_ARCHTYPE_H
+          #define AviaryCommon_ARCHTYPE_H
+        
+      
        /**
         * ArchType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -84,7 +84,13 @@ namespace AviaryCommon
          * @return newly created ArchType object
          */
         ArchType(std::string arg_ArchType);
+        ArchType(const ADBArchTypeEnum arg_ArchType);
         
+
+        /**
+         * resetAll for ArchType
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

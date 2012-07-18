@@ -54,7 +54,7 @@ Axis2SslProvider::Axis2SslProvider(int _log_level, const char* _log_file, const 
 
 Axis2SslProvider::~Axis2SslProvider()
 {
-    axis2_ssl_utils_cleanup_ssl(m_env,m_ctx,m_ssl);
+    axis2_ssl_utils_cleanup_ssl(m_ctx,m_ssl);
 }
 
 bool 

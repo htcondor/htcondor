@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryJob_SUBMITJOB_H
-        #define AviaryJob_SUBMITJOB_H
-
+          #ifndef AviaryJob_SUBMITJOB_H
+          #define AviaryJob_SUBMITJOB_H
+        
+      
        /**
         * SubmitJob.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,10 +20,10 @@
         
 
         
-       #include "AviaryCommon_ResourceConstraint.h"
-          
-       #include "AviaryCommon_Attribute.h"
-          
+                #include "AviaryCommon_ResourceConstraint.h"
+              
+                #include "AviaryCommon_Attribute.h"
+              
         #include <axutil_qname.h>
         
 
@@ -142,6 +142,11 @@ namespace AviaryJob
          */
         SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::string arg_Submission_name,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,std::vector<AviaryCommon::Attribute*>* arg_Extra,bool arg_AllowOverrides);
         
+
+        /**
+         * resetAll for SubmitJob
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/

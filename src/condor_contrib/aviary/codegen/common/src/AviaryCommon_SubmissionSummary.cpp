@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_SubmissionSummary.h"
+          
 
-        #include "AviaryCommon_SubmissionSummary.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -55,8 +67,7 @@
         
         }
 
-       AviaryCommon::SubmissionSummary::SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Qdate,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
-
+       AviaryCommon::SubmissionSummary::SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,int arg_Suspended,int arg_Transferring_output,std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
         {
              
                property_Id  = NULL;
@@ -108,6 +119,18 @@
         }
         AviaryCommon::SubmissionSummary::~SubmissionSummary()
         {
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::SubmissionSummary::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+             resetId();//AviaryCommon::SubmissionID
+             resetStatus();//AviaryCommon::Status
+             resetJobs();//AviaryCommon::JobSummary
+            return true;
 
         }
 
@@ -1065,8 +1088,6 @@
                     
                     axis2_char_t text_value_10[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t text_value_11[ADB_DEFAULT_DIGIT_LIMIT];
-                    
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -1544,11 +1565,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_9, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Suspended);
+                               sprintf (text_value_8, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Suspended);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1601,11 +1622,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_10, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Transferring_output);
+                               sprintf (text_value_9, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Transferring_output);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_10, axutil_strlen(text_value_10));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -2344,10 +2365,10 @@
            
 
             /**
-             * Getter for suspended by  Property Number 9
+             * Getter for suspended by  Property Number 8
              */
             int WSF_CALL
-            AviaryCommon::SubmissionSummary::getProperty9()
+            AviaryCommon::SubmissionSummary::getProperty8()
             {
                 return getSuspended();
             }
@@ -2427,10 +2448,10 @@
            
 
             /**
-             * Getter for transferring_output by  Property Number 10
+             * Getter for transferring_output by  Property Number 9
              */
             int WSF_CALL
-            AviaryCommon::SubmissionSummary::getProperty10()
+            AviaryCommon::SubmissionSummary::getProperty9()
             {
                 return getTransferring_output();
             }
@@ -2510,10 +2531,10 @@
            
 
             /**
-             * Getter for jobs by  Property Number 11
+             * Getter for jobs by  Property Number 10
              */
             std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-            AviaryCommon::SubmissionSummary::getProperty11()
+            AviaryCommon::SubmissionSummary::getProperty10()
             {
                 return getJobs();
             }
