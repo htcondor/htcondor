@@ -19,6 +19,7 @@
 #define BOOST_TEST_MAIN
  
 #include <boost/test/unit_test.hpp>
+#include "collector.h"
 #include <string.h>
 
 /////////////////////////////////////////////////////////////////

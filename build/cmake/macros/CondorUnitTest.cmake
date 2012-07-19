@@ -36,9 +36,12 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 		
 		if ( WINDOWS )
 			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
+			set (BOOST_LINK_FLAG windows_lib)
+		else()
+			set (BOOST_LINK_FLAG -lboost_unit_test_framework)
 		endif ( WINDOWS )
 
-		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS}" )
+		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS};${BOOST_LINK_FLAG}" )
 
 		add_test ( ${LOCAL_${_CNDR_TARGET}}_unit_test
 			   ${LOCAL_${_CNDR_TARGET}} )

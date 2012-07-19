@@ -16,4 +16,4 @@
  # 
  ############################################################### 
 
-condor_unit_test ( _collector collector_tests.cpp "-lboost_unit_test_framework" )
+condor_unit_test ( _collector_tester collector_tests.cpp "" )
