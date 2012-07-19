@@ -41,32 +41,6 @@ bucket_t** param_info;
 
 #include "param_info_init.c"
 
-void
-param_info_init() 
-{
-	static int done_once = 0;
-
-	// guard against multiple initializations of the default table.
-	if (done_once == 1) {
-		return;
-	}
-
-	// if I get here, I've done this task ONCE.
-	done_once = 1;
-
-	param_info_hash_create(&param_info);
-
-    // eventually, we want to do a binary lookup in g_param_info_init_table rather than
-    // creating a hashtable from int and using the hash to do the lookup.  but in the
-    // interest in having minimal changes in this patch, we'll keep the hash table for now.
-    //
-    for (int ii = 0; ii < (int)(sizeof(g_param_info_init_table)/sizeof(g_param_info_init_table[0])); ++ii)
-       {
-       param_info_hash_insert(param_info, g_param_info_init_table[ii]);
-       }
-
-}
-
 const char*
 param_default_string(const char* param)
 {

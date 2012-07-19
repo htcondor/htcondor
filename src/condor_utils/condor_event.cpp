@@ -85,7 +85,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_ATTRIBUTE_UPDATE"			// Job attribute updated
 };
 
-const char * ULogEventOutcomeNames[] = {
+const char * const ULogEventOutcomeNames[] = {
   "ULOG_OK       ",
   "ULOG_NO_EVENT ",
   "ULOG_RD_ERROR ",
