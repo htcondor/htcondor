@@ -251,6 +251,12 @@ our %submit_info = (
 		},
 	},
 	'x86_64_rhap_6.3'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.4'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.5'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.6'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.7'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.8'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.9'	=> 'x86_64_rhap_6.2',
 
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
@@ -267,6 +273,9 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_rhap_5.8'   => 'x86_64_rhap_5.7',
+	'x86_64_rhap_5.9'   => 'x86_64_rhap_5.7',
+	'x86_64_rhap_5.10'   => 'x86_64_rhap_5.7', # dunno if 5.10 will actually be a release
 
 	'x86_rhap_6.2'		=> {
 		'build' => {
@@ -282,6 +291,12 @@ our %submit_info = (
 		},
 	},
 	'x86_rhap_6.3'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.4'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.5'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.6'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.7'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.8'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.9'		=> 'x86_rhap_6.2',
 
 	'x86_rhap_5.8'		=> {
 		'build' => {
@@ -298,6 +313,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_5.9'		=> 'x86_rhap_5.8',
+	'x86_rhap_5.10'		=> 'x86_rhap_5.8',
 
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
@@ -344,6 +361,10 @@ our %submit_info = (
 	'x86_64_fedora_16'				=> 'x86_64_fedora_15',
 	'x86_64_fedora_17'				=> 'x86_64_fedora_15',
 	'x86_64_fedora_18'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_19'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_20'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_21'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_22'				=> 'x86_64_fedora_15',
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
@@ -389,6 +410,9 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_sl_5.8'   => 'x86_sl_5.7',
+	'x86_sl_5.9'   => 'x86_sl_5.7',
+	'x86_sl_5.10'   => 'x86_sl_5.7',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64
