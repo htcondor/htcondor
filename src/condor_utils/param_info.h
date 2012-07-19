@@ -23,8 +23,6 @@
 
 #include "condor_common.h"
 
-#include <string>
-
 typedef enum param_info_t_type_e {
 	PARAM_TYPE_STRING = 0,
 	PARAM_TYPE_INT = 1,
