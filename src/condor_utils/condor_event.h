@@ -93,7 +93,7 @@ enum ULogEventNumber {
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
-extern const char * ULogEventNumberNames[];
+extern const char ULogEventNumberNames[][30];
 
 //----------------------------------------------------------------------------
 /** Enumeration of possible outcomes after attempting to read an event.

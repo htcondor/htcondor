@@ -181,7 +181,7 @@ const struct Translation DCTranslation[] = {
         { "UPDATE_JOBAD", UPDATE_JOBAD },
 	{ "DRAIN_JOBS", DRAIN_JOBS },
 	{ "CANCEL_DRAIN_JOBS", CANCEL_DRAIN_JOBS },
-	{ NULL, 0 }
+	{ "", 0 }
 };
 
 const struct Translation CollectorTranslation[] = {
@@ -244,7 +244,7 @@ const struct Translation CollectorTranslation[] = {
 	{ "QUERY_GRID_ADS", QUERY_GRID_ADS },
 	{ "INVALIDATE_GRID_ADS", INVALIDATE_GRID_ADS },
 	{ "MERGE_STARTD_AD", MERGE_STARTD_AD },
-	{ NULL, 0 }
+	{ "", 0 }
 };
 
 
@@ -259,14 +259,14 @@ const struct Translation CAResultTranslation[] = {
 	{ "LocateFailed", CA_LOCATE_FAILED },
 	{ "ConnectFailed", CA_CONNECT_FAILED },
 	{ "CommunicationError", CA_COMMUNICATION_ERROR },
-	{ NULL, 0 }
+	{ "", 0 }
 };
 
 const struct Translation DrainingScheduleTranslation[] = {
 	{ "graceful", DRAIN_GRACEFUL },
 	{ "quick", DRAIN_QUICK },
 	{ "fast", DRAIN_FAST },
-	{ NULL, 0 }
+	{ "", 0 }
 };
 
 

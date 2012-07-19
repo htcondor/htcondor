@@ -48,7 +48,7 @@ extern FILESQL *FILEObj;
 
 //extern ClassAd *JobAd;
 
-const char * ULogEventNumberNames[] = {
+const char ULogEventNumberNames[][30] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
