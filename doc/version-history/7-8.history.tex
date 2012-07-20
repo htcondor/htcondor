@@ -102,6 +102,10 @@ At least four letters are now required for the \Opt{-forward} option
 properly recognized.
 \Ticket{3062}
 
+\item NorduGrid ARC job statuses of the form ``INLRMS: ?'' are now
+properly recognized both with and without the space after the colon.
+\Ticket{3118}
+
 \item Fixed a bug that caused an invalid proxy to be delegated when
 refreshing the job's X.509 proxy when configuration variable
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} was set to 0.
@@ -114,6 +118,10 @@ suspended and then unsuspended.
 \item Fixed a bug in which Condor would not mark grid-type nordugrid jobs
 as Running due to variation in the format of the job status value.
 \Ticket{3118}
+
+\item The \condor{gridmanager} now properly handles X509 proxy files
+that are specified in the job ad with a relative pathname.
+\Ticket{3027}
 
 \end{itemize}
 

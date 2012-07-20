@@ -65,6 +65,7 @@ if( TestGlue::is_windows() ) {
 		if (-d "release_dir" && ! -d "condor") {
 		   print "Renaming release_dir/ to condor/\n";
 		   rename("release_dir","condor");
+		   system("chmod a+x condor/bin/*");
 		   TestGlue::dir_listing("condor");
 	       
 		   my ($release_zipfile) = glob("condor-*.zip");
