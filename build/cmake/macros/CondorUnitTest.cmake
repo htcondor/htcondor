@@ -24,29 +24,38 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 		# we are dependent on boost unit testing framework.
 		include_directories(${BOOST_INCLUDE})
+		# the structure is a testing subdirectory, so set inlude to go up one level
+		include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 		set ( LOCAL_${_CNDR_TARGET} ${_CNDR_TARGET} )
 
 		if ( WINDOWS )
 			string (REPLACE ".exe" "" ${LOCAL_${_CNDR_TARGET}} ${LOCAL_${_CNDR_TARGET}})
 		else()
-			## add_definitions(-DBOOST_TEST_DYN_LINK)
+			if (PROPER)
+			  # if you are proper then link the system .so (now .a's by def)
+			  add_definitions(-DBOOST_TEST_DYN_LINK)
+			endif()
 		endif( WINDOWS )
 
 		add_executable( ${LOCAL_${_CNDR_TARGET}} ${_SRCS})
 		
+		if (BOOST_REF)
+		    add_dependencies( classads ${BOOST_REF} )
+		endif()
+
 		if ( WINDOWS )
-			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
-			target_link_libraries (${LOCAL_${_CNDR_TARGET}} optimized libboost_unit_test_framework-${MSVCVER}-mt-${BOOST_SHORTVER} )
-			target_link_libraries (${LOCAL_${_CNDR_TARGET}} debug libboost_unit_test_framework-${MSVCVER}-mt-gd-${BOOST_SHORTVER} ) 
+		  set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
+		  #windows will require runtime to match so make certain we link the right one.
+		  target_link_libraries (${LOCAL_${_CNDR_TARGET}} optimized libboost_unit_test_framework-${MSVCVER}-mt-${BOOST_SHORTVER} )
+		  target_link_libraries (${LOCAL_${_CNDR_TARGET}} debug libboost_unit_test_framework-${MSVCVER}-mt-gd-${BOOST_SHORTVER} ) 
 		else()
-			target_link_libraries (${LOCAL_${_CNDR_TARGET}} -lboost_unit_test_framework )
+		  target_link_libraries (${LOCAL_${_CNDR_TARGET}}  -lboost_unit_test_framework )
 		endif ( WINDOWS )
 
 		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS}" )
 
-		add_test ( ${LOCAL_${_CNDR_TARGET}}_unit_test
-			   ${LOCAL_${_CNDR_TARGET}} )
+		add_test ( ${LOCAL_${_CNDR_TARGET}}_unit_test ${LOCAL_${_CNDR_TARGET}} )
 
 		APPEND_VAR( CONDOR_TESTS ${_CNDR_TARGET} )
 
