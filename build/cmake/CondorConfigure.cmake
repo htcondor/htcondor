@@ -664,6 +664,9 @@ if (CONDOR_CXX_FLAGS)
 endif()
 
 if(MSVC)
+	#disable autolink settings 
+	add_definitions(-DBOOST_ALL_NO_LIB)
+
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
 		# turn on code analysis. 

@@ -24,24 +24,26 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 		# we are dependent on boost unit testing framework.
 		include_directories(${BOOST_INCLUDE})
-		add_definitions(-DBOOST_TEST_DYN_LINK)
 
 		set ( LOCAL_${_CNDR_TARGET} ${_CNDR_TARGET} )
 
 		if ( WINDOWS )
 			string (REPLACE ".exe" "" ${LOCAL_${_CNDR_TARGET}} ${LOCAL_${_CNDR_TARGET}})
+		else()
+			## add_definitions(-DBOOST_TEST_DYN_LINK)
 		endif( WINDOWS )
 
 		add_executable( ${LOCAL_${_CNDR_TARGET}} ${_SRCS})
 		
 		if ( WINDOWS )
 			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
-			set (BOOST_LINK_FLAG windows_lib)
+			target_link_libraries (${LOCAL_${_CNDR_TARGET}} optimized libboost_unit_test_framework-${MSVCVER}-mt-${BOOST_SHORTVER} )
+			target_link_libraries (${LOCAL_${_CNDR_TARGET}} debug libboost_unit_test_framework-${MSVCVER}-mt-gd-${BOOST_SHORTVER} ) 
 		else()
-			set (BOOST_LINK_FLAG -lboost_unit_test_framework)
+			target_link_libraries (${LOCAL_${_CNDR_TARGET}} -lboost_unit_test_framework )
 		endif ( WINDOWS )
 
-		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS};${BOOST_LINK_FLAG}" )
+		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS}" )
 
 		add_test ( ${LOCAL_${_CNDR_TARGET}}_unit_test
 			   ${LOCAL_${_CNDR_TARGET}} )

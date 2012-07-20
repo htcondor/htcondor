@@ -25,17 +25,14 @@ if (NOT WINDOWS)
         set (BOOST_COMPONENTS thread) 
     else()
 
-        if (BUILD_TESTING) 
+	if (BUILD_TESTING) 
 	  set (BOOST_COMPONENTS unit_test_framework ${BOOST_COMPONENTS})
 	endif()
 
     endif()
 
     # The following is helpful if you are trying to debug cmake find module
-    #if (_VERBOSE)
     #  set (Boost_DEBUG TRUE)
-    #endif()
-
     find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
     # always prefer system libraries where possible
@@ -80,17 +77,20 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	  set(TOOLSET msvc)
 	  set(JAM_EXT bat)
 	  set(EXEC .\\)
+
+	  set(BUILD_OPTIONS )
 	else()
 
-            if (DARWIN)
+	if (DARWIN)
 	  	set(TOOLSET darwin)
-	    else()
+	else()
 		set(TOOLSET gcc)
-	    endif()
+	endif()
 
-            set(JAM_EXT sh)
-            set(EXEC ./)
-        endif()
+		set(BUILD_OPTIONS --layout=system variant=release)
+        set(JAM_EXT sh)
+        set(EXEC ./)
+	endif()
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test)
 	set(BOOST_PATCH echo "nothing")
@@ -110,7 +110,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 		 ./bootstrap.${JAM_EXT} --prefix=${BOOST_INSTALL_LOC}
 		#--Build Step ----------
 		BUILD_COMMAND cd ${BOOST_VER} &&
-		${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --layout=system --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
+		${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 		BUILD_IN_SOURCE 1
 		#--install Step ----------
 		INSTALL_DIR ${BOOST_INSTALL_LOC}
@@ -118,9 +118,11 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 				  	
 	if (WINDOWS)
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
-	endif()
-
-	condor_post_external( boost "include" "lib" )
+		set(BOOST_SHORTVER 1_49 PARENT_SCOPE)
+		condor_post_external( boost "include/boost-1_49" "lib" )
+	else()
+		condor_post_external( boost "include" "lib" )
+	endif()	
 
 endif()
 
