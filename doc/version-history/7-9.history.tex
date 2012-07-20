@@ -177,12 +177,10 @@ introduced when these functions were added in 7.7.6.
 
 \begin{itemize}
 
-\item Condor slots can now be configured with customized local 
-machine resources via \Macro{MACHINE\_RESOURCE\_NAMES} and 
-\Macro{MACHINE\_RESOURCE\_<name>}, then including local resource
-names on \Macro{SLOT\_TYPE\_<N>}.  Submitted jobs may request
-these resources using the standard request\_<name> syntax.
-See section~\ref{sec:SMP-Local-Machine-Resources}.
+\item Machine slots can now be configured to identify and
+divide customized local resources.
+Jobs may then request these resources.
+See section~\ref{sec:Configuring-SMP} for details.
 \Ticket{2905}
 
 \item Condor now supports and implements the caching of ClassAds 
@@ -286,6 +284,13 @@ a \Condor{schedd} daemon or of a \Condor{submit} executable.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variables \Macro{MACHINE\_RESOURCE\_NAMES}
+(see section~\ref{param:MachineResourceNames})
+and \Macro{MACHINE\_RESOURCE\_<resourcename>}
+(see section~\ref{param:MachineResourceResourcename})
+identify and specify the use of customized local machine resources
+\Ticket{2905}
 
 \item The new configuration variable \MacroNI{ENABLE\_CLASSAD\_CACHING}
 controls whether the new caching feature of ClassAds is used.
