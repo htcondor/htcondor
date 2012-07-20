@@ -66,16 +66,18 @@ Dividing System Resources for Slots within Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{partitioning SMP machines}
 
+The number of each slot type
+reported can be changed at run time by issuing a reconfiguration
+command to
+the \Condor{startd} daemon by sending a SIGHUP or using \Condor{reconfig}.
+However, the definitions for the types themselves cannot be changed
+with reconfiguration.
+To change any slot type definition, use \Condor{restart}
+for that change to take effect.
+
 There are two main ways to go about partitioning a machine:
 
 \begin{description}
-
-\item[Define individualized slot types.]
-  Individualized slot types may specify what fraction of shared
-  system resources (CPU, RAM, swap space, disk space, and custom resources)
-  go to each slot.
-  Given these types, configuration may control how many of each
-  type are reported at any given time.
 
 \item[Evenly divide all resources.]  
   Without individualized slot types, the \Condor{startd} will
@@ -86,29 +88,28 @@ There are two main ways to go about partitioning a machine:
   slots are reported at a time.
   By default, all slots are reported to Condor.
 
+  The number of slots within the SMP machine is the only attribute
+  that needs to be defined.
+  Its definition is accomplished by setting the configuration
+  variable \Macro{NUM\_SLOTS} to the integer number of slots desired.
+  If variable \MacroNI{NUM\_SLOTS} is not defined,
+  it defaults to the number of CPUs within the SMP machine.
+  \MacroNI{NUM\_SLOTS} \emph{cannot} be used to make Condor advertise more
+  slots than there are CPUs on the machine.
+  To do that, use \Macro{NUM\_CPUS}.
+
+\item[Define individualized slot types.]
+  Individualized slot types may specify what fraction of shared
+  system resources (CPU, RAM, swap space, disk space, and custom resources)
+  go to each slot.
+  Given these types, configuration may control how many of each
+  type are reported at any given time.
+
 \end{description}
 
-The number of each type being
-reported can be changed at run time by issuing a reconfiguration
-command to
-the \Condor{startd} daemon by sending a SIGHUP or using \Condor{reconfig}.
-However, the definitions for the types themselves cannot be changed
-with reconfiguration.
-To change any slot type definition, use \Condor{restart}
-\begin{verbatim}
-  condor_restart -startd
-\end{verbatim}
-for that change to take effect.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Slot-Type-Define}
-Defining Slot Types}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-To define your own slot types, add configuration file
-parameters that list how much of each system resource you want in the
-given slot type.  Do this by defining configuration
-variables of the form
+To define individualized slot types, add configuration variables
+that list how much of each system resource is for the given slot type.
+Do this by defining configuration variables of the form
 \Macro{SLOT\_TYPE\_<N>}.
 The \verb@<N>@ represents an integer (for example, 
 \MacroNI{SLOT\_TYPE\_1}), which specifies the slot type defined.
@@ -230,24 +231,6 @@ that they specify an impossible configuration.
 If this occurs, the \Condor{startd} daemon fails after writing
 a message to its log attempting to indicate the configuration
 requirements that it could not implement.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-Slot-Number}
-Evenly Divided Resources}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-If you are not defining your own slot types, then all resources
-are divided equally among the slots.
-The number of slots within the SMP machine is the only attribute
-that needs to be defined.
-Its definition is accomplished by setting the configuration
-variable \Macro{NUM\_SLOTS} to the
-integer number of slots desired.
-If variable \MacroNI{NUM\_SLOTS} is not defined,
-it defaults to the number of CPUs within the SMP machine.
-You cannot use \MacroNI{NUM\_SLOTS} to make Condor advertise more
-slots than there are CPUs on the machine.
-To do that, use \Macro{NUM\_CPUS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}
@@ -713,7 +696,7 @@ MACHINE_RESOURCE_actuator = 8
 
 Local machine resource names defined in this way may now be used in conjunction 
 with \Macro{SLOT\_TYPE\_<N>}, using all the same syntax available for cpus, 
-memory, disk and swap, as described in section~\ref{sec:Slot-Type-Define} and
+memory, disk and swap, as just described and in
 section~\ref{sec:SMP-dynamicprovisioning}.  The following example demonstrates
 the definition of static and partitionable slot types with local machine 
 resources:
