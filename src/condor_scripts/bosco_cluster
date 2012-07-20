@@ -553,6 +553,8 @@ ssh $remote_host "cat >bosco/glite/etc/condor_config.ft-gahp" <<EOF
 BOSCO_SANDBOX_DIR=\$ENV(HOME)/bosco/sandbox
 LOG=\$ENV(HOME)/bosco/glite/log
 FT_GAHP_LOG=\$(LOG)/FTGahpLog
+SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
+SEC_PASSWORD_FILE = \$ENV(HOME)/bosco/glite/etc/passwdfile
 EOF
 
 # Generate the password file, if it doesn't already exist 
@@ -562,6 +564,7 @@ if [ ! -e $bosco_passwd_file ]; then
     condor_store_cred -p $random_string -f $bosco_passwd_file 
 fi
 rsync -aq $bosco_passwd_file $remote_host:bosco/campus_factory/share/glidein_jobs
+rsync -aq $bosco_passwd_file $remote_host:bosco/glite/etc
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type
