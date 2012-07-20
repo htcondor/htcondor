@@ -948,7 +948,7 @@ processCommandLineArguments (int argc, char *argv[])
 	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
+	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1685,7 +1685,14 @@ bufferJobShort( ClassAd *ad ) {
 
 	MyString args_string;
 	ArgList::GetArgsStringForDisplay(ad,&args_string);
-	if (!args_string.IsEmpty()) {
+
+	std::string description;
+
+	ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
+	if ( !description.empty() ){
+		buffer.sprintf("%s", description.c_str());
+	}
+	else if (!args_string.IsEmpty()) {
 		buffer.sprintf( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
 		buffer.sprintf( "%s", condor_basename(cmd) );
@@ -1715,8 +1722,10 @@ bufferJobShort( ClassAd *ad ) {
 	}
 
 	sprintf( return_buff,
-			 widescreen ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
-			            : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+			 widescreen ? description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
+			                                   : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%s)\n"
+			            : description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n"
+				                           : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%-17.17s)\n",
 			 cluster,
 			 proc,
 			 format_owner( owner, ad ),
