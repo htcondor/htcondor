@@ -4444,6 +4444,18 @@ search for the corresponding attribute names using ``slot'', instead.
   In doing so, the \Condor{schedd} can claim multiple dynamic slots 
   without waiting for a negotiation cycle.
 
+\label{param:MachineResourceNames}
+\item[\Macro{MACHINE\_RESOURCE\_NAMES}]
+  A comma and/or space separated list of resource names that represent
+  custom resources specific to a machine.
+  These resources are further intended to be statically divided or
+  partitioned, and these resource names identify the configuration variables
+  that define the partitioning.
+
+\label{param:MachineResourceResourcename}
+\item[\Macro{MACHINE\_RESOURCE\_<ResourceName>}]
+  This definition has not yet been written.
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
