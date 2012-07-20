@@ -293,6 +293,7 @@ find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(LATEX2HTML latex2html)
 find_program(LATEX latex)
+find_program(HAVE_WGET wget)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -503,6 +504,14 @@ endif(BUILD_TESTS)
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
 	cmake_minimum_required(VERSION 2.8)
+	
+	# perform a quick check for wget b/c without it you're hosed. 
+	 if ((${HAVE_WGET} STREQUAL "HAVE_WGET-NOTFOUND"))
+	    message (FATAL "You are trying to perform a UW-Build without wget, EPIC FAIL! ")
+	 else ()
+	    dprint("wget = ${HAVE_WGET}")
+	 endif()
+
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -514,6 +523,7 @@ if (NOT EXTERNAL_STAGE)
 		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
 	endif()
 endif()
+
 if (WINDOWS)
 	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
