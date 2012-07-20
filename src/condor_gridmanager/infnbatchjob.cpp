@@ -510,7 +510,7 @@ void INFNBatchJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) blah_download_sandbox() failed: %s\n",
 						 procID.cluster, procID.proc,
-						 gahp->getErrorString() );
+						 m_xfer_gahp->getErrorString() );
 				errorString = m_xfer_gahp->getErrorString();
 				gmState = GM_CLEAR_REQUEST;
 			} else {
@@ -730,7 +730,7 @@ void INFNBatchJob::doEvaluateState()
 						 "(%d.%d) blah_upload_sandbox() failed: %s\n",
 						 procID.cluster, procID.proc,
 						 m_xfer_gahp->getErrorString() );
-				errorString = gahp->getErrorString();
+				errorString = m_xfer_gahp->getErrorString();
 				gmState = GM_DELETE_SANDBOX;
 			} else {
 				gmState = GM_DONE_SAVE;
@@ -809,7 +809,7 @@ void INFNBatchJob::doEvaluateState()
 				dprintf( D_ALWAYS,
 						 "(%d.%d) blah_destroy_sandbox() failed: %s\n",
 						 procID.cluster, procID.proc,
-						 gahp->getErrorString() );
+						 m_xfer_gahp->getErrorString() );
 				errorString = m_xfer_gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
