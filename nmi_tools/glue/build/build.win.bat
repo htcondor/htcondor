@@ -141,8 +141,8 @@ dir CMakeFiles\generate.stamp*
 for /F %%I in ('dir /b/s CMakeLists.*') do touch %%I
 dir CMakeLists.txt
 dir CMakeFiles\generate.stamp*
-@echo cmake.exe . -G "Visual Studio 9 2008"
-cmake.exe . -G "Visual Studio 9 2008"
+@echo cmake.exe . -G "Visual Studio 10"
+cmake.exe . -G "Visual Studio 10"
 if ERRORLEVEL 1 goto finis
 @echo devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
