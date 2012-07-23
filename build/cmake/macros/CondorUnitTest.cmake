@@ -41,7 +41,7 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 		add_executable( ${LOCAL_${_CNDR_TARGET}} ${_SRCS})
 		
 		if (BOOST_REF)
-		    add_dependencies( classads ${BOOST_REF} )
+		    add_dependencies( ${LOCAL_${_CNDR_TARGET}} ${BOOST_REF} )
 		endif()
 
 		if ( WINDOWS )
