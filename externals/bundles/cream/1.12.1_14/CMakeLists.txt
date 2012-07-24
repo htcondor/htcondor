@@ -251,14 +251,19 @@ if ( NOT PROPER )
 
 else( NOT PROPER )
 
-        # If there are sub-packages to cream you may wish to breakout as was done below
-	find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2713_cxx;glite_security_gss;gridsite" CREAM_FOUND )
-        
+        if ( ${SYSTEM_NAME} MATCHES "rhel6" OR ${SYSTEM_NAME} MATCHES "centos6")
+            find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2716_cxx;glite_security_gss;gridsite" CREAM_FOUND )
+        else()
+            find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2713_cxx;glite_security_gss;gridsite" CREAM_FOUND )
+        endif()
+
         if (CREAM_FOUND)
+            dprint("CREAM_FOUND=${CREAM_FOUND}") 
+            
             find_multiple("log4cpp" LOG4CPP)
             find_multiple("boost_thread" B_THREAD)
             find_multiple("boost_regex" B_REGEX)
-            if (LOG4CPP )
+            if (LOG4CPP AND B_THREAD AND B_REGEX)
                 set (CREAM_FOUND "${CREAM_FOUND};${LOG4CPP};${B_THREAD};${B_REGEX}")
             else()
                 message ( STATUS "missing cream dependencies (LOG4CPP=${LOG4CPP} BOOST_THREAD=${B_THREAD} BOOST_REGEX=${B_REGEX})" )
