@@ -287,9 +287,9 @@ a \Condor{schedd} daemon or of a \Condor{submit} executable.
 
 \item The new configuration variables \Macro{MACHINE\_RESOURCE\_NAMES}
 (see section~\ref{param:MachineResourceNames})
-and \Macro{MACHINE\_RESOURCE\_<resourcename>}
+and \Macro{MACHINE\_RESOURCE\_<name>}
 (see section~\ref{param:MachineResourceResourcename})
-identify and specify the use of customized local machine resources
+identify and specify the use of customized local machine resources.
 \Ticket{2905}
 
 \item The new configuration variable \MacroNI{ENABLE\_CLASSAD\_CACHING}
@@ -389,8 +389,9 @@ when transferring job input files into the job spool directory or the job
 execute directory.
 \Ticket{2423}
 
-\item Fixed a bug where the use of a pipe in the config file on Windows would
-cause a visible console window to show up whenever the configuration was read.
+\item Fixed a bug in which the use of a pipe in the configuration file 
+on Windows platforms would cause a visible console window 
+to show up whenever the configuration was read.
 \Ticket{1534}
 
 \end{itemize}

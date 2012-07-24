@@ -4453,8 +4453,11 @@ search for the corresponding attribute names using ``slot'', instead.
   that define the partitioning.
 
 \label{param:MachineResourceResourcename}
-\item[\Macro{MACHINE\_RESOURCE\_<ResourceName>}]
-  This definition has not yet been written.
+\item[\Macro{MACHINE\_RESOURCE\_<name>}]
+  An integer that specifies the quantity of the customized local machine
+  resource available for an SMP machine.
+  The portion of this configuration variable's name identified with
+  \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
 
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
