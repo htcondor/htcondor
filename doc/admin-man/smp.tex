@@ -205,12 +205,13 @@ may also be explicitly set to \Expr{auto}.  All slots with the value
 \Expr{auto} for a given type of resource will evenly divide
 whatever remains after subtracting out whatever was explicitly
 allocated in other slot definitions.  For example, if one slot is
-defined to use 10\Percent of the memory and the rest define it as
+defined to use 10\Percent\ of the memory and the rest define it as
 \Expr{auto} (or leave it undefined), then the rest of the slots will
-evenly divide 90\Percent of the memory between themselves.
+evenly divide 90\Percent\ of the memory between themselves.
 
-In both of the following examples, the disk share is set to \Expr{auto},
-cpus is 1, and everything else is 50\Percent:
+These two examples are equivalent to each other.
+The disk share is set to \Expr{auto},
+CPUs is 1, and everything else is 50\Percent:
 
 \begin{verbatim}
 SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
@@ -218,12 +219,11 @@ SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
 SLOT_TYPE_1 = cpus=1, disk=auto, 50%
 \end{verbatim}
 
-
 The number of slots of each type is set with the
 configuration variable
 \Macro{NUM\_SLOTS\_TYPE\_<N>},
-where N is the type as given in the
-\MacroNI{SLOT\_TYPE\_<N>}variable.
+where \verb@<N>@ is the type as given in the
+\MacroNI{SLOT\_TYPE\_<N>} variable.
 
 Note that it is possible to set the configuration variables such
 that they specify an impossible configuration.
@@ -232,45 +232,52 @@ a message to its log attempting to indicate the configuration
 requirements that it could not implement.
 
 
-In addition to standard slot resources (cpus, memory, disk and swap) the
-administrator may also define custom resources on a localized per-machine basis.
-First, a list of local machine resources is defined using configuration 
-variable \Macro{MACHINE\_RESOURCE\_NAMES}, as in this example that
-declares resource names for GPUs and an actuator:
+In addition to the standard resources of CPUs, memory, disk, and swap,
+the administrator may also define custom resources on 
+a localized per-machine basis.
+To implement this, 
+a list of names of the local machine resources are defined using configuration 
+variable \Macro{MACHINE\_RESOURCE\_NAMES}.
+This example defines two resources,
+a GPU and an actuator:
 \begin{verbatim}
 MACHINE_RESOURCE_NAMES = gpu, actuator
 \end{verbatim}
 
-Next the available resources quantities are defined using configuration
-variables of the form \Macro{MACHINE\_RESOURCE\_<name>}:
+The quantities of available resources are defined using configuration
+variables of the form \Macro{MACHINE\_RESOURCE\_<name>},
+where \Expr{<name>} is as defined by variable 
+\MacroNI{MACHINE\_RESOURCE\_NAMES}, as shown in this example:
 \begin{verbatim}
 MACHINE_RESOURCE_gpu = 16
 MACHINE_RESOURCE_actuator = 8
 \end{verbatim}
 
 Local machine resource names defined in this way may now be used in conjunction 
-with \Macro{SLOT\_TYPE\_<N>}, using all the same syntax available for cpus, 
-memory, disk and swap, as just described and in
-section~\ref{sec:SMP-dynamicprovisioning}.  The following example demonstrates
+with \Macro{SLOT\_TYPE\_<N>}, using all the same syntax described
+earlier in this section.
+The following example demonstrates
 the definition of static and partitionable slot types with local machine 
 resources:
 \begin{verbatim}
-# declare a partitionable slot with half of the gpus, 6 actuators, and
-# 50% of all other resources (cpus, memory, etc):
+# declare one partitionable slot with half of the GPUs, 6 actuators, and
+# 50% of all other resources:
 SLOT_TYPE_1 = gpu=50%,actuator=6,50%
 SLOT_TYPE_1_PARTITIONABLE = TRUE
 NUM_SLOTS_TYPE_1 = 1
 
-# declare two static slots, each with 25% of the gpus, 1 actuator and
+# declare two static slots, each with 25% of the GPUs, 1 actuator, and
 # 25% of all other resources: 
 SLOT_TYPE_2 = gpu=25%,actuator=1,25%
 SLOT_TYPE_2_PARTITIONABLE = FALSE
 NUM_SLOTS_TYPE_2 = 2
 \end{verbatim}
 
-A submitted job may request local machine resources using the same request\_<name>
-syntax described in section~\ref{sec:SMP-dynamicprovisioning}.  This example
-shows a portion of a job submission description file that requests GPUs and actuators:
+A job may request these local machine resources using the 
+syntax \SubmitCmd{request\_<name>}, 
+as described in section~\ref{sec:SMP-dynamicprovisioning}.  
+This example shows a portion of a submit description file 
+that requests GPUs and an actuator:
 \begin{verbatim}
 universe = vanilla
 
@@ -281,33 +288,28 @@ request_actuator = 1
 queue
 \end{verbatim}
 
-A note on the representation of local machine resources in classads:  A declared resource
-will be represented on a slot ad with the following:
+The slot ClassAd will represent each local machine resource
+with the following attributes:
 \begin{description}
-\item{TotalXxx: the total quantity of resource xxx}
-\item{DetectedXxx: quantity of xxx detected (currently equivalent to TotalXxx)}
-\item{TotalSlotXxx: the quantity of xxx allocated to this slot}
-\item{Xxx: the amount of xxx available to be used on this slot}
+\item{\Attr{Total<name>}: the total quantity of the resource 
+  identified by \Expr{<name>}}
+\item{\Attr{Detected<name>}: the quantity detected of the resource
+  identified by \Expr{<name>}; this attribute is
+  currently equivalent to \Attr{Total<name>}}
+\item{\Attr{TotalSlot<name>}: the quantity of the resource
+  identified by \Expr{<name>} allocated to this slot}
+\item{\Attr{<name>}: the amount of the resource
+  identified by \Expr{<name>} available to be used on this slot}
 \end{description}
 
-From the examples above, the resource 'gpu' would be represented by:
-\begin{description}
-\item{TotalGpu}
-\item{DetectedGpu}
-\item{TotalSlotGpu}
-\item{Gpu}
-\end{description}
-
-On a job ad, requested machine resources appear via:
-\begin{description}
-\item{RequestXxx: amount of xxx requested}
-\end{description}
-
-From the example:
-\begin{description}
-\item{RequestGpu}
-\item{RequestActuator}
-\end{description}
+From the example given, the \Expr{gpu} resource would be represented by
+the ClassAd attributes
+\Attr{TotalGpu}, \Attr{DetectedGpu}, \Attr{TotalSlotGpu}, and \Attr{Gpu}.
+In the job ClassAd, 
+the amount of the requested machine resource appears 
+in a job ClassAd attribute named \Attr{Request<name>}.
+For this example,
+the two attributes will be \Attr{RequestGpu} and \Attr{RequestActuator}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}
