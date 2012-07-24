@@ -28,15 +28,17 @@ set TMP=%BUILD_ROOT%\Temp
 ::
 for /D %%I in ("%VS90COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC90_BIN=%%~sdpIVC\bin
 for /D %%I in ("%VS90COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC90_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
-set VS_DIR=%VS90ROOT:~0,-1%
-set VC_DIR=%VS_DIR%\VC
-set VC_BIN=%VC_DIR%\bin
+for /D %%I in ("%VS90COMNTOOLS%..") do set VSROOT=%%~sdpI
 
 :: pick up vs2010 compiler path from VS100COMNTOOLS environment variable
 ::
 for /D %%I in ("%VS100COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC100_BIN=%%~sdpIVC\bin
 for /D %%I in ("%VS100COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC100_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS100COMNTOOLS%..") do set VSROOT=%%~sdpI
+
+set VS_DIR=%VSROOT:~0,-1%
+set VC_DIR=%VS_DIR%\VC
+set VC_BIN=%VC_DIR%\bin
 
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
