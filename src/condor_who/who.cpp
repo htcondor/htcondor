@@ -39,6 +39,8 @@
 
 #include "condor_distribution.h"
 #include "condor_version.h"
+#include "condor_environ.h"
+#include "setenv.h"
 
 #include <vector>
 #include <sstream>
@@ -62,6 +64,7 @@ typedef struct {
 	std::string log_old; // previous (.old) log file full path name.
 	std::string exe_path; // full path to executable (from master log)
 	std::string pid;      // latest process id (from master log, starterlog, etc)
+	std::string exit_code; // if daemon has exited, this is the exit code otherwise empty
 } LOG_INFO;
 
 typedef std::map<std::string, LOG_INFO*> LOG_INFO_MAP;
@@ -569,7 +572,6 @@ main( int argc, char *argv[] )
 #endif
 
 	myDistro->Init( argc, argv );
-	config();
 
 	if( argc < 1 ) {
 		usage(true);
@@ -595,7 +597,7 @@ main( int argc, char *argv[] )
 			LOG_INFO_MAP::const_iterator it = info.find("Startd");
 			if (it != info.end()) {
 				LOG_INFO * pli = it->second;
-				if ( ! pli->addr.empty()) {
+				if ( ! pli->addr.empty() && pli->exit_code.empty()) {
 					App.query_addrs.push_back(strdup(pli->addr.c_str()));
 				}
 			}
@@ -609,6 +611,46 @@ main( int argc, char *argv[] )
 			}
 		}
 	}
+
+#ifdef WIN32
+#else
+	// Condor will try not to run as root, not even as a tool.
+	// if we are are currently running as root it will look for a condor account
+	// or look in the CONDOR_IDS environment variable, if neither
+	// exist, then it will fail to config.  so if we are root and we don't see
+	// a CONDOR_UIDS environment variable, set one to keep config happy.
+	//
+	if (is_root()) {
+		const char *env_name = EnvGetName(ENV_UG_IDS);
+		if (env_name) {
+			bool fSetUG_IDS = false;
+			char * env = getenv(env_name);
+			if ( ! env) {
+				//env = param_without_default(env_name);
+				//if (env) {
+				//	free(env);
+				//} else {
+					fSetUG_IDS = true;
+				//}
+			}
+
+			if (fSetUG_IDS) {
+				const char * ug_ids = "0.0"; // use root as the condor id.
+				if (App.diagnostic) { printf("setting %s to %s\n", env_name, ug_ids); }
+				SetEnv(env_name, ug_ids);
+			}
+		}
+	}
+#endif
+
+	const char *env_name = EnvGetName(ENV_CONFIG);
+	char * env = getenv(env_name);
+	if ( ! env) { 
+		// If no CONDOR_CONFIG environment variable, we don't want to fail if there
+		// is no global config file, so tell the config subsystem that.
+		config_continue_if_no_config(true);
+	}
+	config();
 
 	CondorQuery *query;
 	if (App.job_ad)
@@ -974,11 +1016,12 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LO
 				size_t ix2 = line.find(" to ", ix);
 				if (ix2 != string::npos) {
 					ix2 += 4;  // 4 == sizeof " to "
+					const size_t cch3 = sizeof(" (pid ")-1;
 					size_t ix3 = line.find(" (pid ", ix2);
 					if (ix3 != string::npos) {
 						size_t ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
-						std::string pid = line.substr(ix3+6, ix4-ix3-6);
+						std::string pid = line.substr(ix3+cch3, ix4-ix3-cch3);
 						lower_case(daemon);
 						daemon[0] = toupper(daemon[0]);
 						if (App.diagnostic)
@@ -996,14 +1039,16 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LO
 			// parse "Started DaemonCore process PATH, pid and pgroup = NNNN"
 			ix = line.find("Started DaemonCore process");
 			if (ix != string::npos) {
+				const size_t cch2 = sizeof(", pid and pgroup = ")-1;
 				size_t ix2 = line.find(", pid and pgroup = ", ix);
 				if (ix2 != string::npos) {
-					std::string pid = line.substr(ix2+sizeof(", pid and pgroup = ")-1);
+					std::string pid = line.substr(ix2+cch2);
+					const size_t cch3 = sizeof("condor_")-1;
 					size_t ix3 = line.rfind("condor_");
 					if (ix3 > ix && ix3 < ix2) {
 						size_t ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
-							std::string daemon = line.substr(ix3+7,ix4-ix3-7);
+							std::string daemon = line.substr(ix3+cch3,ix4-ix3-cch3);
 							lower_case(daemon);
 							daemon[0] = toupper(daemon[0]);
 							if (App.diagnostic)
@@ -1014,6 +1059,58 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid, LO
 									info[daemon]->pid = pid;
 							}
 						}
+					}
+				}
+			}
+
+			//  The DAEMON (pid NNNN) exited with status NNNN
+			ix = line.find(") exited with status ");
+			if (ix != string::npos) {
+				const size_t cch1 = sizeof(") exited with status ")-1;
+				const size_t cch2 = sizeof(" (pid ")-1;
+				size_t ix2 = line.rfind(" (pid ", ix);
+				if (ix2 != string::npos) {
+					const size_t cch3 = sizeof("The ")-1;
+					size_t ix3 = line.rfind("The ", ix2);
+					if (ix3 != string::npos) {
+						std::string daemon = line.substr(ix3+cch3, ix2-ix3-cch3);
+						lower_case(daemon);
+						daemon[0] = toupper(daemon[0]);
+
+						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
+						std::string exit_code = line.substr(ix+cch1);
+						if (App.diagnostic) { 
+							printf("From exited with status: %s = %s (exit %s)\n", 
+									daemon.c_str(), exited_pid.c_str(), exit_code.c_str()); 
+						}
+						if (info.find(daemon) != info.end()) {
+							LOG_INFO * pliDaemon = info[daemon];
+							pliDaemon->pid = exited_pid;
+							pliDaemon->exit_code = exit_code;
+						}
+					}
+				}
+			}
+
+			ix = line.find("All daemons are gone.  Exiting.");
+			if (ix != string::npos) {
+				// mark all but master daemon as exited.
+			}
+
+			// **** condor_master (condor_MASTER) pid 6320 EXITING WITH STATUS 0
+			ix = line.find(" (condor_MASTER) pid ");
+			if (ix != string::npos) {
+				const size_t cch1 = sizeof(" (condor_MASTER) pid ")-1;
+				const size_t cch2 = sizeof(" EXITING WITH STATUS ")-1;
+				size_t ix2 = line.find(" EXITING WITH STATUS ");
+				if (ix2 != string::npos) {
+					std::string pid = line.substr(ix+cch1, ix2-ix-cch1);
+					std::string exit_code = line.substr(ix2+cch2);
+					LOG_INFO * pliMaster = info["Master"];
+					pliMaster->pid = pid;
+					pliMaster->exit_code = exit_code;
+					if (App.diagnostic) {
+						printf("From EXITING WITH STATUS: Master = %s (exit %s)\n", pid.c_str(), exit_code.c_str());
 					}
 				}
 			}
@@ -1463,13 +1560,13 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 
 void print_log_info(LOG_INFO_MAP & info)
 {
-	printf("%-12s %-8s %-24s %s\n", "Daemon", "PID", "Addr", "Log, Log.Old");
-	printf("%-12s %-8s %-24s %s\n", "------", "---", "----", "---, -------");
+	printf("%-12s %-8s %-10s %-24s %s, %s\n", "Daemon", "PID", "Exit", "Addr", "Log", "Log.Old");
+	printf("%-12s %-8s %-10s %-24s %s, %s\n", "------", "---", "----", "----", "---", "-------");
 	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
 	{
 		LOG_INFO * pli = it->second;
-		printf("%-12s %-8s %-24s %s, %s\n", 
-			it->first.c_str(), pli->pid.c_str(), pli->addr.c_str(), 
+		printf("%-12s %-8s %-10s %-24s %s, %s\n", 
+			it->first.c_str(), pli->pid.c_str(), pli->exit_code.c_str(), pli->addr.c_str(), 
 			pli->log.c_str(), pli->log_old.c_str());
 	}
 }
