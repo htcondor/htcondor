@@ -470,6 +470,37 @@ void INFNBatchJob::doEvaluateState()
 		} break;
 		case GM_TRANSFER_INPUT: {
 			// Transfer input sandbox
+			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
+				if ( errorString == "" ) {
+					jobAd->Assign( ATTR_HOLD_REASON,
+								   "Attempts to submit failed" );
+				}
+				gmState = GM_HOLD;
+				break;
+			}
+			// After a submit, wait at least submitInterval before trying
+			// another one.
+			if ( now < lastSubmitAttempt + submitInterval ) {
+				if ( condorState == REMOVED || condorState == HELD ) {
+					gmState = GM_UNSUBMITTED;
+					break;
+				}
+				unsigned int delay = 0;
+				if ( (lastSubmitAttempt + submitInterval) > now ) {
+					delay = (lastSubmitAttempt + submitInterval) - now;
+				}				
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
+				break;
+			}
+
+			// Once RequestSubmit() is called at least once, you must
+			// CancelRequest() once you're done with the request call
+			if ( myResource->RequestSubmit( this ) == false ) {
+				break;
+			}
+
+			// If our blahp is local, we don't have to do any file transfer,
+			// so go straight to submitting the job.
 			if ( !myResource->GahpIsRemote() ) {
 				gmState = GM_SUBMIT;
 				break;
@@ -505,6 +536,8 @@ void INFNBatchJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
+			lastSubmitAttempt = time(NULL);
+			numSubmitAttempts++;
 			if ( rc != 0 ) {
 				// Failure!
 				dprintf( D_ALWAYS,
@@ -528,67 +561,45 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 			*/
-			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				jobAd->Assign( ATTR_HOLD_REASON,
-							   "Attempts to submit failed" );
+			char *job_id_string = NULL;
+
+			if ( gahpAd == NULL ) {
+				gahpAd = buildSubmitAd();
+			}
+			if ( gahpAd == NULL ) {
 				gmState = GM_HOLD;
 				break;
 			}
-			// After a submit, wait at least submitInterval before trying
-			// another one.
-			if ( now >= lastSubmitAttempt + submitInterval ) {
-				char *job_id_string = NULL;
 
-				// Once RequestSubmit() is called at least once, you must
-				// CancelRequest() once you're done with the request call
-				if ( myResource->RequestSubmit( this ) == false ) {
-					break;
-				}
-
-				if ( gahpAd == NULL ) {
-					gahpAd = buildSubmitAd();
-				}
-				if ( gahpAd == NULL ) {
-					gmState = GM_HOLD;
-					break;
-				}
-
-				rc = gahp->blah_job_submit( gahpAd, &job_id_string );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				lastSubmitAttempt = time(NULL);
+			rc = gahp->blah_job_submit( gahpAd, &job_id_string );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			lastSubmitAttempt = time(NULL);
+			if ( !myResource->GahpIsRemote() ) {
 				numSubmitAttempts++;
-				if ( rc == GLOBUS_SUCCESS ) {
-					SetRemoteJobId( job_id_string );
-					if(jobProxy) {
-						remoteProxyExpireTime = jobProxy->expiration_time;
-					}
-					WriteGridSubmitEventToUserLog( jobAd );
-					gmState = GM_SUBMIT_SAVE;
-				} else {
-					// unhandled error
-					dprintf( D_ALWAYS,
-							 "(%d.%d) blah_job_submit() failed: %s\n",
-							 procID.cluster, procID.proc,
-							 gahp->getErrorString() );
-					errorString = gahp->getErrorString();
-					myResource->CancelSubmit( this );
-					gmState = GM_DELETE_SANDBOX;
-					reevaluate_state = true;
+			}
+			if ( rc == GLOBUS_SUCCESS ) {
+				SetRemoteJobId( job_id_string );
+				if(jobProxy) {
+					remoteProxyExpireTime = jobProxy->expiration_time;
 				}
-				if ( job_id_string != NULL ) {
-					free( job_id_string );
-				}
-			} else if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_UNSUBMITTED;
+				WriteGridSubmitEventToUserLog( jobAd );
+				gmState = GM_SUBMIT_SAVE;
 			} else {
-				unsigned int delay = 0;
-				if ( (lastSubmitAttempt + submitInterval) > now ) {
-					delay = (lastSubmitAttempt + submitInterval) - now;
-				}				
-				daemonCore->Reset_Timer( evaluateStateTid, delay );
+				// unhandled error
+				dprintf( D_ALWAYS,
+						 "(%d.%d) blah_job_submit() failed: %s\n",
+						 procID.cluster, procID.proc,
+						 gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				myResource->CancelSubmit( this );
+				gmState = GM_DELETE_SANDBOX;
+				reevaluate_state = true;
+			}
+			if ( job_id_string != NULL ) {
+				free( job_id_string );
 			}
 			} break;
 		case GM_SUBMIT_SAVE: {
@@ -835,7 +846,7 @@ void INFNBatchJob::doEvaluateState()
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( remoteJobId != NULL && condorState != REMOVED ) {
+			if (  (remoteSandboxId != NULL || remoteJobId != NULL) && condorState != REMOVED ) {
 				gmState = GM_HOLD;
 				break;
 			}
