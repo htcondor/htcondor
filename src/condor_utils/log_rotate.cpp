@@ -29,11 +29,11 @@
 
 
 #ifdef WIN32
-char searchLogName[PATH_MAX];
+char * searchLogName = NULL;
 #endif
  
-char logBaseName[PATH_MAX]; 
-char baseDirName[PATH_MAX];
+char * logBaseName = NULL;
+char * baseDirName = NULL;
 int isInitialized = 0;
 
 int numLogs = 0;
@@ -99,11 +99,18 @@ void setBaseName(const char *baseName) {
 	if (isInitialized == 0) {
 		char *tmpDir;
 
-		sprintf(logBaseName, "%s", baseName);
+		if (logBaseName)
+			free(logBaseName);
+		logBaseName = strdup(baseName);
 		tmpDir = condor_dirname(logBaseName);
-		sprintf(baseDirName, "%s", tmpDir);
+		if (baseDirName)
+			free(baseDirName);
+		baseDirName = strdup(tmpDir);
 		free(tmpDir);
 #ifdef WIN32
+		if (searchLogName)
+			free(searchLogName);
+		searchLogName = (char *)malloc(strlen(logBaseName)+3);
 		sprintf(searchLogName, "%s.*", (const char*)logBaseName); 		
 #endif
 		isInitialized = 1;

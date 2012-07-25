@@ -22,7 +22,7 @@
 #include "enum_utils.h"
 
 
-struct Translation ClaimTypeTranslation[] = {
+const struct Translation ClaimTypeTranslation[] = {
 	{ "NONE", CLAIM_NONE },
 	{ "COD", CLAIM_COD },
 	{ "OPPORTUNISTIC", CLAIM_OPPORTUNISTIC },
@@ -31,7 +31,7 @@ struct Translation ClaimTypeTranslation[] = {
 };
 
 
-struct Translation ClaimStateTranslation[] = {
+const struct Translation ClaimStateTranslation[] = {
     { "Unclaimed", CLAIM_UNCLAIMED },
     { "Idle", CLAIM_IDLE },
     { "Running", CLAIM_RUNNING },
@@ -42,7 +42,7 @@ struct Translation ClaimStateTranslation[] = {
 };
 
 
-struct Translation HookTypeTranslation[] = {
+const struct Translation HookTypeTranslation[] = {
 	{ "FETCH_WORK", HOOK_FETCH_WORK },
 	{ "REPLY_FETCH", HOOK_REPLY_FETCH },
 	{ "EVICT_CLAIM", HOOK_EVICT_CLAIM },
@@ -55,7 +55,7 @@ struct Translation HookTypeTranslation[] = {
 };
 
 
-struct Translation VacateTypeTranslation[] = {
+const struct Translation VacateTypeTranslation[] = {
 	{ "GRACEFUL", VACATE_GRACEFUL },
 	{ "FAST", VACATE_FAST },
 	{ "NULL", 0 }
@@ -64,7 +64,7 @@ struct Translation VacateTypeTranslation[] = {
 
 // duplicates are allowed in the table.  however, the first entry we
 // find in the table that matches what we're looking for is used.
-struct Translation ShouldTransferFilesTranslation[] = {
+const struct Translation ShouldTransferFilesTranslation[] = {
 	{ "YES", STF_YES },
 	{ "TRUE", STF_YES },
 	{ "ALWAYS", STF_YES },
@@ -77,7 +77,7 @@ struct Translation ShouldTransferFilesTranslation[] = {
 };
 
 
-struct Translation FileTransferOutputTranslation[] = {
+const struct Translation FileTransferOutputTranslation[] = {
 	{ "ON_EXIT_OR_EVICT", FTO_ON_EXIT_OR_EVICT },
 	{ "ALWAYS", FTO_ON_EXIT_OR_EVICT },
 	{ "ON_EXIT", FTO_ON_EXIT },
@@ -87,7 +87,7 @@ struct Translation FileTransferOutputTranslation[] = {
 };
 
 
-struct Translation JobActionTranslation[] = {
+const struct Translation JobActionTranslation[] = {
 	{ "Hold", JA_HOLD_JOBS },
 	{ "Release", JA_RELEASE_JOBS },
 	{ "Remove", JA_REMOVE_JOBS },
@@ -101,7 +101,7 @@ struct Translation JobActionTranslation[] = {
 };
 
 
-struct Translation CronAutoPublishTranslation[] = {
+const struct Translation CronAutoPublishTranslation[] = {
 	{ "Never", CAP_NEVER },
 	{ "False", CAP_NEVER },
 	{ "Always", CAP_ALWAYS },

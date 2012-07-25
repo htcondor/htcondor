@@ -48,7 +48,7 @@ extern FILESQL *FILEObj;
 
 //extern ClassAd *JobAd;
 
-const char * ULogEventNumberNames[] = {
+const char ULogEventNumberNames[][30] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -85,7 +85,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_ATTRIBUTE_UPDATE"			// Job attribute updated
 };
 
-const char * ULogEventOutcomeNames[] = {
+const char * const ULogEventOutcomeNames[] = {
   "ULOG_OK       ",
   "ULOG_NO_EVENT ",
   "ULOG_RD_ERROR ",

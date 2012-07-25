@@ -45,7 +45,4 @@ const char * const ATTR_VIEW_INFO			= "ViewInfo";
 const char * const ATTR_VIEW_NAME			= "ViewName";
 const char * const ATTR_XACTION_NAME			= "XactionName";
 
-const char * const ATTR_REQUIREMENTS			= "Requirements";
-const char * const ATTR_RANK					= "Rank";
-
 } // classad

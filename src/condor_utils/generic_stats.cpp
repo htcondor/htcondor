@@ -1110,6 +1110,8 @@ void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
       }
 }
 
+template class stats_entry_recent<int>;
+template class stats_entry_recent_histogram<long>;
 
 // this function isn't called, its just here to force instantiation 
 // of template methods that aren't in the header file.

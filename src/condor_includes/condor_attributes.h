@@ -26,948 +26,958 @@
 #ifndef __CONDOR_ATTRIBUTES_H__
 #define __CONDOR_ATTRIBUTES_H__
 
-extern const char * const  ATTR_ABSENT;
-extern const char * const  ATTR_ACCOUNTING_GROUP;
-extern const char * const  ATTR_ACTION_CONSTRAINT;
-extern const char * const  ATTR_ACTION_IDS;
-extern const char * const  ATTR_ACTION_RESULT;
-extern const char * const  ATTR_ACTION_RESULT_TYPE;
-extern const char * const  ATTR_ACTIVITY;
-extern const char * const  ATTR_ALLOW_NOTIFICATION_CC;
-extern const char * const  ATTR_ALL_REMOTE_HOSTS;
-extern const char * const  ATTR_APPEND_FILES;
-extern const char * const  ATTR_ARCH;
-extern const char * const  ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE;
-extern const char * const  ATTR_AVAIL_BANDWIDTH_TO_LAST_CKPT_SERVER;
-extern const char * const  ATTR_AVAIL_BANDWIDTH_TO_CKPT_SERVER;
-extern const char * const  ATTR_AVAIL_SINCE;
-extern const char * const  ATTR_AVAIL_TIME;
-extern const char * const  ATTR_AVAIL_TIME_ESTIMATE;
-extern const char * const  ATTR_BANDWIDTH_TO_SUBMIT_MACHINE;
-extern const char * const  ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER;
-extern const char * const  ATTR_BANDWIDTH_TO_CKPT_SERVER;
-extern const char * const  ATTR_BATCH_QUEUE;
-extern const char * const  ATTR_BUFFER_SIZE;
-extern const char * const  ATTR_BUFFER_FILES;
-extern const char * const  ATTR_BUFFER_BLOCK_SIZE;
-extern const char * const  ATTR_BUFFER_BLOCKS_USED;
-extern const char * const  ATTR_BUFFER_PREFETCH_SIZE;
-extern const char * const  ATTR_BYTES_SENT;
-extern const char * const  ATTR_BYTES_RECVD;
-extern const char * const  ATTR_CAN_HIBERNATE;
-extern const char * const  ATTR_CAPABILITY;
-extern const char * const  ATTR_CKPT_SERVER;
-extern const char * const  ATTR_CLAIM_STARTD;
-extern const char * const  ATTR_COD_CLAIMS;
-extern const char * const  ATTR_COMMAND;
-extern const char * const  ATTR_COMPRESS_FILES;
-extern const char * const  ATTR_REQUESTED_CAPACITY;
-extern const char * const  ATTR_CKPT_ARCH;
-extern const char * const  ATTR_CKPT_LAST_READ;
-extern const char * const  ATTR_CKPT_OPSYS;
-extern const char * const  ATTR_CLAIM_ID;
-extern const char * const  ATTR_CLAIM_IDS;
-extern const char * const  ATTR_PUBLIC_CLAIM_ID;
-extern const char * const  ATTR_PUBLIC_CLAIM_IDS;
-extern const char * const  ATTR_CHILD_REMOVE_CONSTRAINT;
-extern const char * const  ATTR_CLAIM_STATE;
-extern const char * const  ATTR_CLAIM_TYPE;
-extern const char * const  ATTR_CLIENT_MACHINE;
-extern const char * const  ATTR_CLOCK_DAY;
-extern const char * const  ATTR_CLOCK_MIN;
-extern const char * const  ATTR_CLUSTER_ID;
-extern const char * const  ATTR_AUTO_CLUSTER_ID;
-extern const char * const  ATTR_AUTO_CLUSTER_ATTRS;
-extern const char * const  ATTR_COMPLETION_DATE;
-extern const char * const  ATTR_MATCHED_CONCURRENCY_LIMITS;
-extern const char * const  ATTR_MATCHED_PSG;
-extern const char * const  ATTR_CONCURRENCY_LIMITS;
-extern const char * const  ATTR_PREEMPTING_CONCURRENCY_LIMITS;
+// Why use defines instead of a const char *?
+// A const char *, or const char [], is still an entry in the symbol table and
+// eats up RAM - a big concern in the schedd.  The symbol name itself is usually
+// longer than the name of the attribute, and it is once in the libcondor_utils and
+// once per reference.  Thus, we have the text in memory once per reference, plus
+// the actual contents of the symbol (plus a pointer).
+// 
+// This puts the actual contents in the text segment.  This is possibly slightly
+// more bloat than the most optimal case (if you can get such a thing to work on
+// all compilers!), but the bloat is in the text segment - shared on all processes!
+
+#define ATTR_ABSENT                    "Absent"
+#define ATTR_ACCOUNTING_GROUP          "AccountingGroup"
+#define ATTR_ACTION_CONSTRAINT  "ActionConstraint"
+#define ATTR_ACTION_IDS  "ActionIds"
+#define ATTR_ACTION_RESULT  "ActionResult"
+#define ATTR_ACTION_RESULT_TYPE  "ActionResultType"
+#define ATTR_ACTIVITY  "Activity"
+#define ATTR_ALLOW_NOTIFICATION_CC  "AllowNotificationCC"
+#define ATTR_ALL_REMOTE_HOSTS  "AllRemoteHosts"
+#define ATTR_APPEND_FILES  "AppendFiles"
+#define ATTR_ARCH  "Arch"
+#define ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE  "AvailBandwidthToSubmitMachine"
+#define ATTR_AVAIL_BANDWIDTH_TO_LAST_CKPT_SERVER  "AvailBandwidthToLastCkptServer"
+#define ATTR_AVAIL_BANDWIDTH_TO_CKPT_SERVER  "AvailBandwidthToCkptServer"
+#define ATTR_AVAIL_SINCE  "AvailSince"
+#define ATTR_AVAIL_TIME  "AvailTime"
+#define ATTR_AVAIL_TIME_ESTIMATE  "AvailTimeEstimate"
+#define ATTR_BANDWIDTH_TO_SUBMIT_MACHINE  "BandwidthToSubmitMachine"
+#define ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER  "BandwidthToLastCkptServer"
+#define ATTR_BANDWIDTH_TO_CKPT_SERVER  "BandwidthToCkptServer"
+#define ATTR_BATCH_QUEUE  "BatchQueue"
+#define ATTR_BUFFER_SIZE  "BufferSize"
+#define ATTR_BUFFER_FILES  "BufferFiles"
+#define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"
+#define ATTR_BUFFER_BLOCKS_USED  "BufferBlocksUsed"
+#define ATTR_BUFFER_PREFETCH_SIZE  "BufferPrefetchSize"
+#define ATTR_BYTES_SENT  "BytesSent"
+#define ATTR_BYTES_RECVD  "BytesRecvd"
+#define ATTR_CAN_HIBERNATE  "CanHibernate"
+#define ATTR_CAPABILITY  "Capability"
+#define ATTR_CKPT_SERVER  "CkptServer"
+#define ATTR_CLAIM_STARTD  "ClaimStartd"
+#define ATTR_COD_CLAIMS  "CODClaims"
+#define ATTR_COMMAND  "Command"
+#define ATTR_COMPRESS_FILES  "CompressFiles"
+#define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
+#define ATTR_CKPT_ARCH  "CkptArch"
+#define ATTR_CKPT_LAST_READ  "CkptLastRead"
+#define ATTR_CKPT_OPSYS  "CkptOpSys"
+#define ATTR_CLAIM_ID  "ClaimId"
+#define ATTR_CLAIM_IDS  "ClaimIds"
+#define ATTR_PUBLIC_CLAIM_ID  "PublicClaimId"
+#define ATTR_PUBLIC_CLAIM_IDS  "PublicClaimIds"
+//extern const char ATTR_CHILD_REMOVE_CONSTRAINT [];
+#define ATTR_CLAIM_STATE  "ClaimState"
+#define ATTR_CLAIM_TYPE  "ClaimType"
+#define ATTR_CLIENT_MACHINE  "ClientMachine" 
+#define ATTR_CLOCK_DAY  "ClockDay"
+#define ATTR_CLOCK_MIN  "ClockMin"
+#define ATTR_CLUSTER_ID  "ClusterId"
+#define ATTR_AUTO_CLUSTER_ID  "AutoClusterId"
+#define ATTR_AUTO_CLUSTER_ATTRS  "AutoClusterAttrs"
+#define ATTR_COMPLETION_DATE  "CompletionDate"
+#define ATTR_MATCHED_CONCURRENCY_LIMITS  "MatchedConcurrencyLimits"
+#define ATTR_MATCHED_PSG  "Matched_PSG"
+#define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"
+#define ATTR_PREEMPTING_CONCURRENCY_LIMITS  "PreemptingConcurrencyLimits"
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
-extern const char * const  ATTR_CONSOLE_IDLE;
-extern const char * const  ATTR_CONTINUE;
-extern const char * const  ATTR_CONTINUE_REASON;
-extern const char * const  ATTR_CORE_SIZE;
-extern const char * const  ATTR_CREAM_ATTRIBUTES;
-extern const char * const  ATTR_CRON_MINUTES;
-extern const char * const  ATTR_CRON_HOURS;
-extern const char * const  ATTR_CRON_DAYS_OF_MONTH;
-extern const char * const  ATTR_CRON_MONTHS;
-extern const char * const  ATTR_CRON_DAYS_OF_WEEK;
-extern const char * const  ATTR_CRON_NEXT_RUNTIME;
-extern const char * const  ATTR_CRON_CURRENT_TIME_RANGE;
-extern const char * const  ATTR_CRON_PREP_TIME;
-extern const char * const  ATTR_CRON_WINDOW;
-extern const char * const  ATTR_CPU_BUSY;
-extern const char * const  ATTR_CPU_BUSY_TIME;
-extern const char * const  ATTR_CPU_IS_BUSY;
-extern const char * const  ATTR_CPUS;
-extern const char * const  ATTR_CURRENT_HOSTS;
-extern const char * const  ATTR_CURRENT_JOBS_RUNNING;
-extern const char * const  ATTR_CURRENT_RANK;
-extern const char * const  ATTR_CURRENT_STATUS_UNKNOWN;
-extern const char * const  ATTR_CURRENT_TIME;
-extern const char * const  ATTR_DAEMON_START_TIME;
-extern const char * const  ATTR_DAEMON_SHUTDOWN;
-extern const char * const  ATTR_DAEMON_SHUTDOWN_FAST;
-extern const char * const  ATTR_DAG_NODE_NAME;
-extern const char * const  ATTR_DAGMAN_WORKFLOW_LOG;
-extern const char * const  ATTR_DAGMAN_WORKFLOW_MASK;
-extern const char * const  ATTR_DAG_NODE_NAME_ALT;
-extern const char * const  ATTR_DAGMAN_JOB_ID;
-extern const char * const  ATTR_DEFERRAL_OFFSET;
-extern const char * const  ATTR_DEFERRAL_PREP_TIME;
-extern const char * const  ATTR_DEFERRAL_TIME;
-extern const char * const  ATTR_DEFERRAL_WINDOW;
+#define ATTR_CONSOLE_IDLE  "ConsoleIdle"
+#define ATTR_CONTINUE  "Continue"
+#define ATTR_CONTINUE_REASON  "ContinueReason"
+#define ATTR_CORE_SIZE  "CoreSize"
+#define ATTR_CREAM_ATTRIBUTES  "CreamAttributes"
+#define ATTR_CRON_MINUTES  "CronMinute"
+#define ATTR_CRON_HOURS  "CronHour"
+#define ATTR_CRON_DAYS_OF_MONTH  "CronDayOfMonth"
+#define ATTR_CRON_MONTHS  "CronMonth"
+#define ATTR_CRON_DAYS_OF_WEEK  "CronDayOfWeek"
+#define ATTR_CRON_NEXT_RUNTIME  "CronNextRunTime"
+#define ATTR_CRON_CURRENT_TIME_RANGE  "CronCurrentTimeRange"
+#define ATTR_CRON_PREP_TIME  "CronPrepTime"
+#define ATTR_CRON_WINDOW  "CronWindow"
+#define ATTR_CPU_BUSY  "CpuBusy"
+#define ATTR_CPU_BUSY_TIME  "CpuBusyTime"
+#define ATTR_CPU_IS_BUSY  "CpuIsBusy"
+#define ATTR_CPUS  "Cpus"
+#define ATTR_CURRENT_HOSTS  "CurrentHosts"
+#define ATTR_CURRENT_JOBS_RUNNING  "CurrentJobsRunning"
+#define ATTR_CURRENT_RANK  "CurrentRank"
+#define ATTR_CURRENT_STATUS_UNKNOWN  "CurrentStatusUnknown"
+#define ATTR_CURRENT_TIME  "CurrentTime"
+#define ATTR_DAEMON_START_TIME  "DaemonStartTime"
+#define ATTR_DAEMON_SHUTDOWN  "DaemonShutdown"
+#define ATTR_DAEMON_SHUTDOWN_FAST  "DaemonShutdownFast"
+#define ATTR_DAG_NODE_NAME  "DAGNodeName"
+#define ATTR_DAGMAN_WORKFLOW_LOG  "DAGManNodesLog"
+#define ATTR_DAGMAN_WORKFLOW_MASK  "DAGManNodesMask"
+#define ATTR_DAG_NODE_NAME_ALT  "dag_node_name"
+#define ATTR_DAGMAN_JOB_ID  "DAGManJobId"
+#define ATTR_DEFERRAL_OFFSET  "DeferralOffset"
+#define ATTR_DEFERRAL_PREP_TIME  "DeferralPrepTime"
+#define ATTR_DEFERRAL_TIME  "DeferralTime"
+#define ATTR_DEFERRAL_WINDOW  "DeferralWindow"
 //--------------------------------------------------------------------
 // Deltacloud attributes
-extern const char * const  ATTR_DELTACLOUD_AVAILABLE_ACTIONS;
-extern const char * const  ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES;
-extern const char * const  ATTR_DELTACLOUD_PROVIDER_ID;
-extern const char * const  ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES;
-extern const char * const  ATTR_DELTACLOUD_RETRY_TIMEOUT;
-extern const char * const  ATTR_DELTACLOUD_USERNAME;
-extern const char * const  ATTR_DELTACLOUD_PASSWORD_FILE;
-extern const char * const  ATTR_DELTACLOUD_IMAGE_ID;
-extern const char * const  ATTR_DELTACLOUD_INSTANCE_NAME;
-extern const char * const  ATTR_DELTACLOUD_REALM_ID;
-extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE;
-extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU;
-extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY;
-extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE;
-extern const char * const  ATTR_DELTACLOUD_KEYNAME;
-extern const char * const  ATTR_DELTACLOUD_USER_DATA;
-extern const char * const  ATTR_DELTACLOUD_NEEDS_START;
+#define ATTR_DELTACLOUD_AVAILABLE_ACTIONS  "DeltacloudAvailableActions"
+#define ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES  "DeltacloudPrivateNetworkAddresses"
+#define ATTR_DELTACLOUD_PROVIDER_ID  "DeltacloudProviderId"
+#define ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES  "DeltacloudPublicNetworkAddresses"
+#define ATTR_DELTACLOUD_RETRY_TIMEOUT  "DeltacloudRetryTimeout"
+#define ATTR_DELTACLOUD_USERNAME  "DeltacloudUsername"
+#define ATTR_DELTACLOUD_PASSWORD_FILE  "DeltacloudPasswordFile"
+#define ATTR_DELTACLOUD_IMAGE_ID  "DeltacloudImageId"
+#define ATTR_DELTACLOUD_INSTANCE_NAME  "DeltacloudInstanceName"
+#define ATTR_DELTACLOUD_REALM_ID  "DeltacloudRealmId"
+#define ATTR_DELTACLOUD_HARDWARE_PROFILE  "DeltacloudHardwareProfile"
+#define ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU  "DeltacloudHardwareProfileCpu"
+#define ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY  "DeltacloudHardwareProfileMemory"
+#define ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE  "DeltacloudHardwareProfileStorage"
+#define ATTR_DELTACLOUD_KEYNAME  "DeltacloudKeyname"
+#define ATTR_DELTACLOUD_USER_DATA  "DeltacloudUserData"
+#define ATTR_DELTACLOUD_NEEDS_START  "DeltacloudNeedsStart"
 //--------------------------------------------------------------------
-extern const char * const  ATTR_DESTINATION;
-extern const char * const  ATTR_DISK;
-extern const char * const  ATTR_DISK_USAGE;
-extern const char * const  ATTR_EMAIL_ATTRIBUTES;
-extern const char * const  ATTR_ENTERED_CURRENT_ACTIVITY;
-extern const char * const  ATTR_ENTERED_CURRENT_STATE;
-extern const char * const  ATTR_ENTERED_CURRENT_STATUS;
-extern const char * const  ATTR_ERROR_STRING;
-extern const char * const  ATTR_ERROR_CODE;
-extern const char * const  ATTR_EXCEPTION_HIERARCHY;
-extern const char * const  ATTR_EXCEPTION_NAME;
-extern const char * const  ATTR_EXCEPTION_TYPE;
-extern const char * const  ATTR_EXECUTABLE_SIZE;
-extern const char * const  ATTR_EXIT_REASON;
-extern const char * const  ATTR_FETCH_FILES;
-extern const char * const  ATTR_FETCH_WORK_DELAY;
-extern const char * const  ATTR_FILE_NAME;
-extern const char * const  ATTR_FILE_SIZE;
-extern const char * const  ATTR_FILE_SYSTEM_DOMAIN;
-extern const char * const  ATTR_FILE_REMAPS;
-extern const char * const  ATTR_FILE_READ_COUNT;
-extern const char * const  ATTR_FILE_READ_BYTES;
-extern const char * const  ATTR_FILE_WRITE_COUNT;
-extern const char * const  ATTR_FILE_WRITE_BYTES;
-extern const char * const  ATTR_BLOCK_READ_KBYTES;
-extern const char * const  ATTR_BLOCK_WRITE_KBYTES;
-extern const char * const  ATTR_FILE_SEEK_COUNT;
-extern const char * const  ATTR_FLOCKED_JOBS;
-extern const char * const  ATTR_FLAVOR;
-extern const char * const  ATTR_FORCE;
-extern const char * const  ATTR_GID;
-extern const char * const  ATTR_GLOBAL_JOB_ID;
-extern const char * const  ATTR_GZIP;
-extern const char * const  ATTR_GLOBUS_DELEGATION_URI;
+#define ATTR_DESTINATION  "Destination"
+#define ATTR_DISK  "Disk"
+#define ATTR_DISK_USAGE  "DiskUsage"
+#define ATTR_EMAIL_ATTRIBUTES  "EmailAttributes"
+#define ATTR_ENTERED_CURRENT_ACTIVITY  "EnteredCurrentActivity"
+#define ATTR_ENTERED_CURRENT_STATE  "EnteredCurrentState"
+#define ATTR_ENTERED_CURRENT_STATUS  "EnteredCurrentStatus"
+#define ATTR_ERROR_STRING  "ErrorString"
+#define ATTR_ERROR_CODE  "ErrorCode"
+#define ATTR_EXCEPTION_HIERARCHY  "ExceptionHierarchy"
+#define ATTR_EXCEPTION_NAME  "ExceptionName"
+#define ATTR_EXCEPTION_TYPE  "ExceptionType"
+#define ATTR_EXECUTABLE_SIZE  "ExecutableSize"
+#define ATTR_EXIT_REASON  "ExitReason"
+#define ATTR_FETCH_FILES  "FetchFiles"
+#define ATTR_FETCH_WORK_DELAY  "FetchWorkDelay"
+#define ATTR_FILE_NAME  "FileName"
+#define ATTR_FILE_SIZE  "FileSize"
+#define ATTR_FILE_SYSTEM_DOMAIN  "FileSystemDomain"
+#define ATTR_FILE_REMAPS  "FileRemaps"
+#define ATTR_FILE_READ_COUNT  "FileReadCount"
+#define ATTR_FILE_READ_BYTES  "FileReadBytes"
+#define ATTR_FILE_WRITE_COUNT  "FileWriteCount"
+#define ATTR_FILE_WRITE_BYTES  "FileWriteBytes"
+#define ATTR_BLOCK_READ_KBYTES  "BlockReadKbytes"
+#define ATTR_BLOCK_WRITE_KBYTES  "BlockWriteKbytes"
+#define ATTR_FILE_SEEK_COUNT  "FileSeekCount"
+#define ATTR_FLOCKED_JOBS  "FlockedJobs"
+#define ATTR_FLAVOR  "Flavor"
+#define ATTR_FORCE  "Force"
+#define ATTR_GID  "Gid"
+#define ATTR_GLOBAL_JOB_ID  "GlobalJobId"
+#define ATTR_GZIP  "GZIP"
+#define ATTR_GLOBUS_DELEGATION_URI  "GlobusDelegationUri"
 // Deprecated (cruft) -- no longer used
-extern const char * const  ATTR_GLOBUS_GRAM_VERSION;
-extern const char * const  ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME;
-extern const char * const  ATTR_JOB_MUST_EXPAND;
-extern const char * const  ATTR_GLOBUS_RSL;
-extern const char * const  ATTR_GLOBUS_STATUS;
-extern const char * const  ATTR_X509_USER_PROXY;
-extern const char * const  ATTR_X509_USER_PROXY_EXPIRATION;
-extern const char * const  ATTR_X509_USER_PROXY_SUBJECT;
-extern const char * const  ATTR_X509_USER_PROXY_EMAIL;
-extern const char * const  ATTR_X509_USER_PROXY_VONAME;
-extern const char * const  ATTR_X509_USER_PROXY_FIRST_FQAN;
-extern const char * const  ATTR_X509_USER_PROXY_FQAN;
-extern const char * const  ATTR_DELEGATED_PROXY_EXPIRATION;
-extern const char * const  ATTR_GRID_RESOURCE;
-extern const char * const  ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
-extern const char * const  ATTR_GRID_JOB_ID;
-extern const char * const  ATTR_GRID_JOB_STATUS;
+#define ATTR_GLOBUS_GRAM_VERSION  "GlobusGramVersion"
+#define ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME  "GlobusResourceUnavailableTime"
+#define ATTR_JOB_MUST_EXPAND  "MustExpand"
+#define ATTR_GLOBUS_RSL  "GlobusRSL"
+#define ATTR_GLOBUS_STATUS  "GlobusStatus"
+#define ATTR_X509_USER_PROXY  "x509userproxy"
+#define ATTR_X509_USER_PROXY_EXPIRATION  "x509UserProxyExpiration"
+#define ATTR_X509_USER_PROXY_SUBJECT  "x509userproxysubject"
+#define ATTR_X509_USER_PROXY_EMAIL  "x509UserProxyEmail"
+#define ATTR_X509_USER_PROXY_VONAME  "x509UserProxyVOName"
+#define ATTR_X509_USER_PROXY_FIRST_FQAN  "x509UserProxyFirstFQAN"
+#define ATTR_X509_USER_PROXY_FQAN  "x509UserProxyFQAN"
+#define ATTR_DELEGATED_PROXY_EXPIRATION  "DelegatedProxyExpiration"
+#define ATTR_GRID_RESOURCE  "GridResource"
+#define ATTR_GRID_RESOURCE_UNAVAILABLE_TIME  "GridResourceUnavailableTime"
+#define ATTR_GRID_JOB_ID  "GridJobId"
+#define ATTR_GRID_JOB_STATUS  "GridJobStatus"
 // ckireyev myproxy
-extern const char * const  ATTR_MYPROXY_SERVER_DN;
-extern const char * const  ATTR_MYPROXY_HOST_NAME;
-extern const char * const  ATTR_MYPROXY_PASSWORD;
-extern const char * const  ATTR_MYPROXY_PASSWORD_EXISTS;
-extern const char * const  ATTR_MYPROXY_CRED_NAME;
-extern const char * const  ATTR_MYPROXY_REFRESH_THRESHOLD;
-extern const char * const  ATTR_MYPROXY_NEW_PROXY_LIFETIME;
+#define ATTR_MYPROXY_SERVER_DN  "MyProxyServerDN"
+#define ATTR_MYPROXY_HOST_NAME  "MyProxyHost"
+#define ATTR_MYPROXY_PASSWORD  "MyProxyPassword"
+#define ATTR_MYPROXY_PASSWORD_EXISTS  "MyProxyPasswordExists"
+#define ATTR_MYPROXY_CRED_NAME  "MyProxyCredentialName"
+#define ATTR_MYPROXY_REFRESH_THRESHOLD  "MyProxyRefreshThreshold"
+#define ATTR_MYPROXY_NEW_PROXY_LIFETIME  "MyProxyNewProxyLifetime"
 // END ckireyev myproxy
-extern const char * const  ATTR_HARDWARE_ADDRESS;
-extern const char * const  ATTR_HAS_CHECKPOINTING;
-extern const char * const  ATTR_HAS_FILE_TRANSFER;
-extern const char * const  ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS;
-extern const char * const  ATTR_HAS_PER_FILE_ENCRYPTION;
-extern const char * const  ATTR_HAS_IO_PROXY;
-extern const char * const  ATTR_HAS_JAVA;
-extern const char * const  ATTR_HAS_JIC_LOCAL_CONFIG;
-extern const char * const  ATTR_HAS_JIC_LOCAL_STDIN;
-extern const char * const  ATTR_HAS_JOB_AD;
-extern const char * const  ATTR_HAS_JOB_AD_FROM_FILE;
-extern const char * const  ATTR_HAS_JOB_DEFERRAL;
-extern const char * const  ATTR_HAS_MPI;
-extern const char * const  ATTR_HAS_OLD_VANILLA;
-extern const char * const  ATTR_HAS_PVM;
-extern const char * const  ATTR_HAS_RECONNECT;
-extern const char * const  ATTR_HAS_REMOTE_SYSCALLS;
-extern const char * const  ATTR_HAS_TDP;
-extern const char * const  ATTR_HAS_SOAP_API;
-extern const char * const  ATTR_HAS_WIN_RUN_AS_OWNER;
-extern const char * const  ATTR_HAS_VM;
-extern const char * const  ATTR_HELD_JOBS;
-extern const char * const  ATTR_HIBERNATION_LEVEL;
-extern const char * const  ATTR_HIBERNATION_STATE;
-extern const char * const  ATTR_HIBERNATION_SUPPORTED_STATES;
-extern const char * const  ATTR_HIBERNATION_RAW_MASK;
-extern const char * const  ATTR_HIBERNATION_METHOD;
-extern const char * const  ATTR_UNHIBERNATE;
-extern const char * const  ATTR_HOLD_KILL_SIG;
-extern const char * const  ATTR_HOOK_KEYWORD;
-extern const char * const  ATTR_IDLE_JOBS;
-extern const char * const  ATTR_IMAGE_SIZE;
-extern const char * const  ATTR_RESIDENT_SET_SIZE;
-extern const char * const  ATTR_PROPORTIONAL_SET_SIZE;
-extern const char * const  ATTR_INTERACTIVE;
-extern const char * const  ATTR_IS_DAEMON_CORE;
-extern const char * const  ATTR_IS_OWNER;
-extern const char * const  ATTR_IS_QUEUE_SUPER_USER;
-extern const char * const  ATTR_IS_WAKE_SUPPORTED;
-extern const char * const  ATTR_WAKE_SUPPORTED_FLAGS;
-extern const char * const  ATTR_IS_WAKE_ENABLED;
-extern const char * const  ATTR_WAKE_ENABLED_FLAGS;
-extern const char * const  ATTR_IS_WAKEABLE;
-extern const char * const  ATTR_INACTIVE;
-extern const char * const  ATTR_JAR_FILES;
-extern const char * const  ATTR_JAVA_MFLOPS;
-extern const char * const  ATTR_JAVA_VENDOR;
-extern const char * const  ATTR_JAVA_VERSION;
-extern const char * const  ATTR_JOB_ACTION;
-extern const char * const  ATTR_JOB_ARGUMENTS1;
-extern const char * const  ATTR_JOB_ARGUMENTS2;
-extern const char * const  ATTR_JOB_CMD;
-extern const char * const  ATTR_STACK_SIZE;
-extern const char * const  ATTR_JOB_CMD_HASH;
-extern const char * const  ATTR_JOB_CMD_MD5;
-extern const char * const  ATTR_ORIG_JOB_CMD;
-extern const char * const  ATTR_JOB_CORE_DUMPED;
-extern const char * const  ATTR_JOB_CORE_FILENAME;
-extern const char * const  ATTR_JOB_CURRENT_START_DATE;
-extern const char * const  ATTR_JOB_CURRENT_START_EXECUTING_DATE;
-extern const char * const  ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE;
-extern const char * const  ATTR_CUMULATIVE_TRANSFER_TIME;
-extern const char * const  ATTR_JOB_DURATION;
-extern const char * const  ATTR_JOB_ENVIRONMENT1;
-extern const char * const  ATTR_JOB_ENVIRONMENT1_DELIM;
-extern const char * const  ATTR_JOB_ENVIRONMENT2;
-extern const char * const  ATTR_JOB_ERROR;
-extern const char * const  ATTR_JOB_ERROR_SIZE;
-extern const char * const  ATTR_JOB_KEEP_CLAIM_IDLE;
-extern const char * const  ATTR_JOB_KEYWORD;
-extern const char * const  ATTR_JOB_LEASE_DURATION;
-extern const char * const  ATTR_JOB_LEASE_EXPIRATION;
-extern const char * const  ATTR_JOB_SPOOL_EXECUTABLE;
-extern const char * const  ATTR_JOB_EXIT_STATUS;
-extern const char * const  ATTR_JOB_EXIT_REQUIREMENTS;
-extern const char * const  ATTR_JOB_ID;
-extern const char * const  ATTR_JOB_FINISHED_HOOK_DONE;
-extern const char * const  ATTR_JOB_INPUT;
-extern const char * const  ATTR_JOB_IWD;
-extern const char * const  ATTR_JOB_IWD_FLUSH_NFS_CACHE;
-extern const char * const  ATTR_JOB_JAVA_VM_ARGS1;
-extern const char * const  ATTR_JOB_JAVA_VM_ARGS2;
-extern const char * const  ATTR_ORIG_JOB_IWD;
-extern const char * const  ATTR_JOB_REMOTE_IWD;
-extern const char * const  ATTR_JOB_LOAD_PROFILE;
-extern const char * const  ATTR_JOB_RUNAS_OWNER;
-extern const char * const  ATTR_JOB_LOAD_USER_PROFILE;
-extern const char * const  ATTR_JOB_LOCAL_CPU;
-extern const char * const  ATTR_JOB_LOCAL_SYS_CPU;
-extern const char * const  ATTR_JOB_LOCAL_USER_CPU;
-extern const char * const  ATTR_JOB_MANAGED;
-extern const char * const  ATTR_JOB_MANAGED_MANAGER;
-extern const char * const  ATTR_JOB_MATCHED;
-extern const char * const  ATTR_JOB_NONESSENTIAL;
-extern const char * const  ATTR_JOB_NOOP;
-extern const char * const  ATTR_JOB_NOOP_EXIT_SIGNAL;
-extern const char * const  ATTR_JOB_NOOP_EXIT_CODE;
-extern const char * const  ATTR_JOB_NOTIFICATION;
-extern const char * const  ATTR_JOB_OUTPUT;
-extern const char * const  ATTR_JOB_OUTPUT_SIZE;
-extern const char * const  ATTR_JOB_PID;
-extern const char * const  ATTR_PRE_JOB_PRIO1;
-extern const char * const  ATTR_PRE_JOB_PRIO2;
-extern const char * const  ATTR_POST_JOB_PRIO1;
-extern const char * const  ATTR_POST_JOB_PRIO2;
-extern const char * const  ATTR_JOB_PRIO;
-extern const char * const  ATTR_JOB_COMMITTED_TIME;
-extern const char * const  ATTR_JOB_LANGUAGE;
-extern const char * const  ATTR_JOB_LAST_START_DATE;
-extern const char * const  ATTR_JOB_LEAVE_IN_QUEUE;
-extern const char * const  ATTR_JOB_REMOTE_SYS_CPU;
-extern const char * const  ATTR_JOB_REMOTE_USER_CPU;
-extern const char * const  ATTR_JOB_REMOTE_WALL_CLOCK;
-extern const char * const  ATTR_JOB_ROOT_DIR;
-extern const char * const  ATTR_JOB_RUN_COUNT;
-extern const char * const  ATTR_JOB_SANDBOX_JOBAD;
-extern const char * const  ATTR_JOB_SUBMISSION;
-extern const char * const  ATTR_JOB_SUBMISSION_ID;
-extern const char * const  ATTR_JOB_START;
-extern const char * const  ATTR_JOB_START_DATE;
-extern const char * const  ATTR_JOB_STATE;
-extern const char * const  ATTR_JOB_STATUS;
-extern const char * const  ATTR_LAST_JOB_STATUS;
-extern const char * const  ATTR_JOB_STATUS_ON_RELEASE;
-extern const char * const  ATTR_JOB_UNIVERSE;
-extern const char * const  ATTR_JOB_WALL_CLOCK_CKPT;
-extern const char * const  ATTR_JOB_QUEUE_BIRTHDATE;
-extern const char * const  ATTR_JOB_REQUIRES_SANDBOX;
-extern const char * const  ATTR_JOB_VM_TYPE;
-extern const char * const  ATTR_JOB_VM_MEMORY;
-extern const char * const  ATTR_JOB_VM_VCPUS;
-extern const char * const  ATTR_JOB_VM_MACADDR;
-extern const char * const  ATTR_JOB_VM_CHECKPOINT;
-extern const char * const  ATTR_JOB_VM_NETWORKING;
-extern const char * const  ATTR_JOB_VM_NETWORKING_TYPE;
-extern const char * const  ATTR_JOB_VM_HARDWARE_VT;
-extern const char * const  ATTR_JOB_VM_VNC;
-extern const char * const  ATTR_JOB_VM_CPU_UTILIZATION;
-extern const char * const  ATTR_KEYBOARD_IDLE;
-extern const char * const  ATTR_KEYSTORE_FILE;
-extern const char * const  ATTR_KEYSTORE_ALIAS;
-extern const char * const  ATTR_KEYSTORE_PASSPHRASE_FILE;
-extern const char * const  ATTR_KFLOPS;
-extern const char * const  ATTR_KILL;
-extern const char * const  ATTR_KILL_SIG;
-extern const char * const  ATTR_KILL_SIG_TIMEOUT;
-extern const char * const  ATTR_LAST_AVAIL_INTERVAL;
-extern const char * const  ATTR_LAST_BENCHMARK;
-extern const char * const  ATTR_LAST_CKPT_SERVER;
-extern const char * const  ATTR_LAST_CKPT_TIME;
-extern const char * const  ATTR_LAST_PUBLIC_CLAIM_ID;
-extern const char * const  ATTR_LAST_PUBLIC_CLAIM_IDS;
-extern const char * const  ATTR_LAST_CLAIM_STATE;
-extern const char * const  ATTR_LAST_FETCH_WORK_SPAWNED;
-extern const char * const  ATTR_LAST_FETCH_WORK_COMPLETED;
-extern const char * const  ATTR_LAST_VACATE_TIME;
-extern const char * const  ATTR_LAST_HEARD_FROM;
-extern const char * const  ATTR_LAST_HOLD_REASON;
-extern const char * const  ATTR_LAST_HOLD_REASON_CODE;
-extern const char * const  ATTR_LAST_HOLD_REASON_SUBCODE;
-extern const char * const  ATTR_LAST_JOB_LEASE_RENEWAL;
-extern const char * const  ATTR_LAST_JOB_LEASE_RENEWAL_FAILED;
-extern const char * const  ATTR_LAST_MATCH_TIME;
-extern const char * const  ATTR_MACHINE_LAST_MATCH_TIME;
-extern const char * const  ATTR_LAST_MATCH_LIST_PREFIX;
-extern const char * const  ATTR_LAST_MATCH_LIST_LENGTH;
-extern const char * const  ATTR_LAST_REJ_MATCH_TIME;
-extern const char * const  ATTR_LAST_REJ_MATCH_REASON;
-extern const char * const  ATTR_LAST_PERIODIC_CHECKPOINT;
-extern const char * const  ATTR_LAST_RELEASE_REASON;
-extern const char * const  ATTR_LAST_REMOTE_HOST;
-extern const char * const  ATTR_LAST_REMOTE_POOL;
-extern const char * const  ATTR_LAST_REMOTE_STATUS_UPDATE;
-extern const char * const  ATTR_LAST_UPDATE;
-extern const char * const  ATTR_LOCAL_CREDD;
-extern const char * const  ATTR_LOCAL_FILES;
-extern const char * const  ATTR_LOAD_AVG;
-extern const char * const  ATTR_MACHINE;
-extern const char * const  ATTR_MACHINE_COUNT;
-extern const char * const  ATTR_MASTER_IP_ADDR;
-extern const char * const  ATTR_MAX_HOSTS;
-extern const char * const  ATTR_MAX_JOB_RETIREMENT_TIME;
-extern const char * const  ATTR_MAX_JOBS_RUNNING;
-extern const char * const  ATTR_MEMORY;
-extern const char * const  ATTR_MEMORY_USAGE;
-extern const char * const  ATTR_DETECTED_MEMORY;
-extern const char * const  ATTR_DETECTED_CPUS;
-extern const char * const  ATTR_MIN_HOSTS;
-extern const char * const  ATTR_MIPS;
-extern const char * const  ATTR_MPI_IS_MASTER;
-extern const char * const  ATTR_MPI_MASTER_ADDR;
-extern const char * const  ATTR_PARALLEL_IS_MASTER;
-extern const char * const  ATTR_PARALLEL_MASTER_ADDR;
-extern const char * const  ATTR_MY_CURRENT_TIME;
-extern const char * const  ATTR_MY_TYPE;
-extern const char * const  ATTR_NAME;
-extern const char * const  ATTR_NICE_USER;
-extern const char * const  ATTR_NEGOTIATOR_REQUIREMENTS;
-extern const char * const  ATTR_NEXT_CLUSTER_NUM;
-extern const char * const  ATTR_NEXT_FETCH_WORK_DELAY;
-extern const char * const  ATTR_NEXT_JOB_START_DELAY;
-extern const char * const  ATTR_NODE;
-extern const char * const  ATTR_NORDUGRID_RSL;
-extern const char * const  ATTR_NOTIFY_USER;
-extern const char * const  ATTR_NOTIFY_JOB_SCHEDULER;
-extern const char * const  ATTR_NT_DOMAIN;
-extern const char * const  ATTR_WINDOWS_VERSION;
-extern const char * const  ATTR_WINDOWS_MAJOR_VERSION;
-extern const char * const  ATTR_WINDOWS_MINOR_VERSION;
-extern const char * const  ATTR_WINDOWS_BUILD_NUMBER;
-extern const char * const  ATTR_WINDOWS_SERVICE_PACK_MAJOR;
-extern const char * const  ATTR_WINDOWS_SERVICE_PACK_MINOR;
-extern const char * const  ATTR_WINDOWS_PRODUCT_TYPE;
-extern const char * const  ATTR_NUM_COD_CLAIMS;
-extern const char * const  ATTR_NUM_CKPTS;
-extern const char * const  ATTR_NUM_CKPTS_RAW;
-extern const char * const  ATTR_NUM_GLOBUS_SUBMITS;
-extern const char * const  ATTR_NUM_MATCHES;
-extern const char * const  ATTR_NUM_HOPS_TO_SUBMIT_MACHINE;
-extern const char * const  ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER;
-extern const char * const  ATTR_NUM_HOPS_TO_CKPT_SERVER;
-extern const char * const  ATTR_NUM_JOB_STARTS;
-extern const char * const  ATTR_NUM_JOB_RECONNECTS;
-extern const char * const  ATTR_NUM_PIDS;
-extern const char * const  ATTR_NUM_RESTARTS;
-extern const char * const  ATTR_NUM_SHADOW_EXCEPTIONS;
-extern const char * const  ATTR_NUM_SHADOW_STARTS;
-extern const char * const  ATTR_NUM_SYSTEM_HOLDS;
-extern const char * const  ATTR_NUM_USERS;
-extern const char * const  ATTR_OFFLINE;
-extern const char * const  ATTR_OPSYS;
-extern const char * const  ATTR_OPSYSVER;
-extern const char * const  ATTR_OPSYS_AND_VER;
-extern const char * const  ATTR_OPSYS_MAJOR_VER;
-extern const char * const  ATTR_OPSYS_NAME;
-extern const char * const  ATTR_OPSYS_LONG_NAME;
-extern const char * const  ATTR_OPSYS_SHORT_NAME;
-extern const char * const  ATTR_OPSYS_LEGACY;
-extern const char * const  ATTR_ORIG_MAX_HOSTS;
-extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
-extern const char * const  ATTR_OUTPUT_DESTINATION;
-extern const char * const  ATTR_OWNER;
-extern const char * const  ATTR_PARALLEL_SCHEDULING_GROUP;
-extern const char * const  ATTR_PARALLEL_SCRIPT_SHADOW;
-extern const char * const  ATTR_PARALLEL_SCRIPT_STARTER;
-extern const char * const  ATTR_PARALLEL_SHUTDOWN_POLICY;
-extern const char * const  ATTR_PERIODIC_CHECKPOINT;
+#define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
+#define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
+#define ATTR_HAS_FILE_TRANSFER  "HasFileTransfer"
+#define ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS  "HasFileTransferPluginMethods"
+#define ATTR_HAS_PER_FILE_ENCRYPTION  "HasPerFileEncryption"
+#define ATTR_HAS_IO_PROXY  "HasIOProxy"
+#define ATTR_HAS_JAVA  "HasJava"
+#define ATTR_HAS_JIC_LOCAL_CONFIG  "HasJICLocalConfig"
+#define ATTR_HAS_JIC_LOCAL_STDIN  "HasJICLocalStdin"
+#define ATTR_HAS_JOB_AD  "HasJobAd"
+#define ATTR_HAS_JOB_AD_FROM_FILE  "HasJobAdFromFile"
+#define ATTR_HAS_JOB_DEFERRAL  "HasJobDeferral"
+#define ATTR_HAS_MPI  "HasMPI"
+#define ATTR_HAS_OLD_VANILLA  "HasOldVanilla"
+#define ATTR_HAS_PVM  "HasPVM"
+#define ATTR_HAS_RECONNECT  "HasReconnect"
+#define ATTR_HAS_REMOTE_SYSCALLS  "HasRemoteSyscalls"
+#define ATTR_HAS_TDP  "HasTDP"
+#define ATTR_HAS_SOAP_API  "HasSOAPInterface"
+#define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
+#define ATTR_HAS_VM  "HasVM"
+#define ATTR_HELD_JOBS  "HeldJobs"
+#define ATTR_HIBERNATION_LEVEL  "HibernationLevel"
+#define ATTR_HIBERNATION_STATE  "HibernationState"
+#define ATTR_HIBERNATION_SUPPORTED_STATES  "HibernationSupportedStates"
+#define ATTR_HIBERNATION_RAW_MASK  "HibernationRawMask"
+#define ATTR_HIBERNATION_METHOD  "HibernationMethod"
+#define ATTR_UNHIBERNATE  "Unhibernate"
+#define ATTR_HOLD_KILL_SIG  "HoldKillSig"
+#define ATTR_HOOK_KEYWORD  "HookKeyword"
+#define ATTR_IDLE_JOBS  "IdleJobs"
+#define ATTR_IMAGE_SIZE  "ImageSize"
+#define ATTR_RESIDENT_SET_SIZE  "ResidentSetSize"
+#define ATTR_PROPORTIONAL_SET_SIZE  "ProportionalSetSizeKb"
+#define ATTR_INTERACTIVE  "Interactive"
+#define ATTR_IS_DAEMON_CORE  "IsDaemonCore"
+#define ATTR_IS_OWNER  "IsOwner"
+#define ATTR_IS_QUEUE_SUPER_USER  "IsQueueSuperUser"
+#define ATTR_IS_WAKE_SUPPORTED  "IsWakeOnLanSupported"
+#define ATTR_WAKE_SUPPORTED_FLAGS  "WakeOnLanSupportedFlags"
+#define ATTR_IS_WAKE_ENABLED  "IsWakeOnLanEnabled"
+#define ATTR_WAKE_ENABLED_FLAGS  "WakeOnLanEnabledFlags"
+#define ATTR_IS_WAKEABLE  "IsWakeAble"
+#define ATTR_INACTIVE  "Inactive"
+#define ATTR_JAR_FILES  "JarFiles"
+#define ATTR_JAVA_MFLOPS  "JavaMFlops"
+#define ATTR_JAVA_VENDOR  "JavaVendor"
+#define ATTR_JAVA_VERSION  "JavaVersion"
+#define ATTR_JOB_ACTION  "JobAction"
+#define ATTR_JOB_ARGUMENTS1  "Args"
+#define ATTR_JOB_ARGUMENTS2  "Arguments"
+#define ATTR_JOB_CMD  "Cmd"
+#define ATTR_STACK_SIZE  "StackSize"
+#define ATTR_JOB_CMD_HASH  "CmdHash"
+#define ATTR_JOB_CMD_MD5  "CmdMD5"
+#define ATTR_ORIG_JOB_CMD  "OrigCmd" 
+#define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
+#define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"
+#define ATTR_JOB_CURRENT_START_DATE  "JobCurrentStartDate"
+#define ATTR_JOB_CURRENT_START_EXECUTING_DATE  "JobCurrentStartExecutingDate"
+#define ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE  "JobCurrentStartTransferOutputDate"
+#define ATTR_CUMULATIVE_TRANSFER_TIME  "CumulativeTransferTime"
+#define ATTR_JOB_DURATION  "JobDuration"
+#define ATTR_JOB_ENVIRONMENT1  "Env"
+#define ATTR_JOB_ENVIRONMENT1_DELIM  "EnvDelim"
+#define ATTR_JOB_ENVIRONMENT2  "Environment"
+#define ATTR_JOB_ERROR  "Err"
+#define ATTR_JOB_ERROR_SIZE  "ErrSize"
+#define ATTR_JOB_KEEP_CLAIM_IDLE  "KeepClaimIdle"
+#define ATTR_JOB_KEYWORD  "JobKeyword"
+#define ATTR_JOB_LEASE_DURATION  "JobLeaseDuration"
+#define ATTR_JOB_LEASE_EXPIRATION  "JobLeaseExpiration"
+#define ATTR_JOB_SPOOL_EXECUTABLE  "SpoolExecutable"
+#define ATTR_JOB_EXIT_STATUS  "ExitStatus"
+#define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
+#define ATTR_JOB_ID  "JobId"
+#define ATTR_JOB_FINISHED_HOOK_DONE  "JobFinishedHookDone"
+#define ATTR_JOB_INPUT  "In"
+#define ATTR_JOB_IWD  "Iwd"
+#define ATTR_JOB_IWD_FLUSH_NFS_CACHE  "IwdFlushNFSCache"
+#define ATTR_JOB_JAVA_VM_ARGS1  "JavaVMArgs"
+#define ATTR_JOB_JAVA_VM_ARGS2  "JavaVMArguments"
+#define ATTR_ORIG_JOB_IWD  "OrigIwd"
+#define ATTR_JOB_REMOTE_IWD  "RemoteIwd"
+#define ATTR_JOB_LOAD_PROFILE  "LoadProfile"
+#define ATTR_JOB_RUNAS_OWNER  "RunAsOwner"
+#define ATTR_JOB_LOAD_USER_PROFILE  "LoadUserProfile"
+#define ATTR_JOB_LOCAL_CPU  "LocalCpu"
+#define ATTR_JOB_LOCAL_SYS_CPU  "LocalSysCpu"
+#define ATTR_JOB_LOCAL_USER_CPU  "LocalUserCpu"
+#define ATTR_JOB_MANAGED  "Managed"
+#define ATTR_JOB_MANAGED_MANAGER  "ManagedManager"
+#define ATTR_JOB_MATCHED  "Matched"
+#define ATTR_JOB_NONESSENTIAL  "Nonessential"
+#define ATTR_JOB_NOOP  "IsNoopJob"
+#define ATTR_JOB_NOOP_EXIT_SIGNAL  "NoopJobExitSignal"
+#define ATTR_JOB_NOOP_EXIT_CODE  "NoopJobExitCode"
+#define ATTR_JOB_NOTIFICATION  "JobNotification"
+#define ATTR_JOB_OUTPUT  "Out"
+#define ATTR_JOB_OUTPUT_SIZE  "OutSize"
+#define ATTR_JOB_PID  "JobPid"
+#define ATTR_PRE_JOB_PRIO1  "PreJobPrio1"
+#define ATTR_PRE_JOB_PRIO2  "PreJobPrio2"
+#define ATTR_POST_JOB_PRIO1  "PostJobPrio1"
+#define ATTR_POST_JOB_PRIO2  "PostJobPrio2"
+#define ATTR_JOB_PRIO  "JobPrio"
+#define ATTR_JOB_COMMITTED_TIME  "CommittedTime"
+#define ATTR_JOB_LANGUAGE  "JobLanguage"
+#define ATTR_JOB_LAST_START_DATE  "JobLastStartDate"
+#define ATTR_JOB_LEAVE_IN_QUEUE  "LeaveJobInQueue"
+#define ATTR_JOB_REMOTE_SYS_CPU  "RemoteSysCpu"
+#define ATTR_JOB_REMOTE_USER_CPU  "RemoteUserCpu"
+#define ATTR_JOB_REMOTE_WALL_CLOCK  "RemoteWallClockTime"
+#define ATTR_JOB_ROOT_DIR  "RootDir"
+#define ATTR_JOB_RUN_COUNT  "JobRunCount"
+#define ATTR_JOB_SANDBOX_JOBAD  "DropJobAdInSandbox"
+#define ATTR_JOB_SUBMISSION  "Submission"
+#define ATTR_JOB_SUBMISSION_ID  "SubmissionId"
+#define ATTR_JOB_START  "JobStart"
+#define ATTR_JOB_START_DATE  "JobStartDate"
+#define ATTR_JOB_STATE  "JobState"
+#define ATTR_JOB_STATUS  "JobStatus"
+#define ATTR_LAST_JOB_STATUS  "LastJobStatus"
+#define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
+#define ATTR_JOB_UNIVERSE  "JobUniverse"
+#define ATTR_JOB_WALL_CLOCK_CKPT  "WallClockCheckpoint"
+#define ATTR_JOB_QUEUE_BIRTHDATE  "JobQueueBirthdate"
+#define ATTR_JOB_REQUIRES_SANDBOX  "JobRequiresSandbox"
+#define ATTR_JOB_VM_TYPE  "JobVMType"
+#define ATTR_JOB_VM_MEMORY  "JobVMMemory"
+#define ATTR_JOB_VM_VCPUS  "JobVM_VCPUS"
+#define ATTR_JOB_VM_MACADDR  "JobVM_MACADDR"
+#define ATTR_JOB_VM_CHECKPOINT  "JobVMCheckpoint"
+#define ATTR_JOB_VM_NETWORKING  "JobVMNetworking"
+#define ATTR_JOB_VM_NETWORKING_TYPE  "JobVMNetworkingType"
+#define ATTR_JOB_VM_HARDWARE_VT  "JobVMHardwareVT"
+#define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
+#define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
+#define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
+#define ATTR_KEYSTORE_FILE  "KeystoreFile"
+#define ATTR_KEYSTORE_ALIAS  "KeystoreAlias"
+#define ATTR_KEYSTORE_PASSPHRASE_FILE  "KeystorePassphraseFile"
+#define ATTR_KFLOPS  "KFlops"
+#define ATTR_KILL  "Kill"
+#define ATTR_KILL_SIG  "KillSig"
+#define ATTR_KILL_SIG_TIMEOUT  "KillSigTimeout"
+#define ATTR_LAST_AVAIL_INTERVAL  "LastAvailInterval"
+#define ATTR_LAST_BENCHMARK  "LastBenchmark"
+#define ATTR_LAST_CKPT_SERVER  "LastCkptServer"
+#define ATTR_LAST_CKPT_TIME  "LastCkptTime"
+#define ATTR_LAST_PUBLIC_CLAIM_ID  "LastPublicClaimId"
+#define ATTR_LAST_PUBLIC_CLAIM_IDS  "LastPublicClaimIds"
+#define ATTR_LAST_CLAIM_STATE  "LastClaimState"
+#define ATTR_LAST_FETCH_WORK_SPAWNED  "LastFetchWorkSpawned"
+#define ATTR_LAST_FETCH_WORK_COMPLETED  "LastFetchWorkCompleted"
+#define ATTR_LAST_VACATE_TIME  "LastVacateTime"
+#define ATTR_LAST_HEARD_FROM  "LastHeardFrom"
+#define ATTR_LAST_HOLD_REASON  "LastHoldReason"
+#define ATTR_LAST_HOLD_REASON_CODE  "LastHoldReasonCode"
+#define ATTR_LAST_HOLD_REASON_SUBCODE  "LastHoldReasonSubCode"
+#define ATTR_LAST_JOB_LEASE_RENEWAL  "LastJobLeaseRenewal"
+#define ATTR_LAST_JOB_LEASE_RENEWAL_FAILED  "LastJobLeaseRenewalFailed"
+#define ATTR_LAST_MATCH_TIME  "LastMatchTime"
+#define ATTR_MACHINE_LAST_MATCH_TIME  "MachineLastMatchTime"
+#define ATTR_LAST_MATCH_LIST_PREFIX  "LastMatchName"
+#define ATTR_LAST_MATCH_LIST_LENGTH  "LastMatchListLength"
+#define ATTR_LAST_REJ_MATCH_TIME  "LastRejMatchTime"
+#define ATTR_LAST_REJ_MATCH_REASON  "LastRejMatchReason"
+#define ATTR_LAST_PERIODIC_CHECKPOINT  "LastPeriodicCheckpoint"
+#define ATTR_LAST_RELEASE_REASON  "LastReleaseReason"
+#define ATTR_LAST_REMOTE_HOST  "LastRemoteHost"
+#define ATTR_LAST_REMOTE_POOL  "LastRemotePool"
+#define ATTR_LAST_REMOTE_STATUS_UPDATE  "LastRemoteStatusUpdate"
+#define ATTR_LAST_UPDATE  "LastUpdate"
+#define ATTR_LOCAL_CREDD  "LocalCredd"
+#define ATTR_LOCAL_FILES  "LocalFiles"
+#define ATTR_LOAD_AVG  "LoadAvg"
+#define ATTR_MACHINE  "Machine"
+#define ATTR_MACHINE_COUNT  "MachineCount"
+#define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
+#define ATTR_MAX_HOSTS  "MaxHosts"
+#define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
+#define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
+#define ATTR_MEMORY  "Memory"
+#define ATTR_MEMORY_USAGE  "MemoryUsage"
+#define ATTR_DETECTED_MEMORY  "DetectedMemory"
+#define ATTR_DETECTED_CPUS  "DetectedCpus"
+#define ATTR_MIN_HOSTS  "MinHosts"
+#define ATTR_MIPS  "Mips"
+#define ATTR_MPI_IS_MASTER  "MPIIsMaster"
+#define ATTR_MPI_MASTER_ADDR  "MPIMasterAddr"
+#define ATTR_PARALLEL_IS_MASTER  "ParallelIsMaster"   
+#define ATTR_PARALLEL_MASTER_ADDR  "ParallelMasterAddr" 
+#define ATTR_MY_CURRENT_TIME  "MyCurrentTime"
+#define ATTR_MY_TYPE  "MyType"
+#define ATTR_NAME  "Name"
+#define ATTR_NICE_USER  "NiceUser"
+#define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
+#define ATTR_NEXT_CLUSTER_NUM  "NextClusterNum"
+#define ATTR_NEXT_FETCH_WORK_DELAY  "NextFetchWorkDelay"
+#define ATTR_NEXT_JOB_START_DELAY  "NextJobStartDelay"
+#define ATTR_NODE  "Node"
+#define ATTR_NORDUGRID_RSL  "NordugridRSL"
+#define ATTR_NOTIFY_USER  "NotifyUser"
+#define ATTR_NOTIFY_JOB_SCHEDULER  "NotifyJobScheduler"
+#define ATTR_NT_DOMAIN  "NTDomain"
+//extern const char ATTR_WINDOWS_VERSION [];
+#define ATTR_WINDOWS_MAJOR_VERSION  "WindowsMajorVersion"
+#define ATTR_WINDOWS_MINOR_VERSION  "WindowsMinorVersion"
+#define ATTR_WINDOWS_BUILD_NUMBER  "WindowsBuildNumber"
+#define ATTR_WINDOWS_SERVICE_PACK_MAJOR  "WindowsServicePackMajorVersion"
+#define ATTR_WINDOWS_SERVICE_PACK_MINOR  "WindowsServicePackMinorVersion"
+#define ATTR_WINDOWS_PRODUCT_TYPE  "WindowsProductType"
+#define ATTR_NUM_COD_CLAIMS  "NumCODClaims"
+#define ATTR_NUM_CKPTS  "NumCkpts"
+#define ATTR_NUM_CKPTS_RAW  "NumCkpts_RAW"
+#define ATTR_NUM_GLOBUS_SUBMITS  "NumGlobusSubmits"
+#define ATTR_NUM_MATCHES  "NumJobMatches"
+#define ATTR_NUM_HOPS_TO_SUBMIT_MACHINE  "NumHopsToSubmitMachine"
+#define ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER  "NumHopsToLastCkptServer"
+#define ATTR_NUM_HOPS_TO_CKPT_SERVER  "NumHopsToCkptServer"
+#define ATTR_NUM_JOB_STARTS  "NumJobStarts"
+#define ATTR_NUM_JOB_RECONNECTS  "NumJobReconnects"
+#define ATTR_NUM_PIDS  "NumPids"
+#define ATTR_NUM_RESTARTS  "NumRestarts"
+#define ATTR_NUM_SHADOW_EXCEPTIONS  "NumShadowExceptions"
+#define ATTR_NUM_SHADOW_STARTS  "NumShadowStarts"
+#define ATTR_NUM_SYSTEM_HOLDS  "NumSystemHolds"
+#define ATTR_NUM_USERS  "NumUsers"
+#define ATTR_OFFLINE  "Offline"
+#define ATTR_OPSYS  "OpSys"
+#define ATTR_OPSYSVER  "OpSysVer"
+#define ATTR_OPSYS_AND_VER  "OpSysAndVer"
+#define ATTR_OPSYS_MAJOR_VER  "OpSysMajorVer"
+#define ATTR_OPSYS_NAME  "OpSysName"
+#define ATTR_OPSYS_LONG_NAME  "OpSysLongName"
+#define ATTR_OPSYS_SHORT_NAME  "OpSysShortName"
+#define ATTR_OPSYS_LEGACY  "OpSysLegacy"
+#define ATTR_ORIG_MAX_HOSTS  "OrigMaxHosts"
+#define ATTR_OTHER_JOB_REMOVE_REQUIREMENTS  "OtherJobRemoveRequirements" 
+#define ATTR_OUTPUT_DESTINATION  "OutputDestination"
+#define ATTR_OWNER  "Owner" 
+#define ATTR_PARALLEL_SCHEDULING_GROUP  "ParallelSchedulingGroup"
+#define ATTR_PARALLEL_SCRIPT_SHADOW  "ParallelScriptShadow"  
+#define ATTR_PARALLEL_SCRIPT_STARTER  "ParallelScriptStarter" 
+#define ATTR_PARALLEL_SHUTDOWN_POLICY  "ParallelShutdownPolicy" 
+#define ATTR_PERIODIC_CHECKPOINT  "PeriodicCheckpoint"
 #define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
-extern const char * const  ATTR_PREEMPTING_ACCOUNTING_GROUP;
-extern const char * const  ATTR_PREEMPTING_RANK;
-extern const char * const  ATTR_PREEMPTING_OWNER;
-extern const char * const  ATTR_PREEMPTING_USER;
-extern const char * const  ATTR_PREEMPT_STATE_;
-extern const char * const  ATTR_PREFERENCES;
-extern const char * const  ATTR_PREFER_PARALLEL_SCHEDULING_GROUP;
-extern const char * const  ATTR_PREV_SEND_ESTIMATE;
-extern const char * const  ATTR_PREV_RECV_ESTIMATE;
-extern const char * const  ATTR_PRIO;
-extern const char * const  ATTR_PROC_ID;
-extern const char * const  ATTR_SUB_PROC_ID;
-extern const char * const  ATTR_PRIVATE_NETWORK_NAME;
-extern const char * const  ATTR_Q_DATE;
-extern const char * const  ATTR_RANK;
-extern const char * const  ATTR_REAL_UID;
-extern const char * const  ATTR_RELEASE_CLAIM;
-extern const char * const  ATTR_RELEASE_REASON;
-extern const char * const  ATTR_REMOTE_AUTOREGROUP;
-extern const char * const  ATTR_REMOTE_GROUP;
-extern const char * const  ATTR_REMOTE_GROUP_RESOURCES_IN_USE;
-extern const char * const  ATTR_REMOTE_GROUP_QUOTA;
-extern const char * const  ATTR_REMOTE_HOST;
-extern const char * const  ATTR_REMOTE_HOSTS;
-extern const char * const  ATTR_REMOTE_NEGOTIATING_GROUP;
-extern const char * const  ATTR_REMOTE_OWNER;
-extern const char * const  ATTR_REMOTE_POOL;
-extern const char * const  ATTR_REMOTE_SLOT_ID;
-extern const char * const  ATTR_REMOTE_SPOOL_DIR;
-extern const char * const  ATTR_REMOTE_USER;
-extern const char * const  ATTR_REMOTE_USER_PRIO;
-extern const char * const  ATTR_REMOTE_USER_RESOURCES_IN_USE;
+#define ATTR_PREEMPTING_ACCOUNTING_GROUP  "PreemptingAccountingGroup"
+#define ATTR_PREEMPTING_RANK  "PreemptingRank"
+#define ATTR_PREEMPTING_OWNER  "PreemptingOwner"
+#define ATTR_PREEMPTING_USER  "PreemptingUser"
+#define ATTR_PREEMPT_STATE_  "PreemptState"
+#define ATTR_PREFERENCES  "Preferences"
+#define ATTR_PREFER_PARALLEL_SCHEDULING_GROUP  "PreferParallelSchedulingGroup"
+#define ATTR_PREV_SEND_ESTIMATE  "PrevSendEstimate"
+#define ATTR_PREV_RECV_ESTIMATE  "PrevRecvEstimate"
+#define ATTR_PRIO  "Prio"
+#define ATTR_PROC_ID  "ProcId"
+#define ATTR_SUB_PROC_ID  "SubProcId"
+#define ATTR_PRIVATE_NETWORK_NAME  "PrivateNetworkName"
+#define ATTR_Q_DATE  "QDate"
+#define ATTR_RANK  "Rank"
+#define ATTR_REAL_UID  "RealUid"
+#define ATTR_RELEASE_CLAIM  "ReleaseClaim"
+#define ATTR_RELEASE_REASON  "ReleaseReason"
+#define ATTR_REMOTE_AUTOREGROUP  "RemoteAutoregroup"
+#define ATTR_REMOTE_GROUP  "RemoteGroup"
+#define ATTR_REMOTE_GROUP_RESOURCES_IN_USE  "RemoteGroupResourcesInUse"
+#define ATTR_REMOTE_GROUP_QUOTA  "RemoteGroupQuota"
+#define ATTR_REMOTE_HOST  "RemoteHost"
+#define ATTR_REMOTE_HOSTS  "RemoteHosts"
+#define ATTR_REMOTE_NEGOTIATING_GROUP  "RemoteNegotiatingGroup"
+#define ATTR_REMOTE_OWNER  "RemoteOwner"
+#define ATTR_REMOTE_POOL  "RemotePool"
+#define ATTR_REMOTE_SLOT_ID  "RemoteSlotID"
+#define ATTR_REMOTE_SPOOL_DIR  "RemoteSpoolDir"
+#define ATTR_REMOTE_USER  "RemoteUser"
+#define ATTR_REMOTE_USER_PRIO  "RemoteUserPrio"
+#define ATTR_REMOTE_USER_RESOURCES_IN_USE  "RemoteUserResourcesInUse"
 // Deprecated (cruft) -- use: ATTR_REMOTE_SLOT_ID 
-extern const char * const  ATTR_REMOTE_VIRTUAL_MACHINE_ID;
-extern const char * const  ATTR_REMOVE_KILL_SIG;
-extern const char * const  ATTR_REMOVE_REASON;
-extern const char * const  ATTR_REQUEUE_REASON;
-extern const char * const  ATTR_REQUIREMENTS;
-extern const char * const  ATTR_SLOT_TYPE;
-extern const char * const  ATTR_SLOT_TYPE_ID;
-extern const char * const  ATTR_SLOT_WEIGHT;
-extern const char * const  ATTR_RESULT;
-extern const char * const  ATTR_RSC_BYTES_SENT;
-extern const char * const  ATTR_RSC_BYTES_RECVD;
-extern const char * const  ATTR_RUNNING_JOBS;
-extern const char * const  ATTR_RUNNING_COD_JOB;
-extern const char * const  ATTR_RUN_BENCHMARKS;
-extern const char * const  ATTR_SHADOW_IP_ADDR;
-extern const char * const  ATTR_MY_ADDRESS;
-extern const char * const  ATTR_SCHEDD_SWAP_EXHAUSTED;
-extern const char * const  ATTR_SCHEDD_INTERVAL;
-extern const char * const  ATTR_SCHEDD_IP_ADDR;
-extern const char * const  ATTR_SCHEDD_NAME;
-extern const char * const  ATTR_SCHEDULER;
-extern const char * const  ATTR_SHADOW_WAIT_FOR_DEBUG;
-extern const char * const  ATTR_SLOT_ID;
-extern const char * const  ATTR_SLOT_PARTITIONABLE;
-extern const char * const  ATTR_SLOT_DYNAMIC;
-extern const char * const  ATTR_SOURCE;
-extern const char * const  ATTR_STAGE_IN_START;
-extern const char * const  ATTR_STAGE_IN_FINISH;
-extern const char * const  ATTR_STAGE_OUT_START;
-extern const char * const  ATTR_STAGE_OUT_FINISH;
-extern const char * const  ATTR_START;
-extern const char * const  ATTR_START_LOCAL_UNIVERSE;
-extern const char * const  ATTR_START_SCHEDULER_UNIVERSE;
-extern const char * const  ATTR_STARTD_IP_ADDR;
-extern const char * const  ATTR_STARTD_PRINCIPAL;
-extern const char * const  ATTR_STARTD_SENDS_ALIVES;
-extern const char * const  ATTR_STATE;
-extern const char * const  ATTR_STARTER_IP_ADDR;
-extern const char * const  ATTR_STARTER_ABILITY_LIST;
-extern const char * const  ATTR_STARTER_IGNORED_ATTRS;
-extern const char * const  ATTR_STARTER_ULOG_FILE;
-extern const char * const  ATTR_STARTER_ULOG_USE_XML;
-extern const char * const  ATTR_STARTER_WAIT_FOR_DEBUG;
-extern const char * const  ATTR_STATUS;
-extern const char * const  ATTR_STREAM_INPUT;
-extern const char * const  ATTR_STREAM_OUTPUT;
-extern const char * const  ATTR_STREAM_ERROR;
-extern const char * const  ATTR_SUBMIT_EVENT_NOTES;
-extern const char * const  ATTR_SUBMIT_EVENT_USER_NOTES;
-extern const char * const  ATTR_SUBMITTER_ID;
-extern const char * const ATTR_SUBMITTER_TAG;
-extern const char * const  ATTR_SUBMITTOR_PRIO;  // old-style for ATTR_SUBMITTER_USER_PRIO
-extern const char * const  ATTR_SUBMITTER_USER_PRIO;
-extern const char * const  ATTR_SUBMITTER_USER_RESOURCES_IN_USE;
-extern const char * const  ATTR_SUBMITTER_AUTOREGROUP;
-extern const char * const  ATTR_SUBMITTER_GROUP;
-extern const char * const  ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE;
-extern const char * const  ATTR_SUBMITTER_GROUP_QUOTA;
-extern const char * const  ATTR_SUBMITTER_NEGOTIATING_GROUP;
-extern const char * const  ATTR_SUBNET;
-extern const char * const  ATTR_SUBNET_MASK;
-extern const char * const  ATTR_SUSPEND;
-extern const char * const  ATTR_SUSPEND_REASON;
-extern const char * const  ATTR_SUSPEND_JOB_AT_EXEC;
-extern const char * const  ATTR_TARGET_TYPE;
-extern const char * const  ATTR_TIME_TO_LIVE;
-extern const char * const  ATTR_TOOL_DAEMON_ARGS1;
-extern const char * const  ATTR_TOOL_DAEMON_ARGS2;
-extern const char * const  ATTR_TOOL_DAEMON_CMD;
-extern const char * const  ATTR_TOOL_DAEMON_ERROR;
-extern const char * const  ATTR_TOOL_DAEMON_INPUT;
-extern const char * const  ATTR_TOOL_DAEMON_OUTPUT;
-extern const char * const  ATTR_TOTAL_CLAIM_RUN_TIME;
-extern const char * const  ATTR_TOTAL_CLAIM_SUSPEND_TIME;
+#define ATTR_REMOTE_VIRTUAL_MACHINE_ID  "RemoteVirtualMachineID"
+#define ATTR_REMOVE_KILL_SIG  "RemoveKillSig"
+#define ATTR_REMOVE_REASON  "RemoveReason"
+#define ATTR_REQUEUE_REASON  "RequeueReason"
+#define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_SLOT_TYPE  "SlotType"
+#define ATTR_SLOT_TYPE_ID  "SlotTypeID"
+#define ATTR_SLOT_WEIGHT  "SlotWeight"
+#define ATTR_RESULT  "Result"
+#define ATTR_RSC_BYTES_SENT  "RSCBytesSent"
+#define ATTR_RSC_BYTES_RECVD  "RSCBytesRecvd"
+#define ATTR_RUNNING_JOBS  "RunningJobs"
+#define ATTR_RUNNING_COD_JOB  "RunningCODJob"
+#define ATTR_RUN_BENCHMARKS  "RunBenchmarks"
+#define ATTR_SHADOW_IP_ADDR  "ShadowIpAddr"
+#define ATTR_MY_ADDRESS  "MyAddress"
+#define ATTR_SCHEDD_SWAP_EXHAUSTED  "ScheddSwapExhausted"
+#define ATTR_SCHEDD_INTERVAL  "ScheddInterval"
+#define ATTR_SCHEDD_IP_ADDR  "ScheddIpAddr"
+#define ATTR_SCHEDD_NAME  "ScheddName"
+#define ATTR_SCHEDULER  "Scheduler"
+#define ATTR_SHADOW_WAIT_FOR_DEBUG  "ShadowWaitForDebug"
+#define ATTR_SLOT_ID  "SlotID"
+#define ATTR_SLOT_PARTITIONABLE  "PartitionableSlot"
+#define ATTR_SLOT_DYNAMIC  "DynamicSlot"
+#define ATTR_SOURCE  "Source"
+#define ATTR_STAGE_IN_START  "StageInStart"
+#define ATTR_STAGE_IN_FINISH  "StageInFinish"
+#define ATTR_STAGE_OUT_START  "StageOutStart"
+#define ATTR_STAGE_OUT_FINISH  "StageOutFinish"
+#define ATTR_START  "Start"
+#define ATTR_START_LOCAL_UNIVERSE  "StartLocalUniverse"
+#define ATTR_START_SCHEDULER_UNIVERSE  "StartSchedulerUniverse"
+#define ATTR_STARTD_IP_ADDR  "StartdIpAddr"
+#define ATTR_STARTD_PRINCIPAL  "StartdPrincipal"
+#define ATTR_STARTD_SENDS_ALIVES  "StartdSendsAlives"
+#define ATTR_STATE  "State"
+#define ATTR_STARTER_IP_ADDR  "StarterIpAddr"
+#define ATTR_STARTER_ABILITY_LIST  "StarterAbilityList"
+#define ATTR_STARTER_IGNORED_ATTRS  "StarterIgnoredAttributes"
+#define ATTR_STARTER_ULOG_FILE  "StarterUserLog"
+#define ATTR_STARTER_ULOG_USE_XML  "StarterUserLogUseXML"
+#define ATTR_STARTER_WAIT_FOR_DEBUG  "StarterWaitForDebug"
+#define ATTR_STATUS  "Status"
+#define ATTR_STREAM_INPUT  "StreamIn"
+#define ATTR_STREAM_OUTPUT  "StreamOut"
+#define ATTR_STREAM_ERROR  "StreamErr"
+#define ATTR_SUBMIT_EVENT_NOTES  "SubmitEventNotes"
+#define ATTR_SUBMIT_EVENT_USER_NOTES  "SubmitEventUserNotes"
+#define ATTR_SUBMITTER_ID  "SubmitterId"
+#define ATTR_SUBMITTER_TAG  "SubmitterTag"
+#define ATTR_SUBMITTOR_PRIO  "SubmittorPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
+#define ATTR_SUBMITTER_USER_PRIO  "SubmittorUserPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
+#define ATTR_SUBMITTER_USER_RESOURCES_IN_USE  "SubmitterUserResourcesInUse"
+#define ATTR_SUBMITTER_AUTOREGROUP  "SubmitterAutoregroup"
+#define ATTR_SUBMITTER_GROUP  "SubmitterGroup"
+#define ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE  "SubmitterGroupResourcesInUse"
+#define ATTR_SUBMITTER_GROUP_QUOTA  "SubmitterGroupQuota"
+#define ATTR_SUBMITTER_NEGOTIATING_GROUP  "SubmitterNegotiatingGroup"
+#define ATTR_SUBNET  "Subnet"
+#define ATTR_SUBNET_MASK  "SubnetMask"
+#define ATTR_SUSPEND  "Suspend"
+#define ATTR_SUSPEND_REASON  "SuspendReason"
+#define ATTR_SUSPEND_JOB_AT_EXEC  "SuspendJobAtExec"
+#define ATTR_TARGET_TYPE  "TargetType"
+#define ATTR_TIME_TO_LIVE  "TimeToLive"
+#define ATTR_TOOL_DAEMON_ARGS1  "ToolDaemonArgs"
+#define ATTR_TOOL_DAEMON_ARGS2  "ToolDaemonArguments"
+#define ATTR_TOOL_DAEMON_CMD  "ToolDaemonCmd"
+#define ATTR_TOOL_DAEMON_ERROR  "ToolDaemonError"
+#define ATTR_TOOL_DAEMON_INPUT  "ToolDaemonInput"
+#define ATTR_TOOL_DAEMON_OUTPUT  "ToolDaemonOutput"
+#define ATTR_TOTAL_CLAIM_RUN_TIME  "TotalClaimRunTime"
+#define ATTR_TOTAL_CLAIM_SUSPEND_TIME  "TotalClaimSuspendTime"
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
-extern const char * const  ATTR_TOTAL_CPUS;
-extern const char * const  ATTR_TOTAL_SLOT_CPUS;
-extern const char * const  ATTR_TOTAL_DISK;
-extern const char * const  ATTR_TOTAL_SLOT_DISK;
-extern const char * const  ATTR_TOTAL_FLOCKED_JOBS;
-extern const char * const  ATTR_TOTAL_REMOVED_JOBS;
-extern const char * const  ATTR_TOTAL_HELD_JOBS;
-extern const char * const  ATTR_TOTAL_IDLE_JOBS;
-extern const char * const  ATTR_TOTAL_JOB_ADS;
-extern const char * const  ATTR_TOTAL_JOB_RUN_TIME;
-extern const char * const  ATTR_TOTAL_JOB_SUSPEND_TIME;
-extern const char * const  ATTR_TOTAL_LOAD_AVG;
-extern const char * const  ATTR_TOTAL_MEMORY;
-extern const char * const  ATTR_TOTAL_SLOT_MEMORY;
-extern const char * const  ATTR_TOTAL_RUNNING_JOBS;
-extern const char * const  ATTR_TOTAL_LOCAL_RUNNING_JOBS;
-extern const char * const  ATTR_TOTAL_LOCAL_IDLE_JOBS;
-extern const char * const  ATTR_TOTAL_SCHEDULER_RUNNING_JOBS;
-extern const char * const  ATTR_TOTAL_SCHEDULER_IDLE_JOBS;
-extern const char * const  ATTR_JOBS_SUBMITTED_CUMULATIVE;
-extern const char * const  ATTR_JOBS_STARTED_CUMULATIVE;
-extern const char * const  ATTR_JOBS_EXITED_CUMULATIVE;
-extern const char * const  ATTR_JOBS_COMPLETED_CUMULATIVE;
-extern const char * const  ATTR_SHADOW_EXCEPTIONS_CUMULATIVE;
-extern const char * const  ATTR_MEAN_TIME_TO_START_CUMULATIVE;
-extern const char * const  ATTR_SUM_TIME_TO_START_CUMULATIVE;
-extern const char * const  ATTR_MEAN_RUNNING_TIME_CUMULATIVE;
-extern const char * const  ATTR_SUM_RUNNING_TIME_CUMULATIVE;
-extern const char * const  ATTR_EXIT_CODE_CUMULATIVE;
-extern const char * const  ATTR_JOBS_SUBMITTED;
-extern const char * const  ATTR_JOBS_STARTED;
-extern const char * const  ATTR_JOB_START_RATE;
-extern const char * const  ATTR_JOB_SUBMISSION_RATE;
-extern const char * const  ATTR_JOBS_COMPLETED;
-extern const char * const  ATTR_JOB_COMPLETION_RATE;
-extern const char * const  ATTR_JOBS_EXITED;
-extern const char * const  ATTR_SHADOW_EXCEPTIONS;
-extern const char * const  ATTR_MEAN_TIME_TO_START;
-extern const char * const  ATTR_MEAN_RUNNING_TIME;
-extern const char * const  ATTR_EXIT_CODE;
-extern const char * const  ATTR_TOTAL_SLOTS;
-extern const char * const  ATTR_TOTAL_TIME_IN_CYCLE;
-extern const char * const  ATTR_TOTAL_TIME_BACKFILL_BUSY;
-extern const char * const  ATTR_TOTAL_TIME_BACKFILL_IDLE;
-extern const char * const  ATTR_TOTAL_TIME_BACKFILL_KILLING;
-extern const char * const  ATTR_TOTAL_TIME_CLAIMED_BUSY;
-extern const char * const  ATTR_TOTAL_TIME_CLAIMED_IDLE;
-extern const char * const  ATTR_TOTAL_TIME_CLAIMED_RETIRING;
-extern const char * const  ATTR_TOTAL_TIME_CLAIMED_SUSPENDED;
-extern const char * const  ATTR_TOTAL_TIME_MATCHED_IDLE;
-extern const char * const  ATTR_TOTAL_TIME_OWNER_IDLE;
-extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_KILLING;
-extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_VACATING;
-extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
-extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
-extern const char * const  ATTR_TOTAL_TIME_DRAINED_IDLE;
-extern const char * const  ATTR_TOTAL_TIME_DRAINED_RETIRING;
-//extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
+#define ATTR_TOTAL_CPUS  "TotalCpus"
+#define ATTR_TOTAL_SLOT_CPUS  "TotalSlotCpus"
+#define ATTR_TOTAL_DISK  "TotalDisk"
+#define ATTR_TOTAL_SLOT_DISK  "TotalSlotDisk"
+#define ATTR_TOTAL_FLOCKED_JOBS  "TotalFlockedJobs"
+#define ATTR_TOTAL_REMOVED_JOBS  "TotalRemovedJobs"
+#define ATTR_TOTAL_HELD_JOBS  "TotalHeldJobs"
+#define ATTR_TOTAL_IDLE_JOBS  "TotalIdleJobs"
+#define ATTR_TOTAL_JOB_ADS  "TotalJobAds"
+#define ATTR_TOTAL_JOB_RUN_TIME  "TotalJobRunTime"
+#define ATTR_TOTAL_JOB_SUSPEND_TIME  "TotalJobSuspendTime"
+#define ATTR_TOTAL_LOAD_AVG  "TotalLoadAvg"
+#define ATTR_TOTAL_MEMORY  "TotalMemory"
+#define ATTR_TOTAL_SLOT_MEMORY  "TotalSlotMemory"
+#define ATTR_TOTAL_RUNNING_JOBS  "TotalRunningJobs"
+#define ATTR_TOTAL_LOCAL_RUNNING_JOBS  "TotalLocalJobsRunning"
+#define ATTR_TOTAL_LOCAL_IDLE_JOBS  "TotalLocalJobsIdle"
+#define ATTR_TOTAL_SCHEDULER_RUNNING_JOBS  "TotalSchedulerJobsRunning"
+#define ATTR_TOTAL_SCHEDULER_IDLE_JOBS  "TotalSchedulerJobsIdle"
+//extern const char ATTR_JOBS_SUBMITTED_CUMULATIVE [];
+//extern const char ATTR_JOBS_STARTED_CUMULATIVE [];
+//extern const char ATTR_JOBS_EXITED_CUMULATIVE [];
+//extern const char ATTR_JOBS_COMPLETED_CUMULATIVE [];
+//extern const char ATTR_SHADOW_EXCEPTIONS_CUMULATIVE [];
+//extern const char ATTR_MEAN_TIME_TO_START_CUMULATIVE [];
+//extern const char ATTR_SUM_TIME_TO_START_CUMULATIVE [];
+//extern const char ATTR_MEAN_RUNNING_TIME_CUMULATIVE [];
+//extern const char ATTR_SUM_RUNNING_TIME_CUMULATIVE [];
+//extern const char ATTR_EXIT_CODE_CUMULATIVE [];
+//extern const char ATTR_JOBS_SUBMITTED [];
+//extern const char ATTR_JOBS_STARTED [];
+//extern const char ATTR_JOB_START_RATE [];
+//extern const char ATTR_JOB_SUBMISSION_RATE [];
+//extern const char ATTR_JOBS_COMPLETED [];
+//extern const char ATTR_JOB_COMPLETION_RATE [];
+//extern const char ATTR_JOBS_EXITED [];
+//extern const char ATTR_SHADOW_EXCEPTIONS [];
+//extern const char ATTR_MEAN_TIME_TO_START [];
+//extern const char ATTR_MEAN_RUNNING_TIME [];
+//extern const char ATTR_EXIT_CODE [];
+#define ATTR_TOTAL_SLOTS  "TotalSlots"
+#define ATTR_TOTAL_TIME_IN_CYCLE  "TotalTimeInCycle"
+#define ATTR_TOTAL_TIME_BACKFILL_BUSY  "TotalTimeBackfillBusy"
+#define ATTR_TOTAL_TIME_BACKFILL_IDLE  "TotalTimeBackfillIdle"
+#define ATTR_TOTAL_TIME_BACKFILL_KILLING  "TotalTimeBackfillKilling"
+#define ATTR_TOTAL_TIME_CLAIMED_BUSY  "TotalTimeClaimedBusy"
+#define ATTR_TOTAL_TIME_CLAIMED_IDLE  "TotalTimeClaimedIdle"
+#define ATTR_TOTAL_TIME_CLAIMED_RETIRING  "TotalTimeClaimedRetiring"
+#define ATTR_TOTAL_TIME_CLAIMED_SUSPENDED  "TotalTimeClaimedSuspended"
+#define ATTR_TOTAL_TIME_MATCHED_IDLE  "TotalTimeMatchedIdle"
+#define ATTR_TOTAL_TIME_OWNER_IDLE  "TotalTimeOwnerIdle"
+#define ATTR_TOTAL_TIME_PREEMPTING_KILLING  "TotalTimePreemptingKilling"
+#define ATTR_TOTAL_TIME_PREEMPTING_VACATING  "TotalTimePreemptingVacating"
+#define ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING  "TotalTimeUnclaimedBenchmarking"
+#define ATTR_TOTAL_TIME_UNCLAIMED_IDLE  "TotalTimeUnclaimedIdle"
+#define ATTR_TOTAL_TIME_DRAINED_IDLE  "TotalTimeDrainedIdle"
+#define ATTR_TOTAL_TIME_DRAINED_RETIRING  "TotalTimeDrainedRetiring"
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
-extern const char * const  ATTR_TOTAL_VIRTUAL_MACHINES;
-extern const char * const  ATTR_TOTAL_VIRTUAL_MEMORY;
-extern const char * const  ATTR_UID;
-extern const char * const  ATTR_UID_DOMAIN;
-extern const char * const  ATTR_ULOG_FILE;
-extern const char * const  ATTR_ULOG_USE_XML;
-extern const char * const  ATTR_UPDATE_INTERVAL;
-extern const char * const  ATTR_CLASSAD_LIFETIME;
-extern const char * const  ATTR_UPDATE_PRIO;
-extern const char * const  ATTR_UPDATE_SEQUENCE_NUMBER;
-extern const char * const  ATTR_USE_GRID_SHELL;
-extern const char * const  ATTR_USE_PARROT;
-extern const char * const  ATTR_USER;
-extern const char * const  ATTR_VACATE;
-extern const char * const  ATTR_VACATE_TYPE;
-extern const char * const  ATTR_VIRTUAL_MEMORY;
-extern const char * const  ATTR_VISA_TIMESTAMP;
-extern const char * const  ATTR_VISA_DAEMON_TYPE;
-extern const char * const  ATTR_VISA_DAEMON_PID;
-extern const char * const  ATTR_VISA_HOSTNAME;
-extern const char * const  ATTR_VISA_IP;
-extern const char * const  ATTR_WOL_PORT;
-extern const char * const  ATTR_WANT_CHECKPOINT;
-extern const char * const  ATTR_WANT_CLAIMING;
-extern const char * const  ATTR_WANT_IO_PROXY;
-extern const char * const  ATTR_WANT_MATCH_DIAGNOSTICS;
-extern const char * const  ATTR_WANT_PARALLEL_SCHEDULING_GROUPS;
-extern const char * const  ATTR_WANT_REMOTE_SYSCALLS;
-extern const char * const  ATTR_WANT_REMOTE_IO;
-extern const char * const  ATTR_WANT_SCHEDD_COMPLETION_VISA;
-extern const char * const  ATTR_WANT_STARTER_EXECUTION_VISA;
-extern const char * const  ATTR_WANT_SUBMIT_NET_STATS;
-extern const char * const  ATTR_WANT_LAST_CKPT_SERVER_NET_STATS;
-extern const char * const  ATTR_WANT_CKPT_SERVER_NET_STATS;
-extern const char * const  ATTR_WANT_AD_REVAULATE;
-extern const char * const  ATTR_COLLECTOR_IP_ADDR;
-extern const char * const  ATTR_NEGOTIATOR_IP_ADDR;
-extern const char * const  ATTR_CREDD_IP_ADDR;
-extern const char * const  ATTR_NUM_HOSTS_TOTAL;
-extern const char * const  ATTR_NUM_HOSTS_CLAIMED;
-extern const char * const  ATTR_NUM_HOSTS_UNCLAIMED;
-extern const char * const  ATTR_NUM_HOSTS_OWNER;
-extern const char * const  ATTR_MAX_RUNNING_JOBS;
+#define ATTR_TOTAL_VIRTUAL_MACHINES  "TotalVirtualMachines"
+#define ATTR_TOTAL_VIRTUAL_MEMORY  "TotalVirtualMemory"
+#define ATTR_UID  "Uid"
+#define ATTR_UID_DOMAIN  "UidDomain"
+#define ATTR_ULOG_FILE  "UserLog"
+#define ATTR_ULOG_USE_XML  "UserLogUseXML"
+#define ATTR_UPDATE_INTERVAL  "UpdateInterval"
+#define ATTR_CLASSAD_LIFETIME  "ClassAdLifetime"
+#define ATTR_UPDATE_PRIO  "UpdatePrio"
+#define ATTR_UPDATE_SEQUENCE_NUMBER  "UpdateSequenceNumber"
+#define ATTR_USE_GRID_SHELL  "UseGridShell"
+#define ATTR_USE_PARROT  "UseParrot"
+#define ATTR_USER  "User"
+#define ATTR_VACATE  "Vacate"
+#define ATTR_VACATE_TYPE  "VacateType"
+#define ATTR_VIRTUAL_MEMORY  "VirtualMemory"
+#define ATTR_VISA_TIMESTAMP  "VisaTimestamp"
+#define ATTR_VISA_DAEMON_TYPE  "VisaDaemonType"
+#define ATTR_VISA_DAEMON_PID  "VisaDaemonPID"
+#define ATTR_VISA_HOSTNAME  "VisaHostname"
+#define ATTR_VISA_IP  "VisaIpAddr"
+#define ATTR_WOL_PORT  "WakePort"
+#define ATTR_WANT_CHECKPOINT  "WantCheckpoint"
+#define ATTR_WANT_CLAIMING  "WantClaiming"
+#define ATTR_WANT_IO_PROXY  "WantIOProxy"
+#define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
+#define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
+#define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"
+#define ATTR_WANT_REMOTE_IO  "WantRemoteIO"
+#define ATTR_WANT_SCHEDD_COMPLETION_VISA  "WantCompletionVisaFromSchedD"
+#define ATTR_WANT_STARTER_EXECUTION_VISA  "WantExecutionVisaFromStarter"
+#define ATTR_WANT_SUBMIT_NET_STATS  "WantSubmitNetStats"
+#define ATTR_WANT_LAST_CKPT_SERVER_NET_STATS  "WantLastCkptServerNetStats"
+#define ATTR_WANT_CKPT_SERVER_NET_STATS  "WantCkptServerNetStats"
+#define ATTR_WANT_AD_REVAULATE  "WantAdRevaluate"
+#define ATTR_COLLECTOR_IP_ADDR  "CollectorIpAddr"
+#define ATTR_NEGOTIATOR_IP_ADDR  "NegotiatorIpAddr"
+#define ATTR_CREDD_IP_ADDR  "CredDIpAddr"
+#define ATTR_NUM_HOSTS_TOTAL  "HostsTotal"
+#define ATTR_NUM_HOSTS_CLAIMED  "HostsClaimed"
+#define ATTR_NUM_HOSTS_UNCLAIMED  "HostsUnclaimed"
+#define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
+#define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
-extern const char * const  ATTR_SCHEDD_BIRTHDATE;
-extern const char * const  ATTR_SHADOW_VERSION;
+#define ATTR_SCHEDD_BIRTHDATE  "ScheddBday"
+#define ATTR_SHADOW_VERSION  "ShadowVersion"
 // Deprecated (cruft) -- use: ATTR_SLOT_ID
-extern const char * const  ATTR_VIRTUAL_MACHINE_ID;
-extern const char * const  ATTR_SHOULD_TRANSFER_FILES;
-extern const char * const  ATTR_WHEN_TO_TRANSFER_OUTPUT;
-extern const char * const  ATTR_TRANSFER_TYPE;
-extern const char * const  ATTR_TRANSFER_KEY;
-extern const char * const  ATTR_TRANSFER_EXECUTABLE;
-extern const char * const  ATTR_TRANSFER_INPUT;
-extern const char * const  ATTR_TRANSFER_OUTPUT;
-extern const char * const  ATTR_TRANSFER_ERROR;
-extern const char * const  ATTR_TRANSFER_INPUT_FILES;
-extern const char * const  ATTR_TRANSFER_INTERMEDIATE_FILES;
-extern const char * const  ATTR_TRANSFER_OUTPUT_FILES;
-extern const char * const  ATTR_TRANSFER_OUTPUT_REMAPS;
-extern const char * const  ATTR_PRESERVE_RELATIVE_EXECUTABLE;
-extern const char * const  ATTR_SPOOLED_OUTPUT_FILES;
-extern const char * const  ATTR_ENCRYPT_INPUT_FILES;
-extern const char * const  ATTR_ENCRYPT_OUTPUT_FILES;
-extern const char * const  ATTR_DONT_ENCRYPT_INPUT_FILES;
-extern const char * const  ATTR_DONT_ENCRYPT_OUTPUT_FILES;
-extern const char * const  ATTR_TRANSFER_SOCKET;
-extern const char * const  ATTR_SERVER_TIME;
-extern const char * const  ATTR_SHADOW_BIRTHDATE;
-extern const char * const  ATTR_HOLD_REASON;
-extern const char * const  ATTR_HOLD_REASON_CODE;
-extern const char * const  ATTR_HOLD_REASON_SUBCODE;
-extern const char * const  ATTR_HOLD_COPIED_FROM_TARGET_JOB;
-extern const char * const  ATTR_WANT_MATCHING;
-extern const char * const  ATTR_WANT_RESOURCE_AD;
-extern const char * const  ATTR_TOTAL_SUSPENSIONS;
-extern const char * const  ATTR_LAST_SUSPENSION_TIME;
-extern const char * const  ATTR_CUMULATIVE_SUSPENSION_TIME;
-extern const char * const  ATTR_COMMITTED_SUSPENSION_TIME;
-extern const char * const  ATTR_UNCOMMITTED_SUSPENSION_TIME;
+#define ATTR_VIRTUAL_MACHINE_ID  "VirtualMachineID"
+#define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
+#define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
+#define ATTR_TRANSFER_TYPE  "TransferType"
+#define ATTR_TRANSFER_KEY  "TransferKey"
+#define ATTR_TRANSFER_EXECUTABLE  "TransferExecutable"
+#define ATTR_TRANSFER_INPUT  "TransferIn"
+#define ATTR_TRANSFER_OUTPUT  "TransferOut"
+#define ATTR_TRANSFER_ERROR  "TransferErr"
+#define ATTR_TRANSFER_INPUT_FILES  "TransferInput"
+#define ATTR_TRANSFER_INTERMEDIATE_FILES  "TransferIntermediate"
+#define ATTR_TRANSFER_OUTPUT_FILES  "TransferOutput"
+#define ATTR_TRANSFER_OUTPUT_REMAPS  "TransferOutputRemaps"
+#define ATTR_PRESERVE_RELATIVE_EXECUTABLE  "PreserveRelativeExecutable"
+#define ATTR_SPOOLED_OUTPUT_FILES  "SpooledOutputFiles"
+#define ATTR_ENCRYPT_INPUT_FILES  "EncryptInputFiles"
+#define ATTR_ENCRYPT_OUTPUT_FILES  "EncryptOutputFiles"
+#define ATTR_DONT_ENCRYPT_INPUT_FILES  "DontEncryptInputFiles"
+#define ATTR_DONT_ENCRYPT_OUTPUT_FILES  "DontEncryptOutputFiles"
+#define ATTR_TRANSFER_SOCKET  "TransferSocket"
+#define ATTR_SERVER_TIME  "ServerTime"
+#define ATTR_SHADOW_BIRTHDATE  "ShadowBday"
+#define ATTR_HOLD_REASON  "HoldReason"
+#define ATTR_HOLD_REASON_CODE  "HoldReasonCode"
+#define ATTR_HOLD_REASON_SUBCODE  "HoldReasonSubCode"
+#define ATTR_HOLD_COPIED_FROM_TARGET_JOB  "HoldCopiedFromTargetJob"
+#define ATTR_WANT_MATCHING  "WantMatching"
+#define ATTR_WANT_RESOURCE_AD  "WantResAd"
+#define ATTR_TOTAL_SUSPENSIONS  "TotalSuspensions"
+#define ATTR_LAST_SUSPENSION_TIME  "LastSuspensionTime"
+#define ATTR_CUMULATIVE_SUSPENSION_TIME  "CumulativeSuspensionTime"
+#define ATTR_COMMITTED_SUSPENSION_TIME  "CommittedSuspensionTime"
+#define ATTR_UNCOMMITTED_SUSPENSION_TIME  "UncommittedSuspensionTime"
 
-extern const char * const  ATTR_ON_EXIT_BY_SIGNAL;
-extern const char * const  ATTR_ON_EXIT_CODE;
-extern const char * const  ATTR_ON_EXIT_HOLD_CHECK;
-extern const char * const  ATTR_ON_EXIT_HOLD_REASON;
-extern const char * const  ATTR_ON_EXIT_HOLD_SUBCODE;
-extern const char * const  ATTR_ON_EXIT_REMOVE_REASON;
-extern const char * const  ATTR_ON_EXIT_REMOVE_CHECK;
-extern const char * const  ATTR_ON_EXIT_SIGNAL;
-extern const char * const  ATTR_POST_ON_EXIT_BY_SIGNAL;
-extern const char * const  ATTR_POST_ON_EXIT_SIGNAL;
-extern const char * const  ATTR_POST_ON_EXIT_CODE;
-extern const char * const  ATTR_POST_EXIT_REASON;
-extern const char * const  ATTR_PERIODIC_HOLD_CHECK;
-extern const char * const  ATTR_PERIODIC_HOLD_REASON;
-extern const char * const  ATTR_PERIODIC_HOLD_SUBCODE;
-extern const char * const  ATTR_PERIODIC_RELEASE_REASON;
-extern const char * const  ATTR_PERIODIC_REMOVE_REASON;
-extern const char * const  ATTR_PERIODIC_RELEASE_CHECK;
-extern const char * const  ATTR_PERIODIC_REMOVE_CHECK;
-extern const char * const  ATTR_TIMER_REMOVE_CHECK;
-extern const char * const  ATTR_TIMER_REMOVE_CHECK_SENT;
-extern const char * const  ATTR_GLOBUS_RESUBMIT_CHECK;
-extern const char * const  ATTR_REMATCH_CHECK;
+#define ATTR_ON_EXIT_BY_SIGNAL  "ExitBySignal"
+#define ATTR_ON_EXIT_CODE  "ExitCode"
+#define ATTR_ON_EXIT_HOLD_CHECK  "OnExitHold"
+#define ATTR_ON_EXIT_HOLD_REASON  "OnExitHoldReason"
+#define ATTR_ON_EXIT_HOLD_SUBCODE  "OnExitHoldSubCode"
+#define ATTR_ON_EXIT_REMOVE_REASON  "OnExitRemoveReason"
+#define ATTR_ON_EXIT_REMOVE_CHECK  "OnExitRemove"
+#define ATTR_ON_EXIT_SIGNAL  "ExitSignal"
+#define ATTR_POST_ON_EXIT_BY_SIGNAL  "PostExitBySignal"
+#define ATTR_POST_ON_EXIT_SIGNAL  "PostExitSignal"
+#define ATTR_POST_ON_EXIT_CODE  "PostExitCode"
+#define ATTR_POST_EXIT_REASON  "PostExitReason"
+#define ATTR_PERIODIC_HOLD_CHECK  "PeriodicHold"
+#define ATTR_PERIODIC_HOLD_REASON  "PeriodicHoldReason"
+#define ATTR_PERIODIC_HOLD_SUBCODE  "PeriodicHoldSubCode"
+#define ATTR_PERIODIC_RELEASE_REASON  "PeriodicReleaseReason"
+#define ATTR_PERIODIC_REMOVE_REASON  "PeriodicRemoveReason"
+#define ATTR_PERIODIC_RELEASE_CHECK  "PeriodicRelease"
+#define ATTR_PERIODIC_REMOVE_CHECK  "PeriodicRemove"
+#define ATTR_TIMER_REMOVE_CHECK  "TimerRemove"
+#define ATTR_TIMER_REMOVE_CHECK_SENT  "TimerRemoveSent"
+#define ATTR_GLOBUS_RESUBMIT_CHECK  "GlobusResubmit"
+#define ATTR_REMATCH_CHECK  "Rematch"
 
-extern const char * const  ATTR_SEC_AUTHENTICATION_METHODS_LIST;
-extern const char * const  ATTR_SEC_AUTHENTICATION_METHODS;
-extern const char * const  ATTR_SEC_CRYPTO_METHODS;
-extern const char * const  ATTR_SEC_AUTHENTICATION;
-extern const char * const  ATTR_SEC_AUTH_REQUIRED;
-extern const char * const  ATTR_SEC_ENCRYPTION;
-extern const char * const  ATTR_SEC_INTEGRITY;
-extern const char * const  ATTR_SEC_ENACT;
-extern const char * const  ATTR_SEC_RESPOND;
-extern const char * const  ATTR_SEC_COMMAND;
-extern const char * const  ATTR_SEC_AUTH_COMMAND;
-extern const char * const  ATTR_SEC_SID;
-extern const char * const  ATTR_SEC_SUBSYSTEM;
-extern const char * const  ATTR_SEC_REMOTE_VERSION;
-extern const char * const  ATTR_SEC_SERVER_ENDPOINT;
-extern const char * const  ATTR_SEC_SERVER_COMMAND_SOCK;
-extern const char * const  ATTR_SEC_SERVER_PID;
-extern const char * const  ATTR_SEC_PARENT_UNIQUE_ID;
-extern const char * const  ATTR_SEC_PACKET_COUNT;
-extern const char * const  ATTR_SEC_NEGOTIATION;
-extern const char * const  ATTR_SEC_VALID_COMMANDS;
-extern const char * const  ATTR_SEC_SESSION_DURATION;
-extern const char * const  ATTR_SEC_SESSION_EXPIRES;
-extern const char * const  ATTR_SEC_SESSION_LEASE;
-extern const char * const  ATTR_SEC_USER;
-extern const char * const  ATTR_SEC_MY_REMOTE_USER_NAME;
-extern const char * const  ATTR_SEC_NEW_SESSION;
-extern const char * const  ATTR_SEC_USE_SESSION;
-extern const char * const  ATTR_SEC_COOKIE;
-extern const char * const  ATTR_SEC_AUTHENTICATED_USER;
-extern const char * const  ATTR_SEC_TRIED_AUTHENTICATION;
+#define ATTR_SEC_AUTHENTICATION_METHODS_LIST  "AuthMethodsList"
+#define ATTR_SEC_AUTHENTICATION_METHODS  "AuthMethods"
+#define ATTR_SEC_CRYPTO_METHODS  "CryptoMethods"
+#define ATTR_SEC_AUTHENTICATION  "Authentication"
+#define ATTR_SEC_AUTH_REQUIRED  "AuthRequired"
+#define ATTR_SEC_ENCRYPTION  "Encryption"
+#define ATTR_SEC_INTEGRITY  "Integrity"
+#define ATTR_SEC_ENACT  "Enact"
+#define ATTR_SEC_RESPOND  "Respond"
+#define ATTR_SEC_COMMAND  "Command"
+#define ATTR_SEC_AUTH_COMMAND  "AuthCommand"
+#define ATTR_SEC_SID  "Sid"
+#define ATTR_SEC_SUBSYSTEM  "Subsystem"
+#define ATTR_SEC_REMOTE_VERSION  "RemoteVersion"
+#define ATTR_SEC_SERVER_ENDPOINT  "ServerEndpoint"
+#define ATTR_SEC_SERVER_COMMAND_SOCK  "ServerCommandSock"
+#define ATTR_SEC_SERVER_PID  "ServerPid"
+#define ATTR_SEC_PARENT_UNIQUE_ID  "ParentUniqueID"
+#define ATTR_SEC_PACKET_COUNT  "PacketCount"
+#define ATTR_SEC_NEGOTIATION  "OutgoingNegotiation"
+#define ATTR_SEC_VALID_COMMANDS  "ValidCommands"
+#define ATTR_SEC_SESSION_DURATION  "SessionDuration"
+#define ATTR_SEC_SESSION_EXPIRES  "SessionExpires"
+#define ATTR_SEC_SESSION_LEASE  "SessionLease"
+#define ATTR_SEC_USER  "User"
+#define ATTR_SEC_MY_REMOTE_USER_NAME  "MyRemoteUserName"
+#define ATTR_SEC_NEW_SESSION  "NewSession"
+#define ATTR_SEC_USE_SESSION  "UseSession"
+#define ATTR_SEC_COOKIE  "Cookie"
+extern const char ATTR_SEC_AUTHENTICATED_USER [];
+#define ATTR_SEC_TRIED_AUTHENTICATION  "TriedAuthentication"
 
-extern const char * const  ATTR_MULTIPLE_TASKS_PER_PVMD;
+#define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 
-extern const char * const  ATTR_UPDATESTATS_TOTAL;
-extern const char * const  ATTR_UPDATESTATS_SEQUENCED;
-extern const char * const  ATTR_UPDATESTATS_LOST;
-extern const char * const  ATTR_UPDATESTATS_HISTORY;
+#define ATTR_UPDATESTATS_TOTAL  "UpdatesTotal"
+#define ATTR_UPDATESTATS_SEQUENCED  "UpdatesSequenced"
+#define ATTR_UPDATESTATS_LOST  "UpdatesLost"
+#define ATTR_UPDATESTATS_HISTORY  "UpdatesHistory"
 
-extern const char * const  ATTR_QUILL_ENABLED;
-extern const char * const  ATTR_QUILL_NAME;
-extern const char * const  ATTR_QUILL_IS_REMOTELY_QUERYABLE;
-extern const char * const  ATTR_QUILL_DB_IP_ADDR;
-extern const char * const  ATTR_QUILL_DB_NAME;
-extern const char * const  ATTR_QUILL_DB_QUERY_PASSWORD;
+#define ATTR_QUILL_ENABLED  "QuillEnabled"
+#define ATTR_QUILL_NAME  "QuillName"
+#define ATTR_QUILL_IS_REMOTELY_QUERYABLE  "QuillIsRemotelyQueryable"
+#define ATTR_QUILL_DB_IP_ADDR  "QuillDatabaseIpAddr"
+#define ATTR_QUILL_DB_NAME  "QuillDatabaseName"
+#define ATTR_QUILL_DB_QUERY_PASSWORD  "QuillDatabaseQueryPassword"
 
-extern const char * const  ATTR_QUILL_SQL_TOTAL;
-extern const char * const  ATTR_QUILL_SQL_LAST_BATCH;
+#define ATTR_QUILL_SQL_TOTAL  "NumSqlTotal"
+#define ATTR_QUILL_SQL_LAST_BATCH  "NumSqlLastBatch"
 
-extern const char * const  ATTR_CHECKPOINT_PLATFORM;
-extern const char * const  ATTR_LAST_CHECKPOINT_PLATFORM;
-extern const char * const  ATTR_IS_VALID_CHECKPOINT_PLATFORM;
+#define ATTR_CHECKPOINT_PLATFORM  "CheckpointPlatform"
+#define ATTR_LAST_CHECKPOINT_PLATFORM  "LastCheckpointPlatform"
+#define ATTR_IS_VALID_CHECKPOINT_PLATFORM  "IsValidCheckpointPlatform"
 
-extern const char * const  ATTR_WITHIN_RESOURCE_LIMITS;
+#define ATTR_WITHIN_RESOURCE_LIMITS  "WithinResourceLimits"
 
-extern const char * const  ATTR_HAD_IS_ACTIVE;
-extern const char * const  ATTR_HAD_LIST;
-extern const char * const  ATTR_HAD_INDEX;
-extern const char * const  ATTR_HAD_SELF_ID;
-extern const char * const  ATTR_HAD_CONTROLLEE_NAME;
-extern const char * const  ATTR_TERMINATION_PENDING;
-extern const char * const  ATTR_TERMINATION_EXITREASON;
+#define ATTR_HAD_IS_ACTIVE  "HadIsActive"
+#define ATTR_HAD_LIST  "HadList"
+#define ATTR_HAD_INDEX  "HadIndex"
+#define ATTR_HAD_SELF_ID  "HadSelfID"
+#define ATTR_HAD_CONTROLLEE_NAME  "HadControlleeName"
+#define ATTR_TERMINATION_PENDING  "TerminationPending"
+#define ATTR_TERMINATION_EXITREASON  "TerminationExitReason"
 
-extern const char * const  ATTR_REPLICATION_LIST;
+#define ATTR_REPLICATION_LIST  "ReplicationList"
 
-extern const char * const  ATTR_TREQ_DIRECTION;
-extern const char * const  ATTR_TREQ_INVALID_REQUEST;
-extern const char * const  ATTR_TREQ_INVALID_REASON;
-extern const char * const  ATTR_TREQ_HAS_CONSTRAINT;
-extern const char * const  ATTR_TREQ_JOBID_LIST;
-extern const char * const  ATTR_TREQ_PEER_VERSION;
-extern const char * const  ATTR_TREQ_FTP;
-extern const char * const  ATTR_TREQ_TD_SINFUL;
-extern const char * const  ATTR_TREQ_TD_ID;
-extern const char * const  ATTR_TREQ_CONSTRAINT;
-extern const char * const  ATTR_TREQ_JOBID_ALLOW_LIST;
-extern const char * const  ATTR_TREQ_JOBID_DENY_LIST;
-extern const char * const  ATTR_TREQ_CAPABILITY;
-extern const char * const  ATTR_TREQ_WILL_BLOCK;
-extern const char * const  ATTR_TREQ_NUM_TRANSFERS;
-extern const char * const  ATTR_TREQ_UPDATE_STATUS;
-extern const char * const  ATTR_TREQ_UPDATE_REASON;
-extern const char * const ATTR_TREQ_SIGNALED;
-extern const char * const ATTR_TREQ_SIGNAL;
-extern const char * const ATTR_TREQ_EXIT_CODE;
-extern const char * const  ATTR_NEGOTIATOR_MATCH_EXPR;
+#define ATTR_TREQ_DIRECTION  "TransferDirection"
+#define ATTR_TREQ_INVALID_REQUEST  "InvalidRequest"
+#define ATTR_TREQ_INVALID_REASON  "InvalidReason"
+#define ATTR_TREQ_HAS_CONSTRAINT  "HasConstraint"
+#define ATTR_TREQ_JOBID_LIST  "JobIDList"
+#define ATTR_TREQ_PEER_VERSION  "PeerVersion"
+#define ATTR_TREQ_FTP  "FileTransferProtocol" 
+#define ATTR_TREQ_TD_SINFUL  "TDSinful" 
+#define ATTR_TREQ_TD_ID  "TDID" 
+#define ATTR_TREQ_CONSTRAINT  "Constraint"
+#define ATTR_TREQ_JOBID_ALLOW_LIST  "JobIDAllowList"
+#define ATTR_TREQ_JOBID_DENY_LIST  "JobIDDenyList"
+#define ATTR_TREQ_CAPABILITY  "Capability"
+#define ATTR_TREQ_WILL_BLOCK  "WillBlock"
+#define ATTR_TREQ_NUM_TRANSFERS  "NumberOfTransfers"
+#define ATTR_TREQ_UPDATE_STATUS  "UpdateStatus"
+#define ATTR_TREQ_UPDATE_REASON  "UpdateReason"
+#define ATTR_TREQ_SIGNALED  "Signaled"
+#define ATTR_TREQ_SIGNAL  "Signal"
+#define ATTR_TREQ_EXIT_CODE  "ExitCode"
+#define ATTR_NEGOTIATOR_MATCH_EXPR  "NegotiatorMatchExpr"
 
-extern const char * const ATTR_VM_TYPE;
-extern const char * const ATTR_VM_MEMORY;
-extern const char * const ATTR_VM_NETWORKING;
-extern const char * const ATTR_VM_NETWORKING_TYPES;
-extern const char * const ATTR_VM_HARDWARE_VT;
-extern const char * const ATTR_VM_AVAIL_NUM;
-extern const char * const ATTR_VM_ALL_GUEST_MACS;
-extern const char * const ATTR_VM_ALL_GUEST_IPS;
-extern const char * const ATTR_VM_GUEST_MAC;
-extern const char * const ATTR_VM_GUEST_IP;
-extern const char * const ATTR_VM_GUEST_MEM;
-extern const char * const ATTR_VM_CKPT_MAC;
-extern const char * const ATTR_VM_CKPT_IP;
+#define ATTR_VM_TYPE  "VM_Type"
+#define ATTR_VM_MEMORY  "VM_Memory"
+#define ATTR_VM_NETWORKING  "VM_Networking"
+#define ATTR_VM_NETWORKING_TYPES  "VM_Networking_Types"
+#define ATTR_VM_HARDWARE_VT  "VM_HardwareVT"
+#define ATTR_VM_AVAIL_NUM  "VM_AvailNum"
+#define ATTR_VM_ALL_GUEST_MACS  "VM_All_Guest_Macs"
+#define ATTR_VM_ALL_GUEST_IPS  "VM_All_Guest_IPs"
+#define ATTR_VM_GUEST_MAC  "VM_Guest_Mac"
+#define ATTR_VM_GUEST_IP  "VM_Guest_IP"
+#define ATTR_VM_GUEST_MEM  "VM_Guest_Mem"
+#define ATTR_VM_CKPT_MAC  "VM_CkptMac"
+#define ATTR_VM_CKPT_IP  "VM_CkptIP"
 
 //************* Added for EC2 Jobs ***************************//
-extern const char * const ATTR_EC2_ACCESS_KEY_ID;
-extern const char * const ATTR_EC2_SECRET_ACCESS_KEY;
-extern const char * const ATTR_EC2_AMI_ID;
-extern const char * const ATTR_EC2_KEY_PAIR;
-extern const char * const ATTR_EC2_KEY_PAIR_FILE;
-extern const char * const ATTR_EC2_SECURITY_GROUPS;
-extern const char * const ATTR_EC2_USER_DATA;
-extern const char * const ATTR_EC2_USER_DATA_FILE;
-extern const char * const ATTR_EC2_REMOTE_VM_NAME;
-extern const char * const ATTR_EC2_INSTANCE_TYPE;
-extern const char * const ATTR_EC2_INSTANCE_NAME;
-extern const char * const ATTR_EC2_ELASTIC_IP;
-extern const char * const ATTR_EC2_AVAILABILITY_ZONE;
-extern const char * const ATTR_EC2_EBS_VOLUMES;
-extern const char * const ATTR_EC2_VPC_SUBNET;
-extern const char * const ATTR_EC2_VPC_IP;
-extern const char * const ATTR_EC2_TAG_NAMES;
-extern const char * const ATTR_EC2_TAG_PREFIX;
+#define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"
+#define ATTR_EC2_SECRET_ACCESS_KEY  "EC2SecretAccessKey"
+#define ATTR_EC2_AMI_ID  "EC2AmiID"
+#define ATTR_EC2_KEY_PAIR  "EC2KeyPair"
+#define ATTR_EC2_KEY_PAIR_FILE  "EC2KeyPairFile"
+#define ATTR_EC2_SECURITY_GROUPS  "EC2SecurityGroups"
+#define ATTR_EC2_USER_DATA  "EC2UserData"
+#define ATTR_EC2_USER_DATA_FILE  "EC2UserDataFile"
+#define ATTR_EC2_REMOTE_VM_NAME  "EC2RemoteVirtualMachineName"
+#define ATTR_EC2_INSTANCE_TYPE  "EC2InstanceType"
+#define ATTR_EC2_INSTANCE_NAME  "EC2InstanceName"
+#define ATTR_EC2_ELASTIC_IP  "EC2ElasticIp"
+#define ATTR_EC2_AVAILABILITY_ZONE  "EC2AvailabilityZone"
+#define ATTR_EC2_EBS_VOLUMES  "EC2ElasticBlockStorageVolumes"
+#define ATTR_EC2_VPC_SUBNET  "EC2VpcSubnet"
+#define ATTR_EC2_VPC_IP  "EC2VpcIp"
+#define ATTR_EC2_TAG_NAMES  "EC2TagNames"
+#define ATTR_EC2_TAG_PREFIX  "EC2Tag"
 //************* End of changes for EC2 Jobs *****************//
 
-extern const char * const ATTR_REQUEST_CPUS;
-extern const char * const ATTR_REQUEST_MEMORY;
-extern const char * const ATTR_REQUEST_DISK;
+#define ATTR_REQUEST_CPUS  "RequestCpus"
+#define ATTR_REQUEST_MEMORY  "RequestMemory"
+#define ATTR_REQUEST_DISK  "RequestDisk"
 
 // machine resource prefixes
-extern const char * const ATTR_REQUEST_PREFIX;
-extern const char * const ATTR_DETECTED_PREFIX;
-extern const char * const ATTR_TOTAL_PREFIX;
-extern const char * const ATTR_TOTAL_SLOT_PREFIX;
-extern const char * const ATTR_MACHINE_RESOURCES;
+#define ATTR_REQUEST_PREFIX  "Request"
+#define ATTR_DETECTED_PREFIX  "Detected"
+#define ATTR_TOTAL_PREFIX  "Total"
+#define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
+#define ATTR_MACHINE_RESOURCES  "MachineResources"
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the
 // standard universe shadow. It saved a tremendous amount of code to just
 // put this value in the job ad.
-extern const char * const  ATTR_WAITPID_STATUS;
-extern const char * const  ATTR_TERMINATION_REASON;
+#define ATTR_WAITPID_STATUS  "WaitpidStatus"
+#define ATTR_TERMINATION_REASON  "TerminationReason"
 
 // Lease Manager
-extern const char * const ATTR_LEASE_MANAGER_IP_ADDR;
+#define ATTR_LEASE_MANAGER_IP_ADDR  "LeaseManagerIpAddr"
 
 // Valid settings for ATTR_JOB_MANAGED.
 	// Managed by an external process (gridmanager)
-extern const char * const  MANAGED_EXTERNAL;
+#define MANAGED_EXTERNAL  "External"
 	// Schedd should manage as normal
-extern const char * const  MANAGED_SCHEDD;
+#define MANAGED_SCHEDD  "Schedd"
 	// Schedd should manage as normal.  External process doesn't want back.
-extern const char * const  MANAGED_DONE;
+#define MANAGED_DONE  "ScheddDone"
 
-extern const char * const  COLLECTOR_REQUIREMENTS;
-extern const char * const  ATTR_PREV_LAST_HEARD_FROM;
+#define COLLECTOR_REQUIREMENTS  "COLLECTOR_REQUIREMENTS"
+#define ATTR_PREV_LAST_HEARD_FROM  "PrevLastHeardFrom"
 
-extern const char * const ATTR_TRY_AGAIN;
-extern const char * const ATTR_DOWNLOADING;
-extern const char * const ATTR_TIMEOUT;
-extern const char * const ATTR_CCBID;
-extern const char * const ATTR_REQUEST_ID;
-extern const char * const ATTR_SESSION_INFO;
-extern const char * const ATTR_SSH_PUBLIC_SERVER_KEY;
-extern const char * const ATTR_SSH_PRIVATE_CLIENT_KEY;
-extern const char * const ATTR_SHELL;
-extern const char * const ATTR_RETRY;
-extern const char * const ATTR_SSH_KEYGEN_ARGS;
-extern const char * const ATTR_SOCK;
-extern const char * const ATTR_JOB_AD_INFORMATION_ATTRS;
+#define ATTR_TRY_AGAIN  "TryAgain"
+#define ATTR_DOWNLOADING  "Downloading"
+#define ATTR_TIMEOUT  "Timeout"
+#define ATTR_CCBID  "CCBID"
+#define ATTR_REQUEST_ID  "RequestID"
+#define ATTR_SESSION_INFO  "SessionInfo"
+#define ATTR_SSH_PUBLIC_SERVER_KEY  "SSHPublicServerKey"
+#define ATTR_SSH_PRIVATE_CLIENT_KEY  "SSHPrivateClientKey"
+#define ATTR_SHELL  "Shell"
+#define ATTR_RETRY  "Retry"
+#define ATTR_SSH_KEYGEN_ARGS  "SSHKeyGenArgs"
+#define ATTR_SOCK  "sock"
+#define ATTR_JOB_AD_INFORMATION_ATTRS  "JobAdInformationAttrs"
 
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TIME;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_END;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_PERIOD;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCHES;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE;
-extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED;
+#define ATTR_LAST_NEGOTIATION_CYCLE_TIME  "LastNegotiationCycleTime"
+#define ATTR_LAST_NEGOTIATION_CYCLE_END  "LastNegotiationCycleEnd"
+#define ATTR_LAST_NEGOTIATION_CYCLE_PERIOD  "LastNegotiationCyclePeriod"
+#define ATTR_LAST_NEGOTIATION_CYCLE_DURATION  "LastNegotiationCycleDuration"
+#define ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1  "LastNegotiationCyclePhase1Duration"
+#define ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2  "LastNegotiationCyclePhase2Duration"
+#define ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3  "LastNegotiationCyclePhase3Duration"
+#define ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4  "LastNegotiationCyclePhase4Duration"
+#define ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS  "LastNegotiationCycleTotalSlots"
+#define ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS  "LastNegotiationCycleTrimmedSlots"
+#define ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS  "LastNegotiationCycleCandidateSlots"
+#define ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER  "LastNegotiationCycleSlotShareIter"
+#define ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS  "LastNegotiationCycleNumSchedulers"
+#define ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS  "LastNegotiationCycleNumIdleJobs"
+#define ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED  "LastNegotiationCycleNumJobsConsidered"
+#define ATTR_LAST_NEGOTIATION_CYCLE_MATCHES  "LastNegotiationCycleMatches"
+#define ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS  "LastNegotiationCycleRejections"
+#define ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED  "LastNegotiationCycleSubmittersFailed"
+#define ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME  "LastNegotiationCycleSubmittersOutOfTime"
+#define ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT  "LastNegotiationCycleSubmittersShareLimit"
+#define ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT  "LastNegotiationCycleActiveSubmitterCount"
+#define ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE  "LastNegotiationCycleMatchRate"
+#define ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED  "LastNegotiationCycleMatchRateSustained"
 
-extern const char * const ATTR_JOB_MACHINE_ATTRS;
-extern const char * const ATTR_MACHINE_ATTR_PREFIX;
-extern const char * const ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH;
-extern const char * const ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0;
-extern const char * const ATTR_CUMULATIVE_SLOT_TIME;
-extern const char * const ATTR_COMMITTED_SLOT_TIME;
+#define ATTR_JOB_MACHINE_ATTRS  "JobMachineAttrs"
+#define ATTR_MACHINE_ATTR_PREFIX  "MachineAttr"
+#define ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH  "JobMachineAttrsHistoryLength"
+#define ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0  "MachineAttrSlotWeight0"
+#define ATTR_CUMULATIVE_SLOT_TIME  "CumulativeSlotTime"
+#define ATTR_COMMITTED_SLOT_TIME  "CommittedSlotTime"
 
-extern const char * const ATTR_HASH_NAME;
-extern const char * const ATTR_AUTHENTICATED_IDENTITY;
-extern const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME;
+#define ATTR_HASH_NAME  "HashName"
+#define ATTR_AUTHENTICATED_IDENTITY  "AuthenticatedIdentity"
+#define ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME  "DelegateJobGSICredentialsLifetime"
 
-extern const char * const ATTR_DOTNET_VERSIONS;
+#define ATTR_DOTNET_VERSIONS  "DotNetVersions"
 
-extern const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING;
-extern const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING;
-extern const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING;
-extern const char * const ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING;
-extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD;
-extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD;
-extern const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME;
-extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
-extern const char * const ATTR_MACHINE_MAX_VACATE_TIME;
-extern const char * const ATTR_JOB_MAX_VACATE_TIME;
-extern const char * const ATTR_WANT_GRACEFUL_REMOVAL;
-extern const char * const ATTR_HOW_FAST;
-extern const char * const ATTR_RESUME_ON_COMPLETION;
-extern const char * const ATTR_DRAINING;
-extern const char * const ATTR_DRAINING_REQUEST_ID;
-extern const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION;
-extern const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION;
-extern const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT;
-extern const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT;
-extern const char * const ATTR_TOTAL_MACHINE_DRAINING_BADPUT;
-extern const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
-extern const char * const ATTR_CHECK_EXPR;
-extern const char * const ATTR_PROJECTION;
-extern const char * const ATTR_LAST_DRAIN_START_TIME;
+#define ATTR_TRANSFER_QUEUE_NUM_UPLOADING  "TransferQueueNumUploading"
+#define ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING  "TransferQueueNumDownloading"
+#define ATTR_TRANSFER_QUEUE_MAX_UPLOADING  "TransferQueueMaxUploading"
+#define ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING  "TransferQueueMaxDownloading"
+#define ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD  "TransferQueueNumWaitingToUpload"
+#define ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD  "TransferQueueNumWaitingToDownload"
+#define ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME  "TransferQueueUploadWaitTime"
+#define ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME  "TransferQueueDownloadWaitTime"
+#define ATTR_MACHINE_MAX_VACATE_TIME  "MachineMaxVacateTime"
+#define ATTR_JOB_MAX_VACATE_TIME  "JobMaxVacateTime"
+#define ATTR_WANT_GRACEFUL_REMOVAL  "WantGracefulRemoval"
+#define ATTR_HOW_FAST  "HowFast"
+#define ATTR_RESUME_ON_COMPLETION  "ResumeOnCompletion"
+#define ATTR_DRAINING  "Draining"
+#define ATTR_DRAINING_REQUEST_ID  "DrainingRequestId"
+#define ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION  "ExpectedMachineGracefulDrainingCompletion"
+#define ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION  "ExpectedMachineQuickDrainingCompletion"
+#define ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT  "ExpectedMachineGracefulDrainingBadput"
+#define ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT  "ExpectedMachineQuickDrainingBadput"
+#define ATTR_TOTAL_MACHINE_DRAINING_BADPUT  "TotalMachineDrainingBadput"
+#define ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME  "TotalMachineDrainingUnclaimedTime"
+#define ATTR_CHECK_EXPR  "CheckExpr"
+#define ATTR_PROJECTION  "Projection"
+#define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
 
 // temporary attributes for raw utsname info
-extern const char * const ATTR_UTSNAME_SYSNAME;
-extern const char * const ATTR_UTSNAME_NODENAME;
-extern const char * const ATTR_UTSNAME_RELEASE;
-extern const char * const ATTR_UTSNAME_VERSION;
-extern const char * const ATTR_UTSNAME_MACHINE;
+#define ATTR_UTSNAME_SYSNAME  "UtsnameSysname"
+#define ATTR_UTSNAME_NODENAME  "UtsnameNodename"
+#define ATTR_UTSNAME_RELEASE  "UtsnameRelease"
+#define ATTR_UTSNAME_VERSION  "UtsnameVersion"
+#define ATTR_UTSNAME_MACHINE  "UtsnameMachine"
 
 // Introduced for configurable sorting of accounting groups
-extern const char* const ATTR_GROUP_QUOTA;
-extern const char* const ATTR_GROUP_RESOURCES_ALLOCATED;
-extern const char* const ATTR_GROUP_RESOURCES_IN_USE;
-extern const char* const ATTR_SORT_EXPR;
-extern const char* const ATTR_SORT_EXPR_STRING;
+#define ATTR_GROUP_QUOTA  "GroupQuota"
+#define ATTR_GROUP_RESOURCES_ALLOCATED  "GroupResourcesAllocated"
+#define ATTR_GROUP_RESOURCES_IN_USE  "GroupResourcesInUse"
+#define ATTR_SORT_EXPR "SortExpr"
+#define ATTR_SORT_EXPR_STRING "SortExprString"
 
-extern const char* const ATTR_QUERY_EXPIRES;
+#define ATTR_QUERY_EXPIRES "Expires"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

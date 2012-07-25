@@ -22,7 +22,7 @@
 
 #if !defined(WIN32)
 
-struct SigTable { int num; const char *name; };
+struct SigTable { int num; char name [9]; };
 
 /*
   The order in this array doesn't really matter.  it's not trying to
@@ -31,7 +31,11 @@ struct SigTable { int num; const char *name; };
   search through it, so we might as well put the more commonly used
   signals closer to the front...
 */
-static struct SigTable SigNameArray[] = {
+
+// WARNING!  SigTable is a FIXED SIZE CHAR ARRAY!!!!!
+// DO NOT ADD SIGNAL NAMES LONGER THAN 8 CHARS
+// This is done so the thing is marked read-only in libcondor_utils.
+static const struct SigTable SigNameArray_local[] = {
 	{ SIGKILL, "SIGKILL" },
 	{ SIGCONT, "SIGCONT" },
 	{ SIGTERM, "SIGTERM" },
@@ -73,7 +77,7 @@ static struct SigTable SigNameArray[] = {
 #if defined(SIGINFO)
 	{ SIGINFO, "SIGINFO" },
 #endif
-	{ -1, 0 }
+	{ -1, "\0" }
 };
 
 extern "C" {
@@ -84,9 +88,9 @@ signalNumber( const char* signame )
 	if( ! signame ) {
 		return -1;
 	}
-	for( int i = 0; SigNameArray[i].name; i++ ) {
-		if( strcasecmp(SigNameArray[i].name, signame) == 0) {
-			return SigNameArray[i].num;
+	for( int i = 0; SigNameArray_local[i].name[0] != '\0'; i++ ) {
+		if( strcasecmp(SigNameArray_local[i].name, signame) == 0) {
+			return SigNameArray_local[i].num;
 		}
 	}
 	return -1;
@@ -96,9 +100,9 @@ signalNumber( const char* signame )
 const char*
 signalName( int sig )
 {
-	for( int i = 0; SigNameArray[i].name != 0; i++ ) {
-		if( SigNameArray[i].num == sig ) {
-			return SigNameArray[i].name;
+	for( int i = 0; SigNameArray_local[i].name[0] != '\0'; i++ ) {
+		if( SigNameArray_local[i].num == sig ) {
+			return SigNameArray_local[i].name;
 		}
 	}
 	return NULL;
