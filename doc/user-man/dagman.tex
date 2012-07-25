@@ -562,8 +562,8 @@ However, if the DAG utilizes a large number of
 separate log files, performance may suffer.
 Therefore, it is better to have
 fewer, or even only a single log file.
-Unfortunately,
-each Stork job currently requires a separate log file.
+%Unfortunately,
+%each Stork job currently requires a separate log file.
 
 \index{DAGMan!lazy log file evaluation}
 As of Condor version 7.3.2, DAGMan's handling of log files
@@ -585,6 +585,10 @@ The advantages of the new "lazy log file evaluation" scheme are:
 \begin{itemize}
 
 \item The \Condor{dagman} executable uses fewer file descriptors.
+In specific,
+DAGMan must keep a file descriptor open for each unique log file,
+and operating systems limit the number of open file descriptors;
+Condor's most severe limit is 2048 on Windows platforms.
 
 \item It is much easier to have one node of a DAG produce the
 submit description file for a descendant node in the DAG.
@@ -604,18 +608,21 @@ We hope to have this problem fixed soon.
 \end{itemize}
 
 \index{DAGMan!default log file specification}
-Another new feature in Condor version 7.3.2 was the use of 
-default node job user logs.
-Previously, it was a fatal error if the submit description
+%Another new feature in Condor version 7.3.2 was the use of 
+DAGMan assigns 
+default node job user logs,
+if a log file is not specified within a job's submit description file.
+In Condor versions earlier than 7.3.2, 
+it was a fatal error if the submit description
 file for a node job did not specify a log file.
-Starting with Condor version 7.3.2,
-DAGMan specifies a default user log file for any job that does not specify
-a log file.
 The file used as the default node log is controlled by the
 \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
 A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
 Nodes specifying a log file and other nodes using the default log
 file can be mixed in a single DAG.
+Allowing DAGMan to specify a single log file for an entire DAG, 
+especially a wide DAG,
+reduces the number of concurrently open file descriptors.
 
 Log files for node jobs should not be placed on NFS, 
 unless both configuration variables
