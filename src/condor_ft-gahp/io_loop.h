@@ -50,6 +50,7 @@ struct SandboxEnt {
 	int pid;
 	std::string sandbox_id;
 	std::string request_id;
+	int error_pipe;
 //	bool is_download;
 //	FileTransfer *ft;
 };

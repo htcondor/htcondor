@@ -46,6 +46,8 @@ int download_sandbox_reaper_id = -1;
 int upload_sandbox_reaper_id = -1;
 int destroy_sandbox_reaper_id = -1;
 
+int ChildErrorPipe = -1;
+
 // The list of results ready to be output to IO
 StringList result_list;
 
@@ -67,6 +69,36 @@ usage()
 		"Usage: condor_ft-gahp\n"
 			 );
 	DC_Exit( 1 );
+}
+
+void
+write_to_pipe( int fd, const char *msg )
+{
+	int msg_len = strlen( msg ) + 1;
+	if ( write( fd, (char *)&msg_len, sizeof(int) ) != sizeof(int) ) {
+		dprintf( D_ALWAYS, "Failed to write message len to pipe!\n" );
+		return;
+	}
+	if ( write( fd, msg, msg_len ) != msg_len ) {
+		dprintf( D_ALWAYS, "Failed to write message to pipe!\n" );
+	}
+}
+
+void
+read_from_pipe( int fd, char **msg )
+{
+	int msg_len;
+	*msg = NULL;
+	if ( read( fd, (char *)&msg_len, sizeof(int) ) != sizeof(int) ) {
+		dprintf( D_ALWAYS, "Failed to read message len from pipe!\n" );
+		return;
+	}
+	*msg = (char *)malloc( msg_len );
+	if ( read( fd, *msg, msg_len ) != msg_len ) {
+		dprintf( D_ALWAYS, "Failed to read message from pipe!\n" );
+		free( *msg );
+		*msg = NULL;
+	}
 }
 
 int
@@ -231,8 +263,14 @@ stdin_pipe_handler(Service*, int) {
 				gahp_output_return (commands, 10);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DOWNLOAD_SANDBOX) == 0) {
 
+				int fds[2];
+				if ( pipe( fds ) < 0 ) {
+					EXCEPT( "Failed to create pipe!\n" );
+				}
+				ChildErrorPipe = fds[1];
 				int tid = daemonCore->Create_Thread(do_command_download_sandbox, (void*)strdup(command), NULL, download_sandbox_reaper_id);
 
+				close( fds[1] );
 				if( tid ) {
 					dprintf (D_ALWAYS, "BOSCO: created download_sandbox thread, id: %i\n", tid);
 
@@ -245,18 +283,26 @@ stdin_pipe_handler(Service*, int) {
 					e.pid = tid;
 					e.request_id = args.argv[1];
 					e.sandbox_id = args.argv[2];
+					e.error_pipe = fds[0];
 					// transfer started, record the entry in the map
 					std::pair<int, struct SandboxEnt> p(tid, e);
 					sandbox_map.insert(p);
 				} else {
 					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
 					gahp_output_return_success();
+					close( fds[0] );
 				}
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_UPLOAD_SANDBOX) == 0) {
 
+				int fds[2];
+				if ( pipe( fds ) < 0 ) {
+					EXCEPT( "Failed to create pipe!\n" );
+				}
+				ChildErrorPipe = fds[1];
 				int tid = daemonCore->Create_Thread(do_command_upload_sandbox, (void*)strdup(command), NULL, upload_sandbox_reaper_id);
 
+				close( fds[1] );
 				if( tid ) {
 					dprintf (D_ALWAYS, "BOSCO: created upload_sandbox thread, id: %i\n", tid);
 
@@ -269,18 +315,26 @@ stdin_pipe_handler(Service*, int) {
 					e.pid = tid;
 					e.request_id = args.argv[1];
 					e.sandbox_id = args.argv[2];
+					e.error_pipe = fds[0];
 					// transfer started, record the entry in the map
 					std::pair<int, struct SandboxEnt> p(tid, e);
 					sandbox_map.insert(p);
 				} else {
 					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
 					gahp_output_return_success();
+					close( fds[0] );
 				}
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DESTROY_SANDBOX) == 0) {
 
+				int fds[2];
+				if ( pipe( fds ) < 0 ) {
+					EXCEPT( "Failed to create pipe!\n" );
+				}
+				ChildErrorPipe = fds[1];
 				int tid = daemonCore->Create_Thread(do_command_destroy_sandbox, (void*)strdup(command), NULL, destroy_sandbox_reaper_id);
 
+				close( fds[1] );
 				if( tid ) {
 					dprintf (D_ALWAYS, "BOSCO: created destroy_sandbox thread, id: %i\n", tid);
 
@@ -293,12 +347,14 @@ stdin_pipe_handler(Service*, int) {
 					e.pid = tid;
 					e.request_id = args.argv[1];
 					e.sandbox_id = args.argv[2];
+					e.error_pipe = fds[0];
 					// transfer started, record the entry in the map
 					std::pair<int, struct SandboxEnt> p(tid, e);
 					sandbox_map.insert(p);
 				} else {
 					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
 					gahp_output_return_success();
+					close( fds[0] );
 				}
 
 			} else {
@@ -698,6 +754,7 @@ int do_command_download_sandbox(void *arg, Stream*) {
 
 	if (!(my_parser.ParseClassAd(args.argv[3], ad))) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, "Failed to parse job ad" );
 		return 1;
 	}
 
@@ -708,6 +765,7 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	success = create_sandbox_dir(sid, iwd);
 	if (!success) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, "Failed to create sandbox" );
 		return 1;
 	}
 
@@ -721,6 +779,7 @@ int do_command_download_sandbox(void *arg, Stream*) {
 
 	if (!ft.Init(&ad)) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, "Failed to initialize FileTransfer" );
 		return 1;
 	}
 
@@ -737,6 +796,7 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	// the "true" param to DownloadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.DownloadFiles(true)) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.Value() );
 		return 1;
 	}
 
@@ -760,6 +820,7 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 
 	if (!(my_parser.ParseClassAd(args.argv[3], ad))) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, "Failed to parse job ad" );
 		return 1;
 	}
 
@@ -775,6 +836,7 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 
 	if (!ft.Init(&ad)) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, "Failed to initialize FileTransfer" );
 		return 1;
 	}
 
@@ -791,6 +853,7 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 	// the "true" param to UploadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.UploadFiles(true)) {
 		// FAIL
+		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.Value() );
 		return 1;
 	}
 
@@ -814,6 +877,7 @@ int do_command_destroy_sandbox(void *arg, Stream*) {
 	if(!destroy_sandbox(sid, err)) {
 		// FAIL
 		dprintf( D_ALWAYS, "BOSCO: destroy_sandbox error: %s\n", err.c_str());
+		write_to_pipe( ChildErrorPipe, err.c_str() );
 		return 1;
 	}
 
@@ -840,12 +904,22 @@ int download_sandbox_reaper(Service*, int pid, int status) {
 
 		enqueue_result(e.request_id, res, 2);
 	} else {
+		char *err_msg = NULL;
+		read_from_pipe( e.error_pipe, &err_msg );
+		if ( err_msg == NULL ) {
+			err_msg = strdup( "Worker thread failed" );
+		}
+
 		const char * res[2] = {
-			"ERROR",
+			err_msg,
 			"NULL"
 		};
 		enqueue_result(e.request_id, res, 2);
+
+		free( err_msg );
 	}
+
+	close( e.error_pipe );
 
 	// remove from the map
 	sandbox_map.erase(pid);
@@ -866,10 +940,18 @@ int upload_sandbox_reaper(Service*, int pid, int status) {
 		};
 		enqueue_result(e.request_id, res, 1);
 	} else {
+		char *err_msg = NULL;
+		read_from_pipe( e.error_pipe, &err_msg );
+		if ( err_msg == NULL ) {
+			err_msg = strdup( "Worker thread failed" );
+		}
+
 		const char * res[1] = {
-			"ERROR"
+			err_msg
 		};
 		enqueue_result(e.request_id, res, 1);
+
+		free( err_msg );
 	}
 
 	// remove from the map
@@ -892,10 +974,18 @@ int destroy_sandbox_reaper(Service*, int pid, int status) {
 		};
 		enqueue_result(e.request_id, res, 1);
 	} else {
+		char *err_msg = NULL;
+		read_from_pipe( e.error_pipe, &err_msg );
+		if ( err_msg == NULL ) {
+			err_msg = strdup( "Worker thread failed" );
+		}
+
 		const char * res[1] = {
-			"ERROR"
+			err_msg
 		};
 		enqueue_result(e.request_id, res, 1);
+
+		free( err_msg );
 	}
 
 	// remove from the map
