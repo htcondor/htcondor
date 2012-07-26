@@ -23,7 +23,7 @@ the exact date and time at which a job is to begin executing.
 Condor attempts to match the job to an execution machine
 just like any other job,
 however, the job will wait until the exact time to begin execution.
-A user can specify Condor to allow some flexibility to execute jobs
+A user can define the job to allow some flexibility in the execution of jobs
 that miss their execution time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -43,15 +43,15 @@ This is the time that Condor will begin to execute the job.
 
 After a job is matched and all of its files have been transferred
 to an execution machine,
-Condor checks to see if the job's ad contains a deferral time.
+Condor checks to see if the job's ClassAd contains a deferral time.
 If it does,
 Condor calculates the number of seconds between the execution
-machine's current system time to the job's deferral time.
+machine's current system time and the job's deferral time.
 If the deferral time is in the future,
 the job waits to begin execution.
 While a job waits,
 its job ClassAd attribute \AdAttr{JobStatus} indicates the job
-is running.
+is in the Running state.
 As the deferral time arrives, the job begins to execute.
 If a job misses its execution time,
 that is, if the deferral time is in the past,
@@ -69,15 +69,18 @@ When the deferral time arrives,
 Condor begins execution for the job,
 but immediately suspends it.
 
+The deferral time is specified in the job's submit description file
+with the command \SubmitCmd{deferral\_time}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Missed Execution Window}
+\subsubsection{Deferral Window}
 \label{sec:JobDeferral-DeferralWindow}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd job attribute!DeferralWindow}
 \index{submit commands!deferral\_window}
 
 If a job arrives at its execution machine
-after the deferral time passes,
+after the deferral time has passed,
 the job is evicted from the machine and put on hold in the job queue.
 This may occur, for example,
 because the transfer of needed files took too long
@@ -98,6 +101,9 @@ the job immediately begins execution.
 If this difference is greater than the deferral window,
 the job is evicted from the execution machine
 and is put on hold in the job queue.
+
+The deferral window is specified in the job's submit description file
+with the command \SubmitCmd{deferral\_window}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Preparation Time}
@@ -205,8 +211,8 @@ and not the submission machine's system clock.
 Be mindful of the ramifications when
 the two clocks show dramatically different times.
 
-\item A job's \AdAttr{JobStatus} attribute is always in the running state 
-when job deferral is used. 
+\item A job's \AdAttr{JobStatus} attribute is always in the Running state 
+when job deferral is used.
 There is currently no way to distinguish between a job that is 
 executing and a job that is waiting for its deferral time. 
 
