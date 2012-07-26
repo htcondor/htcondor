@@ -57,7 +57,11 @@ page cache in the maximum memory usage.
 This bug fix is also included in Condor version 7.9.0.
 \Ticket{3003}
 
-\item Jobs from a hook to fetch work (\MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}) now correctly receive dynamic slots from a partitionable slot instead of claiming the entire partitionable slot.
+\item Jobs from a hook to fetch work, 
+where the hook is defined by configuration variable 
+\MacroNI{<Keyword>\_HOOK\_FETCH\_WORK},
+now correctly receive dynamic slots from a partitionable slot 
+instead of claiming the entire partitionable slot.
 \Ticket{2819}
 
 \item Fixed a bug in which a slot might become stuck in the Preempting state
