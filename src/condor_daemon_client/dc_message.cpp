@@ -121,7 +121,7 @@ DCMsg::cancelMessage(char const *reason)
 	if( !reason ) {
 		reason = "operation was canceled";
 	}
-	addError( CEDAR_ERR_CANCELED, reason );
+	addError( CEDAR_ERR_CANCELED, "%s", reason );
 
 	if( m_messenger.get() ) {
 		m_messenger->cancelMessage( this );
