@@ -1315,6 +1315,12 @@ ClassAd *INFNBatchJob::buildTransferAd()
 	ExprTree *next_expr;
 	const char *next_name;
 
+	// Initialize ATTR_TRANSFER_OUTPUT_FILES to an empty string.
+	// Right now, we don't support transferring all new/modified output
+	// files. In that case, we need ATTR_TRANSFER_OUTPUT_FILES to always
+	// be set. Otherwise, stdout and stderr aren't transferred.
+	xfer_ad->InsertAttr( ATTR_TRANSFER_OUTPUT_FILES, "" );
+
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
