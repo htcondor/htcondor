@@ -726,6 +726,23 @@ void INFNBatchJob::doEvaluateState()
 				CondorVersionInfo ver_info;
 				m_filetrans->setPeerVersion( ver_info );
 
+				// Add extra remaps for the canonical stdout/err filenames.
+				// If using the FileTransfer object, the starter will rename the
+				// stdout/err files, and we need to remap them back here.
+				std::string file;
+				if ( jobAd->LookupString( ATTR_JOB_OUTPUT, file ) &&
+					 strcmp( file.c_str(), StdoutRemapName ) ) {
+
+					m_filetrans->AddDownloadFilenameRemap( StdoutRemapName,
+														   file.c_str() );
+				}
+				if ( jobAd->LookupString( ATTR_JOB_ERROR, file ) &&
+					 strcmp( file.c_str(), StderrRemapName ) ) {
+
+					m_filetrans->AddDownloadFilenameRemap( StderrRemapName,
+														   file.c_str() );
+				}
+
 				// TODO Should we ever fill the hole?
 				PunchCedarHole( myResource->RemoteHostname() );
 			}
@@ -742,7 +759,7 @@ void INFNBatchJob::doEvaluateState()
 						 procID.cluster, procID.proc,
 						 m_xfer_gahp->getErrorString() );
 				errorString = m_xfer_gahp->getErrorString();
-				gmState = GM_DELETE_SANDBOX;
+				gmState = GM_HOLD;
 			} else {
 				gmState = GM_DONE_SAVE;
 			}
@@ -1246,6 +1263,22 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 
 		old_value = "";
+		submit_ad->LookupString( ATTR_JOB_OUTPUT, old_value );
+		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+			submit_ad->InsertAttr( ATTR_JOB_OUTPUT, StdoutRemapName );
+		}
+
+		new_value = "";
+		submit_ad->LookupString( ATTR_JOB_ERROR, new_value );
+		if ( !new_value.empty() && !nullFile( new_value.c_str() ) ) {
+			if ( old_value == new_value ) {
+				submit_ad->InsertAttr( ATTR_JOB_ERROR, StdoutRemapName );
+			} else {
+				submit_ad->InsertAttr( ATTR_JOB_ERROR, StderrRemapName );
+			}
+		}
+
+		old_value = "";
 		submit_ad->LookupString( ATTR_X509_USER_PROXY, old_value );
 		if ( !old_value.empty() ) {
 			submit_ad->InsertAttr( ATTR_X509_USER_PROXY, condor_basename( old_value.c_str() ) );
@@ -1281,8 +1314,6 @@ ClassAd *INFNBatchJob::buildTransferAd()
 	const char *attrs_to_copy[] = {
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
-		ATTR_JOB_OUTPUT,
-		ATTR_JOB_ERROR,
 		ATTR_TRANSFER_EXECUTABLE,
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
@@ -1314,6 +1345,21 @@ ClassAd *INFNBatchJob::buildTransferAd()
 	ClassAd *xfer_ad = new ClassAd();
 	ExprTree *next_expr;
 	const char *next_name;
+
+	std::string stdout_path;
+	std::string stderr_path;
+	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout_path );
+	if ( !stdout_path.empty() && !nullFile( stdout_path.c_str() ) ) {
+		xfer_ad->InsertAttr( ATTR_JOB_OUTPUT, StdoutRemapName );
+	}
+	jobAd->LookupString( ATTR_JOB_ERROR, stderr_path );
+	if ( !stderr_path.empty() && !nullFile( stderr_path.c_str() ) ) {
+		if ( stdout_path == stderr_path ) {
+			xfer_ad->InsertAttr( ATTR_JOB_ERROR, StdoutRemapName );
+		} else {
+			xfer_ad->InsertAttr( ATTR_JOB_ERROR, StderrRemapName );
+		}
+	}
 
 	// Initialize ATTR_TRANSFER_OUTPUT_FILES to an empty string.
 	// Right now, we don't support transferring all new/modified output
