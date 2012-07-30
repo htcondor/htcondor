@@ -2,7 +2,7 @@
 \section{\label{sec:Admin-Intro}Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is the Condor Administrator's Manual for Unix.
+This is the Condor Administrator's Manual.
 Its purpose is to aid in
 the installation and administration of a Condor pool.  For help on
 using Condor, see the Condor User's Manual.  
@@ -25,8 +25,9 @@ to match pending requests with the appropriate resources.
 Each resource has an owner,
 \index{resource!owner}
 \index{machine!owner}
-the user who works at the machine.  This
-person has absolute power over their own resource and Condor goes out
+the one who sets the policy for the use of the machine.  This
+person has absolute power over the use of the machine,
+and Condor goes out
 of its way to minimize the impact on this owner caused by Condor.  It
 is up to the resource owner to define a policy for when Condor
 requests will
@@ -37,12 +38,11 @@ user who submitted the job.  These people want Condor to provide as
 many CPU cycles as possible for their work.  Often the interests of
 the resource owners are in conflict with the interests of the resource
 requesters.  
-
 The job of the Condor administrator is to configure the Condor pool to
 find the happy medium that keeps both resource owners and users of
-resources satisfied.  The purpose of this manual is to help you
-understand the mechanisms that Condor provides to enable you to find
-this happy medium for your particular set of users and resource owners.
+resources satisfied.  The purpose of this manual is to relate
+the mechanisms that Condor provides to enable the administrator to find
+this happy medium.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Machine-Roles}The Different Roles a Machine Can Play}
@@ -50,7 +50,7 @@ this happy medium for your particular set of users and resource owners.
 
 Every machine in a Condor pool can serve a variety of roles.  Most
 machines serve more than one role simultaneously.  Certain roles can
-only be performed by single machines in your pool.  The following list
+only be performed by a single machine in the pool.  The following list
 describes what these roles are and what resources are required on the
 machine that is providing that service:
 
@@ -58,79 +58,83 @@ machine that is providing that service:
 
 \index{central manager}
 \index{machine!central manager}
-\item[Central Manager] There can be only one central manager for your
-pool.  The machine is the collector of information, and the negotiator
+\item[Central Manager] There can be only one central manager for the pool.
+This machine is the collector of information, and the negotiator
 between resources and resource requests.  These two halves of the
 central manager's responsibility are performed by separate daemons, so
 it would be possible to have different machines providing those two
 services.  However, normally they both live on the same machine.  This
 machine plays a very important part in the Condor pool and should be
 reliable.  If this machine crashes, no further matchmaking can be
-performed within the Condor system (although all current matches
-remain in effect until they are broken by either party involved in the
-match).  Therefore, choose for central manager
-a machine that is likely to be
-up and running all the time, or at least one that will be rebooted quickly if
-something goes wrong.
+performed within the Condor system,
+although all current matches remain in effect until they are broken 
+by either party involved in the match.
+Therefore, choose for central manager
+a machine that is likely to be up and running all the time, 
+or at least one that will be rebooted quickly if something goes wrong.
 The central manager will
 ideally have a good network connection to all the
-machines in your pool, since they all send updates over the network to
-the central manager. All queries go to the central manager. 
+machines in the pool, since these pool machines all send updates over 
+the network to the central manager. 
 
 % editted up to this point
 
 \index{execute machine}
 \index{machine!execute}
-\item[Execute] Any machine in your pool (including your Central
-Manager) can be configured for whether or not it should execute Condor
-jobs.  Obviously, some of your machines will have to serve this
-function or your pool won't be very useful.  Being an execute machine
-doesn't require many resources at all.  About the only resource that
-might matter is disk space, since if the remote job dumps core, that
-file is first dumped to the local disk of the execute machine before
-being sent back to the submit machine for the owner of the job.
-However, if there isn't much disk space, Condor will simply limit the
-size of the core file that a remote job will drop.  In general the
-more resources a machine has (swap space, real memory, CPU speed,
-etc.) the larger the resource requests it can serve.  However, if
-there are requests that don't require many resources, any machine
-in your pool could serve them.
+\item[Execute] Any machine in the pool, 
+including the central manager, 
+can be configured as to whether or not it should execute Condor jobs.
+Obviously, some of the machines will have to serve this
+function, or the pool will not be useful.
+Being an execute machine does not require lots of resources.  
+About the only resource that might matter is disk space.
+%, since if the remote job dumps core, that
+%file is first dumped to the local disk of the execute machine before
+%being sent back to the submit machine for the owner of the job.
+%However, if there isn't much disk space, Condor will simply limit the
+%size of the core file that a remote job will drop.
+In general the
+more resources a machine has in terms of swap space, memory, number of CPUs, 
+the larger variety of resource requests it can serve.
+%However, if
+%there are requests that don't require many resources, any machine
+%in your pool could serve them.
 
 \index{submit machine}
 \index{machine!submit}
-\item[Submit] Any machine in your pool (including your Central
-Manager) can be configured for whether or not it should allow Condor
+\item[Submit] Any machine in the pool,
+including the central manager,
+can be configured as to whether or not it should allow Condor
 jobs to be submitted.
 The resource requirements for a submit machine
 are actually much greater than the resource requirements for an
-execute machine.  First of all, every job that you submit that is
-currently running on a remote machine generates another process on
-your submit machine.  So, if you have lots of jobs running, you will
-need a fair amount of swap space and/or real memory.  In addition all
-the checkpoint files from your jobs are stored on the local disk of
-the machine you submit from.  Therefore, if your jobs have a large
-memory image and you submit a lot of them, you will need a lot of disk
-space to hold these files.  This disk space requirement can be
-somewhat alleviated with a checkpoint server (described below),
-however the binaries of the jobs you submit are still stored on the
-submit machine.
+execute machine.  First, every submitted job that is
+currently running on a remote machine runs a process on
+the submit machine.  
+As a result, lots of running jobs
+will need a fair amount of swap space and/or real memory.
+In addition,
+the checkpoint files from standard universe jobs are stored on 
+the local disk of the submit machine.
+If these jobs have a large
+memory image and there are a lot of them, 
+the submit machine will need a lot of disk space to hold these files.
+This disk space requirement can be
+somewhat alleviated by using a checkpoint server,
+however the binaries of the jobs are still stored on the submit machine.
 
 \index{checkpoint server}
 \index{machine!checkpoint server}
-\item[Checkpoint Server] One machine in your pool can be configured as
-a checkpoint server.
+\item[Checkpoint Server]  Machines in the pool can be configured to act as
+checkpoint servers.
 This is optional, and is not part of the
-standard Condor binary distribution.  The checkpoint server is a
-centralized machine that stores all the checkpoint files for the jobs
-submitted in your pool.  This machine should have lots of disk space
-and a good network connection to the rest of your pool, as the traffic
+standard Condor binary distribution.  A checkpoint server is a
+machine that stores checkpoint files for sets of jobs.
+A machine with this role should have lots of disk space
+and a good network connection to the rest of the pool, as the traffic
 can be quite heavy.
 
 \end{description}
-
-Now that you know the various roles a machine can play in a Condor
-pool, we will describe the actual daemons within Condor that implement
-these functions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Condor-Daemons}The Condor Daemons}
@@ -148,30 +152,33 @@ be started under Condor and what they do:
 \index{condor\_master daemon}
 \item[\Condor{master}] This daemon
 is responsible for keeping all the
-rest of the Condor daemons running on each machine in your pool.  It
-spawns the other daemons, and periodically checks to see if there are
-new binaries installed for any of them.  If there are, the master will
+rest of the Condor daemons running on each machine in the pool.  It
+spawns the other daemons, and it periodically checks to see if there are
+new binaries installed for any of them.  If there are, the 
+\Condor{master} daemon will
 restart the affected daemons.  In addition, if any daemon crashes, the
-master will send e-mail to the Condor Administrator of your pool and
+\Condor{master} will send e-mail to the Condor administrator of the pool and
 restart the daemon.  The \Condor{master} also supports various
-administrative commands that let you start, stop or reconfigure
-daemons remotely.  The \Condor{master} will run on every machine in
-your Condor pool, regardless of what functions each machine are
-performing.  
+administrative commands that enable the administrator to start, 
+stop or reconfigure daemons remotely.  
+The \Condor{master} will run on every machine in
+the pool, regardless of the functions that each machine is performing.  
 
 \index{Condor daemon!condor\_startd@\Condor{startd}}
 \index{daemon!condor\_startd@\Condor{startd}}
 \index{condor\_startd daemon}
 \item[\Condor{startd}] This daemon
-represents a given resource
-(namely, a machine capable of running jobs) to the Condor pool.  It
-advertises certain attributes about that resource that are used to
-match it with pending resource requests.  The startd will run on any
-machine in your pool that you wish to be able to execute jobs.  It is
-responsible for enforcing the policy that resource owners configure
-which determines under what conditions remote jobs will be started,
-suspended, resumed, vacated, or killed.  When the startd is ready to
-execute a Condor job, it spawns the \Condor{starter}, described below.
+represents a given resource to the Condor pool,  
+as a machine capable of running jobs. 
+It advertises certain attributes about machine that are used to
+match it with pending resource requests.  
+The \Condor{startd} will run on any
+machine in the pool that is to be able to execute jobs.  
+It is responsible for enforcing the policy that the resource owner configures,
+which determines under what conditions jobs will be started,
+suspended, resumed, vacated, or killed.
+When the \Condor{startd} is ready to
+execute a Condor job, it spawns the \Condor{starter}.
 
 \index{Condor daemon!condor\_starter@\Condor{starter}}
 \index{daemon!condor\_starter@\Condor{starter}}
