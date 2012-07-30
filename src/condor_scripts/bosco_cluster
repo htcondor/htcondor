@@ -210,17 +210,19 @@ test_cluster () {
     submit_dir=`mktemp -d -p $root_submit_dir`
     submit_file=$submit_dir/condor.submit
     log_file=$submit_dir/logfile
+    test_stdout=$submit_dir/test.stdout
+    test_stderr=$submit_dir/test.stderr
     test_id=bosco-test.$RANDOM
     cat > $submit_file << End_of_Submit
 universe = grid
 grid_resource = batch $cluster_type $remote_host
-output = /dev/null
-error = /dev/null
+output = $test_stdout
+error = $test_stderr
 transfer_executable=false
-executable = /bin/hostname
+executable = /bin/echo
+arguments = Hello
 log = $log_file
-skip_filechecks = true
-+remote_iwd="$default_pwd"
+notification = NEVER
 +bosco_test_id = "$test_id"
 queue
 End_of_Submit
@@ -233,7 +235,7 @@ End_of_Submit
     else
         echo "Passed!"
     fi
-    echo "Submission and log files for these jobs are in $root_submit_dir"
+    echo "Submission and log files for this job are in $submit_dir"
 
     # Get the condor job id using the bosco_test_id
     condor_jobid=`condor_q -const "bosco_test_id =?= \"$test_id\"" -format '%i' ClusterId`
@@ -251,7 +253,7 @@ End_of_Submit
 
     # Check if there is anything in the user log
     echo -n "Checking for submission to remote pbs cluster (could take ~30 seconds)..."
-    counter=5
+    counter=50
     submit_found=0
     while [ $counter -gt 0 ]
     do
@@ -260,7 +262,7 @@ End_of_Submit
             submit_found=1
             break
         fi
-        sleep 10
+        sleep 1
         counter=$(( $counter - 1 ))
     done
     
@@ -292,24 +294,26 @@ End_of_Submit
     #    condor_q -const "(ClusterId == '$condor_jobid')" -format '%s\n' GridJobStatus
     #fi
 
+    # NOTE: We will probably never see the job in running status, as it will
+    #   finish immediately and Condor only polls its status periodically.
     # Check for job to run
-    echo -n "Waiting for job to run... this could take a while (waiting 60 seconds)..."
-    check_condor_q_classad "(ClusterId == $condor_jobid) && (JobStatus == 2)" 60
-    if [ $? -eq 0 ]; then
-        echo "Failed"
-        echo "The job did not start in the 60 seconds we waited."
-        echo "This doesn't always mean there is something wrong, maybe the remote queue is long..."
-        echo "Here is the current status of the job:"
-        condor_q $condor_jobid
-        echo "You can look at job's log file at $log_file"
-        echo "for the job's current status"
-        exit 1
-    else
-        echo "Passed!"
-    fi
+    #echo -n "Waiting for job to run... this could take a while (waiting 60 seconds)..."
+    #check_condor_q_classad "(ClusterId == $condor_jobid) && (JobStatus == 2)" 60
+    #if [ $? -eq 0 ]; then
+    #    echo "Failed"
+    #    echo "The job did not start in the 60 seconds we waited."
+    #    echo "This doesn't always mean there is something wrong, maybe the remote queue is long..."
+    #    echo "Here is the current status of the job:"
+    #    condor_q $condor_jobid
+    #    echo "You can look at job's log file at $log_file"
+    #    echo "for the job's current status"
+    #    exit 1
+    #else
+    #    echo "Passed!"
+    #fi
     
-    echo -n "Waiting for job to exit... this again could take a while (waiting 60 seconds)..."
-    check_condor_q_classad "(ClusterId == $condor_jobid) && (GridJobStatus=\"COMPLETED\") " 60
+    echo -n "Waiting for job to exit... this could take a while (waiting 60 seconds)..."
+    check_condor_q_classad "(ClusterId == $condor_jobid) && (GridJobStatus==\"COMPLETED\") " 60
     if [ $? -eq 0 ]; then
         echo "Failed"
         echo "The job did not end in 60 seconds.  This is not always a bad thing..."
@@ -349,8 +353,20 @@ End_of_Submit
         fi
         exit 1
     fi
- 
 
+    echo -n "Checking for job output..."
+    output=`cat $test_stdout`
+    if [ "$output" == "Hello" ] ; then
+	echo "Passed!"
+    else
+	echo "Failed"
+	echo "Job output should be 'Hello', but isn't"
+	echo "Showing contents of job stdout:"
+	cat $test_stdout
+	echo "Showing contents of job stderr:"
+	cat $test_stderr
+	exit 1
+    fi
 
 }
 
