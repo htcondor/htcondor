@@ -44,7 +44,11 @@ Since Condor 7.5.x, it had only been available as a static library.
 
 \begin{itemize}
 
-\item None.
+\item To avoid the output of an unnecessary DAGMan error message,
+the value of \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+is ignored when both \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK}
+and \MacroNI{ENABLE\_USERLOG\_LOCKING} are \Expr{True}.
+\Ticket{3087}
 
 \end{itemize}
 
