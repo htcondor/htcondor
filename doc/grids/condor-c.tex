@@ -97,6 +97,9 @@ SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
 \end{verbatim}
 \normalsize
 
+Other working authentication methods are
+GSI, SSL, KERBEROS, and FS.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-C-Submit}Condor-C Job Submission}
@@ -238,7 +241,7 @@ and notes about the existence of functionality are given in
 Table~\ref{working-remote-universes}.
 The note "untested" implies that
 submissions under the given universe have not yet
-been throughly tested.
+been thoroughly tested.
 They may already work.
 
 % universes, and whether they work in Condor-C
@@ -322,20 +325,6 @@ defines the Windows domain as the machine name.
 %
 % \Todo
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-C-Limits}Current Limitations in Condor-C}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor-C!limitations}
-Submitting jobs to run under the grid universe has not yet
-been perfected.
-The following is a list of known limitations with Condor-C:
-
-\begin{enumerate}
-  \item{Authentication methods other than
-  \Expr{CLAIMTOBE}, such as \Expr{GSI} and \Expr{KERBEROS}, are 
-  untested, and may not yet work.}
-
-\end{enumerate}
 
 \index{Condor-C|)}
 
