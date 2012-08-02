@@ -14,7 +14,8 @@ The
 settings that control the policy under which Condor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
+section~\ref{sec:Configuring-Policy} on Policy Configuration for the
+\Condor{startd}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
@@ -27,7 +28,7 @@ Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
-various configuration files that might be used including pool-wide,
+various configuration files that might be used, including pool-wide,
 platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
@@ -162,7 +163,7 @@ Recursively defined macros such as
 A = $(B)
 B = $(A)
 \end{verbatim}
-are not allowed.
+are \emph{not} allowed.
 They create definitions that Condor refuses to parse. 
 
 All entries in a configuration file must have an operator,
@@ -310,7 +311,7 @@ and
   ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
   stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
   bigbird.cs.wisc.edu
-  HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
+  HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
 Note that a line continuation character may currently be used within
@@ -320,8 +321,7 @@ configuration variable \MacroNI{FOO}:
   # This comment includes the following line, so FOO is NOT set \
   FOO = BAR
 \end{verbatim}
-It is a poor idea to use this functionality, as it is likely to
-stop working in future Condor releases.
+It is a poor idea to use this functionality.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
@@ -403,7 +403,7 @@ the changed value.
   
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
-  The host name of the local machine (no domain name).
+  The host name of the local machine, \emph{without} a domain name.
   
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
@@ -412,7 +412,7 @@ the changed value.
 \label{param:Tilde}
 \item[\MacroU{TILDE}]
   The full path to the
-  home directory of the Unix user condor, if such a user exists on the
+  home directory of the Unix user \Login{condor}, if such a user exists on the
   local machine.
 
   \label{sec:Condor-Subsystem-Names}
@@ -523,7 +523,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{USERNAME}]
   The user name of the UID of the daemon or tool.
   For daemons started as root, but running under another UID
-  (typically the user condor), this will be the other UID.
+  (typically the user \Login{condor}), this will be the other UID.
 
 \label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
@@ -531,7 +531,7 @@ determined automatically at run time but which can be overwritten.
   qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
-  its use and under what conditions you would want to change it.
+  its use and under what conditions it could be desirable to change it.
 
 \label{param:UIDDomain}
 \item[\MacroU{UID\_DOMAIN}]
@@ -544,8 +544,6 @@ determined automatically at run time but which can be overwritten.
 
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
-Only do so if you know what you are doing.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -564,7 +562,7 @@ For example,
 \begin{verbatim}
   A = $ENV(HOME)
 \end{verbatim}
-binds \MacroNI{A} to the value of the HOME environment variable.
+binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
 Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
