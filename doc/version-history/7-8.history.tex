@@ -135,8 +135,9 @@ properly recognized both with and without the space after the colon.
 that are specified in the job ClassAd with a relative path name.
 \Ticket{3027}
 
-\item Fixed a bug that caused daemon names (e.g. \Macro{STARTD\_NAME})
-containing a dot to be ignored.
+\item Fixed a bug that caused daemon names,
+as set in configuration variables such as \MacroNI{STARTD\_NAME},
+containing a period character to be ignored.
 \Ticket{3172}
 
 \end{itemize}
