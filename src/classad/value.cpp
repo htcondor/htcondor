@@ -53,6 +53,7 @@ Value( )
 Value::
 Value(const Value &value)
 {
+	valueType = UNDEFINED_VALUE;
     CopyFrom(value);
     return;
 }
