@@ -689,6 +689,7 @@ sysapi_find_linux_name( const char *info_str )
   	if( !distro ) {
                 EXCEPT( "Out of memory!" );
         }
+	free( distro_name_lc );
 	return distro;
 }
 
