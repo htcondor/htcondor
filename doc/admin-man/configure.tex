@@ -14,7 +14,8 @@ The
 settings that control the policy under which Condor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
+section~\ref{sec:Configuring-Policy} on Policy Configuration for the
+\Condor{startd}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
@@ -27,7 +28,7 @@ Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
-various configuration files that might be used including pool-wide,
+various configuration files that might be used, including pool-wide,
 platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
@@ -162,7 +163,7 @@ Recursively defined macros such as
 A = $(B)
 B = $(A)
 \end{verbatim}
-are not allowed.
+are \emph{not} allowed.
 They create definitions that Condor refuses to parse. 
 
 All entries in a configuration file must have an operator,
@@ -310,7 +311,7 @@ and
   ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
   stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
   bigbird.cs.wisc.edu
-  HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
+  HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
 Note that a line continuation character may currently be used within
@@ -320,8 +321,7 @@ configuration variable \MacroNI{FOO}:
   # This comment includes the following line, so FOO is NOT set \
   FOO = BAR
 \end{verbatim}
-It is a poor idea to use this functionality, as it is likely to
-stop working in future Condor releases.
+It is a poor idea to use this functionality.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
