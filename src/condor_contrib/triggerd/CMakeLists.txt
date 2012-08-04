@@ -18,5 +18,7 @@
 option(WITH_TRIGGERD "Support for triggerd" ON)
 
 if (WITH_TRIGGERD AND HAVE_EXT_QPID AND LINUX )
+    # LTO does not work with BOOST as of GCC 4.7.  Temporarily squashing it.
+    STRING (REGEX REPLACE "-flto" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
 endif( )
