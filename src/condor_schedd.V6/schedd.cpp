@@ -7401,7 +7401,7 @@ Scheduler::initLocalStarterDir( void )
 			dprintf( D_FULLDEBUG, "initLocalStarterDir: "
 					 "%s already exists, deleting old contents\n",
 					 dir_name.Value() );
-			Directory exec_dir( &exec_statinfo );
+			Directory exec_dir( &exec_statinfo, PRIV_CONDOR );
 			exec_dir.Remove_Entire_Directory();
 			first_time = false;
 		}
