@@ -36,12 +36,11 @@ See section~\ref{sec:Configuring-SMP} for details.
 \Ticket{2905}
 
 \item Condor now supports and implements the caching of ClassAds 
-to reduce memory footprints. Caching may be disabled by setting
+to reduce memory footprints. 
+This feature is experimental and is currently disabled by default.
+It can be enabled by setting
 the new configuration variable \Macro{ENABLE\_CLASSAD\_CACHING}
-to \Expr{False}.
-Third party use of the ClassAd library does not enable the
-caching of ClassAds by default; 
-Condor does enable the caching of ClassAds by default.
+to \Expr{True}.
 \Ticket{2541}
 \Ticket{3127}
 
@@ -146,7 +145,7 @@ identify and specify the use of customized local machine resources.
 
 \item The new configuration variable \MacroNI{ENABLE\_CLASSAD\_CACHING}
 controls whether the new caching feature of ClassAds is used.
-The default value is \Expr{True}.
+The default value is \Expr{False}.
 \Ticket{3127}
 
 \item The new configuration variable \Macro{CLASSAD\_LOG\_STRICT\_PARSING}

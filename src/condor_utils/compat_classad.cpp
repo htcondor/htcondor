@@ -58,7 +58,7 @@ Reconfig()
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::_useOldClassAdSemantics = !m_strictEvaluation;
 
-	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", true) );
+	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
