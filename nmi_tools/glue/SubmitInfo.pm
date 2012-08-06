@@ -413,7 +413,7 @@ our %submit_info = (
 	},
 
 	# This is the new batlab one
-	'x86_64_rhap_5.7'		=> {
+	'x86_64_rhap_5.8'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
