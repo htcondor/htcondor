@@ -116,6 +116,7 @@ BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 static bool have_config_source = true;
+static bool continue_if_no_config = false; // so condor_who won't exit if no config found.
 extern bool condor_fsync_on;
 
 MyString global_config_source;
@@ -125,6 +126,13 @@ param_functions config_p_funcs;
 
 static int ParamValueNameAscendingSort(const void *l, const void *r);
 
+
+bool config_continue_if_no_config(bool contin)
+{
+	bool old_contin = continue_if_no_config;
+	continue_if_no_config = contin;
+	return old_contin;
+}
 
 // Function implementations
 
@@ -615,7 +623,10 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		have_config_source = false;
 	}
 
-	if( have_config_source && ! (config_source = find_global()) ) {
+	if( have_config_source && 
+		! (config_source = find_global()) &&
+		! continue_if_no_config)
+	{
 		if( wantsQuiet ) {
 			fprintf( stderr, "%s error: can't find config source.\n",
 					 myDistro->GetCap() );
@@ -648,7 +659,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	}
 
 		// Read in the global file
-	if( have_config_source ) {
+	if( config_source ) {
 		process_config_source( config_source, "global config source", NULL, true );
 		global_config_source = config_source;
 		free( config_source );

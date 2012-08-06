@@ -5430,7 +5430,7 @@ id=314
 
 [ENABLE_CLASSAD_CACHING]
 aliases=
-default=true
+default=false
 version=0.0.0
 range=.*
 state=default
@@ -8376,7 +8376,7 @@ id=505
 
 [LOCAL_UNIV_EXECUTE]
 aliases=
-default=
+default=$(SPOOL)/local_univ_execute
 version=0.0.0
 range=.*
 state=default

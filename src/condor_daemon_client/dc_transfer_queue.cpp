@@ -102,12 +102,14 @@ TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 	if( !m_unlimited_downloads ) {
 		limited_queues.append("download");
 	}
+	char *list_str = limited_queues.print_to_delimed_string(",");
 	str = "";
 	str += "limit=";
-	str += limited_queues.print_to_delimed_string(",");
+	str += list_str;
 	str += delim;
 	str += "addr=";
 	str += m_addr;
+	free(list_str);
 
 	return true;
 }

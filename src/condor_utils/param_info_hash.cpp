@@ -34,17 +34,18 @@ param_info_hash(const char *str)
 }
 
 void
-param_info_hash_insert(param_info_hash_t param_info, const param_info_t* p) {
+param_info_hash_insert(param_info_hash_t param_info, param_info_storage_t const *p) {
 
 	unsigned int key;
 	bucket_t* b;
 
-	key = param_info_hash(p->name);
+	key = param_info_hash(p->type_string.hdr.name);
 
 	if (!param_info[key]) {
 
 		param_info[key] = (bucket_t *)malloc(sizeof(bucket_t));
-		param_info[key]->param = p;
+		param_info_storage_t * param = &(param_info[key]->param);
+		*param = *p;
 		param_info[key]->next = NULL;
 
 	} else {
@@ -56,7 +57,8 @@ param_info_hash_insert(param_info_hash_t param_info, const param_info_t* p) {
 		b->next = (bucket_t *)malloc(sizeof(bucket_t));
 		if (b->next) {
 			b = b->next;
-			b->param = p;
+			param_info_storage_t *param = &b->param;
+			*param = *p;
 			b->next = NULL;
 		}
 	}
@@ -72,8 +74,8 @@ param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
 	b = param_info[key];
 	while(b != NULL) {
-		if (strcasecmp(b->param->name,param) == 0) {
-			return b->param;
+		if (strcasecmp(b->param.type_string.hdr.name,param) == 0) {
+			return &(b->param.type_string.hdr);
 		}
 		b = b->next;
 	}
@@ -136,10 +138,52 @@ param_info_hash_iterate(param_info_hash_t param_info, int (*callPerElement)
 	for(i = 0; i < PARAM_INFO_TABLE_SIZE && stop == 0; i++) {
 		bucket_t* this_param = (bucket_t*)(param_info + i);
 		while(this_param != NULL && stop == 0) {
-			stop = callPerElement(this_param->param, user_data);
+			stop = callPerElement(&(this_param->param.type_string.hdr), user_data);
 			this_param = this_param->next;
 		}
 	}
+}
+
+// Iterate through the hash table and re-allocate memory in chunks.
+void
+param_info_hash_optimize(param_info_hash_t param_info)
+{
+    // As of July 2012, the occupancy rate of the hash was about 90%.
+    int i;
+    int bucket_count = 0;
+    for(i = 0; i < PARAM_INFO_TABLE_SIZE; i++)
+    {
+        bucket_t* this_param = param_info[i];
+        while(this_param != NULL)
+        {
+            bucket_count++;
+            this_param = this_param->next;
+        }
+    }
+    bucket_t * buckets = (bucket_t*)malloc(sizeof(bucket_t)*bucket_count);
+    int bucket_offset = 0;
+    for(i = 0; i < PARAM_INFO_TABLE_SIZE; i++)
+    {
+        bucket_t* this_param = param_info[i];
+        if (this_param != NULL)
+        {
+            param_info[i] = buckets + bucket_offset;
+        }
+        while(this_param != NULL)
+        {
+           buckets[bucket_offset] = *this_param;
+           bucket_t* old_param = this_param;
+           this_param = this_param->next;
+           if (this_param)
+           {
+               buckets[bucket_offset].next = &buckets[bucket_offset+1];
+           } else {
+               buckets[bucket_offset].next = NULL;
+           }
+           free(old_param);
+           bucket_offset++;
+        }
+    }
 }
 
 void 

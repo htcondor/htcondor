@@ -2374,6 +2374,8 @@ Daemons::AllReaper(int pid, int status)
 			AllStartdsGone();
 		}
 		return TRUE;
+	} else {
+		dprintf( D_ALWAYS, "AllReaper unexpectedly called on pid %i, status %i.\n", pid, status);
 	}
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
@@ -2404,6 +2406,8 @@ Daemons::DefaultReaper(int pid, int status)
  		delete valid_iter->second;
 		exit_allowed.erase(valid_iter);
 		return TRUE;
+	} else {
+		dprintf( D_ALWAYS, "DefaultReaper unexpectedly called on pid %i, status %i.\n", pid, status);
 	}
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {

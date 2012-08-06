@@ -58,6 +58,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-status.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&

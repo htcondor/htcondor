@@ -1592,9 +1592,7 @@ further discussion of this problem.
 
 \index{file system!NFS}
 \index{NFS!interaction with}
-If the current working directory when a job is submitted,
-as with \Condor{submit},
-\index{Condor commands!condor\_submit}
+If the current working directory when a job is submitted
 is accessed via an NFS automounter, Condor may have problems if the
 automounter later decides to unmount the volume before the job has
 completed.
@@ -1605,7 +1603,7 @@ automounter.
 
 There is a simple work around.
 When submitting the job,
-use the \Arg{initialdir} command in the submit description file to point to
+use the submit command \SubmitCmd{initialdir} to point to
 the stable access point.
 For example,
 suppose the NFS automounter is configured to mount a volume at mount point
@@ -1619,7 +1617,7 @@ submit description file solves the problem.
 
 \index{NFS!cache flush on submit machine}
 \index{ClassAd job attribute!IwdFlushNFSCache}
-As of Condor version 7.4.0, 
+%As of Condor version 7.4.0, 
 Condor attempts to flush the NFS cache on a submit machine in order to
 refresh a job's initial working directory.
 This allows files written by the job into an NFS mounted 
@@ -1637,31 +1635,32 @@ of the job ClassAd attribute.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Condor Daemons That Do Not Run as root}
 
-\index{Unix daemon!running as root}
+\index{running as root}
 \index{daemon!running as root}
 Condor is normally installed such that the Condor daemons have root
 permission.
-This allows Condor to run the \condor{shadow} 
+This allows Condor to run the \Condor{shadow} 
 \index{Condor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
-process and
-your job with your UID and file access rights.
+daemon and
+the job with the submitting user's UID and file access rights.
 When Condor
-is started as root, your Condor jobs can access whatever files you can.
+is started as root, Condor jobs can access whatever files the
+user that submits the jobs can.
 
-However, it is possible that whomever installed Condor 
-did not have root access, or
-decided not to run the daemons as root.
+However, it is possible that the Condor installation 
+does not have root access, or
+has decided not to run the daemons as root.
 That is unfortunate,
-since Condor is designed to be run as the Unix user root.
+since Condor is designed to be run as root.
 To see if Condor is
-running as root on a specific machine, enter the command
+running as root on a specific machine, use the command
 \begin{verbatim}
-        condor_status -master -l <machine-name>
+  condor_status -master -l <machine-name>
 \end{verbatim}
 
-where \verb@machine-name@ is the name of the specified machine.
-This command displays a \condor{master} ClassAd; if the
+where \verb@<machine-name>@ is the name of the specified machine.
+This command displays the full \condor{master} ClassAd; if the
 attribute \AdAttr{RealUid} equals zero,
 then the Condor daemons are indeed
 running with root access.  If the
@@ -1674,30 +1673,31 @@ method of determining if Condor is running with root access.
 When using \Prog{ps},
 it may often appear that the daemons are
 running as the condor user instead of root.
-However, note that the \Prog{ps},
+However, note that the \Prog{ps}
 command shows the current \emph{effective} owner of the
 process, not the \emph{real} owner.  (See the \Cmd{getuid}{2} and
 \Cmd{geteuid}{2} Unix man pages for details.)  In Unix, a process
 running under the real UID of root may switch its effective UID.
 (See the \Cmd{seteuid}{2} man page.)
 For security reasons, the daemons
-only set the effective UID to root when absolutely necessary
-(to perform a privileged operation).
+only set the effective UID to root when absolutely necessary,
+as it will be to perform a privileged operation.
 
-If they are not running with root access, you need to make any/all files
-and/or directories that your job will touch readable and/or writable by
-the UID (user id) specified by the RealUid attribute.
+If daemons are not running with root access, 
+make any and all files
+and/or directories that the job will touch readable and/or writable by
+the UID (user id) specified by the \Attr{RealUid} attribute.
 Often this may
 mean using the Unix command \verb@chmod 777@
-on the directory where you submit your Condor job.
+on the directory from which the Condor job is submitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Job-Lease}
 Job Leases}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{job!lease}
+\index{job lease}
 
-A job lease specifies how long a given job will attempt to run
+A \Term{job lease} specifies how long a given job will attempt to run
 on a remote resource,
 even if that resource loses contact with the submitting machine.
 Similarly, it is the length of time the submitting machine will
@@ -1730,11 +1730,12 @@ kills off the \Condor{starter} daemon and user job.
 \index{ClassAd job attribute!JobLeaseDuration}
 \index{JobLeaseDuration!job ClassAd attribute}
 A default value equal to 20 minutes exists for a job's
-ClassAd attribute \Attr{job\_lease\_duration}, 
-or this attribute may be set in the submit description file
+ClassAd attribute \Attr{JobLeaseDuration}, 
+or this attribute may be set in the submit description file,
+using \SubmitCmd{job\_lease\_duration},
 to keep a job running in the case that the submit side no longer
 renews the lease.
-There is a trade off in setting the value of \Attr{job\_lease\_duration}. 
+There is a trade off in setting the value of \SubmitCmd{job\_lease\_duration}. 
 Too small a value,
 and the job might get killed before the submitting machine has a
 chance to recover.

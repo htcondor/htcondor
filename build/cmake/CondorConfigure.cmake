@@ -293,6 +293,7 @@ find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(LATEX2HTML latex2html)
 find_program(LATEX latex)
+find_program(HAVE_WGET wget)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -503,6 +504,14 @@ endif(BUILD_TESTS)
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
 	cmake_minimum_required(VERSION 2.8)
+	
+	# perform a quick check for wget b/c without it you're hosed. 
+	 if ((${HAVE_WGET} STREQUAL "HAVE_WGET-NOTFOUND"))
+	    message (FATAL "You are trying to perform a UW-Build without wget, EPIC FAIL! ")
+	 else ()
+	    dprint("wget = ${HAVE_WGET}")
+	 endif()
+
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -514,6 +523,7 @@ if (NOT EXTERNAL_STAGE)
 		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
 	endif()
 endif()
+
 if (WINDOWS)
 	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
@@ -703,6 +713,29 @@ else(MSVC)
 	if (cxx_Wall)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	endif(cxx_Wall)
+
+	# Added to help make resulting libcondor_utils smaller.
+	#check_cxx_compiler_flag(-fno-exceptions no_exceptions)
+	#if (no_exceptions)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-exceptions")
+	#endif(no_exceptions)
+	#check_cxx_compiler_flag(-Os cxx_Os)
+	#if (cxx_Os)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Os")
+	#endif(cxx_Os)
+
+	if (CMAKE_CXX_COMPILER_VERSION STRGREATER "4.7.0" OR CMAKE_CXX_COMPILER_VERSION STREQUAL "4.7.0")
+	   
+	  check_cxx_compiler_flag(-flto cxx_lto)
+	  if (cxx_lto)
+		  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
+		  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
+	  endif(cxx_lto)
+	else()
+	  dprint("skipping cxx_lto flag check")
+	endif()
 
 	check_cxx_compiler_flag(-W cxx_W)
 	if (cxx_W)

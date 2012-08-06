@@ -34,24 +34,27 @@ typedef enum param_info_t_type_e {
 // will be followed by an int or double when default_valid is true,
 // ranged params will have min and max values following that if range_valid is true.
 typedef struct param_info_t_s {
+    // The commented out things are structures defined in the param table but
+    // not currently utilized by Condor.  They were removed to decrease overall
+    // memory size of the param table.
 
-	char const *  name;
+	const char * name;
     //char const *  aliases;
-	char const *  str_val;
-    char const *  version;
+	const char * str_val;
+    //const char * version;
     //char const *  range;
-    char const *  friendly_name;
-    char const *  usage;
-    char const *  url;
-    char const *  tags;
+    //const char * friendly_name;
+    //const char * usage;
+    //const char * url;
+    //const char * tags;
 
     //int		id;
 
     param_info_t_type_t  	type;
-    int 	state;
-    int 	customization;
-    int 	reconfig;
-    int 	is_macro;
+    //int 	state;
+    //int 	customization;
+    //int 	reconfig;
+    //int 	is_macro;
 	int		default_valid;
 	int 	range_valid;
 
@@ -64,8 +67,8 @@ struct param_info_str_t_s {
 
 struct param_info_str_ranged_t_s {
    param_info_t hdr;
-   const char * str_val;
-   const char * range;
+   char * str_val;
+   char * range;
 };
 
 struct param_info_int_t_s {
@@ -100,6 +103,16 @@ typedef struct param_info_str_t_s        param_info_PARAM_TYPE_STRING_ranged;
 typedef struct param_info_int_ranged_t_s param_info_PARAM_TYPE_INT_ranged;
 typedef struct param_info_dbl_ranged_t_s param_info_PARAM_TYPE_DOUBLE_ranged;
 
+typedef union param_info_storage_u {
+   param_info_PARAM_TYPE_STRING type_string;
+   param_info_PARAM_TYPE_BOOL type_bool;
+   param_info_PARAM_TYPE_INT type_int;
+   param_info_PARAM_TYPE_DOUBLE type_double;
+   param_info_PARAM_TYPE_STRING_ranged type_string_ranged;
+   param_info_PARAM_TYPE_INT_ranged type_int_ranged;
+   param_info_PARAM_TYPE_DOUBLE_ranged type_double_ranged;
+} param_info_storage_t;
+
 BEGIN_C_DECLS
 
 	void param_info_init(void);
@@ -128,17 +141,20 @@ END_C_DECLS
 // hash table stuff
 ///////////////////
 
-#define PARAM_INFO_TABLE_SIZE	2048
+// Picked a table size by looking for a prime number about equal to the
+// half the occupancy number as of July 2012.  Because we're cramped for memory,
+// we prefer hash collisions over memory usage.
+#define PARAM_INFO_TABLE_SIZE	389
 
 struct bucket_t {
-	const param_info_t* param;
+	param_info_storage_t param;
 	struct bucket_t* next;
 };
 typedef struct bucket_t bucket_t;
 
 typedef bucket_t** param_info_hash_t;
 
-void param_info_hash_insert(param_info_hash_t param_info, const param_info_t* p);
+void param_info_hash_insert(param_info_hash_t param_info, const param_info_storage_t* p);
 
 //returns a pointer to an internal object, do not free the returned pointer
 const param_info_t* param_info_hash_lookup(param_info_hash_t param_info, const char* param);
@@ -163,6 +179,9 @@ void param_info_hash_dump(param_info_hash_t param_info);
 // Print out information for one given value.  Typed to be used with
 // param_info_hash_iterate.
 int param_info_hash_dump_value(const param_info_t* param_value, void* unused);
+
+// Optimize the memory layout of the hash table.
+void param_info_hash_optimize(param_info_hash_t param_info);
 
 #endif
 

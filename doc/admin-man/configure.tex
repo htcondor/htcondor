@@ -14,7 +14,8 @@ The
 settings that control the policy under which Condor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
+section~\ref{sec:Configuring-Policy} on Policy Configuration for the
+\Condor{startd}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
@@ -27,7 +28,7 @@ Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
-various configuration files that might be used including pool-wide,
+various configuration files that might be used, including pool-wide,
 platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
@@ -162,7 +163,7 @@ Recursively defined macros such as
 A = $(B)
 B = $(A)
 \end{verbatim}
-are not allowed.
+are \emph{not} allowed.
 They create definitions that Condor refuses to parse. 
 
 All entries in a configuration file must have an operator,
@@ -310,7 +311,7 @@ and
   ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
   stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
   bigbird.cs.wisc.edu
-  HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
+  HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
 Note that a line continuation character may currently be used within
@@ -320,8 +321,7 @@ configuration variable \MacroNI{FOO}:
   # This comment includes the following line, so FOO is NOT set \
   FOO = BAR
 \end{verbatim}
-It is a poor idea to use this functionality, as it is likely to
-stop working in future Condor releases.
+It is a poor idea to use this functionality.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
@@ -403,7 +403,7 @@ the changed value.
   
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
-  The host name of the local machine (no domain name).
+  The host name of the local machine, \emph{without} a domain name.
   
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
@@ -412,7 +412,7 @@ the changed value.
 \label{param:Tilde}
 \item[\MacroU{TILDE}]
   The full path to the
-  home directory of the Unix user condor, if such a user exists on the
+  home directory of the Unix user \Login{condor}, if such a user exists on the
   local machine.
 
   \label{sec:Condor-Subsystem-Names}
@@ -523,7 +523,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{USERNAME}]
   The user name of the UID of the daemon or tool.
   For daemons started as root, but running under another UID
-  (typically the user condor), this will be the other UID.
+  (typically the user \Login{condor}), this will be the other UID.
 
 \label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
@@ -531,7 +531,7 @@ determined automatically at run time but which can be overwritten.
   qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
-  its use and under what conditions you would want to change it.
+  its use and under what conditions it could be desirable to change it.
 
 \label{param:UIDDomain}
 \item[\MacroU{UID\_DOMAIN}]
@@ -544,8 +544,6 @@ determined automatically at run time but which can be overwritten.
 
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
-Only do so if you know what you are doing.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -564,7 +562,7 @@ For example,
 \begin{verbatim}
   A = $ENV(HOME)
 \end{verbatim}
-binds \MacroNI{A} to the value of the HOME environment variable.
+binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
 Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
@@ -1353,7 +1351,7 @@ File System Configuration File Entries''.
   A boolean value that controls the caching of ClassAds.
   Caching saves memory when a Condor process contains
   many ClassAds with the same expressions.
-  The default value is \Expr{True}, which enables caching.
+  The default value is \Expr{False}, which disables caching.
 
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
@@ -4444,6 +4442,21 @@ search for the corresponding attribute names using ``slot'', instead.
   In doing so, the \Condor{schedd} can claim multiple dynamic slots 
   without waiting for a negotiation cycle.
 
+\label{param:MachineResourceNames}
+\item[\Macro{MACHINE\_RESOURCE\_NAMES}]
+  A comma and/or space separated list of resource names that represent
+  custom resources specific to a machine.
+  These resources are further intended to be statically divided or
+  partitioned, and these resource names identify the configuration variables
+  that define the partitioning.
+
+\label{param:MachineResourceResourcename}
+\item[\Macro{MACHINE\_RESOURCE\_<name>}]
+  An integer that specifies the quantity of the customized local machine
+  resource available for an SMP machine.
+  The portion of this configuration variable's name identified with
+  \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
@@ -6017,58 +6030,63 @@ These settings affect the \Condor{starter}.
 
 \label{param:UserJobWrapper} 
 \item[\Macro{USER\_JOB\_WRAPPER}]
-  The full path to an executable or script.
-  This macro allows an administrator to specify a wrapper script to handle the
-  execution of all user jobs.  
+  The full path and file name of an executable or script.
   If specified, Condor never directly executes a job, but instead
-  invokes the program specified by this macro.
+  invokes this executable,
+  allowing an administrator to specify the executable (wrapper script) 
+  that will handle the execution of all user jobs.  
   The command-line arguments passed to this program will include the
-  full-path to the actual user job which should be executed, followed by all
+  full path to the actual user job which should be executed, followed by all
   the command-line parameters to pass to the user job.
-  This wrapper program must ultimately replace its image with the user job;
-  in other words,
-  it must \Procedure{exec} the user job, not \Procedure{fork} it.
+  This wrapper script must ultimately replace its image with the user job;
+  thus, it must \Procedure{exec} the user job, not \Procedure{fork} it.
 
-  For Bourne type shells (sh, bash, ksh), the last line should be:
+  For Bourne type shells (\Prog{sh}, \Prog{bash}, \Prog{ksh}), 
+  the last line should be:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
-  For the C type shells (csh, tcsh), the last line should be:
+  For the C type shells (\Prog{csh}, \Prog{tcsh}), the last line should be:
 \begin{verbatim}
         exec $*:q
 \end{verbatim}
 
-	These precise syntaxes are needed to correctly handle program arguments
-which contain white space.
-
+  This syntax is precise, to correctly handle program arguments
+  which contain white space characters.
 
   For Windows machines, the wrapper will either be
-  a batch script (with a file extension of \File{.bat} or \File{.cmd})
-  or an executable (with a file extension of \File{.exe} or \File{.com}).
+  a batch script with a file extension of \File{.bat} or \File{.cmd},
+  or an executable with a file extension of \File{.exe} or \File{.com}.
 
-  If the wrapper encounters an error, and is unable to run the user
-  job, it is important that the wrapper indicate this to the Condor system
-  so that Condor does not assign the exit code of the wrapper to the
-  user.  To do this, the wrapper should write a useful error message
-  to the file named in the environment variable \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
-  and exit with a non-zero value.
-  If this file is created by the wrapper, Condor assumes that the wrapper
-  has failed, and will mark the job as idle in the queue, and try to 
-  re-run it.  The starter will also copy the contents of this file to
-  the starter log, so the administrator can debug the problem.
+  If the wrapper script encounters an error as it runs,
+  and it is unable to run the user job, 
+  it is important that the wrapper script indicate this to the Condor system
+  so that Condor does not assign the exit code of the wrapper script to the
+  job.  
+  To do this, the wrapper script should write a useful error message
+  to the file named in the environment variable 
+  \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
+  and then the wrapper script should exit with a non-zero value.
+  If this file is created by the wrapper script, 
+  Condor assumes that the wrapper script has failed, 
+  and Condor will place the job back in the queue marking it as Idle, 
+  such that the job will again be run.
+  The \Condor{starter} will also copy the contents of this error file to
+  the \Condor{starter} log, so the administrator can debug the problem.
 
-  When a wrapper is in use, the executable of a job submission may be
-  kept relative and resolved by the user's path by setting:
+  When a wrapper script is in use, the executable of a job submission may be
+  specified by a relative path, as long as the submit description file
+  also contains:
 \begin{verbatim}
         +PreserveRelativeExecutable = True
 \end{verbatim}
-  in the job submission file.  If this is set, then the executable does
-  not need to be fully qualified, for example
+  For example,
 \begin{verbatim}
         # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
+        +PreserveRelativeExecutable = True
 \end{verbatim}
-  As opposed to
+  Without this extra attribute:
 \begin{verbatim}
         # A typical fully-qualified executable path
         cmd = /bin/sleep
