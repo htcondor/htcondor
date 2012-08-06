@@ -91,8 +91,8 @@ static struct {
 
 	bool   diagnostic; // output useful only to developers
 	bool   verbose;    // extra output useful to users
-	bool   full_ads;
-	bool   job_ad;		     // debugging
+	bool   show_full_ads;
+	bool   show_job_ad;     // debugging
 	bool   ping_all_addrs;	 // 
 	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
@@ -112,8 +112,8 @@ void InitAppGlobals(const char * argv0)
 	App.Name = argv0;
 	App.diagnostic = false; // output useful only to developers
 	App.verbose = false;    // extra output useful to users
-	App.full_ads = false;
-	App.job_ad = false;     // debugging
+	App.show_full_ads = false;
+	App.show_job_ad = false;     // debugging
 	App.ping_all_addrs = false;
 	App.test_backward = false;
 }
@@ -454,7 +454,7 @@ void parse_args(int /*argc*/, char *argv[])
 				App.query_pids.push_back(pid);
 			} else if (IsArg(parg, "ps", 2)) {
 			} else if (IsArg(parg, "long", 1)) {
-				App.full_ads = true;
+				App.show_full_ads = true;
 			} else if (IsArg(parg, "format", 1)) {
 			} else if (IsArgColon(parg, "autoformat", &pcolon, 5) ||
 			           IsArgColon(parg, "af", &pcolon, 2)) {
@@ -522,7 +522,7 @@ void parse_args(int /*argc*/, char *argv[])
 					App.print_mask.registerFormat(lbl.Value(), wid, opts, argv[ixArg]);
 				}
 			} else if (IsArg(parg, "job", 3)) {
-				App.job_ad = true;
+				App.show_job_ad = true;
 			} else if (IsArg(parg, "ping_all_addrs", 4)) {
 				App.ping_all_addrs = true;
 			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
@@ -536,10 +536,10 @@ void parse_args(int /*argc*/, char *argv[])
 
 	// if no output format has yet been specified, choose a default.
 	//
-	if ( ! App.full_ads && App.print_mask.IsEmpty() ) {
+	if ( ! App.show_full_ads && App.print_mask.IsEmpty() ) {
 		App.print_mask.SetAutoSep(NULL, " ", NULL, "\n");
 
-		if (App.job_ad) {
+		if (App.show_job_ad) {
 			AddPrintColumn("USER", 0, "User");
 			AddPrintColumn("CMD", 0, "Cmd");
 			AddPrintColumn("MEMORY", 0, "MemoryUsage");
@@ -555,63 +555,19 @@ void parse_args(int /*argc*/, char *argv[])
 		}
 	}
 
-	if (App.job_ad) {
+	if (App.show_job_ad) {
 		// constraint?
 	} else {
 		App.constraint.push_back("JobId=!=UNDEFINED");
 	}
 }
 
-int
-main( int argc, char *argv[] )
+// initialize our config params, this is more complicated than most most tools
+// because condor_who needs to work even if it doesn't have the same config
+// as the daemons that it is trying to query.
+//
+void init_condor_config()
 {
-	InitAppGlobals(argv[0]);
-
-#if !defined(WIN32)
-	install_sig_handler(SIGPIPE, SIG_IGN );
-#endif
-
-	myDistro->Init( argc, argv );
-
-	if( argc < 1 ) {
-		usage(true);
-	}
-
-	// parse command line arguments here.
-	parse_args(argc, argv);
-
-	if (App.query_log_dirs.size() > 0) {
-		if (App.diagnostic) {
-			printf("Query log dirs:\n");
-			for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
-				printf("    [%3d] %s\n", (int)ii, App.query_log_dirs[ii]);
-			}
-		}
-		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
-			LOG_INFO_MAP info;
-			query_log_dir(App.query_log_dirs[ii], info);
-			scan_logs_for_info(info, App.job_to_pid);
-
-			// if we got a STARTD address, push it's address onto the list 
-			// that we want to query.
-			LOG_INFO_MAP::const_iterator it = info.find("Startd");
-			if (it != info.end()) {
-				LOG_INFO * pli = it->second;
-				if ( ! pli->addr.empty() && pli->exit_code.empty()) {
-					App.query_addrs.push_back(strdup(pli->addr.c_str()));
-				}
-			}
-
-			if(App.ping_all_addrs) { ping_all_known_addrs(info); }
-			query_daemons_for_pids(info);
-
-			if (App.diagnostic | App.verbose) {
-				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
-				print_log_info(info);
-			}
-		}
-	}
-
 #ifdef WIN32
 #else
 	// Condor will try not to run as root, not even as a tool.
@@ -651,9 +607,72 @@ main( int argc, char *argv[] )
 		config_continue_if_no_config(true);
 	}
 	config();
+}
 
+int
+main( int argc, char *argv[] )
+{
+	InitAppGlobals(argv[0]);
+
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
+
+	myDistro->Init( argc, argv );
+
+	if( argc < 1 ) {
+		usage(true);
+	}
+
+	// parse command line arguments here.
+	parse_args(argc, argv);
+
+	// setup initial config params from the default condor_config
+	// TODO: change config based on daemon that we are trying to query?
+	init_condor_config();
+
+	// if any log directories were specified, scan them now.
+	//
+	if (App.query_log_dirs.size() > 0) {
+		if (App.diagnostic) {
+			printf("Query log dirs:\n");
+			for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
+				printf("    [%3d] %s\n", (int)ii, App.query_log_dirs[ii]);
+			}
+		}
+		// scrape the log directory, scanning master, startd and slot logs
+		// to pick up addresses, pids & exit codes.
+		//
+		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
+			LOG_INFO_MAP info;
+			query_log_dir(App.query_log_dirs[ii], info);
+			scan_logs_for_info(info, App.job_to_pid);
+
+			// if we got a STARTD address, push it's address onto the list 
+			// that we want to query.
+			LOG_INFO_MAP::const_iterator it = info.find("Startd");
+			if (it != info.end()) {
+				LOG_INFO * pli = it->second;
+				if ( ! pli->addr.empty() && pli->exit_code.empty()) {
+					App.query_addrs.push_back(strdup(pli->addr.c_str()));
+				}
+			}
+
+			if(App.ping_all_addrs) { ping_all_known_addrs(info); }
+			// fill in missing PIDS for daemons by sending them DC_CONFIG_VAL commands
+			query_daemons_for_pids(info);
+
+			if (App.diagnostic | App.verbose) {
+				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
+				print_log_info(info);
+			}
+		}
+	}
+
+	// query any detected startd's for running jobs.
+	//
 	CondorQuery *query;
-	if (App.job_ad)
+	if (App.show_job_ad)
 		query = new CondorQuery(ANY_AD);
 	else
 		query = new CondorQuery(STARTD_AD);
@@ -746,7 +765,7 @@ main( int argc, char *argv[] )
 			if (App.diagnostic) {
 				printf("    result Ad has %d attributes\n", ad->size());
 			}
-			if (App.full_ads) {
+			if (App.show_full_ads) {
 				ad->fPrint(stdout);
 				printf("\n");
 			} else {
