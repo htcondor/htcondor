@@ -87,25 +87,6 @@ static const char *GMStateNames[] = {
         procID.cluster,procID.proc,GMStateNames[gmState],remoteState, \
         func,error)
 
-static void
-PunchCedarHole( const char *host )
-{
-	condor_netaddr netaddr;
-
-	if ( !host || netaddr.from_net_string( host ) ) {
-		return; // not a valid hostname, so don't bother trying to look it up
-	}
-
-	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
-	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
-		 iter != addrs.end();
-		 ++iter) {
-		const condor_sockaddr& addr = *iter;
-		MyString addr_str = addr.to_ip_string();
-		daemonCore->getIpVerify()->PunchHole( WRITE, addr_str );
-	}
-}
-
 void INFNBatchJobInit()
 {
 }
@@ -524,9 +505,6 @@ void INFNBatchJob::doEvaluateState()
 				// TODO Can we determine the ft-gahp's Condor version?
 				CondorVersionInfo ver_info;
 				m_filetrans->setPeerVersion( ver_info );
-
-				// TODO Should we ever fill the hole?
-				PunchCedarHole( myResource->RemoteHostname() );
 			}
 
 			std::string sandbox_path;
@@ -742,9 +720,6 @@ void INFNBatchJob::doEvaluateState()
 					m_filetrans->AddDownloadFilenameRemap( StderrRemapName,
 														   file.c_str() );
 				}
-
-				// TODO Should we ever fill the hole?
-				PunchCedarHole( myResource->RemoteHostname() );
 			}
 
 			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
