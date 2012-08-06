@@ -91,6 +91,7 @@ static struct {
 
 	bool   diagnostic; // output useful only to developers
 	bool   verbose;    // extra output useful to users
+	bool   wide;       // don't truncate to fit the screen
 	bool   show_full_ads;
 	bool   show_job_ad;     // debugging
 	bool   ping_all_addrs;	 // 
@@ -134,6 +135,7 @@ void usage(bool and_exit)
 		"\t-ps\t\t\tDisplay process tree\n"
 		"\t-l[ong]\t\t\tDisplay entire classads\n"
 		"\t-v[erbose]\t\tSame as -long\n"
+		"\t-w[ide]\t\t\tdon't truncate fields to fit the screen\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
 		"\t-a[uto]f[ormat]:[V,ntlh] <attr1> [attr2 [attr3 ...]]\tPrint attr(s) with automatic formatting\n"
 		"\t\t,\tUse %%V formatting\n"
@@ -146,6 +148,31 @@ void usage(bool and_exit)
 	if (and_exit)
 		exit( 1 );
 }
+
+#ifdef WIN32
+static int getConsoleWindowSize(int * pHeight = NULL) {
+	CONSOLE_SCREEN_BUFFER_INFO ws;
+	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
+		if (pHeight)
+			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
+		return (int)ws.dwSize.X;
+	}
+	return 80;
+}
+#else
+#include <sys/ioctl.h> 
+static int getConsoleWindowSize(int * pHeight = NULL) {
+    struct winsize ws; 
+	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
+		//printf ("lines %d\n", ws.ws_row); 
+		//printf ("columns %d\n", ws.ws_col); 
+		if (pHeight)
+			*pHeight = (int)ws.ws_row;
+		return (int) ws.ws_col;
+	}
+	return 80;
+}
+#endif
 
 void AddPrintColumn(const char * heading, int width, const char * expr)
 {
@@ -168,16 +195,44 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 	App.print_mask.registerFormat("%v", wid, opts, expr);
 }
 
+// print a utime in human readable form
 static const char *
 format_int_runtime (int utime, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	return format_time(utime);
 }
 
+// print out static or dynamic slot id.
+static const char *
+format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
+{
+	static char outstr[10];
+	outstr[0] = 0;
+	bool from_name = true;
+	int is_dynamic = false;
+	if (from_name || (ad->LookupBool(ATTR_SLOT_DYNAMIC, is_dynamic) && is_dynamic)) {
+		std::string name;
+		if (ad->LookupString(ATTR_NAME, name) && (0 == name.find("slot"))) {
+			size_t cch = sizeof(outstr)/sizeof(outstr[0]);
+			strncpy(outstr, name.c_str()+4, cch-1);
+			outstr[cch-1] = 0;
+			char * pat = strchr(outstr, '@');
+			if (pat)
+				pat[0] = 0;
+		} else {
+			sprintf(outstr, "%u_?", slotid);
+		}
+	} else {
+		sprintf(outstr, "%u", slotid);
+	}
+	return outstr;
+}
+
+// print the pid for a jobid.
 static const char *
 format_jobid_pid (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
-	static char outstr[100];
+	static char outstr[16];
 	outstr[0] = 0;
 	if (App.job_to_pid.find(jobid) != App.job_to_pid.end()) {
 		sprintf(outstr, "%u", App.job_to_pid[jobid]);
@@ -453,6 +508,8 @@ void parse_args(int /*argc*/, char *argv[])
 				pid_t pid = strtol(argv[ixArg+1], &p, 10);
 				App.query_pids.push_back(pid);
 			} else if (IsArg(parg, "ps", 2)) {
+			} else if (IsArg(parg, "wide", 1)) {
+				App.wide = true;
 			} else if (IsArg(parg, "long", 1)) {
 				App.show_full_ads = true;
 			} else if (IsArg(parg, "format", 1)) {
@@ -491,35 +548,88 @@ void parse_args(int /*argc*/, char *argv[])
 
 				while (argv[ixArg+1] && *(argv[ixArg+1]) != '-') {
 					++ixArg;
-					ClassAd ad;
-					StringList attributes;
-					if(!ad.GetExprReferences(argv[ixArg], attributes, attributes)) {
-						fprintf( stderr, "Error:  Parse error of: %s\n", argv[ixArg]);
-						exit(1);
+
+					parg = argv[ixArg];
+					const char * pattr = parg;
+					void * cust_fmt = NULL;
+					FormatKind cust_kind = PRINTF_FMT;
+
+					// If the attribute/expression begins with # treat it as a magic
+					// identifier for one of the derived fields that we normally display.
+					if (*parg == '#') {
+						++parg;
+						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
+							cust_fmt = format_slot_id;
+							cust_kind = INT_CUSTOM_FMT;
+							pattr = ATTR_SLOT_ID;
+							App.projection.AppendArg(pattr);
+							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
+							App.projection.AppendArg(ATTR_NAME);
+						} else if (MATCH == strcasecmp(parg, "PID")) {
+							cust_fmt = format_jobid_pid;
+							cust_kind = STR_CUSTOM_FMT;
+							pattr = ATTR_JOB_ID;
+							App.projection.AppendArg(pattr);
+						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
+							cust_fmt = format_jobid_program;
+							cust_kind = STR_CUSTOM_FMT;
+							pattr = ATTR_JOB_ID;
+							App.projection.AppendArg(pattr);
+						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
+							cust_fmt = format_int_runtime;
+							cust_kind = INT_CUSTOM_FMT;
+							pattr = ATTR_TOTAL_JOB_RUN_TIME;
+							App.projection.AppendArg(pattr);
+						} else {
+							parg = argv[ixArg];
+						}
 					}
 
-					attributes.rewind();
-					while (const char *str = attributes.next()) {
-						App.projection.AppendArg(str);
+					if ( ! cust_fmt) {
+						ClassAd ad;
+						StringList attributes;
+						if(!ad.GetExprReferences(parg, attributes, attributes)) {
+							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
+							exit(1);
+						}
+
+						attributes.rewind();
+						while (const char *str = attributes.next()) {
+							App.projection.AppendArg(str);
+						}
 					}
 
 					MyString lbl = "";
 					int wid = 0;
 					int opts = FormatOptionNoTruncate;
 					if (fheadings || App.print_head.Length() > 0) { 
-						const char * hd = fheadings ? argv[ixArg] : "(expr)";
+						const char * hd = fheadings ? parg : "(expr)";
 						wid = 0 - (int)strlen(hd); 
 						opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 						App.print_head.Append(hd);
 					}
-					else if (flabel) { lbl.sprintf("%s = ", argv[ixArg]); wid = 0; opts = 0; }
+					else if (flabel) { lbl.sprintf("%s = ", parg); wid = 0; opts = 0; }
 
 					lbl += fCapV ? "%V" : "%v";
 					if (App.diagnostic) {
-						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
-								ixArg, lbl.Value(), wid, opts,  argv[ixArg]);
+						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %x[%s]\n",
+							ixArg, lbl.Value(), wid, opts, cust_fmt, pattr);
 					}
-					App.print_mask.registerFormat(lbl.Value(), wid, opts, argv[ixArg]);
+					if (cust_fmt) {
+						switch (cust_kind) {
+							case INT_CUSTOM_FMT:
+								App.print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
+								break;
+							case FLT_CUSTOM_FMT:
+								App.print_mask.registerFormat(NULL, wid, opts, (FloatCustomFmt)cust_fmt, pattr);
+								break;
+							case STR_CUSTOM_FMT:
+								App.print_mask.registerFormat(NULL, wid, opts, (StringCustomFmt)cust_fmt, pattr);
+								break;
+						}
+					} else {
+						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+					}
 				}
 			} else if (IsArg(parg, "job", 3)) {
 				App.show_job_ad = true;
@@ -547,12 +657,21 @@ void parse_args(int /*argc*/, char *argv[])
 
 			//SLOT OWNER   PID   RUNTIME  MEMORY  COMMAND
 			AddPrintColumn("OWNER", 0, "RemoteOwner");
-			AddPrintColumn("SLOT", 0, "SlotId"); 
-			AddPrintColumn("JOB", -6, "JobId"); 
-			AddPrintColumn("  RUNTIME", 12, "TotalJobRunTime", format_int_runtime);
-			AddPrintColumn("PID", -6, "JobId", format_jobid_pid); 
-			AddPrintColumn("PROGRAM", 0, "JobId", format_jobid_program);
+			AddPrintColumn("CLIENT", 0, "ClientMachine");
+			AddPrintColumn("SLOT", 0, "SlotId", format_slot_id); 
+			App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
+			App.projection.AppendArg(ATTR_NAME);
+			AddPrintColumn("JOB", -6, ATTR_JOB_ID); 
+			AddPrintColumn("  RUNTIME", 12, ATTR_TOTAL_JOB_RUN_TIME, format_int_runtime);
+			AddPrintColumn("PID", -6, ATTR_JOB_ID, format_jobid_pid); 
+			AddPrintColumn("PROGRAM", 0, ATTR_JOB_ID, format_jobid_program);
 		}
+	}
+
+	if ( ! App.wide && ! App.print_mask.IsEmpty()) {
+		int console_width = getConsoleWindowSize()-1; // -1 because we get double spacing if we use the full width.
+		if (console_width < 0) console_width = 1024;
+		App.print_mask.SetOverallWidth(console_width);
 	}
 
 	if (App.show_job_ad) {
@@ -908,6 +1027,8 @@ static void read_address_file(const char * filename, std::string & addr)
 // pids and addresses when they are mentioned in the master log.  this code looks for:
 //		"Sent signal NNN to DAEMON (pid NNNN)"
 //		"Started DaemonCore process PATH, pid and pgroup = NNNN"
+//		"The DAEMON (pid NNNN) exited with status NNNN"		(daemon exit code and pid is scraped)
+//		"(condor_MASTER) pid NNNN EXITING WITH STATUS N"    (scan does not stop, but exit code and pide is scraped)
 //
 // for starter log, it also builds a job_to_pid map for jobs that are still alive
 // according to the log file.  this code looks for:
