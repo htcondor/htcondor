@@ -1373,7 +1373,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree = new_expr->Copy();
-			jobAd->Insert( attrs_to_copy[index], pTree );
+			jobAd->Insert( attrs_to_copy[index], pTree, false );
 		}
 	}
 
