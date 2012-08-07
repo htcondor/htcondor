@@ -212,7 +212,6 @@
 #define ATTR_MYPROXY_REFRESH_THRESHOLD  "MyProxyRefreshThreshold"
 #define ATTR_MYPROXY_NEW_PROXY_LIFETIME  "MyProxyNewProxyLifetime"
 // END ckireyev myproxy
-<<<<<<< HEAD
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
 #define ATTR_HAS_FILE_TRANSFER  "HasFileTransfer"
