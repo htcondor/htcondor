@@ -140,6 +140,18 @@ leaked a small amount of memory every time they were evaluated.  This bug was
 introduced when these functions were added in 7.7.6.
 \Ticket{3082}
 
+\item Several bug fixes for grid-type batch jobs:
+  \begin{itemize}
+  \item Monitoring the status of jobs submitted to PBS and SGE has been
+    improved. \Ticket{3067} \Ticket{3157} \Ticket{3181}
+  \item Job command-line arguments containing characters `(', `)', and `\&'
+    are now handled properly. \Ticket{3057}
+  \item Removing PBS jobs that have just completed no longer causes the jobs
+    to become held. \Ticket{3016}
+  \item Added work-around for \Condor{history} bug when submitting jobs to
+    a Condor pool running Condor 7.7.6 through 7.8.1. \Ticket{3133}
+  \end{itemize}
+
 \end{itemize}
 
 \noindent Known Bugs:
