@@ -537,7 +537,7 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
                 ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
                 if (expr) {
 		    expr = expr->Copy();
-                    ad->Insert(lname, expr);
+                    ad->Insert(lname, expr, false);
                 } else {
                     val = strdup(((LogSetAttribute *)log)->get_value());
                     ad->AssignExpr(lname, val);
@@ -879,7 +879,7 @@ LogSetAttribute::Play(void *data_structure)
 		return -1;
     if (value_expr) {
         ExprTree * pTree = value_expr->Copy();
-        rval = ad->Insert(name, pTree);
+        rval = ad->Insert(name, pTree, false);
     } else {
         rval = ad->AssignExpr(name, value);
     }

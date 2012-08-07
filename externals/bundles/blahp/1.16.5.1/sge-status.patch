@@ -1,7 +1,16 @@
-diff -u -r org.glite.ce.blahp/src/scripts/sge_status.sh org.glite.ce.blahp.patched/src/scripts/sge_status.sh
+diff -u -r org.glite.ce.blahp/src/scripts/sge_status.sh org.glite.ce.blahp-patched/src/scripts/sge_status.sh
 --- org.glite.ce.blahp/src/scripts/sge_status.sh	2011-06-09 06:21:02.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/scripts/sge_status.sh	2012-07-03 17:46:16.000000000 -0500
-@@ -62,7 +62,7 @@
++++ org.glite.ce.blahp-patched/src/scripts/sge_status.sh	2012-08-07 11:29:18.000000000 -0500
+@@ -22,6 +22,8 @@
+ 
+ [ -f ${GLITE_LOCATION:-/opt/glite}/etc/blah.config ] && . ${GLITE_LOCATION:-/opt/glite}/etc/blah.config
+ 
++sge_helper_path=${GLITE_LOCATION:-/opt/glite}/bin
++
+ usage_string="Usage: $0 [-w] [-n]"
+ 
+ #get worker node info
+@@ -62,7 +64,7 @@
  tmpid=`echo "$@"|sed 's/.*\/.*\///g'`
  
  # ASG Keith way

@@ -249,7 +249,7 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 				// insert every attr that's not in the ignored_attr_list
 			if (!ignored_attr_list->contains(lhstr)) {
 				pCopy = tree->Copy();
-				ad->Insert(lhstr, pCopy);
+				ad->Insert(lhstr, pCopy, false);
 				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
 					list->append(lhstr);
 				}
@@ -259,13 +259,13 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 				// no list of attrs to ignore - fallback on old behavior
 			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
 				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
+				ad->Insert( lhstr, pCopy, false );
 				if( list ) {
 					list->append( lhstr );
 				}
 			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
 				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
+				ad->Insert( lhstr, pCopy, false);
 			}
 		}
 	}

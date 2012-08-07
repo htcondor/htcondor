@@ -902,7 +902,7 @@ CombineParentAndChildClassAd(classad::ClassAd *dest,classad::ClassAd *ad,classad
 		dprintf(D_FULLDEBUG,"failed to copy %s value\n",itr->first.c_str());
 			return false;
 		}
-		if(!dest->Insert(itr->first,tree)) {
+		if(!dest->Insert(itr->first,tree, false)) {
 		dprintf(D_FULLDEBUG,"failed to insert %s\n",itr->first.c_str());	
 		return false;
 		}
@@ -2406,7 +2406,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		else {
 			expr = expr->Copy();
 		}
-		if(!src_ad->Insert(new_attr,expr)) {
+		if(!src_ad->Insert(new_attr,expr,false)) {
 			return false;
 		}
 	}
@@ -2428,7 +2428,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree)) {
+		if(!src_ad->Insert(attr,tree, false)) {
 			return false;
 		}
 	}
@@ -2441,7 +2441,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree)) {
+		if(!src_ad->Insert(attr,tree, false)) {
 			return false;
 		}
 		classad::Value val;

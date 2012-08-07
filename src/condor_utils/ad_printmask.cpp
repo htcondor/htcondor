@@ -28,7 +28,8 @@ static char *new_strdup (const char *);
 
 AttrListPrintMask::
 AttrListPrintMask ()
-	: row_prefix(NULL)
+	: overall_max_width(0)
+	, row_prefix(NULL)
 	, col_prefix(NULL)
 	, col_suffix(NULL)
 	, row_suffix(NULL)
@@ -37,7 +38,8 @@ AttrListPrintMask ()
 
 AttrListPrintMask::
 AttrListPrintMask (const AttrListPrintMask &pm)
-	: row_prefix(NULL)
+	: overall_max_width(0)
+	, row_prefix(NULL)
 	, col_prefix(NULL)
 	, col_suffix(NULL)
 	, row_suffix(NULL)
@@ -67,6 +69,12 @@ SetAutoSep(const char* rpre, const char * cpre, const char * cpost, const char *
 	if (cpre)  { col_prefix = new_strdup(cpre); }
 	if (cpost) { col_suffix = new_strdup(cpost); }
 	if (rpost) { row_suffix = new_strdup(rpost); }
+}
+
+void AttrListPrintMask::
+SetOverallWidth(int wid)
+{
+	overall_max_width = wid;
 }
 
 void AttrListPrintMask::
@@ -354,6 +362,9 @@ display_Headings(List<const char> & headings)
 		}
 
 	}
+
+	if (overall_max_width && retval.Length() > overall_max_width)
+		retval.setChar(overall_max_width, 0);
 
 	if (row_suffix)
 		retval += row_suffix;
@@ -776,6 +787,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 			}
 		}
 	}
+
+	if (overall_max_width && retval.Length() > overall_max_width)
+		retval.setChar(overall_max_width, 0);
 
 	if (row_suffix)
 		retval += row_suffix;
