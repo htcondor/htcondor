@@ -18,7 +18,7 @@ REM  WIX_BIN_DIR   - short path to Wix\bin
 REM  ZIP_BIN_DIR   - short path to 7-Zip
 REM  PERL_BIN_DIR  - short path to Perl (c:\Perl\bin)
 REM  GIT_BIN_DIR   - short path to git\bin
-REM  VS_DIR        - the short path to the Visual Studio directory tree
+REM  VS_DIR        - the short path to the Visual Studio 2008 directory tree
 REM  VC_DIR        - the short path to %VS_DIR%\VC (used to set include and lib)
 REM  VC_BIN        - the short path to %VS_DIR%\VC\bin (where the compiler is)
 REM  SDK_DIR       - the short path to the Windows SDK (v7.0)
@@ -36,7 +36,7 @@ REM   MSCONFIG_TOOLS_DIR must be set to the condor sources msconfig dir
 REM   or this batch file must be run from that directory
 REM
 REM   the location of the MS C compiler is derived from the
-REM   VS100COMNTOOLS or VS90COMNTOOLS environment variable. (which is set in all
+REM   VS90COMNTOOLS environment variable. (which is set in all
 REM   user's environments by the default compiler install.)
 REM
 REM
@@ -136,17 +136,12 @@ if not "~%ProgramFiles(x86)%"=="~" set PROGRAMS_DIR=%SystemDrive%\PROGRA~2
 :: we can use that to setup the compiler environment. if it's not set
 :: then all we can do is choose default values for environment variables.
 ::
-if "~%VS100COMNTOOLS%"=="~" goto check_nine
-for /D %%I in ("%VS100COMNTOOLS%..") do set VS100ROOT=%%~sdpI
-set VS_DIR=%VS100ROOT:~0,-1%
-goto complete_vs_path
-
-:check_nine
 if "~%VS90COMNTOOLS%"=="~" goto use_default_paths
+
+:: derive from VS90COMNTOOLS
+::
 for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
-
-:complete_vs_path
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
 set DBG_TOOLS_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)

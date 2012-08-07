@@ -74,7 +74,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	
 	if (WINDOWS)
 	  # need to expand the configure and
-	  set(TOOLSET msvc)
+	  set(TOOLSET msvc-9.0)
 	  set(JAM_EXT bat)
 	  set(EXEC .\\)
 

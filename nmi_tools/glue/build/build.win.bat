@@ -28,17 +28,15 @@ set TMP=%BUILD_ROOT%\Temp
 ::
 for /D %%I in ("%VS90COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC90_BIN=%%~sdpIVC\bin
 for /D %%I in ("%VS90COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC90_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS90COMNTOOLS%..") do set VSROOT=%%~sdpI
+for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
+set VS_DIR=%VS90ROOT:~0,-1%
+set VC_DIR=%VS_DIR%\VC
+set VC_BIN=%VC_DIR%\bin
 
 :: pick up vs2010 compiler path from VS100COMNTOOLS environment variable
 ::
 for /D %%I in ("%VS100COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC100_BIN=%%~sdpIVC\bin
 for /D %%I in ("%VS100COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC100_IDE=%%~sdpICommon7\IDE
-for /D %%I in ("%VS100COMNTOOLS%..") do set VSROOT=%%~sdpI
-
-set VS_DIR=%VSROOT:~0,-1%
-set VC_DIR=%VS_DIR%\VC
-set VC_BIN=%VC_DIR%\bin
 
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
@@ -143,8 +141,8 @@ dir CMakeFiles\generate.stamp*
 for /F %%I in ('dir /b/s CMakeLists.*') do touch %%I
 dir CMakeLists.txt
 dir CMakeFiles\generate.stamp*
-@echo cmake.exe . -G "Visual Studio 10"
-cmake.exe . -G "Visual Studio 10"
+@echo cmake.exe . -G "Visual Studio 9 2008"
+cmake.exe . -G "Visual Studio 9 2008"
 if ERRORLEVEL 1 goto finis
 @echo devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD

@@ -163,7 +163,6 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     # change exestr for Windows tasks.
     # build.win.bat uses BASE_DIR to setup some things.
-	$ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS100COMNTOOLS}..\\IDE;$ENV{VS100COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
     $ENV{BASE_DIR} = "$BaseDir";
     if ($taskname eq $TAR_TASK) {
         if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {

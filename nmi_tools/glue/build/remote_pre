@@ -53,7 +53,7 @@ my %defines = (
 $| = 1;
 
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS100COMNTOOLS}..\\IDE;$ENV{VS100COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
+    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
     $externals_loc   = "c:/temp/condor";
     #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
 } else {
@@ -88,7 +88,6 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	# in the definition of $installcmakecmd to point to the correct
 	# thing.
 	$cmake = "cmake";
-	$defines{generator} = "-G \"Visual Studio 10\"";
 } else {
 	$cmake = `$installcmakecmd ${CONDOR_SCRATCH_DIR} 2>&1 | sed -n \\\$p`;
 	if ($? != 0 || !defined($cmake) || $cmake =~ m/^FAILURE:/) {
