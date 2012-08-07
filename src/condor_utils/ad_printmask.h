@@ -72,6 +72,7 @@ class AttrListPrintMask
 	~AttrListPrintMask ();
 
 	void SetAutoSep(const char* rpre, const char * cpre, const char * cpost, const char * rpost);
+	void SetOverallWidth(int wid);
 
 	// register a format and an attribute
 	void registerFormat (const char *fmt, int wid, int opts, const char *attr, const char*alt="");
@@ -116,6 +117,7 @@ class AttrListPrintMask
 	void copyList  (List<Formatter> &, List<Formatter> &);
 	void copyList  (List<char> &, List<char> &);
 
+	int overall_max_width;
 	const char *    row_prefix;
 	const char *    col_prefix;
 	const char *    col_suffix;
