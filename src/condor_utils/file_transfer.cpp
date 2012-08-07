@@ -854,6 +854,10 @@ FileTransfer::DownloadFiles(bool blocking)
 		if ( !d.connectSock(&sock,0) ) {
 			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
 					 "%s\n", TransSock );
+			Info.success = 0;
+			Info.in_progress = false;
+			sprintf( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
+					 TransSock );
 			return FALSE;
 		}
 
@@ -863,6 +867,10 @@ FileTransfer::DownloadFiles(bool blocking)
 
 		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
+			Info.success = 0;
+			Info.in_progress = false;
+			sprintf( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
+					 TransSock );
 			return 0;
 		}
 
@@ -1201,6 +1209,10 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		if ( !d.connectSock(&sock,0) ) {
 			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
 					 "%s\n", TransSock );
+			Info.success = 0;
+			Info.in_progress = false;
+			sprintf( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
+					 TransSock );
 			return FALSE;
 		}
 
@@ -1210,6 +1222,10 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
+			Info.success = 0;
+			Info.in_progress = false;
+			sprintf( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
+					 TransSock );
 			return 0;
 		}
 
