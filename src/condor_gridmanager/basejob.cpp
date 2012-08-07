@@ -674,7 +674,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 			if ( (expr = new_ad->LookupExpr( held_removed_update_attrs[i] )) != NULL ) {
 				ExprTree * pTree = expr->Copy();
-				jobAd->Insert( held_removed_update_attrs[i], pTree );
+				jobAd->Insert( held_removed_update_attrs[i], pTree, false );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}

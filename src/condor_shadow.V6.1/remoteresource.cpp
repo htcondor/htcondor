@@ -1077,7 +1077,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
 	if( tree ) {
 		tree = tree->Copy();
-		jobAd->Insert(ATTR_MEMORY_USAGE, tree);
+		jobAd->Insert(ATTR_MEMORY_USAGE, tree, false);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
