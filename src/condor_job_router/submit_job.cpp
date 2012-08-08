@@ -608,6 +608,105 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	return success;
 }
 
+/*
+	Update src in the queue so that it ends up looking like dest.
+    This handles attribute deletion as well as change of value.
+	Assumes the existance of an open qmgr connection (via ConnectQ).
+*/
+bool push_classad_diff(classad::ClassAd & src,classad::ClassAd & dest)
+{
+	int cluster;
+	if( ! src.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a cluster\n");
+		return false;
+	}
+	int proc;
+	if( ! src.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
+		return false;
+	}
+	for( classad::ClassAd::iterator it = src.begin();
+		 it != src.end(); ++it)
+	{
+		std::string src_rhstr;
+		std::string dest_rhstr;
+		ExprTree * src_tree;
+		ExprTree * dest_tree;
+
+		char const *attr = it->first.c_str();
+
+		src_tree = src.Lookup( attr );
+		if ( src_tree ) {
+			char const *rhstr = ExprTreeToString( src_tree );
+			if( !rhstr) { 
+				dprintf(D_ALWAYS,"(%d.%d) push_classad_diff: Problem processing classad attribute %s\n", cluster, proc, attr);
+				return false;
+			}
+			src_rhstr = rhstr;
+		}
+
+		dest_tree = dest.Lookup( attr );
+		if ( dest_tree ) {
+			char const *rhstr = ExprTreeToString( dest_tree );
+			if( !rhstr) { 
+				dprintf(D_ALWAYS,"(%d.%d) push_classad_diff: Problem processing classad attribute %s\n", cluster, proc, attr);
+				return false;
+			}
+			dest_rhstr = rhstr;
+			if( dest_rhstr == src_rhstr ) {
+				continue;
+			}
+		}
+		else {
+			dprintf(D_FULLDEBUG, "Deleting %s\n", attr);
+			DeleteAttribute(cluster, proc, attr);
+			continue;
+		}
+
+		dprintf(D_FULLDEBUG, "Setting %s = %s\n", attr, dest_rhstr.c_str());
+		if( SetAttribute(cluster, proc, attr, dest_rhstr.c_str()) == -1 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_classad_diff: Failed to set %s = %s\n", cluster, proc, attr, dest_rhstr.c_str());
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool push_classad_diff_with_current_priv(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+{
+	FailObj failobj;
+	Qmgr_connection *qmgr = open_job(src,schedd_name,pool_name,failobj);
+	if( !qmgr ) {
+		return false;
+	}
+
+	bool ret = push_classad_diff(src,dest);
+
+	failobj.SetQmgr(0);
+	if( ! DisconnectQ(qmgr, ret /* commit */)) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: Failed to commit changes\n");
+		return false;
+	}
+
+	return ret;
+}
+
+/*
+	Update src in the queue so that it ends up looking like dest.
+    This handles attribute deletion as well as change of value.
+	Establishes (and tears down) a qmgr connection.
+*/
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(src);
+
+	success = push_classad_diff_with_current_priv(src,dest,schedd_name,pool_name);
+
+	set_priv(priv);
+	return success;
+}
+
 static bool finalize_job_with_current_privs(classad::ClassAd const &job,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
 {
 	FailObj failobj;

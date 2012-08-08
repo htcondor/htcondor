@@ -226,6 +226,10 @@ class JobRouter: public Service {
 	// Return true if job should be spooled.
 	bool TestJobSandboxed(RoutedJob *job);
 
+	// Return true if job should be edited in place rather than
+	// having a new copy submitted
+	bool TestEditJobInPlace(RoutedJob *job);
+
 	//Produce a default JobRouter name.
 	std::string DaemonIdentityString();
 

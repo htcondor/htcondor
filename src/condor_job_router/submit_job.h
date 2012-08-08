@@ -138,6 +138,14 @@ bool push_dirty_attributes(classad::ClassAd & src);
 bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name);
 
 /*
+	Update src in the queue so that it ends up looking like dest.
+    This handles attribute deletion as well as change of value.
+	Establishes (and tears down) a qmgr connection.
+	schedd_name and pool_name can be NULL to indicate "local".
+*/
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name);
+
+/*
 
 Pull a submit_job() job's results out of the sandbox and place them back where
 they came from.  If successful, let the job leave the queue.
