@@ -39,9 +39,9 @@ as well as whether the site has experienced recent job failures.
 The \Condor{job\_router} daemon and configuration determine a policy
 for which jobs may be transformed and sent to 
 grid sites.
-A job is transformed into a grid universe job
-by making a copy of the original job ClassAd, 
-modifying some attributes of the job.
+By default, a job is transformed into a grid universe job
+by making a copy of the original job ClassAd, and
+modifying some attributes in this copy of the job.
 The copy is called the routed copy,
 and it shows up in the job queue under a new job id.
 
@@ -61,6 +61,12 @@ the original job returns to the normal idle state,
 and is available for matchmaking or rerouting.
 If, instead, the original job is removed or goes on hold,
 the routed copy is removed.
+
+Although the default mode routes vanilla universe jobs to
+grid universe jobs, the routing rules may be configured
+to do some other transformation of the job.  It is also
+possible to edit the job in place rather than creating
+a new transformed version of the job.
 
 The \Condor{job\_router} daemon utilizes a \Term{routing table},
 in which a ClassAd describes each site to where jobs may be sent.
@@ -325,7 +331,10 @@ The conversion of a job to a routed copy may require the
 job ClassAd to be modified.
 The Routing Table specifies attributes of the different possible
 routes and it may specify specific modifications that should be made
-to the job when it is sent along a specific route.
+to the job when it is sent along a specific route.  In addition
+to this mechanism for transforming the job, external programs may be
+invoked to transform the job.  For more information, see
+section~\ref{sec:job-hooks-JR}.
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
@@ -344,8 +353,8 @@ The \Condor{job\_router} distinguishes routes and advertises
 statistics based on this attribute's value.
 
 \index{Job Router Routing Table ClassAd attribute!Requirements}
-\item[Requirements] A \Attr{Requirements} expression in New ClassAd
-syntax that identifies jobs that may be matched to the route.  Note
+\item[Requirements] A \Attr{Requirements} expression
+that identifies jobs that may be matched to the route.  Note
 that, as with all settings, requirements specified in
 the configuration variable
 \MacroNI{JOB\_ROUTER\_ENTRIES} override the setting of
@@ -386,7 +395,7 @@ such that a site at which jobs are sent only to fail (a black hole)
 receives fewer jobs.
 
 \index{Job Router Routing Table ClassAd attribute!JobFailureTest}
-\item[JobFailureTest] An expression in New ClassAds syntax
+\item[JobFailureTest] An expression
 evaluated for each job that finishes,
 to determine whether it was a failure.
 The default value if no expression is defined
@@ -403,7 +412,7 @@ universe for the routed copy of the job.  The default value is 9,
 which is the \SubmitCmd{grid} universe.
 
 \index{Job Router Routing Table ClassAd attribute!UseSharedX509UserProxy}
-\item[UseSharedX509UserProxy] A boolean expression in New ClassAds syntax,
+\item[UseSharedX509UserProxy] A boolean expression
 that when \Expr{True} causes the value of \Attr{SharedX509UserProxy}
 to be the X.509 user proxy for the routed job.
 Note that if the \Condor{job\_router} daemon is running as root,
@@ -426,7 +435,7 @@ turn on sandboxing by having the attribute \Attr{JobShouldBeSandboxed}.
 A string representing file containing the X.509 user proxy for the routed job.
 
 \index{Job Router Routing Table ClassAd attribute!JobShouldBeSandboxed}
-\item[JobShouldBeSandboxed] A boolean expression in New ClassAd syntax,
+\item[JobShouldBeSandboxed] A boolean expression
 that when \Expr{True} causes the created copy of the job to be sandboxed.
 A copy of the input files will be placed in the
 \Condor{schedd} daemon's spool area for the target job,
@@ -459,12 +468,9 @@ For example, if the routed job goes on hold or stays idle for too long,
 remove it and return the original copy of the job to a normal state.
 
 \index{Job Router Routing Table ClassAd attribute!Eval\_Set\_<ATTR>}
-\item[Eval\_Set\_<ATTR>] Defines an expression written in New ClassAd
-syntax. The expression is evaluated, and the resulting value
+\item[Eval\_Set\_<ATTR>] Defines an expression.
+The expression is evaluated, and the resulting value
 sets the value of the routed copy's job ClassAd attribute \Attr{<ATTR>}.
-An expected usage is where a New ClassAd expression evaluation is required.
-Recall that the \Condor{job\_router} daemon evaluates using New ClassAd
-syntax, but the routed copy is represented by the current ClassAd language.
 
 \index{Job Router Routing Table ClassAd attribute!Copy\_<ATTR>}
 \item[Copy\_<ATTR>] Defined with the name of a routed copy ClassAd
@@ -478,6 +484,25 @@ original expression.
 \item[Delete\_<ATTR>] Deletes \Attr{<ATTR>} from the routed copy
 ClassAd.  A value assigned to this attribute in the routing table
 entry is ignored.
+
+\index{Job Router Routing Table ClassAd attribute!EditJobInPlace}
+\item[EditJobInPlace] A boolean expression that, when true, causes the
+original job to be transformed in place rather than creating a new
+transformed version of the job.  In this mode, the routing hook
+\Macro{<Keyword>\_HOOK\_TRANSLATE\_JOB} and transformation
+rules in the routing table are applied during the job
+transformation.  The routing table attribute \Attr{GridResource} is
+ignored, and there is no default transformation of the job from a
+vanilla job to a grid universe job as there is otherwise.  Once
+transformed, the job is still a candidate for matching routing rules,
+so it is up to the routing logic to control whether the job may be
+transformed multiple times or not.  For example, to transform the job
+only once, an attribute could be set in the job ad to prevent it from
+matching the same routing rule in the future.  To transform the job
+multiple times with limited frequency, a timestamp could be inserted
+into the job ad marking the time of the last transformation, and the
+routing entry could require that this timestamp either be undefined
+or older than some limit.
 
 \end{description}
 

@@ -127,7 +127,7 @@ build_valid_daemon_name( const char* name )
 				// no '@', see if what we have is our hostname
 			MyString fqdn = get_fqdn_from_hostname(name);
 			if( fqdn.Length() > 0 ) {
-				if( get_local_fqdn() == fqdn ) {
+				if( !strcasecmp( get_local_fqdn().Value(), fqdn.Value() ) ) {
 						// Yup, so just the full hostname.
 					just_host = true;
 				}					

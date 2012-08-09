@@ -16,9 +16,8 @@
  # 
  ############################################################### 
 
-# Openssl on rhel3/4 don't have EVP_sha256(), which the ec2_gahp uses.
-if( EXPAT_FOUND AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND
-NOT ${SYSTEM_NAME} MATCHES "rhel3"  AND NOT ${SYSTEM_NAME} MATCHES "rhel4" )
+# Openssl on rhel4 don't have EVP_sha256(), which the ec2_gahp uses.
+if( EXPAT_FOUND AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND NOT ${SYSTEM_NAME} MATCHES "rhel4" )
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -32,19 +31,8 @@ NOT ${SYSTEM_NAME} MATCHES "rhel3"  AND NOT ${SYSTEM_NAME} MATCHES "rhel4" )
     	OFF )
 
     # Build an executable needed by the tests.
-	condor_exe_test( queryAPI-sim
-        "queryAPI-sim.cpp"
-        "" )
+	condor_exe_test( queryAPI-sim "queryAPI-sim.cpp" "" )
 
     set_source_files_properties(queryAPI-sim.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated)
-
-    # Declare the test.
-    #
-    # FIXME: the cmake code is broken and dumps the list_* files into
-    # this directory instead of the condor_tests directory.  It's also
-    # broken and dumping them in the *source* directories, rather than
-    # the *object* directories, but that's a whole different failure.
-    #
-    # condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
 
 endif()

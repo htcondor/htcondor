@@ -18,7 +18,7 @@
 
 MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
-	if (BUILD_TESTS)
+	if (BUILD_TESTING)
 
 		set ( LOCAL_${_CNDR_TARGET} ${_CNDR_TARGET} )
 
@@ -43,15 +43,8 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ${LOCAL_${_CNDR_TARGET}} )
 		endif()
 
-		# will tack onto a global var which will be *all test targets.
-		if ( CONDOR_TESTS )
-			set ( CONDOR_TESTS "${CONDOR_TESTS};${_CNDR_TARGET}" )
-		else( CONDOR_TESTS )
-			set ( CONDOR_TESTS ${_CNDR_TARGET} )
-		endif( CONDOR_TESTS )
+		APPEND_VAR( CONDOR_TESTS ${_CNDR_TARGET} )
 
-		set ( CONDOR_TESTS ${CONDOR_TESTS} PARENT_SCOPE )
-
-	endif(BUILD_TESTS)
+	endif(BUILD_TESTING)
 
 ENDMACRO(CONDOR_EXE_TEST)

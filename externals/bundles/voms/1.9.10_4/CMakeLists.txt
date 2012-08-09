@@ -58,11 +58,7 @@ if ( WITH_VOMS )
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/globus52.patch &&
 								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
-			if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-				set (VOMS_OPENSSL_FLAG --with-openssl-prefix=/usr/kerberos)
-			else()
-				set (VOMS_OPENSSL_FLAG "")
-			endif()
+			set (VOMS_OPENSSL_FLAG "")
 		endif()
 
 		condor_pre_external( VOMS voms-1.9.10_4-p3 "include;${VOMS_LIB}" "done")
