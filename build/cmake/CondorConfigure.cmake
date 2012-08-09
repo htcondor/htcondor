@@ -136,6 +136,7 @@ if( NOT WINDOWS)
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
         find_multiple ("dl" HAVE_LIBDL )
+	find_multiple ("ltdl" HAVE_LIBLTDL )
 
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
