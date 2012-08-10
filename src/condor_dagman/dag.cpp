@@ -618,6 +618,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessIsIdleEvent(job);
 				break;
 
+			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_SHADOW_EXCEPTION:
