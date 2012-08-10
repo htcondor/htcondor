@@ -46,7 +46,7 @@ extern JobCollectionType g_jobs;
 extern SubmissionCollectionType g_submissions;
 extern OwnerlessClusterType g_ownerless_clusters;
 extern SubmissionIndexType g_ownerless_submissions;
-extern SubmissionIndexType g_qdate_submissions;
+extern SubmissionMultiIndexType g_qdate_submissions;
 
 void global_reset();
 
