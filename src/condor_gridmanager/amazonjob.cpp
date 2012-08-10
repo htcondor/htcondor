@@ -163,7 +163,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	
 	// check the public_key_file
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_AMAZON_PUBLIC_KEY, buff );
+	jobAd->LookupString( ATTR_AMAZON_PUBLIC_KEY, buff, sizeof(buff) );
 	m_public_key_file = strdup(buff);
 	
 	if ( strlen(m_public_key_file) == 0 ) {
@@ -173,7 +173,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 
 	// check the private_key_file
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_AMAZON_PRIVATE_KEY, buff );
+	jobAd->LookupString( ATTR_AMAZON_PRIVATE_KEY, buff, sizeof(buff) );
 	m_private_key_file = strdup(buff);
 	
 	if ( strlen(m_private_key_file) == 0 ) {
@@ -192,10 +192,10 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	
 	// if user assigns both user_data and user_data_file, the two will
 	// be concatenated by the gahp
-	if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA_FILE, buff ) ) {
+	if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA_FILE, buff, sizeof(buff) ) ) {
 		m_user_data_file = strdup(buff);	
 	}
-	if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA, buff ) ) {
+	if ( jobAd->LookupString( ATTR_AMAZON_USER_DATA, buff, sizeof(buff) ) ) {
 		m_user_data = strdup(buff);
 	}
 	
@@ -204,7 +204,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	// if clients don't assign this value in condor submit file,
 	// we should set the default value to NULL and gahp_server
 	// will start VM in Amazon using m1.small mode.
-	if ( jobAd->LookupString( ATTR_AMAZON_INSTANCE_TYPE, buff ) ) {
+	if ( jobAd->LookupString( ATTR_AMAZON_INSTANCE_TYPE, buff, sizeof(buff) ) ) {
 		m_instance_type = strdup(buff);	
 	}
 	

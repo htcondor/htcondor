@@ -169,7 +169,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		batchType = strdup( buff );
 	} else {
@@ -179,7 +179,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
 	} else {

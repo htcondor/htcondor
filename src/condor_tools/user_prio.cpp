@@ -564,7 +564,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
     attrAcctGroup.sprintf("AccountingGroup%d", i);
     attrIsAcctGroup.sprintf("IsAccountingGroup%d", i);
 
-    if( !ad->LookupString	( attrName, name ) 		|| 
+    if( !ad->LookupString	( attrName, name, sizeof(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
 			continue;
 
@@ -712,7 +712,7 @@ static void PrintResList(AttrList* ad)
     sprintf( attrName , "Name%d", i );
     sprintf( attrStartTime , "StartTime%d", i );
 
-    if( !ad->LookupString   ( attrName, name ) ||
+    if( !ad->LookupString   ( attrName, name, sizeof(name) ) ||
 		!ad->LookupInteger  ( attrStartTime, StartTime))
             break;
 
