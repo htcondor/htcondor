@@ -18,8 +18,7 @@ condor_debconf_cfg=/etc/condor/config.d/00debconf
 
 condor_make_homedir() {
     for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG SPOOL; do
-        dname=$(condor_config_val $dlabel)
-        if [ $? -eq 0 ]; then
+        if dname=$(condor_config_val $dlabel 2>/dev/null); then
             mkdir -p $dname
             chown -R $condor_user: $dname
         else

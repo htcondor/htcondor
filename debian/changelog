@@ -1,3 +1,10 @@
+condor (7.8.2~dfsg.1-1) UNRELEASED; urgency=low
+
+  * Make postinst script more robust against missing config variables (Closes:
+    #684667). Patch is courtesy of Tim Cartwright.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 12 Aug 2012 19:20:35 +0200
+
 condor (7.8.2~dfsg.1-1) unstable; urgency=high
 
   * Upstream security release. Prevent an attacker who is manipulating
