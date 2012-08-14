@@ -46,7 +46,8 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[9]) && 
 		verify_string_name(argv[10]) &&
 		verify_string_name(argv[11]) &&
-		verify_string_name(argv[12]);
+		verify_string_name(argv[12]) &&
+		verify_string_name(argv[13]);
 }
 
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>

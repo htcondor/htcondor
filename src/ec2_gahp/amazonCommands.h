@@ -50,6 +50,10 @@
 #define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC_VM_ATTACH_VOLUME"
 #define AMAZON_COMMAND_VM_CREATE_TAGS		"EC2_VM_CREATE_TAGS"
 
+#define AMAZON_COMMAND_VM_START_SPOT        "EC2_VM_START_SPOT"
+#define AMAZON_COMMAND_VM_STOP_SPOT         "EC2_VM_STOP_SPOT"
+#define AMAZON_COMMAND_VM_STATUS_SPOT       "EC2_VM_STATUS_SPOT"
+
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
 #define AMAZON_COMMAND_S3_CREATE_BUCKET     "AMAZON_S3_CREATE_BUCKET"
@@ -101,6 +105,21 @@ class AmazonVMStart : public AmazonRequest {
         std::string instanceID;
 };
 
+class AmazonVMStartSpot : public AmazonVMStart {
+    public:
+        AmazonVMStartSpot();
+        virtual ~AmazonVMStartSpot();
+        
+        virtual bool SendRequest();
+        
+        // EC2_VM_START_SPOT uses the same argument structure as EC2_VM_START.
+        // static bool ioCheck( char ** argv, int argc );
+        static bool workerFunction( char ** argv, int argc, std::string & result_string );
+
+    protected:
+        std::string spotRequestID;
+};
+
 class AmazonVMStop : public AmazonRequest {
 	public:
 		AmazonVMStop();
@@ -108,6 +127,16 @@ class AmazonVMStop : public AmazonRequest {
 
 		static bool ioCheck(char **argv, int argc);
 		static bool workerFunction(char **argv, int argc, std::string &result_string);
+};
+
+class AmazonVMStopSpot : public AmazonVMStop {
+    public:
+        AmazonVMStopSpot();
+        virtual ~AmazonVMStopSpot();
+        
+        // EC2_VM_STOP_SPOT uses the same argument structure as EC2_VM_STOP.
+		// static bool ioCheck( char ** argv, int argc );
+		static bool workerFunction( char ** argv, int argc, std::string & result_string );
 };
 
 #define AMAZON_STATUS_RUNNING "running"
@@ -149,6 +178,29 @@ class AmazonVMStatus : public AmazonVMStatusAll {
 
 		static bool ioCheck(char **argv, int argc);
 		static bool workerFunction(char **argv, int argc, std::string &result_string);
+};
+
+class AmazonStatusSpotResult {
+    public:
+        std::string status;
+        std::string ami_id;
+        std::string request_id;
+        std::string instance_id;
+};
+
+class AmazonVMStatusSpot : public AmazonVMStatus {
+    public:
+        AmazonVMStatusSpot();
+        virtual ~AmazonVMStatusSpot();
+
+        virtual bool SendRequest();
+        
+        // EC2_VM_STATUS_SPOT uses the same argument structure as EC2_VM_STATUS_SPOT.
+		// static bool ioCheck( char ** argv, int argc );
+		static bool workerFunction( char ** argv, int argc, std::string & result_string );
+
+    protected:
+        std::vector< AmazonStatusSpotResult > spotResults;
 };
 
 class AmazonVMRunningKeypair : public AmazonVMStatusAll {

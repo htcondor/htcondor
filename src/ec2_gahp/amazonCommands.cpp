@@ -44,6 +44,11 @@
 
 #define NULLSTRING "NULL"
 
+const char * nullStringIfEmpty( const std::string & str ) {
+    if( str.empty() ) { return NULLSTRING; }
+    else { return str.c_str(); }
+}
+
 //
 // This function should not be called for anything in query_parameters,
 // except for by AmazonQuery::SendRequest().
@@ -609,7 +614,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( ! verify_min_number_args( argc, 14 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 10, argv[0] );
+                 argc, 14, argv[0] );
         return false;
     }
 
@@ -702,6 +707,174 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
 // ---------------------------------------------------------------------------
 
+AmazonVMStartSpot::AmazonVMStartSpot() { }
+
+AmazonVMStartSpot::~AmazonVMStartSpot() { }
+
+struct vmSpotUD_t {
+    bool inInstanceId;
+    bool inSpotRequestId;
+    std::string & instanceID;
+    std::string & spotRequestID;
+
+    vmSpotUD_t( std::string & iid, std::string & srid ) : inInstanceId( false ), inSpotRequestId( false ), instanceID( iid ), spotRequestID( srid ) { }
+};
+typedef struct vmSpotUD_t vmSpotUD;
+
+//
+// Like the vsmStart*() functions, these assume we only ever get back
+// single-item response sets.  See the note above for a cleaner way of
+// handling multi-item response sets, should we ever need so to do.
+//
+
+void vmSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    vmSpotUD * vsud = (vmSpotUD *)vUserData;
+    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+        vsud->inInstanceId = true;
+    } else if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+        vsud->inSpotRequestId = true;
+    }
+}
+
+void vmSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
+    vmSpotUD * vsud = (vmSpotUD *)vUserData;
+    if( vsud->inInstanceId ) {
+        appendToString( (void *)cdata, len, 1, (void *) & vsud->instanceID );
+    } else if( vsud->inSpotRequestId ) {
+        appendToString( (void *)cdata, len, 1, (void *) & vsud->spotRequestID );
+    }
+}
+
+void vmSpotEEH( void * vUserData, const XML_Char * name ) {
+    vmSpotUD * vsud = (vmSpotUD *)vUserData;
+    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+        vsud->inInstanceId = false;
+    } else if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+        vsud->inSpotRequestId = false;
+    }
+}
+
+bool AmazonVMStartSpot::SendRequest() {
+    bool result = AmazonRequest::SendRequest();
+    if ( result ) {
+        vmSpotUD vsud( this->instanceID, this->spotRequestID );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & vmSpotESH, & vmSpotEEH );
+        XML_SetCharacterDataHandler( xp, & vmSpotCDH );
+        XML_SetUserData( xp, & vsud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+    } else {
+        if( this->errorCode == "E_CURL_IO" ) {
+            // To be on the safe side, if the I/O failed, make the gridmanager
+            // check to see the VM was started or not.
+            this->errorCode = "NEED_CHECK_VM_START"; 
+            return false;
+        }
+    }
+    return result;
+}
+
+bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
+    assert( strcmp( argv[0], "EC2_VM_START_SPOT" ) == 0 );
+    
+    // Uses the Query AP function 'RequestSpotInstances', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RequestSpotInstances.html
+
+    int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 14 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 14, argv[0] );
+        return false;
+    }
+
+    // Fill in required attributes / parameters.
+    AmazonVMStartSpot vmSpotRequest;
+    vmSpotRequest.serviceURL = argv[2];
+    vmSpotRequest.accessKeyFile = argv[3];
+    vmSpotRequest.secretKeyFile = argv[4];
+    vmSpotRequest.query_parameters[ "Action" ] = "RequestSpotInstances";
+    vmSpotRequest.query_parameters[ "LaunchSpecification.ImageId" ] = argv[5];
+    vmSpotRequest.query_parameters[ "InstanceCount" ] = "1";
+    vmSpotRequest.query_parameters[ "SpotPrice" ] = argv[6];
+
+    // Optional attributes / parameters.
+    if( strcasecmp( argv[7], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.KeyName" ] = argv[6];
+    }
+
+    if( strcasecmp( argv[10], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.InstanceType" ] = argv[10];
+    } else {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.InstanceType" ] = "m1.small";
+    }
+
+    if( strcasecmp( argv[11], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.Placement.AvailabilityZone" ] = argv[10];
+    }
+
+    if( strcasecmp( argv[12], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.SubnetId" ] = argv[11];
+    }
+    
+    if( strcasecmp( argv[13], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.NetworkInterface.1.PrivateIpAddress" ] = argv[12];
+    }
+    
+    for( int i = 14; i < argc; ++i ) {
+        std::ostringstream groupName;
+        groupName << "LaunchSpecification.SecurityGroup." << (i - 13 + 1);
+        vmSpotRequest.query_parameters[ groupName.str() ] = argv[ i ];
+    }
+    
+    // Handle user data.
+    std::string buffer;
+    if( strcasecmp( argv[8], NULLSTRING ) ) {
+        buffer = argv[8];
+    }
+    if( strcasecmp( argv[9], NULLSTRING ) ) {
+        std::string udFileName = argv[9];
+        std::string udFileContents;
+        if( ! readShortFile( udFileName, udFileContents ) ) {
+            result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
+            dprintf( D_ALWAYS, "failed to read userdata file '%s'.\n", udFileName.c_str() ) ;
+            return false;
+        }
+        buffer += udFileContents;
+    }
+    if( ! buffer.empty() ) {
+        char * base64Encoded = condor_base64_encode( (const unsigned char *)buffer.c_str(), buffer.length() );
+        vmSpotRequest.query_parameters[ "LaunchSpecification.UserData" ] = base64Encoded;
+        free( base64Encoded );
+    }
+    
+    // Send the request.
+    if( ! vmSpotRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID, vmSpotRequest.errorMessage.c_str(), vmSpotRequest.errorCode.c_str() ) ;
+    } else {
+        if( vmSpotRequest.spotRequestID.empty() ) {
+            dprintf( D_ALWAYS, "Got a result from endpoint that did not include a spot request ID, failing.  Response follows.\n" );
+            dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
+            dprintf( D_ALWAYS, vmSpotRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
+            result_string = create_failure_result( requestID, "Could not find spot request ID in repsonse from server.  Check the EC2 GAHP log for details.", "E_NO_SPOT_REQUEST_ID" );
+            // We don't return false here, because this isn't an error;
+            // it's a failure, which the grid manager will handle.
+        } else {
+            StringList resultList;
+            resultList.append( vmSpotRequest.spotRequestID.c_str() );
+            resultList.append( nullStringIfEmpty( vmSpotRequest.instanceID ) );
+            result_string = create_success_result( requestID, & resultList );
+        }
+    }
+
+    return true;
+} // end AmazonVMStartSpot::workerFunction()
+
+// ---------------------------------------------------------------------------
+
 AmazonVMStop::AmazonVMStop() { }
 
 AmazonVMStop::~AmazonVMStop() { }
@@ -748,14 +921,54 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
 
 // ---------------------------------------------------------------------------
 
+AmazonVMStopSpot::AmazonVMStopSpot() { }
+
+AmazonVMStopSpot::~AmazonVMStopSpot() { }
+
+bool AmazonVMStopSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
+    assert( strcmp( argv[0], "EC2_VM_STOP_SPOT" ) == 0 );
+    
+    // Uses the Query API function 'CancelSpotInstanceRequests', documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CancelSpotInstanceRequests.html
+    
+    int requestID;
+    get_int( argv[1], & requestID );
+
+    if( ! verify_min_number_args( argc, 6 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 6, argv[0] );
+        return false;
+    }
+    
+    AmazonVMStopSpot terminationRequest;
+    terminationRequest.serviceURL = argv[2];
+    terminationRequest.accessKeyFile = argv[3];
+    terminationRequest.secretKeyFile = argv[4];
+    terminationRequest.query_parameters[ "Action" ] = "CancelSpotInstanceRequests";
+    //
+    // Rather than cancel the corresponding instance in this function,
+    // just have the grid manager call EC2_VM_STOP; that allows us to
+    // return two error messages for two activities.
+    //
+    terminationRequest.query_parameters[ "SpotInstanceRequestId.1" ] = argv[5];
+
+    if( ! terminationRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            terminationRequest.errorMessage.c_str(),
+            terminationRequest.errorCode.c_str() );
+    } else {
+        result_string = create_success_result( requestID, NULL );
+    }
+    
+    return true;
+} // end AmazonVMStop::workerFunction()
+
+// ---------------------------------------------------------------------------
+
 AmazonVMStatus::AmazonVMStatus() { }
 
 AmazonVMStatus::~AmazonVMStatus() { }
-
-const char * nullStringIfEmpty( const std::string & str ) {
-    if( str.empty() ) { return NULLSTRING; }
-    else { return str.c_str(); }
-}    
 
 // Expecting:EC2_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_string) {
@@ -821,6 +1034,178 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
 
     return true;
 }
+
+// ---------------------------------------------------------------------------
+
+AmazonVMStatusSpot::AmazonVMStatusSpot() { }
+
+AmazonVMStatusSpot::~AmazonVMStatusSpot() { }
+
+struct vmStatusSpotUD_t {
+    enum vmStatusSpotTags_t {
+        NONE,
+        INSTANCE_ID,
+        STATUS,
+        AMI_ID,
+        REQUEST_ID
+    };
+    typedef enum vmStatusSpotTags_t vmStatusSpotTags;
+
+    bool inItem;
+    vmStatusSpotTags inWhichTag;
+    AmazonStatusSpotResult * currentResult;
+ 
+    std::vector< AmazonStatusSpotResult > & results;
+    
+    vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
+        inItem( false ),
+        inWhichTag( vmStatusSpotUD_t::NONE ),
+        currentResult( NULL ),
+        results( assrList ) { };
+};
+typedef struct vmStatusSpotUD_t vmStatusSpotUD;
+
+void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
+
+    if( ! vsud->inItem ) {
+        if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+            vsud->currentResult = new AmazonStatusSpotResult();
+            assert( vsud->currentResult != NULL );
+            vsud->inItem = true;
+        }
+        return;
+    }
+    
+    if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
+    } else if( strcasecmp( (const char *)name, "state" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::STATUS;
+    } else if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::INSTANCE_ID;
+    // Strictly speaking, this is part of the launch specification,
+    // but since there can be only one of those, and imageId is
+    // unique in this response, we can ignore that.
+    } else if( strcasecmp( (const char *)name, "imageId" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::AMI_ID;
+    } else {
+        vsud->inWhichTag = vmStatusSpotUD::NONE;
+    }
+}
+
+void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
+    vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
+    if( ! vsud->inItem ) { return; }
+    
+    std::string * targetString = NULL;
+    switch( vsud->inWhichTag ) {
+        case vmStatusSpotUD::NONE:
+            return;
+
+        case vmStatusSpotUD::REQUEST_ID:
+            targetString = & vsud->currentResult->request_id;
+            break;
+        
+        case vmStatusSpotUD::STATUS:
+            targetString = & vsud->currentResult->status;
+            break;
+        
+        case vmStatusSpotUD::AMI_ID:
+            targetString = & vsud->currentResult->ami_id;
+            break;
+        
+        case vmStatusSpotUD::INSTANCE_ID:
+            targetString = & vsud->currentResult->instance_id;
+            break;
+
+        default:
+            // This should never happen.
+            break;
+    }
+    
+    appendToString( (void *)cdata, len, 1, (void *)targetString );
+}
+
+void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
+    vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
+
+    if( vsud->inItem && strcasecmp( (const char *)name, "item" ) == 0 ) {
+            vsud->currentResult->status.c_str(),
+            vsud->currentResult->ami_id.c_str(),
+            vsud->currentResult->request_id.c_str(),
+            vsud->currentResult->instance_id.c_str() );
+        vsud->results.push_back( * vsud->currentResult );
+        delete vsud->currentResult;
+        vsud->currentResult = NULL;
+        vsud->inItem = false;
+    }
+
+    vsud->inWhichTag = vmStatusSpotUD::NONE;
+}
+
+bool AmazonVMStatusSpot::SendRequest() {
+    bool result = AmazonRequest::SendRequest();
+    if( result ) {
+        vmStatusSpotUD vssud( this->spotResults );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & vmStatusSpotESH, & vmStatusSpotEEH );
+        XML_SetCharacterDataHandler( xp, & vmStatusSpotCDH );
+        XML_SetUserData( xp, & vssud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+    }
+    return result;
+} // end AmazonVMStatusSpot::SendRequest()
+
+bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &result_string) {
+    assert( strcmp( argv[0], "EC2_VM_STATUS_SPOT" ) == 0 );
+
+    // Uses the Query API function 'DescribeSpotInstanceRequests', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSpotInstanceRequests.html
+
+    int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 6 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 6, argv[0] );
+        return false;
+    }
+
+    AmazonVMStatusSpot statusRequest;
+    statusRequest.serviceURL = argv[2];
+    statusRequest.accessKeyFile = argv[3];
+    statusRequest.secretKeyFile = argv[4];
+    statusRequest.query_parameters[ "Action" ] = "DescribeSpotInstanceRequests";
+    statusRequest.query_parameters[ "SpotInstanceRequestId.1" ] = argv[5];
+
+    //
+    // TODO: Implement a shared (w/ VM_STATUS_ALL) mechanism for parsing
+    // a spotInstanceRequestSet (with multiple items).
+    //
+    if( ! statusRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            statusRequest.errorMessage.c_str(),
+            statusRequest.errorCode.c_str() );
+    } else {
+        if( statusRequest.spotResults.size() == 0 ) {
+            result_string = create_success_result( requestID, NULL );
+        } else {
+            // There should only ever be one result, but let's not worry.
+            StringList resultList;
+            for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
+                AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
+                resultList.append( assr.request_id.c_str() );
+                resultList.append( assr.status.c_str() );
+                resultList.append( assr.ami_id.c_str() );
+            }
+            result_string = create_success_result( requestID, & resultList );
+        }
+    }
+
+    return true;
+} // end AmazonVmStatusSpot::workerFunction()
 
 // ---------------------------------------------------------------------------
 
