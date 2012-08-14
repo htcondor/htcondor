@@ -134,11 +134,12 @@ void usage(bool and_exit)
 		"\t-v[erbose]\t\tDisplay pids and addresses for daemons\n"
 		"\t-diag[nostic]\t\tDisplay extra information helpful for debugging\n"
 		"    and [addr-opt] is one of\n"
-		"\t-addr[ess] <host>\t\tSCHEDD host address to query\n"
+		"\t-addr[ess] <host>\t\tSTARTD host address to query\n"
 		"\t-log[dir] <dir>\t\tDirectory to seach for SCHEDD host address to query\n"
-		"\t-pid <pid>\t\tSCHEDD Process to query\n"
+		"\t-pid <pid>\t\tProcess ID of STARTD query\n"
+		"\t-al[lpids]\t\tQuery all local STARTDs\n"
 		"   and [display-opt] is one or more of\n"
-		"\t-ps\t\t\tDisplay process tree\n"
+//		"\t-ps\t\t\tDisplay process tree\n"
 		"\t-l[ong]\t\t\tDisplay entire classads\n"
 		"\t-w[ide]\t\t\tdon't truncate fields to fit the screen\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
@@ -256,9 +257,9 @@ format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
 {
 	static char outstr[10];
 	outstr[0] = 0;
-	bool from_name = true;
+	//bool from_name = false;
 	int is_dynamic = false;
-	if (from_name || (ad->LookupBool(ATTR_SLOT_DYNAMIC, is_dynamic) && is_dynamic)) {
+	if (/*from_name || */(ad->LookupBool(ATTR_SLOT_DYNAMIC, is_dynamic) && is_dynamic)) {
 		std::string name;
 		if (ad->LookupString(ATTR_NAME, name) && (0 == name.find("slot"))) {
 			size_t cch = sizeof(outstr)/sizeof(outstr[0]);
@@ -1000,7 +1001,7 @@ void parse_args(int /*argc*/, char *argv[])
 				char * p;
 				pid_t pid = strtol(argv[ixArg], &p, 10);
 				App.query_pids.push_back(pid);
-			} else if (IsArg(parg, "ps", 2)) {
+			} else if (IsArg(parg, "allpids", 2)) {
 				App.scan_pids = true;
 			} else if (IsArg(parg, "wide", 1)) {
 				App.wide = true;
@@ -1175,6 +1176,16 @@ void parse_args(int /*argc*/, char *argv[])
 		// constraint?
 	} else {
 		App.constraint.push_back("JobID=!=UNDEFINED");
+	}
+
+	if (App.scan_pids) {
+		#ifdef WIN32
+		#else
+		if (! is_root()) {
+			fprintf (stderr, "Warning: only the root account can use -allpids "
+			         "to query condor_startd's not owned by the current user\n");
+		}
+		#endif
 	}
 }
 
@@ -1605,7 +1616,7 @@ static void scan_a_log_for_info(
 		daemon_name_all_caps = "MASTER";
 		startup_banner_text = " (CONDOR_MASTER) STARTING UP";
 	} else {
-		bSlotLog = starts_with(it->first.c_str(),"Slot",NULL);
+		bSlotLog = starts_with(it->first.c_str(),"Slot",NULL) || starts_with(it->first.c_str(),"Starter",NULL);
 		if (bSlotLog) {
 			daemon_name_all_caps = "STARTER";
 			startup_banner_text = " (CONDOR_STARTER) STARTING UP";
@@ -1906,7 +1917,8 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_p
 	}
 	for (it = info.begin(); it != info.end(); ++it) {
 		// scan starter logs.
-		if (starts_with(it->first.c_str(),"Slot",NULL)) {
+		if (starts_with(it->first.c_str(),"Slot",NULL) || 
+			starts_with(it->first.c_str(),"Starter", NULL)) {
 			scan_a_log_for_info(info, job_to_pid, it);
 			continue;
 		}
