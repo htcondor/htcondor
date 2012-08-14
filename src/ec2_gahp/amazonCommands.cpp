@@ -1130,10 +1130,6 @@ void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
     if( vsud->inItem && strcasecmp( (const char *)name, "item" ) == 0 ) {
-            vsud->currentResult->status.c_str(),
-            vsud->currentResult->ami_id.c_str(),
-            vsud->currentResult->request_id.c_str(),
-            vsud->currentResult->instance_id.c_str() );
         vsud->results.push_back( * vsud->currentResult );
         delete vsud->currentResult;
         vsud->currentResult = NULL;
@@ -1180,10 +1176,6 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
     statusRequest.query_parameters[ "Action" ] = "DescribeSpotInstanceRequests";
     statusRequest.query_parameters[ "SpotInstanceRequestId.1" ] = argv[5];
 
-    //
-    // TODO: Implement a shared (w/ VM_STATUS_ALL) mechanism for parsing
-    // a spotInstanceRequestSet (with multiple items).
-    //
     if( ! statusRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,
             statusRequest.errorMessage.c_str(),
@@ -1206,6 +1198,56 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
 
     return true;
 } // end AmazonVmStatusSpot::workerFunction()
+
+// ---------------------------------------------------------------------------
+
+AmazonVMStatusAllSpot::AmazonVMStatusAllSpot() { }
+
+AmazonVMStatusAllSpot::~AmazonVMStatusAllSpot( ) { }
+
+bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &result_string) {
+    assert( strcmp( argv[0], "EC2_VM_STATUS_ALL_SPOT" ) == 0 );
+
+    // Uses the Query API function 'DescribeSpotInstanceRequests', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSpotInstanceRequests.html
+
+    int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 5 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 5, argv[0] );
+        return false;
+    }
+
+    AmazonVMStatusAllSpot statusRequest;
+    statusRequest.serviceURL = argv[2];
+    statusRequest.accessKeyFile = argv[3];
+    statusRequest.secretKeyFile = argv[4];
+    statusRequest.query_parameters[ "Action" ] = "DescribeSpotInstanceRequests";
+
+    if( ! statusRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            statusRequest.errorMessage.c_str(),
+            statusRequest.errorCode.c_str() );
+    } else {
+        if( statusRequest.spotResults.size() == 0 ) {
+            result_string = create_success_result( requestID, NULL );
+        } else {
+            StringList resultList;
+            for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
+                AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
+                resultList.append( assr.request_id.c_str() );
+                resultList.append( assr.status.c_str() );
+                resultList.append( assr.ami_id.c_str() );
+            }
+            result_string = create_success_result( requestID, & resultList );
+        }
+    }
+
+    return true;
+} // end AmazonVmStatusAllSpot::workerFunction()
 
 // ---------------------------------------------------------------------------
 

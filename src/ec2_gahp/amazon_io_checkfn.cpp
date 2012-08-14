@@ -72,6 +72,15 @@ bool AmazonVMStatus::ioCheck(char **argv, int argc)
 		verify_string_name(argv[5]);
 }
 
+bool AmazonVMStatusAllSpot::ioCheck(char **argv, int argc)
+{
+	return verify_min_number_args(argc, 5) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]);
+}
+
 // Expecting:EC2_VM_ASSOCIATE_ADDRESS  <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <elastic-ip> 
 bool AmazonAssociateAddress::ioCheck(char **argv, int argc)
 {

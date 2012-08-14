@@ -53,6 +53,7 @@
 #define AMAZON_COMMAND_VM_START_SPOT        "EC2_VM_START_SPOT"
 #define AMAZON_COMMAND_VM_STOP_SPOT         "EC2_VM_STOP_SPOT"
 #define AMAZON_COMMAND_VM_STATUS_SPOT       "EC2_VM_STATUS_SPOT"
+#define AMAZON_COMMAND_VM_STATUS_ALL_SPOT   "EC2_VM_STATUS_ALL_SPOT"
 
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
@@ -201,6 +202,15 @@ class AmazonVMStatusSpot : public AmazonVMStatus {
 
     protected:
         std::vector< AmazonStatusSpotResult > spotResults;
+};
+
+class AmazonVMStatusAllSpot : public AmazonVMStatusSpot {
+    public:
+        AmazonVMStatusAllSpot();
+        virtual ~AmazonVMStatusAllSpot();
+
+		static bool ioCheck( char ** argv, int argc );
+		static bool workerFunction( char ** argv, int argc, std::string & result_string );
 };
 
 class AmazonVMRunningKeypair : public AmazonVMStatusAll {

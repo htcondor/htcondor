@@ -95,6 +95,9 @@ registerAllAmazonCommands(void)
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_SPOT,
             AmazonVMStatusSpot::ioCheck, AmazonVMStatusSpot::workerFunction);
 
+    registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL_SPOT,
+            AmazonVMStatusAllSpot::ioCheck, AmazonVMStatusAllSpot::workerFunction);
+
 	/*
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REBOOT, 
 			AmazonVMReboot::ioCheck, AmazonVMReboot::workerFunction);
