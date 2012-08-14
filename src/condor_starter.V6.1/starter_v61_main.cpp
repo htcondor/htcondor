@@ -751,12 +751,14 @@ main( int argc, char **argv )
 }
 
 
-extern "C" 
+//extern "C" 
 int
-display_dprintf_header(char **buf,int *bufpos,int *buflen)
+//display_dprintf_header(char **buf,int *bufpos,int *buflen)
+display_dprintf_header(std::stringstream& formatter)
 {
 	if( dprintf_header ) {
-		return sprintf_realloc( buf, bufpos, buflen, "%s ", dprintf_header );
+		//return sprintf_realloc( buf, bufpos, buflen, "%s ", dprintf_header );
+		formatter << dprintf_header << " ";
 	}
 	return 0;
 }

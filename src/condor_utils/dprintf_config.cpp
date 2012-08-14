@@ -419,7 +419,7 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 			if(!logPath.empty())
 			{
 				// merge flags if we see the same log file name more than once.
-				// we don't really expect this to happen, but things get wierd of
+				// we don't really expect this to happen, but things get weird of
 				// it does happen and we don't check for it.
 				//
 				for(it = DebugLogs->begin(); it != DebugLogs->end(); ++it)
@@ -433,7 +433,26 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 				if(it == DebugLogs->end()) // We did not find the logPath in our DebugLogs
 				{
 					it = DebugLogs->insert(DebugLogs->end(),p_info[ii]);
-					it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
+					if(logPath == "OUTDBGSTR")
+					{
+						it->outputTarget = OUTPUT_DEBUG_STR;
+						it->dprintfFunc = &dprintf_to_outdbgstr;
+					}
+					else if(logPath == "1>")
+					{
+						it->outputTarget = STD_OUT;
+						it->debugFP = stdout;
+					}
+					else if(logPath == "2>")
+					{
+						it->outputTarget = STD_ERR;
+						it->debugFP = stderr;
+					}
+					else
+					{
+						it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
+						it->dprintfFunc = _dprintf_global_func;
+					}
 					it->logPath = logPath;
 				}
 

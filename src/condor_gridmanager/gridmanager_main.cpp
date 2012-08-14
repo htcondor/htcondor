@@ -181,9 +181,10 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries. 
-extern "C" 
+//extern "C" 
 int
-display_dprintf_header(char **buf,int *bufpos,int *buflen)
+//display_dprintf_header(char **buf,int *bufpos,int *buflen)
+display_dprintf_header(std::stringstream& formatter)
 {
 	static pid_t mypid = 0;
 
@@ -191,5 +192,7 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 		mypid = daemonCore->getpid();
 	}
 
-	return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
+	//return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
+	formatter << "[" << (long)mypid << "] ";
+	return 0;
 }

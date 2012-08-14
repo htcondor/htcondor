@@ -22,6 +22,11 @@
 // to have any effect.
 #include <string>
 #include <map>
+
+struct DebugFileInfo;
+
+typedef void (*DprintfFuncPtr)(int, int, time_t, struct tm*, std::string&, DebugFileInfo*);
+
 enum DebugOutput
 {
 	FILE_OUT,
@@ -59,13 +64,25 @@ struct DebugFileInfo
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
-	DebugFileInfo() : outputTarget(FILE_OUT), debugFP(0), choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
+	bool dont_panic;
+	DebugFileInfo() :
+			outputTarget(FILE_OUT),
+			debugFP(0),
+			choice(0),
+			maxLog(0),
+			maxLogNum(0),
+			want_truncate(false),
+			accepts_all(false),
+			dont_panic(false),
+			dprintfFunc(NULL)
+			{}
 	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
-		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum),
-		want_truncate(dfi.want_truncate), accepts_all(dfi.accepts_all) {}
+		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
+		accepts_all(dfi.accepts_all), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
 	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
 	bool MatchesCatAndFlags(int cat_and_flags) const;
+	DprintfFuncPtr dprintfFunc;
 };
 
 struct dprintf_output_settings
@@ -82,3 +99,11 @@ struct dprintf_output_settings
 	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
 };
 
+//Global dprint functions meant as fallbacks.
+void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
+void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo);
+
+#ifdef WIN32
+//Output to dbg string
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo);
+#endif

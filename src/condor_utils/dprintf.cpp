@@ -54,9 +54,6 @@
 
 extern const char *_condor_DebugFlagNames[];
 
-FILE *debug_lock(int debug_flags, const char *mode, int force_lock);
-void debug_unlock(int debug_flags);
-
 static FILE *debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic);
 static void debug_unlock_it(struct DebugFileInfo* it);
 static FILE *open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic);
@@ -66,9 +63,8 @@ static void debug_open_lock(void);
 static void debug_close_lock(void);
 static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic);
 
-FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
-void debug_unlock(int debug_level);
+
 void preserve_log_file(int debug_level);
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
@@ -106,10 +102,10 @@ static int DebugLockDelay = 0; /* seconds spent waiting for lock */
 static time_t DebugLockDelayPeriodStarted = 0;
 
 /*
- * On Windows we have the ability to hold open the handle/FD to the
- * log file.  On Linux this is not enabled because of the hard global
- * limit to FDs.  Windows can open as many as you want short of running
- * out of physical resources like memory.
+ * We have the ability to hold log files open between writes. This has
+ * caused some grief with respect to log rotation on Linux because two
+ * processes have open FDs to the same file and may attempt to rotate
+ * in succession.
  */
 std::vector<DebugFileInfo> * DebugLogs = NULL;
 /*
@@ -145,7 +141,7 @@ int      DebugContinueOnOpenFailure = 0;
 char	*DebugLock = NULL;
 int		DebugLockIsMutex = -1;
 
-int		(*DebugId)(char **buf,int *bufpos,int *buflen);
+int		(*DebugId)(std::stringstream& formatter);
 int		SetSyscalls(int mode);
 
 int		LockFd = -1;
@@ -217,36 +213,17 @@ static char *formatTimeHeader(struct tm *tm) {
 	return timebuf;
 }
 
-/* _condor_dfprintf_va
- * This function is used internally by the dprintf system wherever
- * it wants to write directly to the open debug log.
- *
- * Since this function is called from a code path that is already
- * not reentrant, this function itself does not bother to try
- * to be reentrant.  Specifically, it uses static buffers.  If we
- * ever do reenter this function it is assumed that the program
- * will abort before returning to the prior call to this function.
- *
- * The caller of this function should not assume that args can be
- * used again on systems where va_copy is required.  If the caller
- * wishes to use args again, the caller should therefore pass in
- * a copy of the args.
- */
-static void
-_condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, FILE *fp, const char* fmt, va_list args )
+void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message)
 {
-		// static buffer to avoid frequent memory allocation
-	static char *buf = NULL;
-	static int buflen = 0;
-
-	int bufpos = 0;
-	int rc = 0;
-	int sprintf_errno = 0;
 	int my_pid;
 	int my_tid;
-	int start_pos;
-	FILE *local_fp;
-	int fopen_rc = 1;
+	static std::stringstream formatter;
+	//static std::string buffer;
+	formatter.clear();
+	FILE* local_fp = NULL;
+
+	formatter.clear();
+	//buffer.clear();
 
 #ifdef D_CATEGORY_MASK
 	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK);
@@ -261,32 +238,23 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 				// warning.  Probably format should be %ld, and
 				// we should cast to long int, but I'm afraid of
 				// changing the output format.  wenger 2009-02-24.
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%d) ", (int)clock_now );
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+			formatter << "(" << (int)clock_now << ") ";
 		} else {
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s", formatTimeHeader(tm));
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+			formatter << formatTimeHeader(tm);
 		}
 
 		if (hdr_flags & D_FDS) {
 			//Regardless of whether we're keeping the log file open our not, we open
 			//the NULL file for the FD number.
-			if( (local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644)) == NULL )
+			local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644);
+			if(local_fp == NULL )
 			{
-				local_fp = fp;
-				fopen_rc = 0;
+				formatter << "(fd:0) ";
 			}
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
-			if(fopen_rc)
+			else
 			{
-				fopen_rc = fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
+				formatter << "(fd:" << fileno(local_fp) << ") ";
+				fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
 			}
 		}
 
@@ -296,19 +264,13 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 #else
 			my_pid = (int) getpid();
 #endif
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(pid:%d) ", my_pid );
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+			formatter << "(pid:" << my_pid << ") ";
 		}
 
 			/* include tid if we are configured to use a thread pool */
 		my_tid = CondorThreads_gettid();
 		if ( my_tid > 0 ) {
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(tid:%d) ", my_tid );
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+			formatter << "(tid:" << my_tid << ") ";
 		}
 
 #ifdef D_LEVEL //  with the switch from flags to enum, this code doesn't work anymore.
@@ -338,37 +300,39 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 #ifdef D_CAT
 		if ((hdr_flags & D_CAT) && /*cat > 0 &&*/ cat < D_CATEGORY_COUNT) {
 			char verbosity[10] = "";
+			int sprintf_error = 0;
 			if (cat_and_flags & (D_VERBOSE_MASK | D_FULLDEBUG)) {
 				int verb = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
 				if (cat_and_flags & D_FULLDEBUG) verb = 2;
-				sprintf(verbosity, ":%d", verb);
+				sprintf_error = sprintf(verbosity, ":%d", verb);
+				if(sprintf_error)
+				{
+					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
+				}
 			}
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%s%s) ", 
-					_condor_DebugFlagNames[cat], verbosity);
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+
+			formatter << "(" << _condor_DebugFlagNames[cat] << verbosity << ") ";
 		}
 #endif
 
 		if( DebugId ) {
-			rc = (*DebugId)( &buf, &bufpos, &buflen );
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+			(*DebugId)( formatter );
 		}
 	}
 
-	if( sprintf_errno != 0 ) {
-		_condor_dprintf_exit(sprintf_errno, "Error writing to debug header\n");	
-	}
+	message.insert(0, formatter.str());
+}
 
-	rc = vsprintf_realloc( &buf, &bufpos, &buflen, fmt, args );
-
-		/* printf returns < 0 on error */
-	if (rc < 0) {
-		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
-	}
+void
+_dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo)
+{
+	int start_pos = 0;
+	int bufpos = 0;
+	int rc = 0;
+	//debug_lock_it(dbgInfo, NULL, 0);
+	_format_global_header(cat_and_flags, hdr_flags, clock_now, tm, message);
+	const char* buf = message.c_str();
+	bufpos = strlen(buf);
 
 		// We attempt to write the log record with one call to
 		// write(), because then O_APPEND will ensure (on
@@ -377,18 +341,54 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 		// signals, we should not need to loop here on EINTR,
 		// but we do anyway in case one of the exotic signals
 		// that we are not blocking interrupts us.
-	start_pos = 0;
 	while( start_pos<bufpos ) {
-		rc = write( fileno(fp),
+		rc = write( fileno(dbgInfo->debugFP),
 					buf+start_pos,
 					bufpos-start_pos );
 		if( rc > 0 ) {
 			start_pos += rc;
 		}
 		else if( errno != EINTR ) {
-			_condor_dprintf_exit(errno, "Error writing debug log\n");	
+			_condor_dprintf_exit(errno, "Error writing debug log\n");
 		}
 	}
+}
+
+/* _condor_dfprintf_va
+ * This function is used internally by the dprintf system wherever
+ * it wants to write directly to the open debug log.
+ *
+ * Since this function is called from a code path that is already
+ * not reentrant, this function itself does not bother to try
+ * to be reentrant.  Specifically, it uses static buffers.  If we
+ * ever do reenter this function it is assumed that the program
+ * will abort before returning to the prior call to this function.
+ *
+ * The caller of this function should not assume that args can be
+ * used again on systems where va_copy is required.  If the caller
+ * wishes to use args again, the caller should therefore pass in
+ * a copy of the args.
+ */
+
+static void
+_condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, DebugFileInfo *dbgInfo, const char* fmt, va_list args )
+{
+		// static buffer to avoid frequent memory allocation
+	static char *buf = NULL;
+	static int buflen = 0;
+	int sprintf_errno = 0;
+	int my_pid;
+	int my_tid;
+	
+	FILE *local_fp;
+	int fopen_rc = 1;
+
+	std::string buffer;
+	sprintf(buffer, fmt, args);
+
+	//buffer.append(dbgInfo->formatHeaderFunc(cat_and_flags,hdr_flags,clock_now,tm));
+	//buffer.append(dbgInfo->formatMessageFunc(fmt, args));
+	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, clock_now, tm, buffer, dbgInfo);
 }
 
 /* _condor_dfprintf
@@ -409,7 +409,7 @@ _condor_dfprintf( FILE *fp, const char* fmt, ... )
 	}
 
     va_start( args, fmt );
-	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,fp,fmt,args);
+	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,&((*DebugLogs)[0]),fmt,args);
     va_end( args );
 }
 
@@ -559,7 +559,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
 			va_end(copyargs);
 #else
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,args);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&((*DebugLogs)[0]),fmt,args);
 #endif
 		}
 
@@ -597,17 +597,18 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 					break;
 			   #endif
 			}
-
-			if (debug_file_ptr) {
+			std::string buffer;
 #ifdef va_copy
-				va_list copyargs;
-				va_copy(copyargs, args);
-				_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
-				va_end(copyargs);
+			va_list copyargs;
+			va_copy(copyargs, args);
+//			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,copyargs);
+			buffer.append(it->formatMessageFunc(fmt,copyargs));
+			va_end(copyargs);
 #else
-				_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,args);
+			//_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,args);
+			sprintf(buffer, fmt,args);
 #endif
-			}
+			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, buffer, &(*it));
 			if (funlock_it) {
 				debug_unlock_it(&(*it));
 			}
@@ -815,34 +816,8 @@ double dprintf_get_lock_delay(void) {
 	return ((double)DebugLockDelay)/(now-DebugLockDelayPeriodStarted);
 }
 
-PRAGMA_REMIND("TJ: can we kill this? or maybe fix it so it doesn't assume debug_flags == debug_file_index")
-FILE *
-debug_lock(int debug_flags, const char *mode, int force_lock)
-{
-	DebugOutputChoice choice(debug_flags);
-
-	for(std::vector<DebugFileInfo>::iterator it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * debug_level is being treated by the caller as an INDEX into
-		 * the DebugLogs vector, this it nuts, but it works as long as
-		 * each file has a unique set of flags which is true for now...
-		 */
-		if (it->choice != choice)
-			continue;
-
-		// for log files other than the first one, dont panic if we
-		// fail to write to the file.
-		bool dont_panic = (it->choice != 0) || DebugContinueOnOpenFailure;
-
-		return debug_lock_it(&(*it), mode, force_lock, dont_panic);
-	}
-
-	return stderr;
-}
-
 static FILE *
-debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic)
+debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock)
 {
 	int64_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
@@ -877,12 +852,12 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		//open_debug_file will set DebugFPs[debug_level] so we do
 		//not have to worry about it in this function, assuming
 		//there are no further errors.
-		debug_file_ptr = open_debug_file(it, mode, dont_panic);
+		debug_file_ptr = open_debug_file(it, mode, it->dont_panic);
 
 		if( debug_file_ptr == NULL ) {
 			
 			save_errno = errno;
-			if (dont_panic) {
+			if (it->dont_panic) {
 				_set_priv(priv, __FILE__, __LINE__, 0);
 				return NULL;
 			}
@@ -911,7 +886,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 	length = lseek(fileno(debug_file_ptr), 0, SEEK_END);
 #endif
 	if(length < 0 ) {
-		if (dont_panic) {
+		if (it->dont_panic) {
 			if(locked) debug_close_lock();
 			debug_close_file(it);
 
@@ -949,7 +924,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 				debug_close_lock();
 				debug_close_file(it);
 				_set_priv(priv, __FILE__, __LINE__, 0);
-				return debug_lock_it(it, mode, 1, dont_panic);
+				return debug_lock_it(it, mode, 1, it->dont_panic);
 			}
 		}
 
@@ -959,7 +934,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		// wenger 2009-02-24.
 		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
 		
-		debug_file_ptr = preserve_log_file(it, dont_panic);
+		debug_file_ptr = preserve_log_file(it, it->dont_panic);
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -1027,26 +1002,6 @@ debug_close_all_files()
 			_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 		}
 		(*it).debugFP = NULL;
-	}
-}
-
-PRAGMA_REMIND("TJ: can we kill this, or fix it so it doesn't assume debug_flags == debug_file_index")
-void
-debug_unlock(int debug_flags)
-{
-	DebugOutputChoice choice(debug_flags);
-
-	for(std::vector<DebugFileInfo>::iterator it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * debug_level is being treated by the caller as an INDEX into
-		 * the DebugLogs vector, this it nuts, but it works as long as
-		 * each file has a unique set of flags which is true for now...
-		 */
-		if (it->choice != choice)
-			continue;
-		debug_unlock_it(&(*it));
-		break;
 	}
 }
 
@@ -1875,5 +1830,13 @@ bool debug_open_fds(std::map<int,bool> &open_fds)
 void
 dprintf_dump_stack(void) {
 		// this platform does not support backtrace()
+}
+#endif
+
+#ifdef WIN32
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo)
+{
+	_format_global_header(cat_and_flags,hdr_flags,clock_now,tm, message);
+	OutputDebugStringA(message.c_str());
 }
 #endif

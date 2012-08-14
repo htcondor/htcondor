@@ -42,7 +42,8 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+//extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(std::string& buffer);
 extern bool sendUpdatesToSchedd;
 
 // some helper functions
@@ -1417,9 +1418,10 @@ extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
-extern "C" 
+//extern "C" 
 int
-display_dprintf_header(char **buf,int *bufpos,int *buflen)
+//display_dprintf_header(char **buf,int *bufpos,int *buflen)
+display_dprintf_header(std::stringstream& formatter)
 {
 	static pid_t mypid = 0;
 	int mycluster = -1;
@@ -1435,10 +1437,12 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 	}
 
 	if ( mycluster != -1 ) {
-		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
+		//return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
+		formatter << "(" << mycluster << "." << myproc << ") (" << (long)mypid << "): ";
 	} else {
-		return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
-	}	
+		//return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
+		formatter << "(?.?) (" << (long)mypid << "): ";
+	}
 
 	return 0;
 }

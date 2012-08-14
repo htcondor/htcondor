@@ -179,6 +179,9 @@ extern "C" {
 
 typedef unsigned int DebugOutputChoice;
 
+typedef std::string (*FormatHeaderFuncPtr)(int, int, time_t, struct tm *);
+typedef std::string (*FormatMessageFuncPtr)(const char*, va_list);
+
 extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
 extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
 extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
