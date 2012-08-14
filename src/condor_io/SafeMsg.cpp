@@ -1207,8 +1207,12 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 /* Peek the next byte */
 int _condorInMsg::peek(char &c)
 {
-	c = curDir->dEntry[curPacket].dGram[curData];
-	return TRUE;
+	if (curDir->dEntry[curPacket].dGram) {
+		c = curDir->dEntry[curPacket].dGram[curData];
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }
 
 /* Check if every data in all the bytes of the message have been read */
