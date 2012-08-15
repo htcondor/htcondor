@@ -8038,7 +8038,7 @@ These macros affect the \Condor{job\_router} daemon.
   the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
-  The default is "jobrouter".
+  The default is \AdStr{jobrouter}.
 
   Changing this value when routed jobs already exist is not currently
   gracefully handled.  However, it can be done if one also uses
@@ -8068,16 +8068,18 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
   The path to the spool directory for the \Condor{schedd} serving as the
   source of jobs for routing.  If not specified, this defaults to
-  \Macro{SPOOL}.  If specified, this parameter must point to the spool
-  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}.
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD1\_NAME}.
 
 \label{param:JobRouterSchedd2Spool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
   The path to the spool directory for the \Condor{schedd} to which the
   routed copy of the jobs are submitted.  If not specified, this defaults to
-  \Macro{SPOOL}.  If specified, this parameter must point to the spool
-  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}.
-  Note that when \Condor{job\_router} is running as root and is
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD2\_NAME}.
+  Note that when \Condor{job\_router} is running as \Login{root} and is
   submitting routed jobs to a different \Condor{schedd} than the
   source \Condor{schedd}, it is required that \Condor{job\_router}
   have permission to impersonate the job owners of the routed jobs.
@@ -8091,7 +8093,7 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   source of jobs for routing.  If not specified, this defaults to the
   local \Condor{schedd}.  If specified, this parameter must name the
   same \Condor{schedd} whose spool is configured in
-  \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  \MacroNI{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
   not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
   will also need to be set.
 
@@ -8101,10 +8103,10 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   routed copy of the jobs are submitted.  If not specified, this defaults to
   the local \Condor{schedd}.  If specified, this parameter must name the
   same \Condor{schedd} whose spool is configured in
-  \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  \MacroNI{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
   not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
   will also need to be set.
-  Note that when \Condor{job\_router} is running as root and is
+  Note that when \Condor{job\_router} is running as \Login{root} and is
   submitting routed jobs to a different \Condor{schedd} than the
   source \Condor{schedd}, it is required that \Condor{job\_router}
   have permission to impersonate the job owners of the routed jobs.
@@ -8114,15 +8116,15 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
 
 \label{param:JobRouterSchedd1Pool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
-  The Condor pool (collector address) of the \Condor{schedd} serving as the
-  source of jobs for routing.  If not specified, this defaults to the
-  local pool.
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd} 
+  serving as the source of jobs for routing.
+  If not specified, defaults to the local pool.
 
 \label{param:JobRouterSchedd2Pool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
-  The Condor pool (collector address) of the \Condor{schedd} to which
-  the routed copy of the jobs are submitted.  If not specified, this
-  defaults to the local pool.
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd}
+  to which the routed copy of the jobs are submitted.
+  If not specified, defaults to the local pool.
 
 \end{description}
 
