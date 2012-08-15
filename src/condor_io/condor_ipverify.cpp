@@ -620,6 +620,39 @@ IpVerify::refreshDNS() {
 	reconfig();
 }
 
+// DO NOT MERGE THIS CODE FORWARD EVER.  ipv6 came along, and the
+// implementation for 7.8 and beyond is different, and in a different file
+// that doesn't exist here.  this function has been backported to 7.6 just
+// for security reasons
+bool verify_name_has_ip(char* name, struct in_addr addr){
+	hostent *he;
+    bool found = false;
+
+	dprintf(D_FULLDEBUG, "IPVERIFY: checking %s against %x\n", name, *((int*)&addr) );
+
+	he = gethostbyname(name);
+	if (!he) {
+		return false;
+	}
+
+    char **p = he->h_addr_list;
+	int i = 0;
+	while(p[i]) {
+        if(memcmp(p[i], &addr, 4) == 0) {
+			dprintf(D_FULLDEBUG, "IPVERIFY: matched %x to %x\n", *((int*)p[i]), *((int*)&addr) );
+			found = true;
+		} else {
+            dprintf(D_FULLDEBUG, "IPVERIFY: comparing %x to %x\n", *((int*)p[i]), *((int*)&addr) );
+		}
+
+		i++;
+    }
+
+	dprintf(D_FULLDEBUG, "IPVERIFY: ip found is %i\n", found);
+
+    return found;
+}
+
 int
 IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user, MyString *allow_reason, MyString *deny_reason )
 {
@@ -784,26 +817,32 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			thehost = NULL;
 		}
 		while ( thehost ) {
-			peer_description.append_to_list(thehost);
+			// before doing this, we need to check the forward mapping.
+			if (verify_name_has_ip(thehost, sin->sin_addr)) {
+				peer_description.append_to_list(thehost);
 
-			if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {
-				mask |= deny_mask(perm);
-				if( deny_reason ) {
-					deny_reason->sprintf(
-						"%s authorization policy denies hostname %s",
-						PermString(perm), thehost );
+				if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {
+					mask |= deny_mask(perm);
+					if( deny_reason ) {
+						deny_reason->sprintf(
+							"%s authorization policy denies hostname %s",
+							PermString(perm), thehost );
+					}
 				}
-			}
 
-			if ( !(mask&allow_resolved) && lookup_user_host_allow(perm,who,thehost) ) {
-				mask |= allow_mask(perm);
-				if( allow_reason ) {
-					allow_reason->sprintf(
-						"%s authorization policy allows hostname %s",
-						PermString(perm), thehost );
+				if ( !(mask&allow_resolved) && lookup_user_host_allow(perm,who,thehost) ) {
+					mask |= allow_mask(perm);
+					if( allow_reason ) {
+						allow_reason->sprintf(
+							"%s authorization policy allows hostname %s",
+							PermString(perm), thehost );
+					}
 				}
+			} else {
+				dprintf(D_ALWAYS, "WARNING: forward resolution of %s doesn't match %x!\n",
+					thehost, *((int*)&(sin->sin_addr)));
 			}
-                
+					
 				// check all aliases for this IP as well
 			if( aliases ) {
 				thehost = *(aliases++);
