@@ -385,6 +385,7 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_rhap_6.3' => 'x86_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 6 on x86. This one is continuously updated by the batlab.
@@ -421,6 +422,7 @@ our %submit_info = (
 	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
 	'x86_64_rhap_6.2' => 'x86_64_rhap_6.0',
+	'x86_64_rhap_6.3' => 'x86_64_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 5 on x86_64
@@ -443,6 +445,7 @@ our %submit_info = (
 	},
 
 	'x86_64_rhap_5.7' => 'x86_64_rhap_5',
+	'x86_64_rhap_5.8' => 'x86_64_rhap_5',
 
 	##########################################################################
 	# Platform RHEL 3 on x86_64
@@ -581,6 +584,7 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_rhap_5.8'	=> 'x86_rhap_5',
 
 	##########################################################################
 	# Platform RHEL 3 on x86
