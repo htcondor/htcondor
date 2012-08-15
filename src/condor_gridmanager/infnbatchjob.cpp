@@ -248,6 +248,10 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
+	gahp->setNotificationTimerId( evaluateStateTid );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
+
 	if ( gahp_args.Count() > 0 ) {
 		gahp_path = param( "REMOTE_GAHP" );
 		if ( gahp_path == NULL ) {
@@ -260,6 +264,12 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		gahp_args.InsertArg( "condor_ft-gahp", 1 );
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 		free( gahp_path );
+
+		m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
+		m_xfer_gahp->setMode( GahpClient::normal );
+		// TODO: This can't be the normal gahp timeout value. Does it need to
+		//   be configurable?
+		m_xfer_gahp->setTimeout( 60*60 );
 	}
 
 	myResource = INFNBatchResource::FindOrCreateResource( batchType,
@@ -272,18 +282,6 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// Does this have to be lower-case for SetRemoteJobId()?
 
 	strlwr( batchType );
-
-	ASSERT( gahp != NULL );
-	gahp->setNotificationTimerId( evaluateStateTid );
-	gahp->setMode( GahpClient::normal );
-	gahp->setTimeout( gahpCallTimeout );
-
-	ASSERT( gahp != NULL );
-	m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
-	m_xfer_gahp->setMode( GahpClient::normal );
-	// TODO: This can't be the normal gahp timeout value. Does it need to
-	//   be configurable?
-	m_xfer_gahp->setTimeout( 60*60 );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
@@ -794,30 +792,33 @@ void INFNBatchJob::doEvaluateState()
 			} break;
 		case GM_DELETE_SANDBOX: {
 			// Delete the remote sandbox
-			if ( gahpAd == NULL ) {
-				gahpAd = buildTransferAd();
-			}
-			if ( gahpAd == NULL ) {
-				gmState = GM_HOLD;
-				break;
-			}
+			if ( myResource->GahpIsRemote() ) {
 
-			rc = m_xfer_gahp->blah_destroy_sandbox( remoteSandboxId, gahpAd );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
+				if ( gahpAd == NULL ) {
+					gahpAd = buildTransferAd();
+				}
+				if ( gahpAd == NULL ) {
+					gmState = GM_HOLD;
+					break;
+				}
+
+				rc = m_xfer_gahp->blah_destroy_sandbox( remoteSandboxId, gahpAd );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != 0 ) {
+					// Failure!
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_destroy_sandbox() failed: %s\n",
+							 procID.cluster, procID.proc,
+							 m_xfer_gahp->getErrorString() );
+					errorString = m_xfer_gahp->getErrorString();
+					gmState = GM_HOLD;
+					break;
+				}
 			}
-			if ( rc != 0 ) {
-				// Failure!
-				dprintf( D_ALWAYS,
-						 "(%d.%d) blah_destroy_sandbox() failed: %s\n",
-						 procID.cluster, procID.proc,
-						 m_xfer_gahp->getErrorString() );
-				errorString = m_xfer_gahp->getErrorString();
-				gmState = GM_HOLD;
-				break;
-			}
-			SetRemoteSandboxId( NULL );
+			SetRemoteIds( NULL, NULL );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
