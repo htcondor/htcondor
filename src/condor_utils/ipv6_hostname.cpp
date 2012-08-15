@@ -286,16 +286,49 @@ MyString get_hostname(const condor_sockaddr& addr) {
 	return ret;
 }
 
+// will this work for ipv6?
+// 1) maybe... even probably.
+// 2) i don't care
+
+bool verify_name_has_ip(MyString name, condor_sockaddr addr){
+	std::vector<condor_sockaddr> addrs;
+	bool found = false;
+
+	addrs = resolve_hostname(name);
+	dprintf(D_FULLDEBUG, "IPVERIFY: checking %s against %s\n", name.Value(), addr.to_ip_string().Value());
+	for(unsigned int i = 0; i < addrs.size(); i++) {
+		// compare MyStrings
+		// addr.to_ip_string
+		if(addrs[i].to_ip_string() == addr.to_ip_string()) {
+			dprintf(D_FULLDEBUG, "IPVERIFY: matched %s to %s\n", addrs[i].to_ip_string().Value(), addr.to_ip_string().Value());
+			found = true;
+		} else {
+			dprintf(D_FULLDEBUG, "IPVERIFY: comparing %s to %s\n", addrs[i].to_ip_string().Value(), addr.to_ip_string().Value());
+		}
+	}
+	dprintf(D_FULLDEBUG, "IPVERIFY: ip found is %i\n", found);
+
+	return found;
+}
+
 std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr)
 {
-	std::vector<MyString> ret;
+	std::vector<MyString> prelim_ret;
+	std::vector<MyString> actual_ret;
+
 	MyString hostname = get_hostname(addr);
 	if (hostname.IsEmpty())
-		return ret;
-	ret.push_back(hostname);
+		return prelim_ret;
+
+	// we now start to construct a list (prelim_ret) of the hostname and all
+	// the aliases.  first the name itself.
+	prelim_ret.push_back(hostname);
 
 	if (nodns_enabled())
-		return ret; // no need to call further DNS functions.
+		// don't need to verify this... the string is actually an IP here
+		return prelim_ret; // no need to call further DNS functions.
+
+	// now, add the aliases
 
 	hostent* ent;
 		//int aftype = addr.get_aftype();
@@ -309,14 +342,31 @@ std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr)
 		// IPv6 addresses?
 	ent = gethostbyname(hostname.Value());
 
-	if (!ent)
-		return ret;
-
-	char** alias = ent->h_aliases;
-	for (; *alias; ++alias) {
-		ret.push_back(MyString(*alias));
+	if (ent) {
+		char** alias = ent->h_aliases;
+		for (; *alias; ++alias) {
+			prelim_ret.push_back(MyString(*alias));
+		}
 	}
-	return ret;
+
+	// WARNING! there is a reason this is implimented as two separate loops,
+	// so please don't try to combine them.
+	//
+	// calling verify_name_has_ip() will potentially overwrite static data that
+	// is referred to by ent->h_aliases (man 3 gethostbyname, see notes).  so
+	// first, we push the name and then all aliases into the MyString vector
+	// prelim_ret, and then verify them in the following loop.
+
+	for (unsigned int i = 0; i < prelim_ret.size(); i++) {
+		if(verify_name_has_ip(prelim_ret[i], addr)) {
+			actual_ret.push_back(prelim_ret[i]);
+		} else {
+			dprintf(D_ALWAYS, "WARNING: forward resolution of %s doesn't match %s!\n",
+					prelim_ret[i].Value(), addr.to_ip_string().Value());
+		}
+	}
+
+	return actual_ret;
 }
 
 // look up FQDN for hostname and aliases.
