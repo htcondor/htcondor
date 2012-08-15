@@ -246,7 +246,7 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 	switch (nk)
 	{
 	  case EXPR_ENVELOPE:
-	     pRet = pTree->Copy();
+	     pRet = pTree;
 	  break;
 	  
 	  case EXPR_LIST_NODE:
