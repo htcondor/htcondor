@@ -216,6 +216,7 @@ const char	*Priority		= "priority";
 const char	*Notification	= "notification";
 const char	*WantRemoteIO	= "want_remote_io";
 const char	*Executable		= "executable";
+const char *Description = "description";
 const char	*Arguments1		= "arguments";
 const char	*Arguments2		= "arguments2";
 const char    *AllowArgumentsV1 = "allow_arguments_v1";
@@ -1871,6 +1872,24 @@ SetExecutable()
 
 	free(ename);
 	free(copySpool);
+}
+
+void
+SetDescription()
+{
+
+	char* description;
+	description = condor_param( Description, ATTR_JOB_DESCRIPTION );
+
+	if ( description ){
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
+	}
+	else if ( InteractiveJob ){
+		std::string default_description = "Interactive from ";
+		default_description += my_full_hostname();
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
+	}
+	free(description);
 }
 
 #ifdef WIN32
@@ -6353,6 +6372,7 @@ queue(int num)
 			SetUniverse();
 			SetExecutable();
 		}
+		SetDescription();
 		SetMachineCount();
 
 		/* For MPI only... we have to define $(NODE) to some string
