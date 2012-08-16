@@ -2254,6 +2254,7 @@ usage (const char *myName)
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t\t    Print attr(s) with automatic formatting\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
