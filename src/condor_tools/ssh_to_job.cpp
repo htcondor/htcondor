@@ -98,7 +98,7 @@ SSHToJob::SSHToJob():
 	m_debug(false),
 	m_retry_sensible(false),
 	m_auto_retry(false),
-	m_retry_delay(30),
+	m_retry_delay(5),
 	m_x_forwarding(false)
 {
 	m_jobid.cluster = m_jobid.proc = -1;
@@ -346,7 +346,14 @@ bool SSHToJob::execute_ssh_retry()
 	int attempt = 0;
 	for(attempt=0; attempt==0 || m_auto_retry; attempt++) {
 		if( attempt > 0 ) {
-			fprintf(stderr,"Will try again in %d seconds.\n",m_retry_delay);
+			// try every 10 seconds for first 5 min, then every 30 seconds
+			if ( m_retry_delay < 30 && ((m_retry_delay * attempt) >= 300) ) {
+				m_retry_delay = 30;
+			}
+			//fprintf(stderr,"Will try again in %d seconds.\n",m_retry_delay);
+			if (attempt==1) {
+				fprintf(stderr,"Waiting for job to start...\n");
+			}
 			sleep(m_retry_delay);
 		}
 		if( execute_ssh() ) {
@@ -424,7 +431,9 @@ bool SSHToJob::execute_ssh()
 	}
 
 	if( !success ) {
-		logError("%s\n",error_msg.Value());
+		if ( !m_retry_sensible ) {
+			logError("%s\n",error_msg.Value());
+		}
 		return false;
 	}
 
@@ -437,7 +446,9 @@ bool SSHToJob::execute_ssh()
 
 	DCStarter starter;
 	if( !starter.initFromClassAd(&starter_ad) ) {
-		logError("Failed to initialize starter object.\n");
+		if ( !m_retry_sensible ) {
+			logError("Failed to initialize starter object.\n");
+		}
 		return false;
 	}
 

@@ -6,8 +6,10 @@
 
 \SynProg{\Condor{power}}
 \oOpt{-d}
+\oOpt{-i}
 \oOptArg{-m}{MACaddress}
 \oOptArg{-s}{subnet}
+%\oOptArg{-p}{port}
 \oArg{ClassAdFile}
 
 
@@ -38,16 +40,23 @@ of the machine ClassAd as provided in a file or on standard input.
 Note that this case implies that the command line specification of the 
 subnet is ignored.
 
+\Condor{power} relies on the router receiving the WOL packet to correctly
+broadcast the request. 
+Since routers are often configured to ignore
+requests to broadcast messages on a different subnet than the sender,
+the send of a WOL packet to a machine on a different subnet may fail.
 
 \begin{Options}
   \OptItem{\Opt{-h}}{Print usage information and exit.}
   \OptItem{\Opt{-d}}{Enable debugging messages.}
+  \OptItem{\Opt{-i}}{Read a ClassAd that is piped in through standard input. }
   \OptItem{\OptArg{-m}{MACaddress}} {Specify the MAC address in the standard
     format of six groups of two hexadecimal digits separated by colons. }
+%  \OptItem{\OptArg{-p}{port}} {Specify a port. }
   \OptItem{\OptArg{-s}{subnet}}{Specify the subnet in the standard form
-    of an IP address.
-    Without this option, the default subnet used will be
-    255.255.255.255, causing a broadcast. }
+    of a mask for an IPv4 address.
+    Without this option, a global broadcast will be sent. }
+
 \end{Options}
 
 \ExitStatus

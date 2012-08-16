@@ -16,7 +16,6 @@
  #
  ###############################################################
 
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
@@ -131,19 +130,14 @@ if( NOT WINDOWS)
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 
-	find_library( ZLIB_FOUND z )
-	find_library( EXPAT_FOUND expat )
-	find_library( LIBUUID_FOUND uuid )
+        find_multiple( "z" ZLIB_FOUND)
+	find_multiple( "expat" EXPAT_FOUND )
+	find_multiple( "uuid" LIBUUID_FOUND )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
-	find_library( LIBRESOLV_PATH resolv )
-    if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
-      set(HAVE_LIBRESOLV ON)
-    endif()
-	find_library( LIBDL_PATH dl )
-    if( NOT "${LIBDL_PATH}" MATCHES "-NOTFOUND" )
-      set(HAVE_LIBDL ON)
-    endif()
-	find_library( LIBLTDL_PATH ltdl )
+	find_multiple( "resolv" HAVE_LIBRESOLV )
+        find_multiple ("dl" HAVE_LIBDL )
+	find_multiple ("ltdl" HAVE_LIBLTDL )
+
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
@@ -251,14 +245,39 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
-	# Some early 4.0 g++'s have unordered maps, but their iterators don't work
-	check_cxx_source_compiles("
+	dprint ("TJ && TSTCLAIR We need this check in MSVC") 
+
+	check_cxx_compiler_flag(-std=c++11 cxx_11)
+	if (cxx_11)
+
+		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+		#check_cxx_source_compiles("
+		##include <unordered_map>
+		##include <memory>
+		#int main() {
+		#	std::unordered_map<int, int> ci;
+		#	std::shared_ptr<int> foo;
+		#	return 0;
+		#}
+		#" PREFER_CPP11 )
+
+	endif (cxx_11)
+
+	if (NOT PREFER_CPP11)
+
+	  # Some early 4.0 g++'s have unordered maps, but their iterators don't work
+	  check_cxx_source_compiles("
 		#include <tr1/unordered_map>
 		int main() {
 			std::tr1::unordered_map<int, int>::const_iterator ci;
 			return 0;
 		}
-		" HAVE_TR1_UNORDERED_MAP )
+		" PREFER_TR1 )
+
+	endif(NOT PREFER_CPP11)
+	
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -274,6 +293,7 @@ find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(LATEX2HTML latex2html)
 find_program(LATEX latex)
+find_program(HAVE_WGET wget)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -323,12 +343,6 @@ if (${OS_NAME} STREQUAL "SUNOS")
 elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
-
-	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-		set(CMAKE_PREFIX_PATH /usr/kerberos)
-		include_directories(/usr/kerberos/include)
-	endif()
-
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 
 	set(DOES_SAVE_SIGSTATE ON)
@@ -340,8 +354,12 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	check_include_files("linux/nfsd/const.h" HAVE_LINUX_NFSD_CONST_H)
 	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
+	check_include_files("X11/Xlib.h" HAVE_XLIB_H)
 
-	find_library(HAVE_X11 X11)
+	if (HAVE_XLIB_H)
+	  find_library(HAVE_X11 X11)
+	endif()
+
 	dprint("Threaded functionality only enable in Linux and Windows")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
@@ -367,14 +385,6 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( IOKIT_FOUND IOKit )
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
-elseif(${OS_NAME} STREQUAL "HPUX")
-	set(HPUX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
-elseif(${OS_NAME} STREQUAL "HPUX")
-	set(HPUX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
 ##################################################
@@ -387,8 +397,7 @@ option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
-option(BUILD_TESTS "Will build internal test applications" ON)
-option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
@@ -443,13 +452,12 @@ else()
 endif()
 
 #####################################
-# KBDD option
-if (NOT HPUX)
-	option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
-	if (NOT WINDOWS)
-		set (HAVE_SCM_RIGHTS_PASSFD ON)
-	endif()
-endif(NOT HPUX)
+# Shared port option
+option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
+if (NOT WINDOWS)
+	set (HAVE_SCM_RIGHTS_PASSFD ON)
+endif()
+
 
 #####################################
 # ssh_to_job option
@@ -466,9 +474,9 @@ if ( HAVE_SSH_TO_JOB )
     endif()
 endif()
 
-if (BUILD_TESTS)
+if (BUILD_TESTING)
 	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
-endif(BUILD_TESTS)
+endif(BUILD_TESTING)
 
 ##################################################
 ##################################################
@@ -480,6 +488,14 @@ endif(BUILD_TESTS)
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
 	cmake_minimum_required(VERSION 2.8)
+	
+	# perform a quick check for wget b/c without it you're hosed. 
+	 if ((${HAVE_WGET} STREQUAL "HAVE_WGET-NOTFOUND"))
+	    message (FATAL "You are trying to perform a UW-Build without wget, EPIC FAIL! ")
+	 else ()
+	    dprint("wget = ${HAVE_WGET}")
+	 endif()
+
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -491,6 +507,7 @@ if (NOT EXTERNAL_STAGE)
 		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
 	endif()
 endif()
+
 if (WINDOWS)
 	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
@@ -516,13 +533,7 @@ add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 if (NOT WINDOWS)
 
-	if (${SYSTEM_NAME} MATCHES "rhel3")
-		# The new version of 2011.05.24-r31 doesn't compile on rhel3/x86_64
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
-	else ()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
-	endif()
-
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
@@ -621,6 +632,7 @@ include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
@@ -642,8 +654,8 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
-set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
+set (CONDOR_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
+set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")
@@ -653,6 +665,9 @@ if (CONDOR_CXX_FLAGS)
 endif()
 
 if(MSVC)
+	#disable autolink settings 
+	add_definitions(-DBOOST_ALL_NO_LIB)
+
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
 		# turn on code analysis. 
@@ -679,6 +694,29 @@ else(MSVC)
 	if (cxx_Wall)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	endif(cxx_Wall)
+
+	# Added to help make resulting libcondor_utils smaller.
+	#check_cxx_compiler_flag(-fno-exceptions no_exceptions)
+	#if (no_exceptions)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-exceptions")
+	#endif(no_exceptions)
+	#check_cxx_compiler_flag(-Os cxx_Os)
+	#if (cxx_Os)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Os")
+	#endif(cxx_Os)
+
+	if (CMAKE_CXX_COMPILER_VERSION STRGREATER "4.7.0" OR CMAKE_CXX_COMPILER_VERSION STREQUAL "4.7.0")
+	   
+	  check_cxx_compiler_flag(-flto cxx_lto)
+	  if (cxx_lto)
+		  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
+		  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
+	  endif(cxx_lto)
+	else()
+	  dprint("skipping cxx_lto flag check")
+	endif()
 
 	check_cxx_compiler_flag(-W cxx_W)
 	if (cxx_W)

@@ -49,6 +49,8 @@
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
+#include <string>
+#include <algorithm>
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
@@ -1230,6 +1232,14 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 		if (!m_lock) {
 			dprintf( D_ALWAYS, "WriteUserLog: No user log lock!\n" );
 			return false;
+		}
+	}
+	// Check our mask vector for the event
+	// If we have a mask, the event must be in the mask to write the event.
+	if(!mask.empty()){
+		std::vector<ULogEventNumber>::iterator p = std::find(mask.begin(),mask.end(),event->eventNumber);	
+		if(p == mask.end()) { // Event not in the mask, we don't care about it.
+			return true;
 		}
 	}
 

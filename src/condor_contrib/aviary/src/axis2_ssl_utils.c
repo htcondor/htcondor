@@ -69,7 +69,7 @@ axis2_ssl_utils_initialize_ctx(
     axis2_char_t *ca_dir,
     axis2_char_t * ssl_pp)
 {
-    SSL_METHOD *meth = NULL;
+    const SSL_METHOD *meth = NULL;
     SSL_CTX *ctx = NULL;
     char* cipherlist = "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH";
     local_log = env->log;
@@ -101,17 +101,17 @@ axis2_ssl_utils_initialize_ctx(
      */
     if (server_key) /*can we check if the server needs client auth? */
     {
-/* disable password checking on the key for now...impractical for server-side */
-/*
         if (!ssl_pp)
         {
+        /* disable password checking on the key for now...impractical for server-side */
+        /*
             AXIS2_LOG_INFO(env->log,
                 "[ssl] No passphrase specified for key file %s and server cert %s", server_key, server_cert);
+        */
         }
+        /* SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) ssl_pp); */
+        /* SSL_CTX_set_default_passwd_cb(ctx, password_cb); */
 
-        SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) ssl_pp);
-        SSL_CTX_set_default_passwd_cb(ctx, password_cb);
-*/
         if (!(SSL_CTX_use_certificate_chain_file(ctx, server_cert)))
         {
             AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,
@@ -180,8 +180,7 @@ axis2_ssl_utils_initialize_ssl(
     if (!sbio)
     {
         AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,
-            "[ssl] Unable to create BIO new socket for socket %d",
-            (int)socket);
+            "[ssl] Unable to create BIO new socket for socket %d",socket);
         if (ssl) {
             SSL_shutdown(ssl);
             SSL_free(ssl);
@@ -227,7 +226,7 @@ axis2_ssl_utils_initialize_ssl(
 
 AXIS2_EXTERN axis2_status_t AXIS2_CALL
 axis2_ssl_utils_cleanup_ssl(
-    const axutil_env_t * env,
+    /*const axutil_env_t * env,*/
     SSL_CTX * ctx,
     SSL * ssl)
 {

@@ -81,7 +81,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 				dprintf(D_ALWAYS,
 						"error processing %s: failed to add '%s' to "
 						"ClassAd collection.\n",
-						m_reader->GetClassAdLogFileName(), cluster_key);
+						m_reader ? m_reader->GetClassAdLogFileName() : "(null)", cluster_key);
 				delete ad;
 				return true; // XXX: why is this ok?
 			}
@@ -95,7 +95,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 			dprintf(D_ALWAYS,
 					"error processing %s: failed to add '%s' to "
 					"ClassAd collection.\n",
-					m_reader->GetClassAdLogFileName(),
+					m_reader ? m_reader->GetClassAdLogFileName() : "(null)",
 					key);
 				// XXX: why is this ok?
 		}
@@ -121,7 +121,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 	if (!ad) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
-				m_reader->GetClassAdLogFileName(), key);
+				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", key);
 		return false;
 	}
 	classad::ExprTree *expr;
@@ -129,7 +129,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 	if (!expr) {
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to parse expression: %s\n",
-				m_reader->GetClassAdLogFileName(), value);
+				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", value);
 		ASSERT(expr);
 		return false;
 	}
@@ -146,7 +146,7 @@ NewClassAdJobLogConsumer::DeleteAttribute(const char *key,
 	if (!ad) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
-				m_reader->GetClassAdLogFileName(), key);
+				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", key);
 		return false;
 	}
 	ad->Delete(name);

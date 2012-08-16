@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_JOBCONSTRAINT_H
-        #define AviaryCommon_JOBCONSTRAINT_H
-
+          #ifndef AviaryCommon_JOBCONSTRAINT_H
+          #define AviaryCommon_JOBCONSTRAINT_H
+        
+      
        /**
         * JobConstraint.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_JobConstraintType.h"
-          
+                #include "AviaryCommon_JobConstraintType.h"
+              
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -86,6 +86,11 @@ namespace AviaryCommon
          */
         JobConstraint(AviaryCommon::JobConstraintType* arg_Type,std::string arg_Value);
         
+
+        /**
+         * resetAll for JobConstraint
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

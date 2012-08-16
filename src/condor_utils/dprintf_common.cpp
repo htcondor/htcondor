@@ -165,7 +165,7 @@ _condor_parse_merge_debug_flags(
 				hdr = D_FDS;
 			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
 				hdr = D_EXPR;
-			} else if( (strcasecmp(flag, "D_LABEL") == 0) || (strcasecmp(flag, "D_CATEGORY") == 0) || (strcasecmp(flag, "D_CAT") == 0) ) {
+			} else if( (strcasecmp(flag, "D_LEVEL") == 0) || (strcasecmp(flag, "D_CATEGORY") == 0) || (strcasecmp(flag, "D_CAT") == 0) ) {
 				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
 				fulldebug = (flag_verbosity > 0);

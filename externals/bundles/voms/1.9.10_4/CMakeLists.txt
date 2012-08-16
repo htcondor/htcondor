@@ -58,11 +58,7 @@ if ( WITH_VOMS )
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/globus52.patch &&
 								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
-			if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-				set (VOMS_OPENSSL_FLAG --with-openssl-prefix=/usr/kerberos)
-			else()
-				set (VOMS_OPENSSL_FLAG "")
-			endif()
+			set (VOMS_OPENSSL_FLAG "")
 		endif()
 
 		condor_pre_external( VOMS voms-1.9.10_4-p3 "include;${VOMS_LIB}" "done")
@@ -117,6 +113,18 @@ if ( WITH_VOMS )
 				# itself, it doesn't know to strip them.
 				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libvoms*.so*
 					COMMAND xargs strip)" )
+			endif()
+			# Check libvomsapi's shared library dependencies
+			# and copy a specific subset of those libraries
+			# into <release>/lib/condor
+			# This is to pick up libexpat, which libvomsapi
+			# depends on, but none of the binaries that use it do.
+			if ( NOT CONDOR_PACKAGE_BUILD )
+				set( SRC_DIR ${CMAKE_SOURCE_DIR} )
+				install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
+				install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_*.so ${SRC_DIR}/src/condor_scripts/syslib-patterns
+					 COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor
+			 		 )" )
 			endif()
 		endif()
 		if ( DARWIN )

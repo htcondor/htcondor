@@ -101,7 +101,7 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
 	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ),
-			_pre_status( NO_PRE_VALUE ), _final( false )
+			_pre_status( NO_PRE_VALUE ), _final( false ), append_default_log(true)
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -204,13 +204,12 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 
 //---------------------------------------------------------------------------
 bool
-Job::CheckForLogFile() const
+Job::CheckForLogFile(bool usingDefault ) const
 {
 	bool tmpLogFileIsXml;
 	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-				_directory, tmpLogFileIsXml );
-	bool result = (logFile != "");
-	return result;
+				_directory, tmpLogFileIsXml, usingDefault );
+	return (logFile != "");
 }
 
 //---------------------------------------------------------------------------
@@ -246,7 +245,7 @@ void Job::Dump ( const Dag *dag ) const {
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
 
-		set<JobID_t>::const_iterator qit;
+		std::set<JobID_t>::const_iterator qit;
 		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
 			Job *node = dag->Dag::FindNodeByNodeID( *qit );
 			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
@@ -483,7 +482,7 @@ Job::TerminateFailure()
 bool
 Job::Add( const queue_t queue, const JobID_t jobID )
 {
-	pair<set<JobID_t>::iterator, bool> ret;
+	std::pair<std::set<JobID_t>::iterator, bool> ret;
 
 	ret = _queues[queue].insert(jobID);
 
@@ -581,7 +580,7 @@ Job::GetStatusName() const
 bool
 Job::HasChild( Job* child ) {
 	JobID_t cid;
-	set<JobID_t>::iterator it;
+	std::set<JobID_t>::iterator it;
 
 	if( !child ) {
 		return false;
@@ -600,7 +599,7 @@ Job::HasChild( Job* child ) {
 bool
 Job::HasParent( Job* parent ) {
 	JobID_t pid;
-	set<JobID_t>::iterator it;
+	std::set<JobID_t>::iterator it;
 
 	if( !parent ) {
 		return false;
@@ -783,7 +782,7 @@ Job::SetDagFile(const char *dagFile)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-			bool recovery, const char *defaultNodeLog )
+			bool recovery, const char *defaultNodeLog, bool usingDefault )
 {
 	debug_printf( DEBUG_DEBUG_2,
 				"Attempting to monitor log file for node %s\n",
@@ -798,10 +797,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
 
-    MyString logFileStr;
+    std::string logFileStr;
 	if ( _jobType == TYPE_CONDOR ) {
-    	logFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-					_directory, _logFileIsXml );
+			// We check to see if the user has specified a log file
+			// If not, we give him a default
+    	MyString templogFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+					_directory, _logFileIsXml, usingDefault);
+		logFileStr = templogFileStr.Value();
 	} else {
 		StringList logFiles;
 		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
@@ -826,26 +828,39 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	if ( logFileStr == "" ) {
 		logFileStr = defaultNodeLog;
 		_useDefaultLog = true;
+			// Default User log is never XML
+			// This could be specified in the submit file and should be
+			// ignored.
 		_logFileIsXml = false;
 		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
 					"submit file %s (node %s); using default (%s)\n",
-					_cmdFile, GetJobName(), logFileStr.Value() );
+					_cmdFile, GetJobName(), logFileStr.c_str() );
+		append_default_log = false;
+	} else {
+		append_default_log = usingDefault;
+		if( append_default_log ) {
+				// DAGman is not going to look at the user-specified log.
+				// It will look at the defaultNode log.
+			logFileStr = defaultNodeLog;
+			_useDefaultLog = false;
+			_logFileIsXml = false;
+		}
 	}
 
 		// This function returns true if the log file is on NFS and
 		// that is an error.  If the log file is on NFS, but nfsIsError
 		// is false, it prints a warning but returns false.
-	if ( MultiLogFiles::logFileNFSError( logFileStr.Value(),
+	if ( MultiLogFiles::logFileNFSError( logFileStr.c_str(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					logFileStr.Value() );
+					logFileStr.c_str() );
 		LogMonitorFailed();
 		return false;
 	}
 
 	delete [] _logFile;
 		// Saving log file here in case submit file gets changed.
-	_logFile = strnewp( logFileStr.Value() );
+	_logFile = strnewp( logFileStr.c_str() );
 	debug_printf( DEBUG_DEBUG_2, "Monitoring log file <%s> for node %s\n",
 				GetLogFile(), GetJobName() );
 	CondorError errstack;
@@ -999,8 +1014,8 @@ Job::GetPreSkip() const
 void
 Job::FixPriority(Dag& dag)
 {
-	set<JobID_t> parents = GetQueueRef(Q_PARENTS);
-	for(set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
+	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
+	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
 		Job* parent = dag.FindNodeByNodeID(*p);
 		if( parent->_hasNodePriority ) {
 			// Nothing to do if parent priority is small

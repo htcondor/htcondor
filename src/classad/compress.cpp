@@ -89,7 +89,7 @@ Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,
 
                 // make a projected classad 
             for( ritr=refs.begin( ); ritr!=refs.end( ); ritr++ ) {
-                bin->ad->Insert( *ritr, ad->Lookup( *ritr )->Copy( ) );
+                bin->ad->Insert( *ritr, ad->Lookup( *ritr )->Copy( ), false );
             }
 
 				// insert bin into container

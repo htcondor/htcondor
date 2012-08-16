@@ -36,11 +36,13 @@ Emitter::Emitter() {
 	skipped_tests = 0;
 	buf = 0;
 	test_buf = 0;
+	cur_test_name = 0;
 }
 
 Emitter::~Emitter() {
 	delete buf;
 	delete test_buf;
+	delete cur_test_name;
 }
 
 /* Initializes the Emitter object.
@@ -118,10 +120,22 @@ void Emitter::emit_problem(const char* problem) {
 /* Shows exactly what is going to be tested.
  */
 void Emitter::emit_test(const char* test) {
+	if(cur_test_name) {
+		MyString s = "Starting new test \"";
+		s += test;
+		s += MyString("\" but test \"");
+		s += *cur_test_name;
+		s += MyString("\" never finished!");
+		emit_alert(s.Value());
+		emit_result_failure(0, "Unknown");
+		delete cur_test_name;
+		cur_test_name = 0;
+	}
 	emit_test_break();
 	function_tests++;
 	buf->sprintf_cat("TEST:  %s\n", test);
 	print_now_if_possible();
+	cur_test_name = new MyString(test);
 	start = time(0);
 }
 
@@ -149,9 +163,12 @@ void Emitter::emit_output_actual_header() {
 /* Prints out a message saying that the test succeeded. The function should
  * be called via the PASS macro."
  */
-void Emitter::emit_result_success(int line) {
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n",
-		line, time(0) - start);
+void Emitter::emit_result_success(int line, const char * file) {
+	if( ! cur_test_name) {
+		emit_alert("A test succeeded, but we're not in a test!");
+	}
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at %s:%d (%ld seconds)\n",
+		file, line, time(0) - start);
 	print_now_if_possible();
 	if(print_successes && !print_failures) {
 		if(!test_buf->IsEmpty()) {
@@ -162,29 +179,41 @@ void Emitter::emit_result_success(int line) {
 	}
 	buf->setChar(0, '\0');
 	passed_tests++;
+	delete cur_test_name;
+	cur_test_name = 0;
 }
 
 /* Prints out a message saying that the test failed. The function should
  * be called via the PASS macro."
  */
-void Emitter::emit_result_failure(int line) {
-	buf->sprintf_cat("RESULT:  FAILURE, test failed at line %d (%ld seconds)\n", 
-		line, time(0) - start);
+void Emitter::emit_result_failure(int line, const char * file) {
+	if( ! cur_test_name) {
+		emit_alert("A test failed, but we're not in a test!");
+	}
+	buf->sprintf_cat("RESULT:  FAILURE, test failed at %s:%d (%ld seconds)\n", 
+		file, line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	failed_tests++;
+	delete cur_test_name;
+	cur_test_name = 0;
 }
 
 /* Prints out a message saying that the test was aborted for some unknown
  * reason, probably given by emit_abort() before this function call.  The
  * function should be called via the ABORT macro."
  */
-void Emitter::emit_result_abort(int line) {
-	buf->sprintf_cat("RESULT:  ABORTED, test failed at line %d (%ld seconds)\n", 
-		line, time(0) - start);
+void Emitter::emit_result_abort(int line, const char * file) {
+	if( ! cur_test_name) {
+		emit_alert("A test was aborted, but we're not in a test!");
+	}
+	buf->sprintf_cat("RESULT:  ABORTED, test failed at %s:%d (%ld seconds)\n", 
+		file, line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
 	aborted_tests++;
+	delete cur_test_name;
+	cur_test_name = 0;
 }
 
 /* Prints out a message saying that the test was skipped, for whatever reason.
@@ -297,16 +326,16 @@ void emit_output_actual_header(void) {
 	e.emit_output_actual_header();
 }
 
-void emit_result_success(int line) {
-	e.emit_result_success(line);
+void emit_result_success(int line, const char * file) {
+	e.emit_result_success(line, file);
 }
 
-void emit_result_failure(int line) {
-	e.emit_result_failure(line);
+void emit_result_failure(int line, const char * file) {
+	e.emit_result_failure(line, file);
 }
 
-void emit_result_abort(int line) {
-	e.emit_result_abort(line);
+void emit_result_abort(int line, const char * file) {
+	e.emit_result_abort(line, file);
 }
 
 void emit_alert(const char* alert) {

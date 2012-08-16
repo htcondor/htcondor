@@ -537,7 +537,7 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
                 ExprTree* expr = ((LogSetAttribute *)log)->get_expr();
                 if (expr) {
 		    expr = expr->Copy();
-                    ad->Insert(lname, expr);
+                    ad->Insert(lname, expr, false);
                 } else {
                     val = strdup(((LogSetAttribute *)log)->get_value());
                     ad->AssignExpr(lname, val);
@@ -879,7 +879,7 @@ LogSetAttribute::Play(void *data_structure)
 		return -1;
     if (value_expr) {
         ExprTree * pTree = value_expr->Copy();
-        rval = ad->Insert(name, pTree);
+        rval = ad->Insert(name, pTree, false);
     } else {
         rval = ad->AssignExpr(name, value);
     }
@@ -961,7 +961,11 @@ LogSetAttribute::ReadBody(FILE* fp)
     if (ParseClassAdRvalExpr(value, value_expr)) {
         if (value_expr) delete value_expr;
         value_expr = NULL;
-        return -1;
+        if (param_boolean("CLASSAD_LOG_STRICT_PARSING", true)) {
+            return -1;
+        } else {
+            dprintf(D_ALWAYS, "WARNING: strict classad parsing failed for expression: \"%s\"\n", value);
+        }
     }
 	return rval + rval1;
 }

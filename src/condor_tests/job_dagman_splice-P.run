@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,100 +18,61 @@
 ##
 ##**************************************************************
 
+use strict;
+use warnings;
+
 use CondorTest;
 use CondorUtils;
+use DagmanTest;
 
-$cmd = 'job_dagman_splice-P-0.dag';
-$testdesc =  'Condor submit dag - splice test for gittrac #1751 - scheduler U';
-$testname = "job_dagman_splice-P";
-$dagman_args = "-verbose";
+my $cmd = 'job_dagman_splice-P-0.dag';
+my $testdesc =  'Condor submit dag - splice test for gittrac #1751 - scheduler U';
+my $testname = "job_dagman_splice-P";
+my $dagman_args = "-verbose";
 
-@outfiles = ("0_B");
+DagmanTest::register_event_handlers($testname);
 
-my $killedchosen = 0;
+my @outfiles = ("0_P2");
 
-# truly const variables in perl
-sub IDLE{1};
-sub HELD{5};
-sub RUNNING{2};
-
-$abnormal = sub 
-{
-
-	die "Want to see only submit, execute and successful completion\n";
-};
-
-$aborted = sub 
-{
-	die "Abort event NOT expected\n";
-};
-
-$held = sub 
-{
-	die "Held event NOT expected\n";
-};
-
-$executed = sub
-{
-	my %info = @_;
-
-	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
-};
-
-$submitted = sub
-{
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
-};
-
-$success = sub
-{
-	CondorTest::debug("executed successfully\n",1);
-	CondorTest::debug("Verifying output\n",1);
-	$diditpass = 1;
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^OK.*$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
+my $success = sub {
+    CondorTest::debug("executed successfully\n", 1);
+    CondorTest::debug("Verifying output\n", 1);
+    my $passed = 1;
+    FILE: foreach my $file (@outfiles) {
+	if(!open(OUT, '<', "$file.out")) {
+	    CondorTest::debug("ERROR: Can not open output file '$file.out': $!\n", 1);
+	    $passed = 0;
+	    next;
 	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
+
+	while(<OUT>) {
+	    if(/^OK/) {
+		next FILE;
+	    }
 	}
-	if($diditpass == 0) {
-		die "All expected files and correct output failed\n";
-	}
+
+	CondorTest::debug("ERROR - $file.out did not contain OK\n", 1);
+	$passed = 0;
+    }
+
+    my $save_dir = "$testname.output_files";
+    runcmd("mkdir -p $save_dir");
+    foreach my $name (@outfiles) {
+	runcmd("mv $name.out $name.err $save_dir");
+    }
+
+    if($passed == 0) {
+	die "All expected files and correct output failed\n";
+    }
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
-CondorTest::RegisterExecute($testname, $executed);
-CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
-CondorTest::RegisterAbort( $testname, $aborted );
-CondorTest::RegisterHold( $testname, $held );
-CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
+    CondorTest::debug("$testname: SUCCESS\n",1);
+    exit(0);
+}
+else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

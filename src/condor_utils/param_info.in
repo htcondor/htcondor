@@ -5428,6 +5428,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
 
+[ENABLE_CLASSAD_CACHING]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable ClassAd Caching
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad
+id=315
+
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
 default=true
@@ -8118,6 +8134,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=491
 
+[QUEUE_SUPER_USER_MAY_IMPERSONATE]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Queue Super Users
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd,qmgmt
+id=491
+
 [QUEUE_ALL_USERS_TRUSTED]
 aliases=
 default=false
@@ -8344,7 +8376,7 @@ id=505
 
 [LOCAL_UNIV_EXECUTE]
 aliases=
-default=
+default=$(SPOOL)/local_univ_execute
 version=0.0.0
 range=.*
 state=default
@@ -10233,6 +10265,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag
 id=602
 
+[DEFRAG_CANCEL_REQUIREMENTS]
+aliases=
+default=$(DEFRAG_WHOLE_MACHINE_EXPR)
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=602
+
 [DEFRAG_WHOLE_MACHINE_EXPR]
 aliases=
 default=Cpus == TotalCpus && Offline=!=True
@@ -10649,6 +10697,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
 
+[CLASSAD_LOG_STRICT_PARSING]
+aliases=
+default=true
+version=7.9.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable strict parse checking of classad RHS expressions in classad log files
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad_log
+id=612
+
 [STARTER_RLIMIT_AS]
 aliases=
 default=0
@@ -10665,4 +10729,18 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=611
 
-
+[INTERACTIVE_SUBMIT_FILE]
+aliases=
+default=$(LIBEXEC)/interactive.sub
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Location of default submit file for condor_submit -i
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit
+id=612

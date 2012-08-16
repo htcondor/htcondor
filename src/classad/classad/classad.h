@@ -38,11 +38,16 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef boost::unordered_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef classad_unordered<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
 void ClassAdLibraryVersion(std::string &version_string);
+
+// Should parsed expressions be cached and shared between multiple ads.
+// The default is false.
+void ClassAdSetExpressionCaching(bool do_caching);
+bool ClassAdGetExpressionCaching();
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
@@ -130,6 +135,10 @@ class ClassAd : public ExprTree
 e		*/
 		bool InsertAttr( const std::string &attrName,int value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
+		bool InsertAttr( const std::string &attrName,long value, 
+				Value::NumberFactor f=Value::NO_FACTOR );
+		bool InsertAttr( const std::string &attrName,long long value, 
+				Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
 		 		is evaluated to obtain a nested classad, and the attribute is
@@ -144,6 +153,10 @@ e		*/
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				int value, Value::NumberFactor f=Value::NO_FACTOR );
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
+				long value, Value::NumberFactor f=Value::NO_FACTOR );
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
+				long long value, Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
@@ -364,9 +377,13 @@ e		*/
 		/** Evaluates an attribute to an integer.
 			@param attr The name of the attribute.
 			@param intValue The value of the attribute.
+			If the type of intValue is smaller than a long long, the
+			value may be truncated.
 			@return true if attrName evaluated to an integer, false otherwise.
 		*/
 		bool EvaluateAttrInt( const std::string &attr, int& intValue ) const;
+		bool EvaluateAttrInt( const std::string &attr, long& intValue ) const;
+		bool EvaluateAttrInt( const std::string &attr, long long& intValue ) const;
 
 		/** Evaluates an attribute to a real.
 			@param attr The name of the attribute.
@@ -379,9 +396,13 @@ e		*/
 				a real, it is truncated to an integer.
 			@param attr The name of the attribute.
 			@param intValue The value of the attribute.
+			If the type of intValue is smaller than a long long, the
+			value may be truncated.
 			@return true if attrName evaluated to an number, false otherwise.
 		*/
 		bool EvaluateAttrNumber( const std::string &attr, int& intValue ) const;
+		bool EvaluateAttrNumber( const std::string &attr, long& intValue ) const;
+		bool EvaluateAttrNumber( const std::string &attr, long long& intValue ) const;
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.
@@ -427,7 +448,17 @@ e		*/
 			@return true if attrName evaluated to a ClassAd, false 
 				otherwise.
 		*/
-        bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
+		// This interface is disabled, because it cannot support dynamically allocated
+		// classad values (in case such a thing is ever added, similar to SLIST_VALUE).
+		// Instead, use EvaluateAttr().
+		// Waiting to hear if anybody cares ...
+		// If anybody does, we can make this set a shared_ptr instead, but that
+		// has performance implications that depend on whether all ClassAds
+		// are managed via shared_ptr or only ones dynamically created
+		// during evaluation (because a fresh copy has to be made for
+		// objects not already managed via shared_ptr).  So let's avoid depending
+		// on this interface until we need it.
+        //bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
 
 		/** Evaluates an attribute to an ExprList.  A pointer to the ExprList is 
 				returned. You do not own the ExprList--do not free it.
@@ -436,7 +467,16 @@ e		*/
 			@return true if attrName evaluated to a ExprList, false 
 				otherwise.
 		*/
-        bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
+		// This interface is disabled, because it cannot support dynamically allocated
+		// list values (SLIST_VALUE).  Instead, use EvaluateAttr().
+		// Waiting to hear if anybody cares ...
+		// If anybody does, we can make this set a shared_ptr instead, but that
+		// has performance implications that depend on whether all ExprLists
+		// in ClassAds are managed via shared_ptr or only ones dynamically created
+		// during evaluation  (because a fresh copy has to be made for
+		// objects not already managed via shared_ptr).  So let's avoid depending
+		// on this interface until we need it.
+        //bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
 		//@}
 
 		/**@name STL-like Iterators */

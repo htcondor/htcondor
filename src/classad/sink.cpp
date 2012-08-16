@@ -166,9 +166,9 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::INTEGER_VALUE: {
-			int	i;
+			long long	i;
 			val.IsIntegerValue( i );
-			sprintf( tempBuf, "%d", i );
+			sprintf( tempBuf, "%lld", i );
 			buffer += tempBuf;
 			return;
 		}
@@ -240,6 +240,7 @@ Unparse( string &buffer, const Value &val )
 			UnparseAux( buffer, attrs );
 			return;
 		}
+		case Value::SLIST_VALUE:
 		case Value::LIST_VALUE: {
 			const ExprList *el = NULL;
 			vector<ExprTree*> exprs;
@@ -728,7 +729,7 @@ identifierNeedsQuoting( const string &str )
 
 	// must start with [a-zA-Z_]
 	if( !isalpha( *ch ) && *ch != '_' ) {
-		needs_quoting = false;
+		needs_quoting = true;
 	} else {
 
 		// all other characters must be [a-zA-Z0-9_]

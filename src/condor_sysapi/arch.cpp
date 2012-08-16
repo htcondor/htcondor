@@ -660,15 +660,15 @@ sysapi_find_linux_name( const char *info_str )
 	}
    	else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "cern") )
         {
-                distro = strdup("ScientificLinuxCern");
+                distro = strdup("SLCern");
         }
         else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "slf") )
         {
-                distro = strdup("ScientificLinuxFermi");
+                distro = strdup("SLFermi");
         }
    	else if ( strstr(distro_name_lc, "scientific") )
         {
-                distro = strdup("ScientificLinux");
+                distro = strdup("SL");
         }
         else if ( strstr(distro_name_lc, "centos") )
         {
@@ -689,6 +689,7 @@ sysapi_find_linux_name( const char *info_str )
   	if( !distro ) {
                 EXCEPT( "Out of memory!" );
         }
+	free( distro_name_lc );
 	return distro;
 }
 

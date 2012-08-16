@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryQuery_GETJOBDATA_H
-        #define AviaryQuery_GETJOBDATA_H
-
+          #ifndef AviaryQuery_GETJOBDATA_H
+          #define AviaryQuery_GETJOBDATA_H
+        
+      
        /**
         * GetJobData.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_JobData.h"
-          
+                #include "AviaryCommon_JobData.h"
+              
         #include <axutil_qname.h>
         
 
@@ -99,6 +99,11 @@ namespace AviaryQuery
          */
         GetJobData(AviaryCommon::JobData* arg_Data,int arg_Max_bytes,bool arg_From_end);
         
+
+        /**
+         * resetAll for GetJobData
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

@@ -71,7 +71,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	for( int i = 0 ; i < numExprs ; i++ ) {
 		char const *strptr = NULL;
 		string buffer;
-		if( !sock->get_string_ptr( strptr ) ) {
+		if( !sock->get_string_ptr( strptr ) || !strptr ) {
 			return( false );	 
 		}		
 

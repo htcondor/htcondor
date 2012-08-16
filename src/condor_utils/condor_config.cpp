@@ -38,7 +38,6 @@
       2) /etc/condor/
       3) /usr/local/etc/
       4) ~condor/
-      5) ${GLOBUS_LOCATION}/etc/
 
   If none of the above locations contain a config source, config()
   prints an error message and exits.
@@ -117,6 +116,7 @@ BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 static bool have_config_source = true;
+static bool continue_if_no_config = false; // so condor_who won't exit if no config found.
 extern bool condor_fsync_on;
 
 MyString global_config_source;
@@ -126,6 +126,13 @@ param_functions config_p_funcs;
 
 static int ParamValueNameAscendingSort(const void *l, const void *r);
 
+
+bool config_continue_if_no_config(bool contin)
+{
+	bool old_contin = continue_if_no_config;
+	continue_if_no_config = contin;
+	return old_contin;
+}
 
 // Function implementations
 
@@ -616,7 +623,10 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		have_config_source = false;
 	}
 
-	if( have_config_source && ! (config_source = find_global()) ) {
+	if( have_config_source && 
+		! (config_source = find_global()) &&
+		! continue_if_no_config)
+	{
 		if( wantsQuiet ) {
 			fprintf( stderr, "%s error: can't find config source.\n",
 					 myDistro->GetCap() );
@@ -649,7 +659,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	}
 
 		// Read in the global file
-	if( have_config_source ) {
+	if( config_source ) {
 		process_config_source( config_source, "global config source", NULL, true );
 		global_config_source = config_source;
 		free( config_source );
@@ -1108,7 +1118,7 @@ find_file(const char *env_name, const char *file_name)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		int locations_length = 5;
+		const int locations_length = 4;
 		MyString locations[locations_length];
 			// 1) $HOME/.condor/condor_config
 		struct passwd *pw = getpwuid( geteuid() );
@@ -1123,11 +1133,6 @@ find_file(const char *env_name, const char *file_name)
 		if (tilde) {
 				// 4) ~condor/condor_config
 			locations[3].sprintf( "%s/%s", tilde, file_name );
-		}
-			// 5) ${GLOBUS_LOCATION}/etc/condor_config
-		char *globus_location;
-		if ((globus_location = getenv("GLOBUS_LOCATION"))) {
-			locations[4].sprintf( "%s/etc/%s", globus_location, file_name );
 		}
 
 		int ctr;	
@@ -2694,6 +2699,9 @@ bool param(MyString &buf,char const *param_name,char const *default_value)
 	else if( default_value ) {
 		buf = default_value;
 	}
+	else {
+		buf = "";
+	}
 	free( param_value );
 	return found;
 }
@@ -2708,6 +2716,9 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	}
 	else if( default_value ) {
 		buf = default_value;
+	}
+	else {
+		buf = "";
 	}
 	free( param_value );
 	return found;

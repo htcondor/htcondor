@@ -58,6 +58,8 @@ Reconfig()
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::_useOldClassAdSemantics = !m_strictEvaluation;
 
+	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
+
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
 		StringList new_libs_list( new_libs );
@@ -90,8 +92,8 @@ void getTheMyRef( classad::ClassAd *ad )
 	//}
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=0;
-		ad->Insert( "my", (pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" ) ) );
+		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+		ad->Insert( "my", pExpr );
 	}
 }
 
@@ -481,7 +483,7 @@ bool splitAt_func( const char * name,
 		second.SetStringValue(str.substr(ix+1));
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 	lst->push_back(classad::Literal::MakeLiteral(first));
 	lst->push_back(classad::Literal::MakeLiteral(second));
@@ -854,7 +856,7 @@ AssignExpr(char const *name,char const *value)
 	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
 		return FALSE;
 	}
-	if ( !Insert( name, expr ) ) {
+	if ( !Insert( name, expr, false ) ) {
 		delete expr;
 		return FALSE;
 	}
@@ -2048,7 +2050,7 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 	classad::ExprTree *e = source_ad->Lookup( source_attr );
 	if ( e ) {
 		e = e->Copy();
-		Insert( target_attr, e );
+		Insert( target_attr, e, false );
 	} else {
 		Delete( target_attr );
 	}
@@ -2144,8 +2146,8 @@ void ClassAd::ChainCollapse()
             tmpExprTree = tmpExprTree->Copy(); 
             ASSERT(tmpExprTree); 
 
-            //K, it's clear. Insert it!
-            Insert((*itr).first, tmpExprTree);
+            //K, it's clear. Insert it, but don't try to 
+            Insert((*itr).first, tmpExprTree, false);
         }
     }
 }
@@ -2872,8 +2874,7 @@ static void InitTargetAttrLists()
 }
 #endif
 
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
-								  TargetAdType /*target_type*/ )
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType /*target_type*/ )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();

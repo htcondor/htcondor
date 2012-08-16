@@ -21,8 +21,8 @@ of all the remote machines running a parallel or mpi universe job.
 %%% ClassAd attribute: BatchQueue
 \index{ClassAd job attribute!BatchQueue}
 \index{BatchQueue!job ClassAd attribute}
-\item[\AdAttr{BatchQueue}:]  For grid jobs going to PBS, LSG or SGE, the
-name of the queue in the remote batch system.
+\item[\AdAttr{BatchQueue}:]  For grid universe jobs destined for 
+PBS, LSF or SGE, the name of the queue in the remote batch system.
 
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
@@ -156,6 +156,23 @@ contain
 \begin{verbatim}
   -append +DAGParentNodeNames=B,C
 \end{verbatim}
+
+%%% ClassAd attribute: DAGManNodesLog
+\index{ClassAd job attribute!DAGManNodesLog}
+\index{DAGManNodesLog!job ClassAd attribute}
+\item[\AdAttr{DAGManNodesLog}:] For a DAGMan node job only, gives the path to
+an event log used exclusively by DAGMan to monitor the state of the DAG's jobs.
+
+%%% ClassAd attribute: DAGManNodesLog
+\index{ClassAd job attribute!DAGManNodesMask}
+\index{DAGManNodesMask!job ClassAd attribute}
+\item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, controls the
+events inserted in the log referred to by \Attr{DAGManNodesLog} (the auxiliary
+log). If the mask is empty or undefined, all events are written to the
+auxiliary job log.  Otherwise, it is a list of numbers; events are only written
+to the auxiliary log if they are found in the list. If \Attr{DAGManNodesLog} is
+not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
+affect events recorded in the user log file referred to by \Attr{UserLog}.
 
 %%% ClassAd attribute: DeltacloudAvailableActions
 \index{ClassAd job attribute!DeltacloudAvailableActions}

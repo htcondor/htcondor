@@ -37,6 +37,7 @@ install (FILES
 		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
 		condor_config.generic
+		condor_config.generic.redhat
 		condor_config.local.dedicated.resource
 		condor_config.local.view_server
 		#condor_config.generic.debian.patch
@@ -55,9 +56,12 @@ install (FILES
 	 DESTINATION ${C_ETC_EXAMPLES}
 	 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-
-install (FILES condor_limits_wrapper.sh condor_schedd.init DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
-
+install (FILES 
+	condor_limits_wrapper.sh
+	condor_schedd.init
+	interactive.sub
+	DESTINATION ${C_LIBEXEC}
+	PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 
 #Prepare OS specific config file
 

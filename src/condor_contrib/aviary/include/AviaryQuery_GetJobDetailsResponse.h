@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryQuery_GETJOBDETAILSRESPONSE_H
-        #define AviaryQuery_GETJOBDETAILSRESPONSE_H
-
+          #ifndef AviaryQuery_GETJOBDETAILSRESPONSE_H
+          #define AviaryQuery_GETJOBDETAILSRESPONSE_H
+        
+      
        /**
         * GetJobDetailsResponse.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_JobDetails.h"
-          
+                #include "AviaryCommon_JobDetails.h"
+              
         #include <axutil_qname.h>
         
 
@@ -81,6 +81,11 @@ namespace AviaryQuery
          */
         GetJobDetailsResponse(std::vector<AviaryCommon::JobDetails*>* arg_Jobs);
         
+
+        /**
+         * resetAll for GetJobDetailsResponse
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/

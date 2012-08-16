@@ -74,7 +74,7 @@ axis2_ssl_stream_free(
     ssl_stream_impl_t *stream_impl = NULL;
 
     stream_impl = AXIS2_INTF_TO_IMPL(stream);
-    axis2_ssl_utils_cleanup_ssl(env, stream_impl->ctx, stream_impl->ssl);
+    axis2_ssl_utils_cleanup_ssl(stream_impl->ctx, stream_impl->ssl);
     AXIS2_FREE(env->allocator, stream_impl);
 
     return;
@@ -209,6 +209,8 @@ axis2_ssl_stream_get_char(
     const axutil_env_t * env)
 {
     int ret = -1;
+    (void)stream;
+    (void)env;
 
     return ret;
 }
@@ -218,5 +220,6 @@ axis2_ssl_stream_get_type(
     axutil_stream_t * stream,
     const axutil_env_t * env)
 {
+    (void)env;
     return AXIS2_INTF_TO_IMPL(stream)->stream_type;
 }

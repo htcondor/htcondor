@@ -501,7 +501,7 @@ void INFNBatchJob::doEvaluateState()
 						 "(%d.%d) blah_job_status() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			ProcessRemoteAd( status_ad );
@@ -806,7 +806,7 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
 			ExprTree * pTree =  new_expr->Copy();
-			jobAd->Insert( attrs_to_copy[index], pTree );
+			jobAd->Insert( attrs_to_copy[index], pTree, false );
 		}
 	}
 
@@ -872,7 +872,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	while ( attrs_to_copy[++index] != NULL ) {
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
 			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attrs_to_copy[index], pTree );
+			submit_ad->Insert( attrs_to_copy[index], pTree, false );
 		}
 	}
 
@@ -902,14 +902,15 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
-	jobAd->LookupString( ATTR_X509_USER_PROXY, expr );
-	if ( expr[0] != '/' ) {
-		std::string fullpath;
-		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-		sprintf_cat( fullpath, "/%s", expr.Value() );
-		submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
-	} else {
-		submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+	if ( jobAd->LookupString( ATTR_X509_USER_PROXY, expr ) ) {
+		if ( expr[0] != '/' ) {
+			std::string fullpath;
+			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
+			sprintf_cat( fullpath, "/%s", expr.Value() );
+			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
+		} else {
+			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+		}
 	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
@@ -1035,7 +1036,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			}
 
 			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attr_name, pTree );
+			submit_ad->Insert( attr_name, pTree, false );
 		}
 	}
 

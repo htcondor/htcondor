@@ -140,19 +140,23 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 bool MatchClassAd::
 ReplaceLeftAd( ClassAd *ad )
 {
+	lad = ad;
 	ladParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
 		if( !Insert( "LEFT", ad, false ) ) {
+			lad = NULL;
+			ladParent = NULL;
+			Delete( "LEFT" );
 			return false;
 		}
 		
-		lad = ad;
-	
 		// For the ability to efficiently reference the ad via
 		// .LEFT, it is inserted in the top match ad, but we want
 		// its parent scope to be the context ad.
 		lCtx->SetParentScope(this);
 		lad->SetParentScope(lCtx);
+	} else {
+		Delete( "LEFT" );
 	}
 	return true;
 }
@@ -161,19 +165,24 @@ ReplaceLeftAd( ClassAd *ad )
 bool MatchClassAd::
 ReplaceRightAd( ClassAd *ad )
 {
+	rad = ad;
 	radParent = ad ? ad->GetParentScope( ) : (ClassAd*)NULL;
 	if( ad ) {
 		if( !Insert( "RIGHT", ad , false ) ) {
+			rad = NULL;
+			radParent = NULL;
+			Delete( "RIGHT" );
 			return false;
 		}
 		
-		rad = ad;
 	
 		// For the ability to efficiently reference the ad via
 		// .RIGHT, it is inserted in the top match ad, but we want
 		// its parent scope to be the context ad.
 		rCtx->SetParentScope(this);
 		rad->SetParentScope(rCtx);
+	} else {
+		Delete( "RIGHT" );
 	}
 	return true;
 }
@@ -355,7 +364,7 @@ EvalMatchExpr(ExprTree *match_expr)
 		if( val.IsBooleanValue( result ) ) {
 			return result;
 		}
-		int int_result = 0;
+		long long int_result = 0;
 		if( val.IsIntegerValue( int_result ) ) {
 			return int_result != 0;
 		}

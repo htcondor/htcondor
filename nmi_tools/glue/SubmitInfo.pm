@@ -179,8 +179,6 @@ our %submit_info = (
 	'x86_64_winnt_6.1'		=> {
 		'build' => {
 			'configure_args' => { 
-			 # TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
-			 # '-G \"Visual Studio 9 2008\"' => undef,
 			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
             },
 			'prereqs'	=> undef,
@@ -250,6 +248,13 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_64_rhap_6.3'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.4'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.5'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.6'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.7'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.8'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.9'	=> 'x86_64_rhap_6.2',
 
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
@@ -266,6 +271,9 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_rhap_5.8'   => 'x86_64_rhap_5.7',
+	'x86_64_rhap_5.9'   => 'x86_64_rhap_5.7',
+	'x86_64_rhap_5.10'   => 'x86_64_rhap_5.7', # dunno if 5.10 will actually be a release
 
 	'x86_rhap_6.2'		=> {
 		'build' => {
@@ -280,6 +288,13 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_6.3'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.4'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.5'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.6'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.7'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.8'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.9'		=> 'x86_rhap_6.2',
 
 	'x86_rhap_5.8'		=> {
 		'build' => {
@@ -296,6 +311,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_5.9'		=> 'x86_rhap_5.8',
+	'x86_rhap_5.10'		=> 'x86_rhap_5.8',
 
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
@@ -342,6 +359,10 @@ our %submit_info = (
 	'x86_64_fedora_16'				=> 'x86_64_fedora_15',
 	'x86_64_fedora_17'				=> 'x86_64_fedora_15',
 	'x86_64_fedora_18'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_19'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_20'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_21'				=> 'x86_64_fedora_15',
+	'x86_64_fedora_22'				=> 'x86_64_fedora_15',
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
@@ -352,11 +373,14 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_OPENSSL:BOOL' => 'OFF',
+			# we can use ssh_to_job on solaris if we use the proper kerberose
+			# this is OK since we build kerberose only for batlab.
+			'configure_args' => { @default_build_configure_args,
+								  '-DWITH_KRB5:BOOL' => 'OFF',
+								  '-DWITH_GSOAP:BOOL' => 'OFF', 
 								  '-DWITH_CURL:BOOL' => 'OFF',
-								  '-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
-								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
+								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
+								  #'-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 			},
 			'prereqs'	=> [],
 			'xtests'	=> undef,
@@ -384,6 +408,9 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_sl_5.8'   => 'x86_sl_5.7',
+	'x86_sl_5.9'   => 'x86_sl_5.7',
+	'x86_sl_5.10'   => 'x86_sl_5.7',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64

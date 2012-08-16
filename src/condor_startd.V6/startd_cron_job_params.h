@@ -22,7 +22,6 @@
 
 #include "classad_cron_job.h"
 #include <list>
-using namespace std;
 
 // Define a "ClassAd" cron job parameter object
 class StartdCronJobParams : public ClassAdCronJobParams
@@ -37,7 +36,7 @@ class StartdCronJobParams : public ClassAdCronJobParams
 	bool InSlotList( unsigned slot ) const;
 
   private:
-	list<unsigned>	m_slots;
+	std::list<unsigned>	m_slots;
 };
 
 #endif /* _STARTD_CRON_JOB_PARAMS_H */

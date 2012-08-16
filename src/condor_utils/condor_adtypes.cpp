@@ -22,7 +22,7 @@
 #include "condor_adtypes.h"
 
 struct Lookup {
-	const char	*str;
+	char	str[20];
 	AdTypes		type;
 };
 static const Lookup adtypes [] =
@@ -51,7 +51,7 @@ static const Lookup adtypes [] =
 	{ GRID_ADTYPE, 			GRID_AD, },
 	{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD, },
 	{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD, },
-	{ (const char *) 0,		NO_AD, },
+	{ "",		NO_AD, },
 };
 
 AdTypes

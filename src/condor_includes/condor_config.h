@@ -164,6 +164,7 @@ class ParamValue {
 extern "C" {
 	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
 	void config_host( char* host=NULL );
+	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
@@ -194,7 +195,7 @@ extern "C" {
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
-						  char *self=NULL, bool use_default_param_table=false );
+						  const char *self=NULL, bool use_default_param_table=false );
 
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),

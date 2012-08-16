@@ -21,7 +21,10 @@ if (LINUX)
 endif()
 
 if ( WITH_PLUMAGE )
- 
+
+ # LTO does not work with BOOST as of GCC 4.7.  Temporarily squashing it.
+ STRING (REGEX REPLACE "-flto" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
  include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src ${MONGODB_INCLUDES})
  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
 

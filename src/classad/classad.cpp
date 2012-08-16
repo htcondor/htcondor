@@ -35,6 +35,19 @@ namespace classad {
 // semantics. It will be removed without warning in a future release.
 bool _useOldClassAdSemantics = false;
 
+// Should parsed expressions be cached and shared between multiple ads.
+// The default is false.
+static bool doExpressionCaching = false;
+
+void ClassAdSetExpressionCaching(bool do_caching) {
+	doExpressionCaching = do_caching;
+}
+
+bool ClassAdGetExpressionCaching()
+{
+	return doExpressionCaching;
+}
+
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
@@ -231,7 +244,51 @@ InsertAttr( const string &name, int value, Value::NumberFactor f )
 
 
 bool ClassAd::
+InsertAttr( const string &name, long value, Value::NumberFactor f )
+{
+	ExprTree* plit;
+	Value val;
+
+	val.SetIntegerValue( value );
+	plit = Literal::MakeLiteral( val, f );
+	return( Insert( name, plit ) );
+}
+
+
+bool ClassAd::
+InsertAttr( const string &name, long long value, Value::NumberFactor f )
+{
+	ExprTree* plit;
+	Value val;
+
+	val.SetIntegerValue( value );
+	plit = Literal::MakeLiteral( val, f );
+	return( Insert( name, plit ) );
+}
+
+
+bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value, 
+	Value::NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value, 
+	Value::NumberFactor f )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value, f ) );
+}
+
+
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value, 
 	Value::NumberFactor f )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
@@ -339,53 +396,59 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const string &value )
 bool ClassAd::Insert( std::string& serialized_nvp)
 {
 
-  bool bRet = true;
+  bool bRet = false;
   string name, szValue;
   size_t pos, npos, vpos;
   
   // comes in as "name = value" "name= value" or "name =value"
-  npos=pos = serialized_nvp.find("=");
-  if (serialized_nvp[pos-1] == ' ')
+  npos=pos=serialized_nvp.find("=");
+  
+  // only try to process if the string is valid 
+  if ( pos != string::npos  )
   {
-    npos--;
-  }
-  name = serialized_nvp.substr(0, npos);
-
-  vpos=pos+1;
-  if (serialized_nvp[vpos] == ' ')
-  {
-    vpos++;
-  }
-
-  szValue = serialized_nvp.substr(vpos);
-
-  // here is the special logic to check
-  CachedExprEnvelope * cache_check = CachedExprEnvelope::check_hit( name, szValue );
-  if ( cache_check ) 
-  {
-      ExprTree * in = cache_check;
-      bRet = Insert( name, in, false );
-  }
-  else
-  {
-    ClassAdParser parser;
-    ExprTree * newTree=0;
-
-    // we did not hit in the cache... parse the expression
-    newTree = parser.ParseExpression(szValue);
-
-    // invert default flow logic for else case.
-    bRet = false;
-
-    if ( newTree )
+    if (serialized_nvp[pos-1] == ' ')
     {
-      if ( Insert( name, newTree ) ) 
-      {
-	bRet = true;
-      }
+      npos--;
+    }
+    name = serialized_nvp.substr(0, npos);
+
+    vpos=pos+1;
+    if (serialized_nvp[vpos] == ' ')
+    {
+      vpos++;
     }
 
-  }
+    szValue = serialized_nvp.substr(vpos);
+
+    // here is the special logic to check
+    CachedExprEnvelope * cache_check = NULL;
+	if ( doExpressionCaching ) {
+		cache_check = CachedExprEnvelope::check_hit( name, szValue );
+	}
+    if ( cache_check ) 
+    {
+	ExprTree * in = cache_check;
+	bRet = Insert( name, in, false );
+    }
+    else
+    {
+      ClassAdParser parser;
+      ExprTree * newTree=0;
+
+      // we did not hit in the cache... parse the expression
+      newTree = parser.ParseExpression(szValue);
+
+      if ( newTree )
+      {
+	if ( Insert( name, newTree ) ) 
+	{
+	  bRet = true;
+	}
+      }
+
+    }
+    
+  } // end if pos != string::npos
 
   return bRet;
 }
@@ -419,7 +482,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		return( false );
 	}
 
-	if (cache)
+	if (doExpressionCaching && cache)
 	{
 	  tree = CachedExprEnvelope::cache(szName, pRef);
 	  // what goes in may be destroyed in preference for cache.
@@ -938,6 +1001,20 @@ EvaluateAttrInt( const string &attr, int &i )  const
 }
 
 bool ClassAd::
+EvaluateAttrInt( const string &attr, long &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+}
+
+bool ClassAd::
+EvaluateAttrInt( const string &attr, long long &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+}
+
+bool ClassAd::
 EvaluateAttrReal( const string &attr, double &r )  const
 {
 	Value val;
@@ -946,6 +1023,20 @@ EvaluateAttrReal( const string &attr, double &r )  const
 
 bool ClassAd::
 EvaluateAttrNumber( const string &attr, int &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+}
+
+bool ClassAd::
+EvaluateAttrNumber( const string &attr, long &i )  const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+}
+
+bool ClassAd::
+EvaluateAttrNumber( const string &attr, long long &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
@@ -979,19 +1070,36 @@ EvaluateAttrBool( const string &attr, bool &b ) const
 	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
 }
 
+#if 0
+// disabled (see header)
 bool ClassAd::
 EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
 {
 	Value val;
+		// TODO: filter out shared_ptr<ClassAd> values that would
+		// go out of scope here (if such a thing is ever added),
+		// or return a shared_ptr and make a copy here of the
+		// ClassAd if it is not already managed by a shared_ptr.
 	return( EvaluateAttr( attr, val ) && val.IsClassAdValue( classad ) );
 }
+#endif
 
+#if 0
+// disabled (see header)
 bool ClassAd::
 EvaluateAttrList( const string &attr, ExprList *&l ) const
 {
     Value val;
-	return( EvaluateAttr( attr, val ) && val.IsListValue( l ) );
+		// This version of EvaluateAttrList() can only succeed
+		// if the result is LIST_VALUE, not SLIST_VALUE, because
+		// the shared_ptr<ExprList> goes out of scope before
+		// returning to the caller.  Either do as below and filter
+		// out SLIST_VALUE, or return a shared_ptr and create a
+		// copy of the list here if it is not already managed
+		// by a shared_ptr.
+	return( EvaluateAttr( attr, val ) && val.GetType() == LIST_VALUE && val.IsListValue( l ) );
 }
+#endif
 
 bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )

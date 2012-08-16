@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,123 +18,85 @@
 ##
 ##**************************************************************
 
+use strict;
+use warnings;
+
 use CondorTest;
 use CondorUtils;
 
-$cmd      = 'job_filexfer_limitback_van.cmd';
-$testdesc =  'Base file transfer requesting a subset of output files - vanilla U';
-$testname = "job_filexfer_limitback_van";
+my $cmd      = 'job_filexfer_limitback_van.cmd';
+my $cmdnew   = $cmd . ".modified";
+my $testdesc = 'Base file transfer requesting a subset of output files - vanilla U';
+my $testname = "job_filexfer_limitback_van";
 
-# truly const variables in perl
-sub IDLE{1};
-sub HELD{5};
-sub RUNNING{2};
+my $pid = $$;
+my $baseoutfile = "submit_filetrans_output" . $pid;
+my $oute = $baseoutfile . "e.txt";
+my $outf = $baseoutfile . "f.txt";
+my $outg = $baseoutfile . "g.txt";
 
-my $job = $$;
-my $baseoutfile = "submit_filetrans_output" . "$job";
-my $oute = "$baseoutfile"."e.txt";
-my $outf = "$baseoutfile"."f.txt";
-my $outg = "$baseoutfile"."g.txt";
-my $outh = "$baseoutfile"."h.txt";
-my $outi = "$baseoutfile"."i.txt";
-my $outj = "$baseoutfile"."j.txt";
-
-my $alreadydone=0;
-
-$execute = sub {
-	my %args = @_;
-	my $cluster = $args{"cluster"};
-
-	CondorTest::debug("Running $cluster\n",1);
-
+my $execute = sub {
+    my %args = @_;
+    my $cluster = $args{"cluster"};
+    CondorTest::debug("Running $cluster\n", 1);
 };
 
-$success = sub
-{
-	CondorTest::debug("Base file transfer job!\n",1);
-	if(-f "$oute"){ print "$oute arrived unexpectedly\n"; exit(1)};
-	if(!-f "$outf"){ print "$outf failed to arrive\n"; exit(1)};
-	if(!-f "$outg"){ print "$outg failed to arrive\n"; exit(1)};
+my $success = sub {
+    my $errors = 0;
+    CondorTest::debug("Base file transfer job!\n", 1);
+    if(-f $oute) {
+        print "$oute arrived unexpectedly\n";
+        $errors++;
+    }
+    if(!-f $outf) {
+        print "$outf failed to arrive\n";
+        $errors++;
+    }
+    if(!-f $outg) {
+        print "$outg failed to arrive\n";
+        $errors++;
+    }
+
+    if($errors > 0) {
+        exit(1);
+    }
 };
 
-$abort = sub {
-	CondorTest::debug("Job is gone now, cool.\n",1);
+my $abort = sub {
+    CondorTest::debug("Job is gone now, cool.\n", 1);
 };
 
-$timed = sub
-{
-	die "Job should have ended by now. file transfer broken!\n";
+my $timed = sub {
+    die "Job should have ended by now. file transfer broken!\n";
 };
 
-# make some needed files. All 0 sized and xxxxxx.txt for
-# easy cleanup
+# make some needed files. All 0 sized and xxxxxx.txt for easy cleanup
+CondorTest::debug("PID = $pid\n", 1);
+my $args = "--job=$pid --onesetout ";
 
-my $job = $$;
-CondorTest::debug("Process Id for this script is  $job\n",1);
-my $basefile = "submit_filetrans_input" . "$job";
-my $in = "$basefile".".txt";
-my $ina = "$basefile"."a.txt";
-my $inb = "$basefile"."b.txt";
-my $inc = "$basefile"."c.txt";
-
-my $inputdir = "job_"."$job"."_dir";
-
-runcmd("mkdir -p $inputdir");
-runcmd("touch $inputdir/$in");
-runcmd("touch $inputdir/$ina");
-runcmd("touch $inputdir/$inb");
-runcmd("touch $inputdir/$inc");
-
-my $line = "";
-my $args = "--job=$job --onesetout ";
-
-# pass pid for output file production
 # open submitfile and fix
-open(CMD,"<$cmd") || die "Can not open command file: $!\n";
-open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
-while(<CMD>)
-{
-	CondorUtils::fullchomp($_);
-	CondorTest::debug("$_\n",1);
-	$line = $_;
-	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)
-	{
-		my $input = "$1"."$job".".txt";
-		CondorTest::debug("Input file was $1\n",1);
-		print NEWCMD "input = $inputdir/$input\n"
-	}
-	elsif( $line =~ /^\s*transfer_input_files\s*=\s*.*$/ )
-	{
-		print NEWCMD "transfer_input_files = $inputdir/$ina,$inputdir/$inb,$inputdir/$inc\n";
-	}
-	elsif( $line =~ /^\s*transfer_output_files\s*=\s*.*$/ )
-	{
-		# not requesting third file produced but who should care
-		print NEWCMD "transfer_output_files = $outf,$outg\n";
-	}
-	elsif( $line =~ /^\s*arguments\s*=\s*.*$/)
-	{
-		print NEWCMD "arguments = $args\n";
-	}
-	else
-	{
-		print NEWCMD "$line\n";
-	}
-
+print "Submit file contents:\n";
+open(CMD, '<', $cmd) || die "Can not open $cmd for reading: $!\n";
+open(NEWCMD, '>', $cmdnew) || die "Can not open $cmd for writing: $!\n";
+while(<CMD>) {
+    s/^\s*(transfer_output_files)\s*=.*/$1 = $outf,$outg/;
+    s/^\s*(arguments)\s*=.*/$1 = $args/;
+    print NEWCMD $_;
+    print "\t$_";
 }
 close(CMD);
 close(NEWCMD);
-runcmd("mv $cmd.new $cmd");
 
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExitedSuccess($testname, $success);
 #CondorTest::RegisterTimed($testname, $timed, 3600);
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+if( CondorTest::RunTest($testname, $cmdnew, 0) ) {
+    CondorTest::debug("$testname: SUCCESS\n", 1);
+    exit(0);
+}
+else {
+    die "$testname: CondorTest::RunTest() failed\n";
 }
 

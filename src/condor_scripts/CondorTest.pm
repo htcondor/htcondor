@@ -1731,12 +1731,10 @@ sub findOutput
 
 # Call down to Condor Perl Module for now
 
-sub debug
-{
+sub debug {
     my $string = shift;
-	my $level = shift;
-	my $newstring = "CT:$string";
-	Condor::debug($newstring,$level);
+    my $level = shift;
+    Condor::debug("<CondorTest> $string", $level);
 }
 
 
@@ -2276,7 +2274,8 @@ sub AddRunningTest {
     my $test = shift;
     my $runningfile = FindControlFile();
     debug( "Adding <$test> to running tests\n",$debuglevel);
-    runcmd("touch $runningfile/$test");
+    open(OUT, '>', '$runningfile/$test');
+    close(OUT);
 }
 
 sub RemoveRunningTest {

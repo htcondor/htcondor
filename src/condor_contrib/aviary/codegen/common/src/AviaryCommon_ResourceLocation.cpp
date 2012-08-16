@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_ResourceLocation.h"
+          
 
-        #include "AviaryCommon_ResourceLocation.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -35,13 +47,9 @@
               
             isValidLocation  = false;
         
-                property_Status  = NULL;
-              
-            isValidStatus  = false;
-        
         }
 
-       AviaryCommon::ResourceLocation::ResourceLocation(AviaryCommon::ResourceID* arg_Id,std::vector<axutil_uri_t*>* arg_Location,AviaryCommon::Status* arg_Status)
+       AviaryCommon::ResourceLocation::ResourceLocation(AviaryCommon::ResourceID* arg_Id,std::vector<axutil_uri_t*>* arg_Location)
         {
              
                property_Id  = NULL;
@@ -52,22 +60,25 @@
              
             isValidLocation  = true;
             
-               property_Status  = NULL;
-             
-            isValidStatus  = true;
-            
                     property_Id = arg_Id;
             
                     property_Location = arg_Location;
             
-                    property_Status = arg_Status;
-            
         }
         AviaryCommon::ResourceLocation::~ResourceLocation()
         {
-			if (property_Id) delete property_Id;
-			if (property_Location) delete property_Location;
-			if (property_Status) delete property_Status;
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::ResourceLocation::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+             resetId();//AviaryCommon::ResourceID
+             resetLocation();//axutil_uri_t*
+            return true;
+
         }
 
         
@@ -289,88 +300,6 @@
                      element_qname = NULL;
                   }
                  
-
-                     
-                     /*
-                      * building status element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "status", NULL, NULL);
-                                 
-
-                           if (isParticle() ||  
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("status", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("status", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 AviaryCommon::Status* element = new AviaryCommon::Status();
-
-                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                      if(AXIS2_FAILURE == status)
-                                      {
-                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element status");
-                                      }
-                                      else
-                                      {
-                                          status = setStatus(element);
-                                      }
-                                    
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for status ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element status missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
           return status;
        }
 
@@ -426,8 +355,6 @@
                     
                     axis2_char_t *text_value_2;
                     axis2_char_t *text_value_2_temp;
-                    
-                    axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -588,67 +515,6 @@
                          }
                      }
                    
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
-                   if (!isValidStatus)
-                   {
-                      
-                            
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property status");
-                            return NULL;
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("status"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("status")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing status element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%sstatus",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sstatus>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                     
-                            if(!property_Status->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                            }
-                            property_Status->serialize(current_node, parent_element,
-                                                                                 property_Status->isParticle() || false, namespaces, next_ns_index);
-                            
-                            if(!property_Status->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                            }
-                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -1140,118 +1006,6 @@
                 
                 return AXIS2_SUCCESS;
 
-           }
-
-           
-
-            /**
-             * Getter for status by  Property Number 3
-             */
-            AviaryCommon::Status* WSF_CALL
-            AviaryCommon::ResourceLocation::getProperty3()
-            {
-                return getStatus();
-            }
-
-            /**
-             * getter for status.
-             */
-            AviaryCommon::Status* WSF_CALL
-            AviaryCommon::ResourceLocation::getStatus()
-             {
-                return property_Status;
-             }
-
-            /**
-             * setter for status
-             */
-            bool WSF_CALL
-            AviaryCommon::ResourceLocation::setStatus(
-                    AviaryCommon::Status*  arg_Status)
-             {
-                
-
-                if(isValidStatus &&
-                        arg_Status == property_Status)
-                {
-                    
-                    return true;
-                }
-
-                
-                  if(NULL == arg_Status)
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"status is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
-
-                
-                resetStatus();
-
-                
-                    if(NULL == arg_Status)
-                         
-                {
-                    /* We are already done */
-                    return true;
-                }
-                
-                        property_Status = arg_Status;
-                        isValidStatus = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for status
-            */
-           bool WSF_CALL
-           AviaryCommon::ResourceLocation::resetStatus()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-            
-                
-
-                if(property_Status != NULL)
-                {
-                   
-                   
-                         delete  property_Status;
-                     
-
-                   }
-
-                
-                
-                
-               isValidStatus = false; 
-               return true;
-           }
-
-           /**
-            * Check whether status is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::ResourceLocation::isStatusNil()
-           {
-               return !isValidStatus;
-           }
-
-           /**
-            * Set status to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::ResourceLocation::setStatusNil()
-           {
-               return resetStatus();
            }
 
            

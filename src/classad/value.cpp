@@ -45,16 +45,16 @@ Value( )
 	integerValue = 0;
 	realValue = 0.0;
 	listValue = NULL;
+	slistValue = NULL;
 	classadValue = NULL;
 	relTimeValueSecs = 0;
-	absTimeValueSecs.secs = 0;
-	absTimeValueSecs.offset = 0;
 }
 
 
 Value::
 Value(const Value &value)
 {
+	valueType = UNDEFINED_VALUE;
     CopyFrom(value);
     return;
 }
@@ -62,6 +62,7 @@ Value(const Value &value)
 Value::
 ~Value()
 {
+	_Clear();
 }
 
 Value& Value::
@@ -77,13 +78,24 @@ operator=(const Value &value)
 void Value::
 Clear()
 {
+	_Clear();
+	valueType 	= UNDEFINED_VALUE;
+}
+
+
+void Value::
+_Clear()
+{
 	switch( valueType ) {
 		case LIST_VALUE:
 			// list values live in the evaluation environment, so they must
 			// never be explicitly destroyed
 			listValue = NULL;
 			break;
-
+		case SLIST_VALUE:
+			delete slistValue;
+			slistValue = NULL;
+			break;
 		case CLASSAD_VALUE:
 			// classad values live in the evaluation environment, so they must 
 			// never be explicitly destroyed
@@ -91,18 +103,49 @@ Clear()
 			break;
 
 		case STRING_VALUE:
-			strValue = "";
+			delete strValue;
+			strValue = NULL;
+			break;
+
+		case ABSOLUTE_TIME_VALUE:
+			delete absTimeValueSecs;
+			absTimeValueSecs = NULL;
 			break;
 
 		default:
-			valueType = UNDEFINED_VALUE;
+			; // noop
 	}
-	valueType 	= UNDEFINED_VALUE;
 }
 
 
 bool Value::
 IsNumber (int &i) const
+{
+	long long i2;
+	if ( IsNumber( i2 ) ) {
+		i = (int)i2;		// truncation
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+bool Value::
+IsNumber (long &i) const
+{
+	long long i2;
+	if ( IsNumber( i2 ) ) {
+		i = (long)i2;		// possible truncation
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+bool Value::
+IsNumber (long long &i) const
 {
 	switch (valueType) {
 		case INTEGER_VALUE:
@@ -110,7 +153,7 @@ IsNumber (int &i) const
 			return true;
 
 		case REAL_VALUE:
-			i = (int) realValue;	// truncation	
+			i = (long long) realValue;	// truncation	
 			return true;
 
 		default:
@@ -164,10 +207,11 @@ IsBooleanValueEquiv(bool &b) const
 void Value::
 CopyFrom( const Value &val )
 {
+	_Clear();
 	valueType = val.valueType;
 	switch (val.valueType) {
 		case STRING_VALUE:
-			strValue = val.strValue;
+			strValue = new string( *val.strValue);
 			return;
 
 		case BOOLEAN_VALUE:
@@ -190,12 +234,17 @@ CopyFrom( const Value &val )
 			listValue = val.listValue;
 			return;
 
+		case SLIST_VALUE:
+			slistValue = new classad_shared_ptr<ExprList>(*val.slistValue);
+			return;
+
 		case CLASSAD_VALUE:
 			classadValue = val.classadValue;
 			return;
 
 		case ABSOLUTE_TIME_VALUE:
-		  	absTimeValueSecs = val.absTimeValueSecs;
+			absTimeValueSecs = new abstime_t();
+		  	*absTimeValueSecs = *val.absTimeValueSecs;
 			return;
 
 		case RELATIVE_TIME_VALUE:
@@ -211,6 +260,7 @@ CopyFrom( const Value &val )
 void Value::
 SetRealValue (double r)
 {
+	_Clear();
     valueType=REAL_VALUE;
     realValue = r;
 }
@@ -218,13 +268,15 @@ SetRealValue (double r)
 void Value::
 SetBooleanValue( bool b )
 {
+	_Clear();
 	valueType = BOOLEAN_VALUE;
 	booleanValue = b;
 }
 
 void Value::
-SetIntegerValue (int i)
+SetIntegerValue (long long i)
 {
+	_Clear();
     valueType=INTEGER_VALUE;
     integerValue = i;
 }
@@ -232,39 +284,53 @@ SetIntegerValue (int i)
 void Value::
 SetUndefinedValue (void)
 {
+	_Clear();
     valueType=UNDEFINED_VALUE;
 }
 
 void Value::
 SetErrorValue (void)
 {
+	_Clear();
     valueType=ERROR_VALUE;
 }
 
 void Value::
 SetStringValue( const string &s )
 {
+	_Clear();
 	valueType = STRING_VALUE;
-	strValue = s;
+	strValue = new string( s );
 }
 
 void Value::
 SetStringValue( const char *s )
 {
+	_Clear();
 	valueType = STRING_VALUE;
-	strValue = s;
+	strValue = new string( s );
 }
 
 void Value::
 SetListValue( ExprList *l)
 {
+	_Clear();
     valueType = LIST_VALUE;
     listValue = l;
 }
 
 void Value::
+SetListValue( classad_shared_ptr<ExprList> l)
+{
+	_Clear();
+    valueType = SLIST_VALUE;
+    slistValue = new classad_shared_ptr<ExprList>(l);
+}
+
+void Value::
 SetClassAdValue( ClassAd *ad )
 {
+	_Clear();
 	valueType = CLASSAD_VALUE;
 	classadValue = ad;
 }
@@ -272,6 +338,7 @@ SetClassAdValue( ClassAd *ad )
 void Value::
 SetRelativeTimeValue( time_t rsecs ) 
 {
+	_Clear();
 	valueType = RELATIVE_TIME_VALUE;
 	relTimeValueSecs = (double) rsecs;
 }
@@ -279,6 +346,7 @@ SetRelativeTimeValue( time_t rsecs )
 void Value::
 SetRelativeTimeValue( double rsecs ) 
 {
+	_Clear();
 	valueType = RELATIVE_TIME_VALUE;
 	relTimeValueSecs = rsecs;
 }
@@ -286,8 +354,10 @@ SetRelativeTimeValue( double rsecs )
 void Value::
 SetAbsoluteTimeValue( abstime_t asecs ) 
 {
+	_Clear();
 	valueType = ABSOLUTE_TIME_VALUE;
-	absTimeValueSecs = asecs;
+	absTimeValueSecs = new abstime_t();
+	*absTimeValueSecs = asecs;
 }	
 
 bool Value::
@@ -315,6 +385,9 @@ SameAs(const Value &otherValue) const
         case Value::LIST_VALUE:
             is_same = listValue->SameAs(otherValue.listValue);
             break;
+        case Value::SLIST_VALUE:
+            is_same = (*slistValue)->SameAs(otherValue.slistValue->get());
+            break;
         case Value::CLASSAD_VALUE:
             is_same = classadValue->SameAs(otherValue.classadValue);
             break;
@@ -322,11 +395,11 @@ SameAs(const Value &otherValue) const
             is_same = (relTimeValueSecs == otherValue.relTimeValueSecs);
             break;
         case Value::ABSOLUTE_TIME_VALUE:
-            is_same = (   absTimeValueSecs.secs   == otherValue.absTimeValueSecs.secs
-                       && absTimeValueSecs.offset == otherValue.absTimeValueSecs.offset);
+            is_same = (   absTimeValueSecs->secs   == otherValue.absTimeValueSecs->secs
+                       && absTimeValueSecs->offset == otherValue.absTimeValueSecs->offset);
             break;
         case Value::STRING_VALUE:
-            is_same = (strValue == otherValue.strValue);
+            is_same = (*strValue == *otherValue.strValue);
             break;
         }
     }
@@ -367,6 +440,7 @@ ostream& operator<<(ostream &stream, Value &value)
 		stream << value.realValue;
 		break;
 	case Value::LIST_VALUE:
+	case Value::SLIST_VALUE:
 	case Value::CLASSAD_VALUE:
 	case Value::RELATIVE_TIME_VALUE: 
 	case Value::ABSOLUTE_TIME_VALUE: {
@@ -375,7 +449,7 @@ ostream& operator<<(ostream &stream, Value &value)
 		break;
 	}
 	case Value::STRING_VALUE:
-		stream << value.strValue;
+		stream << *value.strValue;
 		break;
 	}
 
@@ -389,7 +463,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 	const char	        *start;
 	const char          *end;
 	char                *end_tmp;
-	int		            ivalue;
+	long long           ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
@@ -405,6 +479,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 			realValue.SetErrorValue();
 			could_convert = false;
             break;
@@ -487,7 +562,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
     bool                could_convert;
 	string	            buf;
     char                *end;
-	int		            ivalue;
+	long long           ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
 	bool	            bvalue;
@@ -503,13 +578,14 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 			integerValue.SetErrorValue();
 			could_convert = false;
             break;
 
 		case Value::STRING_VALUE:
 			value.IsStringValue( buf );
-			ivalue = (int) strtod( buf.c_str( ), (char**) &end);
+			ivalue = (long long) strtod( buf.c_str( ), (char**) &end);
 			if( end == buf && ivalue == 0 ) {
 				// strtol() returned an error
 				integerValue.SetErrorValue( );
@@ -530,7 +606,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
                     break;
                 }
                 if (could_convert) {
-                    integerValue.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
+                    integerValue.SetIntegerValue((long long) (ivalue*Value::ScaleFactor[nf]));
                 }
             }
             break;
@@ -548,7 +624,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::REAL_VALUE:
             value.IsRealValue(rvalue);
-            integerValue.SetIntegerValue((int) rvalue);
+            integerValue.SetIntegerValue((long long) rvalue);
             could_convert = true;
             break;
 
@@ -560,7 +636,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
 
 		case Value::RELATIVE_TIME_VALUE:
 			value.IsRelativeTimeValue(rtvalue);
-			integerValue.SetIntegerValue((int) rtvalue);
+			integerValue.SetIntegerValue((long long) rtvalue);
 			could_convert = true;
             break;
 
@@ -598,6 +674,7 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
 
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
 		case Value::INTEGER_VALUE:
 		case Value::REAL_VALUE:
@@ -626,6 +703,28 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
             break;
     }
     return could_convert;
+}
+
+bool Value::
+IsSListValue(classad_shared_ptr<ExprList>& l)
+{
+    if (valueType == SLIST_VALUE) {
+        l = (*slistValue);
+        return true;
+    } else if (valueType == LIST_VALUE) {
+            // we must copy our list, because it does not belong
+            // to a shared_ptr
+        l = classad_shared_ptr<ExprList>( (ExprList*)listValue->Copy() );
+        if( !l ) {
+            return false;
+        }
+            // in case we are called multiple times, stash a shared_ptr
+            // to the copy of the list
+        SetListValue(l);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 } // classad

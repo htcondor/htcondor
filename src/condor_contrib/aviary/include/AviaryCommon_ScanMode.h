@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_SCANMODE_H
-        #define AviaryCommon_SCANMODE_H
-
+          #ifndef AviaryCommon_SCANMODE_H
+          #define AviaryCommon_SCANMODE_H
+        
+      
        /**
         * ScanMode.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 07, 2011 (03:40:57 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -84,7 +84,13 @@ namespace AviaryCommon
          * @return newly created ScanMode object
          */
         ScanMode(std::string arg_ScanMode);
+        ScanMode(const ADBScanModeEnum arg_ScanMode);
         
+
+        /**
+         * resetAll for ScanMode
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

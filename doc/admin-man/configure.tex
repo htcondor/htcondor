@@ -14,7 +14,8 @@ The
 settings that control the policy under which Condor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
+section~\ref{sec:Configuring-Policy} on Policy Configuration for the
+\Condor{startd}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
@@ -27,7 +28,7 @@ Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
-various configuration files that might be used including pool-wide,
+various configuration files that might be used, including pool-wide,
 platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
@@ -162,7 +163,7 @@ Recursively defined macros such as
 A = $(B)
 B = $(A)
 \end{verbatim}
-are not allowed.
+are \emph{not} allowed.
 They create definitions that Condor refuses to parse. 
 
 All entries in a configuration file must have an operator,
@@ -310,7 +311,7 @@ and
   ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
   stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
   bigbird.cs.wisc.edu
-  HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
+  HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
 Note that a line continuation character may currently be used within
@@ -320,8 +321,7 @@ configuration variable \MacroNI{FOO}:
   # This comment includes the following line, so FOO is NOT set \
   FOO = BAR
 \end{verbatim}
-It is a poor idea to use this functionality, as it is likely to
-stop working in future Condor releases.
+It is a poor idea to use this functionality.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
@@ -403,7 +403,7 @@ the changed value.
   
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
-  The host name of the local machine (no domain name).
+  The host name of the local machine, \emph{without} a domain name.
   
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
@@ -412,7 +412,7 @@ the changed value.
 \label{param:Tilde}
 \item[\MacroU{TILDE}]
   The full path to the
-  home directory of the Unix user condor, if such a user exists on the
+  home directory of the Unix user \Login{condor}, if such a user exists on the
   local machine.
 
   \label{sec:Condor-Subsystem-Names}
@@ -523,7 +523,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{USERNAME}]
   The user name of the UID of the daemon or tool.
   For daemons started as root, but running under another UID
-  (typically the user condor), this will be the other UID.
+  (typically the user \Login{condor}), this will be the other UID.
 
 \label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
@@ -531,7 +531,7 @@ determined automatically at run time but which can be overwritten.
   qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
-  its use and under what conditions you would want to change it.
+  its use and under what conditions it could be desirable to change it.
 
 \label{param:UIDDomain}
 \item[\MacroU{UID\_DOMAIN}]
@@ -544,8 +544,6 @@ determined automatically at run time but which can be overwritten.
 
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
-Only do so if you know what you are doing.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -564,7 +562,7 @@ For example,
 \begin{verbatim}
   A = $ENV(HOME)
 \end{verbatim}
-binds \MacroNI{A} to the value of the HOME environment variable.
+binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
 Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
@@ -1111,6 +1109,20 @@ File System Configuration File Entries''.
   and this rotation would cause the number of backups to be larger
   the the maximum specified, the oldest file is removed.
 
+\label{param:ClassadLogStrictParsing}
+\item[\Macro{CLASSAD\_LOG\_STRICT\_PARSING}]
+  A boolean value that defaults to \Expr{True}. 
+  When \Expr{True}, ClassAd log files will be read using 
+  a strict syntax checking for ClassAd expressions.  
+  ClassAd log files include the job queue log and the accountant log.
+  When \Expr{False}, 
+  ClassAd log files are read without strict expression syntax checking, 
+  which allows some legacy ClassAd log data to be read in a backward
+  compatible manner.  
+  This configuration variable may no longer be supported in future releases, 
+  eventually requiring all ClassAd log files to pass strict 
+  ClassAd syntax checking. 
+
 \label{param:DefaultDomainName}
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}]
   The value to be appended to a machine's host name,
@@ -1334,6 +1346,13 @@ File System Configuration File Entries''.
   page~\pageref{sec:windows-scripts-as-executables} for a more complete
   description.
 
+\label{param:EnableClassadCaching}
+\item[\Macro{ENABLE\_CLASSAD\_CACHING}]
+  A boolean value that controls the caching of ClassAds.
+  Caching saves memory when a Condor process contains
+  many ClassAds with the same expressions.
+  The default value is \Expr{False}, which disables caching.
+
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
   A boolean value that controls how ClassAd expressions are evaluated. 
@@ -1505,8 +1524,7 @@ of the subsystem corresponding to the daemon.
   that defaults to \Expr{True}. 
   This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
   is \Expr{True}.
-  When \Expr{True}, job user logs and the global job event log are
-  written to a directory named \File{condorLocks},
+  When \Expr{True}, lock files are written to a directory named \File{condorLocks},
   thereby using a local drive to avoid known problems with locking on NFS.
   The location of the \File{condorLocks} directory is determined by
   \begin{enumerate}
@@ -1751,13 +1769,13 @@ of the subsystem corresponding to the daemon.
     descriptors as it will generally track the number of file descriptors
     that Condor has open.
 
-  \label{dflag:level}
-  \item[\Dflag{LEVEL}]
-    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_LEVEL@\texttt{D\_LEVEL}}
+  \label{dflag:category}
+  \item[\Dflag{CATEGORY}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_CATEGORY@\texttt{D\_CATEGORY}}
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
-    If \Dflag{LEVEL} is set, Condor will include the debugging level flags 
+    If \Dflag{CATEGORY} is set, Condor will include the debugging level flags 
     that were in effect for each line of output.  
     This may be used to filter log output by the level or 
     tag it, for example, identifying all
@@ -4424,6 +4442,21 @@ search for the corresponding attribute names using ``slot'', instead.
   In doing so, the \Condor{schedd} can claim multiple dynamic slots 
   without waiting for a negotiation cycle.
 
+\label{param:MachineResourceNames}
+\item[\Macro{MACHINE\_RESOURCE\_NAMES}]
+  A comma and/or space separated list of resource names that represent
+  custom resources specific to a machine.
+  These resources are further intended to be statically divided or
+  partitioned, and these resource names identify the configuration variables
+  that define the partitioning.
+
+\label{param:MachineResourceResourcename}
+\item[\Macro{MACHINE\_RESOURCE\_<name>}]
+  An integer that specifies the quantity of the customized local machine
+  resource available for an SMP machine.
+  The portion of this configuration variable's name identified with
+  \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
@@ -5237,6 +5270,21 @@ MAX_JOBS_RUNNING	= \
   \Login{administrator} are given the ability to remove other user's jobs,
   in addition to user \Login{condor}.
 
+\label{param:QueueSuperUserMayImpersonate}
+\item[\Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE}]
+  A regular expression that matches the user names 
+  (that is, job owner names) 
+  that the queue super user may impersonate when managing jobs.
+  When not set, the default behavior is to allow impersonation of any
+  user who has had a job in the queue during the life of the \Condor{schedd}.
+  For proper functioning of the \Condor{shadow}, the \Condor{gridmanager}, and
+  the \Condor{job\_router}, this expression, if set, must match the owner
+  names of all jobs that these daemons will manage.  
+  Note that a regular expression that matches only part of the user name 
+  is still considered a match.  
+  If acceptance of partial matches is not desired, 
+  the regular expression should begin with \verb|^| and end with \verb|$|.
+
 \label{param:SystemJobMachineAttrs}
 \item[\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}]
   This macro specifies a space and/or comma separated list of
@@ -5712,12 +5760,56 @@ SYSTEM_PERIODIC_REMOVE = \
   STATISTICS_TO_PUBLISH = SCHEDD:2
 \end{verbatim}
   
-
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   The amount of time given in seconds defining the interval of time over
   which \Condor{schedd} daemon Statistics attributes are quantized.
   Defaults to 1200 seconds, which is 20 minutes.
+
+\label{param:ScheddCollectStatsForName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>}]
+  A boolean expression that when \Expr{True} creates a set of \Condor{schedd}
+  ClassAd attributes of statistics collected for a particular set.
+  These attributes are named using the prefix of \Expr{<Name>}.
+  The set includes each entity for which this expression is \Expr{True}.
+  As an example, assume that \Condor{schedd} statistics attributes are to
+  be created for only user Einstein's jobs.
+  Defining
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_FOR_Einstein = (Owner=="einstein")
+\end{verbatim}
+  causes the creation of the set of statistics attributes with names such as
+  \Attr{EinsteinJobsCompleted} and \Attr{EinsteinJobsCoredumped}.
+
+\label{param:ScheddCollectStatsByName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_BY\_<Name>}]
+  Defines a string expression.  The evaluated string is used in the naming of 
+  a set of \Condor{schedd} statistics ClassAd attributes.
+  The naming begins with \Expr{<Name>}, an underscore character, 
+  and the evaluated string.
+  Each character not permitted in an attribute name will be converted
+  to the underscore character.
+  For example,
+\footnotesize
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_BY_Host = splitSlotName(RemoteHost)[1]
+\end{verbatim}
+\normalsize
+  a set of statistics attributes will be created and kept. 
+  If the string expression were to evaluate to \AdStr{storm.04.cs.wisc.edu},
+  the names of two of these attributes will be
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCompleted} and 
+  \Attr{Host\_storm\_04\_cs\_wisc\_edu\_JobsCoredumped}.
+  
+\label{param:ScheddExpireStatsByName}
+\item[\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>}]
+  The number of seconds after which the \Condor{schedd} daemon will stop
+  collecting and discard the statistics for a subset 
+  identified by \Expr{<Name>},
+  if no event has occurred to cause any counter or statistic for the subset
+  to be updated. 
+  If this variable is not defined for a particular \Expr{<Name>},
+  then the default value will be \Expr{60*60*24*7}, which is one week's time.
 
 \end{description}
 
@@ -5938,58 +6030,63 @@ These settings affect the \Condor{starter}.
 
 \label{param:UserJobWrapper} 
 \item[\Macro{USER\_JOB\_WRAPPER}]
-  The full path to an executable or script.
-  This macro allows an administrator to specify a wrapper script to handle the
-  execution of all user jobs.  
+  The full path and file name of an executable or script.
   If specified, Condor never directly executes a job, but instead
-  invokes the program specified by this macro.
+  invokes this executable,
+  allowing an administrator to specify the executable (wrapper script) 
+  that will handle the execution of all user jobs.  
   The command-line arguments passed to this program will include the
-  full-path to the actual user job which should be executed, followed by all
+  full path to the actual user job which should be executed, followed by all
   the command-line parameters to pass to the user job.
-  This wrapper program must ultimately replace its image with the user job;
-  in other words,
-  it must \Procedure{exec} the user job, not \Procedure{fork} it.
+  This wrapper script must ultimately replace its image with the user job;
+  thus, it must \Procedure{exec} the user job, not \Procedure{fork} it.
 
-  For Bourne type shells (sh, bash, ksh), the last line should be:
+  For Bourne type shells (\Prog{sh}, \Prog{bash}, \Prog{ksh}), 
+  the last line should be:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
-  For the C type shells (csh, tcsh), the last line should be:
+  For the C type shells (\Prog{csh}, \Prog{tcsh}), the last line should be:
 \begin{verbatim}
         exec $*:q
 \end{verbatim}
 
-	These precise syntaxes are needed to correctly handle program arguments
-which contain whitespace.
-
+  This syntax is precise, to correctly handle program arguments
+  which contain white space characters.
 
   For Windows machines, the wrapper will either be
-  a batch script (with a file extension of \File{.bat} or \File{.cmd})
-  or an executable (with a file extension of \File{.exe} or \File{.com}).
+  a batch script with a file extension of \File{.bat} or \File{.cmd},
+  or an executable with a file extension of \File{.exe} or \File{.com}.
 
-  If the wrapper encounters an error, and is unable to run the user
-  job, it is important that the wrapper indicate this to the Condor system
-  so that Condor does not assign the exit code of the wrapper to the
-  user.  To do this, the wrapper should write a useful error message
-  to the file named in the environment variable \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
-  and exit with a non-zero value.
-  If this file is created by the wrapper, Condor assumes that the wrapper
-  has failed, and will mark the job as idle in the queue, and try to 
-  re-run it.  The starter will also copy the contents of this file to
-  the starter log, so the administrator can debug the problem.
+  If the wrapper script encounters an error as it runs,
+  and it is unable to run the user job, 
+  it is important that the wrapper script indicate this to the Condor system
+  so that Condor does not assign the exit code of the wrapper script to the
+  job.  
+  To do this, the wrapper script should write a useful error message
+  to the file named in the environment variable 
+  \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
+  and then the wrapper script should exit with a non-zero value.
+  If this file is created by the wrapper script, 
+  Condor assumes that the wrapper script has failed, 
+  and Condor will place the job back in the queue marking it as Idle, 
+  such that the job will again be run.
+  The \Condor{starter} will also copy the contents of this error file to
+  the \Condor{starter} log, so the administrator can debug the problem.
 
-  When a wrapper is in use, the executable of a job submission may be
-  kept relative and resolved by the user's path by setting:
+  When a wrapper script is in use, the executable of a job submission may be
+  specified by a relative path, as long as the submit description file
+  also contains:
 \begin{verbatim}
         +PreserveRelativeExecutable = True
 \end{verbatim}
-  in the job submission file.  If this is set, then the executable does
-  not need to be fully qualified, for example
+  For example,
 \begin{verbatim}
         # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
+        +PreserveRelativeExecutable = True
 \end{verbatim}
-  As opposed to
+  Without this extra attribute:
 \begin{verbatim}
         # A typical fully-qualified executable path
         cmd = /bin/sleep
@@ -6108,6 +6205,18 @@ which contain whitespace.
 \item[\Macro{MEMORY\_USAGE\_METRIC\_VM}]
   A ClassAd expression that produces an initial value for the job ClassAd
   attribute \Attr{MemoryUsage} in vm universe jobs.
+
+\label{param:StarterRlimitAs} 
+\item[ \Macro{STARTER\_RLIMIT\_AS}]
+  An integer ClassAd expression, 
+  evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
+  of the \Procedure{setrlimit} system call.
+  This limits the virtual memory size of each process in the user job.  
+  The expression is
+  evaluated in the context of both the machine and job ClassAds,
+  where the machine ClassAd is the \Expr{my} ClassAd,
+  and the job ClassAd is the \Expr{target} ClassAd.
+  There is no default value for this variable.
 
 \end{description}
 
@@ -7338,8 +7447,8 @@ Configuration File Macros}
 
 \label{param:UseProcd}
 \item[\Macro{USE\_PROCD}]
-  This boolean parameter
-  is used to determine whether the \Condor{procd} will be used for
+  This boolean variable
+  determines whether the \Condor{procd} will be used for
   managing process families. If the \Condor{procd} is not used, each
   daemon will run the process family tracking logic on its own. Use of
   the \Condor{procd} results in improved scalability because only one
@@ -7348,8 +7457,10 @@ Configuration File Macros}
   group ID-based process tracking (see
   Section~\ref{sec:GroupTracking}). In either of these cases, the
   \MacroNI{USE\_PROCD} setting will be ignored and a \Condor{procd} will
-  always be used. By default, the \Condor{master} will start a
-  \Condor{procd} that all other daemons that need process family tracking will use.
+  always be used. 
+  By default, the \Condor{master} will start a
+  \Condor{procd} that all other daemons that need process family tracking 
+  will use.
   A daemon that uses the \Condor{procd} will start a \Condor{procd} for
   use by itself and all of its child daemons.
 
@@ -7867,7 +7978,7 @@ These macros affect the \Condor{job\_router} daemon.
   when a \Condor{reconfig} command is invoked 
   or when the \Condor{job\_router} daemon restarts.
 
-\label{JobRouterLock}
+\label{param:JobRouterLock}
 \item[\Macro{JOB\_ROUTER\_LOCK}] This specifies the name of a lock
  file that is used to ensure that multiple instances of
  \condor{job\_router} never run with the same
@@ -7875,7 +7986,7 @@ These macros affect the \Condor{job\_router} daemon.
  same name could lead to mismanagement of routed jobs.  The default
  value is \verb@$(LOCK)/$(JOB_ROUTER_NAME)Lock@.
 
-\label{JobRouterSourceJobConstraint}
+\label{param:JobRouterSourceJobConstraint}
 \item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
   Specifies a global \Attr{Requirements} expression that must be true
   for all newly routed jobs,
@@ -7886,14 +7997,14 @@ These macros affect the \Condor{job\_router} daemon.
  does not match \Macro{JOB\_ROUTER\_NAME}.  When not running as root,
  it also avoids routing jobs belonging to other users.
 
-\label{JobRouterMaxJobs}
+\label{param:JobRouterMaxJobs}
 \item[\Macro{JOB\_ROUTER\_MAX\_JOBS}]
   An integer value representing the maximum number of jobs that may be routed,
   summed over all routes.
   The default value is -1, which means an unlimited number of jobs
   may be routed.
 
-\label{MaxJobMirrorUpdateLag}
+\label{param:MaxJobMirrorUpdateLag}
 \item[\Macro{MAX\_JOB\_MIRROR\_UPDATE\_LAG}]
   An integer value that administrators will rarely consider changing,
   representing the maximum number of
@@ -7908,7 +8019,7 @@ These macros affect the \Condor{job\_router} daemon.
   the \Condor{job\_router} daemon acts presuming the expected event
   will never occur.
 
-\label{JobRouterPollingPeriod}
+\label{param:JobRouterPollingPeriod}
 \item[\Macro{JOB\_ROUTER\_POLLING\_PERIOD}]
   An integer value representing the number of seconds
   between cycles in the \Condor{job\_router} daemon's task loop.
@@ -7921,13 +8032,13 @@ These macros affect the \Condor{job\_router} daemon.
   routing latency is no problem, increasing this value to a few
   hundred seconds would be reasonable.
 
-\label{JobRouterName}
+\label{param:JobRouterName}
 \item[\Macro{JOB\_ROUTER\_NAME}]
   A unique identifier utilized to name multiple instances of
   the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
-  The default is "jobrouter".
+  The default is \AdStr{jobrouter}.
 
   Changing this value when routed jobs already exist is not currently
   gracefully handled.  However, it can be done if one also uses
@@ -7943,7 +8054,7 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   RoutedBy '"insert_new_name"'
 \end{verbatim}
 
-\label{JobRouterReleaseOnHold}
+\label{param:JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
   A boolean value that defaults to \Expr{True}.
   It controls how the \Condor{job\_router} handles the routed copy when it
@@ -7952,6 +8063,68 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   ClassAd in the same state as when claimed.  When \Expr{False},
   the \Condor{job\_router} does not attempt to reset the original job
   ClassAd to a pre-claimed state upon yielding control of the job.
+
+\label{param:JobRouterSchedd1Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD1\_NAME}.
+
+\label{param:JobRouterSchedd2Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD2\_NAME}.
+  Note that when \Condor{job\_router} is running as \Login{root} and is
+  submitting routed jobs to a different \Condor{schedd} than the
+  source \Condor{schedd}, it is required that \Condor{job\_router}
+  have permission to impersonate the job owners of the routed jobs.
+  It is therefore usually necessary to configure
+  \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
+  of the target \Condor{schedd}.
+
+\label{param:JobRouterSchedd1Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
+  The advertised daemon name of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \MacroNI{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+  will also need to be set.
+
+\label{param:JobRouterSchedd2Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_NAME}]
+  The advertised daemon name of the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  the local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \MacroNI{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+  will also need to be set.
+  Note that when \Condor{job\_router} is running as \Login{root} and is
+  submitting routed jobs to a different \Condor{schedd} than the
+  source \Condor{schedd}, it is required that \Condor{job\_router}
+  have permission to impersonate the job owners of the routed jobs.
+  It is therefore usually necessary to configure
+  \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
+  of the target \Condor{schedd}.
+
+\label{param:JobRouterSchedd1Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd} 
+  serving as the source of jobs for routing.
+  If not specified, defaults to the local pool.
+
+\label{param:JobRouterSchedd2Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd}
+  to which the routed copy of the jobs are submitted.
+  If not specified, defaults to the local pool.
 
 \end{description}
 
@@ -8420,6 +8593,9 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
   node job submit description files with user log files on NFS.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
+  \Expr{True} and
+  \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
   If a DAG references such a submit description file and
   \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
   the DAG will abort during the initialization process. 
@@ -8684,6 +8860,20 @@ in section~\ref{sec:DAG-configuration}.
   The default value is 20. 
   A value of 0 causes \Condor{dagman} not to set the job ClassAd attribute.
 
+\label{param:DAGmanAlwaysUseNodeLog}
+\item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
+  A boolean value defining whether \Condor{dagman} watches for events in its
+  default node log.
+  The default log is defined by the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
+  The default value is \Expr{True}.
+  If \Expr{True},
+  then \Condor{dagman} writes POST script terminate events to the default log,
+  and not to the user log specified in the submit description file.
+  \Condor{dagman} will also only read events from the default log file.
+  This variable must be \Expr{False} if \Condor{dagman} from Condor
+  version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
+  or using a \Condor{submit} executable that is older than Condor version 7.9.0.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -8729,36 +8919,38 @@ section~\ref{sec:Security} on Security.
   a comma separated list of the subject
   name(s) of the certificate(s) used by Condor daemons to
   which this configuration of Condor will connect.
-  The \verb|*| character may be used as a wildcard character.
-  When \MacroNI{GSI\_DAEMON\_NAME} is
-  defined, only certificates matching
+  The \verb|*| character may be used as a wild card character.
+  When \MacroNI{GSI\_DAEMON\_NAME} is defined, 
+  only certificates matching
   \MacroNI{GSI\_DAEMON\_NAME} pass the authentication step, and no
-  check is performed to require that the hostname of the daemon
-  matches the hostname in the daemon's certificate.  When
-  \MacroNI{GSI\_DAEMON\_NAME} is not defined, 
-  the hostname of the daemon and certificate must match unless
-  exempted by \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
+  check is performed to require that the host name of the daemon
+  matches the host name in the daemon's certificate.  
+  When \MacroNI{GSI\_DAEMON\_NAME} is not defined, 
+  the host name of the daemon and certificate must match unless
+  exempted by the use of \MacroNI{GSI\_SKIP\_HOST\_CHECK} and/or
   \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
 
-\label{param:GsiSkipHostCheck}
+\label{param:GSISkipHostCheck}
 \item[\Macro{GSI\_SKIP\_HOST\_CHECK}]
-This is a boolean setting that controls whether a check is performed during
-GSI authentication of a Condor daemon.  When false (the default),
-the check is not skipped, so the daemon hostname must match the
-hostname in the daemon's certificate, unless otherwise exempted
-by \MacroNI{GSI\_DAEMON\_NAME} or
-\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
-When true, this check is skipped, and hosts will not be rejected
-due to a mismatch of certificate and hostname.
+  A boolean variable that controls whether a check is performed during
+  GSI authentication of a Condor daemon.  
+  When the default value of \Expr{False},
+  the check is not skipped, so the daemon host name must match the
+  host name in the daemon's certificate, 
+  unless otherwise exempted by the use of \Macro{GSI\_DAEMON\_NAME} or
+  \MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+  When \Expr{True}, this check is skipped, and hosts will not be rejected
+  due to a mismatch of certificate and host name.
 
-\label{param:GsiSkipHostCheckCertRegex}
+\label{param:GSISkipHostCheckCertRegex}
 \item[\Macro{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}]
-This may be set to a regular expression.  GSI certificates of Condor
-daemons with a subject name that are matched in full by this regular
-expression are not required to have a matching daemon hostname and
-certificate hostname.  The default is an empty regular expression,
-which will not match any certificates (even if they have an empty
-subject name).
+  This may be set to a regular expression.  GSI certificates of Condor
+  daemons with a subject name that are matched in full by this regular
+  expression are not required to have a matching daemon host name and
+  certificate host name.  
+  The default is an empty regular expression,
+  which will not match any certificates,
+  even if they have an empty subject name.
 
 \label{param:GSIDaemonDirectory}
 \item[\Macro{GSI\_DAEMON\_DIRECTORY}]
@@ -8833,7 +9025,7 @@ subject name).
   A value of 0 indicates that the delegated proxy should be valid for as
   long as allowed by the credential used to create the proxy.  
   The job may override this configuration setting by using the
-  \SubmitCmd{delegated\_job\_GSI\_credentials\_lifetime} submit file
+  \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
   command.  This configuration variable currently only applies to
   proxies delegated for non-grid jobs and Condor-C jobs.  It does not
   currently apply to globus grid jobs, which always behave as though
@@ -10784,6 +10976,12 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   is matched if \emph{any} of its slots match this expression. 
   Machines are automatically excluded if they are already draining,
   or if they match \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
+
+\label{param:DefragRequirements}
+\item[\Macro{DEFRAG\_CANCEL\_REQUIREMENTS}] An expression that specifies
+  which draining machines should have draining be canceled.  This defaults
+  to \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  This could be used to drain
+  partial rather than whole machines.
 
 \label{param:DefragRank}
 \item[\Macro{DEFRAG\_RANK}] An expression that specifies which machines

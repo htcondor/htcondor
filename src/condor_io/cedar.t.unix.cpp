@@ -46,10 +46,9 @@ int main()
 	float f;
 	double d;
 
-	charString = (char *)malloc(100);
+	config();
 
-	result = mySock.set_os_buffers(3000000, false);
-	cout << "buffer size set to " << result << endl;
+	charString =  0;
 
 	cout << "(1) Server" << endl;
 	cout << "(2) Client" << endl;
@@ -59,7 +58,7 @@ int main()
 
 	switch(op) {
 		case 1: // Server
-			result = mySock.bind(SERVER_PORT);
+			result = mySock.bind(false, SERVER_PORT, false); // outbound, port, loopback
 			if(result != TRUE) {
 				cout << "Bind failed\n";
 				exit(-1);
@@ -123,6 +122,9 @@ int main()
 				exit(-1);
 			}
 			cout << "Connected to [" << serverName<< ", " << SERVER_PORT << "]\n";
+			
+			charString = (char *) malloc(100);
+
 			while(true) {
 				mySock.encode();
 				

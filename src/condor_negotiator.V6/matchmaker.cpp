@@ -1445,7 +1445,7 @@ negotiationTime ()
                 if (group->allocated > 0) served_groups += 1;
                 else if (group->requested > 0) unserved_groups += 1;
                 double target = (accept_surplus) ? group->allocated : group->quota;
-                maxdelta = max(maxdelta, max(0.0, target - group->usage));
+                maxdelta = std::max(maxdelta, std::max(0.0, target - group->usage));
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
@@ -1493,7 +1493,7 @@ negotiationTime ()
             while (true) {
                 // Up our fraction of the full deltas.  Note that maxdelta may be zero, but we still
                 // want to negotiate at least once regardless, so loop halting check is at the end.
-                n = min(n+ninc, maxdelta);
+                n = std::min(n+ninc, maxdelta);
                 dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
@@ -1522,12 +1522,12 @@ negotiationTime ()
                     // if allocating surplus, use allocated, otherwise just use the group's quota directly
                     double target = (accept_surplus) ? group->allocated : group->quota;
 
-                    double delta = max(0.0, target - group->usage);
+                    double delta = std::max(0.0, target - group->usage);
                     // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
                     // we just got allocated, so just negotiate for what we were allocated.
                     double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
                     // Defensive -- do not exceed allocated slots
-                    slots = min(slots, target);
+                    slots = std::min(slots, target);
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
@@ -1560,7 +1560,7 @@ negotiationTime ()
                 dprintf(D_FULLDEBUG, "group quotas: Group %s  allocated= %g  usage= %g\n", group->name.c_str(), group->allocated, group->usage);
 
                 // I do not want to give credit for usage above what was allocated here.
-                usage_total += min(group->usage, group->allocated);
+                usage_total += std::min(group->usage, group->allocated);
 
                 if (group->usage < group->allocated) {
                     // If we failed to match all the allocated slots for any reason, then take what we
@@ -1754,7 +1754,7 @@ void Matchmaker::hgq_construct_tree() {
     // With the tree structure in place, we can make a list of groups in breadth-first order
     // For more convenient iteration over the structure
     hgq_groups.clear();
-    deque<GroupEntry*> grpq;
+    std::deque<GroupEntry*> grpq;
     grpq.push_back(hgq_root_group);
     while (!grpq.empty()) {
         GroupEntry* group = grpq.front();
@@ -1808,10 +1808,10 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
     // static quotas get first dibs on any available quota
     // total static quota assignable is bounded by quota coming from above
-    double sqa = (allow_quota_oversub) ? sqsum : min(sqsum, quota);
+    double sqa = (allow_quota_oversub) ? sqsum : std::min(sqsum, quota);
 
     // children with dynamic quotas get allocated from the remainder 
-    double dqa = max(0.0, quota - sqa);
+    double dqa = std::max(0.0, quota - sqa);
 
     dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", group->name.c_str(), sqa, dqa);
 
@@ -1820,7 +1820,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
     double Zs = (sqsum > 0) ? sqsum : 1;
 
     // If dqsum exceeds 1, then dynamic quota values get scaled so that they sum to 1
-    double Zd = max(dqsum, double(1));
+    double Zd = std::max(dqsum, double(1));
 
     // quota assigned to all children 
     double chq = 0;
@@ -1854,7 +1854,7 @@ double Matchmaker::hgq_fairshare(GroupEntry* group) {
             group->name.c_str(), group->quota, group->requested);
 
     // Allocate whichever is smallest: the requested slots or group quota.
-    group->allocated = min(group->requested, group->quota);
+    group->allocated = std::min(group->requested, group->quota);
 
     // update requested values
     group->requested -= group->allocated;
@@ -2079,7 +2079,7 @@ double Matchmaker::hgq_recover_remainders(GroupEntry* group) {
         if (child->accept_surplus) {
             group->subtree_requested += child->subtree_requested;
             if (child->subtree_requested > 0)
-                group->subtree_rr_time = min(group->subtree_rr_time, child->subtree_rr_time);
+                group->subtree_rr_time = std::min(group->subtree_rr_time, child->subtree_rr_time);
         }
     }
 
@@ -2153,7 +2153,7 @@ double Matchmaker::hgq_round_robin(GroupEntry* group, double surplus) {
 
     while ((surplus >= 1) && (requested > 0)) {
         // max we can fairly allocate per group this round:
-        double amax = max(double(1), floor(surplus / outstanding));
+        double amax = std::max(double(1), floor(surplus / outstanding));
 
         dprintf(D_FULLDEBUG, "group quotas: round-robin (2): pass: surplus= %g  requested= %g  outstanding= %g  amax= %g\n", 
                 surplus, requested, outstanding, amax);
@@ -2164,7 +2164,7 @@ double Matchmaker::hgq_round_robin(GroupEntry* group, double surplus) {
             unsigned long j = idx[jj];
             GroupEntry* grp = groups[j];
             if (grp->accept_surplus && (subtree_requested[j] > 0)) {
-                double a = min(subtree_requested[j], amax);
+                double a = std::min(subtree_requested[j], amax);
                 allocated[j] += a;
                 subtree_requested[j] -= a;
                 sumalloc += a;

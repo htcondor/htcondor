@@ -626,6 +626,17 @@ Characters may be appended to a numerical value to indicate units.
 \Expr{T} or \Expr{TB} indicates Tbytes.
 
 %%%%%%%%%%%%%%%%%%%
+%% request_<name>
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!request\_<name>}
+\label{man-condor-submit-request-name}
+\item[request\_<name> = $<$quantity$>$] 
+The required amount of the custom machine resource 
+identified by \Expr{<name>} that this job needs.
+The custom machine resource is defined in the machine's configuration.
+
+%%%%%%%%%%%%%%%%%%%
 %% requirements
 %%%%%%%%%%%%%%%%%%%
 
@@ -1609,10 +1620,11 @@ conditions that were present when the job checkpointed.
 \index{submit commands!batch\_queue}
 \label{condor-submit-batch-queue}
 \item[batch\_queue = $<$queuename$>$]
-Used for \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge} jobs.
+Used for \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge} 
+grid universe jobs.
 Specifies the name of the PBS/LSF/SGE job queue into which the job should
 be submitted.
-If this attribute is absent, the default queue is used.
+If not specified, the default queue is used.
 
 %%%%%%%%%%%%%%%%%%%
 %% cream_attributes
@@ -2696,6 +2708,17 @@ miss their deferral time to begin execution.
 See section~\ref{sec:JobDeferral} for further details and examples.
 
 %%%%%%%%%%%%%%%%%%%
+%% dagman_log
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!dagman\_log}
+\label{condor-submit-dagman-log}
+\item[dagman\_log = $<$pathname$>$] 
+DAGMan inserts this command to specify an event log that it watches to maintain
+the state of the DAG. If the \SubmitCmd{log} command is not specified in the
+submit file, DAGMan uses the \SubmitCmd{log} command to specify the event log.
+
+%%%%%%%%%%%%%%%%%%%
 %% deferral_prep_time
 %%%%%%%%%%%%%%%%%%%
 
@@ -3224,6 +3247,7 @@ when file transfer is enabled.
 \end{description} 
 
 
+\label{macro-in-submit-description-file}
 \index{macro!in submit description file}
 In addition to commands, the submit description file can contain macros
 and comments:
@@ -3260,6 +3284,34 @@ as parallel universe jobs.
 It is a unique value assigned for the duration of the job
 that essentially identifies the machine on which a program is
 executing.
+
+Recursive definition of macros is permitted.
+An example of a construction that works is the following: 
+\begin{verbatim}
+foo = bar
+foo =  snap $(foo)
+\end{verbatim}
+As a result, \Expr{foo = snap bar}.
+
+Note that both left- and right- recursion works, so 
+\begin{verbatim}
+foo = bar
+foo =  $(foo) snap
+\end{verbatim}
+has as its result \Expr{foo = bar snap}.
+
+The construction 
+\begin{verbatim}
+foo = $(foo) bar 
+\end{verbatim}
+by itself will \emph{not} work, as it does not have an initial base case.
+Mutually recursive constructions such as: 
+\begin{verbatim}
+B = bar 
+C = $(B)
+B = $(C) boo
+\end{verbatim}
+will \emph{not} work, and will fill memory with expansions.
 
 \index{\$!as a literal character in a submit description file}
 To use the dollar sign character (\verb@$@) as a literal,

@@ -102,6 +102,7 @@ static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
 static int job_queued_count = 0;
+static Regex *queue_super_user_may_impersonate_regex = NULL;
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -562,6 +563,18 @@ InitQmgmt()
 			"NOTE: QUEUE_ALL_USERS_TRUSTED=TRUE - "
 			"all queue access checks disabled!\n"
 			);
+	}
+
+	delete queue_super_user_may_impersonate_regex;
+	queue_super_user_may_impersonate_regex = NULL;
+	std::string queue_super_user_may_impersonate;
+	if( param(queue_super_user_may_impersonate,"QUEUE_SUPER_USER_MAY_IMPERSONATE") ) {
+		queue_super_user_may_impersonate_regex = new Regex;
+		const char *errptr=NULL;
+		int erroffset=0;
+		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errptr,&erroffset) ) {
+			EXCEPT("QUEUE_SUPER_USER_MAY_IMPERSONATE is an invalid regular expression: %s",queue_super_user_may_impersonate.c_str());
+		}
 	}
 
 	schedd_forker.Initialize();
@@ -1143,6 +1156,9 @@ DestroyJobQueue( void )
 		}
 		delete [] super_users;
 	}
+
+	delete queue_super_user_may_impersonate_regex;
+	queue_super_user_may_impersonate_regex = NULL;
 }
 
 
@@ -1209,6 +1225,14 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 		// attribute of a job to a value we have seen before.
 		// The JobRouter depends on this when it is running as
 		// root/condor.
+
+	if( queue_super_user_may_impersonate_regex ) {
+		if( queue_super_user_may_impersonate_regex->match(user.Value()) ) {
+			return true;
+		}
+		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the ALLOW_QUEUE_SUPER_USER_TO_IMPERSONATE regular expression.\n",user.Value());
+		return false;
+	}
 
 	int junk = 0;
 	if( owner_history.lookup(user,junk) != -1 ) {
@@ -3118,7 +3142,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
 				ExprTree * pTree = expr->Copy();
-				updated_attrs->Insert(name, pTree);
+				updated_attrs->Insert(name, pTree, false);
 			}
 			else
 			{
@@ -4443,9 +4467,7 @@ int mark_idle(ClassAd *job)
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
 		if ( universe == CONDOR_UNIVERSE_GRID ) {
-			char grid_job_id[20];
-			if ( job->LookupString( ATTR_GRID_JOB_ID, grid_job_id,
-									sizeof(grid_job_id) ) )
+			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.

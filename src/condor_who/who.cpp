@@ -39,11 +39,15 @@
 
 #include "condor_distribution.h"
 #include "condor_version.h"
+#include "condor_environ.h"
+#include "setenv.h"
 
 #include <vector>
 #include <sstream>
 #include <map>
 #include <iostream>
+
+#include "backward_file_reader.h"
 
 using std::vector;
 using std::map;
@@ -60,16 +64,18 @@ typedef struct {
 	std::string log_old; // previous (.old) log file full path name.
 	std::string exe_path; // full path to executable (from master log)
 	std::string pid;      // latest process id (from master log, starterlog, etc)
+	std::string exit_code; // if daemon has exited, this is the exit code otherwise empty
 } LOG_INFO;
 
 typedef std::map<std::string, LOG_INFO*> LOG_INFO_MAP;
-typedef std::map<std::string, pid_t> MAP_TO_PID;
-typedef	std::map<pid_t, std::string> MAP_FROM_PID;
+typedef std::map<std::string, pid_t> MAP_STRING_TO_PID;
+typedef std::map<pid_t, std::string> MAP_STRING_FROM_PID;
+typedef std::map<std::string, std::vector<std::string> > TABULAR_MAP;
 
 //char	*param();
 static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info);
 static void print_log_info(LOG_INFO_MAP & info);
-static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid);
+static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid);
 static void query_daemons_for_pids(LOG_INFO_MAP & info);
 static void ping_all_known_addrs(LOG_INFO_MAP & info);
 static char * get_daemon_param(const char * addr, const char * param_name);
@@ -84,19 +90,24 @@ static struct {
 	AttrListPrintMask print_mask;
 	ArgList projection;    // Attributes that we want the server to send us
 
-	bool   diagnostic; // output useful only to developers
+	int    diagnostic; // output useful only to developers
 	bool   verbose;    // extra output useful to users
-	bool   full_ads;
-	bool   job_ad;		     // debugging
-	bool   ping_all_addrs;	 // 
+	bool   wide;       // don't truncate to fit the screen
+	bool   show_full_ads;
+	bool   show_job_ad;     // debugging
+	bool   scan_pids;       // query all schedds found via ps/tasklist
+	bool   ping_all_addrs;	 //
+	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
 	vector<const char *> query_addrs;
 	vector<const char *> constraint;
 
 	// hold temporary results.
-	MAP_TO_PID   job_to_pid;
-	MAP_FROM_PID pid_to_program;
+	MAP_STRING_TO_PID   job_to_pid;
+	MAP_STRING_FROM_PID pid_to_program;	// pid to program/command line
+	MAP_STRING_FROM_PID pid_to_addr; // pid to sinful address
+	std::string configured_logdir; // $(LOG) from condor_config (if any)
 
 } App;
 
@@ -104,32 +115,36 @@ static struct {
 void InitAppGlobals(const char * argv0)
 {
 	App.Name = argv0;
-	App.diagnostic = false; // output useful only to developers
+	App.diagnostic = 0; // output useful only to developers
 	App.verbose = false;    // extra output useful to users
-	App.full_ads = false;
-	App.job_ad = false;     // debugging
+	App.show_full_ads = false;
+	App.show_job_ad = false;     // debugging
+	App.scan_pids = false;
 	App.ping_all_addrs = false;
+	App.test_backward = false;
 }
 
 	// Tell folks how to use this program
 void usage(bool and_exit)
 {
-	fprintf (stderr, 
+	fprintf (stderr,
 		"Usage: %s [help-opt] [addr-opt] [query-opt] [display-opt]\n"
 		"    where [help-opt] is one of\n"
 		"\t-h[elp]\t\t\tThis screen\n"
-		"\t-diag[nostic]\t\tPrint out query ad without performing query\n"
+		"\t-v[erbose]\t\tDisplay pids and addresses for daemons\n"
+		"\t-diag[nostic]\t\tDisplay extra information helpful for debugging\n"
 		"    and [addr-opt] is one of\n"
-		"\t-addr[ess] <host>\t\tSCHEDD host address to query\n"
+		"\t-addr[ess] <host>\t\tSTARTD host address to query\n"
 		"\t-log[dir] <dir>\t\tDirectory to seach for SCHEDD host address to query\n"
-		"\t-pid <pid>\t\tSCHEDD Process to query\n"
+		"\t-pid <pid>\t\tProcess ID of STARTD query\n"
+		"\t-al[lpids]\t\tQuery all local STARTDs\n"
 		"   and [display-opt] is one or more of\n"
-		"\t-ps\t\t\tDisplay process tree\n"
+//		"\t-ps\t\t\tDisplay process tree\n"
 		"\t-l[ong]\t\t\tDisplay entire classads\n"
-		"\t-v[erbose]\t\tSame as -long\n"
+		"\t-w[ide]\t\t\tdon't truncate fields to fit the screen\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
 		"\t-a[uto]f[ormat]:[V,ntlh] <attr1> [attr2 [attr3 ...]]\tPrint attr(s) with automatic formatting\n"
-		"\t\t,\tUse %%V formatting\n"
+		"\t\tV\tUse %%V formatting\n"
 		"\t\t,\tComma separated (default is space separated)\n"
 		"\t\tt\tTab separated\n"
 		"\t\tn\tNewline after each attribute\n"
@@ -138,6 +153,74 @@ void usage(bool and_exit)
 		, App.Name);
 	if (and_exit)
 		exit( 1 );
+}
+
+#ifdef WIN32
+static int getConsoleWindowSize(int * pHeight = NULL) {
+	CONSOLE_SCREEN_BUFFER_INFO ws;
+	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
+		if (pHeight)
+			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
+		return (int)ws.dwSize.X;
+	}
+	return 80;
+}
+#else
+#include <sys/ioctl.h>
+static int getConsoleWindowSize(int * pHeight = NULL) {
+    struct winsize ws;
+	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
+		//printf ("lines %d\n", ws.ws_row);
+		//printf ("columns %d\n", ws.ws_col);
+		if (pHeight)
+			*pHeight = (int)ws.ws_row;
+		return (int) ws.ws_col;
+	}
+	return 80;
+}
+#endif
+
+// return true if p1 is longer than p2 and it ends with p2
+// if ppEnd is not NULL, return a pointer to the start of the end of p1
+bool ends_with(const char * p1, const char * p2, const char ** ppEnd)
+{
+	int cch2 = p2 ? strlen(p2) : 0;
+	if ( ! cch2)
+		return false;
+
+	int cch1 = p1 ? strlen(p1) : 0;
+	if (cch2 >= cch1)
+		return false;
+
+	const char * p1e = p1+cch1-1;
+	const char * p2e = p2+cch2-1;
+	while (p2e >= p2) {
+		if (*p2e != *p1e)
+			return false;
+		--p2e; --p1e;
+	}
+	if (ppEnd)
+		*ppEnd = p1e+1;
+	return true;
+}
+
+// return true if p1 starts with p2
+// if ppEnd is not NULL, return a pointer to the first non-matching char of p1
+bool starts_with(const char * p1, const char * p2, const char ** ppEnd)
+{
+	if ( ! p2 || ! *p2)
+		return false;
+
+	const char * p1e = p1;
+	const char * p2e = p2;
+	while (*p2e) {
+		if (*p1e != *p2e)
+			return false;
+		++p2e; ++p1e;
+	}
+	if (ppEnd)
+		*ppEnd = p1e;
+	return true;
 }
 
 void AddPrintColumn(const char * heading, int width, const char * expr)
@@ -161,16 +244,44 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 	App.print_mask.registerFormat("%v", wid, opts, expr);
 }
 
+// print a utime in human readable form
 static const char *
 format_int_runtime (int utime, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	return format_time(utime);
 }
 
+// print out static or dynamic slot id.
+static const char *
+format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
+{
+	static char outstr[10];
+	outstr[0] = 0;
+	//bool from_name = false;
+	int is_dynamic = false;
+	if (/*from_name || */(ad->LookupBool(ATTR_SLOT_DYNAMIC, is_dynamic) && is_dynamic)) {
+		std::string name;
+		if (ad->LookupString(ATTR_NAME, name) && (0 == name.find("slot"))) {
+			size_t cch = sizeof(outstr)/sizeof(outstr[0]);
+			strncpy(outstr, name.c_str()+4, cch-1);
+			outstr[cch-1] = 0;
+			char * pat = strchr(outstr, '@');
+			if (pat)
+				pat[0] = 0;
+		} else {
+			sprintf(outstr, "%u_?", slotid);
+		}
+	} else {
+		sprintf(outstr, "%u", slotid);
+	}
+	return outstr;
+}
+
+// print the pid for a jobid.
 static const char *
 format_jobid_pid (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
-	static char outstr[100];
+	static char outstr[16];
 	outstr[0] = 0;
 	if (App.job_to_pid.find(jobid) != App.job_to_pid.end()) {
 		sprintf(outstr, "%u", App.job_to_pid[jobid]);
@@ -178,8 +289,245 @@ format_jobid_pid (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 	return outstr;
 }
 
+
+// takes the output of ps or lsof or tasklist.
+// returns a map that uses headings as the key, and has a vector of strings for each field under that heading.
+// if fMultiSep is true, then 2 or more separator characters are required to represent a field separation.
+//
+int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMultiWord = false)
+{
+	int rows = 0;
+	out.clear();
+
+	// stream contains
+	// HEADINGS over DATA with optional ==== or --- line under headings.
+	char * line = getline(stream);
+	if (line && (0 == strlen(line))) line = getline(stream);
+	if ( ! line || (0 == strlen(line)))
+		return 0;
+
+	std::string headings = line;
+	std::string subhead;
+	std::string data;
+
+	line = getline(stream);
+	if (line) data = line;
+
+	if (data.find("====") == 0 || data.find("----") == 0) {
+		subhead = line;
+		data.clear();
+
+		// first line after headings is not data, but underline
+		line = getline(stream);
+		if (line) data = line;
+	}
+
+	if (App.diagnostic > 2) { printf("HD: %s\n", headings.c_str()); printf("SH: %s\n", subhead.c_str()); }
+
+	while ( ! data.empty()) {
+		const char WS[] = " \t\r\n";
+		if (App.diagnostic > 2) { printf(" D: %s\n", data.c_str()); }
+		if (subhead.empty()) {
+			// use whitespace as a field separator
+			// assume all but last field headings/data have no spaces in them.
+			size_t ixh=0, ixd=0, ixh2, ixd2, ixhN;
+			for (;;) {
+				if (ixh == string::npos)
+					break;
+				ixhN = ixh2 = ixh = headings.find_first_not_of(WS, ixh);
+				if (ixh2 != string::npos) {
+					ixh2 = headings.find_first_of(WS, ixh2);
+					if (ixh2 != string::npos) {
+						ixhN = headings.find_first_not_of(WS, ixh2);
+						if (fMultiWord && (ixhN == ixh2 + 1)) {
+							ixh2 = headings.find_first_of(WS, ixhN);
+						}
+					}
+				}
+				// so the last field can contain spaces, we notice when we get to the last heading
+				// an use that to trigger a 'read to end of line' for the data
+				bool to_eol = ((ixh2 == string::npos) || (headings.find_first_not_of(WS, ixh2) == string::npos));
+
+				//if (App.diagnostic > 3) { printf(" hs(%d,%d)", (int)ixh, (int)ixh2); }
+				std::string hd;
+				if (ixh2 != string::npos)
+					hd = headings.substr(ixh, ixh2-ixh);
+				else
+					hd = headings.substr(ixh);
+
+				std::string val;
+				if (fMultiWord) {
+					// if multi word headings, use the heading offsets strictly to parse the underlying data
+					// the windows netstat tool does this.
+					ixd = ixh;
+					if (to_eol || (ixh2 == string::npos))
+						val = data.substr(ixd);
+					else {
+						ixd2 = data.find_first_of(WS, ixh2);
+						val = data.substr(ixd, ixd2-ixd);
+					}
+				} else {
+					ixd2 = ixd = data.find_first_not_of(WS, ixd);
+					if (ixd2 != string::npos) ixd2 = data.find_first_of(WS, ixd2);
+					if (to_eol || ixd2 == string::npos) {
+						//if (App.diagnostic > 3) { printf(" ds(%d)", (int)ixd); }
+						val = data.substr(ixd);
+					} else {
+						if (ixd >= ixhN) {
+							// if the data starts AFTER the colunm header for the next colum
+							// pretend that this colum is empty.
+							val = "";
+							ixd = ixd2 = ixh2;
+						} else {
+							//if (App.diagnostic > 3) { printf(" ds(%d,%d)", (int)ixd, (int)ixd2); }
+							val = data.substr(ixd, ixd2-ixd);
+						}
+					}
+				}
+				trim(hd);
+				trim(val);
+				out[hd].push_back(val);
+
+				ixh = ixh2;
+				ixd = ixd2;
+				//if (App.diagnostic > 3) { printf(" h=%d d=%d\n", (int)ixh, (int)ixd); }
+			}
+		} else {
+			// use subhead to get field widths
+			size_t ixh = 0, ixh2;
+			for (;;) {
+				if (ixh == string::npos)
+					break;
+
+				std::string hd;
+				ixh2 = ixh = subhead.find_first_not_of(WS, ixh);
+				if (ixh2 != string::npos)
+					ixh2 = subhead.find_first_of(WS, ixh2);
+				if (ixh2 != string::npos)
+					hd = headings.substr(ixh, ixh2-ixh);
+				else
+					hd = headings.substr(ixh);
+
+				std::string val;
+				if (ixh2 != string::npos)
+					val = data.substr(ixh, ixh2-ixh);
+				else
+					val = data.substr(ixh);
+
+				trim(hd);
+				trim(val);
+				out[hd].push_back(val);
+
+				ixh = ixh2;
+			}
+		}
+
+		// get next line.
+		line = getline(stream);
+		if (line) data = line; else data.clear();
+	}
+
+	return rows;
+}
+
+class tabular_map_constraint {
+public:
+	typedef bool (tabular_map_constraint::*FNConstraint)(TABULAR_MAP & table, size_t index) const;
+	FNConstraint m_include_row;
+	tabular_map_constraint() : m_include_row(NULL) {}
+	bool include_row(TABULAR_MAP & table, size_t index) const {
+		return m_include_row ? (this->*m_include_row)(table, index) : true;
+	}
+};
+
+class tm_cmd_contains : public tabular_map_constraint {
+public:
+	tm_cmd_contains(std::string name_to_match) : name(name_to_match) {
+		m_include_row = (tabular_map_constraint::FNConstraint)&tm_cmd_contains::query;
+	}
+	//operator const tabular_map_constraint&() const { return (const tabular_map_constraint&)(*this); }
+	//operator tabular_map_constraint&() { return (tabular_map_constraint&)(*this); }
+
+	bool query(TABULAR_MAP & table, size_t index) const {
+		#ifdef WIN32
+			const char * cmd_key = "Image Name";
+		#else
+			const char * cmd_key = "CMD";
+		#endif
+		if (table[cmd_key][index].find(name) != std::string::npos) return true;
+		return false;
+	}
+	std::string name;
+};
+
+class tm_pid_is_known : public tabular_map_constraint {
+public:
+	tm_pid_is_known() {
+		m_include_row = (tabular_map_constraint::FNConstraint)&tm_pid_is_known::query;
+	}
+	bool query(TABULAR_MAP & table, size_t index) const {
+		const char * cmd_key = "PID";
+		pid_t pid = atoi(table[cmd_key][index].c_str());
+		if (App.pid_to_addr.find(pid) != App.pid_to_addr.end() ||
+			App.pid_to_program.find(pid) != App.pid_to_program.end()) {
+			return true;
+		} else if (App.query_pids.size() > 0) {
+			for (size_t ix = 0; ix < App.query_pids.size(); ++ix) {
+				if (App.query_pids[ix] == pid) return true;
+			}
+		}
+		return false;
+	}
+
+};
+
+typedef bool (*TABULAR_MAP_CALLBACK)(void* pUser, TABULAR_MAP & table, size_t index);
+
+// iterate a tabular map, calling pfn for each row that matches map_constraint until
+// pfn returns false.
+//
+void iterate_tabular_map(TABULAR_MAP & table, TABULAR_MAP_CALLBACK pfn, void* pUser, const tabular_map_constraint & map_constraint)
+{
+	TABULAR_MAP::const_iterator it = table.begin();
+	if (it != table.end()) {
+		size_t cRows = it->second.size();
+
+		for (size_t ix = 0; ix < cRows; ++ix) {
+			if (map_constraint.include_row(table, ix)) {
+				if ( ! pfn(pUser, table, ix))
+					break;
+			}
+		}
+	}
+}
+
+void dump_tabular_map(TABULAR_MAP & table, const tabular_map_constraint & map_constraint)
+{
+	size_t cRows = 0;
+	std::string headings;
+	for (TABULAR_MAP::const_iterator it = table.begin(); it != table.end(); ++it) {
+		if ( ! headings.empty()) { headings += "; "; }
+		headings += it->first;
+		cRows = MAX(cRows, it->second.size());
+	}
+	printf("H [%s]\n", headings.c_str());
+
+	for (size_t ix = 0; ix < cRows; ++ix) {
+		if (map_constraint.include_row(table, ix)) {
+
+			std::string row;
+			for (TABULAR_MAP::const_iterator it = table.begin(); it != table.end(); ++it) {
+				if ( ! row.empty()) { row += "; "; }
+				row += it->second[ix];
+			}
+			printf(" D[%s]\n", row.c_str());
+
+		}
+	}
+}
+
 // parse a file stream and return the first field value from the column named fld_name.
-// 
+//
 // stream is expected to be the output of a tool like ps or tasklist that returns
 // data in tabular form with a header (parse_type==0),  or one labeled value per line
 // form like a long form classad (parse_type=1)
@@ -250,7 +598,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 
 					std::string hd;
 					ixh2 = ixh = subhead.find_first_not_of(WS, ixh);
-					if (ixh2 != string::npos) 
+					if (ixh2 != string::npos)
 						ixh2 = subhead.find_first_of(WS, ixh2);
 					if (ixh2 != string::npos)
 						hd = headings.substr(ixh, ixh2-ixh);
@@ -271,10 +619,10 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 				}
 			}
 		}
-	} else if (1 == parse_type) { 
+	} else if (1 == parse_type) {
 		// stream contains lines with
 		// Label: value
-		//  or 
+		//  or
 		// Label = value
 
 	}
@@ -286,11 +634,262 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 #include <psapi.h>
 #endif
 
+static void get_process_table(TABULAR_MAP & table)
+{
+	ArgList cmdargs;
+#ifdef WIN32
+	cmdargs.AppendArg("tasklist");
+	//cmdargs.AppendArg("/V");
+#else
+	cmdargs.AppendArg("ps");
+	cmdargs.AppendArg("-eF");
+#endif
+
+	FILE * stream = my_popen(cmdargs, "r", FALSE);
+	if (stream) {
+		get_fields_from_tabular_stream(stream, table);
+		my_pclose(stream);
+	}
+
+	if (App.diagnostic > 1) {
+		MyString args;
+		cmdargs.GetArgsStringForDisplay(&args);
+		printf("Parsed command output> %s\n", args.Value());
+
+		printf("with filter> %s\n", "cmd_contains(\"condor\")");
+		dump_tabular_map(table, tm_cmd_contains("condor"));
+		printf("[eos]\n");
+
+		printf("with filter> %s\n", "pid_is_known()");
+		dump_tabular_map(table, tm_pid_is_known());
+		printf("[eos]\n");
+	}
+}
+
+static void get_address_table(TABULAR_MAP & table)
+{
+	ArgList cmdargs;
+#ifdef WIN32
+	cmdargs.AppendArg("netstat");
+	cmdargs.AppendArg("-ano");
+#else
+	cmdargs.AppendArg("lsof");
+	cmdargs.AppendArg("-nPi");
+#endif
+
+	FILE * stream = my_popen(cmdargs, "r", FALSE);
+	if (stream) {
+		bool fMultiWord = false; // output has multi-word headings.
+		#ifdef WIN32
+		// netstat begins with the line "Active Connections" followed by a blank line
+		// followed by the actual data, but that confuses the table parser, so skip the first 2 lines.
+		char * line = getline(stream);
+		while (MATCH != strcasecmp(line, "Active Connections")) {
+			if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
+			line = getline(stream);
+		}
+		if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
+		fMultiWord = true;
+		#endif
+		get_fields_from_tabular_stream(stream, table, fMultiWord);
+		my_pclose(stream);
+	}
+
+	if (App.diagnostic > 1) {
+		MyString args;
+		cmdargs.GetArgsStringForDisplay(&args);
+		printf("Parsed command output> %s\n", args.Value());
+
+		printf("with filter> %s\n", "true");
+		dump_tabular_map(table, tabular_map_constraint());
+
+		printf("with filter> %s\n", "pid_is_known()");
+		dump_tabular_map(table, tm_pid_is_known());
+		printf("[eos]\n");
+	}
+}
+
+// convert from tabular map data into a usable sinful string
+// this involves recognising various ways of expressing all-interfaces
+// in the UI and converting them to a local IP address.
+//
+void convert_to_sinful_addr(std::string & out, const std::string & str)
+{
+	int port_offset = 0;
+	if (starts_with(str.c_str(), "*:", NULL)) { // lsof does this
+		port_offset = 2;
+	} else if (starts_with(str.c_str(), "0.0.0.0:", NULL)) {  // netstat does this
+		port_offset = 8;
+	} else if (starts_with(str.c_str(), "[::]:", NULL)) { // netstat does this (ipv6?)
+		port_offset = 5;
+	}
+
+	if (port_offset) {
+		sprintf(out, "<%s:%s>", my_ip_string(), str.substr(port_offset).c_str());
+	} else {
+		sprintf(out, "<%s>", str.c_str());
+	}
+}
+
+#ifdef WIN32
+
+// search through the process_table (returned from invoking tasklist) to get
+// the module name associated with a PID.
+// returns a pointer into the process_table, so it's only valid until the process table is freed
+//
+const char * get_module_for_pid(const std::string & pidstr, TABULAR_MAP & process_table)
+{
+	if (App.diagnostic > 1) { printf("searching process_table for PID %s", pidstr.c_str()); }
+
+	TABULAR_MAP::const_iterator itPID  = process_table.find("PID");
+	TABULAR_MAP::const_iterator itModule = process_table.find("Image Name");
+	if (itPID != process_table.end() &&
+		itModule != process_table.end()) {
+		for (size_t ix = 0; ix < itPID->second.size(); ++ix) {
+			if (itPID->second[ix] == pidstr) {
+				if (App.diagnostic > 1) { printf(" %s\n", itModule->second[ix].c_str()); }
+				return itModule->second[ix].c_str();
+			}
+		}
+	}
+	if (App.diagnostic > 1) { printf(" NULL\n"); }
+	return NULL;
+}
+
+// On Windows, the address_table is build from invoking netstat.
+// it give us the CREATOR pid for a given listen port, not the current owner.
+// in practice that means that all of the daemons' command ports are associated
+// with the master's pid.  so we have to send a "condor_config_val PID" query
+// to every port assocated with condor_master to figure out what the PID of the
+// listening deamon is.
+//
+bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_MAP & process_table, std::string & addr)
+{
+	addr.clear();
+
+	TABULAR_MAP::const_iterator itPID  = address_table.find("PID");
+	TABULAR_MAP::const_iterator itAddr = address_table.find("Local Address");
+	TABULAR_MAP::const_iterator itState = address_table.find("State");
+
+	std::string temp;
+	if (itPID != address_table.end() &&
+		itAddr != address_table.end() &&
+		itState != address_table.end()) {
+
+		for (size_t ix = 0; ix < itAddr->second.size(); ++ix) {
+			if (itState->second[ix] != "LISTENING")
+				continue;
+
+			const char * pszModule = get_module_for_pid(itPID->second[ix], process_table);
+			if ( ! pszModule || MATCH != strcasecmp(pszModule, "condor_master.exe")) {
+				continue;
+			}
+
+			convert_to_sinful_addr(temp, itAddr->second[ix]);
+			if (App.diagnostic > 1) { printf("Query \"%s\" for PID\n", temp.c_str()); }
+
+			// now ask the daemon listening at this port what his PID is,
+			// and return the address if the PID matches what we are searching for.
+			//
+			char * pidstr = get_daemon_param(temp.c_str(), "PID");
+			if (pidstr) {
+				bool match = (atoi(pidstr) == pid);
+				free(pidstr);
+				if (match)
+					break;
+			}
+			temp.clear();
+		}
+	}
+
+	if ( ! temp.empty()) {
+		addr = temp;
+		return true;
+	}
+
+	return false;
+}
+
+#else // ! windows
+
+// on *nix, the address table is built from lsof -nPi, the listen ports will be under the heading NAME
+// with the address & port followed by the text " (LISTEN)". LISTEN is not in a separate field, so
+// we have to parse the address out of the name.
+//
+bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_MAP & /*process_table*/, std::string & addr)
+{
+	addr.clear();
+
+	TABULAR_MAP::const_iterator itPID  = address_table.find("PID");
+	TABULAR_MAP::const_iterator itAddr = address_table.find("NAME");
+
+	std::string temp;
+	if (itPID != address_table.end() && itAddr != address_table.end()) {
+		for (size_t ix = 0; ix < itPID->second.size(); ++ix) {
+			pid_t pid2 = atoi(itPID->second[ix].c_str());
+			if (pid2 == pid) {
+				std::string str = itAddr->second[ix];
+				size_t cch = str.find_first_of(" ", 0);
+				if (cch == string::npos || str.substr(cch+1) != "(LISTEN)") {
+					if (App.diagnostic) { printf("Ignoring addr \"%s\" for pid %d\n", str.c_str(), pid); }
+					continue;
+				}
+
+				convert_to_sinful_addr(temp, itAddr->second[ix].substr(0,cch));
+				break;
+			}
+		}
+	}
+
+	if ( ! temp.empty()) {
+		addr = temp;
+		return true;
+	}
+
+	return false;
+}
+#endif
+
+
 static void init_program_for_pid(pid_t pid)
 {
 	App.pid_to_program[pid] = "";
 
+	ArgList cmdargs;
+#ifdef WIN32
+	cmdargs.AppendArg("tasklist");
+	cmdargs.AppendArg("/FI");
+	std::string eqpid;
+	sprintf(eqpid, "PID eq %u", pid);
+	cmdargs.AppendArg(eqpid.c_str());
+	const char * fld_name = "Image Name";
+	const int    parse_type = 0;
+	//const int    parse_type = 1;
+#else
+	cmdargs.AppendArg("ps");
+	cmdargs.AppendArg("-F");
+	std::string eqpid;
+	sprintf(eqpid, "%u", pid);
+	cmdargs.AppendArg(eqpid.c_str());
+	const char * fld_name = "CMD";
+	const  int    parse_type = 0;
+#endif
+
+	FILE * stream = my_popen(cmdargs, "r", FALSE);
+	if (stream) {
+		std::string program;
+		if (get_field_from_stream(stream, parse_type, fld_name, program))
+			App.pid_to_program[pid] = program;
+		my_pclose(stream);
+	}
+}
+
+// alternative for windows
 #if 0
+static void init_program_for_pid(pid_t pid)
+{
+	App.pid_to_program[pid] = "";
+
 	#ifdef WIN32
 		extern DWORD WINAPI GetProcessImageFileNameA(HANDLE, LPSTR, DWORD);
 		HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
@@ -301,53 +900,9 @@ static void init_program_for_pid(pid_t pid)
 			CloseHandle(hProcess);
 		}
 	#endif
-#else
-#if 1
-		ArgList cmdargs;
-	#ifdef WIN32
-		cmdargs.AppendArg("tasklist");
-		cmdargs.AppendArg("/FI");
-		std::string eqpid;
-		sprintf(eqpid, "PID eq %u", pid);
-		cmdargs.AppendArg(eqpid.c_str());
-		const char * fld_name = "Image Name";
-		const int    parse_type = 0;
-		//const int    parse_type = 1;
-	#else
-		cmdargs.AppendArg("ps");
-		cmdargs.AppendArg("-f");
-		std::string eqpid;
-		sprintf(eqpid, "%u", pid);
-		cmdargs.AppendArg(eqpid.c_str());
-		const char * fld_name = "CMD";
-		const  int    parse_type = 0;
-	#endif
-		FILE * stream = my_popen(cmdargs, "r", FALSE);
-#else
-		std::string cmdline;
-	#ifdef WIN32
-		//const char * cmd_format = "tasklist /FO LIST /FI \"PID eq %u\" ";
-		const char * cmd_format = "tasklist /FI \"PID eq %u\" ";
-		const char * fld_name = "Image Name";
-		//const int    parse_type = 1;
-		const int    parse_type = 0;
-	#else
-		const char * cmd_format = "ps -f %u";
-		const char * fld_name = "CMD";
-		const  int    parse_type = 0;
-	#endif
-		sprintf(cmdline, cmd_format, pid);
-		const char * pcmdline = cmdline.c_str();
-		FILE * stream = my_popen(pcmdline, "r", FALSE);
-#endif
-		if (stream) {
-			std::string program;
-			if (get_field_from_stream(stream, parse_type, fld_name, program))
-				App.pid_to_program[pid] = program;
-			my_pclose(stream);
-		}
-#endif
 }
+#endif
+
 
 static const char *
 format_jobid_program (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
@@ -386,6 +941,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, IntCusto
 }
 
 #define IsArg is_arg_prefix
+#define IsArgColon is_arg_colon_prefix
 
 void parse_args(int /*argc*/, char *argv[])
 {
@@ -411,14 +967,15 @@ void parse_args(int /*argc*/, char *argv[])
 		}
 
 		if (*parg != '-') {
-			// arg without leaging - is a target
+			// arg without leading - is a target
 			App.target_names.Append(parg);
 		} else {
 			// arg with leading '-' is an option
 			const char * pcolon = NULL;
 			++parg;
-			if (IsArg(parg, "diagnostic", 4)) {
-				App.diagnostic = true;
+			if (IsArgColon(parg, "diagnostic", &pcolon, 4)) {
+				App.diagnostic = 1;
+				if (pcolon) App.diagnostic = atoi(++pcolon);
 			} else if (IsArg(parg, "verbose", 4)) {
 				App.verbose = true;
 			} else if (IsArg(parg, "address", 4)) {
@@ -442,14 +999,17 @@ void parse_args(int /*argc*/, char *argv[])
 				}
 				++ixArg;
 				char * p;
-				pid_t pid = strtol(argv[ixArg+1], &p, 10);
+				pid_t pid = strtol(argv[ixArg], &p, 10);
 				App.query_pids.push_back(pid);
-			} else if (IsArg(parg, "ps", 2)) {
+			} else if (IsArg(parg, "allpids", 2)) {
+				App.scan_pids = true;
+			} else if (IsArg(parg, "wide", 1)) {
+				App.wide = true;
 			} else if (IsArg(parg, "long", 1)) {
-				App.full_ads = true;
+				App.show_full_ads = true;
 			} else if (IsArg(parg, "format", 1)) {
-			} else if (is_arg_colon_prefix(parg, "autoformat", &pcolon, 5) ||
-			           is_arg_colon_prefix(parg, "af", &pcolon, 2)) {
+			} else if (IsArgColon(parg, "autoformat", &pcolon, 5) ||
+			           IsArgColon(parg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
 				if ( !argv[ixArg+1] || *(argv[ixArg+1]) == '-') {
 					fprintf (stderr, "Error: Argument %s requires "
@@ -483,40 +1043,98 @@ void parse_args(int /*argc*/, char *argv[])
 
 				while (argv[ixArg+1] && *(argv[ixArg+1]) != '-') {
 					++ixArg;
-					ClassAd ad;
-					StringList attributes;
-					if(!ad.GetExprReferences(argv[ixArg], attributes, attributes)) {
-						fprintf( stderr, "Error:  Parse error of: %s\n", argv[ixArg]);
-						exit(1);
+
+					parg = argv[ixArg];
+					const char * pattr = parg;
+					void * cust_fmt = NULL;
+					FormatKind cust_kind = PRINTF_FMT;
+
+					// If the attribute/expression begins with # treat it as a magic
+					// identifier for one of the derived fields that we normally display.
+					if (*parg == '#') {
+						++parg;
+						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
+							cust_fmt = (void*)format_slot_id;
+							cust_kind = INT_CUSTOM_FMT;
+							pattr = ATTR_SLOT_ID;
+							App.projection.AppendArg(pattr);
+							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
+							App.projection.AppendArg(ATTR_NAME);
+						} else if (MATCH == strcasecmp(parg, "PID")) {
+							cust_fmt = (void*)format_jobid_pid;
+							cust_kind = STR_CUSTOM_FMT;
+							pattr = ATTR_JOB_ID;
+							App.projection.AppendArg(pattr);
+						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
+							cust_fmt = (void*)format_jobid_program;
+							cust_kind = STR_CUSTOM_FMT;
+							pattr = ATTR_JOB_ID;
+							App.projection.AppendArg(pattr);
+						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
+							cust_fmt = (void*)format_int_runtime;
+							cust_kind = INT_CUSTOM_FMT;
+							pattr = ATTR_TOTAL_JOB_RUN_TIME;
+							App.projection.AppendArg(pattr);
+						} else {
+							parg = argv[ixArg];
+						}
 					}
 
-					attributes.rewind();
-					while (const char *str = attributes.next()) {
-						App.projection.AppendArg(str);
+					if ( ! cust_fmt) {
+						ClassAd ad;
+						StringList attributes;
+						if(!ad.GetExprReferences(parg, attributes, attributes)) {
+							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
+							exit(1);
+						}
+
+						attributes.rewind();
+						while (const char *str = attributes.next()) {
+							App.projection.AppendArg(str);
+						}
 					}
 
 					MyString lbl = "";
 					int wid = 0;
 					int opts = FormatOptionNoTruncate;
-					if (fheadings || App.print_head.Length() > 0) { 
-						const char * hd = fheadings ? argv[ixArg] : "(expr)";
-						wid = 0 - (int)strlen(hd); 
-						opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
+					if (fheadings || App.print_head.Length() > 0) {
+						const char * hd = fheadings ? parg : "(expr)";
+						wid = 0 - (int)strlen(hd);
+						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 						App.print_head.Append(hd);
 					}
-					else if (flabel) { lbl.sprintf("%s = ", argv[ixArg]); wid = 0; opts = 0; }
+					else if (flabel) { lbl.sprintf("%s = ", parg); wid = 0; opts = 0; }
 
 					lbl += fCapV ? "%V" : "%v";
 					if (App.diagnostic) {
-						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
-								ixArg, lbl.Value(), wid, opts,  argv[ixArg]);
+						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %x[%s]\n",
+							ixArg, lbl.Value(), wid, opts, (int)(long long)cust_fmt, pattr);
 					}
-					App.print_mask.registerFormat(lbl.Value(), wid, opts, argv[ixArg]);
+					if (cust_fmt) {
+						switch (cust_kind) {
+							case INT_CUSTOM_FMT:
+								App.print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
+								break;
+							case FLT_CUSTOM_FMT:
+								App.print_mask.registerFormat(NULL, wid, opts, (FloatCustomFmt)cust_fmt, pattr);
+								break;
+							case STR_CUSTOM_FMT:
+								App.print_mask.registerFormat(NULL, wid, opts, (StringCustomFmt)cust_fmt, pattr);
+								break;
+							default:
+								App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+								break;
+						}
+					} else {
+						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+					}
 				}
 			} else if (IsArg(parg, "job", 3)) {
-				App.job_ad = true;
+				App.show_job_ad = true;
 			} else if (IsArg(parg, "ping_all_addrs", 4)) {
 				App.ping_all_addrs = true;
+			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
+				App.test_backward = pcolon ? atoi(pcolon) : 1;
 			}
 		}
 	}
@@ -526,30 +1144,121 @@ void parse_args(int /*argc*/, char *argv[])
 
 	// if no output format has yet been specified, choose a default.
 	//
-	if ( ! App.full_ads && App.print_mask.IsEmpty() ) {
+	if ( ! App.show_full_ads && App.print_mask.IsEmpty() ) {
 		App.print_mask.SetAutoSep(NULL, " ", NULL, "\n");
 
-		if (App.job_ad) {
-			AddPrintColumn("USER", 0, "User");
-			AddPrintColumn("CMD", 0, "Cmd");
-			AddPrintColumn("MEMORY", 0, "MemoryUsage");
+		if (App.show_job_ad) {
+			AddPrintColumn("USER", 0, ATTR_USER);
+			AddPrintColumn("CMD", 0, ATTR_JOB_CMD);
+			AddPrintColumn("MEMORY", 0, ATTR_MEMORY_USAGE);
 		} else {
 
 			//SLOT OWNER   PID   RUNTIME  MEMORY  COMMAND
-			AddPrintColumn("OWNER", 0, "RemoteOwner");
-			AddPrintColumn("SLOT", 0, "SlotId"); 
-			AddPrintColumn("JOB", -6, "JobId"); 
-			AddPrintColumn("  RUNTIME", 12, "TotalJobRunTime", format_int_runtime);
-			AddPrintColumn("PID", -6, "JobId", format_jobid_pid); 
-			AddPrintColumn("PROGRAM", 0, "JobId", format_jobid_program);
+			AddPrintColumn("OWNER", 0, ATTR_REMOTE_OWNER);
+			AddPrintColumn("CLIENT", 0, ATTR_CLIENT_MACHINE);
+			AddPrintColumn("SLOT", 0, ATTR_SLOT_ID, format_slot_id);
+			App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
+			App.projection.AppendArg(ATTR_NAME);
+			AddPrintColumn("JOB", -6, ATTR_JOB_ID);
+			AddPrintColumn("  RUNTIME", 12, ATTR_TOTAL_JOB_RUN_TIME, format_int_runtime);
+			AddPrintColumn("PID", -6, ATTR_JOB_ID, format_jobid_pid);
+			AddPrintColumn("PROGRAM", 0, ATTR_JOB_ID, format_jobid_program);
 		}
 	}
 
-	if (App.job_ad) {
+	if ( ! App.wide && ! App.print_mask.IsEmpty()) {
+		int console_width = getConsoleWindowSize()-1; // -1 because we get double spacing if we use the full width.
+		if (console_width < 0) console_width = 1024;
+		App.print_mask.SetOverallWidth(console_width);
+	}
+
+	if (App.show_job_ad) {
 		// constraint?
 	} else {
-		App.constraint.push_back("JobId=!=UNDEFINED");
+		App.constraint.push_back("JobID=!=UNDEFINED");
 	}
+
+	if (App.scan_pids) {
+		#ifdef WIN32
+		#else
+		if (! is_root()) {
+			fprintf (stderr, "Warning: only the root account can use -allpids "
+			         "to query condor_startd's not owned by the current user\n");
+		}
+		#endif
+	}
+}
+
+bool contains_pid(vector<pid_t> & pids, pid_t pid)
+{
+	for (size_t ix = 0; ix < pids.size(); ++ix) {
+		if (pids[ix] == pid) return true;
+	}
+	return false;
+}
+
+bool fn_add_to_query_pids(void* /*pUser*/, TABULAR_MAP & table, size_t index)
+{
+	pid_t pid = atoi(table["PID"][index].c_str());
+	if (pid && ! contains_pid(App.query_pids, pid)) {
+		if (App.verbose) {
+			#ifdef WIN32
+				const char * cmd_key = "Image Name";
+			#else
+				const char * cmd_key = "CMD";
+			#endif
+			printf("Found PID %d : %s\n", pid, table[cmd_key][index].c_str());
+		}
+		App.query_pids.push_back(pid);
+	}
+	return true;
+}
+
+// initialize our config params, this is more complicated than most most tools
+// because condor_who needs to work even if it doesn't have the same config
+// as the daemons that it is trying to query.
+//
+void init_condor_config()
+{
+#ifdef WIN32
+#else
+	// Condor will try not to run as root, not even as a tool.
+	// if we are are currently running as root it will look for a condor account
+	// or look in the CONDOR_IDS environment variable, if neither
+	// exist, then it will fail to config.  so if we are root and we don't see
+	// a CONDOR_UIDS environment variable, set one to keep config happy.
+	//
+	if (is_root()) {
+		const char *env_name = EnvGetName(ENV_UG_IDS);
+		if (env_name) {
+			bool fSetUG_IDS = false;
+			char * env = getenv(env_name);
+			if ( ! env) {
+				//env = param_without_default(env_name);
+				//if (env) {
+				//	free(env);
+				//} else {
+					fSetUG_IDS = true;
+				//}
+			}
+
+			if (fSetUG_IDS) {
+				const char * ug_ids = "0.0"; // use root as the condor id.
+				if (App.diagnostic) { printf("setting %s to %s\n", env_name, ug_ids); }
+				SetEnv(env_name, ug_ids);
+			}
+		}
+	}
+#endif
+
+	const char *env_name = EnvGetName(ENV_CONFIG);
+	char * env = getenv(env_name);
+	if ( ! env) {
+		// If no CONDOR_CONFIG environment variable, we don't want to fail if there
+		// is no global config file, so tell the config subsystem that.
+		config_continue_if_no_config(true);
+	}
+	config();
 }
 
 int
@@ -562,7 +1271,6 @@ main( int argc, char *argv[] )
 #endif
 
 	myDistro->Init( argc, argv );
-	config();
 
 	if( argc < 1 ) {
 		usage(true);
@@ -571,6 +1279,21 @@ main( int argc, char *argv[] )
 	// parse command line arguments here.
 	parse_args(argc, argv);
 
+	// setup initial config params from the default condor_config
+	// TODO: change config based on daemon that we are trying to query?
+	init_condor_config();
+
+	// of no -logdir's or -pid's listed on the command line, try the LOG config knob.
+	// note that we can't depend on having a valid condor_config here, but we _might_ have one.
+	if ( ! App.scan_pids && (App.query_log_dirs.size() == 0 && App.query_pids.size() == 0)) {
+		if (param(App.configured_logdir, "LOG") &&
+			IsDirectory(App.configured_logdir.c_str())) {
+			App.query_log_dirs.push_back(App.configured_logdir.c_str());
+		}
+	}
+
+	// if any log directories were specified, scan them now.
+	//
 	if (App.query_log_dirs.size() > 0) {
 		if (App.diagnostic) {
 			printf("Query log dirs:\n");
@@ -578,33 +1301,96 @@ main( int argc, char *argv[] )
 				printf("    [%3d] %s\n", (int)ii, App.query_log_dirs[ii]);
 			}
 		}
+		// scrape the log directory, scanning master, startd and slot logs
+		// to pick up addresses, pids & exit codes.
+		//
 		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 			LOG_INFO_MAP info;
 			query_log_dir(App.query_log_dirs[ii], info);
 			scan_logs_for_info(info, App.job_to_pid);
 
-			// if we got a STARTD address, push it's address onto the list 
+			// if we got a STARTD address, push it's address onto the list
 			// that we want to query.
 			LOG_INFO_MAP::const_iterator it = info.find("Startd");
 			if (it != info.end()) {
 				LOG_INFO * pli = it->second;
-				if ( ! pli->addr.empty()) {
+				if ( ! pli->addr.empty() && pli->exit_code.empty()) {
 					App.query_addrs.push_back(strdup(pli->addr.c_str()));
 				}
 			}
 
 			if(App.ping_all_addrs) { ping_all_known_addrs(info); }
+			// fill in missing PIDS for daemons by sending them DC_CONFIG_VAL commands
 			query_daemons_for_pids(info);
 
-			if (App.diagnostic | App.verbose) {
+			if (App.diagnostic || App.verbose) {
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_log_info(info);
+			}
+
+
+		}
+	}
+
+	// build a table of info from the output of ps or tasklist
+	TABULAR_MAP process_table;
+	get_process_table(process_table);
+	TABULAR_MAP address_table;
+	get_address_table(address_table);
+
+	// if no specified logdirs and no specified pids.
+	// build a list of pids by examining the process_table.
+	if (App.scan_pids || (App.query_log_dirs.size() == 0 && App.query_pids.size() == 0)) {
+		iterate_tabular_map(process_table, fn_add_to_query_pids, NULL, tm_cmd_contains("condor_startd"));
+	}
+
+	// if there are PIDs to query, do that now.
+	// use the address_table (lsof/netstat) and process_table (ps/tasklist) to
+	// figure out the cmd port of the given PID, then add those addresses
+	// to the list of startd's to query.
+	//
+	if (App.query_pids.size() > 0) {
+		size_t cPids = App.query_pids.size();
+		for (size_t ix = 0; ix < cPids; ++ix) {
+			pid_t pid = App.query_pids[ix];
+			if (App.pid_to_addr.find(pid) == App.pid_to_addr.end()) {
+				std::string addr;
+				if (determine_address_for_pid(pid, address_table, process_table, addr)) {
+
+					if (App.diagnostic || App.verbose) {
+						printf("\nAddr for PID %d is %s\n", pid, addr.c_str());
+					}
+					App.query_addrs.push_back(strdup(addr.c_str()));
+
+					// if no log directories specifed on the command line, ask the daemon
+					// for it's log directory and scan it.
+					//
+					if ( ! App.query_log_dirs.size()) {
+						char * logdir = get_daemon_param(addr.c_str(), "LOG");
+						if (logdir) {
+							if (App.diagnostic || App.verbose) {
+								printf("LOG directory for PID %d is \"%s\"\n", pid, logdir);
+							}
+
+							LOG_INFO_MAP info;
+							query_log_dir(logdir, info);
+							scan_logs_for_info(info, App.job_to_pid);
+
+							if (App.diagnostic || App.verbose) {
+								print_log_info(info);
+							}
+							free(logdir);
+						}
+					}
+				}
 			}
 		}
 	}
 
+	// query any detected startd's for running jobs.
+	//
 	CondorQuery *query;
-	if (App.job_ad)
+	if (App.show_job_ad)
 		query = new CondorQuery(ANY_AD);
 	else
 		query = new CondorQuery(STARTD_AD);
@@ -646,6 +1432,7 @@ main( int argc, char *argv[] )
 		App.query_addrs.push_back("NULL");
 	}
 
+	bool identify_schedd = App.query_addrs.size() > 1;
 	for (size_t ixAddr = 0; ixAddr < App.query_addrs.size(); ++ixAddr) {
 
 		const char * direct = NULL; //"<128.105.136.32:7977>";
@@ -697,16 +1484,21 @@ main( int argc, char *argv[] )
 			if (App.diagnostic) {
 				printf("    result Ad has %d attributes\n", ad->size());
 			}
-			if (App.full_ads) {
+			if (App.show_full_ads) {
 				ad->fPrint(stdout);
 				printf("\n");
 			} else {
 				if (fFirstLine) {
+					if (identify_schedd) {
+						printf("\n%s has %d job(s) running\n", addr, result.Length());
+					} else {
+						printf("\n");
+					}
+
 					// print the first line so that we get column widths.
 					char * tmp = App.print_mask.display(ad);
 					delete [] tmp;
 					// now print headings
-					printf("\n");
 					App.print_mask.display_Headings(stdout, App.print_head);
 					//printf("\n");
 					fFirstLine = false;
@@ -729,48 +1521,6 @@ main( int argc, char *argv[] )
 	return 0;
 }
 
-// return true if p1 is longer than p2 and it ends with p2
-// if ppEnd is not NULL, return a pointer to the start of the end of p1
-bool ends_with(const char * p1, const char * p2, const char ** ppEnd)
-{
-	int cch2 = p2 ? strlen(p2) : 0;
-	if ( ! cch2)
-		return false;
-
-	int cch1 = p1 ? strlen(p1) : 0;
-	if (cch2 >= cch1)
-		return false;
-
-	const char * p1e = p1+cch1-1;
-	const char * p2e = p2+cch2-1;
-	while (p2e >= p2) {
-		if (*p2e != *p1e)
-			return false;
-		--p2e; --p1e;
-	}
-	if (ppEnd)
-		*ppEnd = p1e+1;
-	return true;
-}
-
-// return true if p1 starts with p2
-// if ppEnd is not NULL, return a pointer to the first non-matching char of p1
-bool starts_with(const char * p1, const char * p2, const char ** ppEnd)
-{
-	if ( ! p2 || ! *p2)
-		return false;
-
-	const char * p1e = p1;
-	const char * p2e = p2;
-	while (*p2e) {
-		if (*p1e != *p2e)
-			return false;
-		++p2e; ++p1e;
-	}
-	if (ppEnd)
-		*ppEnd = p1e;
-	return true;
-}
 
 /*
 static LOG_INFO * find_log_info(LOG_INFO_MAP & info, std::string name)
@@ -826,301 +1576,166 @@ static void read_address_file(const char * filename, std::string & addr)
 	addr = buf;
 }
 
-class BWReaderBuffer {
 
-protected:
-	char * data;
-	int    cbData;
-	int    cbAlloc;
-	bool   at_eof;
-	int    error;
-
-public:
-	BWReaderBuffer(int cb=0, char * input = NULL) 
-		: data(input), cbData(cb), cbAlloc(cb), at_eof(false), error(0) {
-		if (input) {
-			cbAlloc = cbData = cb;
-		} else if (cb > 0) {
-			data = (char*)malloc(cb);
-			memset(data, 17, cb);
-			cbData = 0;
-		}
-	}
-
-	~BWReaderBuffer() {
-		if (data)
-			free(data);
-		data = NULL;
-		cbData = cbAlloc = 0;
-	}
-
-	void clear() { cbData = 0; }
-	void setsize(int cb) { cbData = cb; ASSERT(cbData <= cbAlloc); }
-	int size() { return cbData; }
-	int capacity() { return cbAlloc-1; }
-	int LastError() { return error; }
-	bool AtEOF() { return at_eof; }
-	char operator[](int ix) const { return data[ix]; }
-	char& operator[](int ix) { return data[ix]; }
-
-	bool reserve(int cb) {
-		if (data && cbAlloc >= cb)
-			return true;
-		void * pv = realloc(data, cb);
-		if (pv) {
-			data = (char*)pv;
-			cbAlloc = cb;
-			return true;
-		}
-		return false;
-	}
-
-	/* returns number of characters read. or 0 on error use LastError & AtEOF methods to know which.
-	*/
-	int fread_at(FILE * file, off_t offset, int cb) {
-		if ( ! reserve(((cb + 16) & ~15) + 16))
-			return 0;
-
-		fseek(file, offset, SEEK_SET);
-
-		int ret = fread(data, 1, cb, file);
-		cbData = ret;
-
-		if (ret <= 0) {
-			error = ferror(file);
-			return 0;
-		} else {
-			error = 0;
-		}
-
-		// on windows we can consume more than we read because of \r
-		// but since we are scanning backwards this can cause us to re-read
-		// the same bytes more than once. So lop off the end of the buffer so
-		// so we only get back the unique bytes
-		at_eof = feof(file);
-		if ( ! at_eof) {
-			off_t end_offset = ftell(file);
-			int extra = (int)(end_offset - (offset + ret));
-			ret -= extra;
-		}
-
-		if (ret < cbAlloc) {
-			data[ret] =  0; // force null terminate.
-		} else {
-			// this should NOT happen
-			EXCEPT("BWReadBuffer is unexpectedly too small!");
-		}
-
-		return ret;
-	}
-};
-
-class BackwardsReader {
-protected:
-	int error;
-	FILE * file;
-	filesize_t cbFile;
-	off_t      cbPos;
-	BWReaderBuffer buf;
-
-public:
-	BackwardsReader(std::string filename, int open_flags) 
-		: error(0), file(NULL), cbFile(0), cbPos(0) {
-		int fd = safe_open_wrapper_follow(filename.c_str(), open_flags);
-		if (fd < 0)
-			error = errno;
-		else
-			OpenFile(fd, "rb");
-	}
-	BackwardsReader(int fd, const char * open_options) 
-		: error(0), file(NULL), cbFile(0), cbPos(0) {
-		OpenFile(fd, open_options);
-	}
-	~BackwardsReader() {
-		if (file) fclose(file);
-		file = NULL;
-	}
-
-	int  LastError() { return error; }
-	bool AtEOF() { 
-		if ( ! file || (cbPos >= cbFile))
-			return true; 
-		return false;
-	}
-	bool AtBOF() { 
-		if ( ! file || (cbPos == 0))
-			return true; 
-		return false;
-	}
-
-#if 0
-	bool NextLine(std::string & str) {
-		// write this
-		return false;
-	}
-#endif
-	bool PrevLine(std::string & str) {
-		str.clear();
-
-		// can we get a previous line out of our existing buffer?
-		// then do that.
-		if (PrevLineFromBuf(str))
-			return true;
-
-		// no line in the buffer? then return false
-		if (AtBOF())
-			return false;
-
-		const int cbBack = 128;
-		while (true) {
-			int off = cbPos > cbBack ? cbPos - cbBack : 0;
-			int cbToRead = (int)(cbPos - off);
-
-			// we want to read in cbBack chunks at cbBack aligment, of course
-			// this only makes sense to do if cbBack is a power of 2. 
-			// also, in order to get EOF to register, we have to read a little 
-			// so we may want the first read (from the end, of course) to be a bit 
-			// larger than cbBack so that we read at least cbBack but also end up
-			// on cbBack alignment. 
-			if (cbFile == cbPos) {
-				// test to see if cbBack is a power of 2, if it is, then set our
-				// seek to align on cbBack.
-				if (!(cbBack & (cbBack-1))) {
-					// seek to an even multiple of cbBack at least cbBack from the end of the file.
-					off = (cbFile - cbBack) & ~(cbBack-1);
-					cbToRead = cbFile - off;
-				}
-				cbToRead += 16;
-			}
-
-			if ( ! buf.fread_at(file, off, cbToRead)) {
-				if (buf.LastError()) {
-					error = buf.LastError();
-					return false;
-				}
-			}
-
-			cbPos = off;
-
-			// try again to get some data from the buffer
-			if (PrevLineFromBuf(str) || AtBOF())
-				return true;
-		}
-	}
-
-private:
-	bool OpenFile(int fd, const char * open_options) {
-		file = fdopen(fd, open_options);
-		if ( ! file) {
-			error = errno;
-		} else {
-			// seek to the end of the file.
-			fseek(file, 0, SEEK_END);
-			cbFile = cbPos = ftell(file);
-			error = 0;
-		}
-		return error != 0;
-	}
-
-	// prefixes or part of a line into str, and updates internal
-	// variables to keep track of what parts of the buffer have been returned.
-	bool PrevLineFromBuf(std::string & str)
-	{
-		// if we have no buffered data, then there is nothing to do
-		int cb = buf.size();
-		if (cb <= 0)
-			return false;
-
-		// if buffer ends in a newline, convert it to a \0
-		if (buf[--cb] == '\n') {
-			buf[cb] = 0;
-		}
-		// because of windows style \r\n, we also tolerate a \r at the end of the line
-		if (buf[cb-1] == '\r') {
-			buf[--cb] = 0;
-		}
-
-		// now we walk backward through the buffer until we encounter another newline
-		// returning all of the characters that we found.
-		while (cb > 0) {
-			if (buf[--cb] == '\n') {
-				str.insert(0, &buf[cb+1]);
-				buf[cb] = 0;
-				buf.setsize(cb);
-				return true;
-			}
-		}
-
-		// we hit the start of the buffer without finding another newline,
-		// so return that text, but only return true if we are also at the start
-		// of the file.
-		str.insert(0, &buf[0]);
-		buf[0] = 0;
-		buf.clear();
-
-		return (0 == cbPos);
-	}
-};
-
-static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
+// scan backward through a daemon log file and extract PID and Address information
+// this code looks as the LAST daemon startup banner and a few lines after it to get
+// this information.  It scans backwards from the end of the file and quits as soon
+// as it gets to the startup banner. this code looks for:
+//		" (CONDOR_DAEMON) STARTING UP"  (where DAEMON is MASTER, SCHEDD, etc)
+//		" ** Log last touched "
+//		" ** PID = NNNN"                (between Log last touched and STARTING UP)
+//		" DaemonCore: command socket at <"
+//
+// for the master log, it also parses some other lines to more efficiently pick up
+// pids and addresses when they are mentioned in the master log.  this code looks for:
+//		"Sent signal NNN to DAEMON (pid NNNN)"
+//		"Started DaemonCore process PATH, pid and pgroup = NNNN"
+//		"The DAEMON (pid NNNN) exited with status NNNN"		(daemon exit code and pid is scraped)
+//		"(condor_MASTER) pid NNNN EXITING WITH STATUS N"    (scan does not stop, but exit code and pide is scraped)
+//
+// for starter log, it also builds a job_to_pid map for jobs that are still alive
+// according to the log file.  this code looks for:
+//		" (condor_STARTER) pid NNNN EXITING WITH STATUS N"  (this stops scanning of the starter log)
+//		" Starting a UUUUUU universe job with ID: JJJJJ"    (JJJJ scraped from this line and mapped to possible_pid)
+//		"Create_Process succeeded, pid=NNNN"                (NNNN is possible_pid if NNNN is not in dead pids list)
+//		"Process exited, pid=NNNN"                          (NNNN added to dead_pids list)
+//
+//
+static void scan_a_log_for_info(
+	LOG_INFO_MAP & info,
+	MAP_STRING_TO_PID & job_to_pid,
+	LOG_INFO_MAP::const_iterator & it)
 {
-	// scan the masterlog backwards until we find the STARTING UP banner
-	// looking for places where the log mentions the PIDS of the daemons.
-	//
-	if (info.find("Master") != info.end()) {
-		LOG_INFO * pliMaster = info["Master"];
-		std::string filename;
-		sprintf(filename, "%s%c%s", pliMaster->log_dir.c_str(), DIR_DELIM_CHAR, pliMaster->log.c_str());
-		if (App.diagnostic) printf("scanning master log file '%s' for pids\n", filename.c_str());
+	std::string daemon_name_all_caps;  // e.g. "MASTER"
+	std::string startup_banner_text;  // e.g. " (CONDOR_MASTER) STARTING UP"
 
-		BackwardsReader reader(filename, O_RDONLY);
-		if (reader.LastError()) {
-			// report error??
-			if (App.diagnostic) {
-				fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
-			}
-			return;
+	// set flags to trigger special scraping rules for certain log files
+	bool bSlotLog = false;
+	bool bMasterLog = (it->first == "Master");
+	if (bMasterLog) {
+		daemon_name_all_caps = "MASTER";
+		startup_banner_text = " (CONDOR_MASTER) STARTING UP";
+	} else {
+		bSlotLog = starts_with(it->first.c_str(),"Slot",NULL) || starts_with(it->first.c_str(),"Starter",NULL);
+		if (bSlotLog) {
+			daemon_name_all_caps = "STARTER";
+			startup_banner_text = " (CONDOR_STARTER) STARTING UP";
+		} else {
+			daemon_name_all_caps = it->first;
+			upper_case(daemon_name_all_caps);
+			startup_banner_text = " (CONDOR_";
+			startup_banner_text += daemon_name_all_caps;
+			startup_banner_text += ") STARTING UP";
 		}
+	}
 
-		std::string possible_master_pid;
-		std::string line;
-		while (reader.PrevLine(line)) {
-			// printf("%s\n", line.c_str());
+	const char * pszDaemon = it->first.c_str();
+	LOG_INFO * pliDaemon = it->second;
 
-			if (line.find("** condor_master (CONDOR_MASTER) STARTING UP") != string::npos) {
-				if (App.diagnostic) {
-					printf("found master startup banner with pid %s\n", possible_master_pid.c_str());
-					printf("quitting scan of master log file\n\n");
-				}
-				if (pliMaster->pid.empty())
-					pliMaster->pid = possible_master_pid;
-				break;
+	std::string filename;
+	sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
+	if (App.diagnostic) {
+		printf("scanning %s log file '%s' for pids and addresses\n", pszDaemon, filename.c_str());
+		printf("using '%s' as banner\n", startup_banner_text.c_str());
+	}
+
+	BackwardFileReader reader(filename, O_RDONLY);
+	if (reader.LastError()) {
+		// report error??
+		if (App.diagnostic) {
+			fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
+		}
+	}
+
+	std::map<pid_t,bool> dead_pids;
+	std::string possible_job_id;
+	std::string possible_job_pid;
+	std::string possible_daemon_pid;
+	std::string possible_daemon_addr;
+	bool bInsideBanner = false;
+	bool bInsideJobStartup = false;
+	bool bEchoLines = App.test_backward != 0;
+
+	std::string line;
+	while (reader.PrevLine(line)) {
+		if (bEchoLines) { printf("%s\n", line.c_str()); }
+
+		/* the daemon startup banner looks like this.
+		05/22/12 14:19:40 ******************************************************
+		05/22/12 14:19:40 ** condor_master (CONDOR_MASTER) STARTING UP
+		05/22/12 14:19:40 ** D:\scratch\condor\master\test\bin\condor_master.exe
+		05/22/12 14:19:40 ** SubsystemInfo: name=MASTER type=MASTER(2) class=DAEMON(1)
+		05/22/12 14:19:40 ** Configuration: subsystem:MASTER local:<NONE> class:DAEMON
+		05/22/12 14:19:40 ** $CondorVersion: 7.8.0 Apr 30 2012 PRE-RELEASE-UWCS $
+		05/22/12 14:19:40 ** $CondorPlatform: X86-WINDOWS_6.1 $
+		05/22/12 14:19:40 ** PID = 5460
+		05/22/12 14:19:40 ** Log last touched time unavailable (No such file or directory)
+		05/22/12 14:19:40 ******************************************************
+		*/
+
+		if (line.find(startup_banner_text) != string::npos) {
+			if (App.diagnostic) {
+				printf("found %s startup banner with pid %s\n", pszDaemon, possible_daemon_pid.c_str());
+				printf("quitting scan of %s log file\n\n", pszDaemon);
 			}
-			// parse master header
+			if (pliDaemon->pid.empty())
+				pliDaemon->pid = possible_daemon_pid;
+			if (pliDaemon->addr.empty())
+				pliDaemon->addr = possible_daemon_addr;
+
+			bInsideBanner = false;
+			// found daemon startup header, everything before this is from a different invocation
+			// of the daemon, so stop searching.
+			break;
+		}
+		// are we inside the banner?
+		if (line.find(" ** Log last touched ") != string::npos) {
+			if (App.diagnostic) { printf("inside banner\n"); }
+			bInsideBanner = true;
+			continue;
+		}
+		if (bInsideBanner) {
+			// parse PID from banner
 			size_t ix = line.find(" ** PID = ");
 			if (ix != string::npos) {
-				possible_master_pid = line.substr(ix+10);
+				possible_daemon_pid = line.substr(ix+10);
 			}
+			continue;
+		}
+
+		// if we get to here, we are not inside the banner.
+
+		// DaemonCore: command socket at <sin>
+		// DaemonCore: private command socket at <sin>
+		size_t ix = line.find(" DaemonCore: command socket at <");
+		if (ix != string::npos) {
+			possible_daemon_addr = line.substr(line.find("<",ix));
+			continue;
+		}
+
+		// special parsing for master log.
+		if (bMasterLog) {
 
 			// parse "Sent signal NNN to DAEMON (pid NNNN)"
 			ix = line.find("Sent signal");
 			if (ix != string::npos) {
 				size_t ix2 = line.find(" to ", ix);
 				if (ix2 != string::npos) {
-					ix2 += 4;
+					ix2 += 4;  // 4 == sizeof " to "
+					const size_t cch3 = sizeof(" (pid ")-1;
 					size_t ix3 = line.find(" (pid ", ix2);
 					if (ix3 != string::npos) {
 						size_t ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
-						std::string pid = line.substr(ix3+6, ix4-ix3-6);
+						std::string pid = line.substr(ix3+cch3, ix4-ix3-cch3);
 						lower_case(daemon);
 						daemon[0] = toupper(daemon[0]);
 						if (App.diagnostic)
 							printf("From Sent Signal: %s = %s\n", daemon.c_str(), pid.c_str());
 						if (info.find(daemon) != info.end()) {
-							LOG_INFO * pliDaemon = info[daemon];
-							if (pliDaemon->pid.empty())
-								info[daemon]->pid = pid;
+							LOG_INFO * pliTemp = info[daemon];
+							if (pliTemp->pid.empty())
+								pliTemp->pid = pid;
 						}
 					}
 				}
@@ -1130,14 +1745,16 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 			// parse "Started DaemonCore process PATH, pid and pgroup = NNNN"
 			ix = line.find("Started DaemonCore process");
 			if (ix != string::npos) {
+				const size_t cch2 = sizeof(", pid and pgroup = ")-1;
 				size_t ix2 = line.find(", pid and pgroup = ", ix);
 				if (ix2 != string::npos) {
-					std::string pid = line.substr(ix2+sizeof(", pid and pgroup = ")-1);
+					std::string pid = line.substr(ix2+cch2);
+					const size_t cch3 = sizeof("condor_")-1;
 					size_t ix3 = line.rfind("condor_");
 					if (ix3 > ix && ix3 < ix2) {
 						size_t ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
-							std::string daemon = line.substr(ix3+7,ix4-ix3-7);
+							std::string daemon = line.substr(ix3+cch3,ix4-ix3-cch3);
 							lower_case(daemon);
 							daemon[0] = toupper(daemon[0]);
 							if (App.diagnostic)
@@ -1151,84 +1768,105 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 					}
 				}
 			}
-		}
-	}
 
-	// scan the Starter.slotNN logs backwards until we find the STARTING UP banner
-	// looking for the starter PIDS, and job PIDS & job IDs
-	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
-	{
-		if ( ! starts_with(it->first.c_str(),"Slot",NULL)) {
-			continue;
-		}
+			//  The DAEMON (pid NNNN) exited with status NNNN
+			ix = line.find(") exited with status ");
+			if (ix != string::npos) {
+				const size_t cch1 = sizeof(") exited with status ")-1;
+				const size_t cch2 = sizeof(" (pid ")-1;
+				size_t ix2 = line.rfind(" (pid ", ix);
+				if (ix2 != string::npos) {
+					const size_t cch3 = sizeof("The ")-1;
+					size_t ix3 = line.rfind("The ", ix2);
+					if (ix3 != string::npos) {
+						std::string daemon = line.substr(ix3+cch3, ix2-ix3-cch3);
+						lower_case(daemon);
+						daemon[0] = toupper(daemon[0]);
 
-		LOG_INFO * pliDaemon = it->second;
-
-		std::string filename;
-		sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
-		if (App.diagnostic) printf("scanning %s log file '%s' for pids\n", it->first.c_str(), filename.c_str());
-
-		BackwardsReader reader(filename, O_RDONLY);
-		if (reader.LastError()) {
-			// report error??
-			if (App.diagnostic) {
-				fprintf(stderr,"Error opening %s: %s\n", filename.c_str(), strerror(reader.LastError()));
+						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
+						std::string exit_code = line.substr(ix+cch1);
+						if (App.diagnostic) {
+							printf("From exited with status: %s = %s (exit %s)\n",
+									daemon.c_str(), exited_pid.c_str(), exit_code.c_str());
+						}
+						if (info.find(daemon) != info.end()) {
+							LOG_INFO * pliDaemon = info[daemon];
+							pliDaemon->pid = exited_pid;
+							pliDaemon->exit_code = exit_code;
+						}
+					}
+				}
 			}
-			return;
-		}
 
-		std::map<pid_t,bool> dead_pids;
-		std::string possible_starter_pid;
-		std::string possible_job_id;
-		std::string possible_job_pid;
+			ix = line.find("All daemons are gone.  Exiting.");
+			if (ix != string::npos) {
+				// mark all but master daemon as exited.
+			}
 
-		std::string line;
-		while (reader.PrevLine(line)) {
-			// printf("%s\n", line.c_str());
-			if (line.find("**** condor_starter (condor_STARTER) pid") != string::npos &&
+			// **** condor_master (condor_MASTER) pid 6320 EXITING WITH STATUS 0
+			ix = line.find(" (condor_MASTER) pid ");
+			if (ix != string::npos) {
+				const size_t cch1 = sizeof(" (condor_MASTER) pid ")-1;
+				const size_t cch2 = sizeof(" EXITING WITH STATUS ")-1;
+				size_t ix2 = line.find(" EXITING WITH STATUS ");
+				if (ix2 != string::npos) {
+					std::string pid = line.substr(ix+cch1, ix2-ix-cch1);
+					std::string exit_code = line.substr(ix2+cch2);
+					LOG_INFO * pliMaster = info["Master"];
+					pliMaster->pid = pid;
+					pliMaster->exit_code = exit_code;
+					if (App.diagnostic) {
+						printf("From EXITING WITH STATUS: Master = %s (exit %s)\n", pid.c_str(), exit_code.c_str());
+					}
+				}
+			}
+
+		} else if (bSlotLog) { // special parsing for StarterLog.slotN
+
+			// if we find an exited message for the starter, then nothing before that in the log will be
+			// 'live' anymore, so we can quit scanning.
+			if (line.find(" (condor_STARTER) pid") != string::npos &&
 				line.find("EXITING WITH STATUS") != string::npos) {
 				if (App.diagnostic) {
 					printf("found EXITING line for starter\nquitting scan of %s log file\n\n", it->first.c_str());
 				}
 				break;
 			}
-			if (line.find("** condor_starter (CONDOR_STARTER) STARTING UP") != string::npos) {
-				if (App.diagnostic) {
-					printf("found startup banner with pid %s\n", possible_starter_pid.c_str());
-					printf("quitting scan of %s log file\n\n", it->first.c_str());
-				}
-				if (pliDaemon->pid.empty())
-					pliDaemon->pid = possible_starter_pid;
-				break;
+
+			// top line of JobStartup is " Communicating with shadow <"
+			//
+			size_t ix = line.find(" Communicating with shadow <");
+			if (ix != string::npos) {
+				bInsideJobStartup = false;
+				//possible_job_shadow_addr = line.substr(line.find("<",ix));
 			}
 
-			// parse start banner
-			size_t ix = line.find(" ** PID = ");
-			if (ix != string::npos) {
-				possible_starter_pid = line.substr(ix+10);
-			}
+			if (bInsideJobStartup) {
 
-			ix = line.find("DaemonCore: command socket at");
-			if (ix != string::npos) {
-				pliDaemon->addr = line.substr(line.find("<", ix));
-			}
-
-			// parse jobid
-			ix = line.find("Starting a ");
-			if (ix != string::npos) {
-				size_t ix2 = line.find("job with ID: ", ix);
-				if (ix2 != string::npos) {
-					possible_job_id = line.substr(line.find(": ", ix2)+2);
-					if (App.diagnostic) { printf("found JobId %s\n", possible_job_id.c_str()); }
-					if ( ! possible_job_pid.empty()) {
-						pid_t pid = atoi(possible_job_pid.c_str());
-						if (App.diagnostic) { printf("Adding %s = %s to job->pid map\n", possible_job_id.c_str(), possible_job_pid.c_str()); }
-						job_to_pid[possible_job_id] = pid;
+				// parse jobid  "Starting a %s universe job with ID: %d.%d\n"
+				ix = line.find(" Starting a ");
+				if (ix != string::npos) {
+					size_t ix2 = line.find(" universe job with ID: ", ix);
+					if (ix2 != string::npos) {
+						possible_job_id = line.substr(line.find(": ", ix2)+2);
+						if (App.diagnostic) { printf("found JobId %s\n", possible_job_id.c_str()); }
+						if ( ! possible_job_pid.empty()) {
+							pid_t pid = atoi(possible_job_pid.c_str());
+							if (App.diagnostic) { printf("Adding %s = %s to job->pid map\n", possible_job_id.c_str(), possible_job_pid.c_str()); }
+							job_to_pid[possible_job_id] = pid;
+						}
 					}
 				}
+
+				ix = line.find(" About to exec ");
+				if (ix != string::npos) {
+					pid_t pid = atoi(possible_job_pid.c_str());
+					//possible_job_exe = line.substring(ix+sizeof(" About to exec ")-1);
+					App.pid_to_program[pid] = line.substr(ix+sizeof(" About to exec ")-1);
+				}
 			}
 
-			// collect job pids
+			// bottom line of JobStartup is "Create_Process succeeded, pid=%d"
 			//
 			ix = line.find("Create_Process succeeded, pid=");
 			if (ix != string::npos) {
@@ -1241,6 +1879,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 					dead_pids.erase(it_pids);
 				} else {
 					// running_pids.push_back(pid);
+					bInsideJobStartup = true;
 				}
 			}
 
@@ -1251,9 +1890,50 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_TO_PID & job_to_pid)
 				pid_t pid = atoi(exited_pid.c_str());
 				dead_pids[pid] = true;
 			}
+
 		}
 	}
 
+	if (App.test_backward > 1) {
+		printf("------- scanning complete -------\n");
+		while (reader.PrevLine(line)) {
+			printf("%s\n", line.c_str());
+		}
+	}
+
+	reader.Close();
+}
+
+// scan the log files found in the log info map for PIDS and ADDRESSES
+// and use that information to populate the info map and to build a mapping
+// of jobid to pid.
+//
+static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid)
+{
+	// scan the master log first
+	LOG_INFO_MAP::const_iterator it = info.find("Master");
+	if (it != info.end()) {
+		scan_a_log_for_info(info, job_to_pid, it);
+	}
+	for (it = info.begin(); it != info.end(); ++it) {
+		// scan starter logs.
+		if (starts_with(it->first.c_str(),"Slot",NULL) || 
+			starts_with(it->first.c_str(),"Starter", NULL)) {
+			scan_a_log_for_info(info, job_to_pid, it);
+			continue;
+		}
+
+		// scan schedd and startd logs only if we don't already
+		// have their pid and/or addresses
+		LOG_INFO * pliDaemon = it->second;
+		if ( ! pliDaemon->pid.empty() && ! pliDaemon->addr.empty())
+			continue;
+
+		if (it->first != "Schedd" && it->first != "Startd")
+			continue;
+
+		scan_a_log_for_info(info, job_to_pid, it);
+	}
 }
 
 static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
@@ -1275,14 +1955,14 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			//if (App.diagnostic) printf("\t\tAddress file: %s\n", name.c_str());
 		} else if (ends_with(file, "Log", &pu)) {
 			name.insert(0, file, pu-file);
-			if (name == "Sched") name = "Schedd"; // the schedd log is called CredLog
+			if (name == "Sched") name = "Schedd"; // the schedd log is called SchedLog
 			if (name == "Start") name = "Startd"; // the startd log is called StartLog
 			if (name == "Cred") name = "Credd"; // the credd log is called CredLog
 			if (name == "Kbd") name = "Kbdd"; // the kbdd log is called KbdLog
 			filetype = 2; // log
 		} else if (ends_with(file, "Log.old", &pu)) {
 			name.insert(0, file, pu-file);
-			if (name == "Sched") name = "Schedd"; // the schedd log is called CredLog
+			if (name == "Sched") name = "Schedd"; // the schedd log is called SchedLog
 			if (name == "Start") name = "Startd"; // the startd log is called StartLog
 			if (name == "Cred") name = "Credd";
 			if (name == "Kbd") name = "Kbdd";
@@ -1291,7 +1971,7 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			const char * pname = pu;
 			if (ends_with(pname, ".old", &pu)) {
 				name.insert(0, pname, pu - pname);
-				filetype = 3; // previous slotlog
+				filetype = 3; // old slotlog
 			} else {
 				name.insert(0, pname);
 				filetype = 2; // slotlog
@@ -1326,13 +2006,14 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 
 void print_log_info(LOG_INFO_MAP & info)
 {
-	printf("%-12s %-8s %-24s %s\n", "Daemon", "PID", "Addr", "Log, Log.Old");
-	printf("%-12s %-8s %-24s %s\n", "------", "---", "----", "---, -------");
+	printf("\n");
+	printf("%-12s %-8s %-10s %-24s %s, %s\n", "Daemon", "PID", "Exit", "Addr", "Log", "Log.Old");
+	printf("%-12s %-8s %-10s %-24s %s, %s\n", "------", "---", "----", "----", "---", "-------");
 	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
 	{
 		LOG_INFO * pli = it->second;
-		printf("%-12s %-8s %-24s %s, %s\n", 
-			it->first.c_str(), pli->pid.c_str(), pli->addr.c_str(), 
+		printf("%-12s %-8s %-10s %-24s %s, %s\n",
+			it->first.c_str(), pli->pid.c_str(), pli->exit_code.c_str(), pli->addr.c_str(),
 			pli->log.c_str(), pli->log_old.c_str());
 	}
 }
@@ -1357,16 +2038,16 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr, param_name); }
 
 	if ( ! sock.code(tmp_param_name)) {
-		if (App.diagnostic) { fprintf(stderr, "Can't send DC_CONFIG_VAL for %s to %s\n", param_name, addr); }
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't send DC_CONFIG_VAL for %s to %s\n", param_name, addr); }
 	} else if ( ! sock.end_of_message()) {
-		if (App.diagnostic) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
 	} else {
 		sock.decode();
 		if ( ! sock.code(value)) {
-			if (App.diagnostic) { fprintf(stderr, "Can't receive reply from %s\n", addr); }
+			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive reply from %s\n", addr); }
 		} else if( ! sock.end_of_message()) {
-			if (App.diagnostic) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
-		} else if (App.diagnostic) {
+			if (App.diagnostic > 1) { fprintf(stderr, "Can't receive end of message from %s\n", addr); }
+		} else if (App.diagnostic > 1) {
 			printf("DC_CONFIG_VAL %s, %s = %s\n", addr, param_name, value);
 		}
 	}
@@ -1427,6 +2108,13 @@ static void query_daemons_for_pids(LOG_INFO_MAP & info)
 			if (pid) {
 				pli->pid.insert(0,pid);
 				free(pid);
+			}
+		}
+		// now put that in the daemon address table.
+		if (pli->exit_code.empty() && ! pli->pid.empty()) {
+			pid_t pid = atoi(pli->pid.c_str());
+			if (pid) {
+				App.pid_to_addr[pid] = pli->addr;
 			}
 		}
 	}

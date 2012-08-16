@@ -17,7 +17,6 @@
  ***************************************************************/
 
 #include "classad/classadCache.h"
-#include <boost/weak_ptr.hpp>
 #include <assert.h>
 #include <stdio.h>
 #include <list>
@@ -41,11 +40,11 @@ class ClassAdCache
 {
 protected:
     
-        typedef boost::unordered_map<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr> AttrValues;
-        typedef boost::unordered_map<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr>::iterator value_iterator;
+        typedef classad_unordered<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr> AttrValues;
+        typedef classad_unordered<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr>::iterator value_iterator;
         
-	typedef boost::unordered_map<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr> AttrCache;
-	typedef boost::unordered_map<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr>::iterator cache_iterator;
+	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr> AttrCache;
+	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr>::iterator cache_iterator;
 
 	AttrCache m_Cache;		///< Data Store
 	unsigned long m_HitCount;	///< Hit Counter
@@ -203,7 +202,7 @@ public:
 };
 
 
-static ClassAdCache * _cache = 0;
+static classad_shared_ptr<ClassAdCache> _cache;
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -240,27 +239,38 @@ CachedExprEnvelope::~CachedExprEnvelope()
 
 ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 {
-	CachedExprEnvelope * pRet=0;
+	ExprTree * pRet=pTree;
+	string szValue;
+	NodeKind nk = pTree->GetKind();
 	
-	if (pTree->GetKind() == EXPR_ENVELOPE)
+	switch (nk)
 	{
-	  // This exists because there are so many wonky code paths that are hard to protect against.
-	  pRet = (CachedExprEnvelope *)pTree->Copy();
-	}
-	else
-	{	
-		pRet = new CachedExprEnvelope();
+	  case EXPR_ENVELOPE:
+	     pRet = pTree;
+	  break;
+	  
+	  case EXPR_LIST_NODE:
+	  case CLASSAD_NODE:
+	    // for classads the values are already cached but we still should string space the name
+	    check_hit (pName, szValue);
+	  break;
+	    
+	  default:
+	  {
+	    CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
 	
-                string szValue;
-		classad::val_str(szValue, pTree); 
+            
+	    classad::val_str(szValue, pTree); 
 	
-		pRet->nodeKind = EXPR_ENVELOPE;
-		if (!_cache)
-		{
-			_cache = new ClassAdCache();
-		}
+	    pNewEnv->nodeKind = EXPR_ENVELOPE;
+	    if (!_cache)
+	    {
+	      _cache.reset( new ClassAdCache() );
+	    }
 
-		pRet->m_pLetter = _cache->cache( pName, szValue, pTree);
+	    pNewEnv->m_pLetter = _cache->cache( pName, szValue, pTree);
+	    pRet = pNewEnv;
+	  }
 	}
 	
 	return ( pRet );
@@ -277,7 +287,7 @@ CachedExprEnvelope * CachedExprEnvelope::check_hit (string & szName, const strin
 
    if (!_cache)
    {
-	_cache = new ClassAdCache();
+	_cache.reset(new ClassAdCache());
    }
 
    pCacheData cache_check = _cache->cache( szName, szValue, 0);
