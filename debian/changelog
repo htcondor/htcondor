@@ -1,3 +1,12 @@
+condor (7.8.2~dfsg.1-1) unstable; urgency=high
+
+  * Upstream security release. Prevent an attacker who is manipulating
+    reverse-DNS entries and is able to connect to a Condor daemon to gain
+    access to a Condor pool that is using DNS/hostname host-based authentication
+    (only). CVE-2012-3416
+
+ -- Michael Hanke <mih@debian.org>  Thu, 16 Aug 2012 08:32:49 +0200
+
 condor (7.8.1~dfsg.1-2) unstable; urgency=low
 
   * Remove dangling symlink /usr/sbin/condor -> ../bin/condor. This file no
