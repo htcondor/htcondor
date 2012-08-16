@@ -124,7 +124,7 @@ foreach my $task (sort keys %tasklist) {
     my $test_count = defined($RuncountChanges{$task}) ? $RuncountChanges{$task} : 1;
 
     my $prefix = "JOB ";
-    my @serial_test_platforms = qw//;
+    my @serial_test_platforms = qw/x86_winnt_5.1 x86_64_winnt_6.1/;
     if(grep $_ eq $ENV{NMI_PLATFORM}, @serial_test_platforms) {
 	$prefix = "";
     }
