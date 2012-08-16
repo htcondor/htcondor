@@ -146,8 +146,7 @@ This bug was introduced when these functions were added in Condor version 7.7.6.
 
 \begin{itemize}
 
-\item Condor version 7.9.0 not yet released.
-%\item Condor version 7.9.0 released on Month Date, 2012.
+\item Condor version 7.9.0 released on August 16, 2012.
 
 \end{itemize}
 
@@ -256,6 +255,13 @@ if \Condor{dagman} version 7.9.0 or later is submitting jobs
 to an older version of
 a \Condor{schedd} daemon or of a \Condor{submit} executable.
 \Ticket{2807}
+
+\item \Condor{submit} has a new \Opt{-interactive} option for
+platforms other than Windows,
+which schedules and runs a job that provides a shell prompt
+on the execute machine.
+Documentation of this feature is not yet available.
+\Ticket{3088}
 
 \end{itemize}
 
