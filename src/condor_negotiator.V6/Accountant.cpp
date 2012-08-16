@@ -201,10 +201,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   if ( first_time ) {
 	  HashKey HK;
 	  ClassAd* ad;
-	  AttrList *unused;
 	  StringList users;
-	  char *next_user;
-	  MyString user;
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
 	  int total_overestimated_users = 0;
@@ -212,14 +209,14 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  float total_overestimated_resourcesRW = 0;
 	  int total_overestimated_usersRW = 0;
 
+      first_time = false;
+
 	  dprintf(D_ACCOUNTANT,"Sanity check on number of resources per user\n");
 
 		// first find all the users
 	  AcctLog->table.startIterations();
 	  while (AcctLog->table.iterate(HK,ad)) {
-		MyString keybuf;
-		HK.sprint(keybuf);
-		char const *key = keybuf.Value();
+		char const *key = HK.value();
 			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 		char const *thisUser = &(key[CustomerRecord.Length()]);
@@ -230,17 +227,12 @@ void Accountant::Initialize(GroupEntry* root_group)
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
 	  users.rewind();
-	  while( (next_user=users.next()) ) 
-	  {
-		  user = next_user;
+	  while (char* next_user=users.next()) {
+		  string user = next_user;
 		  resources_used = GetResourcesUsed(user);
 		  resourcesRW_used = GetWeightedResourcesUsed(user);
 
-		  /* It appears here that only the second variable is of interest to
-		  	this part of the code, however, this function returns new'ed memory
-			so keep track of it and delete it so we don't leak memory. */
-		  unused = ReportState(user,&resources_used_really,&resourcesRW_used_really);
-		  delete unused;
+		  CheckResources(user, resources_used_really, resourcesRW_used_really);
 
 		  if ( resources_used == resources_used_really ) {
 			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
@@ -486,9 +478,7 @@ void Accountant::ResetAllUsage()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-	char const *key = keybuf.Value();
+	char const *key = HK.value();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 	AcctLog->BeginTransaction();
     SetAttributeFloat(key,AccumulatedUsageAttr,0);
@@ -773,9 +763,7 @@ void Accountant::DisplayLog()
   ClassAd* ad;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString key;
-    HK.sprint(key);
-    printf("------------------------------------------------\nkey = %s\n",key.Value());
+    printf("------------------------------------------------\nkey = %s\n",HK.value());
     ad->fPrint(stdout);
   }
 }
@@ -791,9 +779,7 @@ void Accountant::DisplayMatches()
   MyString ResourceName;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-	char const *key = keybuf.Value();
+	char const *key = HK.value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     MyString RemoteUser;
@@ -846,9 +832,7 @@ void Accountant::UpdatePriorities()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-    char const *key = keybuf.Value();
+    char const *key = HK.value();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
     // lookup values in the ad
@@ -950,9 +934,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   // Remove matches that were broken
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-    char const *key = keybuf.Value();
+    char const *key = HK.value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
@@ -986,22 +968,14 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResources, float* NumResourcesRW) {
+AttrList* Accountant::ReportState(const MyString& CustomerName) {
     dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
     HashKey HK;
     ClassAd* ResourceAd;
-    MyString ResourceName;
     int StartTime;
 
     AttrList* ad = new AttrList();
-
-    if (NumResources) {
-        *NumResources = 0;
-    }
-    if (NumResourcesRW) {
-        *NumResourcesRW = 0;
-    }
 
     bool isGroup=false;
     string cgrp = GetAssignedGroup(CustomerName.Value(), isGroup)->name;
@@ -1011,10 +985,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResource
     int ResourceNum=1;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK,ResourceAd)) {
-        MyString key;
-        HK.sprint(key);
-
-        if (strncmp(ResourceRecord.Value(), key.Value(), ResourceRecord.Length())) continue;
+        if (strncmp(ResourceRecord.Value(), HK.value(), ResourceRecord.Length())) continue;
 
         MyString rname;
         if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
@@ -1025,10 +996,9 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResource
         } else {
             // customername is a traditional submitter: group.username@host
             if (CustomerName != rname) continue;
-     
+
             MyString tmp;
-            ResourceName=key+ResourceRecord.Length();
-            tmp.sprintf("Name%d = \"%s\"", ResourceNum, ResourceName.Value());
+            tmp.sprintf("Name%d = \"%s\"", ResourceNum, HK.value()+ResourceRecord.Length());
             ad->Insert(tmp.Value());
 
             if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
@@ -1037,18 +1007,43 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResource
         }
 
         ResourceNum++;
-        if (NumResourcesRW) {
-            float SlotWeight = 1.0;
-            ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
-            *NumResourcesRW += SlotWeight;
-        }
-    }
-
-    if (NumResources) {
-        *NumResources = ResourceNum - 1;
     }
 
     return ad;
+}
+
+
+void Accountant::CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW) {
+    dprintf(D_ACCOUNTANT, "Checking Resources for customer %s\n", CustomerName.c_str());
+
+    NumResources = 0;
+    NumResourcesRW = 0;
+
+    bool isGroup=false;
+    string cgrp = GetAssignedGroup(CustomerName.c_str(), isGroup)->name;
+    // This is a defunct group:
+    if (isGroup && (cgrp != CustomerName)) return;
+
+    HashKey HK;
+    ClassAd* ResourceAd;
+    AcctLog->table.startIterations();
+    while (AcctLog->table.iterate(HK, ResourceAd)) {
+        if (strncmp(ResourceRecord.Value(), HK.value(), ResourceRecord.Length())) continue;
+
+        string rname;
+        if (ResourceAd->LookupString(RemoteUserAttr, rname) == 0) continue;
+
+        if (isGroup) {
+            if (cgrp != GetAssignedGroup(rname)->name) continue;
+        } else {
+            if (CustomerName != rname) continue;
+        }
+
+        NumResources += 1;
+        float SlotWeight = 1.0;
+        ResourceAd->LookupFloat(SlotWeightAttr, SlotWeight);
+        NumResourcesRW += SlotWeight;
+    }
 }
 
 
@@ -1084,10 +1079,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
     ClassAd* CustomerAd = NULL;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK,CustomerAd)) {
-        MyString key;
-        HK.sprint(key);
-        if (strncmp(CustomerRecord.Value(), key.Value(), CustomerRecord.Length())) continue;
-        MyString CustomerName = key.Value()+CustomerRecord.Length();
+        if (strncmp(CustomerRecord.Value(), HK.value(), CustomerRecord.Length())) continue;
+        MyString CustomerName = HK.value()+CustomerRecord.Length();
 
         bool isGroup=false;
         GroupEntry* cgrp = GetAssignedGroup(CustomerName, isGroup);
