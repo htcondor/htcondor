@@ -21,3 +21,6 @@ file( GLOB CeadarRmvSrcs *.t* test.h )
 condor_glob( CedarHdrs CedarSrcs "${CeadarRmvSrcs}" )
 
 set( CEDAR_UTIL_SRCS "${CedarHdrs};${CedarSrcs}" PARENT_SCOPE )
+
+condor_exe_test(cedar_test.exe "cedar.t.unix.cpp" "${CONDOR_TOOL_LIBS};${COREDUMPER_FOUND}")
+
