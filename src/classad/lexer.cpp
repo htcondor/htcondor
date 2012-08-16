@@ -121,7 +121,7 @@ mark (void)
 void  Lexer::
 cut (void)
 {
-	if (lexBufferCount<lexBuffer.length())
+	if(lexBufferCount < lexBuffer.length())
 	{
 		lexBuffer[lexBufferCount] = '\0';
 	}
