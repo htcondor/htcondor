@@ -543,7 +543,7 @@ if (NOT WINDOWS)
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
