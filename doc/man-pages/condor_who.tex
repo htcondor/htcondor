@@ -1,0 +1,122 @@
+\begin{ManPage}{\label{man-condor-who}\Condor{who}}{1}
+{Display information about owners of jobs and jobs running on an execute machine}
+\Synopsis \SynProg{\Condor{who}}
+\oArg{help options}
+\oArg{address options}
+\oArg{display options}
+
+\index{Condor commands!condor\_who}
+\index{condor\_who command}
+
+\Description
+\Condor{who} queries and displays information about the user that
+owns the jobs running on a machine.
+It is intended to be run on an execute machine.
+
+The options that may be supplied to \Condor{who} belong to five groups:
+\begin{itemize}
+  \item \textbf{Help options} provide information about the \Condor{who}
+  tool.
+  \item \textbf{Address options} allow destination specification for query.
+  \item \textbf{Display options} control the formatting and which of the 
+  queried information to display.
+\end{itemize}
+
+At any time, only one \textbf{help option} and one \textbf{address option}
+may be specified.  
+Any number of \textbf{display options} may be specified.
+
+\begin{Options}
+    \OptItem{\Opt{-help}}{(help option) Display usage information}
+    \OptItem{\Opt{-diagnostic}}{(help option) Display extra information helpful for debugging }
+    \OptItem{\Opt{-verbose}}{(help option) Display PIDs and 
+addresses of daemons }
+    \OptItem{\OptArg{-address}{hostaddress}} {(address option) 
+      Identify the \Condor{startd} host address to query }
+    \OptItem{\OptArg{-logdir}{directoryname}} {(address option) 
+      Specifies the log directory that \Condor{who} will scan to search
+      for command ports of \Condor{start} daemons to query }
+
+    \OptItem{\Opt{-long}}{(display option) Display entire ClassAds }
+    \OptItem{\Opt{-wide}}{(display option) Displays fields without
+truncating them in order to fit screen width }
+
+\OptItem{\OptArg{-format}{fmt attr}}{(display option) Display attribute
+      \Arg{attr} in format \Arg{fmt}.
+      To display the attribute or expression the format must contain a single
+      \Code{printf(3)}-style conversion specifier.
+      Attributes must be from the resource ClassAd.
+      Expressions are ClassAd expressions and may
+      refer to attributes in the resource ClassAd.
+      If the attribute is not present in a given ClassAd and cannot
+      be parsed as an expression, then the
+      format option will be silently skipped.
+      The conversion specifier must match the type of the
+      attribute or expression.
+      \%s is suitable for strings such as \Attr{Name},
+      \%d for integers such as \Attr{LastHeardFrom},
+      and \%f for floating point numbers such as \Attr{LoadAvg}.
+      \%v identifies the type of the attribute,
+      and then prints the value in an appropriate format.
+      \%V identifies the type of the attribute,
+      and then prints the value in an appropriate format as it would
+      appear in the \Opt{-long} format.
+      As an example, strings used with \%V will have quote marks.
+      An incorrect format will result in undefined behavior.
+      Do not use more than one conversion specifier in a given
+      format.  More than one conversion specifier will result
+      in undefined behavior.  To output multiple attributes
+      repeat the \Opt{-format} option once for each desired
+      attribute.
+      Like \Code{printf(3)}-style formats, one may include other
+      text that will be reproduced directly.
+      A format without any conversion specifiers may be specified,
+      but an attribute is still required.
+      Include \Bs n to specify a line break. }
+    \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}} {
+      (display option) Display machine ClassAd attribute values 
+      formatted in a default way according to their attribute types.  
+      This option takes an arbitrary number of attribute names as arguments,
+      and prints out their values.  It is like the \Opt{-format} option,
+      but no format strings are required.
+      It is assumed that no attribute names begin with a dash character,
+      so that the next word that begins with dash is the 
+      start of the next option.
+      The \Opt{autoformat} option may be followed by a colon character
+      and formatting qualifiers:
+
+      \textbf{t} add a tab character before each field instead of 
+      the default space character,
+
+      \textbf{n} add a newline character after each field,
+
+      \textbf{,} add a comma character after each field,
+
+      \textbf{l} label each field,
+
+      \textbf{V} use \%V rather than \%v for formatting,
+
+      \textbf{h} print headings before the first line of output.
+
+      The newline and comma characters may \emph{not} be used together.
+      }
+\end{Options}
+
+\Examples
+
+\underline{Example 1} Description here
+\footnotesize
+\begin{verbatim}
+% condor_who 
+
+\end{verbatim}
+\normalsize
+
+
+\ExitStatus
+
+\Condor{who} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
+
