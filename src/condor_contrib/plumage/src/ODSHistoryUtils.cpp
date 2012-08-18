@@ -76,7 +76,7 @@ plumage::etl::processHistoryDirectory()
         CondorError errstack;
         if ( !h_file.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         errstack.clear();
@@ -118,7 +118,7 @@ plumage::etl::processCurrentHistory(bool force_reset)
     {
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );
@@ -149,7 +149,7 @@ plumage::etl::processCurrentHistory(bool force_reset)
         currentHistory = ODSHistoryFile ( currentHistoryFilename.Value() );
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );

@@ -468,7 +468,7 @@ main( int argc, char *argv[] )
 		CondorError errstack;
 		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
 		if (had_error) {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		}
 		printNewMessages( result_ad, job_ids );
 		delete( result_ad );
@@ -480,7 +480,7 @@ main( int argc, char *argv[] )
 		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 		CondorError errstack;
 		if (!my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0, &errstack)) {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		}
 	}
 
@@ -630,7 +630,7 @@ procArg(const char* arg)
 						 "has been removed locally (remote state unknown)" :
 						 actionWord(mode,true) );
 			} else {
-				fprintf( stderr, "%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 				if (had_error)
 				{
 					fprintf( stderr, 
@@ -674,7 +674,7 @@ procArg(const char* arg)
 					 "have been removed locally (remote state unknown)" :
 					 actionWord(mode,true) );
 		} else {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 			if (had_error)
 			{
 				fprintf( stderr, 
@@ -749,7 +749,7 @@ handleAll()
 				 "removed locally (remote state unknown)" :
 				 actionWord(mode,true) );
 	} else {
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		if (had_error)
 		{
 			fprintf( stderr, "Could not %s all jobs.\n",
@@ -777,7 +777,7 @@ handleConstraints( void )
 				 actionWord(mode,true) );
 
 	} else {
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		if (had_error)
 		{
 			fprintf( stderr, 

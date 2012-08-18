@@ -692,7 +692,7 @@ monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 	CondorError errstack;
 	if ( !reader.monitorLogFile( logfile, truncateIfFirst, errstack ) ) {
 		printf( "Error monitoring log file %s: %s\n", logfile,
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		return false;
 	}
 
@@ -706,7 +706,7 @@ unmonitorLogFile( ReadMultipleUserLogs &reader, const char *logfile )
 	CondorError errstack;
 	if ( !reader.unmonitorLogFile( logfile, errstack ) ) {
 		printf( "Error unmonitoring log file %s: %s\n", logfile,
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		return false;
 	}
 

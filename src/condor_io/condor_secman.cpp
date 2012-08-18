@@ -1082,10 +1082,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			// caller did not provide an errstack, so print out the
 			// internal one
 
-		char const *error_msg = m_internal_errstack.getFullText();
-		if(error_msg && *error_msg) {
-			dprintf(D_ALWAYS, "ERROR: %s\n",error_msg);
-		}
+		dprintf(D_ALWAYS, "ERROR: %s\n", m_internal_errstack.getFullText().c_str());
 	}
 
 	if(result != StartCommandInProgress) {

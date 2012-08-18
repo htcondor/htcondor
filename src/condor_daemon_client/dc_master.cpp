@@ -94,7 +94,7 @@ DCMaster::sendMasterCommand( bool insure_update, int my_cmd )
 			m_master_safesock = NULL;
 		}
 		if( errstack.code() != 0 ) {
-		        dprintf( D_ALWAYS, "ERROR: %s\n", errstack.getFullText() );
+		        dprintf( D_ALWAYS, "ERROR: %s\n", errstack.getFullText().c_str() );
 		}
 		return false;
 	}

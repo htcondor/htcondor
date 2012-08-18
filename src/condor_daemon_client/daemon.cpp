@@ -787,14 +787,14 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 			err_msg += "CA_AUTH_CMD";
 		}
 		err_msg += "): ";
-		err_msg += errstack.getFullText();
+		err_msg += errstack.getFullText().c_str();
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
 	}
 	if( force_auth ) {
 		CondorError e;
 		if( ! forceAuthentication(cmd_sock, &e) ) {
-			newError( CA_NOT_AUTHENTICATED, e.getFullText() );
+			newError( CA_NOT_AUTHENTICATED, e.getFullText().c_str() );
 			return false;
 		}
 	}
@@ -1245,7 +1245,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		CondorError errstack;
 		if (collectors->query (query, ads) != Q_OK) {
 			delete collectors;
-			newError( CA_LOCATE_FAILED, errstack.getFullText() );
+			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;
 		};
 		delete collectors;

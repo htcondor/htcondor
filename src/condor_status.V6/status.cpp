@@ -455,7 +455,7 @@ main (int argc, char *argv[])
         if (Q_OK != q) {
                 // we can always provide these messages:
 	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 
 	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
                         // Specific long message if connection to collector failed.

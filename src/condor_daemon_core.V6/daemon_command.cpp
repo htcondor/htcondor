@@ -1010,7 +1010,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		if( !auth_success ) {
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 		}
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -1037,7 +1037,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: required authentication of %s failed: %s\n",
 					 m_sock->peer_ip_str(),
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		}
