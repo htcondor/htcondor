@@ -10697,6 +10697,13 @@ Scheduler::Init()
 	}
 #endif
 
+	char *collectorHost = NULL;
+	collectorHost  = param("COLLECTOR_HOST");
+	if (collectorHost) {
+		m_adSchedd->Assign(ATTR_COLLECTOR_HOST, collectorHost); 
+		free(collectorHost);
+	}
+
 		// Now create another command port to be used exclusively by shadows.
 		// Stash the sinfull string of this new command port in MyShadowSockName.
 	if ( ! MyShadowSockName ) {
