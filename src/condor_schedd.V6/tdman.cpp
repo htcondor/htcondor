@@ -878,7 +878,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 			errstack.push( "SCHEDD::TDMan", 42,
 					"Failure to register transferd - Authentication failed" );
 			dprintf( D_ALWAYS, "transferd_registration() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			refuse( rsock );
 			dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
 			return CLOSE_STREAM;

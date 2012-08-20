@@ -212,7 +212,7 @@ public:
 		/* add an error message to the error stack */
 	void addError( int code, char const *format, ... );
 
-	char const *getErrorStackText();
+	std::string getErrorStackText();
 
 		/* this calls addError() after a failed call to sock->put()/get() */
 	void sockFailed( Sock *sock );

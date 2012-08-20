@@ -1464,11 +1464,11 @@ main( int argc, char *argv[] )
 			QueryResult qr = query->fetchAds (result, addr, &errstack);
 			if (Q_OK != qr) {
 				fprintf( stderr, "Error: %s\n", getStrQueryResult(qr) );
-				fprintf( stderr, "%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 				exit(1);
 			}
 			else if (App.diagnostic) {
-				printf("QueryResult is %d : %s\n", qr, errstack.getFullText(true));
+				printf("QueryResult is %d : %s\n", qr, errstack.getFullText(true).c_str());
 				printf("    %d records\n", result.Length());
 			}
 		}

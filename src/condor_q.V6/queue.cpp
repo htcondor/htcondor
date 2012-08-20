@@ -2701,7 +2701,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			fprintf( stderr, 
 					"\n-- Failed to fetch ads from db [%s] at database "
 					"server %s\n%s\n",
-					db_name, db_ipAddr, errstack.getFullText(true) );
+					db_name, db_ipAddr, errstack.getFullText(true).c_str() );
 
 			if(dbconn) {
 				free(dbconn);
@@ -2745,7 +2745,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 				default:
 					fprintf(stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true) );
+						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 			}
 
 			return false;
@@ -3037,7 +3037,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			if( Q.fetchQueueFromDB(jobs, lastUpdate, dbconn, &errstack) != Q_OK ) {
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						db_ipAddr, db_name, errstack.getFullText(true) );
+						db_ipAddr, db_name, errstack.getFullText(true).c_str() );
 				if(dbconn) {
 					free(dbconn);
 				}
@@ -3066,7 +3066,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				default:
 					fprintf(stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true) );
+						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 			}
 			return false;
 			}

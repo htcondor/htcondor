@@ -74,7 +74,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
 					// Failed to authenticate
 				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n", 
-						 errstack.getFullText() );
+						 errstack.getFullText().c_str() );
 				authenticated = false;
 			}
 		}

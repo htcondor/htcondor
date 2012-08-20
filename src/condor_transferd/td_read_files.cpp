@@ -77,7 +77,7 @@ TransferD::read_files_handler(int cmd, Stream *sock)
 				"Failure to register transferd - Authentication failed" );
 			dprintf( D_ALWAYS, "setup_transfer_request_handler() "
 				"aborting: %s\n",
-				errstack.getFullText() );
+				errstack.getFullText().c_str() );
 			refuse( rsock );
 			return CLOSE_STREAM;
 		} 

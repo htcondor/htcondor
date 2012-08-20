@@ -868,7 +868,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
 		LogMonitorFailed();
 		EXCEPT( "Fatal log file monitoring error!\n" );
 		return false;
@@ -905,7 +905,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to unmonitor log " "file for node %s",
 					GetJobName() );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
 		EXCEPT( "Fatal log file monitoring error!\n" );
 	}
 

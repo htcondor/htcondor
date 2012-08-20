@@ -407,7 +407,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 
 	DCSchedd schedd( schedd_addr );
 	if ( schedd.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
-		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText( ) );
+		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}
 	return true;

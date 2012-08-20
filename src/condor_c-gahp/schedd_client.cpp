@@ -263,7 +263,7 @@ doContactSchedd()
 		if (!result_ad) {
 			error = TRUE;
 			sprintf( error_msg, "Error connecting to schedd %s %s: %s",
-					 ScheddAddr, dc_schedd.addr(), errstack.getFullText() );
+					 ScheddAddr, dc_schedd.addr(), errstack.getFullText().c_str() );
 		}
 		else {
 			result_ad->dPrint (D_FULLDEBUG);
@@ -395,7 +395,7 @@ doContactSchedd()
 										  array,
 										  &errstack )) {
 				error = TRUE;
-				sprintf( error_msg, "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText() );
+				sprintf( error_msg, "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText().c_str() );
 				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 			}
 			delete [] array;
@@ -457,7 +457,7 @@ doContactSchedd()
 										  &errstack, &jobssent )) {
 			error = TRUE;
 			sprintf( error_msg, "Error receiving files from schedd %s: %s",
-							   ScheddAddr, errstack.getFullText() );
+							   ScheddAddr, errstack.getFullText().c_str() );
 			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
 
@@ -538,7 +538,7 @@ doContactSchedd()
 
 		if (result == false) {
 			sprintf( error_msg, "Error refreshing proxy to schedd %s: %s",
-					 ScheddAddr, errstack.getFullText() );
+					 ScheddAddr, errstack.getFullText().c_str() );
 			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 
 			const char * result_to_queue[] = {

@@ -2735,7 +2735,7 @@ obtainAdsFromCollector (
 	result = collects->query (publicQuery, allAds, &errstack);
 	if( result!=Q_OK ) {
 		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", 
-           errstack.code() ? errstack.getFullText(false) : getStrQueryResult(result)
+           errstack.code() ? errstack.getFullText(false).c_str() : getStrQueryResult(result)
            );
 		return false;
 	}

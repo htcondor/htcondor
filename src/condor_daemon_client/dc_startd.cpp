@@ -927,7 +927,7 @@ DCStartd::getAds( ClassAdList &adsList )
 		q = query->fetchAds(adsList, ad_addr, &errstack);
 		if (q != Q_OK) {
         	if (q == Q_COMMUNICATION_ERROR) {
-            	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true) );
+            	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true).c_str() );
         	}
         	else {
             	dprintf (D_ALWAYS, "Error:  Could not fetch ads --- %s\n",

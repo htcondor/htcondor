@@ -1082,10 +1082,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			// caller did not provide an errstack, so print out the
 			// internal one
 
-		char const *error_msg = m_internal_errstack.getFullText();
-		if(error_msg && *error_msg) {
-			dprintf(D_ALWAYS, "ERROR: %s\n",error_msg);
-		}
+		dprintf(D_ALWAYS, "ERROR: %s\n", m_internal_errstack.getFullText().c_str());
 	}
 
 	if(result != StartCommandInProgress) {
@@ -2212,7 +2209,7 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 				  "SECMAN: unable to create security session to %s via TCP, "
 		          "failing.\n", m_sock->get_sinful_peer() );
 		m_errstack->pushf("SECMAN", SECMAN_ERR_NO_SESSION,
-		                 "Failed to create security session to %s with TCP.\n",
+		                 "Failed to create security session to %s with TCP.",
 		                 m_sock->get_sinful_peer());
 		rc = StartCommandFailed;
 	}

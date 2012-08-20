@@ -79,7 +79,7 @@ HistoryFile::operator=(const HistoryFile &base)
 		if (!init(errstack)) {
 			// XXX: Should throw an exception here
 			dprintf ( D_ALWAYS, "HistoryFile::operator=: %s\n",
-					errstack.getFullText(true));		
+					errstack.getFullText(true).c_str());		
 		}
 	}
 
@@ -182,7 +182,7 @@ HistoryFile::poll(CondorError &/*errstack*/)
 	// Load from the index
 	CondorError ignored_errstack;
 	if (!pollIndex(ignored_errstack)) {
-		dprintf(D_FULLDEBUG, "%s\n", ignored_errstack.getFullText(true));		
+		dprintf(D_FULLDEBUG, "%s\n", ignored_errstack.getFullText(true).c_str());		
 	}
 
 	// Seek to the end of the last known record

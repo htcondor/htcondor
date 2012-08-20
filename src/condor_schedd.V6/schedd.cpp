@@ -3443,7 +3443,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
 			dprintf( D_ALWAYS, "spoolJobFiles() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
 		}
@@ -3699,7 +3699,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
 					"Failure to update GSI cred - Authentication failed" );
 			dprintf( D_ALWAYS, "updateGSICred(%d) aborting: %s\n", cmd,
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
 		}
@@ -3910,7 +3910,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_JOB_ACTION_FAILED,
 					"Failed to act on jobs - Authentication failed");
 			dprintf( D_ALWAYS, "actOnJobs() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
 		}
@@ -12116,7 +12116,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		{
 			dprintf( D_ALWAYS,
 					 "GET_JOB_CONNECT_INFO: authentication failed: %s\n", 
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			return FALSE;
 		}
 	}
@@ -13666,7 +13666,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		{
 			dprintf( D_ALWAYS,
 					 "RecycleShadow(): authentication failed: %s\n", 
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			return FALSE;
 		}
 	}
@@ -13876,7 +13876,7 @@ Scheduler::clear_dirty_job_attrs_handler(int /*cmd*/, Stream *stream)
 		{
 			dprintf( D_ALWAYS,
 					 "clear_dirty_job_attrs_handler(): authentication failed: %s\n", 
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			return FALSE;
 		}
 	}
