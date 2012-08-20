@@ -1,6 +1,12 @@
 \index{ClassAd!Scheduler attributes}
 \begin{description}
 
+\index{ClassAd Scheduler attribute!CollectorHost}
+\item[\AdAttr{CollectorHost}:] The name of the main collector
+  which this schedd reports to.  If a schedd flocks to other
+  collectors, this attribute still represents the "home" collector,
+  so this value can be used to tell if a schedd is currently flocking.
+
 \index{ClassAd Scheduler attribute!DaemonCoreDutyCycle}
 \item[\AdAttr{DaemonCoreDutyCycle}:] A Statistics attribute defining
   the ratio of the time spent handling 

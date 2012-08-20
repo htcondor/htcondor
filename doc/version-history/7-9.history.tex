@@ -71,6 +71,10 @@ partial draining of machines.
 
 \begin{itemize}
 
+\item The \Condor{schedd} now advertises the value of the configuration parameter
+COLLECTOR\_HOST in its daemon ad.  This allows one to determine if a given
+schedd reporting to a collector is flocking to that collector or not.
+
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
 
