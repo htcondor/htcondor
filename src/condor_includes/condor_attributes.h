@@ -70,6 +70,7 @@
 #define ATTR_CKPT_SERVER  "CkptServer"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
 #define ATTR_COD_CLAIMS  "CODClaims"
+#define ATTR_COLLECTOR_HOST  "CollectorHost"
 #define ATTR_COMMAND  "Command"
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
