@@ -797,7 +797,7 @@ void main_init (int argc, char ** const argv) {
 	if ( !MultiLogFiles::makePathAbsolute( tmpDefaultLog, errstack) ) {
        	debug_printf( DEBUG_QUIET, "Unable to convert default log "
 					"file name to absolute path: %s\n",
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
 		DC_Exit( EXIT_ERROR );
 	}

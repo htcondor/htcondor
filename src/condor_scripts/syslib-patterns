@@ -9,3 +9,4 @@ libpcre
 libldap
 liblber
 libltdl
+libcurl

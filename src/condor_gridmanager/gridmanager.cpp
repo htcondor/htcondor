@@ -618,7 +618,7 @@ doContactSchedd()
 		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
 		if ( rval == NULL ) {
 			sprintf( error_str, "vacateJobs returned NULL, CondorError: %s!",
-							   errstack.getFullText() );
+							   errstack.getFullText().c_str() );
 			goto contact_schedd_failure;
 		} else {
 			pendingScheddVacates.startIterations();
@@ -1149,7 +1149,7 @@ contact_schedd_next_add_job:
 		dirty_job_ids.rewind();
 		rval = ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack );
 		if ( rval == NULL ) {
-			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText() );
+			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText().c_str() );
 		}
 		delete rval;
 	}

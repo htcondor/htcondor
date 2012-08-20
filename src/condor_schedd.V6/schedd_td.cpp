@@ -85,7 +85,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
 			dprintf( D_ALWAYS, "requestSandBoxLocation() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Authentication failed.");
@@ -1530,7 +1530,7 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
 			dprintf( D_ALWAYS, "spoolJobFiles() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
 		}

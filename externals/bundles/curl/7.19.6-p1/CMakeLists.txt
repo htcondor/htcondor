@@ -22,7 +22,9 @@ option(WITH_CURL "Compiling with support for CURL" ON)
 
 if (WITH_CURL)
 
-	if ( NOT PROPER )
+	find_multiple( "curl" CURL_FOUND )
+
+	if ( NOT CURL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 		
 		condor_pre_external( CURL curl-7.19.6-p1 "lib;include" "include/curl/curl.h")
 
@@ -78,12 +80,7 @@ if (WITH_CURL)
 		
 		condor_post_external( curl include OFF )
 
-	else( NOT PROPER )
-
-		#find the following libraries.
-		find_multiple( "curl" CURL_FOUND)
-
-	endif( NOT PROPER )	
+	endif()
 
 	if (CURL_FOUND)
 		set( CURL_FOUND ${CURL_FOUND} PARENT_SCOPE )

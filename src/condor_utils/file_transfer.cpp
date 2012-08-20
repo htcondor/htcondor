@@ -2002,7 +2002,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// defined state
 
 				if (rc == GET_FILE_PLUGIN_FAILED) {
-					error_buf.sprintf_cat(": %s", errstack.getFullText());
+					error_buf.sprintf_cat(": %s", errstack.getFullText().c_str());
 				} else {
 					error_buf.replaceString("receive","write to");
 					error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
@@ -2934,7 +2934,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					}
 				} else {
 					// add on the error string from the errstack used
-					error_desc.sprintf_cat(": %s", errstack.getFullText());
+					error_desc.sprintf_cat(": %s", errstack.getFullText().c_str());
 				}
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE_UploadFileError;
@@ -3830,7 +3830,7 @@ int FileTransfer::InitializePlugins(CondorError &e) {
 			I_support_filetransfer_plugins = true;
 			InsertPluginMappings(methods, p);
 		} else {
-			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText());
+			dprintf(D_ALWAYS, "FILETRANSFER: failed to add plugin \"%s\" because: %s\n", p, e.getFullText().c_str());
 		}
 	}
 

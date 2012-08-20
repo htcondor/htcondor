@@ -370,7 +370,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, 
 			"DCSchedd::receiveJobSandbox: authentication failure: %s\n",
-			errstack ? errstack->getFullText() : "" );
+			errstack ? errstack->getFullText().c_str() : "" );
 		return false;
 	}
 
@@ -572,7 +572,7 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCSchedd::register_transferd authentication "
-				"failure: %s\n", errstack->getFullText() );
+				"failure: %s\n", errstack->getFullText().c_str() );
 		errstack->push("DC_SCHEDD", 1, 
 			"Failed to authenticate properly.");
 		return false;
@@ -772,7 +772,7 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
-				 errstack->getFullText() );
+				 errstack->getFullText().c_str() );
 		return false;
 	}
 
@@ -929,7 +929,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
-				 errstack ? errstack->getFullText() : "" );
+				 errstack ? errstack->getFullText().c_str() : "" );
 		return false;
 	}
 
@@ -1083,7 +1083,7 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	if( ! startCommand(UPDATE_GSI_CRED, (Sock*)&rsock, 0, errstack) ) {
 		dprintf( D_ALWAYS, "DCSchedd::updateGSIcredential: "
 				 "Failed send command to the schedd: %s\n",
-				 errstack->getFullText());
+				 errstack->getFullText().c_str());
 		return false;
 	}
 
@@ -1092,7 +1092,7 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, 
 				"DCSchedd:updateGSIcredential authentication failure: %s\n",
-				 errstack->getFullText() );
+				 errstack->getFullText().c_str() );
 		return false;
 	}
 
@@ -1155,7 +1155,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	if( ! startCommand(DELEGATE_GSI_CRED_SCHEDD, (Sock*)&rsock, 0, errstack) ) {
 		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
 				 "Failed send command to the schedd: %s\n",
-				 errstack->getFullText());
+				 errstack->getFullText().c_str());
 		return false;
 	}
 
@@ -1164,7 +1164,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, 
 				"DCSchedd::delegateGSIcredential authentication failure: %s\n",
-				 errstack->getFullText() );
+				 errstack->getFullText().c_str() );
 		return false;
 	}
 
@@ -1305,7 +1305,7 @@ DCSchedd::actOnJobs( JobAction action,
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
-				 errstack->getFullText() );
+				 errstack->getFullText().c_str() );
 		return NULL;
 	}
 
@@ -1766,19 +1766,19 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,&errstack) ) {
 		error_msg.sprintf("Failed to connect to schedd: %s",
-						  errstack.getFullText());
+						  errstack.getFullText().c_str());
 		return false;
 	}
 
 	if( !startCommand(RECYCLE_SHADOW, &sock, timeout, &errstack) ) {
 		error_msg.sprintf("Failed to send RECYCLE_SHADOW to schedd: %s",
-						  errstack.getFullText());
+						  errstack.getFullText().c_str());
 		return false;
 	}
 
 	if( !forceAuthentication(&sock, &errstack) ) {
 		error_msg.sprintf("Failed to authenticate: %s",
-						  errstack.getFullText());
+						  errstack.getFullText().c_str());
 		return false;
 	}
 

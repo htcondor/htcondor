@@ -177,7 +177,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 	if( !m_xfer_queue_sock ) {
 		sprintf(m_xfer_rejected_reason,
 			"Failed to connect to transfer queue manager for job %s (%s): %s.",
-			jobid, fname, errstack.getFullText() );
+			jobid, fname, errstack.getFullText().c_str() );
 		error_desc = m_xfer_rejected_reason;
 		dprintf(D_ALWAYS,"%s\n",m_xfer_rejected_reason.c_str());
 		return false;
@@ -199,7 +199,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 		m_xfer_queue_sock = NULL;
 		sprintf(m_xfer_rejected_reason,
 			"Failed to initiate transfer queue request for job %s (%s): %s.",
-			jobid, fname, errstack.getFullText() );
+			jobid, fname, errstack.getFullText().c_str() );
 		error_desc = m_xfer_rejected_reason;
 		dprintf(D_ALWAYS,"%s\n",m_xfer_rejected_reason.c_str());
 		return false;

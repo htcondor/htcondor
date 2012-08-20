@@ -133,7 +133,7 @@ aviary::history::processHistoryDirectory()
         CondorError errstack;
         if ( !h_file.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         errstack.clear();
@@ -230,7 +230,7 @@ aviary::history::processCurrentHistory()
         force_reset = false;
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );
@@ -268,7 +268,7 @@ aviary::history::processCurrentHistory()
         currentHistory = HistoryFile ( currentHistoryFilename.Value() );
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );

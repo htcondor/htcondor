@@ -17,12 +17,15 @@
  ***************************************************************/
 
 #define BOOST_TEST_MAIN
- 
+#define BOOST_AUTO_TEST_MAIN
+
 #include <boost/test/unit_test.hpp>
+#include <boost/test/auto_unit_test.hpp>
 #include <string.h>
 
 /////////////////////////////////////////////////////////////////
-BOOST_AUTO_TEST_SUITE( collector_auto )
+//BOOST_AUTO_TEST_SUITE( collector_auto )
+#define BOOST_TEST_MODULE GRNN test suite
 
 // --------------------------------------------------------------------
 BOOST_AUTO_TEST_CASE( example_test )
@@ -33,5 +36,5 @@ BOOST_AUTO_TEST_CASE( example_test )
     BOOST_CHECK_NO_THROW(); 
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+//BOOST_AUTO_TEST_SUITE_END()
 //////////////////////////////////////////////////////////////////

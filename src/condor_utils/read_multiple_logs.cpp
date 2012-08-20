@@ -453,7 +453,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 				// comparing paths to the log files.  wenger 2004-05-27.
 			CondorError errstack;
 			if ( !makePathAbsolute( logFileName, errstack ) ) {
-				dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
+				dprintf(D_ALWAYS, "%s\n", errstack.getFullText().c_str());
 				return "";
 			}
 		}

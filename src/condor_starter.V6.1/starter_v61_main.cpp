@@ -148,7 +148,7 @@ printClassAd( void )
 	CondorError e;
 	ft.InitializePlugins(e);
 	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText());
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
 	MyString method_list = ft.GetSupportedMethods();

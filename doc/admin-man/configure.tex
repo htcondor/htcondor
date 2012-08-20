@@ -7978,7 +7978,7 @@ These macros affect the \Condor{job\_router} daemon.
   when a \Condor{reconfig} command is invoked 
   or when the \Condor{job\_router} daemon restarts.
 
-\label{JobRouterLock}
+\label{param:JobRouterLock}
 \item[\Macro{JOB\_ROUTER\_LOCK}] This specifies the name of a lock
  file that is used to ensure that multiple instances of
  \condor{job\_router} never run with the same
@@ -7986,7 +7986,7 @@ These macros affect the \Condor{job\_router} daemon.
  same name could lead to mismanagement of routed jobs.  The default
  value is \verb@$(LOCK)/$(JOB_ROUTER_NAME)Lock@.
 
-\label{JobRouterSourceJobConstraint}
+\label{param:JobRouterSourceJobConstraint}
 \item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
   Specifies a global \Attr{Requirements} expression that must be true
   for all newly routed jobs,
@@ -7997,14 +7997,14 @@ These macros affect the \Condor{job\_router} daemon.
  does not match \Macro{JOB\_ROUTER\_NAME}.  When not running as root,
  it also avoids routing jobs belonging to other users.
 
-\label{JobRouterMaxJobs}
+\label{param:JobRouterMaxJobs}
 \item[\Macro{JOB\_ROUTER\_MAX\_JOBS}]
   An integer value representing the maximum number of jobs that may be routed,
   summed over all routes.
   The default value is -1, which means an unlimited number of jobs
   may be routed.
 
-\label{MaxJobMirrorUpdateLag}
+\label{param:MaxJobMirrorUpdateLag}
 \item[\Macro{MAX\_JOB\_MIRROR\_UPDATE\_LAG}]
   An integer value that administrators will rarely consider changing,
   representing the maximum number of
@@ -8019,7 +8019,7 @@ These macros affect the \Condor{job\_router} daemon.
   the \Condor{job\_router} daemon acts presuming the expected event
   will never occur.
 
-\label{JobRouterPollingPeriod}
+\label{param:JobRouterPollingPeriod}
 \item[\Macro{JOB\_ROUTER\_POLLING\_PERIOD}]
   An integer value representing the number of seconds
   between cycles in the \Condor{job\_router} daemon's task loop.
@@ -8032,13 +8032,13 @@ These macros affect the \Condor{job\_router} daemon.
   routing latency is no problem, increasing this value to a few
   hundred seconds would be reasonable.
 
-\label{JobRouterName}
+\label{param:JobRouterName}
 \item[\Macro{JOB\_ROUTER\_NAME}]
   A unique identifier utilized to name multiple instances of
   the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
-  The default is "jobrouter".
+  The default is \AdStr{jobrouter}.
 
   Changing this value when routed jobs already exist is not currently
   gracefully handled.  However, it can be done if one also uses
@@ -8054,7 +8054,7 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   RoutedBy '"insert_new_name"'
 \end{verbatim}
 
-\label{JobRouterReleaseOnHold}
+\label{param:JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
   A boolean value that defaults to \Expr{True}.
   It controls how the \Condor{job\_router} handles the routed copy when it
@@ -8064,20 +8064,22 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   the \Condor{job\_router} does not attempt to reset the original job
   ClassAd to a pre-claimed state upon yielding control of the job.
 
-\label{JobRouterSchedd1Spool}
+\label{param:JobRouterSchedd1Spool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
   The path to the spool directory for the \Condor{schedd} serving as the
   source of jobs for routing.  If not specified, this defaults to
-  \Macro{SPOOL}.  If specified, this parameter must point to the spool
-  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}.
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD1\_NAME}.
 
-\label{JobRouterSchedd2Spool}
+\label{param:JobRouterSchedd2Spool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
   The path to the spool directory for the \Condor{schedd} to which the
   routed copy of the jobs are submitted.  If not specified, this defaults to
-  \Macro{SPOOL}.  If specified, this parameter must point to the spool
-  directory of the \Condor{schedd} identified by \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}.
-  Note that when \Condor{job\_router} is running as root and is
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD2\_NAME}.
+  Note that when \Condor{job\_router} is running as \Login{root} and is
   submitting routed jobs to a different \Condor{schedd} than the
   source \Condor{schedd}, it is required that \Condor{job\_router}
   have permission to impersonate the job owners of the routed jobs.
@@ -8085,26 +8087,26 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
   of the target \Condor{schedd}.
 
-\label{JobRouterSchedd1Name}
+\label{param:JobRouterSchedd1Name}
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
   The advertised daemon name of the \Condor{schedd} serving as the
   source of jobs for routing.  If not specified, this defaults to the
   local \Condor{schedd}.  If specified, this parameter must name the
   same \Condor{schedd} whose spool is configured in
-  \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  \MacroNI{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
   not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
   will also need to be set.
 
-\label{JobRouterSchedd2Name}
+\label{param:JobRouterSchedd2Name}
 \item[\Macro{JOB\_ROUTER\_SCHEDD2\_NAME}]
   The advertised daemon name of the \Condor{schedd} to which the
   routed copy of the jobs are submitted.  If not specified, this defaults to
   the local \Condor{schedd}.  If specified, this parameter must name the
   same \Condor{schedd} whose spool is configured in
-  \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  \MacroNI{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
   not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
   will also need to be set.
-  Note that when \Condor{job\_router} is running as root and is
+  Note that when \Condor{job\_router} is running as \Login{root} and is
   submitting routed jobs to a different \Condor{schedd} than the
   source \Condor{schedd}, it is required that \Condor{job\_router}
   have permission to impersonate the job owners of the routed jobs.
@@ -8112,17 +8114,17 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
   of the target \Condor{schedd}.
 
-\label{JobRouterSchedd1Pool}
+\label{param:JobRouterSchedd1Pool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
-  The Condor pool (collector address) of the \Condor{schedd} serving as the
-  source of jobs for routing.  If not specified, this defaults to the
-  local pool.
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd} 
+  serving as the source of jobs for routing.
+  If not specified, defaults to the local pool.
 
-\label{JobRouterSchedd2Pool}
+\label{param:JobRouterSchedd2Pool}
 \item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
-  The Condor pool (collector address) of the \Condor{schedd} to which
-  the routed copy of the jobs are submitted.  If not specified, this
-  defaults to the local pool.
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd}
+  to which the routed copy of the jobs are submitted.
+  If not specified, defaults to the local pool.
 
 \end{description}
 

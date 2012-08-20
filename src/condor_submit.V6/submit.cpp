@@ -216,6 +216,7 @@ const char	*Priority		= "priority";
 const char	*Notification	= "notification";
 const char	*WantRemoteIO	= "want_remote_io";
 const char	*Executable		= "executable";
+const char *Description = "description";
 const char	*Arguments1		= "arguments";
 const char	*Arguments2		= "arguments2";
 const char    *AllowArgumentsV1 = "allow_arguments_v1";
@@ -1273,7 +1274,7 @@ main( int argc, char *argv[] )
 											  JobAdsArray.getarray(),
 											  &errstack );
 					if ( !result ) {
-						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 						fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 						exit(1);
 					}
@@ -1295,7 +1296,7 @@ main( int argc, char *argv[] )
 												JobAdsArray.getarray(), FTP_CFTP,
 												&respad, &errstack );
 					if ( !result ) {
-						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 						fprintf( stderr, 
 							"ERROR: Failed to get a sandbox location.\n" );
 						exit(1);
@@ -1325,7 +1326,7 @@ main( int argc, char *argv[] )
 											  JobAdsArray.getarray(),
 											  &respad, &errstack );
 					if ( !result ) {
-						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 						fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 						exit(1);
 					}
@@ -1871,6 +1872,24 @@ SetExecutable()
 
 	free(ename);
 	free(copySpool);
+}
+
+void
+SetDescription()
+{
+
+	char* description;
+	description = condor_param( Description, ATTR_JOB_DESCRIPTION );
+
+	if ( description ){
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
+	}
+	else if ( InteractiveJob ){
+		std::string default_description = "Interactive from ";
+		default_description += my_full_hostname();
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
+	}
+	free(description);
 }
 
 #ifdef WIN32
@@ -6240,11 +6259,11 @@ connect_to_the_schedd()
 		if( ScheddName ) {
 			fprintf( stderr, 
 					"\nERROR: Failed to connect to queue manager %s\n%s\n",
-					 ScheddName, errstack.getFullText(true) );
+					 ScheddName, errstack.getFullText(true).c_str() );
 		} else {
 			fprintf( stderr, 
 				"\nERROR: Failed to connect to local queue manager\n%s\n",
-				errstack.getFullText(true) );
+				errstack.getFullText(true).c_str() );
 		}
 		exit(1);
 	}
@@ -6352,6 +6371,7 @@ queue(int num)
 			SetUniverse();
 			SetExecutable();
 		}
+		SetDescription();
 		SetMachineCount();
 
 		/* For MPI only... we have to define $(NODE) to some string

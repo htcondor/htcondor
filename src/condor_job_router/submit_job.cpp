@@ -177,7 +177,7 @@ static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &sc
 	CondorError errstack;
 	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner, schedd.version());
 	if( ! qmgr ) {
-		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true).c_str());
 		return NULL;
 	}
 	failobj.SetQmgr(qmgr);
@@ -504,7 +504,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		ClassAd * adlist[1];
 		adlist[0] = &src;
 		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
-			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true));
+			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true).c_str());
 			return false;
 		}
 	}
@@ -617,23 +617,37 @@ bool push_classad_diff(classad::ClassAd & src,classad::ClassAd & dest)
 {
 	int cluster;
 	if( ! src.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
-		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a cluster\n");
+		dprintf(D_ALWAYS, "push_classad_diff: job lacks a cluster\n");
 		return false;
 	}
 	int proc;
 	if( ! src.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
-		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
+		dprintf(D_ALWAYS, "push_classad_diff: job lacks a proc\n");
 		return false;
 	}
-	for( classad::ClassAd::iterator it = src.begin();
-		 it != src.end(); ++it)
+
+	classad::References attrs;
+
+	for( classad::ClassAd::iterator src_it = src.begin();
+		 src_it != src.end(); ++src_it)
+	{
+		attrs.insert( src_it->first );
+	}
+	for( classad::ClassAd::iterator dest_it = dest.begin();
+		 dest_it != dest.end(); ++dest_it)
+	{
+		attrs.insert( dest_it->first );
+	}
+
+	for ( classad::References::iterator attrs_itr = attrs.begin();
+		  attrs_itr != attrs.end(); attrs_itr++ )
 	{
 		std::string src_rhstr;
 		std::string dest_rhstr;
 		ExprTree * src_tree;
 		ExprTree * dest_tree;
 
-		char const *attr = it->first.c_str();
+		char const *attr = attrs_itr->c_str();
 
 		src_tree = src.Lookup( attr );
 		if ( src_tree ) {

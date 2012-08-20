@@ -1,0 +1,24 @@
+diff -u -r org.glite.ce.cream-client-api-c/interface/glite/ce/cream-client-api-c/VOMSWrapper.h org.glite.ce.cream-client-api-c.patched/interface/glite/ce/cream-client-api-c/VOMSWrapper.h
+--- org.glite.ce.cream-client-api-c/interface/glite/ce/cream-client-api-c/VOMSWrapper.h	2010-03-18 03:17:59.000000000 -0500
++++ org.glite.ce.cream-client-api-c.patched/interface/glite/ce/cream-client-api-c/VOMSWrapper.h	2012-08-15 23:20:10.000000000 -0500
+@@ -23,7 +23,7 @@
+ 
+ #include "glite/ce/cream-client-api-c/creamApiLogger.h"
+ #include "glite/ce/cream-client-api-c/auth_ex.h"
+-#include <glite/security/voms/voms_api.h>
++#include <voms/voms_api.h>
+ #include <vector>
+ #include <string>
+ #include <cstdio>
+diff -u -r org.glite.ce.cream-client-api-c/interface/glite/ce/cream-client-api-c/certUtil.h org.glite.ce.cream-client-api-c.patched/interface/glite/ce/cream-client-api-c/certUtil.h
+--- org.glite.ce.cream-client-api-c/interface/glite/ce/cream-client-api-c/certUtil.h	2010-01-28 06:02:10.000000000 -0600
++++ org.glite.ce.cream-client-api-c.patched/interface/glite/ce/cream-client-api-c/certUtil.h	2012-08-15 23:19:54.000000000 -0500
+@@ -23,7 +23,7 @@
+  
+ #include "glite/ce/cream-client-api-c/auth_ex.h"
+ #include <string>
+-#include <glite/security/voms/voms_api.h>
++#include <voms/voms_api.h>
+ #include <openssl/pem.h>
+ 
+ namespace glite {
