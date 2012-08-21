@@ -594,7 +594,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 #ifdef va_copy
 			va_list copyargs;
 			va_copy(copyargs, args);
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&((*DebugLogs)[0]),fmt,copyargs);
 			va_end(copyargs);
 #else
 			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&((*DebugLogs)[0]),fmt,args);
@@ -625,7 +625,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 				case STD_OUT: debug_file_ptr = stdout; break;
 				default:
 				case FILE_OUT:
-					debug_file_ptr = debug_lock_it(&(*it), NULL, 0, dont_panic);
+					debug_file_ptr = debug_lock_it(&(*it), NULL, 0, it->dont_panic);
 					funlock_it = true;
 					break;
 			   #ifdef WIN32
@@ -640,7 +640,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			va_list copyargs;
 			va_copy(copyargs, args);
 //			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,copyargs);
-			buffer.append(it->formatMessageFunc(fmt,copyargs));
+			sprintf(buffer, fmt,copyargs);
 			va_end(copyargs);
 #else
 			//_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,args);
@@ -855,7 +855,7 @@ double dprintf_get_lock_delay(void) {
 }
 
 static FILE *
-debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock)
+debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic)
 {
 	int64_t		length = 0; // this gets assigned return value from lseek()
 	priv_state	priv;
@@ -890,12 +890,12 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock)
 		//open_debug_file will set DebugFPs[debug_level] so we do
 		//not have to worry about it in this function, assuming
 		//there are no further errors.
-		debug_file_ptr = open_debug_file(it, mode, it->dont_panic);
+		debug_file_ptr = open_debug_file(it, mode, dont_panic);
 
 		if( debug_file_ptr == NULL ) {
 			
 			save_errno = errno;
-			if (it->dont_panic) {
+			if (dont_panic) {
 				_set_priv(priv, __FILE__, __LINE__, 0);
 				return NULL;
 			}
@@ -924,7 +924,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock)
 	length = lseek(fileno(debug_file_ptr), 0, SEEK_END);
 #endif
 	if(length < 0 ) {
-		if (it->dont_panic) {
+		if (dont_panic) {
 			if(locked) debug_close_lock();
 			debug_close_file(it);
 
@@ -972,7 +972,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock)
 		// wenger 2009-02-24.
 		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
 		
-		debug_file_ptr = preserve_log_file(it, it->dont_panic);
+		debug_file_ptr = preserve_log_file(it, dont_panic);
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -1346,9 +1346,9 @@ bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic)
 	FILE *debug_file_fp;
 
 	if( fTruncate ) {
-		debug_file_fp = debug_lock_it(&it, "wN", 0, dont_panic);
+		debug_file_fp = debug_lock_it(&it, "wN", 0, it.dont_panic);
 	} else {
-		debug_file_fp = debug_lock_it(&it, "aN", 0, dont_panic);
+		debug_file_fp = debug_lock_it(&it, "aN", 0, it.dont_panic);
 	}
 
 	if (debug_file_fp) (void)debug_unlock_it(&it);
