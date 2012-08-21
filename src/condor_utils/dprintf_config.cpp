@@ -106,7 +106,7 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 int
-dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/, int config_term_log /*= 0*/)
+dprintf_config( const char *subsys, param_functions *p_funcs, int config_term_log /*= 0*/, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
 {
 	char pname[ BUFSIZ ];
 	char *pval = NULL;
@@ -436,11 +436,13 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 				{
 					it->outputTarget = STD_OUT;
 					it->debugFP = stdout;
+					it->dprintfFunc = _dprintf_global_func;
 				}
 				else if(logPath == "2>")
 				{
 					it->outputTarget = STD_ERR;
 					it->debugFP = stderr;
+					it->dprintfFunc = _dprintf_global_func;
 				}
 #ifdef WIN32
 				else if(logPath == "OUTDBGSTR")
