@@ -16,6 +16,9 @@
  # 
  ############################################################### 
 
+# The source tarball voms-2.0.6.tar.gz was taken from the git
+# repository git://testbed002.cnaf.infn.it/opt/gits/voms.git using
+# tag voms_R_2_0_6.
 
 if (LINUX OR DARWIN)
   option( WITH_VOMS "Compiling with support for VOMS" ON )
@@ -24,78 +27,65 @@ endif(LINUX OR DARWIN)
 if ( WITH_VOMS )
 
 	if (NOT PROPER)
-		if(${SYS_ARCH} MATCHES "X86_64" AND LINUX)
-			set(VOMS_LIB lib64)
-		else()
-			set(VOMS_LIB lib)
-		endif()
 
-		if ( BUILDING_OPENSSL )
-			set (VOMS_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF})
-			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
-								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
-			set (VOMS_OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC})
-		elseif( DARWIN )
-			set (VOMS_DEPENDS ${GLOBUS_REF})
-			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure_openssl.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/globus52.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch &&
-								cp ${CMAKE_CURRENT_SOURCE_DIR}/dummy.c org.glite.security.voms/src/replib &&
-								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
-			set (VOMS_OPENSSL_FLAG "")
-		else()
-			set (VOMS_DEPENDS ${GLOBUS_REF})
-			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure_openssl.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/globus52.patch &&
-								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
-			set (VOMS_OPENSSL_FLAG "")
-		endif()
+		if ( DARWIN )
+			set ( VOMS_PATCH cd voms-2.0.6 &&
+				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
+				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
+				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
+				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
+				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
+				cp ${CMAKE_CURRENT_SOURCE_DIR}/dummy.c src/replib &&
+				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch )
+			set ( VOMS_GLOBUS_FLAG "" )
+		ELSE()
+			set ( VOMS_PATCH cd voms-2.0.6 &&
+				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
+				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
+				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
+				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
+				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
+				./autogen.sh )
+			set ( VOMS_GLOBUS_FLAG --with-globus-prefix=${GLOBUS_INSTALL_LOC} )
+		ENDIF()
 
-		condor_pre_external( VOMS voms-1.9.10_4-p3 "include;${VOMS_LIB}" "done")
+		condor_pre_external( VOMS voms-2.0.6 "include;lib" "done")
 
 		ExternalProject_Add(voms
-							DEPENDS ${VOMS_DEPENDS}
-							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/voms-1.9.10_4.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${VOMS_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/voms-1.9.10_4.tar.gz
-							#--Patch step ----------
-							PATCH_COMMAND ${VOMS_PATCH}
-							#--Configure step ----------
-							CONFIGURE_COMMAND cd org.glite.security.voms &&
-								./configure
-								--prefix=${VOMS_INSTALL_LOC}
-								--with-api-only
-								${VOMS_OPENSSL_FLAG}
-								--with-globus-prefix=${GLOBUS_INSTALL_LOC}
-								--with-globus-flavor=${GLOBUS_FLAVOR}pthr --disable-java --disable-docs --disable-glite
-							#--Build Step ----------
-							BUILD_COMMAND cd org.glite.security.voms && make
-							BUILD_IN_SOURCE 1
-							#--install Step ----------
-							INSTALL_DIR ${VOMS_INSTALL_LOC}
-							INSTALL_COMMAND cd org.glite.security.voms && make install && touch ${VOMS_INSTALL_LOC}/done
-				)
+			DEPENDS ${GLOBUS_REF}
+			#-- Download Step ----------
+			DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz ${CMD_TERM}
+			DOWNLOAD_DIR ${VOMS_STAGE}/dl
+			URL http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz
+			#--Patch step ----------
+			PATCH_COMMAND ${VOMS_PATCH}
+			#--Configure step ----------
+			CONFIGURE_COMMAND cd voms-2.0.6 &&
+				./configure
+					--prefix=${VOMS_INSTALL_LOC}
+					--with-api-only
+					${VOMS_GLOBUS_FLAG}
+					--disable-java --disable-docs
+					--disable-glite
+			#--Build Step ----------
+			BUILD_COMMAND cd voms-2.0.6 && make
+			BUILD_IN_SOURCE 1
+			#--install Step ----------
+			INSTALL_DIR ${VOMS_INSTALL_LOC}
+			INSTALL_COMMAND cd voms-2.0.6 && make install && touch ${VOMS_INSTALL_LOC}/done
+		)
 
 		if ( LINUX )
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}pthr.so" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.so" )
 		elseif ( DARWIN )
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}pthr.dylib" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.dylib" )
 		else()
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}pthr.a" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )
 		endif()
 
-		condor_post_external( voms include/glite/security OFF )
+		condor_post_external( voms include OFF )
 
 		if ( LINUX )
 			# Install the VOMS libraries manually.
@@ -105,7 +95,7 @@ if ( WITH_VOMS )
 			# when cmake is run, which may be before the
 			# external is built.
 			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-			install( CODE "execute_process(COMMAND find ${VOMS_INSTALL_LOC}/${VOMS_LIB} -maxdepth 1 -name *.so*
+			install( CODE "execute_process(COMMAND find ${VOMS_INSTALL_LOC}/lib -maxdepth 1 -name *.so*
 				COMMAND xargs -isrc cp -a src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
 			if ( CONDOR_STRIP_PACKAGES )
 				# Strip the libraries manually.
@@ -122,7 +112,7 @@ if ( WITH_VOMS )
 			if ( NOT CONDOR_PACKAGE_BUILD )
 				set( SRC_DIR ${CMAKE_SOURCE_DIR} )
 				install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
-				install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_*.so ${SRC_DIR}/src/condor_scripts/syslib-patterns
+				install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${VOMS_INSTALL_LOC}/lib/libvomsapi.so ${SRC_DIR}/src/condor_scripts/syslib-patterns
 					 COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor
 			 		 )" )
 			endif()
@@ -135,7 +125,7 @@ if ( WITH_VOMS )
 			# when cmake is run, which may be before the
 			# external is built.
 			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-			install( CODE "execute_process(COMMAND find ${VOMS_INSTALL_LOC}/${VOMS_LIB} -maxdepth 1 -name *.dylib*
+			install( CODE "execute_process(COMMAND find ${VOMS_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
 				COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
 
 				# Fix up the share library dependencies

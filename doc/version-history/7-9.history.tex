@@ -71,6 +71,10 @@ partial draining of machines.
 
 \begin{itemize}
 
+\item The \Condor{schedd} now advertises the value of the configuration parameter
+COLLECTOR\_HOST in its daemon ad.  This allows one to determine if a given
+schedd reporting to a collector is flocking to that collector or not.
+
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
 
@@ -98,6 +102,10 @@ This could be used to drain partial rather than whole machines.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The \Condor{negotiator} now sanity-checks accountant log file once only
+on startup.  Iteration through the accountant ClassAd log structure is faster.
+\Ticket{3011}
 
 \item The ClassAd functions \Procedure{splitUserName} and 
 \Procedure{splitSlotName}

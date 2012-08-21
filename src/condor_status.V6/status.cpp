@@ -455,7 +455,7 @@ main (int argc, char *argv[])
         if (Q_OK != q) {
                 // we can always provide these messages:
 	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 
 	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
                         // Specific long message if connection to collector failed.
@@ -567,7 +567,14 @@ usage ()
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
 		"\t-format <fmt> <attr>\tRegister display format and attribute\n"
-		"\t-target filename\tIf -format is used, the option target classad\n",
+		"\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t    Print attr(s) with automatic formatting\n"
+		"\t\tV\tUse %%V formatting\n"
+		"\t\t,\tComma separated (default is space separated)\n"
+		"\t\tt\tTab separated\n"
+		"\t\tn\tNewline after each attribute\n"
+		"\t\tl\tLabel each value\n"
+		"\t\th\tHeadings\n"
+		"\t-target filename\tIf -format or -af is used, the option target classad\n",
 		myName);
 }
 

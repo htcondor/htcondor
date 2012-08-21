@@ -374,7 +374,7 @@ main(int argc, char *argv[])
 			result = schedd->receiveJobSandbox(global_constraint.Value(),
 				&errstack);
 			if ( !result ) {
-				fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 				exit(1);
 			}
@@ -401,7 +401,7 @@ main(int argc, char *argv[])
 			result = schedd->requestSandboxLocation(FTPD_DOWNLOAD, 
 				global_constraint, FTP_CFTP, &respad, &errstack);
 			if ( !result ) {
-				fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 				exit(1);
 			}
@@ -424,7 +424,7 @@ main(int argc, char *argv[])
 
 			result = dctd.download_job_files(&respad, &errstack);
 			if ( !result ) {
-				fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 				exit(1);
 			}

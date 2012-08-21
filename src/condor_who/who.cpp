@@ -128,22 +128,22 @@ void InitAppGlobals(const char * argv0)
 void usage(bool and_exit)
 {
 	fprintf (stderr,
-		"Usage: %s [help-opt] [addr-opt] [query-opt] [display-opt]\n"
+		"Usage: %s [help-opt] [addr-opt] [display-opt]\n"
 		"    where [help-opt] is one of\n"
 		"\t-h[elp]\t\t\tThis screen\n"
 		"\t-v[erbose]\t\tDisplay pids and addresses for daemons\n"
 		"\t-diag[nostic]\t\tDisplay extra information helpful for debugging\n"
 		"    and [addr-opt] is one of\n"
-		"\t-addr[ess] <host>\t\tSTARTD host address to query\n"
-		"\t-log[dir] <dir>\t\tDirectory to seach for SCHEDD host address to query\n"
-		"\t-pid <pid>\t\tProcess ID of STARTD query\n"
+		"\t-addr[ess] <host>\tSTARTD host address to query\n"
+		"\t-log[dir] <dir>\t\tDirectory to seach for STARTD address to query\n"
+		"\t-pid <pid>\t\tProcess ID of STARTD to query\n"
 		"\t-al[lpids]\t\tQuery all local STARTDs\n"
 		"   and [display-opt] is one or more of\n"
 //		"\t-ps\t\t\tDisplay process tree\n"
 		"\t-l[ong]\t\t\tDisplay entire classads\n"
 		"\t-w[ide]\t\t\tdon't truncate fields to fit the screen\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
-		"\t-a[uto]f[ormat]:[V,ntlh] <attr1> [attr2 [attr3 ...]]\tPrint attr(s) with automatic formatting\n"
+		"\t-a[uto]f[ormat]:[V,ntlh] <attr> [<attr2> [<attr3> [...]]\n\t\t\t\tPrint attr(s) with automatic formatting\n"
 		"\t\tV\tUse %%V formatting\n"
 		"\t\t,\tComma separated (default is space separated)\n"
 		"\t\tt\tTab separated\n"
@@ -1464,11 +1464,11 @@ main( int argc, char *argv[] )
 			QueryResult qr = query->fetchAds (result, addr, &errstack);
 			if (Q_OK != qr) {
 				fprintf( stderr, "Error: %s\n", getStrQueryResult(qr) );
-				fprintf( stderr, "%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 				exit(1);
 			}
 			else if (App.diagnostic) {
-				printf("QueryResult is %d : %s\n", qr, errstack.getFullText(true));
+				printf("QueryResult is %d : %s\n", qr, errstack.getFullText(true).c_str());
 				printf("    %d records\n", result.Length());
 			}
 		}

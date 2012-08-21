@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 								number,
 								errorstack)) {
 		fprintf (stderr, "Unable to retrieve credentials (%s)\n",
-				 errorstack.getFullText(true));
+				 errorstack.getFullText(true).c_str());
 		return 1;
 	}
 	 

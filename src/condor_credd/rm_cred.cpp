@@ -132,7 +132,7 @@ int main(int argc, char **argv)
 
 	if (dc_credd.removeCredential(cred_name, errstack)) {
 		fprintf (stderr, "Unable to remove credential '%s'\n%s\n",
-				cred_name, errstack.getFullText(true));
+				cred_name, errstack.getFullText(true).c_str());
 		return 1;
 	}
 

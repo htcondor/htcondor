@@ -1273,7 +1273,7 @@ main( int argc, char *argv[] )
 											  JobAdsArray.getarray(),
 											  &errstack );
 					if ( !result ) {
-						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 						fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 						exit(1);
 					}
@@ -1295,7 +1295,7 @@ main( int argc, char *argv[] )
 												JobAdsArray.getarray(), FTP_CFTP,
 												&respad, &errstack );
 					if ( !result ) {
-						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 						fprintf( stderr, 
 							"ERROR: Failed to get a sandbox location.\n" );
 						exit(1);
@@ -1325,7 +1325,7 @@ main( int argc, char *argv[] )
 											  JobAdsArray.getarray(),
 											  &respad, &errstack );
 					if ( !result ) {
-						fprintf( stderr, "\n%s\n", errstack.getFullText(true) );
+						fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
 						fprintf( stderr, "ERROR: Failed to spool job files.\n" );
 						exit(1);
 					}
@@ -6259,11 +6259,11 @@ connect_to_the_schedd()
 		if( ScheddName ) {
 			fprintf( stderr, 
 					"\nERROR: Failed to connect to queue manager %s\n%s\n",
-					 ScheddName, errstack.getFullText(true) );
+					 ScheddName, errstack.getFullText(true).c_str() );
 		} else {
 			fprintf( stderr, 
 				"\nERROR: Failed to connect to local queue manager\n%s\n",
-				errstack.getFullText(true) );
+				errstack.getFullText(true).c_str() );
 		}
 		exit(1);
 	}

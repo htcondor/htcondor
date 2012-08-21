@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 		CondorError errstack;
 		if ( !ru.monitorLogFile( filestring, false, errstack ) ) {
 			fprintf( stderr, "Error monitoring log file %s: %s\n", filename,
-						errstack.getFullText() );
+						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 		CondorError errstack;
 		if ( !ru.unmonitorLogFile( filestring, errstack ) ) {
 			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename,
-						errstack.getFullText() );
+						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}

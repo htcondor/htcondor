@@ -177,7 +177,7 @@ static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &sc
 	CondorError errstack;
 	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner, schedd.version());
 	if( ! qmgr ) {
-		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true).c_str());
 		return NULL;
 	}
 	failobj.SetQmgr(qmgr);
@@ -504,7 +504,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		ClassAd * adlist[1];
 		adlist[0] = &src;
 		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
-			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true));
+			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true).c_str());
 			return false;
 		}
 	}

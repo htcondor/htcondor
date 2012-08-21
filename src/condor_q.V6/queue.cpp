@@ -2253,6 +2253,7 @@ usage (const char *myName)
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t\t    Print attr(s) with automatic formatting\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
@@ -2699,7 +2700,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			fprintf( stderr, 
 					"\n-- Failed to fetch ads from db [%s] at database "
 					"server %s\n%s\n",
-					db_name, db_ipAddr, errstack.getFullText(true) );
+					db_name, db_ipAddr, errstack.getFullText(true).c_str() );
 
 			if(dbconn) {
 				free(dbconn);
@@ -2743,7 +2744,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 				default:
 					fprintf(stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true) );
+						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 			}
 
 			return false;
@@ -3035,7 +3036,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			if( Q.fetchQueueFromDB(jobs, lastUpdate, dbconn, &errstack) != Q_OK ) {
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						db_ipAddr, db_name, errstack.getFullText(true) );
+						db_ipAddr, db_name, errstack.getFullText(true).c_str() );
 				if(dbconn) {
 					free(dbconn);
 				}
@@ -3064,7 +3065,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				default:
 					fprintf(stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true) );
+						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 			}
 			return false;
 			}

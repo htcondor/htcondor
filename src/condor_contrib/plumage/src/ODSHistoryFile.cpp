@@ -83,7 +83,7 @@ ODSHistoryFile::operator=(const ODSHistoryFile &base)
 		if (!init(errstack)) {
 			// XXX: Should throw an exception here
 			dprintf ( D_ALWAYS, "ODSHistoryFile::operator=: %s\n",
-					errstack.getFullText(true));		
+					errstack.getFullText(true).c_str());		
 		}
 	}
 

@@ -123,10 +123,10 @@ print "****************************************************\n";
 foreach my $task (sort keys %tasklist) {
     my $test_count = defined($RuncountChanges{$task}) ? $RuncountChanges{$task} : 1;
 
-    my $prefix = "";
-    my @parallel_platforms = qw/x86_64_sl_6.2 x86_freebsd_7.4 x86_sl_5.8 x86_64_fedora_15 x86_rhap_5.8 x86_deb_5.0/;
-    if(grep $_ eq $ENV{NMI_PLATFORM}, @parallel_platforms) {
-	$prefix = "JOB ";
+    my $prefix = "JOB ";
+    my @serial_test_platforms = qw/x86_winnt_5.1 x86_64_winnt_6.1/;
+    if(grep $_ eq $ENV{NMI_PLATFORM}, @serial_test_platforms) {
+	$prefix = "";
     }
 
     if(defined($CustomTimeouts{"$task"})) {

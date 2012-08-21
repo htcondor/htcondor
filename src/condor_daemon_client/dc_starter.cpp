@@ -133,7 +133,7 @@ DCStarter::updateX509Proxy( const char * filename, char const *sec_session_id)
 	if( ! startCommand(UPDATE_GSI_CRED, &rsock, 0, &errstack, NULL, false, sec_session_id) ) {
 		dprintf( D_ALWAYS, "DCStarter::updateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
-				 errstack.getFullText());
+				 errstack.getFullText().c_str());
 		return XUS_Error;
 	}
 
@@ -179,7 +179,7 @@ DCStarter::delegateX509Proxy( const char * filename, time_t expiration_time, cha
 	if( ! startCommand(DELEGATE_GSI_CRED_STARTER, &rsock, 0, &errstack, NULL, false, sec_session_id) ) {
 		dprintf( D_ALWAYS, "DCStarter::delegateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
-				 errstack.getFullText());
+				 errstack.getFullText().c_str());
 		return XUS_Error;
 	}
 

@@ -70,16 +70,14 @@ endif( NOT WINDOWS )
 # we only use our version of boost if the system is not good enough
 if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
-	set(BOOST_FILENAME boost_1_49_0)
-	condor_pre_external( BOOST ${BOOST_FILENAME}-p1 "lib;include" "include/boost")
-	
 	if (WINDOWS)
 	  # need to expand the configure and
-	  set(TOOLSET msvc-9.0)
-	  set(JAM_EXT bat)
+	  set(TOOLSET msvc-${MSVCVERNUM})
+	  set(BOOTSTRAP call bootstrap.bat )
 	  set(EXEC .\\)
 
 	  set(BUILD_OPTIONS )
+	  set(INCLUDE_LOC include/boost_1_49)
 	else()
 
 	if (DARWIN)
@@ -88,10 +86,14 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 		set(TOOLSET gcc)
 	endif()
 
+		set(INCLUDE_LOC include)
 		set(BUILD_OPTIONS --layout=system variant=release)
-        set(JAM_EXT sh)
+        set(BOOTSTRAP ./bootstrap.sh )
         set(EXEC ./)
 	endif()
+
+	set(BOOST_FILENAME boost_1_49_0)
+	condor_pre_external( BOOST ${BOOST_FILENAME}-p2 "lib;${INCLUDE_LOC}" "done")
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test)
 	set(BOOST_PATCH echo "nothing")
@@ -107,15 +109,13 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
-		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM}
-		 ./bootstrap.${JAM_EXT} --prefix=${BOOST_INSTALL_LOC}
+		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${CMD_TERM} echo "Configure complete"
 		#--Build Step ----------
-		BUILD_COMMAND cd ${BOOST_FILENAME} &&
-		${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
+		BUILD_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 		BUILD_IN_SOURCE 1
 		#--install Step ----------
 		INSTALL_DIR ${BOOST_INSTALL_LOC}
-		INSTALL_COMMAND cd ${BOOST_FILENAME} && ${BOOST_INSTALL} )
+		INSTALL_COMMAND touch ${BOOST_INSTALL_LOC}/done )
 				  	
 	if (WINDOWS)
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)

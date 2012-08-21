@@ -217,7 +217,7 @@ DCMsg::reportFailure( DCMessenger *messenger )
 	dprintf( debug_level, "Failed to send %s to %s: %s\n",
 			 name(),
 			 messenger->peerDescription(),
-			 m_errstack.getFullText() );
+			 m_errstack.getFullText().c_str() );
 }
 
 void
@@ -231,7 +231,7 @@ DCMsg::addError( int code, char const *format, ... )
 	va_end(args);
 }
 
-char const *
+std::string
 DCMsg::getErrorStackText()
 {
 	return m_errstack.getFullText();
@@ -756,7 +756,7 @@ ChildAliveMsg::messageSendFailed( DCMessenger *messenger )
 			messenger->peerDescription(),
 			m_tries,
 			m_max_tries,
-			getErrorStackText());
+			getErrorStackText().c_str());
 
 	if( m_tries < m_max_tries ) {
 		if( getDeadlineExpired() ) {

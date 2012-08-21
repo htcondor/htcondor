@@ -96,7 +96,7 @@ main2(int argc, char **argv)
 		HistoryFile h_file((path + DIR_DELIM_STRING + file).Value());
 		CondorError errstack;
 		if (!h_file.init(errstack)) {
-			fprintf(stderr, "%s\n", errstack.getFullText());
+			fprintf(stderr, "%s\n", errstack.getFullText().c_str());
 			return 1;
 		}
 		errstack.clear();
@@ -140,7 +140,7 @@ main2(int argc, char **argv)
 	HistoryFile h_file((path + DIR_DELIM_STRING + file).Value());
 	CondorError errstack;
 	if (!h_file.init(errstack)) {
-		fprintf(stderr, "%s\n", errstack.getFullText());
+		fprintf(stderr, "%s\n", errstack.getFullText().c_str());
 		return 1;
 	}
 	HistoryFile::HistoryEntriesTypeIterators poll = h_file.poll(errstack);
