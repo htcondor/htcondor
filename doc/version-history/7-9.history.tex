@@ -103,6 +103,10 @@ This could be used to drain partial rather than whole machines.
 
 \begin{itemize}
 
+\item The \Condor{negotiator} now sanity-checks accountant log file once only
+on startup.  Iteration through the accountant ClassAd log structure is faster.
+\Ticket{3011}
+
 \item The ClassAd functions \Procedure{splitUserName} and 
 \Procedure{splitSlotName}
 no longer leak a small amount of memory each time they are evaluated.  
