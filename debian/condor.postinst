@@ -164,8 +164,25 @@ case "$1" in
     configure)
         # according to http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=621833#119
         # this should always work
-        adduser --system --group --gecos "$condor_gecos" --home $condor_home \
-                --disabled-password --disabled-login $condor_user --quiet
+        if ! adduser --system --group --gecos "$condor_gecos" --home $condor_home \
+                --disabled-password --disabled-login $condor_user --quiet 2>/dev/null; then
+            # the only time where it would fail, is when there is an existing
+            # non-system 'condor' user. This could happen e.g. in a heterogenous
+            # Condor pool (various OSes) where the adminstrative Condor user
+            # comes from LDAP and the home dir is shared across machines. This
+            # is a supported deployment scenario for Condor (see installation
+            # manual section 3.2)
+            # the only problem is the possibility to conflict with an actual
+            # "human" user with the same name, so only proceed when the
+            # respective user is locked down
+            SH=$(getent passwd | egrep '^condor:'| cut -d : -f 7)
+            if [ "$SH" = "/bin/false" -o "$SH" = "/usr/sbin/nologin" ]; then
+                echo "WARNING: Condor will be running under an existing non-system user account 'condor'."
+            else
+                echo "ERROR: Condor cannot run under unlocked non-system account 'condor'" 1>&2
+                exit 1
+            fi
+        fi
         # make sure the config and home dir are complete
         condor_local_cfg_template
         condor_put_debconf_cfg

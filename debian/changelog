@@ -3,10 +3,16 @@ condor (7.8.2~dfsg.1-2) UNRELEASED; urgency=low
   * Make postinst script more robust against missing config variables (Closes:
     #684667). Patch is courtesy of Tim Cartwright.
   * Disable Condor's file transfer mechanism for jobs submitted via
-    condor_qsub, as a shared filesystem is assumed for these jobs
+    condor_qsub, because a shared filesystem is assumed for these jobs
     (Closes: #684879).
-  * This time reaaly remove dangling symlink /usr/sbin/condor -> ../bin/condor.
+  * This time really remove dangling symlink /usr/sbin/condor -> ../bin/condor.
     This file no longer exists (Closes: #678425).
+  * Support deployment scenario where the administrative 'condor' user is not
+    a local system user, but is shared (e.g. through LDAP) by all machines in a
+    Condor pool (see installation manual section 3.2). The condor package will
+    accept to run under an existing non-system user account named 'condor',
+    but only when that account is locked, i.e. not login is possible
+    (Closes: #684463).
 
  -- Michael Hanke <mih@debian.org>  Sun, 12 Aug 2012 19:20:35 +0200
 
