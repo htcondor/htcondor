@@ -154,8 +154,7 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	p_funcs = get_param_functions();
-	dprintf_config("TOOL", p_funcs);
+	dprintf_config("TOOL", get_param_functions(), Termlog);
 	if (VerboseFlag)
 	{
 		// always append D_FULLDEBUG locally when verbose.

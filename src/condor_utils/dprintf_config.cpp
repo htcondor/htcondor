@@ -106,7 +106,7 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 int
-dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
+dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/, int config_term_log /*= 0*/)
 {
 	char pname[ BUFSIZ ];
 	char *pval = NULL;
@@ -248,7 +248,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		char *logPathParam = NULL;
 		if(debug_level == D_ALWAYS)
 		{
-			if (Termlog) {
+			if (config_term_log) {
 				logPath = "2>";
 			} else {
 				logPathParam = dprintf_param_funcs->param(pname);
@@ -377,12 +377,12 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 	}
 	else
 	{
-		dprintf_set_outputs(&DebugParams[0], DebugParams.size());
+		dprintf_set_outputs(&DebugParams[0], DebugParams.size(), config_term_log);
 	}
 	return 0;
 }
 
-void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info)
+void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info, int config_term_log)
 {
 	static int first_time = 1;
 
@@ -409,100 +409,92 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 	**	of the log file, maximum log size, and the name of the
 	**	lock file (if it is specified).
 	*/
-	if ( ! Termlog )
+	std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
+	for (int ii = 0; ii < c_info; ++ii)
 	{
-		std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
-		for (int ii = 0; ii < c_info; ++ii)
+		std::string logPath = p_info[ii].logPath;
+
+		if(!logPath.empty())
 		{
-			std::string logPath = p_info[ii].logPath;
-
-			if(!logPath.empty())
+			// merge flags if we see the same log file name more than once.
+			// we don't really expect this to happen, but things get weird of
+			// it does happen and we don't check for it.
+			//
+			for(it = DebugLogs->begin(); it != DebugLogs->end(); ++it)
 			{
-				// merge flags if we see the same log file name more than once.
-				// we don't really expect this to happen, but things get weird of
-				// it does happen and we don't check for it.
-				//
-				for(it = DebugLogs->begin(); it != DebugLogs->end(); ++it)
-				{
-					if(it->logPath != logPath)
-						continue;
-					it->choice |= p_info[ii].choice;
-					break;
-				}
+				if(it->logPath != logPath)
+					continue;
+				it->choice |= p_info[ii].choice;
+				break;
+			}
 
-				if(it == DebugLogs->end()) // We did not find the logPath in our DebugLogs
+			if(it == DebugLogs->end()) // We did not find the logPath in our DebugLogs
+			{
+				it = DebugLogs->insert(DebugLogs->end(),p_info[ii]);
+				if(logPath == "OUTDBGSTR")
 				{
-					it = DebugLogs->insert(DebugLogs->end(),p_info[ii]);
-					if(logPath == "OUTDBGSTR")
-					{
-						it->outputTarget = OUTPUT_DEBUG_STR;
-						it->dprintfFunc = &dprintf_to_outdbgstr;
-					}
-					else if(logPath == "1>")
-					{
-						it->outputTarget = STD_OUT;
-						it->debugFP = stdout;
-					}
-					else if(logPath == "2>")
-					{
-						it->outputTarget = STD_ERR;
-						it->debugFP = stderr;
-					}
-					else
-					{
-						it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
-						it->dprintfFunc = _dprintf_global_func;
-					}
-					it->logPath = logPath;
+					it->outputTarget = OUTPUT_DEBUG_STR;
+					it->dprintfFunc = &dprintf_to_outdbgstr;
 				}
-
-				if (ii == 0) {
-					if(first_time) {
-						struct stat stat_buf;
-						if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
-							DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
-						} else {
-							DebugLastMod = -errno;
-						}
-					}
-					PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
-					DebugBasic = p_info[0].choice;
-					DebugVerbose = p_info[0].VerboseCats;
-					DebugHeaderOptions = p_info[0].HeaderOpts;
-				}
-
-				// check to see if we can open the log file.
-				bool dont_panic = true;
-				bool fOk = debug_check_it(*it, (first_time && it->want_truncate), dont_panic);
-				if( ! fOk && ii == 0 )
+				else if(logPath == "1>")
 				{
-			       #ifdef WIN32
-					/*
-					** If we could not open the log file, we might want to keep running anyway.
-					** If we do, then set the log filename to NUL so we don't keep trying
-					** (and failing) to open the file.
-					*/
-					if (DebugContinueOnOpenFailure) 
-					{
-						// change the debug file to point to the NUL device.
-						it->logPath.insert(0, NULL_FILE);
-					} else
-			       #endif
-					{
-						EXCEPT("Cannot open log file '%s'", logPath.c_str());
+					it->outputTarget = STD_OUT;
+					it->debugFP = stdout;
+				}
+				else if(logPath == "2>")
+				{
+					it->outputTarget = STD_ERR;
+					it->debugFP = stderr;
+				}
+				else
+				{
+					it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
+					it->dprintfFunc = _dprintf_global_func;
+				}
+				it->logPath = logPath;
+			}
+
+			if (ii == 0) {
+				if(first_time) {
+					struct stat stat_buf;
+					if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
+						DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
+					} else {
+						DebugLastMod = -errno;
 					}
+				}
+				PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
+				DebugBasic = p_info[0].choice;
+				DebugVerbose = p_info[0].VerboseCats;
+				DebugHeaderOptions = p_info[0].HeaderOpts;
+			}
+
+			// check to see if we can open the log file.
+			bool dont_panic = true;
+			bool fOk = debug_check_it(*it, (first_time && it->want_truncate), dont_panic);
+			if( ! fOk && ii == 0 )
+			{
+#ifdef WIN32
+				/*
+				** If we could not open the log file, we might want to keep running anyway.
+				** If we do, then set the log filename to NUL so we don't keep trying
+				** (and failing) to open the file.
+				*/
+				if (DebugContinueOnOpenFailure) 
+				{
+					// change the debug file to point to the NUL device.
+					it->logPath.insert(0, NULL_FILE);
+				} else
+#endif
+				{
+					EXCEPT("Cannot open log file '%s'", logPath.c_str());
 				}
 			}
 		}
-	} else {
+	}
 
-		if (p_info && (c_info > 0)) {
-			PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
-			DebugBasic = p_info[0].choice;
-			DebugVerbose = p_info[0].VerboseCats;
-			DebugHeaderOptions = p_info[0].HeaderOpts;
-		}
-
+	if(config_term_log)
+	{
 #if !defined(WIN32)
 		setlinebuf( stderr );
 #endif

@@ -58,7 +58,7 @@ PipeBuffer stdin_buffer;
 Worker workers[NUMBER_WORKERS];
 
 // this appears at the bottom of this file
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
 #ifdef WIN32
 int STDIN_FILENO = fileno(stdin);
@@ -771,7 +771,7 @@ main( int argc, char **argv )
 //extern "C"
 int
 //display_dprintf_header(char **buf,int *bufpos,int *buflen)
-display_dprintf_header(std::stringstream& formatter)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
 
@@ -779,7 +779,5 @@ display_dprintf_header(std::stringstream& formatter)
 		mypid = daemonCore->getpid();
 	}
 
-	//return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
-	formatter << "[" << (long)mypid << "] ";
-	return 0;
+	return sprintf_realloc( buf, bufpos, buflen, "[%ld] ", (long)mypid );
 }

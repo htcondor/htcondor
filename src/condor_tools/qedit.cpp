@@ -76,8 +76,7 @@ main(int argc, char *argv[])
 	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
 		// output dprintf messages to stderror at TOOL_DEBUG level
 		Termlog = 1;
-		p_funcs = get_param_functions();
-		dprintf_config ("TOOL", p_funcs);
+		dprintf_config ("TOOL", get_param_functions(), Termlog);
 		nextarg++;
 	}
 

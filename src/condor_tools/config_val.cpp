@@ -318,7 +318,7 @@ main( int argc, char* argv[] )
 	if (debug) {
 		p_funcs = get_param_functions();
 		Termlog = 1;
-		dprintf_config( "TOOL", p_funcs );
+		dprintf_config( "TOOL", p_funcs, Termlog );
 	}
 
 	/* XXX -dump only currently spits out variables found through the

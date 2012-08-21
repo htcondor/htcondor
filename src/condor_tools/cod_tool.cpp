@@ -655,7 +655,7 @@ parseArgv( int  /*argc*/, char* argv[] )
 			} 
 			Termlog = 1;
 			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_config ("TOOL", p_funcs, Termlog);
 			break;
 
 		case 'a':

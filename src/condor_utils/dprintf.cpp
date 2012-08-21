@@ -141,7 +141,7 @@ int      DebugContinueOnOpenFailure = 0;
 char	*DebugLock = NULL;
 int		DebugLockIsMutex = -1;
 
-int		(*DebugId)(std::stringstream& formatter);
+int		(*DebugId)(char **buf,int *bufpos,int *buflen);
 int		SetSyscalls(int mode);
 
 int		LockFd = -1;
@@ -215,6 +215,12 @@ static char *formatTimeHeader(struct tm *tm) {
 
 void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message)
 {
+	static char *buf = NULL;
+	static int buflen = 0;
+	int bufpos = 0;
+	int rc = 0;
+	int sprintf_errno = 0;
+
 	int my_pid;
 	int my_tid;
 	static std::stringstream formatter;
@@ -238,9 +244,17 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 				// warning.  Probably format should be %ld, and
 				// we should cast to long int, but I'm afraid of
 				// changing the output format.  wenger 2009-02-24.
-			formatter << "(" << (int)clock_now << ") ";
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%d) ", (int)clock_now );
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
+			//formatter << "(" << (int)clock_now << ") ";
 		} else {
-			formatter << formatTimeHeader(tm);
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s", formatTimeHeader(tm));
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
+			//formatter << formatTimeHeader(tm);
 		}
 
 		if (hdr_flags & D_FDS) {
@@ -249,11 +263,17 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 			local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644);
 			if(local_fp == NULL )
 			{
-				formatter << "(fd:0) ";
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
+				if( rc < 0 ) {
+					sprintf_errno = errno;
+				}
 			}
 			else
 			{
-				formatter << "(fd:" << fileno(local_fp) << ") ";
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) ", fileno(local_fp) );
+				if( rc < 0 ) {
+					sprintf_errno = errno;
+				}
 				fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
 			}
 		}
@@ -264,13 +284,21 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 #else
 			my_pid = (int) getpid();
 #endif
-			formatter << "(pid:" << my_pid << ") ";
+			//formatter << "(pid:" << my_pid << ") ";
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(pid:%d) ", my_pid );
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
 		}
 
 			/* include tid if we are configured to use a thread pool */
 		my_tid = CondorThreads_gettid();
 		if ( my_tid > 0 ) {
-			formatter << "(tid:" << my_tid << ") ";
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(tid:%d) ", my_tid );
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
+			//formatter << "(tid:" << my_tid << ") ";
 		}
 
 #ifdef D_LEVEL //  with the switch from flags to enum, this code doesn't work anymore.
@@ -316,11 +344,21 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 #endif
 
 		if( DebugId ) {
-			(*DebugId)( formatter );
+			//(*DebugId)( formatter );
+			rc = (*DebugId)( &buf, &bufpos, &buflen );
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
 		}
 	}
 
-	message.insert(0, formatter.str());
+	//message.insert(0, formatter.str());
+	if( sprintf_errno != 0 ) {
+		_condor_dprintf_exit(sprintf_errno, "Error writing to debug header\n");
+	}
+
+	//rc = vsprintf_realloc( &buf, &bufpos, &buflen, "%s", message.c_str() );
+	message.insert(0, buf, bufpos);
 }
 
 void

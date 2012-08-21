@@ -517,7 +517,7 @@ int main(int argc, char **argv) {
 
 	Termlog = 1;
 	p_funcs = get_param_functions();
-	dprintf_config ("TOOL", p_funcs );
+	dprintf_config ("TOOL", p_funcs, Termlog );
 
 	isOn = wfh.firewallIsOn();
 

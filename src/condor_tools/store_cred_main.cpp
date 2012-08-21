@@ -453,8 +453,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 #endif
 				case 'd':
 					Termlog = 1;
-					p_funcs = get_param_functions();
-					dprintf_config ("TOOL", p_funcs);
+					dprintf_config ("TOOL", get_param_functions(), Termlog);
 					break;
 				case 'h':
 					opts->help = true;

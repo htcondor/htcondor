@@ -49,7 +49,7 @@ extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
 
 // this appears at the bottom of this file:
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 static char* dprintf_header = NULL;
 
 int my_argc;
@@ -753,12 +753,10 @@ main( int argc, char **argv )
 
 //extern "C" 
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
-display_dprintf_header(std::stringstream& formatter)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	if( dprintf_header ) {
-		//return sprintf_realloc( buf, bufpos, buflen, "%s ", dprintf_header );
-		formatter << dprintf_header << " ";
+		return sprintf_realloc( buf, bufpos, buflen, "%s ", dprintf_header );
 	}
 	return 0;
 }

@@ -100,7 +100,7 @@ main( int argc, char* argv[] )
 				// dprintf to console
 			Termlog = 1;
 			p_funcs = get_param_functions();
-			dprintf_config( "DAEMON-TOOL", p_funcs );
+			dprintf_config( "DAEMON-TOOL", p_funcs, Termlog );
 			set_debug_flags(NULL, D_FULLDEBUG|D_SECURITY);
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();

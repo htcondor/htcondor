@@ -508,7 +508,7 @@ main( int argc, char *argv[] )
 			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
 				Termlog = 1;
 				p_funcs = get_param_functions();
-				dprintf_config ("TOOL", p_funcs);
+				dprintf_config ("TOOL", p_funcs, Termlog);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );
 					// We got a "-daemon", make sure we've got 

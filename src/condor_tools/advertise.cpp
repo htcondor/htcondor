@@ -93,7 +93,7 @@ int main( int argc, char *argv[] )
 				// dprintf to console
 			Termlog = 1;
 			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_config ("TOOL", p_funcs, Termlog);
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			if(command==-1) {
 				command = getCollectorCommandNum(argv[i]);

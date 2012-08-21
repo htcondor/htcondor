@@ -94,9 +94,9 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = true;
+	Termlog = 1;
 	p_funcs = get_param_functions();
-	dprintf_config("TEST_LOG_READER", p_funcs);
+	dprintf_config("TEST_LOG_READER", p_funcs, Termlog);
 
 	int		result = 0;
 	int		events = 0;

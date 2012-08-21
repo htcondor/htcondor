@@ -925,8 +925,7 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-debug" ) ) {
 				// dprintf to console
 				Termlog = 1;
-				p_funcs = get_param_functions();
-				dprintf_config( "TOOL", p_funcs );
+				dprintf_config( "TOOL", get_param_functions(), Termlog );
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;

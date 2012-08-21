@@ -44,7 +44,7 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 // this appears at the bottom of this file:
 //extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
-int display_dprintf_header(std::string& buffer);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
 // some helper functions
@@ -1487,7 +1487,7 @@ extern BaseShadow *Shadow;
 //extern "C" 
 int
 //display_dprintf_header(char **buf,int *bufpos,int *buflen)
-display_dprintf_header(std::stringstream& formatter)
+display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
 	int mycluster = -1;
@@ -1503,11 +1503,9 @@ display_dprintf_header(std::stringstream& formatter)
 	}
 
 	if ( mycluster != -1 ) {
-		//return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
-		formatter << "(" << mycluster << "." << myproc << ") (" << (long)mypid << "): ";
+		return sprintf_realloc( buf, bufpos, buflen, "(%d.%d) (%ld): ", mycluster, myproc, (long)mypid );
 	} else {
-		//return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
-		formatter << "(?.?) (" << (long)mypid << "): ";
+		return sprintf_realloc( buf, bufpos, buflen, "(?.?) (%ld): ", (long)mypid );
 	}
 
 	return 0;

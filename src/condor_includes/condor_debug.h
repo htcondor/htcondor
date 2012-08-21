@@ -208,8 +208,9 @@ void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 int dprintf_config( 
 	const char *subsys,  // in: subsystem name to use for param lookups
 	param_functions * p_funcs = NULL, // in: callback functions to use for param-ing
+	int config_term_log = 0,
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
-	int c_info = 0);                  // in: number of entries in p_info array on input.
+	int c_info = 0); // in: number of entries in p_info array on input.                  
 
 // parse strflags and cat_and_flags and merge them into the in,out args
 // for backward compatibility, the D_ALWAYS bit will always be set in basic
@@ -222,7 +223,7 @@ void _condor_parse_merge_debug_flags(
 	DebugOutputChoice & verbose); // in,out: verbose output choice, expect this to get folded into basic someday.
 
 // initialize
-void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
+void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info, int config_term_log);
 
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );

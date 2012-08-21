@@ -75,9 +75,9 @@ int main(int argc, char *argv[])
 
 		// Set up the dprintf stuff to write to stderr, so that Condor
 		// libraries which use it will write to the right place...
-	Termlog = true;
+	Termlog = 1;
 	p_funcs = get_param_functions();
-	dprintf_config("condor_submit_dag", p_funcs); 
+	dprintf_config("condor_submit_dag", p_funcs, Termlog); 
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 	config();
 
