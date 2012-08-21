@@ -431,12 +431,8 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 			if(it == DebugLogs->end()) // We did not find the logPath in our DebugLogs
 			{
 				it = DebugLogs->insert(DebugLogs->end(),p_info[ii]);
-				if(logPath == "OUTDBGSTR")
-				{
-					it->outputTarget = OUTPUT_DEBUG_STR;
-					it->dprintfFunc = &dprintf_to_outdbgstr;
-				}
-				else if(logPath == "1>")
+
+				if(logPath == "1>")
 				{
 					it->outputTarget = STD_OUT;
 					it->debugFP = stdout;
@@ -446,6 +442,13 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 					it->outputTarget = STD_ERR;
 					it->debugFP = stderr;
 				}
+#ifdef WIN32
+				else if(logPath == "OUTDBGSTR")
+				{
+					it->outputTarget = OUTPUT_DEBUG_STR;
+					it->dprintfFunc = &dprintf_to_outdbgstr;
+				}
+#endif
 				else
 				{
 					it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
