@@ -1,10 +1,12 @@
-condor (7.8.2~dfsg.1-1) UNRELEASED; urgency=low
+condor (7.8.2~dfsg.1-2) UNRELEASED; urgency=low
 
   * Make postinst script more robust against missing config variables (Closes:
     #684667). Patch is courtesy of Tim Cartwright.
   * Disable Condor's file transfer mechanism for jobs submitted via
     condor_qsub, as a shared filesystem is assumed for these jobs
     (Closes: #684879).
+  * This time reaaly remove dangling symlink /usr/sbin/condor -> ../bin/condor.
+    This file no longer exists (Closes: #678425).
 
  -- Michael Hanke <mih@debian.org>  Sun, 12 Aug 2012 19:20:35 +0200
 
