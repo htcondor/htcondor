@@ -251,6 +251,7 @@ our %submit_info = (
 		},
 	},
 	'x86_64_rhap_6.3'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.4'	=> 'x86_64_rhap_6.2',
 
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
@@ -267,6 +268,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_rhap_5.8'	=> 'x86_64_rhap_5.7',
+	'x86_64_rhap_5.9'	=> 'x86_64_rhap_5.7',
 
 	'x86_rhap_6.2'		=> {
 		'build' => {
@@ -282,6 +285,7 @@ our %submit_info = (
 		},
 	},
 	'x86_rhap_6.3'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.4'		=> 'x86_rhap_6.2',
 
 	'x86_rhap_5.8'		=> {
 		'build' => {
@@ -298,6 +302,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_5.9'		=> 'x86_rhap_5.8',
 
 	# This is new batlab macos 10.7 machine
 	'x86_64_macos_10.7' => {
@@ -386,6 +391,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_sl_5.8' => 'x86_sl_5.7',
+	'x86_sl_5.9' => 'x86_sl_5.7',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64
