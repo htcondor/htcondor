@@ -621,8 +621,8 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			FILE * debug_file_ptr = NULL;
 			bool   funlock_it = false;
 			switch ((*it).outputTarget) {
-				case STD_ERR: debug_file_ptr = stderr; break;
-				case STD_OUT: debug_file_ptr = stdout; break;
+				case STD_ERR: it->debugFP = stderr;//debug_file_ptr = stderr; break;
+				case STD_OUT: it->debugFP = stdout;//debug_file_ptr = stdout; break;
 				default:
 				case FILE_OUT:
 					debug_file_ptr = debug_lock_it(&(*it), NULL, 0, it->dont_panic);
