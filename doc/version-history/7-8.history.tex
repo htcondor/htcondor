@@ -152,6 +152,18 @@ events in the user log for counting idle jobs.
 desired.
 \Ticket{3199}
 
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash if a
+grid universe job's X.509 user certificate didn't contain an e-mail
+address.
+\Ticket{3203}
+
+\item Fixed a bug that caused \Condor{schedd} to, by default, share the job queue.
+\Ticket{3196}
+
+\item Fixed a bug that could cause \Condor{q} to not print all jobs when
+it thought it was querying an old \Condor{schedd}.
+\Ticket{3206}
+
 \end{itemize}
 
 \noindent Known Bugs:

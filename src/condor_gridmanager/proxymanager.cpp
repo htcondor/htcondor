@@ -366,7 +366,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			std::string tmp;
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
-			proxy_subject->email = strdup( email );
+			proxy_subject->email = email ? strdup( email ) : NULL;
 			proxy_subject->fqan = strdup( fqan );
 			proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 			proxy_subject->has_voms_attrs = true;
