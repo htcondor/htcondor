@@ -361,13 +361,13 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
-	const char 		*constraint;
+	char 			*constraint;
 	int     		result;
 
 	// make the query ad
 	if ((result = query.makeQuery (tree)) != Q_OK)
 		return result;
-	constraint = ExprTreeToString( tree );
+	constraint = strdup( ExprTreeToString( tree ) );
 	delete tree;
 
 	/*
@@ -378,13 +378,16 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) ) {
+		free( constraint );
 		return Q_SCHEDD_COMMUNICATION_ERROR;
+	}
 
 	// get the ads and filter them
 	result = getFilterAndProcessAds (constraint, attrs, process_func, useFastPath);
 
 	DisconnectQ (qmgr);
+	free( constraint );
 	return result;
 }
 
