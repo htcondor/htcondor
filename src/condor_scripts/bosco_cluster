@@ -80,6 +80,35 @@ check_cluster_list () {
     fi
 }
 
+check_cluster_list2 () {
+    # $1 = cluster to check for
+    remote_host=$1
+    # $2 = action v|e|ve v=verbose e=exit
+    case "x$2" in
+     xve|xev) action=2;;
+     xv) action=1;;
+     xe) action=3;;
+     *) action=0;;
+    esac
+    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        if [ $action -eq 0 ]; then
+            return 1
+        fi
+        if [ $action -le 2 ]; then
+            echo "Unable to find $remote_host in list of installed clusters."
+            echo "Available clusters:"
+            list
+        fi
+        if [ $action -ge 2 ]; then
+            exit 1
+        fi
+        return 1
+    fi
+}
+
 check_reverse_connectivity() {
     # check if the remote host can connect back
     # $1 = cluster to check for
@@ -103,11 +132,11 @@ add_cluster_to_list () {
     # $1 = cluster to add
     # $2 = max queued setting of cluster
     # $3 = cluster batch system (pbs, lsf, sge)
-    # Remove the host, and readd
+    # Remove the host (if already there), and (re)add
     remote_host=$1
     max_queued=$2
     cluster_type=$3
-    check_cluster_list $remote_host
+    check_cluster_list2 $remote_host
     if [ $? -eq 0 ]; then
         tmpfile=`mktemp`
         sed "/entry=$remote_host max_queued=.*/d" $CLUSTERLIST_LOCATION > tmpfile
@@ -392,35 +421,6 @@ End_of_Submit
 
 }
 
-check_cluster_list2 () {
-    # $1 = cluster to check for
-    remote_host=$1
-    # $2 = action v|e|ve v=verbose e=exit
-    case "x$2" in
-     xve|xev) action=2;;
-     xv) action=1;;
-     xe) action=3;;
-     *) action=0;;
-    esac
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-        return 0
-    else
-        if [ $action -eq 0 ]; then
-            return 1
-        fi
-        if [ $action -le 2 ]; then
-            echo "Unable to find $remote_host in list of installed clusters."
-            echo "Available clusters:"
-            list
-        fi
-        if [ $action -ge 2 ]; then
-            exit 1
-        fi
-        return 1
-    fi
-}
-
 
 get_status () {
     remote_host=$1
@@ -489,7 +489,7 @@ else
 fi
 
 # Check if the cluster is already in the list
-check_cluster_list $remote_host
+check_cluster_list2 $remote_host
 if [ $? -eq 0 ]; then
     echo "Cluster $remote_host already installed"
     echo "Reinstalling on $remote_host"
@@ -502,7 +502,7 @@ fi
 if [ ! -e $bosco_key ]; then
     # Read in password for bosco key
     stty -echo
-    read -p "Enter password for bosco ssh key: " PASSPHRASE; echo
+    read -p "Choose and enter a password for the bosco ssh key: " PASSPHRASE; echo
     stty echo
 
     # Output the password to a specially crafted file
@@ -526,7 +526,7 @@ fi
 
 # Transfer the public key to the remote host
 # ssh-copy-id is available on el5 from openssh-clients
-echo "Enter password to copy ssh keys to $remote_host:"
+echo "Enter the password to copy the ssh keys to $remote_host:"
 ssh-copy-id -i $bosco_key $remote_host > /dev/null
 if [ $? -ne 0 ]; then
     echo "Error running ssh-copy-id.  Please make sure you password is correct."
