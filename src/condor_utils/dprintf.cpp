@@ -415,12 +415,6 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 	static int buflen = 0;
 	int bufpos = 0;
 	int rc = 0;
-	int sprintf_errno = 0;
-	int my_pid;
-	int my_tid;
-	
-	FILE *local_fp;
-	int fopen_rc = 1;
 
 	rc = vsprintf_realloc( &buf, &bufpos, &buflen, fmt, args );
 	if (rc < 0) {
@@ -437,7 +431,7 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
  * it wants to write directly to the open debug log.
  */
 static void
-_condor_dfprintf( FILE *fp, const char* fmt, ... )
+_condor_dfprintf( struct DebugFileInfo* it, const char* fmt, ... )
 {
 	struct tm *tm=0;
 	time_t clock_now;
@@ -450,7 +444,7 @@ _condor_dfprintf( FILE *fp, const char* fmt, ... )
 	}
 
     va_start( args, fmt );
-	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,&((*DebugLogs)[0]),fmt,args);
+	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,it,fmt,args);
     va_end( args );
 }
 
@@ -596,7 +590,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			/* registered for other debug levels */
 		if(!DebugLogs->size())
 		{
-			FILE * debug_file_ptr = stderr;
+			(*DebugLogs)[0].debugFP = stderr;
 #ifdef va_copy
 			va_list copyargs;
 			va_copy(copyargs, args);
@@ -621,7 +615,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			// for log files other than the first one, dont panic if we
 			// fail to write to the file.
 			PRAGMA_REMIND("TJ: move dont_panic flag into debug output vector")
-			bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
+			//bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
 
 			/* Open and lock the log file */
 			FILE * debug_file_ptr = NULL;
@@ -978,7 +972,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		// Probably format should be %ld, and we should cast to
 		// long int, but I'm afraid of changing the output format.
 		// wenger 2009-02-24.
-		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
+		_condor_dfprintf(it, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
 		
 		debug_file_ptr = preserve_log_file(it, dont_panic);
 	}
@@ -1110,7 +1104,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 	(void)setBaseName(filePath.c_str());
 	timestamp = createRotateFilename(NULL, it->maxLogNum);
 	(void)sprintf( old, "%s.%s", filePath.c_str() , timestamp);
-	_condor_dfprintf( debug_file_ptr, "Saving log file to \"%s\"\n", old );
+	_condor_dfprintf( it, "Saving log file to \"%s\"\n", old );
 	(void)fflush( debug_file_ptr );
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
@@ -1188,22 +1182,22 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 	}
 
 	if ( !still_in_old_file ) {
-		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", it->logPath.c_str());
+		_condor_dfprintf (it, "Now in new log file %s\n", it->logPath.c_str());
 	}
 
 	// We may have a message left over from the succeeded rename after which the file
 	// may have been recreated by another process. Tell user about it.
 	if (file_there > 0) {
-		_condor_dfprintf(debug_file_ptr, "WARNING: %s", msg_buf);
+		_condor_dfprintf(it, "WARNING: %s", msg_buf);
 	}
 
 	if ( failed_to_rotate || rename_failed ) {
-		_condor_dfprintf(debug_file_ptr,"WARNING: Failed to rotate log into file %s!\n",old);
+		_condor_dfprintf(it,"WARNING: Failed to rotate log into file %s!\n",old);
 		if( rename_failed ) {
-			_condor_dfprintf(debug_file_ptr,"Likely cause is that another Condor process rotated the file at the same time.\n");
+			_condor_dfprintf(it,"Likely cause is that another Condor process rotated the file at the same time.\n");
 		}
 		else {
-			_condor_dfprintf(debug_file_ptr,"       Perhaps someone is keeping log files open???");
+			_condor_dfprintf(it,"       Perhaps someone is keeping log files open???");
 		}
 	}
 	
@@ -1314,6 +1308,10 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 	char msg_buf[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::string filePath = (*it).logPath;
+	struct DebugFileInfo* dFIptr = it;
+
+	struct DebugFileInfo stderrBackup(*it);
+	stderrBackup.debugFP = stderr;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1329,9 +1327,9 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 		}
 #endif
 		if (fp == NULL) {
-			fp = stderr;
+			dFIptr = &stderrBackup;
 		}
-		_condor_dfprintf( fp, "Can't open \"%s\"\n", filePath.c_str() );
+		_condor_dfprintf( dFIptr, "Can't open \"%s\"\n", filePath.c_str() );
 		if( ! dont_panic ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 filePath.c_str() );
@@ -1354,9 +1352,9 @@ bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic)
 	FILE *debug_file_fp;
 
 	if( fTruncate ) {
-		debug_file_fp = debug_lock_it(&it, "wN", 0, it.dont_panic);
+		debug_file_fp = debug_lock_it(&it, "wN", 0, dont_panic);
 	} else {
-		debug_file_fp = debug_lock_it(&it, "aN", 0, it.dont_panic);
+		debug_file_fp = debug_lock_it(&it, "aN", 0, dont_panic);
 	}
 
 	if (debug_file_fp) (void)debug_unlock_it(&it);
