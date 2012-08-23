@@ -10,6 +10,9 @@ PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 # Bosco cluster list location
 CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
+# Executables
+TR=tr
+
 usage()
 {
 cat << EOM
@@ -477,9 +480,9 @@ if [ "x$1" == "x" ]; then
     echo 
     cluster_type="pbs"
 else
-    cluster_type=$1
+    cluster_type=$(echo $1 | $TR '[:upper:]' '[:lower:]')
     if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" ]; then
-        echo "Unrecognized batch system: $cluster_type"
+        echo "Unrecognized batch system: $1 (normalized: $cluster_type)"
         echo "Please specify one of the following: pbs, lsf, sge, condor"
         exit 1
     fi
