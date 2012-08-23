@@ -556,20 +556,24 @@ else
     echo "Exiting, retry to add the cluster once you fix the problem."    
     exit 1
 fi
-# Get the queue information
-echo -n "Detecting cluster configuration..."
-qmgr_out=`ssh $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
 
-# Get the default queue
-default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
+if [ "$cluster_type" == "pbs" ]; then
+    # Get the queue information
+    echo -n "Detecting PBS cluster configuration..."
+    qmgr_out=`ssh $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
 
-# Get the max queued for the queue default_queue
-max_queued=`expr "$qmgr_out" : ".*set queue $default_queue max_user_queuable = \([0-9]*\).*"`
+    # Get the default queue
+    default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
+
+    # Get the max queued for the queue default_queue
+    max_queued=`expr "$qmgr_out" : ".*set queue $default_queue max_user_queuable = \([0-9]*\).*"`
+
+    echo "Done!"
+fi
+
 if [ "x$max_queued" == "x" ]; then
     max_queued=-1
 fi
-
-echo "Done!"
 
 
 # First, find the blahp
