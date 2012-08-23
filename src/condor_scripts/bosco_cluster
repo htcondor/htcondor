@@ -77,6 +77,25 @@ check_cluster_list () {
     fi
 }
 
+check_reverse_connectivity() {
+    # check if the remote host can connect back
+    # $1 = cluster to check for
+    remote_host=$1
+    myhost=`hostname`
+    # try ping first
+    ssh $remote_host ping -c 1 $myhost > /dev/null 2>/dev/null
+    if [ $? -eq 0 ]; then
+        return 0
+    fi
+    # test nc from remote_host to 9618 (bosco is started and default port is used)
+    ssh $remote_host nc -z $myhost 9618 > /dev/null 2>/dev/null
+    if [ $? -eq 0 ]; then
+        return 0
+    fi
+    return 1
+}
+
+
 add_cluster_to_list () {
     # $1 = cluster to add
     # $2 = max queued setting of cluster
@@ -521,6 +540,19 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Test reverse connectivity from remote_host
+echo -n "Testing reverse connectivity..."
+check_reverse_connectivity $remote_host
+if [ $? -eq 0 ]; then
+    echo "Done!"
+else
+    echo "Failed!"
+    echo "$remote_host was unable to connect to the BOSCO host."
+    echo "If the submit node is unable to connect back, the worker nodes are unlikely to be able to as required."
+    echo "Check if you have firewalls blocking the connection."
+    echo "Exiting, retry to add the cluster once you fix the problem."    
+    exit 1
+fi
 # Get the queue information
 echo -n "Detecting cluster configuration..."
 qmgr_out=`ssh $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
