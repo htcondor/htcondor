@@ -213,7 +213,7 @@ static char *formatTimeHeader(struct tm *tm) {
 	return timebuf;
 }
 
-void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message)
+const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm)
 {
 	static char *buf = NULL;
 	static int buflen = 0;
@@ -223,13 +223,7 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 
 	int my_pid;
 	int my_tid;
-	static std::stringstream formatter;
-	//static std::string buffer;
-	formatter.clear();
 	FILE* local_fp = NULL;
-
-	formatter.clear();
-	//buffer.clear();
 
 #ifdef D_CATEGORY_MASK
 	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK);
@@ -338,8 +332,9 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
 			}
-
-			formatter << "(" << _condor_DebugFlagNames[cat] << verbosity << ") ";
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s)", _condor_DebugFlagNames[cat], verbosity);
+			if (rc < 0) sprintf_errno = errno;
+			//formatter << "(" << _condor_DebugFlagNames[cat] << verbosity << ") ";
 		}
 #endif
 
@@ -358,19 +353,23 @@ void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, s
 	}
 
 	//rc = vsprintf_realloc( &buf, &bufpos, &buflen, "%s", message.c_str() );
-	message.insert(0, buf, bufpos);
+	return buf;
 }
 
 void
-_dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo)
+_dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo)
 {
 	int start_pos = 0;
 	int bufpos = 0;
 	int rc = 0;
+	static char* buffer = NULL;
+	static int buflen = 0;
 	//debug_lock_it(dbgInfo, NULL, 0);
-	_format_global_header(cat_and_flags, hdr_flags, clock_now, tm, message);
-	const char* buf = message.c_str();
-	bufpos = strlen(buf);
+	const char* header = _format_global_header(cat_and_flags, hdr_flags, clock_now, tm);
+	rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s%s", header, message);
+	if (rc < 0) {
+		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+	}
 
 		// We attempt to write the log record with one call to
 		// write(), because then O_APPEND will ensure (on
@@ -381,7 +380,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 		// that we are not blocking interrupts us.
 	while( start_pos<bufpos ) {
 		rc = write( fileno(dbgInfo->debugFP),
-					buf+start_pos,
+					buffer+start_pos,
 					bufpos-start_pos );
 		if( rc > 0 ) {
 			start_pos += rc;
@@ -414,6 +413,8 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 		// static buffer to avoid frequent memory allocation
 	static char *buf = NULL;
 	static int buflen = 0;
+	int bufpos = 0;
+	int rc = 0;
 	int sprintf_errno = 0;
 	int my_pid;
 	int my_tid;
@@ -421,12 +422,14 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 	FILE *local_fp;
 	int fopen_rc = 1;
 
-	std::string buffer;
-	sprintf(buffer, fmt, args);
+	rc = vsprintf_realloc( &buf, &bufpos, &buflen, fmt, args );
+	if (rc < 0) {
+		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+	}
 
 	//buffer.append(dbgInfo->formatHeaderFunc(cat_and_flags,hdr_flags,clock_now,tm));
 	//buffer.append(dbgInfo->formatMessageFunc(fmt, args));
-	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, clock_now, tm, buffer, dbgInfo);
+	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, clock_now, tm, buf, dbgInfo);
 }
 
 /* _condor_dfprintf
@@ -468,6 +471,9 @@ struct tm *localtime();
 void
 _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 {
+	static char* message_buffer = NULL;
+	static int buflen = 0;
+	int bufpos = 0;
 	struct tm *tm=0;
 	time_t clock_now;
 #if !defined(WIN32)
@@ -630,23 +636,25 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 					break;
 			   #ifdef WIN32
 				case OUTPUT_DEBUG_STR:
-
-					continue;
 					break;
 			   #endif
 			}
-			std::string buffer;
+			int rc = 0;
 #ifdef va_copy
 			va_list copyargs;
 			va_copy(copyargs, args);
 //			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,copyargs);
-			sprintf(buffer, fmt,copyargs);
+			rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, copyargs);
 			va_end(copyargs);
 #else
 			//_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,args);
-			sprintf(buffer, fmt,args);
+			rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, args);
 #endif
-			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, buffer, &(*it));
+			if (rc < 0) {
+				_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+			}
+			
+			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, message_buffer, &(*it));
 			if (funlock_it) {
 				debug_unlock_it(&(*it));
 			}
@@ -1872,9 +1880,9 @@ dprintf_dump_stack(void) {
 #endif
 
 #ifdef WIN32
-void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo)
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo)
 {
-	_format_global_header(cat_and_flags,hdr_flags,clock_now,tm, message);
-	OutputDebugStringA(message.c_str());
+	_format_global_header(cat_and_flags,hdr_flags,clock_now,tm);
+	OutputDebugStringA(message);
 }
 #endif

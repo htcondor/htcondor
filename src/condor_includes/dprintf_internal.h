@@ -25,7 +25,7 @@
 
 struct DebugFileInfo;
 
-typedef void (*DprintfFuncPtr)(int, int, time_t, struct tm*, std::string&, DebugFileInfo*);
+typedef void (*DprintfFuncPtr)(int, int, time_t, struct tm*, const char*, DebugFileInfo*);
 
 enum DebugOutput
 {
@@ -99,11 +99,11 @@ struct dprintf_output_settings
 	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
 };
 
+const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
 //Global dprint functions meant as fallbacks.
-void _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
-void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo);
+void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
 
 #ifdef WIN32
 //Output to dbg string
-void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, std::string& message, DebugFileInfo* dbgInfo);
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
 #endif
