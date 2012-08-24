@@ -2149,7 +2149,7 @@ SetUniverse()
 		exit( 1 );
 #else
 		JobUniverse = CONDOR_UNIVERSE_STANDARD;
-		buffer.sprintf( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
+		buffer.formatstr( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
 		InsertJobExpr (buffer);
 		free(univ);
 		return;
@@ -5759,7 +5759,7 @@ SetGSICredentials()
 				exit( 1 );
 			}
 
-			(void) buffer.sprintf( "%s=%li", ATTR_X509_USER_PROXY_EXPIRATION, 
+			(void) buffer.formatstr( "%s=%li", ATTR_X509_USER_PROXY_EXPIRATION, 
 						   proxy_expiration);
 			InsertJobExpr(buffer);	
 	
@@ -5773,7 +5773,7 @@ SetGSICredentials()
 				exit( 1 );
 			}
 
-			(void) buffer.sprintf( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 						   proxy_subject);
 			InsertJobExpr(buffer);	
 			free( proxy_subject );

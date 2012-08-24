@@ -2816,7 +2816,7 @@ static void InitTargetAttrLists()
 
 	tmp = param( "STARTD_RESOURCE_PREFIX" );
 	if ( tmp ) {
-		buff.sprintf( "%s*", tmp );
+		buff.formatstr( "%s*", tmp );
 		machine_attrs_strlist.append( buff.Value() );
 		free( tmp );
 	} else {
@@ -2849,10 +2849,10 @@ static void InitTargetAttrLists()
 		tmp_strlist.clearAll();
 	}
 
-	buff.sprintf( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
+	buff.formatstr( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
 	job_attrs_strlist.append( buff.Value() );
 
-	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
+	buff.formatstr( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
 	job_attrs_strlist.append( buff.Value() );
 
 	tmp = param( "TARGET_JOB_ATTRS" );

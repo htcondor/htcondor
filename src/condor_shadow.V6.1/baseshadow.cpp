@@ -1123,19 +1123,19 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		while ((resname = reslist.next()) != NULL) {
 			MyString attr;
 			int64_value = -1;
-			attr.sprintf("%s", resname); // provisioned value
+			attr.formatstr("%s", resname); // provisioned value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(resname, int64_value);
 			} 
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			int64_value = -2;
-			attr.sprintf("Request%s", resname);	// requested value
+			attr.formatstr("Request%s", resname);	// requested value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
 			int64_value = -3;
-			attr.sprintf("%sUsage", resname); // usage value
+			attr.formatstr("%sUsage", resname); // usage value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}

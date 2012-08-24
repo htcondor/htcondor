@@ -1341,7 +1341,7 @@ int Scheduler::make_ad_list(
    MyString submitter_name;
    for (int ii = 0; ii < N_Owners; ++ii) {
       pAd = new ClassAd(*pAdGeneric);
-      submitter_name.sprintf("%s@%s", Owners[ii].Name, UidDomain);
+      submitter_name.formatstr("%s@%s", Owners[ii].Name, UidDomain);
       pAd->Assign(ATTR_NAME, submitter_name.Value());
       pAd->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
@@ -10682,7 +10682,7 @@ Scheduler::Init()
 		m_adSchedd->Assign( ATTR_QUILL_DB_NAME, quill_db_name ); 
 
 		MyString expr;
-		expr.sprintf( "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR,
+		expr.formatstr( "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR,
 					  quill_db_ip_addr ); 
 		m_adSchedd->Insert( expr.Value() );
 

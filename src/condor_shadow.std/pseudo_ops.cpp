@@ -2184,7 +2184,7 @@ pseudo_register_syscall_version( const char *job_version )
 	buf += shadow_version;
 	buf += "\n\nYou must do one of the following:\n\n";
 
-	line.sprintf(
+	line.formatstr(
 		"1) Remove your job (\"condor_rm %d.%d\"), re-link it with a\n",
 		 Proc->id.cluster, Proc->id.proc );
 	buf += line;
@@ -2197,7 +2197,7 @@ pseudo_register_syscall_version( const char *job_version )
 		"of the condor_shadow program on your submit machine.\n"
 		"In this case, once the compatible shadow is in place, you\n";
 
-	line.sprintf( "can release your job with \"condor_release %d.%d\".\n",
+	line.formatstr( "can release your job with \"condor_release %d.%d\".\n",
 			 Proc->id.cluster, Proc->id.proc );
 	buf += line;
 

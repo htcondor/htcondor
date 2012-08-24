@@ -71,7 +71,7 @@ main(int argc, const char **argv)
 	}
 	else {
 		MyString	sinful;
-		sinful.sprintf( "<%s:1234>", opts.m_address );
+		sinful.formatstr( "<%s:1234>", opts.m_address );
 		printf( "Creating network adapter object for %s\n", sinful.Value() );
 		net = NetworkAdapterBase::createNetworkAdapter( sinful.Value() );
 	}

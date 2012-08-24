@@ -41,7 +41,7 @@ main(int argc, char *argv[])
 	char tmpfile[L_tmpnam];
 	tmpnam(tmpfile);
 	MyString cmd;
-	cmd.sprintf( "cp %s %s", argv[1], tmpfile);
+	cmd.formatstr( "cp %s %s", argv[1], tmpfile);
 	system(cmd.Value());
 	
 	ClassAdCollection c(tmpfile);
