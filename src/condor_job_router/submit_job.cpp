@@ -255,6 +255,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity,ad);
 
 	set_priv(priv);
+	uninit_user_ids();
 
 		// chown the src job sandbox to the user if appropriate
 	if( result == CJR_OK && !target_is_sandboxed ) {
@@ -416,6 +417,7 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
 
 	set_priv(priv);
+	uninit_user_ids();
 
 	return success;
 }
@@ -523,6 +525,7 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
 
 	set_priv(priv);
+	uninit_user_ids();
 
 	return success;
 }
@@ -605,6 +608,7 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	success = push_dirty_attributes_with_current_priv(src,schedd_name,pool_name);
 
 	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
@@ -718,6 +722,7 @@ bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ch
 	success = push_classad_diff_with_current_priv(src,dest,schedd_name,pool_name);
 
 	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
@@ -782,6 +787,7 @@ bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char *
 	success = finalize_job_with_current_privs(ad,cluster,proc,schedd_name,pool_name,is_sandboxed);
 
 	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
@@ -837,6 +843,7 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	success = remove_job_with_current_privs(cluster,proc,reason,schedd_name,pool_name,error_desc);
 
 	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
