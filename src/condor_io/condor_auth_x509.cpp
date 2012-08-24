@@ -825,7 +825,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	char const *server_dn = getAuthenticatedName();
 	if( !server_dn ) {
 		std::string msg;
-		sprintf(msg,"Failed to find certificate DN for server on GSI connection to %s",ip);
+		formatstr(msg,"Failed to find certificate DN for server on GSI connection to %s",ip);
 		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
 		return false;
 	}
@@ -836,7 +836,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 		const char *errptr=NULL;
 		int erroffset=0;
 		std::string full_pattern;
-		sprintf(full_pattern,"^(%s)$",skip_check_pattern.c_str());
+		formatstr(full_pattern,"^(%s)$",skip_check_pattern.c_str());
 		if( !re.compile(full_pattern.c_str(),&errptr,&erroffset) ) {
 			dprintf(D_ALWAYS,"GSI_SKIP_HOST_CHECK_CERT_REGEX is not a valid regular expression: %s\n",skip_check_pattern.c_str());
 			return false;
@@ -851,7 +851,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	ASSERT( ip );
 	if( !fqh || !fqh[0] ) {
 		std::string msg;
-		sprintf(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by making GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or by disabling all hostname checks by setting GSI_SKIP_HOST_CHECK=true or defining GSI_DAEMON_NAME.",ip,server_dn);
+		formatstr(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by making GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or by disabling all hostname checks by setting GSI_SKIP_HOST_CHECK=true or defining GSI_DAEMON_NAME.",ip,server_dn);
 		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
 		return false;
 	}
@@ -862,7 +862,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	OM_uint32 major_status = 0;
 	OM_uint32 minor_status = 0;
 
-	sprintf(connect_name,"%s/%s",fqh,sock->peer_ip_str());
+	formatstr(connect_name,"%s/%s",fqh,sock->peer_ip_str());
 
 	gss_connect_name_buf.value = strdup(connect_name.c_str());
 	gss_connect_name_buf.length = connect_name.size()+1;
@@ -876,7 +876,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 
 	if( major_status != GSS_S_COMPLETE ) {
 		std::string comment;
-		sprintf(comment,"Failed to create gss connection name data structure for %s.\n",connect_name.c_str());
+		formatstr(comment,"Failed to create gss connection name data structure for %s.\n",connect_name.c_str());
 		print_log( major_status, minor_status, 0, comment.c_str() );
 		return false;
 	}
@@ -891,7 +891,7 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 
 	if( !name_equal ) {
 		std::string msg;
-		sprintf(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If you wish to use a daemon certificate that does not match the daemon's host name, make GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true or by defining GSI_DAEMON_NAME.\n",
+		formatstr(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If you wish to use a daemon certificate that does not match the daemon's host name, make GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true or by defining GSI_DAEMON_NAME.\n",
 				server_dn,
 				fqh,
 				ip,

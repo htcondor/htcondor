@@ -401,9 +401,9 @@ static void setup() {
 	// Create some symbolic links
 #ifndef WIN32
 	MyString link;
-	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
+	cut_assert_true( link.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
-	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
+	cut_assert_true( link.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
 #endif
 	// Get back to original directory
