@@ -264,7 +264,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 			}
 			else
 			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) ", fileno(local_fp) );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) " );
 				if( rc < 0 ) {
 					sprintf_errno = errno;
 				}
