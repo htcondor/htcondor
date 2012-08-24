@@ -1314,7 +1314,7 @@ DedicatedScheduler::sortJobs( void )
 		std::string fifoConstraint;
 		// "JobUniverse == PARALLEL_UNIVERSE && JobStatus == HELD && HoldReasonCode == HOLD_SpoolingInput
 
-		sprintf(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
+		formatstr(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
 																ATTR_JOB_STATUS, HELD, 
 																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
 		ClassAd *spoolingInJob = GetJobByConstraint(fifoConstraint.c_str());
@@ -1520,7 +1520,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// Make a new list to hold our resource classads.
 	resources = new ClassAdList;
 
-    constraint.sprintf("DedicatedScheduler == \"%s\"", name());
+    constraint.formatstr("DedicatedScheduler == \"%s\"", name());
 	query.addORConstraint( constraint.Value() );
 
 		// This should fill in resources with all the classads we care
@@ -3250,7 +3250,7 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// >= the duration of the job...
 
 	MyString buf;
-	buf.sprintf( "%s = (Target.DedicatedScheduler == \"%s\") && "
+	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf.Value() );
@@ -3321,7 +3321,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle,
 									   CAList* busy )
 {
 	MyString msg;
-	msg.sprintf( "Satisfied job %d with ", cluster );
+	msg.formatstr( "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
 		msg += idle->Length();

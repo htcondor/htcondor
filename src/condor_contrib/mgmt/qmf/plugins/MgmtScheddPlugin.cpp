@@ -187,7 +187,7 @@ MgmtScheddPlugin::initialize()
 			EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
 		}
 
-		key.sprintf("%d.%d", id.cluster, id.proc);
+		key.formatstr("%d.%d", id.cluster, id.proc);
 
 		processJob(key.Value(), ATTR_JOB_STATUS, value);
 
@@ -413,10 +413,10 @@ MgmtScheddPlugin::processJob(const char *key,
 					// wrong if the DAGMan job didn't use the
 					// default, but it is better to be wrong than
 					// to fail entirely, which is the alternative.
-				submissionName.sprintf("%s#%d", Name, dagman.cluster);
+				submissionName.formatstr("%s#%d", Name, dagman.cluster);
 			}
 		} else {
-			submissionName.sprintf("%s#%d", Name, id.cluster);
+			submissionName.formatstr("%s#%d", Name, id.cluster);
 		}
 
 		MyString tmp;

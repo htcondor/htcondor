@@ -104,7 +104,7 @@ void BaseResource::Reconfig()
 	setProbeInterval( tmp_int );
 
 	jobLimit = -1;
-	sprintf( param_name, "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
+	formatstr( param_name, "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
 						ResourceType() );
 	param_value = param( param_name.c_str() );
 	if ( param_value == NULL ) {
@@ -173,7 +173,7 @@ bool BaseResource::Invalidate () {
     /* We only want to invalidate this resource. Using the tuple
        (HashName,SchedName,Owner) as unique id. */
 	std::string line;
-	sprintf( line,
+	formatstr( line,
         "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
 		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
         ATTR_HASH_NAME, GetHashName (),
@@ -251,7 +251,7 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	std::string buff;
 
-	sprintf( buff, "%s %s", ResourceType(), resourceName );
+	formatstr( buff, "%s %s", ResourceType(), resourceName );
 	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	resource_ad->Assign( "HashName", GetHashName() );
 	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );

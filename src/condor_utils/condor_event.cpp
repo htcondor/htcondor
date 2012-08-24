@@ -598,9 +598,9 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 	}
 
 	MyString fmt;
-	fmt.sprintf("\tPartitionable Resources : %%%ds %%%ds %%%ds\n", cchUse, cchReq, MAX(cchAlloc,9));
+	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds\n", cchUse, cchReq, MAX(cchAlloc,9));
 	fprintf(file, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "");
-	fmt.sprintf("\t   %%-%ds : %%%ds %%%ds %%%ds\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
+	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
 	//fputs(fmt.Value(), file);
 	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
 		 it != useMap.end();
@@ -687,13 +687,13 @@ static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
 			pszTbl[ixUse] = 0;
 			pszTbl[ixReq] = 0;
 			std::string exprstr;
-			sprintf(exprstr, "%sUsage = %s", pszLbl, pszTbl);
+			formatstr(exprstr, "%sUsage = %s", pszLbl, pszTbl);
 			puAd->Insert(exprstr.c_str());
-			sprintf(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
+			formatstr(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
 			puAd->Insert(exprstr.c_str());
 			if (ixAlloc > 0) {
 				pszTbl[ixAlloc] = 0;
-				sprintf(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
+				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
 				puAd->Insert(exprstr.c_str());
 			}
 		}
@@ -1439,7 +1439,7 @@ RemoteErrorEvent::writeEvent(FILE *file)
 		insertCommonIdentifiers(tmpCl2);
 
 		MyString tmp;
-		tmp.sprintf("endtype = null");
+		tmp.formatstr("endtype = null");
 		tmpCl2.Insert(tmp.Value());
 
 			// critical error means this run is ended.
@@ -1765,16 +1765,16 @@ ExecuteEvent::writeEvent (FILE *file)
 
 	tmpCl1.Assign("endts", (int)eventclock);
 
-	tmp.sprintf("endtype = -1");
+	tmp.formatstr("endtype = -1");
 	tmpCl1.Insert(tmp.Value());
 
-	tmp.sprintf("endmessage = \"UNKNOWN ERROR\"");
+	tmp.formatstr("endmessage = \"UNKNOWN ERROR\"");
 	tmpCl1.Insert(tmp.Value());
 
 	// this inserts scheddname, cluster, proc, etc
 	insertCommonIdentifiers(tmpCl2);
 
-	tmp.sprintf("endtype = null");
+	tmp.formatstr("endtype = null");
 	tmpCl2.Insert(tmp.Value());
 
 	if (FILEObj) {
@@ -1896,7 +1896,7 @@ ExecutableErrorEvent::writeEvent (FILE *file)
 	// this inserts scheddname, cluster, proc, etc
 	insertCommonIdentifiers(tmpCl2);
 
-	tmp.sprintf( "endtype = null");
+	tmp.formatstr( "endtype = null");
 	tmpCl2.Insert(tmp.Value());
 
 	if (FILEObj) {
@@ -2404,7 +2404,7 @@ JobEvictedEvent::writeEvent( FILE *file )
   tmpCl1.Assign("endts", (int)eventclock);
   tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
 
-  tmp.sprintf( "endmessage = \"%s%s\"", messagestr, terminatestr);
+  tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
   tmpCl1.Insert(tmp.Value());
 
   tmpCl1.Assign("wascheckpointed", checkpointedstr);
@@ -2414,7 +2414,7 @@ JobEvictedEvent::writeEvent( FILE *file )
   // this inserts scheddname, cluster, proc, etc
   insertCommonIdentifiers(tmpCl2);
 
-  tmp.sprintf( "endtype = null");
+  tmp.formatstr( "endtype = null");
   tmpCl2.Insert(tmp.Value());
 
   if (FILEObj) {
@@ -2974,7 +2974,7 @@ JobTerminatedEvent::writeEvent (FILE *file)
   // this inserts scheddname, cluster, proc, etc
   insertCommonIdentifiers(tmpCl2);
 
-  tmp.sprintf( "endtype = null");
+  tmp.formatstr( "endtype = null");
   tmpCl2.Insert(tmp.Value());
 
   if (FILEObj) {
@@ -3319,7 +3319,7 @@ ShadowExceptionEvent::writeEvent (FILE *file)
 		// this inserts scheddname, cluster, proc, etc
 		insertCommonIdentifiers(tmpCl2);
 
-		tmp.sprintf( "endtype = null");
+		tmp.formatstr( "endtype = null");
 		tmpCl2.Insert(tmp.Value());
 
 		if (FILEObj) {

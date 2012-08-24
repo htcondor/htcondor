@@ -367,7 +367,7 @@ TransferD::write_files_reaper(int tid, int exit_status)
 		dprintf(D_ALWAYS, "Thread exited with signal: %d\n", signal);
 
 		result.Assign(ATTR_TREQ_UPDATE_STATUS, "NOT OK");
-		str.sprintf("Died with signal %d", signal);
+		str.formatstr("Died with signal %d", signal);
 		result.Assign(ATTR_TREQ_UPDATE_REASON, str);
 		result.Assign(ATTR_TREQ_SIGNALED, TRUE);
 
@@ -385,7 +385,7 @@ TransferD::write_files_reaper(int tid, int exit_status)
 
 			default:
 				result.Assign(ATTR_TREQ_UPDATE_STATUS, "NOT OK");
-				str.sprintf("Exited with bad exit code %d", exit_code);
+				str.formatstr("Exited with bad exit code %d", exit_code);
 				result.Assign(ATTR_TREQ_UPDATE_REASON, str);
 				result.Assign(ATTR_TREQ_SIGNALED, FALSE);
 				result.Assign(ATTR_TREQ_EXIT_CODE, exit_code);

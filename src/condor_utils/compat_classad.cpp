@@ -1384,7 +1384,7 @@ initFromString( char const *str,MyString *err_msg )
 
 		if (!Insert(exprbuf)) {
 			if( err_msg ) {
-				err_msg->sprintf("Failed to parse ClassAd expression: '%s'",
+				err_msg->formatstr("Failed to parse ClassAd expression: '%s'",
 					exprbuf);
 			} else {
 				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",

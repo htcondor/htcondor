@@ -329,7 +329,7 @@ int BaseShadow::cdToIwd() {
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
 		MyString hold_reason;
-		hold_reason.sprintf("Cannot access initial working directory %s: %s",
+		hold_reason.formatstr("Cannot access initial working directory %s: %s",
 		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
@@ -574,7 +574,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* The first thing we do is record that we are in a termination pending
 		state. */
 	if (kind == US_NORMAL) {
-		str.sprintf("%s = TRUE", ATTR_TERMINATION_PENDING);
+		str.formatstr("%s = TRUE", ATTR_TERMINATION_PENDING);
 		jobAd->Insert(str.Value());
 	}
 
@@ -607,7 +607,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 		if (exited_by_signal == TRUE) {
 			reason = JOB_COREDUMPED;
-			str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
+			str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
 			jobAd->Insert(str.Value());
 		} else {
 			reason = JOB_EXITED;
@@ -638,7 +638,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* also store the corefilename into the jobad so we can recover this 
 		during a termination pending scenario. */
 	if( reason == JOB_COREDUMPED ) {
-		str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
+		str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
 		jobAd->Insert(str.Value());
 	}
 
@@ -728,7 +728,7 @@ BaseShadow::evictJob( int reason )
 	MyString from_where;
 	MyString machine;
 	if( getMachineName(machine) ) {
-		from_where.sprintf(" from %s",machine.Value());
+		from_where.formatstr(" from %s",machine.Value());
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
 			 getCluster(), getProc(), from_where.Value() );
@@ -869,7 +869,7 @@ void BaseShadow::initUserLog()
 			// of the failure.
 		if ( !result ) {
 			MyString hold_reason;
-			hold_reason.sprintf(
+			hold_reason.formatstr(
 					"Failed to initialize user log to %s", logfile.c_str());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
@@ -908,7 +908,7 @@ void BaseShadow::initUserLog()
 			// of the failure.
 		if ( !result ) {
 			MyString hold_reason;
-			hold_reason.sprintf(
+			hold_reason.formatstr(
 					"Failed to initialize user log to %s", logfile.c_str());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
@@ -973,19 +973,19 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 		while ((resname = reslist.next()) != NULL) {
 			MyString attr;
 			int64_value = -1;
-			attr.sprintf("%s", resname); // provisioned value
+			attr.formatstr("%s", resname); // provisioned value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(resname, int64_value);
 			} 
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			int64_value = -2;
-			attr.sprintf("Request%s", resname);	// requested value
+			attr.formatstr("Request%s", resname);	// requested value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
 			int64_value = -3;
-			attr.sprintf("%sUsage", resname); // usage value
+			attr.formatstr("%sUsage", resname); // usage value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
@@ -1340,10 +1340,10 @@ BaseShadow::updateJobInQueue( update_t type )
 		// won't actually connect to the job queue for it.  we do this
 		// here since we want it for all kinds of updates...
 	MyString buf;
-	buf.sprintf( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
+	buf.formatstr( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
 											  bytesReceived()) );
 	jobAd->Insert( buf.Value() );
-	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
+	buf.formatstr( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
 	jobAd->Insert( buf.Value() );
 

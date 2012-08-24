@@ -262,7 +262,7 @@ MatchTest::showJobAd(ClassAd *ad,char const *label)
         int proc = -1;
         ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
         ad->LookupInteger(ATTR_PROC_ID,proc);
-        gid.sprintf("%d.%d",cluster,proc);
+        gid.formatstr("%d.%d",cluster,proc);
     }
 
     printf("%s: %s\n",label,gid.Value());

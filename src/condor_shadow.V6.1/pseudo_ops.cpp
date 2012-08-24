@@ -289,7 +289,7 @@ static void complete_path( const char *short_path, MyString &full_path )
 		full_path = short_path;
 	} else {
 		// strcpy(full_path,CurrentWorkingDir);
-		full_path.sprintf("%s%s%s",
+		full_path.formatstr("%s%s%s",
 						  Shadow->getIwd(),
 						  DIR_DELIM_STRING,
 						  short_path);
@@ -680,7 +680,7 @@ pseudo_ulog( ClassAd *ad )
 		}
 
 		if(err->isCriticalError()) {
-			CriticalErrorBuf.sprintf(
+			CriticalErrorBuf.formatstr(
 			  "Error from %s: %s",
 			  err->getExecuteHost(),
 			  err->getErrorText());
@@ -795,7 +795,7 @@ pseudo_constrain( const char *expr )
 		dprintf(D_SYSCALLS,"\tRequirements already refers to AgentRequirements\n");
 		return 0;
 	} else {
-		newreqs.sprintf("(%s) && AgentRequirements",reqs.Value());
+		newreqs.formatstr("(%s) && AgentRequirements",reqs.Value());
 		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs.Value());
 		return pseudo_set_job_attr("Requirements",newreqs.Value());
 	}

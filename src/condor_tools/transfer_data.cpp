@@ -106,7 +106,7 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			constraint.sprintf( "%s==%d", ATTR_CLUSTER_ID, c );
+			constraint.formatstr( "%s==%d", ATTR_CLUSTER_ID, c );
 			addConstraint(constraint.Value());
 			return;
 		}
@@ -122,7 +122,7 @@ procArg(const char* arg)
 			if(*tmp == '\0')
 			// process a proc
 			{
-				constraint.sprintf( "(%s==%d && %s==%d)", 
+				constraint.formatstr( "(%s==%d && %s==%d)", 
 					ATTR_CLUSTER_ID, c,
 					ATTR_PROC_ID, p);
 				addConstraint(constraint.Value());
@@ -135,7 +135,7 @@ procArg(const char* arg)
 	else if(isalpha(*arg))
 	// process by user name
 	{
-		constraint.sprintf( "%s == \"%s\"", ATTR_OWNER, arg );
+		constraint.formatstr( "%s == \"%s\"", ATTR_OWNER, arg );
 		addConstraint(constraint.Value());
 	} else {
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );

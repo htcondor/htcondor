@@ -37,7 +37,7 @@ static bool
 not_root_squashed( char const *exec_path )
 {
 	MyString test_dir;
-	test_dir.sprintf("%s/.root_squash_test", exec_path);
+	test_dir.formatstr("%s/.root_squash_test", exec_path);
 
 	if (rmdir(test_dir.Value()) == -1) {
 		if (errno != ENOENT) {
@@ -190,7 +190,7 @@ check_recovery_file( const char *execute_dir )
 		return;
 	}
 
-	recovery_file.sprintf( "%s.recover", execute_dir );
+	recovery_file.formatstr( "%s.recover", execute_dir );
 
 	StatInfo si( recovery_file.Value() );
 
@@ -337,8 +337,8 @@ cleanup_execute_dir(int pid, char const *exec_path)
 		// We're trying to delete a specific subdirectory, either
 		// b/c a starter just exited and we might need to clean up
 		// after it, or because we're in a recursive call.
-	pid_dir.sprintf( "dir_%d", pid );
-	pid_dir_path.sprintf( "%s/%s", exec_path, pid_dir.Value() );
+	pid_dir.formatstr( "dir_%d", pid );
+	pid_dir_path.formatstr( "%s/%s", exec_path, pid_dir.Value() );
 
 	check_recovery_file( pid_dir_path.Value() );
 

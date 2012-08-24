@@ -248,7 +248,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				if (!ad.LookupString(ATTR_NAME, name)) {
 					name = "UNKNOWN";
 				}
-				name.sprintf("Negotiator: %s", hashKey.name.Value());
+				name.formatstr("Negotiator: %s", hashKey.name.Value());
 
 				negotiatorObject =
 					new NegotiatorObject(singleton->getInstance(),

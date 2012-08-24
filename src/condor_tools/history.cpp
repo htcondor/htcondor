@@ -269,7 +269,7 @@ main(int argc, char* argv[])
 	}
     else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
 		if (i+1==argc || constraint!="") break;
-		sprintf(constraint,"(%s)",argv[i+1]);
+		formatstr(constraint,"(%s)",argv[i+1]);
 		i++;
 		//readfromfile = true;
     }
@@ -298,7 +298,7 @@ main(int argc, char* argv[])
 			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>.<proc>\n");
 			break;
 		}
-		sprintf (constraint, "((%s == %d) && (%s == %d))", 
+		formatstr (constraint, "((%s == %d) && (%s == %d))", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
 		parameters[0] = &cluster;
 		parameters[1] = &proc;
@@ -312,7 +312,7 @@ main(int argc, char* argv[])
 			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>\n");
 			break;
 		}
-		sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
+		formatstr (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		parameters[0] = &cluster;
 #ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
@@ -332,7 +332,7 @@ main(int argc, char* argv[])
 		}
 		owner = (char *) malloc(512 * sizeof(char));
 		sscanf(argv[i], "%s", owner);	
-		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
+		formatstr(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
 		parameters[0] = owner;
 #ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
@@ -573,7 +573,7 @@ static int parse_autoformat_arg(
 			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 			print_head.Append(hd);
 		}
-		else if (flabel) { lbl.sprintf("%s = ", parg); wid = 0; opts = 0; }
+		else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
 
 		lbl += fCapV ? "%V" : "%v";
 		if (diagnostic) {
@@ -668,7 +668,7 @@ format_job_id(int cluster, AttrList * ad, Formatter & /*fmt*/)
 	ret = "";
 	int proc;
 	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,proc)) proc = 0;
-	ret.sprintf("%4d.%-3d", cluster, proc);
+	ret.formatstr("%4d.%-3d", cluster, proc);
 	return ret.Value();
 }
 

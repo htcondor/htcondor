@@ -181,7 +181,7 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 					}
 					ASSERT(tmpDomain);
 					setRemoteDomain(tmpDomain);
-					myUser.sprintf("%s@%s", tmpUser, tmpDomain);
+					myUser.formatstr("%s@%s", tmpUser, tmpDomain);
 					free(tmpDomain);
 				}
 				setRemoteUser(tmpUser);

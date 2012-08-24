@@ -100,7 +100,7 @@ buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs
 					opsys = BASIC_WINOS_FORMAT;
 				}
 				else {
-					sprintf(opsys,BASIC_OS_FORMAT,rc->getValue().c_str());
+					formatstr(opsys,BASIC_OS_FORMAT,rc->getValue().c_str());
 				}
 				break;
             case ResourceConstraintType_DISK:
@@ -118,7 +118,7 @@ buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs
 		}
 	}
 	// order is important! see BASIC_REQ_FORMAT above
-	sprintf(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
+	formatstr(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
 }
 
 bool

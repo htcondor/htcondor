@@ -319,7 +319,7 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 		if( check_subsystem ) {
 				// First see if there is a specific config entry for the
 				// specified condor subsystem.
-			buf.sprintf( fmt, PermString(*perms) );
+			buf.formatstr( fmt, PermString(*perms) );
 			buf.sprintf_cat("_%s",check_subsystem);
 			if( int_result ) {
 				found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
@@ -337,7 +337,7 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 			}
 		}
 
-		buf.sprintf( fmt, PermString(*perms) );
+		buf.formatstr( fmt, PermString(*perms) );
 		if( int_result ) {
 			found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
 		}
@@ -559,7 +559,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		// For historical reasons, session duration is inserted as a string
 		// in the ClassAd
 	MyString session_duration_buf;
-	session_duration_buf.sprintf("%d",session_duration);
+	session_duration_buf.formatstr("%d",session_duration);
 	ad->Assign ( ATTR_SEC_SESSION_DURATION, session_duration_buf );
 
 	int session_lease = 3600;
@@ -892,7 +892,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 				m_cmd_description = cmd_description;
 			}
 			else {
-				m_cmd_description.sprintf("command %d",m_cmd);
+				m_cmd_description.formatstr("command %d",m_cmd);
 			}
 		}
 		m_already_logged_startcommand = false;
@@ -1171,7 +1171,7 @@ SecManStartCommand::startCommand_inner()
 
 	if( m_sock->deadline_expired() ) {
 		MyString msg;
-		msg.sprintf("deadline for %s %s has expired.",
+		msg.formatstr("deadline for %s %s has expired.",
 					m_is_tcp && !m_sock->is_connected() ?
 					"connection to" : "security handshake with",
 					m_sock->peer_description());
@@ -1188,7 +1188,7 @@ SecManStartCommand::startCommand_inner()
 	}
 	else if( m_is_tcp && !m_sock->is_connected()) {
 		MyString msg;
-		msg.sprintf("TCP connection to %s failed.",
+		msg.formatstr("TCP connection to %s failed.",
 					m_sock->peer_description());
 		dprintf(D_SECURITY,"SECMAN: %s\n", msg.Value());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
@@ -1262,7 +1262,7 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 	}
 
-	m_session_key.sprintf ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
+	m_session_key.formatstr ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
 		found_map_ent = (m_sec_man.command_map->lookup(m_session_key, sid) == 0);
@@ -2036,7 +2036,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			coms.rewind();
 			while ( (p = coms.next()) ) {
 				MyString keybuf;
-				keybuf.sprintf ("{%s,<%s>}", m_sock->get_connect_addr(), p);
+				keybuf.formatstr ("{%s,<%s>}", m_sock->get_connect_addr(), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
 				if (m_sec_man.command_map->insert(keybuf, sesid) == 0) {
@@ -2289,7 +2289,7 @@ SecManStartCommand::WaitForSocketCallback()
 	}
 
 	MyString req_description;
-	req_description.sprintf("SecManStartCommand::WaitForSocketCallback %s",
+	req_description.formatstr("SecManStartCommand::WaitForSocketCallback %s",
 							m_cmd_description.Value());
 	int reg_rc = daemonCoreSockAdapter.Register_Socket(
 		m_sock,
@@ -2301,7 +2301,7 @@ SecManStartCommand::WaitForSocketCallback()
 
 	if(reg_rc < 0) {
 		MyString msg;
-		msg.sprintf("StartCommand to %s failed because "
+		msg.formatstr("StartCommand to %s failed because "
 					"Register_Socket returned %d.",
 					m_sock->get_sinful_peer(),
 					reg_rc);
@@ -2746,7 +2746,7 @@ char* SecMan::my_unique_id() {
 #endif
 
         MyString tid;
-        tid.sprintf( "%s:%i:%i", get_local_hostname().Value(), mypid, 
+        tid.formatstr( "%s:%i:%i", get_local_hostname().Value(), mypid, 
 					 (int)time(0));
 
         _my_unique_id = strdup(tid.Value());

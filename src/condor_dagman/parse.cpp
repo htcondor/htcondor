@@ -434,7 +434,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	Dag *tmp = NULL;
 
 	MyString expectedSyntax;
-	expectedSyntax.sprintf( "Expected syntax: %s%s nodename %s "
+	expectedSyntax.formatstr( "Expected syntax: %s%s nodename %s "
 				"[DIR directory] [NOOP] [DONE]", nodeTypeKeyword, inlineOrExt,
 				submitOrDagFile );
 
@@ -1837,7 +1837,7 @@ parse_reject(
 	}
 
 	MyString location;
-	location.sprintf( "%s (line %d)", filename, lineNumber );
+	location.formatstr( "%s (line %d)", filename, lineNumber );
 	debug_printf( DEBUG_QUIET, "REJECT specification at %s "
 				"will cause this DAG to fail\n", location.Value() );
 

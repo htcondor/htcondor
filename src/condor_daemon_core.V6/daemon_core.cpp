@@ -773,7 +773,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 			return false;
 		}
 		if(msg) {
-			msg->sprintf( "file descriptor safety level exceeded: "
+			msg->formatstr( "file descriptor safety level exceeded: "
 			              " limit %d, "
 			              " registered socket count %d, "
 			              " fd %d",
@@ -2804,7 +2804,7 @@ DaemonCore::reconfig(void) {
 	// a daemon core parent.
 	if ( ppid && m_want_send_child_alive ) {
 		MyString buf;
-		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
+		buf.formatstr("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
 		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
@@ -6197,7 +6197,7 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
-	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
+	inheritbuf.formatstr("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
 		//  CCB's trickery if present.  As this address is
@@ -7038,7 +7038,7 @@ int DaemonCore::Create_Process(
 		if( stat(cwd, &stat_struct) == -1 ) {
 			return_errno = errno;
             if (NULL != err_return_msg) {
-                err_return_msg->sprintf("Cannot access specified iwd \"%s\"", cwd);
+                err_return_msg->formatstr("Cannot access specified iwd \"%s\"", cwd);
             }
 			dprintf( D_ALWAYS, "Create_Process: "
 					 "Cannot access specified iwd \"%s\": "
@@ -7068,7 +7068,7 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.sprintf("%s/%s", currwd.Value(), executable);
+			executable_fullpath_buf.formatstr("%s/%s", currwd.Value(), executable);
 			executable_fullpath = executable_fullpath_buf.Value();
 
 				// Finally, log it
@@ -8078,7 +8078,7 @@ DaemonCore::Inherit( void )
 			}
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			MyString id;
-			id.sprintf("%s", CONDOR_PARENT_FQU);
+			id.formatstr("%s", CONDOR_PARENT_FQU);
 			ipv->PunchHole(DAEMON, id);
 		}
 	}
@@ -8907,7 +8907,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 			last_email = time(NULL);
 
 			std::string subject;
-			sprintf(subject,"Condor process reports long locking delays!");
+			formatstr(subject,"Condor process reports long locking delays!");
 
 			FILE *mailer = email_admin_open(subject.c_str());
 			if( mailer ) {
@@ -9516,7 +9516,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 			// level.
 
 		MyString command_desc;
-		command_desc.sprintf("remote config %s",name);
+		command_desc.formatstr("remote config %s",name);
 
 		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
@@ -9845,7 +9845,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 
     if( fname ) {
 		MyString newLocalAdFile;
-		newLocalAdFile.sprintf("%s.new",fname);
+		newLocalAdFile.formatstr("%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );

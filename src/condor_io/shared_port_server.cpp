@@ -170,7 +170,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 		sock->set_deadline_timeout( deadline );
 
 		if( IsDebugLevel( D_NETWORK ) ) {
-			deadline_desc.sprintf(" (deadline %ds)", deadline);
+			deadline_desc.formatstr(" (deadline %ds)", deadline);
 		}
 	}
 

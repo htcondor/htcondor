@@ -55,7 +55,7 @@ struct AviaryLocatorPlugin : public Service, CollectorPlugin
 		}
 
 		string log_name;
-		sprintf(log_name,"aviary_locator.log");
+		formatstr(log_name,"aviary_locator.log");
 		provider = AviaryProviderFactory::create(log_name, getPoolName(),CUSTOM,LOCATOR, "services/locator/");
 		if (!provider) {
 			EXCEPT("Unable to configure AviaryProvider. Exiting...");

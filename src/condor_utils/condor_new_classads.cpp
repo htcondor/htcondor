@@ -445,7 +445,7 @@ NewClassAdUnparser::OldValueToNewValue(char const *old_value,MyString &new_value
 
 	if( in_string ) {
 		if( err_msg ) {
-			err_msg->sprintf("Unterminated string: %s",old_value);
+			err_msg->formatstr("Unterminated string: %s",old_value);
 		}
 		return false;
 	}

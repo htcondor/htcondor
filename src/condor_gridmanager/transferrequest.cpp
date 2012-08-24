@@ -39,7 +39,7 @@ TransferRequest::TransferRequest( Proxy *proxy, const StringList &src_list,
 							"TransferRequest::CheckRequest", (Service*)this );
 
 	if ( m_src_urls.number() != m_dst_urls.number() ) {
-		sprintf( m_errMsg, "Unenven number of source and destination URLs" );
+		formatstr( m_errMsg, "Unenven number of source and destination URLs" );
 		m_status = TransferFailed;
 		return;
 	}
@@ -47,11 +47,11 @@ TransferRequest::TransferRequest( Proxy *proxy, const StringList &src_list,
 	std::string buff;
 	char *gahp_path = param( "NORDUGRID_GAHP" );
 	if ( gahp_path == NULL ) {
-		sprintf( m_errMsg, "NORDUGRID_GAHP not defined" );
+		formatstr( m_errMsg, "NORDUGRID_GAHP not defined" );
 		m_status = TransferFailed;
 		return;
 	}
-	sprintf( buff, "NORDUGRID/%s", m_proxy->subject->fqan );
+	formatstr( buff, "NORDUGRID/%s", m_proxy->subject->fqan );
 	m_gahp = new GahpClient( buff.c_str(), gahp_path );
 	m_gahp->setNotificationTimerId( m_CheckRequest_tid );
 	m_gahp->setMode( GahpClient::normal );
@@ -95,7 +95,7 @@ void TransferRequest::CheckRequest()
 
 		int rc = m_gahp->gridftp_transfer( first_src, first_dst );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
-			sprintf( m_errMsg, "Failed to start transfer request" );
+			formatstr( m_errMsg, "Failed to start transfer request" );
 			m_status = TransferFailed;
 			daemonCore->Reset_Timer( m_notify_tid, 0 );
 			return;
@@ -107,7 +107,7 @@ void TransferRequest::CheckRequest()
 			return;
 		}
 		if ( rc != 0 ) {
-			sprintf( m_errMsg, "Transfer failed: %s", m_gahp->getErrorString() );
+			formatstr( m_errMsg, "Transfer failed: %s", m_gahp->getErrorString() );
 			m_status = TransferFailed;
 			daemonCore->Reset_Timer( m_notify_tid, 0 );
 			return;
@@ -124,7 +124,7 @@ void TransferRequest::CheckRequest()
 
 		rc = m_gahp->gridftp_transfer( next_src, next_dst );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
-			sprintf( m_errMsg, "Failed to start transfer request" );
+			formatstr( m_errMsg, "Failed to start transfer request" );
 			m_status = TransferFailed;
 			daemonCore->Reset_Timer( m_notify_tid, 0 );
 			return;

@@ -132,7 +132,7 @@ HADStateMachine::~HADStateMachine(void)
 
     invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
     invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
-    line.sprintf( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
+    line.formatstr( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name.Value() );
     daemonCore->sendUpdates( INVALIDATE_HAD_ADS, &invalidate_ad, NULL, false );
@@ -208,7 +208,7 @@ HADStateMachine::softReconfigure(void)
         // 'my_username' allocates dynamic string
         buffer = my_username();
         tmp = buffer ? buffer : "UNKNOWN";
-        m_name.sprintf( "%s@%s", tmp, my_full_hostname( ) );
+        m_name.formatstr( "%s@%s", tmp, my_full_hostname( ) );
 	if ( buffer ) {
 		free( buffer );
 	}

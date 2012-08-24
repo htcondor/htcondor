@@ -610,7 +610,7 @@ void main_init (int argc, char ** const argv) {
 
 		// Construct a string of the minimum submit file version.
 	MyString minSubmitVersionStr;
-	minSubmitVersionStr.sprintf( "%d.%d.%d",
+	minSubmitVersionStr.formatstr( "%d.%d.%d",
 				MIN_SUBMIT_FILE_VERSION.majorVer,
 				MIN_SUBMIT_FILE_VERSION.minorVer,
 				MIN_SUBMIT_FILE_VERSION.subMinorVer );
@@ -825,7 +825,7 @@ void main_init (int argc, char ** const argv) {
 
 		// Just generate this message fragment in one place.
 	MyString versionMsg;
-	versionMsg.sprintf("the version (%s) of this DAG's Condor submit "
+	versionMsg.formatstr("the version (%s) of this DAG's Condor submit "
 				"file (created by condor_submit_dag)", csdVersion );
 
 		// Make sure version in submit file is valid.
@@ -944,7 +944,7 @@ void main_init (int argc, char ** const argv) {
 
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
-		rescueDagMsg.sprintf( "Rescue DAG number %d specified", rescueDagNum );
+		rescueDagMsg.formatstr( "Rescue DAG number %d specified", rescueDagNum );
 		RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
@@ -952,7 +952,7 @@ void main_init (int argc, char ** const argv) {
 		rescueDagNum = FindLastRescueDagNum(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
-		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
+		rescueDagMsg.formatstr( "Found rescue DAG number %d", rescueDagNum );
 	}
 
 		//

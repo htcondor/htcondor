@@ -1335,7 +1335,7 @@ processCommandLineArguments (int argc, char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					mask_head.Append(hd);
 				}
-				else if (flabel) { lbl.sprintf("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fCapV ? "%V" : "%v";
 				mask.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
@@ -1364,7 +1364,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix( arg, "run")) {
 			std::string expr;
-			sprintf( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
+			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			run = true;
@@ -1690,12 +1690,12 @@ bufferJobShort( ClassAd *ad ) {
 
 	ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
 	if ( !description.empty() ){
-		buffer.sprintf("%s", description.c_str());
+		buffer.formatstr("%s", description.c_str());
 	}
 	else if (!args_string.IsEmpty()) {
-		buffer.sprintf( "%s %s", condor_basename(cmd), args_string.Value() );
+		buffer.formatstr( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
-		buffer.sprintf( "%s", condor_basename(cmd) );
+		buffer.formatstr( "%s", condor_basename(cmd) );
 	}
 	free(cmd);
 	utime = job_time(utime,ad);

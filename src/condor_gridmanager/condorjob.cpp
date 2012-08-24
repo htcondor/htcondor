@@ -221,7 +221,7 @@ CondorJob::CondorJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "condor" ) ) {
-			sprintf( error_string, "%s not of type condor",
+			formatstr( error_string, "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -230,7 +230,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		if ( token && *token ) {
 			remoteScheddName = strdup( token );
 		} else {
-			sprintf( error_string, "%s missing schedd name",
+			formatstr( error_string, "%s missing schedd name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -239,13 +239,13 @@ CondorJob::CondorJob( ClassAd *classad )
 		if ( token && *token ) {
 			remotePoolName = strdup( token );
 		} else {
-			sprintf( error_string, "%s missing pool name",
+			formatstr( error_string, "%s missing pool name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -268,7 +268,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		}
 		submitterId = strdup( buff );
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GLOBAL_JOB_ID );
 		goto error_exit;
 	}
@@ -450,7 +450,7 @@ void CondorJob::doEvaluateState()
 			int tmp_int = 0;
 			ClassAd **status_ads = NULL;
 			std::string constraint;
-			sprintf( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
+			formatstr( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
 								remoteJobId.cluster, ATTR_PROC_ID,
 								remoteJobId.proc );
 			rc = gahp->condor_job_status_constrained( remoteScheddName,
@@ -874,7 +874,7 @@ void CondorJob::doEvaluateState()
 			int num_ads;
 			ClassAd **status_ads = NULL;
 			std::string constraint;
-			sprintf( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
+			formatstr( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
 								remoteJobId.cluster, ATTR_PROC_ID,
 								remoteJobId.proc );
 			rc = gahp->condor_job_status_constrained( remoteScheddName,
@@ -1076,7 +1076,7 @@ void CondorJob::doEvaluateState()
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
 			if( remoteJobId.cluster != 0 ) {
-				sprintf( errorString, "Internal error: Attempting to clear "
+				formatstr( errorString, "Internal error: Attempting to clear "
 									 "request, but remoteJobId.cluster(%d) "
 									 "!= 0, condorState is %s (%d)",
 									 remoteJobId.cluster,
@@ -1225,7 +1225,7 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 			return;
 		}
 
-		sprintf( full_job_id, "condor %s %s %s", remoteScheddName,
+		formatstr( full_job_id, "condor %s %s %s", remoteScheddName,
 							 remotePoolName, job_id );
 	} else {
 		remoteJobId.cluster = 0;
@@ -1511,7 +1511,7 @@ ClassAd *CondorJob::buildSubmitAd()
 						   output_remaps.c_str() );
 	}
 
-	sprintf( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
+	formatstr( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
 				  COMPLETED );
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
@@ -1521,11 +1521,11 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Insert( expr.c_str() );
 
-	sprintf( expr, "%s = Undefined", ATTR_OWNER );
+	formatstr( expr, "%s = Undefined", ATTR_OWNER );
 	submit_ad->Insert( expr.c_str() );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
-	sprintf( expr, "%s = (%s > 0) =!= True && time() > %s + %d",
+	formatstr( expr, "%s = (%s > 0) =!= True && time() > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
 	submit_ad->Insert( expr.c_str() );

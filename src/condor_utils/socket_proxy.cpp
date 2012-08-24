@@ -152,7 +152,7 @@ void SocketProxy::execute()
 				}
 				else if( n < 0 ) {
 					MyString error_msg;
-					error_msg.sprintf("Error reading from socket %d: %s\n",
+					error_msg.formatstr("Error reading from socket %d: %s\n",
 									  it->from_socket, strerror(errno));
 					setErrorMsg(error_msg.Value());
 					break;

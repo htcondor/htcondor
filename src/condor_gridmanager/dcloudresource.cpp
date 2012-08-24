@@ -34,7 +34,7 @@ const char * DCloudResource::HashName( const char *resource_name,
 									   const char *password )
 {
 	static MyString hash_name;
-	hash_name.sprintf( "%s#%s#%s", resource_name, username, password );
+	hash_name.formatstr( "%s#%s#%s", resource_name, username, password );
 	return hash_name.Value();
 }
 
@@ -196,7 +196,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 			(status = statuses.next()) ) {
 
 		MyString hashname;
-		hashname.sprintf( "%s#%s", ResourceName(), instance_id );
+		hashname.formatstr( "%s#%s", ResourceName(), instance_id );
 		DCloudJob *job = NULL;
 
 		// TODO We can get rid of the hashtable.

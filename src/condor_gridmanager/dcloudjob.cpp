@@ -182,7 +182,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "deltacloud" ) ) {
-			sprintf( error_string, "%s not of type deltacloud",
+			formatstr( error_string, "%s not of type deltacloud",
 					 ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -191,23 +191,23 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		if ( token ) {
 			m_serviceUrl = strdup( token );
 		} else {
-			sprintf( error_string, "%s missing Deltacloud service URL",
+			formatstr( error_string, "%s missing Deltacloud service URL",
 					 ATTR_GRID_RESOURCE );
 		}
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 				 ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
 	if ( !jobAd->LookupString( ATTR_DELTACLOUD_USERNAME, &m_username ) ) {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 				 ATTR_DELTACLOUD_USERNAME );
 		goto error_exit;
 	}
 
 	if ( !jobAd->LookupString( ATTR_DELTACLOUD_PASSWORD_FILE, &m_password ) ) {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 				 ATTR_DELTACLOUD_PASSWORD_FILE );
 		goto error_exit;
 	}
@@ -217,7 +217,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 	// only fail if no imageid && no 
 	if ( !jobAd->LookupString( ATTR_DELTACLOUD_IMAGE_ID, &m_imageId ) && m_instanceName == NULL) {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 				 ATTR_DELTACLOUD_IMAGE_ID );
 		goto error_exit;
 	}
@@ -240,7 +240,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 		token = str.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "deltacloud" ) ) {
-			sprintf( error_string, "%s not of type deltacloud",
+			formatstr( error_string, "%s not of type deltacloud",
 					 ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -287,7 +287,7 @@ DCloudJob::~DCloudJob()
 
 	if ( m_instanceId ) {
 		MyString hashname;
-		hashname.sprintf( "%s#%s", m_serviceUrl, m_instanceId );
+		hashname.formatstr( "%s#%s", m_serviceUrl, m_instanceId );
 		JobsByInstanceId.insert( HashKey( hashname.Value() ), this );
 	}
 
@@ -986,13 +986,13 @@ void DCloudJob::SetInstanceId( const char *instance_id )
 {
 	MyString hashname;
 	if ( m_instanceId ) {
-		hashname.sprintf( "%s#%s", m_serviceUrl, m_instanceId );
+		hashname.formatstr( "%s#%s", m_serviceUrl, m_instanceId );
 		JobsByInstanceId.remove( HashKey( hashname.Value() ) );
 		free( m_instanceId );
 	}
 	if ( instance_id ) {
 		m_instanceId = strdup( instance_id );
-		hashname.sprintf( "%s#%s", m_serviceUrl, m_instanceId );
+		hashname.formatstr( "%s#%s", m_serviceUrl, m_instanceId );
 		JobsByInstanceId.insert( HashKey( hashname.Value() ), this );
 	} else {
 		m_instanceId = NULL;
@@ -1005,7 +1005,7 @@ void DCloudJob::SetRemoteJobId( const char *instance_name, const char *instance_
 {
 	MyString full_job_id;
 	if ( instance_name && instance_name[0] ) {
-		full_job_id.sprintf( "deltacloud %s", instance_name );
+		full_job_id.formatstr( "deltacloud %s", instance_name );
 		if ( instance_id && instance_id[0] ) {
 			full_job_id.sprintf_cat( " %s", instance_id );
 		}

@@ -511,12 +511,12 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 		if(error_msg) {
 			MyString msg;
 			if(delim == NULL) {
-				msg.sprintf(
+				msg.formatstr(
 				  "ERROR: Missing '=' after environment variable '%s'.",
 				  nameValueExpr);
 			}
 			else {
-				msg.sprintf("ERROR: missing variable in '%s'.",expr);
+				msg.formatstr("ERROR: missing variable in '%s'.",expr);
 			}
 			AddErrorMessage(msg.Value(),error_msg);
 		}
@@ -633,7 +633,7 @@ Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark
 		}
 		else {
 			MyString var_val;
-			var_val.sprintf("%s=%s",var.Value(),val.Value());
+			var_val.formatstr("%s=%s",var.Value(),val.Value());
 			env_list.Append(var_val);
 		}
 	}
@@ -683,7 +683,7 @@ Env::getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim) co
 
 			if(error_msg) {
 				MyString msg;
-				msg.sprintf("Environment entry is not compatible with V1 syntax: %s=%s",var.Value(),val.Value());
+				msg.formatstr("Environment entry is not compatible with V1 syntax: %s=%s",var.Value(),val.Value());
 				AddErrorMessage(msg.Value(),error_msg);
 			}
 			return false;

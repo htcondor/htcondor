@@ -109,11 +109,11 @@ Condor_Auth_Passwd::fetchLogin()
 	
 		// decide the login name we will try to authenticate with.  
 	if ( is_root() ) {
-		login.sprintf("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	} else {
 		// for now, always use the POOL_PASSWORD_USERNAME.  at some
 		// point this code should call my_username() my_domainname().
-		login.sprintf("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
 	return strdup( login.Value() );

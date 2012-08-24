@@ -240,13 +240,13 @@ class MyString
 	 *  Assuming, of course, that you don't run out of memory. 
 	 *  The returns true if it succeeded, false otherwise.
 	 */
-	bool sprintf(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
+	bool formatstr(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 	/** Fills a MyString with what you would have gotten from vsprintf.
 	 *  This is handy if you define your own printf-like functions.
 	 */
 
-	bool vsprintf(const char *format, va_list args);
+	bool vformatstr(const char *format, va_list args);
 
 	/** Like sprintf, but this appends to existing data. */
 	bool sprintf_cat(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);

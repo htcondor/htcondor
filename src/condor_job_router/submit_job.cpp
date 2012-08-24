@@ -127,13 +127,13 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	int status;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
 		if(error_details) {
-			error_details->sprintf("Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
+			error_details->formatstr("Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
 		}
 		return CJR_ERROR;
 	}
 	if(status != IDLE) {
 		if(error_details) {
-			error_details->sprintf("Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
+			error_details->formatstr("Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
 		}
 		return CJR_BUSY;
 	}
@@ -145,7 +145,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 		free(managed);
 		if( ! ok ) {
 			if(error_details) {
-				error_details->sprintf("Job %d.%d is already managed by another process", cluster, proc); 
+				error_details->formatstr("Job %d.%d is already managed by another process", cluster, proc); 
 			}
 			return CJR_BUSY;
 		}
@@ -155,7 +155,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	// No one else has a claim.  Claim it ourselves.
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL) == -1 ) {
 		if(error_details) {
-			error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+			error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
 		}
 		return CJR_ERROR;
 	}
@@ -163,7 +163,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	if(my_identity) {
 		if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, my_identity) == -1 ) {
 			if(error_details) {
-				error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+				error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
 			}
 			return CJR_ERROR;
 		}
@@ -238,7 +238,7 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res == CJR_OK) {
-			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
+			error_details->formatstr("Failed to commit job claim for schedd %s in pool %s",
 				schedd_name ? schedd_name : "local schedd",
 				pool_name ? pool_name : "local pool");
 		}
@@ -262,7 +262,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
 			if( !SpooledJobFiles::createJobSpoolDirectory(&old_job_ad,PRIV_USER) ) {
 				if( error_details ) {
-					error_details->sprintf("Failed to create/chown source job spool directory to the user.");
+					error_details->formatstr("Failed to create/chown source job spool directory to the user.");
 				}
 				yield_job(ad,pool_name,schedd_name,true,cluster,proc,error_details,my_identity,false);
 				return CJR_ERROR;
@@ -293,7 +293,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 	}
 	if( ! is_managed ) {
 		if(error_details) {
-			error_details->sprintf("Job %d.%d is not managed!", cluster, proc); 
+			error_details->formatstr("Job %d.%d is not managed!", cluster, proc); 
 		}
 		*keep_trying = false;
 		return false;
@@ -304,7 +304,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED_MANAGER, &manager) >= 0) {
 			if(strcmp(manager, my_identity) != 0) {
 				if(error_details) {
-					error_details->sprintf("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
+					error_details->formatstr("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
 				}
 				free(manager);
 				*keep_trying = false;
@@ -325,7 +325,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 	const char * newsetting = done ? MANAGED_DONE : MANAGED_SCHEDD;
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, newsetting) == -1 ) {
 		if(error_details) {
-			error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
+			error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
 		}
 		return false;
 	}
@@ -394,7 +394,7 @@ static bool yield_job_with_current_privs(
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res) {
-			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
+			error_details->formatstr("Failed to commit job claim for schedd %s in pool %s",
 				schedd_name ? schedd_name : "local schedd",
 				pool_name ? pool_name : "local pool");
 		}
@@ -474,7 +474,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 
 		// we want the job to hang around (taken from condor_submit.V6/submit.C)
 	MyString leaveinqueue;
-	leaveinqueue.sprintf("%s == %d", ATTR_JOB_STATUS, COMPLETED);
+	leaveinqueue.formatstr("%s == %d", ATTR_JOB_STATUS, COMPLETED);
 	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 
 	ExprTree * tree;
@@ -735,7 +735,7 @@ static bool finalize_job_with_current_privs(classad::ClassAd const &job,int clus
 	}
 
 	MyString constraint;
-	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	constraint.formatstr("(ClusterId==%d&&ProcId==%d)", cluster, proc);
 
 
 	if( is_sandboxed ) {
@@ -795,12 +795,12 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 		if(!schedd_name) { schedd_name = "local schedd"; }
 		if(!pool_name) { pool_name = "local pool"; }
 		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
-		error_desc.sprintf("Unable to find address of %s at %s", schedd_name, pool_name);
+		error_desc.formatstr("Unable to find address of %s at %s", schedd_name, pool_name);
 		return false;
 	}
 
 	MyString constraint;
-	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	constraint.formatstr("(ClusterId==%d&&ProcId==%d)", cluster, proc);
 	ClassAd *result_ad;
 
 	result_ad = schedd.removeJobs(constraint.Value(), reason, &errstack, AR_LONG);

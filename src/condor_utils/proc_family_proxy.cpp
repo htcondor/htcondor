@@ -490,7 +490,7 @@ ProcFamilyProxy::start_procd()
 			EXCEPT("GLEXEC_JOB is defined, but LIBEXEC not configured");
 		}
 		MyString glexec_kill;
-		glexec_kill.sprintf("%s/condor_glexec_kill", libexec);
+		glexec_kill.formatstr("%s/condor_glexec_kill", libexec);
 		free(libexec);
 		args.AppendArg(glexec_kill.Value());
 		char* glexec = param("GLEXEC");

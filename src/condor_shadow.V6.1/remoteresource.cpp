@@ -718,7 +718,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 			MyString filetrans_claimid;
 				// prepend something to the claim id so that the session id
 				// is different for file transfer than for the claim session
-			filetrans_claimid.sprintf("filetrans.%s",claim_id);
+			filetrans_claimid.formatstr("filetrans.%s",claim_id);
 			m_filetrans_session = ClaimIdParser(filetrans_claimid.Value());
 
 				// Get rid of session parameters set by startd.
@@ -1920,7 +1920,7 @@ RemoteResource::requestReconnect( void )
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {
-		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
+		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
 		req.Insert(msg.Value());
 		free(value);
 		value = NULL;
@@ -1930,7 +1930,7 @@ RemoteResource::requestReconnect( void )
 	}
 	jobAd->LookupString(ATTR_TRANSFER_SOCKET,&value);
 	if (value) {
-		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
+		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
 		req.Insert(msg.Value());
 		free(value);
 		value = NULL;

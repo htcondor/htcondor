@@ -230,10 +230,10 @@ VanillaProc::StartJob()
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
 		ASSERT (starter_name.size());
-		cgroup_uniq.sprintf("%s_%s", execute_str.c_str(), starter_name.c_str());
+		cgroup_uniq.formatstr("%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		cgroup_uniq.replaceString(dir_delim, "_");
-		cgroup_str.sprintf("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
+		cgroup_str.formatstr("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.Value());
 		cgroup = cgroup_str.Value();
 		ASSERT (cgroup != NULL);

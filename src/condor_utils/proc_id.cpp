@@ -125,7 +125,7 @@ procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str)
 	}
 
 	for(i = 0; i < procids->length(); i++) {
-		tmp.sprintf("%d.%d", (*procids)[i].cluster, (*procids)[i].proc);
+		tmp.formatstr("%d.%d", (*procids)[i].cluster, (*procids)[i].proc);
 		str += tmp;
 		// don't put a comma on the last one.
 		if (i < (procids->length() - 1)) {

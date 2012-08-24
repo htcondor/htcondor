@@ -134,7 +134,7 @@ doContactSchedd()
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr, ScheddPool );
 	if (dc_schedd.error() || !dc_schedd.locate()) {
-		sprintf( error_msg, "Error locating schedd %s", ScheddAddr );
+		formatstr( error_msg, "Error locating schedd %s", ScheddAddr );
 
 		dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 
@@ -262,7 +262,7 @@ doContactSchedd()
 		// Analyze the result ad
 		if (!result_ad) {
 			error = TRUE;
-			sprintf( error_msg, "Error connecting to schedd %s %s: %s",
+			formatstr( error_msg, "Error connecting to schedd %s %s: %s",
 					 ScheddAddr, dc_schedd.addr(), errstack.getFullText().c_str() );
 		}
 		else {
@@ -395,7 +395,7 @@ doContactSchedd()
 										  array,
 										  &errstack )) {
 				error = TRUE;
-				sprintf( error_msg, "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText().c_str() );
+				formatstr( error_msg, "Error sending files to schedd %s: %s", ScheddAddr, errstack.getFullText().c_str() );
 				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 			}
 			delete [] array;
@@ -456,14 +456,14 @@ doContactSchedd()
 		if (!dc_schedd.receiveJobSandbox( constraint.c_str(),
 										  &errstack, &jobssent )) {
 			error = TRUE;
-			sprintf( error_msg, "Error receiving files from schedd %s: %s",
+			formatstr( error_msg, "Error receiving files from schedd %s: %s",
 							   ScheddAddr, errstack.getFullText().c_str() );
 			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
 
 		if(error == FALSE && jobssent != jobsexpected) {
 			error = TRUE;
-			sprintf( error_msg, "Schedd %s didn't send expected files",
+			formatstr( error_msg, "Schedd %s didn't send expected files",
 					 ScheddAddr );
 			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.c_str());
 		}
@@ -537,7 +537,7 @@ doContactSchedd()
 		current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 		if (result == false) {
-			sprintf( error_msg, "Error refreshing proxy to schedd %s: %s",
+			formatstr( error_msg, "Error refreshing proxy to schedd %s: %s",
 					 ScheddAddr, errstack.getFullText().c_str() );
 			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 
@@ -564,7 +564,7 @@ doContactSchedd()
 	
 	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, NULL, NULL, dc_schedd.version() )) == NULL) {
 		error = TRUE;
-		sprintf( error_msg, "Error connecting to schedd %s", ScheddAddr );
+		formatstr( error_msg, "Error connecting to schedd %s", ScheddAddr );
 		dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 	} else {
 		errno = 0;
@@ -610,7 +610,7 @@ doContactSchedd()
 
 			rhstr = ExprTreeToString( tree );
 			if( !lhstr || !rhstr) {
-				sprintf( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
+				formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
 				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 				error = TRUE;
@@ -624,7 +624,7 @@ doContactSchedd()
 							failure_errno = errno;
 							goto contact_schedd_disconnect;
 						}
-						sprintf( error_msg, "ERROR: Failed (errno=%d) to SetAttributeByConstraint %s=%s for constraint %s",
+						formatstr( error_msg, "ERROR: Failed (errno=%d) to SetAttributeByConstraint %s=%s for constraint %s",
 									errno, lhstr, rhstr, current_command->constraint );
 						dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 						error = TRUE;
@@ -639,7 +639,7 @@ doContactSchedd()
 							failure_errno = errno;
 							goto contact_schedd_disconnect;
 						}
-						sprintf( error_msg, "ERROR: Failed to SetAttribute() %s=%s for job %d.%d",
+						formatstr( error_msg, "ERROR: Failed to SetAttribute() %s=%s for job %d.%d",
 										 lhstr, rhstr, current_command->cluster_id,  current_command->proc_id);
 						dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 						error = TRUE;
@@ -702,7 +702,7 @@ update_report_result:
 
 		std::string success_job_ids="";
 		if (qmgr_connection == NULL) {
-			sprintf( error_msg, "Error connecting to schedd %s", ScheddAddr );
+			formatstr( error_msg, "Error connecting to schedd %s", ScheddAddr );
 			error = TRUE;
 		} else {
 			error = FALSE;
@@ -861,7 +861,7 @@ update_report_result:
 			if(!arglist.AppendArgsFromClassAd(current_command->classad,&arg_error_msg) ||
 		   !	arglist.InsertArgsIntoClassAd(current_command->classad,&version_info,&arg_error_msg))
 			{
-				sprintf( error_msg,
+				formatstr( error_msg,
 						"ERROR: ClassAd problem in converting arguments to syntax "
 						"for schedd (version=%s): %s\n",
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
@@ -873,7 +873,7 @@ update_report_result:
 			if(!env_obj.MergeFrom(current_command->classad,&env_error_msg) ||
 			   !env_obj.InsertEnvIntoClassAd(current_command->classad,&env_error_msg,NULL,&version_info))
 			{
-				sprintf( error_msg,
+				formatstr( error_msg,
 						"ERROR: Failed to convert environment to target syntax"
 						" for schedd (version %s): %s\n",
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
@@ -908,7 +908,7 @@ update_report_result:
 						failure_errno = errno;
 						goto contact_schedd_disconnect;
 					}
-					sprintf( error_msg, "ERROR: Failed to SetTimerAttribute %s=%ld for job %d.%d",
+					formatstr( error_msg, "ERROR: Failed to SetTimerAttribute %s=%ld for job %d.%d",
 							 ATTR_TIMER_REMOVE_CHECK, expire_time - time(NULL), ClusterId, ProcId );
 					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
@@ -925,7 +925,7 @@ update_report_result:
 
 				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {
-					sprintf( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
+					formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
 					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
@@ -937,7 +937,7 @@ update_report_result:
 						failure_errno = errno;
 						goto contact_schedd_disconnect;
 					}
-					sprintf( error_msg, "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
+					formatstr( error_msg, "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
 									 lhstr, rhstr, ClusterId, ProcId );
 					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
@@ -1051,7 +1051,7 @@ submit_report_result:
 			const char ** result  = new const char* [matching_ads.Length() + 3];
 
 			std::string _ad_count;
-			sprintf( _ad_count, "%d", matching_ads.Length() );
+			formatstr( _ad_count, "%d", matching_ads.Length() );
 
 			int count=0;
 			result[count++] = GAHP_RESULT_SUCCESS;
@@ -1100,12 +1100,12 @@ submit_report_result:
 		if ( failure_errno == ETIMEDOUT ) {
 			dprintf( D_ALWAYS, "Timed out talking to schedd at line %d in "
 					 "doContactSchedd()\n", failure_line_num );
-			sprintf( error_msg, "Timed out talking to schedd" );
+			formatstr( error_msg, "Timed out talking to schedd" );
 		} else {
 			dprintf( D_ALWAYS, "Error talking to schedd at line %d in "
 					 "doContactSchedd(), errno=%d (%s)\n", failure_line_num,
 					 failure_errno, strerror(failure_errno) );
-			sprintf( error_msg, "Error talking to schedd" );
+			formatstr( error_msg, "Error talking to schedd" );
 		}
 		command_queue.Rewind();
 		while (command_queue.Next(current_command)) {
@@ -1520,7 +1520,7 @@ enqueue_result (int req_id, const char ** results, const int argc)
 {
 	std::string *buffer = new std::string();
 
-	sprintf( *buffer, "%d", req_id );
+	formatstr( *buffer, "%d", req_id );
 
 	for ( int i = 0; i < argc; i++ ) {
 		*buffer += ' ';

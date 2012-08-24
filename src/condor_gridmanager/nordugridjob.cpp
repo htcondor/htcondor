@@ -198,7 +198,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			sprintf( error_string, "%s is not set in the job ad",
+			formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -228,7 +228,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "nordugrid" ) ) {
-			sprintf( error_string, "%s not of type nordugrid",
+			formatstr( error_string, "%s not of type nordugrid",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -237,13 +237,13 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			sprintf( error_string, "%s missing server name",
+			formatstr( error_string, "%s missing server name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -574,7 +574,7 @@ void NordugridJob::doEvaluateState()
 		case GM_EXIT_INFO: {
 			std::string filter;
 			StringList reply;
-			sprintf( filter, "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
+			formatstr( filter, "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
 							resourceManagerString, remoteJobId );
 
 			rc = gahp->nordugrid_ldap_query( resourceManagerString, "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-usedcputime,nordugrid-job-usedwalltime,nordugrid-job-exitcode", reply );
@@ -895,7 +895,7 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		sprintf( full_job_id, "nordugrid %s %s", resourceManagerString,
+		formatstr( full_job_id, "nordugrid %s %s", resourceManagerString,
 							 job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
@@ -926,7 +926,7 @@ std::string *NordugridJob::buildSubmitRSL()
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	sprintf( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
+	formatstr( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -950,7 +950,7 @@ std::string *NordugridJob::buildSubmitRSL()
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
-			sprintf(errorString,"Failed to read job arguments: %s\n",
+			formatstr(errorString,"Failed to read job arguments: %s\n",
 					arg_errors.Value());
 			delete rsl;
 			return NULL;
@@ -962,7 +962,7 @@ std::string *NordugridJob::buildSubmitRSL()
 					dprintf(D_ALWAYS,
 							"(%d.%d) Failed to get job arguments: %s\n",
 							procID.cluster,procID.proc,arg_errors.Value());
-					sprintf(errorString,"Failed to get job arguments: %s\n",
+					formatstr(errorString,"Failed to get job arguments: %s\n",
 							arg_errors.Value());
 					delete rsl;
 					return NULL;
@@ -1118,9 +1118,9 @@ StringList *NordugridJob::buildStageInList()
 	tmp_list->rewind();
 	while ( ( filename = tmp_list->next() ) ) {
 		if ( filename[0] == '/' || IsUrl( filename ) ) {
-			sprintf( buf, "%s", filename );
+			formatstr( buf, "%s", filename );
 		} else {
-			sprintf( buf, "%s%s", iwd.c_str(), filename );
+			formatstr( buf, "%s%s", iwd.c_str(), filename );
 		}
 		stage_list->append( buf.c_str() );
 	}
@@ -1206,7 +1206,7 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 			 || IsUrl( local_name.Value() ) ) {
 			buff = local_name;
 		} else {
-			sprintf( buff, "%s%s", iwd.c_str(), local_name.Value() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
 		}
 		stage_local_list->append( buff.c_str() );
 	}

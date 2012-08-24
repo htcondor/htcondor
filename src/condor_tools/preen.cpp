@@ -208,7 +208,7 @@ produce_output()
 	char	*str;
 	FILE	*mailer;
 	MyString subject,szTmp;
-	subject.sprintf("condor_preen results %s: %d old file%s found", 
+	subject.formatstr("condor_preen results %s: %d old file%s found", 
 		my_full_hostname(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
 
@@ -220,7 +220,7 @@ produce_output()
 		mailer = stdout;
 	}
 
-	szTmp.sprintf("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
+	szTmp.formatstr("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
 	dprintf(D_ALWAYS, "%s", szTmp.Value()); 
 		
 	if( MailFlag ) {
@@ -229,7 +229,7 @@ produce_output()
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		szTmp.sprintf("  %s\n", str);
+		szTmp.formatstr("  %s\n", str);
 		dprintf(D_ALWAYS, "%s", szTmp.Value() );
 		fprintf( mailer, "%s", szTmp.Value() );
 	}
@@ -269,7 +269,7 @@ check_job_spool_hierarchy( char const *parent, char const *child, StringList &ba
 	}
 
 	std::string topdir;
-	sprintf(topdir,"%s%c%s",parent,DIR_DELIM_CHAR,child);
+	formatstr(topdir,"%s%c%s",parent,DIR_DELIM_CHAR,child);
 	Directory dir(topdir.c_str(),PRIV_ROOT);
 	char const *f;
 	while( (f=dir.Next()) ) {
@@ -457,7 +457,7 @@ is_valid_shared_exe( const char *name )
 		return FALSE;
 	}
 	MyString path;
-	path.sprintf("%s/%s", Spool, name);
+	path.formatstr("%s/%s", Spool, name);
 	int count = link_count(path.Value());
 	if (count == 1) {
 		return FALSE;
@@ -705,7 +705,7 @@ check_daemon_sock_dir()
 
 	while( (f = dir.Next()) ) {
 		MyString full_path;
-		full_path.sprintf("%s%c%s",DaemonSockDir,DIR_DELIM_CHAR,f);
+		full_path.formatstr("%s%c%s",DaemonSockDir,DIR_DELIM_CHAR,f);
 
 			// daemon sockets are touched periodically to mark them as
 			// still in use
@@ -869,7 +869,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	buf;
 
 	if( is_relative_to_cwd( name ) ) {
-	pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	pathname.formatstr( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 	}
 	else {
 		pathname = name;
@@ -892,12 +892,12 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 			}
 		}
 		if( removed ) {
-			buf.sprintf( "%s - Removed", pathname.Value() );
+			buf.formatstr( "%s - Removed", pathname.Value() );
 		} else {
-			buf.sprintf( "%s - Can't Remove", pathname.Value() );
+			buf.formatstr( "%s - Can't Remove", pathname.Value() );
 		}
 	} else {
-		buf.sprintf( "%s - Not Removed", pathname.Value() );
+		buf.formatstr( "%s - Not Removed", pathname.Value() );
 	}
 	BadFiles->append( buf.Value() );
 }

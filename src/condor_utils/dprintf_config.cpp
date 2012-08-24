@@ -261,7 +261,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 						EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
 					}
 
-					sprintf(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);
+					formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);
 
 					free(lsubsys);
 				}
@@ -340,7 +340,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 			bool r = lex_cast(pval, maxlog);
 			if (!r || (maxlog < 0)) {
 				std::string m;
-				sprintf(m, "Invalid config %s = %s: %s must be an integer literal >= 0\n", pname, pval, pname);
+				formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0\n", pname, pval, pname);
 				_condor_dprintf_exit(EINVAL, m.c_str());
 			}
 			DebugParams[param_index].maxLog = maxlog;

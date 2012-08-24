@@ -94,7 +94,7 @@ DCMsg::name()
 	m_cmd_str = getCommandString( m_cmd );
 	if( !m_cmd_str ) {
 		std::string buf;
-		sprintf(buf,"command %d",m_cmd);
+		formatstr(buf,"command %d",m_cmd);
 		m_cmd_str = buf.c_str();
 	}
 	return m_cmd_str;
@@ -464,7 +464,7 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	msg->setMessenger( this );
 
 	std::string name;
-	sprintf(name, "DCMessenger::receiveMsgCallback %s", msg->name());
+	formatstr(name, "DCMessenger::receiveMsgCallback %s", msg->name());
 
 	incRefCount();
 
