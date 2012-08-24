@@ -442,23 +442,23 @@ condor_auth_config(int is_daemon)
 	if (pbuf) {
 
 		if( !trustedca_buf) {
-			buffer.sprintf( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
+			buffer.formatstr( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
 			SetEnv( STR_GSI_CERT_DIR, buffer.Value() );
 		}
 
 		if (!mapfile_buf ) {
-			buffer.sprintf( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
+			buffer.formatstr( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
 			SetEnv( STR_GSI_MAPFILE, buffer.Value() );
 		}
 
 		if( is_daemon ) {
 			if( !cert_buf ) {
-				buffer.sprintf( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
+				buffer.formatstr( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
 				SetEnv( STR_GSI_USER_CERT, buffer.Value() );
 			}
 	
 			if (!key_buf ) {
-				buffer.sprintf( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
+				buffer.formatstr( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
 				SetEnv( STR_GSI_USER_KEY, buffer.Value() );
 			}
 		}
