@@ -678,7 +678,7 @@ condor__removeCluster(struct soap *soap,
 	}
 
 	MyString constraint;
-	constraint.sprintf("%s==%d", ATTR_CLUSTER_ID, clusterId);
+	constraint.formatstr("%s==%d", ATTR_CLUSTER_ID, clusterId);
 
         // NOTE: There is an assumption here that the owner of the
         // first job in a cluster is the owner of all the jobs in
