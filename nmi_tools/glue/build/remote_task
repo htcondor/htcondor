@@ -117,8 +117,8 @@ elsif ($taskname eq $CHECK_TAR_TASK) {
 elsif ($taskname eq $NATIVE_TASK) {
     # Create native packages on Red Hat and Debian
     print "Create native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
-    if ($ENV{NMI_PLATFORM} =~ /deb/) {
-        print "Detected OS is Debian.  Creating Deb package.\n";
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/) {
+        print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb();
     }
     elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
