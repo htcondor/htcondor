@@ -460,7 +460,7 @@ if ($opt_bosco) {
 
     # Campus Factory configuration
     my $config_dir=$local_dir . "/config";
-    system("mkdir -p $config_dir && cp $opt_prefix_dir/etc/condor/config.d/condor_config.factory $config_dir ");
+    system("mkdir -p $config_dir && cp $opt_prefix_dir/etc/examples/condor_config.factory $config_dir ");
 
 
 }

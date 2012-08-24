@@ -16,39 +16,20 @@
  # 
  ############################################################### 
 
-# The source tarball for this external was downloaded from this URL:
-#   http://jra1mw.cvs.cern.ch:8180/cgi-bin/jra1mw.cgi/org.glite.ce.blahp.tar.gz?view=tar&pathrev=glite-ce-blahp_R_1_16_5_1
-
 if ( LINUX )
-	option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" OFF)
+	if ( WANT_FULL_DEPLOYMENT )
+		option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" ON)
+	else ( WANT_FULL_DEPLOYMENT )
+		option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" OFF)
+	endif ( WANT_FULL_DEPLOYMENT )
 endif ( LINUX )
 
 if ( WITH_CAMPUSFACTORY )
 
-	if ( NOT PROPER )
-        #add_dependencies( CAMPUSFACTORY ${BLAHP_FOUND} )
-
-		install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python-lib DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
+	install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python-lib DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
         install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
         install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/campus_factory ${CMAKE_CURRENT_SOURCE_DIR}/bin/runfactory DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS}) 
         install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/etc/campus_factory.conf DESTINATION ${C_LIBEXEC}/campus_factory/etc )
-        install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/condor/condor_config.factory DESTINATION ${C_CONFIGD} )
+        install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/condor/condor_config.factory DESTINATION ${C_ETC_EXAMPLES} )
 		
-		set(CAMPUSFACTORY_FOUND ON)
-
-	else ( NOT PROPER )
-
-		
-	endif ( NOT PROPER )
-
-
 endif( WITH_CAMPUSFACTORY )
-
-if ( CAMPUSFACTORY_FOUND )
-	message( STATUS "external configured (campusfactory) CAMPUSFACTORY_FOUND=${CAMPUSFACTORY_FOUND}" )
-	set( CAMPUSFACTORY_FOUND ${CAMPUSFACTORY_FOUND} PARENT_SCOPE )
-	set( HAVE_EXT_CAMPUSFACTORY ON PARENT_SCOPE )
-else()
-	message ( STATUS "external skipped (campusfactory)" )
-endif ( CAMPUSFACTORY_FOUND )
-	
