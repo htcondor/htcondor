@@ -2523,7 +2523,7 @@ static bool replace_string_return_true() {
 static bool sprintf_empty() {
 	emit_test("Test sprintf() on an empty MyString.");
 	MyString a;
-	a.sprintf("%s %d", "happy", 3);
+	a.formatstr("%s %d", "happy", 3);
 	emit_input_header();
 	emit_param("STRING", "%s", "happy");
 	emit_param("INT", "%d", 3);
@@ -2541,7 +2541,7 @@ static bool sprintf_empty() {
 static bool sprintf_non_empty() {
 	emit_test("Test sprintf() on a non-empty MyString.");
 	MyString a("replace me!");
-	a.sprintf("%s %d", "sad", 5);
+	a.formatstr("%s %d", "sad", 5);
 	emit_input_header();
 	emit_param("STRING", "%s", "sad");
 	emit_param("INT", "%d", 5);
@@ -2558,7 +2558,7 @@ static bool sprintf_non_empty() {
 static bool sprintf_return_true() {
 	emit_test("Does sprintf() return true on success?");
 	MyString a;
-	bool res = a.sprintf("%s %d", "sad", 5);
+	bool res = a.formatstr("%s %d", "sad", 5);
 	emit_input_header();
 	emit_param("STRING", "%s", "sad");
 	emit_param("INT", "%d", 5);

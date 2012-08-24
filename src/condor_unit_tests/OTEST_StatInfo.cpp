@@ -257,7 +257,7 @@ static void setup() {
 	original_dir += DIR_DELIM_CHAR;
 	
 	// Directory strings
-	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
+	cut_assert_true( tmp.formatstr("testtmp%d", getpid()) );
 	
 	// Make a temporary directory to test
 	cut_assert_z( mkdir(tmp.Value(), 0700) );
@@ -266,13 +266,13 @@ static void setup() {
 	// Store some directories
 	cut_assert_true( condor_getcwd(tmp_dir) );
 	tmp_dir += DIR_DELIM_CHAR;
-	cut_assert_true( empty_dir.sprintf("%s%s%c", tmp_dir.Value(), "empty_dir",
+	cut_assert_true( empty_dir.formatstr("%s%s%c", tmp_dir.Value(), "empty_dir",
 					 DIR_DELIM_CHAR) );
-	cut_assert_true( full_dir.sprintf("%s%s%c", tmp_dir.Value(), "full_dir",
+	cut_assert_true( full_dir.formatstr("%s%s%c", tmp_dir.Value(), "full_dir",
 					 DIR_DELIM_CHAR) );
-	cut_assert_true( invalid_dir.sprintf("%s%c", "DoesNotExist",
+	cut_assert_true( invalid_dir.formatstr("%s%c", "DoesNotExist",
 					 DIR_DELIM_CHAR) );
-	cut_assert_true( file_dir.sprintf("%s%s%c", full_dir.Value(), "full_file",
+	cut_assert_true( file_dir.formatstr("%s%s%c", full_dir.Value(), "full_file",
 					 DIR_DELIM_CHAR) );
 	
 	// Put some files/directories in there
@@ -282,9 +282,9 @@ static void setup() {
 	// Create some symbolic links
 #ifndef WIN32
 	MyString link;
-	cut_assert_true( link.sprintf("%s%s", full_dir.Value(), "full_file") );
+	cut_assert_true( link.formatstr("%s%s", full_dir.Value(), "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
-	cut_assert_true( link.sprintf("%s%s", full_dir.Value(), "link_dir") );
+	cut_assert_true( link.formatstr("%s%s", full_dir.Value(), "link_dir") );
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
 	
 	cut_assert_z( chdir("full_dir") );
@@ -356,7 +356,7 @@ static bool test_path_constructor_null() {
 static bool test_path_constructor_file() {
 	emit_test("Test the StatInfo constructor when passed a valid file path.");
 	MyString path;
-	path.sprintf("%s%s", full_dir.Value(), "full_file");
+	path.formatstr("%s%s", full_dir.Value(), "full_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -375,7 +375,7 @@ static bool test_path_constructor_dir() {
 	emit_test("Test the StatInfo constructor when passed a valid directory "
 		"path.");
 	MyString path;
-	path.sprintf("%s%s", tmp_dir.Value(), "full_dir");
+	path.formatstr("%s%s", tmp_dir.Value(), "full_dir");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -561,7 +561,7 @@ static bool test_full_path_path() {
 	emit_test("Test that FullPath() returns the correct full path for a "
 		"StatInfo object constructed from a valid path.");
 	MyString path;
-	path.sprintf("%s%s", full_dir.Value(), "empty_file");
+	path.formatstr("%s%s", full_dir.Value(), "empty_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -584,7 +584,7 @@ static bool test_full_path_path_name() {
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "full_file");
 	MyString path;
-	path.sprintf("%s%s", full_dir.Value(), "full_file");
+	path.formatstr("%s%s", full_dir.Value(), "full_file");
 	emit_output_expected_header();
 	emit_retval("%s", path.Value());
 	StatInfo info(path.Value());
@@ -636,7 +636,7 @@ static bool test_base_name_file_just_path() {
 	emit_test("Test that BaseName() returns the correct base name for a "
 		"StatInfo object constructed from just a file path.");
 	MyString path;
-	path.sprintf("%s%s", full_dir.Value(), "full_file");
+	path.formatstr("%s%s", full_dir.Value(), "full_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -745,7 +745,7 @@ static bool test_dir_path_file_no_delim() {
 		"StatInfo object constructed from a valid file when the directory path "
 		"doesn't end with the directory delimiter.");
 	MyString path;
-	path.sprintf("%s%s", tmp_dir.Value(), "full_dir");
+	path.formatstr("%s%s", tmp_dir.Value(), "full_dir");
 	emit_input_header();
 	emit_param("Directory Path", "%s", path.Value());
 	emit_param("File Name", "full_file");
@@ -765,7 +765,7 @@ static bool test_dir_path_file_just_path() {
 	emit_test("Test that DirPath() returns the correct directory path for a "
 		"StatInfo object constructed from just a file path.");
 	MyString path;
-	path.sprintf("%s%s", full_dir.Value(), "full_file");
+	path.formatstr("%s%s", full_dir.Value(), "full_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -877,7 +877,7 @@ static bool test_get_access_time_file() {
 	emit_param("File Name", "empty_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	file.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
@@ -899,7 +899,7 @@ static bool test_get_access_time_file_old() {
 	emit_param("File Name", "%s", readme);
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
+	file.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
@@ -921,7 +921,7 @@ static bool test_get_access_time_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
@@ -943,7 +943,7 @@ static bool test_get_access_time_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
@@ -965,7 +965,7 @@ static bool test_get_access_time_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
@@ -1005,7 +1005,7 @@ static bool test_get_modify_time_file() {
 	emit_param("File Name", "empty_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	file.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
@@ -1027,7 +1027,7 @@ static bool test_get_modify_time_file_old() {
 	emit_param("File Name", "%s", readme);
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
+	file.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
@@ -1049,7 +1049,7 @@ static bool test_get_modify_time_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
@@ -1071,7 +1071,7 @@ static bool test_get_modify_time_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
@@ -1093,7 +1093,7 @@ static bool test_get_modify_time_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
@@ -1133,7 +1133,7 @@ static bool test_get_create_time_file() {
 	emit_param("File Name", "empty_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	file.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
@@ -1155,7 +1155,7 @@ static bool test_get_create_time_file_old() {
 	emit_param("File Name", "%s", readme);
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
+	file.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
@@ -1177,7 +1177,7 @@ static bool test_get_create_time_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
@@ -1199,7 +1199,7 @@ static bool test_get_create_time_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
@@ -1221,7 +1221,7 @@ static bool test_get_create_time_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
@@ -1262,7 +1262,7 @@ static bool test_get_file_size_file() {
 	emit_param("File Name", "full_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", full_dir.Value(), "full_file");
+	file.formatstr("%s%s", full_dir.Value(), "full_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_size);
@@ -1301,7 +1301,7 @@ static bool test_get_file_size_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "full_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_size);
@@ -1323,7 +1323,7 @@ static bool test_get_file_size_dir_empty() {
 	emit_param("File Name", "empty_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "empty_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "empty_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_size);
@@ -1345,7 +1345,7 @@ static bool test_get_file_size_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_file");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_size);
@@ -1367,7 +1367,7 @@ static bool test_get_file_size_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_size);
@@ -1410,7 +1410,7 @@ static bool test_get_mode_file() {
 	emit_param("File Name", "full_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", full_dir.Value(), "full_file");
+	file.formatstr("%s%s", full_dir.Value(), "full_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%o", st.st_mode);
@@ -1432,7 +1432,7 @@ static bool test_get_mode_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "full_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%o", st.st_mode);
@@ -1454,7 +1454,7 @@ static bool test_get_mode_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_file");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%o", st.st_mode);
@@ -1476,7 +1476,7 @@ static bool test_get_mode_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%o", st.st_mode);
@@ -1742,7 +1742,7 @@ static bool test_get_owner_file() {
 	emit_param("File Name", "full_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", full_dir.Value(), "full_file");
+	file.formatstr("%s%s", full_dir.Value(), "full_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_uid);
@@ -1764,7 +1764,7 @@ static bool test_get_owner_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "full_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_uid);
@@ -1786,7 +1786,7 @@ static bool test_get_owner_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_file");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_uid);
@@ -1808,7 +1808,7 @@ static bool test_get_owner_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_uid);
@@ -1846,7 +1846,7 @@ static bool test_get_group_file() {
 	emit_param("File Name", "full_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", full_dir.Value(), "full_file");
+	file.formatstr("%s%s", full_dir.Value(), "full_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_gid);
@@ -1868,7 +1868,7 @@ static bool test_get_group_dir() {
 	emit_param("File Name", "full_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "full_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "full_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_gid);
@@ -1890,7 +1890,7 @@ static bool test_get_group_symlink_file() {
 	emit_param("File Name", "symlink_file");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_file");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_file");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_gid);
@@ -1912,7 +1912,7 @@ static bool test_get_group_symlink_dir() {
 	emit_param("File Name", "symlink_dir");
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%s", tmp_dir.Value(), "symlink_dir");
+	file.formatstr("%s%s", tmp_dir.Value(), "symlink_dir");
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%u", st.st_gid);

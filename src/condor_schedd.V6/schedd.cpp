@@ -1973,7 +1973,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				dprintf(D_ALWAYS, "init_user_ids() failed - putting job on "
 					   "hold.\n");
 #ifdef WIN32
-				msg.sprintf("Bad or missing credential for user: %s", owner.Value());
+				msg.formatstr("Bad or missing credential for user: %s", owner.Value());
 #else
 				msg.formatstr("Unable to switch to user: %s", owner.Value());
 #endif
@@ -7584,7 +7584,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	if (! init_user_ids(owner.Value(), domain.Value()) ) {
 		MyString tmpstr;
 #ifdef WIN32
-		tmpstr.sprintf("Bad or missing credential for user: %s", owner.Value());
+		tmpstr.formatstr("Bad or missing credential for user: %s", owner.Value());
 #else
 		tmpstr.formatstr("Unable to switch to user: %s", owner.Value());
 #endif

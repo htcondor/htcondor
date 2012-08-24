@@ -2257,7 +2257,7 @@ Daemons::FinalRestartMaster()
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
 			MyString command;
-			command.sprintf("net stop %s & net start %s", 
+			command.formatstr("net stop %s & net start %s", 
 				_condor_myServiceName, _condor_myServiceName);
 			dprintf( D_ALWAYS, "Doing exec( \"%s /Q /C %s\" )\n", 
 				 systemshell,command.Value());

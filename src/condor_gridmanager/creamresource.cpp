@@ -508,7 +508,7 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 #ifdef WIN32
 				struct _timeb timebuffer;
 				_ftime( &timebuffer );
-				sprintf( delegation_uri, "%d.%d", timebuffer.time, timebuffer.millitm );
+				formatstr( delegation_uri, "%d.%d", timebuffer.time, timebuffer.millitm );
 #else
 				struct timeval tv;
 				gettimeofday( &tv, NULL );

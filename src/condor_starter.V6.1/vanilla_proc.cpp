@@ -117,7 +117,7 @@ VanillaProc::StartJob()
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
 					condor_basename ( jobname.Value () ) ) ) {
-				filename.sprintf ( "condor_exec%s", extension );
+				filename.formatstr ( "condor_exec%s", extension );
 				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 

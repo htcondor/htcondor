@@ -1721,7 +1721,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// check for write permission on this file, if we are supposed to check
 			if ( perm_obj && (perm_obj->write_access(fullname.Value()) != 1) ) {
 				// we do _not_ have permission to write this file!!
-				error_buf.sprintf("Permission denied to write file %s!",
+				error_buf.formatstr("Permission denied to write file %s!",
 				                   fullname.Value());
 				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 				download_success = false;
@@ -2593,7 +2593,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			(perm_obj->read_access(fullname.Value()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
-			error_desc.sprintf("error reading from %s: permission denied",fullname.Value());
+			error_desc.formatstr("error reading from %s: permission denied",fullname.Value());
 			do_upload_ack = true;    // tell receiver that we failed
 			do_download_ack = true;
 			try_again = false; // put job on hold

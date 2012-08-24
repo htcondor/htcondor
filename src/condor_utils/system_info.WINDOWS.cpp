@@ -681,7 +681,7 @@ BOOL SystemHandleInformation::GetNameByType( HANDLE h, WORD type, MyString& str,
 		GetProcessId( handle, dwId );
 		
 		//str.Format( "PID: 0x%X", dwId );
-		str.sprintf( "PID: 0x%X", dwId );
+		str.formatstr( "PID: 0x%X", dwId );
 			
 		ret = TRUE;
 		goto cleanup;
@@ -690,7 +690,7 @@ BOOL SystemHandleInformation::GetNameByType( HANDLE h, WORD type, MyString& str,
 	case OB_TYPE_THREAD:
 		GetThreadId( handle, dwId );
 
-		str.sprintf( "TID: 0x%X" , dwId );
+		str.formatstr( "TID: 0x%X" , dwId );
 				
 		ret = TRUE;
 		goto cleanup;
@@ -783,7 +783,7 @@ BOOL SystemHandleInformation::GetProcessPath( HANDLE h, MyString& strPath, DWORD
 {
 	h; strPath; remoteProcessId;
 
-	strPath.sprintf( "%d", remoteProcessId );
+	strPath.formatstr( "%d", remoteProcessId );
 
 	return TRUE;
 }

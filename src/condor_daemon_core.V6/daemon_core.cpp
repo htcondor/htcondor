@@ -1713,7 +1713,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 #ifdef WIN32
 	static unsigned pipe_counter = 0;
 	MyString pipe_name;
-	pipe_name.sprintf("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
+	pipe_name.formatstr("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
 	return Create_Named_Pipe(pipe_ends,
 		can_register_read,
 		can_register_write,
@@ -6643,7 +6643,7 @@ int DaemonCore::Create_Process(
 		/** surround the executable name with quotes or you'll 
 			have problems when the execute directory contains 
 			spaces! */
-		strArgs.sprintf ( 
+		strArgs.formatstr ( 
 			"\"%s\"",
 			executable );
 		
@@ -6676,7 +6676,7 @@ int DaemonCore::Create_Process(
 		
 		/** next, stuff the extra cmd.exe args in with 
 			the arguments */
-		strArgs.sprintf ( 
+		strArgs.formatstr ( 
 			"\"%s\" /Q /C \"%s\"",
 			systemshell,
 			executable );
@@ -6750,7 +6750,7 @@ int DaemonCore::Create_Process(
 
 				/** add the script to the command-line. The 
 					executable is actually the script. */
-				strArgs.sprintf (
+				strArgs.formatstr (
 					"\"%s\" \"%s\"",
 					interpreter, 
 					executable );

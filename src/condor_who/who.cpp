@@ -860,7 +860,7 @@ static void init_program_for_pid(pid_t pid)
 	cmdargs.AppendArg("tasklist");
 	cmdargs.AppendArg("/FI");
 	std::string eqpid;
-	sprintf(eqpid, "PID eq %u", pid);
+	formatstr(eqpid, "PID eq %u", pid);
 	cmdargs.AppendArg(eqpid.c_str());
 	const char * fld_name = "Image Name";
 	const int    parse_type = 0;

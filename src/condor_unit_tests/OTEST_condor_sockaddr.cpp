@@ -90,7 +90,7 @@ static bool test_from_ip_string_simple_v4() {
 
 static bool is_private_network(const char * ip_string, bool expect_private) {
 	MyString header;
-	header.sprintf("Is %s a private network?", ip_string);
+	header.formatstr("Is %s a private network?", ip_string);
 	emit_test(header.Value());
 
 	emit_input_header();

@@ -2063,7 +2063,7 @@ int dc_main( int argc, char** argv )
 	}
 
 #ifdef WIN32
-	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	debug_wait_param.formatstr("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
 	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
 	if (wait_for_win32_debugger) {
 		UINT ms = GetTickCount() - 10;

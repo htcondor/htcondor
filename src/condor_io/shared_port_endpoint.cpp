@@ -242,7 +242,7 @@ SharedPortEndpoint::CreateListener()
 		return true;
 	}
 
-	m_full_name.sprintf(
+	m_full_name.formatstr(
 		"%s%c%s",m_socket_dir.Value(),DIR_DELIM_CHAR,m_local_id.Value());
 
 	pipe_end = CreateNamedPipe(

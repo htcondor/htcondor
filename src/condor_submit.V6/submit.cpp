@@ -755,7 +755,7 @@ init_job_ad()
 #ifdef WIN32
 	// put the NT domain into the ad as well
 	ntdomain = my_domainname();
-	buffer.sprintf( "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
+	buffer.formatstr( "%s = \"%s\"", ATTR_NT_DOMAIN, ntdomain);
 	InsertJobExpr (buffer);
 
 	// Publish the version of Windows we are running
@@ -773,28 +773,28 @@ init_job_ad()
 		}
 	}
 	if ( ok ) {
-		buffer.sprintf( "%s = %u", ATTR_WINDOWS_MAJOR_VERSION, 
+		buffer.formatstr( "%s = %u", ATTR_WINDOWS_MAJOR_VERSION, 
 			os_version_info.dwMajorVersion );
 		InsertJobExpr ( buffer );
-		buffer.sprintf( "%s = %u", ATTR_WINDOWS_MINOR_VERSION, 
+		buffer.formatstr( "%s = %u", ATTR_WINDOWS_MINOR_VERSION, 
 			os_version_info.dwMinorVersion );
 		InsertJobExpr ( buffer );
-		buffer.sprintf( "%s = %u", ATTR_WINDOWS_BUILD_NUMBER, 
+		buffer.formatstr( "%s = %u", ATTR_WINDOWS_BUILD_NUMBER, 
 			os_version_info.dwBuildNumber );
 		InsertJobExpr ( buffer );
 		// publish the extended Windows version information if we
 		// have it at our disposal
 		if ( sizeof ( OSVERSIONINFOEX ) ==
 			os_version_info.dwOSVersionInfoSize ) {
-			buffer.sprintf ( "%s = %lu",
+			buffer.formatstr ( "%s = %lu",
 				ATTR_WINDOWS_SERVICE_PACK_MAJOR,
 				os_version_info.wServicePackMajor );
 			InsertJobExpr ( buffer );
-			buffer.sprintf ( "%s = %lu",
+			buffer.formatstr ( "%s = %lu",
 				ATTR_WINDOWS_SERVICE_PACK_MINOR,
 				os_version_info.wServicePackMinor );
 			InsertJobExpr ( buffer );
-			buffer.sprintf ( "%s = %lu",
+			buffer.formatstr ( "%s = %lu",
 				ATTR_WINDOWS_PRODUCT_TYPE,
 				os_version_info.wProductType );
 			InsertJobExpr ( buffer );
@@ -7056,7 +7056,7 @@ full_path(const char *name, bool use_iwd)
 	if ( name[0] == '\\' || name[0] == '/' || (name[0] && name[1] == ':') ) {
 		pathname = name;
 	} else {
-		pathname.sprintf( "%s\\%s", p_iwd, name );
+		pathname.formatstr( "%s\\%s", p_iwd, name );
 	}
 #else
 

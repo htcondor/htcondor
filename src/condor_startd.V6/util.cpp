@@ -309,7 +309,7 @@ cleanup_execute_dir(int pid, char const *exec_path)
 	// with this starter pid.  this account might have been left around
 	// if the starter did not clean up completely.
 	//sprintf(buf,"condor-run-dir_%d",pid);
-		buf.sprintf("condor-run-%d",pid);
+		buf.formatstr("condor-run-%d",pid);
 		if ( nobody_login.deleteuser(buf.Value()) ) {
 			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.Value());
 		}
@@ -320,7 +320,7 @@ cleanup_execute_dir(int pid, char const *exec_path)
 	// existence of the subdirectory persistantly tells us that the
 	// account may still exist [in case the startd blows up as well].
 
-	buf.sprintf( "%s\\dir_%d", exec_path, pid );
+	buf.formatstr( "%s\\dir_%d", exec_path, pid );
  
 	check_recovery_file( buf.Value() );
 

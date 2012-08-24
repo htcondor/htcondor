@@ -125,14 +125,14 @@ param_boinc( const char* attr_name, const char* alt_name )
 		EXCEPT( "param_boinc() called with NULL attr_name" );
 	}
 	MyString param_name;
-	param_name.sprintf( "BOINC_%s", attr_name );
+	param_name.formatstr( "BOINC_%s", attr_name );
 	char* tmp = param( param_name.Value() );
 	if( tmp ) {
 		free( tmp );
 		return true;
 	}
 	if( alt_name ) {
-		param_name.sprintf( "BOINC_%s", alt_name );
+		param_name.formatstr( "BOINC_%s", alt_name );
 		tmp = param( param_name.Value() );
 		if( tmp ) {
 			free( tmp );
@@ -318,7 +318,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 		ClassAd fake_ad;
 		MyString fake_req;
 		bool no_starter = false;
-		fake_req.sprintf( "%s = TARGET.%s", ATTR_REQUIREMENTS,
+		fake_req.formatstr( "%s = TARGET.%s", ATTR_REQUIREMENTS,
 						  ATTR_HAS_JIC_LOCAL_CONFIG );
 		fake_ad.Insert( fake_req.Value() );
 		tmp_starter = resmgr->starter_mgr.findStarter( &fake_ad, NULL, no_starter );
