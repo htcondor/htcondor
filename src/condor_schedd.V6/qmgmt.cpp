@@ -3903,7 +3903,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		const char *base = NULL;
 		while ( (old_path_buf=old_paths.next()) ) {
 			base = condor_basename(old_path_buf);
-			if ((AttrsToModify[attrIndex] == ATTR_TRANSFER_INPUT_FILES) && IsUrl(old_path_buf)) {
+			if ((strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf)) {
 				base = old_path_buf;
 			} else if ( strcmp(base,old_path_buf)!=0 ) {
 				changed = true;
