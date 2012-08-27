@@ -65,6 +65,13 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 	ParseMapFile();
 #endif
 	if ( !m_globusActivated ) {
+		std::string gsi_authz_conf;
+		if (param(gsi_authz_conf, "GSI_AUTHZ_CONF")) {
+			if (globus_libc_setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
+				dprintf(D_ALWAYS, "Failed to set the GSI_AUTHZ_CONF environment variable.\n");
+				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
+			}
+		}
 		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
 		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
 		m_globusActivated = true;
