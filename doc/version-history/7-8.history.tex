@@ -157,7 +157,10 @@ grid universe job's X.509 user certificate did not contain an e-mail
 address.
 \Ticket{3203}
 
-\item Fixed a bug that caused \Condor{schedd} to, by default, share the job queue.
+\item Fixed a bug introduced in Condor version 7.7.5 that caused multiple
+\Condor{schedd} daemons running on the same machine to share the job queue
+with each other due to way in which the default value of configuration
+variable \MacroNI{JOB\_QUEUE\_LOG} was set.
 \Ticket{3196}
 
 \item Fixed a bug that could cause \Condor{q} to not print all jobs when
