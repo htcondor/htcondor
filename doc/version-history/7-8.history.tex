@@ -165,12 +165,14 @@ it thought it was querying an old \Condor{schedd}.
 \Ticket{3206}
 
 \item Fixed a bug that could cause a job's standard output and standard
-error files to be written in the job's initial working directory despite
-the submit file saying to write them in a different directory.
-This would happen when file transfer was used, the execution machine was
-running Condor 7.7.1 or earlier, and either Condor's security negotiation
-was disabled or \Macro{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} was
-set to \Expr{True}.
+error files to be written in the job's initial working directory,
+despite the submit description file's specification to write them 
+to a different directory.
+This would happen when the file transfer mechanism was used, 
+the execution machine was running Condor version 7.7.1 or earlier, 
+and either Condor's security negotiation
+was disabled or the configuration variable
+\MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} was set to \Expr{True}.
 \Ticket{3208}
 
 \item The log message that is generated when the \MacroNI{EXECUTE} directory
