@@ -173,7 +173,10 @@ doContactSchedd()
 		}
 	}
 
-	
+	int interaction_time = param_integer("CGAHP_SCHEDD_INTERACTION_TIME", 5);
+	time_t starttime = time(NULL);
+	bool rerun_immediately = false;
+
 	SchedDRequest::schedd_command_type commands [] = {
 		SchedDRequest::SDC_REMOVE_JOB,
 		SchedDRequest::SDC_HOLD_JOB,
@@ -188,7 +191,11 @@ doContactSchedd()
 	int i=0;
 	while (i<3) {
 		
-		
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
+
 		StringList id_list;
 		SimpleList <SchedDRequest*> this_batch;
 
@@ -361,6 +368,12 @@ doContactSchedd()
 
 	SimpleList <SchedDRequest*> stage_in_batch;
 	do {
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
+
 		stage_in_batch.Clear();
 
 		command_queue.Rewind();
@@ -509,6 +522,11 @@ doContactSchedd()
 		if (current_command->command != SchedDRequest::SDC_JOB_REFRESH_PROXY)
 			continue;
 
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
+
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(current_command->classad);
 		time_t result_expiration_time = 0;
 
@@ -593,7 +611,12 @@ doContactSchedd()
 
 		if (qmgr_connection == NULL)
 			goto update_report_result;
-		
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
+
 		error = FALSE;
 		errno = 0;
 		BeginTransaction();
@@ -633,7 +656,8 @@ doContactSchedd()
 					if( SetAttribute(current_command->cluster_id,
 											current_command->proc_id,
 											lhstr,
-											rhstr) == -1 ) {
+											rhstr,
+											SetAttribute_NoAck) == -1 ) {
 						if ( errno == ETIMEDOUT ) {
 							failure_line_num = __LINE__;
 							failure_errno = errno;
@@ -699,6 +723,11 @@ update_report_result:
 
 		if (current_command->command != SchedDRequest::SDC_UPDATE_LEASE)
 			continue;
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
 
 		std::string success_job_ids="";
 		if (qmgr_connection == NULL) {
@@ -804,6 +833,11 @@ update_report_result:
 
 		if (current_command->command != SchedDRequest::SDC_SUBMIT_JOB)
 			continue;
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
 
 		int ClusterId = -1;
 		int ProcId = -1;
@@ -931,7 +965,8 @@ update_report_result:
 					error = TRUE;
 				} else if( SetAttribute (ClusterId, ProcId,
 											lhstr,
-											rhstr) == -1 ) {
+											rhstr,
+											SetAttribute_NoAck) == -1 ) {
 					if ( errno == ETIMEDOUT ) {
 						failure_line_num = __LINE__;
 						failure_errno = errno;
@@ -994,6 +1029,11 @@ submit_report_result:
 
 		if (current_command->command != SchedDRequest::SDC_STATUS_CONSTRAINED)
 			continue;
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
 
 		if (qmgr_connection != NULL) {
 			SimpleList <MyString *> matching_ads;
@@ -1167,9 +1207,14 @@ submit_report_result:
 		}
 	}
 
+	dprintf (D_FULLDEBUG, "Schedd interaction took %ld seconds.\n", time(NULL)-starttime);
+	if (rerun_immediately) {
+		dprintf (D_FULLDEBUG, "Schedd interaction time hit limit; will retry immediately.\n");
+	}
+
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
-	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
+	daemonCore->Reset_Timer( contactScheddTid, rerun_immediately ? 1 : contact_schedd_interval );
 }
 
 
