@@ -421,8 +421,6 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
 	}
 
-	//buffer.append(dbgInfo->formatHeaderFunc(cat_and_flags,hdr_flags,clock_now,tm));
-	//buffer.append(dbgInfo->formatMessageFunc(fmt, args));
 	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, clock_now, tm, buf, dbgInfo);
 }
 
@@ -590,14 +588,16 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			/* registered for other debug levels */
 		if(!DebugLogs->size())
 		{
-			(*DebugLogs)[0].debugFP = stderr;
+			DebugFileInfo backup;
+			backup.debugFP = stderr;
+			backup.dprintfFunc = _dprintf_global_func;
 #ifdef va_copy
 			va_list copyargs;
 			va_copy(copyargs, args);
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&((*DebugLogs)[0]),fmt,copyargs);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,copyargs);
 			va_end(copyargs);
 #else
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&((*DebugLogs)[0]),fmt,args);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,args);
 #endif
 		}
 
@@ -618,14 +618,13 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			//bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
 
 			/* Open and lock the log file */
-			FILE * debug_file_ptr = NULL;
 			bool   funlock_it = false;
 			switch ((*it).outputTarget) {
 				case STD_ERR: it->debugFP = stderr;//debug_file_ptr = stderr; break;
 				case STD_OUT: it->debugFP = stdout;//debug_file_ptr = stdout; break;
 				default:
 				case FILE_OUT:
-					debug_file_ptr = debug_lock_it(&(*it), NULL, 0, it->dont_panic);
+					debug_lock_it(&(*it), NULL, 0, it->dont_panic);
 					funlock_it = true;
 					break;
 			   #ifdef WIN32
@@ -1170,6 +1169,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 
 	if (debug_file_ptr == NULL) {
 		debug_file_ptr = open_debug_file(it, "aN", dont_panic);
+		it->debugFP = debug_file_ptr;
 	}
 
 	if( debug_file_ptr == NULL ) {
