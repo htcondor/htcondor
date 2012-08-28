@@ -66,12 +66,25 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 	ParseMapFile();
 #endif
 	if ( !m_globusActivated ) {
+		// The Globus callout module is a system-wide setting.  There are several
+		// cases where a user may not want it to apply to Condor by default
+		// (for example, if it causes crashes when mixed with Condor libs!).
+		// Setting GSI_AUTHZ_CONF=/dev/null works for disabling the callouts.
 		std::string gsi_authz_conf;
 		if (param(gsi_authz_conf, "GSI_AUTHZ_CONF")) {
 			if (globus_libc_setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
 				dprintf(D_ALWAYS, "Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 			}
+		}
+		// In 99% of cases, this is a no-op because the Globus threading model defaults
+		// to "none".  However, this can be overridden by a user's environment variable
+		// and I'd prefer to take no chances.  This call can fail if a globus module
+		// has already been activated (i.e., in the GAHP).  As the defaults are OK,
+		// the logging is done at FULLDEBUG, not ALWAYS.
+		if (globus_thread_set_model( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS) {
+			dprintf(D_FULLDEBUG, "Unable to explicitly turn-off Globus threading."
+				"  Will proceed with the default.\n");
 		}
 		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
 		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
