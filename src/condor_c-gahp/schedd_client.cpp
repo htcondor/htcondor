@@ -173,10 +173,6 @@ doContactSchedd()
 		}
 	}
 
-	int interaction_time = param_integer("CGAHP_SCHEDD_INTERACTION_TIME", 5);
-	time_t starttime = time(NULL);
-	bool rerun_immediately = false;
-
 	SchedDRequest::schedd_command_type commands [] = {
 		SchedDRequest::SDC_REMOVE_JOB,
 		SchedDRequest::SDC_HOLD_JOB,
@@ -191,11 +187,6 @@ doContactSchedd()
 	int i=0;
 	while (i<3) {
 		
-		if (time(NULL) - starttime > interaction_time) {
-			rerun_immediately = true;
-			break;
-		}
-
 		StringList id_list;
 		SimpleList <SchedDRequest*> this_batch;
 
@@ -369,11 +360,6 @@ doContactSchedd()
 	SimpleList <SchedDRequest*> stage_in_batch;
 	do {
 
-		if (time(NULL) - starttime > interaction_time) {
-			rerun_immediately = true;
-			break;
-		}
-
 		stage_in_batch.Clear();
 
 		command_queue.Rewind();
@@ -522,11 +508,6 @@ doContactSchedd()
 		if (current_command->command != SchedDRequest::SDC_JOB_REFRESH_PROXY)
 			continue;
 
-		if (time(NULL) - starttime > interaction_time) {
-			rerun_immediately = true;
-			break;
-		}
-
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(current_command->classad);
 		time_t result_expiration_time = 0;
 
@@ -576,6 +557,11 @@ doContactSchedd()
 
 	// Now do all the QMGMT transactions
 	error = FALSE;
+
+	// Limit the time we spend connected to the schedd
+	int interaction_time = param_integer("CGAHP_SCHEDD_INTERACTION_TIME", 5);
+	time_t starttime = time(NULL);
+	bool rerun_immediately = false;
 
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
@@ -696,8 +682,18 @@ update_report_result:
 			}
 		} else {
 			if ( RemoteCommitTransaction() < 0 ) {
-				failure_line_num = __LINE__;
-				failure_errno = errno;
+				// We assume the preceeding SetAttribute() with NoAck
+				// is what really failed. Mark this command as failed
+				// and jump to the end (since the schedd has closed
+				// the connection). Any subsequent commands will be
+				// tried the next time we come through.
+				error_msg =  "ERROR: Failed to set attribute";
+				const char * result[] = {
+					GAHP_RESULT_FAILURE,
+					error_msg.c_str() };
+				enqueue_result (current_command->request_id, result, 2);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+				rerun_immediately = true;
 				goto contact_schedd_disconnect;
 			}
 			const char * result[] = {
@@ -1004,8 +1000,19 @@ submit_report_result:
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} else {
 			if ( RemoteCommitTransaction() < 0 ) {
-				failure_line_num = __LINE__;
-				failure_errno = errno;
+				// We assume the preceeding SetAttribute() with NoAck
+				// is what really failed. Mark this command as failed
+				// and jump to the end (since the schedd has closed
+				// the connection). Any subsequent commands will be
+				// tried the next time we come through.
+				error_msg =  "ERROR: Failed to submit job";
+				const char * result[] = {
+					GAHP_RESULT_FAILURE,
+					job_id_buff,
+					error_msg.c_str() };
+				enqueue_result (current_command->request_id, result, 3);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+				rerun_immediately = true;
 				goto contact_schedd_disconnect;
 			}
 			const char * result[] = {
