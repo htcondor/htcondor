@@ -173,7 +173,6 @@ doContactSchedd()
 		}
 	}
 
-	
 	SchedDRequest::schedd_command_type commands [] = {
 		SchedDRequest::SDC_REMOVE_JOB,
 		SchedDRequest::SDC_HOLD_JOB,
@@ -187,7 +186,6 @@ doContactSchedd()
 	// RELEASE
 	int i=0;
 	while (i<3) {
-		
 		
 		StringList id_list;
 		SimpleList <SchedDRequest*> this_batch;
@@ -361,6 +359,7 @@ doContactSchedd()
 
 	SimpleList <SchedDRequest*> stage_in_batch;
 	do {
+
 		stage_in_batch.Clear();
 
 		command_queue.Rewind();
@@ -559,6 +558,11 @@ doContactSchedd()
 	// Now do all the QMGMT transactions
 	error = FALSE;
 
+	// Limit the time we spend connected to the schedd
+	int interaction_time = param_integer("CGAHP_SCHEDD_INTERACTION_TIME", 5);
+	time_t starttime = time(NULL);
+	bool rerun_immediately = false;
+
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
 	
@@ -593,7 +597,12 @@ doContactSchedd()
 
 		if (qmgr_connection == NULL)
 			goto update_report_result;
-		
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
+
 		error = FALSE;
 		errno = 0;
 		BeginTransaction();
@@ -633,7 +642,8 @@ doContactSchedd()
 					if( SetAttribute(current_command->cluster_id,
 											current_command->proc_id,
 											lhstr,
-											rhstr) == -1 ) {
+											rhstr,
+											SetAttribute_NoAck) == -1 ) {
 						if ( errno == ETIMEDOUT ) {
 							failure_line_num = __LINE__;
 							failure_errno = errno;
@@ -672,8 +682,18 @@ update_report_result:
 			}
 		} else {
 			if ( RemoteCommitTransaction() < 0 ) {
-				failure_line_num = __LINE__;
-				failure_errno = errno;
+				// We assume the preceeding SetAttribute() with NoAck
+				// is what really failed. Mark this command as failed
+				// and jump to the end (since the schedd has closed
+				// the connection). Any subsequent commands will be
+				// tried the next time we come through.
+				error_msg =  "ERROR: Failed to set attribute";
+				const char * result[] = {
+					GAHP_RESULT_FAILURE,
+					error_msg.c_str() };
+				enqueue_result (current_command->request_id, result, 2);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+				rerun_immediately = true;
 				goto contact_schedd_disconnect;
 			}
 			const char * result[] = {
@@ -699,6 +719,11 @@ update_report_result:
 
 		if (current_command->command != SchedDRequest::SDC_UPDATE_LEASE)
 			continue;
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
 
 		std::string success_job_ids="";
 		if (qmgr_connection == NULL) {
@@ -804,6 +829,11 @@ update_report_result:
 
 		if (current_command->command != SchedDRequest::SDC_SUBMIT_JOB)
 			continue;
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
 
 		int ClusterId = -1;
 		int ProcId = -1;
@@ -931,7 +961,8 @@ update_report_result:
 					error = TRUE;
 				} else if( SetAttribute (ClusterId, ProcId,
 											lhstr,
-											rhstr) == -1 ) {
+											rhstr,
+											SetAttribute_NoAck) == -1 ) {
 					if ( errno == ETIMEDOUT ) {
 						failure_line_num = __LINE__;
 						failure_errno = errno;
@@ -969,8 +1000,19 @@ submit_report_result:
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} else {
 			if ( RemoteCommitTransaction() < 0 ) {
-				failure_line_num = __LINE__;
-				failure_errno = errno;
+				// We assume the preceeding SetAttribute() with NoAck
+				// is what really failed. Mark this command as failed
+				// and jump to the end (since the schedd has closed
+				// the connection). Any subsequent commands will be
+				// tried the next time we come through.
+				error_msg =  "ERROR: Failed to submit job";
+				const char * result[] = {
+					GAHP_RESULT_FAILURE,
+					job_id_buff,
+					error_msg.c_str() };
+				enqueue_result (current_command->request_id, result, 3);
+				current_command->status = SchedDRequest::SDCS_COMPLETED;
+				rerun_immediately = true;
 				goto contact_schedd_disconnect;
 			}
 			const char * result[] = {
@@ -994,6 +1036,11 @@ submit_report_result:
 
 		if (current_command->command != SchedDRequest::SDC_STATUS_CONSTRAINED)
 			continue;
+
+		if (time(NULL) - starttime > interaction_time) {
+			rerun_immediately = true;
+			break;
+		}
 
 		if (qmgr_connection != NULL) {
 			SimpleList <MyString *> matching_ads;
@@ -1167,9 +1214,14 @@ submit_report_result:
 		}
 	}
 
+	dprintf (D_FULLDEBUG, "Schedd interaction took %ld seconds.\n", time(NULL)-starttime);
+	if (rerun_immediately) {
+		dprintf (D_FULLDEBUG, "Schedd interaction time hit limit; will retry immediately.\n");
+	}
+
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
-	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
+	daemonCore->Reset_Timer( contactScheddTid, rerun_immediately ? 1 : contact_schedd_interval );
 }
 
 
