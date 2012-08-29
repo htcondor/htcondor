@@ -599,6 +599,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 #else
 			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,args);
 #endif
+			backup.debugFP = NULL;
 		}
 
 		unsigned int basic_flag = (cat_and_flags & D_FULLDEBUG) ? 0 : (1<<(cat_and_flags&D_CATEGORY_MASK));
@@ -963,7 +964,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 				debug_close_lock();
 				debug_close_file(it);
 				_set_priv(priv, __FILE__, __LINE__, 0);
-				return debug_lock_it(it, mode, 1, it->dont_panic);
+				return debug_lock_it(it, mode, 1, dont_panic);
 			}
 		}
 
@@ -1169,7 +1170,6 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 
 	if (debug_file_ptr == NULL) {
 		debug_file_ptr = open_debug_file(it, "aN", dont_panic);
-		it->debugFP = debug_file_ptr;
 	}
 
 	if( debug_file_ptr == NULL ) {
@@ -1203,7 +1203,6 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
 	cleanUp(it->maxLogNum);
-	(*it).debugFP = debug_file_ptr;
 
 	return debug_file_ptr;
 }
@@ -1343,6 +1342,8 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 	it->debugFP = fp;
+
+	stderrBackup.debugFP = NULL;
 
 	return fp;
 }
