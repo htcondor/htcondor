@@ -549,6 +549,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				delete event;
 				break;
 			case ULOG_EXECUTABLE_ERROR:
+			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_SHADOW_EXCEPTION: {
 				ExecuteEvent *execEvent;
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
@@ -597,6 +598,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			}
 			default:
 				// ignore the rest of the eveats
+				delete event;
 				break;
 			}
 		} else {
