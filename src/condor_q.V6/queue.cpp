@@ -3038,7 +3038,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 	std::string constr_string; // to hold the return from ExprTreeToString()
 	ExprTree *tree = NULL;
-	int err = Q.rawQuery(tree);
+	Q.rawQuery(tree);
 	if (tree) {
 		constr_string = ExprTreeToString(tree);
 		constr = constr_string.c_str();

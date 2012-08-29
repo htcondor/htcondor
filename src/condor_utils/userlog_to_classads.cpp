@@ -609,7 +609,7 @@ bool userlog_to_classads(const char *filename, ClassAdList &classads, CondorID* 
 
     bool include_classad=true;
     // Check if it passed the constraint
-    if (constr != NULL) {
+    if (constr && constr[0]) {
       include_classad=false;
       classad::Value result;
       if (classad->EvaluateExpr(constr,result)) {
