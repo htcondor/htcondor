@@ -14,6 +14,7 @@
 \Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
+\oOpt{-interactive}
 \oArg{submit description file}
 
 \index{Condor commands!condor\_submit}
@@ -63,10 +64,6 @@ Placing the backslash at the end of a line causes the current line's command
 to be continued with the next line of the file.
 Submit description files may contain comments.
 A comment is any line beginning with a pound character (\verb@#@). 
-
-Here is a list of
-the commands that may be placed in the submit description file
-to direct the submission of a job.
 
 \begin{Options}
 
@@ -135,9 +132,13 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 \OptItem{\OptArg{-dump}{filename}}{Sends all ClassAds to the specified
   file, instead of to the \Condor{schedd}.}
 
-\OptItem{\Arg{submit description file}}{The pathname to the submit description
-file. If this optional argument is missing or equal to ``-'', then the commands
-are taken from standard input.}
+\OptItem{\Opt{-interactive}}{Use of this option is not yet written.
+  }
+
+\OptItem{\Arg{submit description file}}{The path and file name of 
+the submit description file. 
+If this optional argument is missing or is the dash character (Expr{-}),
+then the commands are taken from standard input.}
 
 \end{Options}
 
