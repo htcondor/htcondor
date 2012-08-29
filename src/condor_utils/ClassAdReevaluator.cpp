@@ -54,7 +54,7 @@ classad_reevaluate(ClassAd *ad, ClassAd *context)
 
 	reevaluate_attrs->rewind();
 	while (NULL != (atmp = reevaluate_attrs->next())) {
-		stmp.sprintf("REEVALUATE_%s_EXPR", atmp);
+		stmp.formatstr("REEVALUATE_%s_EXPR", atmp);
 
 		dprintf(D_FULLDEBUG,
 				"classad_reevaluate: Attempting reevaluate %s with %s\n",

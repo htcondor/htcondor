@@ -98,13 +98,13 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 			// for the job, instead.
 		if( jic->iwdIsChanged() ) {
 			const char* base = condor_basename(tmp.Value());
-			logfilename.sprintf( "%s/%s", iwd, base);
+			logfilename.formatstr( "%s/%s", iwd, base);
 		} else {
 			logfilename = tmp;
 		}
 	} else {
 			// no full path, so, use the job's iwd...
-		logfilename.sprintf( "%s/%s", iwd, tmp.Value());
+		logfilename.formatstr( "%s/%s", iwd, tmp.Value());
 	}
 
 	ad->LookupBool( xml_attr, use_xml );

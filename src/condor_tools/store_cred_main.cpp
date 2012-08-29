@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 		char* my_name = my_username();	
 		char* my_domain = my_domainname();
 
-		my_full_name.sprintf("%s@%s", my_name, my_domain);
+		my_full_name.formatstr("%s@%s", my_name, my_domain);
 		if ( my_name) { free(my_name); }
 		if ( my_domain) { free(my_domain); }
 		my_name = my_domain = NULL;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
 				goto cleanup;
 			}
 		}
-		my_full_name.sprintf(POOL_PASSWORD_USERNAME "@%s", domain);
+		my_full_name.formatstr(POOL_PASSWORD_USERNAME "@%s", domain);
 		free(domain);
 	} else {
 			// username was specified on the command line

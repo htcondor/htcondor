@@ -846,18 +846,18 @@ firstPass (int argc, char *argv[])
             ss.expr = sortExpr;
 
             ss.arg = argv[i];
-            sprintf(ss.keyAttr, "CondorStatusSortKey%d", jsort);
-            sprintf(ss.keyExprAttr, "CondorStatusSortKeyExpr%d", jsort);
+            formatstr(ss.keyAttr, "CondorStatusSortKey%d", jsort);
+            formatstr(ss.keyExprAttr, "CondorStatusSortKeyExpr%d", jsort);
 
 			string exprString;
-			sprintf(exprString, "MY.%s < TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
+			formatstr(exprString, "MY.%s < TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
 			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
                 fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
                 exit(1);
 			}
 			ss.exprLT = sortExpr;
 
-			sprintf(exprString, "MY.%s == TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
+			formatstr(exprString, "MY.%s == TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
 			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
                 fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
                 exit(1);
@@ -1012,7 +1012,7 @@ secondPass (int argc, char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					pm_head.Append(hd);
 				}
-				else if (flabel) { lbl.sprintf("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fCapV ? "%V" : "%v";
 				if (diagnose) {
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",

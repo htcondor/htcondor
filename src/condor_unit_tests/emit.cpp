@@ -80,7 +80,7 @@ void Emitter::emit_retval(const char* format, va_list args) {
 /* Emits a heading and the function string.
  */
 void Emitter::emit_function(const char* function) {
-	test_buf->sprintf("\n\n------------------------------------------------------"
+	test_buf->formatstr("\n\n------------------------------------------------------"
 		"--------------------------\nFUNCTION:  %s\n---------------------------"
 		"-----------------------------------------------------\n", function);
 	if(print_failures && print_successes) {
@@ -92,7 +92,7 @@ void Emitter::emit_function(const char* function) {
 /* Emits a heading and the object string.
  */
 void Emitter::emit_object(const char* object) {
-	test_buf->sprintf("\n------------------------------------------------------"
+	test_buf->formatstr("\n------------------------------------------------------"
 		"--------------------------\nOBJECT:  %s\n-----------------------------"
 		"---------------------------------------------------\n", object);
 	if(print_failures && print_successes) {

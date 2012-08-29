@@ -597,26 +597,25 @@ MyString::sprintf_cat(const char *format,...)
 }
 
 bool
-MyString::vsprintf(const char *format,va_list args)
+MyString::vformatstr(const char *format,va_list args)
 {
 	Len = 0;
 	if(Data) Data[0] = '\0';
 	return vsprintf_cat(format,args);
 }
 
-bool 
-MyString::sprintf(const char *format,...)
+bool
+MyString::formatstr(const char *format,...)
 {
 	bool    succeeded;
 	va_list args;
 
 	va_start(args, format);
-	succeeded = vsprintf(format,args);
+	succeeded = vformatstr(format,args);
 	va_end(args);
 
 	return succeeded;
 }
-
 
 void
 MyString::lower_case(void)

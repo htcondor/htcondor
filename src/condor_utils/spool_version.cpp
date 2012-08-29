@@ -29,7 +29,7 @@ CheckSpoolVersion(char const *spool, int spool_min_version_i_support, int spool_
 	spool_cur_version = 0;
 
 	std::string vers_fname;
-	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
+	formatstr(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
 
 	FILE *vers_file = safe_fopen_wrapper_follow(vers_fname.c_str(),"r");
 	if( vers_file ) {
@@ -86,7 +86,7 @@ void CheckSpoolVersion(
 void
 WriteSpoolVersion(char const *spool,int spool_min_version_i_write,int spool_cur_version_i_support) {
 	std::string vers_fname;
-	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
+	formatstr(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
 
 	FILE *vers_file = safe_fcreate_replace_if_exists(vers_fname.c_str(),"w");
 	if( !vers_file ) {

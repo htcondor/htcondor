@@ -156,11 +156,11 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 	if (libexec == NULL) {
 		EXCEPT("GLExec: LIBEXEC not defined");
 	}
-	m_setup_script.sprintf("%s/condor_glexec_setup", libexec);
-	m_run_script.sprintf("%s/condor_glexec_run", libexec);
-	m_wrapper_script.sprintf("%s/condor_glexec_job_wrapper", libexec);
-	m_proxy_update_script.sprintf("%s/condor_glexec_update_proxy", libexec);
-	m_cleanup_script.sprintf("%s/condor_glexec_cleanup", libexec);
+	m_setup_script.formatstr("%s/condor_glexec_setup", libexec);
+	m_run_script.formatstr("%s/condor_glexec_run", libexec);
+	m_wrapper_script.formatstr("%s/condor_glexec_job_wrapper", libexec);
+	m_proxy_update_script.formatstr("%s/condor_glexec_update_proxy", libexec);
+	m_cleanup_script.formatstr("%s/condor_glexec_cleanup", libexec);
 	free(libexec);
 
 	m_sandbox_owned_by_user = false;
@@ -324,7 +324,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 	FamilyInfo fi;
 	FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
 	MyString proxy_path;
-	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
+	proxy_path.formatstr("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
 		// At the very least, we need to pass the condor daemon's

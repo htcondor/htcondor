@@ -471,8 +471,8 @@ UserProc::execute()
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
 
-	shortname.sprintf( "condor_exec.%d.%d", cluster, proc );
-	a_out_name.sprintf( "%s/%s/%s", Execute, local_dir, shortname.Value() );
+	shortname.formatstr( "condor_exec.%d.%d", cluster, proc );
+	a_out_name.formatstr( "%s/%s/%s", Execute, local_dir, shortname.Value() );
 
 		// Set up arg vector according to class of job
 	switch( job_class ) {
@@ -827,7 +827,7 @@ UserProc::delete_files()
 		// the "remove dir" operation
 		//
 		MyString local_dir_path;
-		local_dir_path.sprintf("%s/%s", Execute, local_dir);
+		local_dir_path.formatstr("%s/%s", Execute, local_dir);
 		if (!privsep_remove_dir(local_dir_path.Value())) {
 			dprintf(D_ALWAYS,
 			        "privsep_remove_dir failed to remove %s\n",
@@ -935,13 +935,13 @@ UserProc::handle_termination( int exit_st )
 			core_name_type = CORE_NAME_UNKNOWN;
 
 			/* try the 'core.pid' form first */
-			corebuf.sprintf( "%s/core.%lu", local_dir, 
+			corebuf.formatstr( "%s/core.%lu", local_dir, 
 				(unsigned long)user_job_pid);
 			if (stat(corebuf.Value(), &sbuf) >= 0) {
 				core_name_type = CORE_NAME_KNOWN;
 			} else {
 				/* now try the normal 'core' form */
-				corebuf.sprintf( "%s/core", local_dir);
+				corebuf.formatstr( "%s/core", local_dir);
 				if (stat(corebuf.Value(), &sbuf) >= 0) {
 					core_name_type = CORE_NAME_KNOWN;
 				}
@@ -1177,7 +1177,7 @@ UserProc::store_core()
 																free_disk );
 
 	if( free_disk > core_size ) {
-		new_name.sprintf( "%s/core.%d.%d", virtual_working_dir, cluster, proc);
+		new_name.formatstr( "%s/core.%d.%d", virtual_working_dir, cluster, proc);
 		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name.Value() );
 		priv = set_root_priv();
 		send_a_file( core_name, new_name.Value(), REGULAR_FILE_MODE );
@@ -1350,7 +1350,7 @@ open_std_file( int fd )
 
 	if(real_fd<0) {
 		MyString err;
-		err.sprintf("Can't open \"%s\": %s", file_name,strerror(errno));
+		err.formatstr("Can't open \"%s\": %s", file_name,strerror(errno));
 		dprintf(D_ALWAYS,"%s\n",err.Value());
 		REMOTE_CONDOR_report_error(const_cast<char *>(err.Value()));
 		exit( 4 );
@@ -1422,30 +1422,30 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 		// assume outgoing port range
 	if (get_port_range(TRUE, &low_port, &high_port) == TRUE) {
-		buf.sprintf( "_condor_LOWPORT=%d", low_port);
+		buf.formatstr( "_condor_LOWPORT=%d", low_port);
 		env_obj.SetEnv(buf.Value());
-		buf.sprintf( "_condor_HIGHPORT=%d", high_port);
+		buf.formatstr( "_condor_HIGHPORT=%d", high_port);
 		env_obj.SetEnv(buf.Value());
 	}
 	/* end - Port regulation for user job */
 
 	if( param_boolean("BIND_ALL_INTERFACES", true) ) {
-		buf.sprintf( "_condor_BIND_ALL_INTERFACES=TRUE" );
+		buf.formatstr( "_condor_BIND_ALL_INTERFACES=TRUE" );
 	} else {
-		buf.sprintf( "_condor_BIND_ALL_INTERFACES=FALSE" );
+		buf.formatstr( "_condor_BIND_ALL_INTERFACES=FALSE" );
 	}
 	env_obj.SetEnv(buf.Value());
 	
 
 		// Generate a directory where process can run and do its checkpointing
 	omask = umask(0);
-	buf.sprintf( "dir_%d", getpid() );
+	buf.formatstr( "dir_%d", getpid() );
 	local_dir = new char [ buf.Length() + 1 ];
 	strcpy( local_dir, buf.Value() );
 	if (privsep_enabled()) {
 		// the Switchboard expects a full path to privsep_create_dir
 		MyString local_dir_path;
-		local_dir_path.sprintf("%s/%s", Execute, local_dir);
+		local_dir_path.formatstr("%s/%s", Execute, local_dir);
 		if (!privsep_create_dir(get_condor_uid(), local_dir_path.Value())) {
 			EXCEPT("privsep_create_dir failure");
 		}
@@ -1463,10 +1463,10 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 		// Now that we know what the local_dir is, put the path into
 		// the environment so the job knows where it is
 	MyString scratch_env;
-	scratch_env.sprintf("CONDOR_SCRATCH_DIR=%s/%s",Execute,local_dir);
+	scratch_env.formatstr("CONDOR_SCRATCH_DIR=%s/%s",Execute,local_dir);
 	env_obj.SetEnv(scratch_env.Value());
 
-	buf.sprintf( "%s/condor_exec.%d.%d", local_dir, cluster, proc );
+	buf.formatstr( "%s/condor_exec.%d.%d", local_dir, cluster, proc );
 	cur_ckpt = new char [ buf.Length() + 1 ];
 	strcpy( cur_ckpt, buf.Value() );
 
@@ -1510,7 +1510,7 @@ set_iwd()
 		}
 			
 		MyString err;
-		err.sprintf( "Can't open working directory \"%s\": %s", iwd,
+		err.formatstr( "Can't open working directory \"%s\": %s", iwd,
 			    strerror(errno) );
 		REMOTE_CONDOR_report_error(const_cast<char *>(err.Value()));
 		exit( 4 );

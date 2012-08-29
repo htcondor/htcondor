@@ -230,7 +230,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "unicore" ) ) {
-			sprintf( error_string, "%s not of type unicore", ATTR_GRID_JOB_ID );
+			formatstr( error_string, "%s not of type unicore", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
@@ -238,7 +238,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		GetNextToken( " ", false );
 		token = GetNextToken( " ", false );
 		if ( !token ) {
-			sprintf( error_string, "%s missing job ID",
+			formatstr( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -808,7 +808,7 @@ void UnicoreJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		sprintf( full_job_id, "%s %s", resourceName, job_id );
+		formatstr( full_job_id, "%s %s", resourceName, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }

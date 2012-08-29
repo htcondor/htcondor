@@ -257,7 +257,7 @@ main_init( int argc, char* argv[] )
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
 		MyString runfor_env;
-		runfor_env.sprintf("%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
+		runfor_env.formatstr("%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
 						   time(NULL) + (runfor * 60));
 		SetEnv(runfor_env.Value());
     }
@@ -1088,7 +1088,7 @@ invalidate_ads() {
 	}
 	
 	ClassAd::EscapeStringValue( default_name, escaped_name );
-	line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
 	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());

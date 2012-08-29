@@ -49,10 +49,10 @@ utilNoParameterError( const char* parameter, const char* daemonName )
 	MyString error;
 
 	if( ! strcasecmp( daemonName, "HAD" ) ) {
-		error.sprintf( "HAD configuration error: no %s in config file",
+		error.formatstr( "HAD configuration error: no %s in config file",
                         parameter );
 	} else if( ! strcasecmp( daemonName, "REPLICATION" ) ) {
-		error.sprintf( "Replication configuration error: no %s in config file",
+		error.formatstr( "Replication configuration error: no %s in config file",
                        parameter );
 	} else {
 		dprintf( D_ALWAYS, "utilNoParameterError no such daemon name %s\n", 
@@ -68,10 +68,10 @@ utilConfigurationError( const char* parameter, const char* daemonName )
 	MyString error;
 
     if( ! strcasecmp( daemonName, "HAD" ) ) {
-		error.sprintf("HAD configuration error: %s is not valid in config file",
+		error.formatstr("HAD configuration error: %s is not valid in config file",
 					   parameter );
 	} else if( ! strcasecmp( daemonName, "REPLICATION" ) ) {
-    	error.sprintf( "Replication configuration error: %s is not valid "
+    	error.formatstr( "Replication configuration error: %s is not valid "
                        "in config file", parameter );
 	} else {
         dprintf( D_ALWAYS, "utilConfigurationError no such daemon name %s\n", 

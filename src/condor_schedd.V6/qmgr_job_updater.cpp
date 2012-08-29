@@ -277,7 +277,7 @@ bool
 QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
 	MyString buf;
-    buf.sprintf("%d", value);
+    buf.formatstr("%d", value);
 	return updateAttr(name, buf.Value(), updateMaster, log);
 }
 

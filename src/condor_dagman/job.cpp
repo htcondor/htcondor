@@ -400,7 +400,7 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-		whynot.sprintf( "%s child may not be given a new %s parent",
+		whynot.formatstr( "%s child may not be given a new %s parent",
 						this->GetStatusName(), parent->GetStatusName() );
 		return false;
 	}
@@ -516,7 +516,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 		return false;
 	}
 	if( post ? _scriptPost : _scriptPre ) {
-		whynot.sprintf( "%s script already assigned (%s)",
+		whynot.formatstr( "%s script already assigned (%s)",
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
@@ -542,7 +542,7 @@ bool
 Job::AddPreSkip( int exitCode, MyString &whynot )
 {
 	if( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
-		whynot.sprintf( "PRE_SKIP exit code must be between %d and %d\n",
+		whynot.formatstr( "PRE_SKIP exit code must be between %d and %d\n",
 			PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}

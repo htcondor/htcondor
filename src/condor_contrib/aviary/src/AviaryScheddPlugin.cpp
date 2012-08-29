@@ -54,7 +54,7 @@ AviaryScheddPlugin::earlyInitialize()
 	if (skip) return; skip = true;
 
     string log_name;
-    sprintf(log_name,"aviary_job.log");
+    formatstr(log_name,"aviary_job.log");
 	string myname = "job@" + getScheddName();
     provider = AviaryProviderFactory::create(log_name,myname,
 											 "SCHEDULER","JOB","services/job/");
@@ -114,7 +114,7 @@ AviaryScheddPlugin::initialize()
 			EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
 		}
 
-		key.sprintf("%d.%d", id.cluster, id.proc);
+		key.formatstr("%d.%d", id.cluster, id.proc);
 
 		processJob(key.Value(), ATTR_JOB_STATUS, value);
 
@@ -313,10 +313,10 @@ AviaryScheddPlugin::processJob(const char *key,
 					// wrong if the DAGMan job didn't use the
 					// default, but it is better to be wrong than
 					// to fail entirely, which is the alternative.
-				submissionName.sprintf("%s#%d", Name, dagman.cluster);
+				submissionName.formatstr("%s#%d", Name, dagman.cluster);
 			}
 		} else {
-			submissionName.sprintf("%s#%d", Name, id.cluster);
+			submissionName.formatstr("%s#%d", Name, id.cluster);
 		}
 
 		MyString tmp;

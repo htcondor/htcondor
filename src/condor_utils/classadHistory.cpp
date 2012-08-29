@@ -556,9 +556,9 @@ void WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	if (useGjid) {
 		MyString gjid;
 		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-		file_name.sprintf("%s/history.%s", PerJobHistoryDir, gjid.Value());
+		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.Value());
 	} else {
-		file_name.sprintf("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
 	}
 
 	// write out the file

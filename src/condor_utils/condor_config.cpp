@@ -150,14 +150,14 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 		prefix = get_mySubSystem()->getLocalName();
 	}
 
-	buffer.sprintf( "%s_EXPRS", get_mySubSystem()->getName() );
+	buffer.formatstr( "%s_EXPRS", get_mySubSystem()->getName() );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
 	}
 
-	buffer.sprintf( "%s_ATTRS", get_mySubSystem()->getName() );
+	buffer.formatstr( "%s_ATTRS", get_mySubSystem()->getName() );
 	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
@@ -165,14 +165,14 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	}
 
 	if(prefix) {
-		buffer.sprintf( "%s_%s_EXPRS", prefix, get_mySubSystem()->getName() );
+		buffer.formatstr( "%s_%s_EXPRS", prefix, get_mySubSystem()->getName() );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
 			free (tmp);
 		}
 
-		buffer.sprintf( "%s_%s_ATTRS", prefix, get_mySubSystem()->getName() );
+		buffer.formatstr( "%s_%s_ATTRS", prefix, get_mySubSystem()->getName() );
 		tmp = param( buffer.Value() );
 		if( tmp ) {
 			reqdExprs.initializeFromString (tmp);	
@@ -186,14 +186,14 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 		while ((tmp = reqdExprs.next())) {
 			expr = NULL;
 			if(prefix) {
-				buffer.sprintf("%s_%s", prefix, tmp);	
+				buffer.formatstr("%s_%s", prefix, tmp);	
 				expr = param(buffer.Value());
 			}
 			if(!expr) {
 				expr = param(tmp);
 			}
 			if(expr == NULL) continue;
-			buffer.sprintf( "%s = %s", tmp, expr );
+			buffer.formatstr( "%s = %s", tmp, expr );
 
 			if( !ad->Insert( buffer.Value() ) ) {
 				dprintf(D_ALWAYS,
@@ -233,7 +233,7 @@ validate_entries( bool ignore_invalid_entry ) {
 			MyString filename;
 			int line_number;
 			param_get_location(name, filename, line_number);
-			tmp.sprintf("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
+			tmp.formatstr("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
 			output += tmp;
 			invalid_entries++;
 		}
@@ -442,23 +442,23 @@ condor_auth_config(int is_daemon)
 	if (pbuf) {
 
 		if( !trustedca_buf) {
-			buffer.sprintf( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
+			buffer.formatstr( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
 			SetEnv( STR_GSI_CERT_DIR, buffer.Value() );
 		}
 
 		if (!mapfile_buf ) {
-			buffer.sprintf( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
+			buffer.formatstr( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
 			SetEnv( STR_GSI_MAPFILE, buffer.Value() );
 		}
 
 		if( is_daemon ) {
 			if( !cert_buf ) {
-				buffer.sprintf( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
+				buffer.formatstr( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
 				SetEnv( STR_GSI_USER_CERT, buffer.Value() );
 			}
 	
 			if (!key_buf ) {
-				buffer.sprintf( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
+				buffer.formatstr( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
 				SetEnv( STR_GSI_USER_KEY, buffer.Value() );
 			}
 		}
@@ -753,7 +753,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// the general mechanism and set START itself --pfc]
 		if( !strcmp( macro_name, "START_owner" ) ) {
 			MyString ownerstr;
-			ownerstr.sprintf( "Owner == \"%s\"", varvalue );
+			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
 			insert( "START", ownerstr.Value(), ConfigTab, TABLESIZE );
 			extra_info->AddEnvironmentParam("START");
 		}
@@ -1057,7 +1057,7 @@ char*
 find_global()
 {
 	MyString	file;
-	file.sprintf( "%s_config", myDistro->Get() );
+	file.formatstr( "%s_config", myDistro->Get() );
 	return find_file( EnvGetName( ENV_CONFIG), file.Value() );
 }
 
@@ -1123,16 +1123,16 @@ find_file(const char *env_name, const char *file_name)
 			// 1) $HOME/.condor/condor_config
 		struct passwd *pw = getpwuid( geteuid() );
 		if ( !can_switch_ids() && pw && pw->pw_dir ) {
-			sprintf( locations[0], "%s/.%s/%s", pw->pw_dir, myDistro->Get(),
+			formatstr( locations[0], "%s/.%s/%s", pw->pw_dir, myDistro->Get(),
 					 file_name );
 		}
 			// 2) /etc/condor/condor_config
-		locations[1].sprintf( "/etc/%s/%s", myDistro->Get(), file_name );
+		locations[1].formatstr( "/etc/%s/%s", myDistro->Get(), file_name );
 			// 3) /usr/local/etc/condor_config (FreeBSD)
-		locations[2].sprintf( "/usr/local/etc/%s", file_name );
+		locations[2].formatstr( "/usr/local/etc/%s", file_name );
 		if (tilde) {
 				// 4) ~condor/condor_config
-			locations[3].sprintf( "%s/%s", tilde, file_name );
+			locations[3].formatstr( "%s/%s", tilde, file_name );
 		}
 
 		int ctr;	
@@ -1279,7 +1279,7 @@ fill_attributes()
 
 		int ver = sysapi_opsys_version();
 		if (ver > 0) {
-			val.sprintf("%d", ver);
+			val.formatstr("%d", ver);
 			insert( "OPSYSVER", val.Value(), ConfigTab, TABLESIZE );
 			extra_info->AddInternalParam("OPSYSVER");
 		}
@@ -1297,7 +1297,7 @@ fill_attributes()
 
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
-		val.sprintf("%d", major_ver);
+		val.formatstr("%d", major_ver);
 		insert( "OPSYS_MAJOR_VER", val.Value(), ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("OPSYS_MAJOR_VER");
 	}
@@ -1353,7 +1353,7 @@ fill_attributes()
 	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("SUBSYSTEM");
 
-	val.sprintf("%d",sysapi_phys_memory_raw_no_param());
+	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
 	insert( "DETECTED_MEMORY", val.Value(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("DETECTED_MEMORY");
 
@@ -1368,7 +1368,7 @@ fill_attributes()
 	int num_hyperthread_cpus=0;
 	sysapi_ncpus_raw_no_param(&num_cpus,&num_hyperthread_cpus);
 
-	val.sprintf("%d",num_hyperthread_cpus);
+	val.formatstr("%d",num_hyperthread_cpus);
 	insert( "DETECTED_CORES", val.Value(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("DETECTED_CORES");
 }
@@ -2264,7 +2264,7 @@ init_dynamic_config()
 		// if we're using runtime config, try a subsys-specific config
 		// knob for the root location
 	MyString filename_parameter;
-	filename_parameter.sprintf( "%s_CONFIG", get_mySubSystem()->getName() );
+	filename_parameter.formatstr( "%s_CONFIG", get_mySubSystem()->getName() );
 	tmp = param( filename_parameter.Value() );
 	if( tmp ) {
 		toplevel_persistent_config = tmp;
@@ -2293,7 +2293,7 @@ init_dynamic_config()
 			exit( 1 );
 		}
 	}
-	toplevel_persistent_config.sprintf( "%s%c.config.%s", tmp,
+	toplevel_persistent_config.formatstr( "%s%c.config.%s", tmp,
 										DIR_DELIM_CHAR,
 										get_mySubSystem()->getName() );
 	free(tmp);
@@ -2345,8 +2345,8 @@ set_persistent_config(char *admin, char *config)
 	priv = set_root_priv();
 	if (config && config[0]) {	// (re-)set config
 			// write new config to temporary file
-		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
-		tmp_filename.sprintf( "%s.tmp", filename.Value() );
+		filename.formatstr( "%s.%s", toplevel_persistent_config.Value(), admin );
+		tmp_filename.formatstr( "%s.tmp", filename.Value() );
 		do {
 			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( tmp_filename.Value() );
@@ -2400,7 +2400,7 @@ set_persistent_config(char *admin, char *config)
 	}		
 
 	// update admin list on disk
-	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
+	tmp_filename.formatstr( "%s.tmp", toplevel_persistent_config.Value() );
 	do {
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( tmp_filename.Value() );
@@ -2462,7 +2462,7 @@ set_persistent_config(char *admin, char *config)
 
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
-		filename.sprintf( "%s.%s", toplevel_persistent_config.Value(), admin );
+		filename.formatstr( "%s.%s", toplevel_persistent_config.Value(), admin );
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( filename.Value() );
 		if (PersistAdminList.number() == 0) {
@@ -2553,7 +2553,7 @@ process_persistent_configs()
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
 		MyString config_source;
-		config_source.sprintf( "%s.%s", toplevel_persistent_config.Value(),
+		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
 		rval = Read_config( config_source.Value(), ConfigTab, TABLESIZE,
 							 EXPAND_LAZY, true, extra_info );

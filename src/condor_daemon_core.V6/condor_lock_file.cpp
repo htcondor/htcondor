@@ -129,14 +129,14 @@ CondorLockFile::BuildLock( const char	*l_url,
 	this->lock_name = l_name;
 
 		// Create the lock file name from it
-	sprintf( lock_file, "%s/%s.lock", l_url + 5, l_name );
+	formatstr( lock_file, "%s/%s.lock", l_url + 5, l_name );
 
 		// Build a temporary file name
 	char	hostname[128];
 	if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
 		sprintf( hostname, "unknown-%d", rand( ) );
 	}
-	sprintf( temp_file, "%s.%s-%d", lock_file.c_str(), hostname, getpid( ) );
+	formatstr( temp_file, "%s.%s-%d", lock_file.c_str(), hostname, getpid( ) );
 
 	dprintf( D_FULLDEBUG, "HA Lock Init: lock file='%s'\n",
 			 lock_file.c_str() );

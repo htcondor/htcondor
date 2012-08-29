@@ -95,7 +95,7 @@ int sysapi_partition_id_raw(char const *path,char **result)
 	}
 
 	std::string buf;
-	sprintf(buf,"%ld",(long)statbuf.st_dev);
+	formatstr(buf,"%ld",(long)statbuf.st_dev);
 	*result = strdup(buf.c_str());
 	ASSERT( *result );
 

@@ -102,7 +102,7 @@ getValidKnownJob(const char* key, AviaryStatus &_status) {
 	// #1: is it even a proper "cluster.proc"?
 	PROC_ID id = getProcByString(key);
 	if (id.cluster < 0 || id.proc < 0) {
-		sprintf (_status.text, "Invalid job id '%s'",key);
+		formatstr (_status.text, "Invalid job id '%s'",key);
 		dprintf(D_FULLDEBUG, "%s\n", _status.text.c_str());
 		_status.type = AviaryStatus::FAIL;
 		return NULL;
@@ -111,7 +111,7 @@ getValidKnownJob(const char* key, AviaryStatus &_status) {
 	// #2 is it anywhere in our job map?
     JobCollectionType::const_iterator element = g_jobs.find(key);
     if ( g_jobs.end() == element ) {
-		sprintf (_status.text, "Unknown local job id '%s'",key);
+		formatstr (_status.text, "Unknown local job id '%s'",key);
 		dprintf(D_FULLDEBUG, "%s\n", _status.text.c_str());
 		_status.type = AviaryStatus::NO_MATCH;
 		return NULL;
@@ -144,7 +144,7 @@ bool JobServerObject::getSummary(const char* key, JobSummaryFields& _summary, Av
     string str;
     if ( classAd.LookupString("JOB_AD_ERROR", str) )
     {
-		sprintf(_status.text,"Error obtaining ClassAd for job '%s'; ",key);
+		formatstr(_status.text,"Error obtaining ClassAd for job '%s'; ",key);
 		_status.text += str;
 		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
         return false;
@@ -181,7 +181,7 @@ JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, AviaryStatu
     string str;
     if ( classAd.LookupString("JOB_AD_ERROR", str) )
     {
-		sprintf(_status.text,"Error obtaining ClassAd for job '%s'; ",key);
+		formatstr(_status.text,"Error obtaining ClassAd for job '%s'; ",key);
 		_status.text += str;
 		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
     }
@@ -189,7 +189,7 @@ JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, AviaryStatu
     // return all the attributes in the ClassAd
     if ( !m_codec->classAdToMap ( classAd, _map  ) )
     {
-		sprintf(_status.text,"Error mapping info for job '%s'; ",key);
+		formatstr(_status.text,"Error mapping info for job '%s'; ",key);
 		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
         return false;
     }
@@ -236,7 +236,7 @@ JobServerObject::fetchJobData(const char* key,
 	string str;
 	job->getFullAd ( ad );
 	if ( ad.LookupString("JOB_AD_ERROR", str)  ) {
-		sprintf(_status.text,"Error checking ClassAd for user priv on job '%s'; ",key);
+		formatstr(_status.text,"Error checking ClassAd for user priv on job '%s'; ",key);
 		_status.text += str;
 		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
 		return false;
@@ -246,28 +246,28 @@ JobServerObject::fetchJobData(const char* key,
 	switch (ftype) {
 		case ERR:
 			if ( !ad.LookupString(ATTR_JOB_ERROR, fname)  ) {
-				sprintf (_status.text,  "No error file for job '%s'",key);
+				formatstr (_status.text,  "No error file for job '%s'",key);
 				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		case LOG:
 			if ( !ad.LookupString(ATTR_ULOG_FILE, fname)  ) {
-				sprintf (_status.text,  "No log file for job '%s'",key);
+				formatstr (_status.text,  "No log file for job '%s'",key);
 				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		case OUT:
 			if ( !ad.LookupString(ATTR_JOB_OUTPUT, fname)  ) {
-				sprintf (_status.text,  "No output file for job '%s'",key);
+				formatstr (_status.text,  "No output file for job '%s'",key);
 				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		default:
 			// ruh-roh...asking for a file type we don't know about
-			sprintf (_status.text,  "Unknown file type for job '%s'",key);
+			formatstr (_status.text,  "Unknown file type for job '%s'",key);
 			dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 			return false;
 	}
@@ -276,18 +276,18 @@ JobServerObject::fetchJobData(const char* key,
 
 	StatInfo the_file(fname.c_str());
 	if (the_file.Error()) {
-		sprintf (_status.text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
+		formatstr (_status.text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
         dprintf(D_FULLDEBUG,"%s\n", _status.text.c_str());
         // don't give up yet...maybe it's IWD+filename
         string iwd_path;
         if ( !ad.LookupString(ATTR_JOB_IWD, iwd_path)  ) {
-            sprintf (_status.text,  "No IWD found for job '%s'",key);
+            formatstr (_status.text,  "No IWD found for job '%s'",key);
             dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
             return false;
         }
         StatInfo the_iwd_file(iwd_path.c_str(),fname.c_str());
         if (the_iwd_file.Error()) {
-            sprintf (_status.text,  "No output file for job '%s'",key);
+            formatstr (_status.text,  "No output file for job '%s'",key);
             dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
             return false;
         }

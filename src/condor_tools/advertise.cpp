@@ -207,7 +207,7 @@ int main( int argc, char *argv[] )
 				// If there's no "MyAddress", generate one..
 			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
 				MyString tmp;
-				tmp.sprintf( "<%s:0>", my_ip_string() );
+				tmp.formatstr( "<%s:0>", my_ip_string() );
 				ad->Assign( ATTR_MY_ADDRESS, tmp.Value() );
 			}
 

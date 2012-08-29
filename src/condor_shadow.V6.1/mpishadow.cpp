@@ -481,7 +481,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 	args.InsertArg("-p4pg",0);
 
 	MyString procgroup;
-	procgroup.sprintf("procgroup.%d.%d",getCluster(),getProc());
+	procgroup.formatstr("procgroup.%d.%d",getCluster(),getProc());
 	args.InsertArg(procgroup.Value(),1);
 
 	if(!args.InsertArgsIntoClassAd(ad,NULL,&args_error)) {
@@ -512,11 +512,11 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 	MyString new_transfer_files;
 	if( !ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &transfer_files) ) {
 			// Nothing here, so we can safely add it ourselves. 
-		new_transfer_files.sprintf( "%s = \"procgroup.%d.%d\"",
+		new_transfer_files.formatstr( "%s = \"procgroup.%d.%d\"",
 				 ATTR_TRANSFER_INPUT_FILES, getCluster(), getProc() ); 
 	} else {
 			// There's a list already.  We've got to append to it. 
-		new_transfer_files.sprintf( "%s = \"%s, procgroup.%d.%d\"",
+		new_transfer_files.formatstr( "%s = \"%s, procgroup.%d.%d\"",
 				 ATTR_TRANSFER_INPUT_FILES, transfer_files, getCluster(),
 				 getProc() );
 

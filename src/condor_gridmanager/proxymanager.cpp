@@ -72,7 +72,7 @@ SetMasterProxy( Proxy *master, const Proxy *copy_src )
 	int rc;
 	std::string tmp_file;
 
-	sprintf( tmp_file, "%s.tmp", master->proxy_filename );
+	formatstr( tmp_file, "%s.tmp", master->proxy_filename );
 
 	rc = copy_file( copy_src->proxy_filename, tmp_file.c_str() );
 	if ( rc != 0 ) {
@@ -189,7 +189,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) ) {
 		std::string param_name;
-		sprintf( param_name, "JOB_PROXY_OVERRIDE_FILE_%s", owner.c_str() );
+		formatstr( param_name, "JOB_PROXY_OVERRIDE_FILE_%s", owner.c_str() );
 		param_str = param( param_name.c_str() );
 	}
 	if ( param_str == NULL ) {
@@ -230,7 +230,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 				// Create a master proxy for our new ProxySubject
 				Proxy *new_master = new Proxy;
 				new_master->id = next_proxy_id++;
-				sprintf( tmp, "%s/master_proxy.%d", masterProxyDirectory,
+				formatstr( tmp, "%s/master_proxy.%d", masterProxyDirectory,
 							 new_master->id );
 				new_master->proxy_filename = strdup( tmp.c_str() );
 				new_master->num_references = 0;
@@ -366,7 +366,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			std::string tmp;
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
-			proxy_subject->email = strdup( email );
+			proxy_subject->email = email ? strdup( email ) : NULL;
 			proxy_subject->fqan = strdup( fqan );
 			proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 			proxy_subject->has_voms_attrs = true;
@@ -374,7 +374,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			// Create a master proxy for our new ProxySubject
 			Proxy *new_master = new Proxy;
 			new_master->id = next_proxy_id++;
-			sprintf( tmp, "%s/master_proxy.%d", masterProxyDirectory,
+			formatstr( tmp, "%s/master_proxy.%d", masterProxyDirectory,
 						 new_master->id );
 			new_master->proxy_filename = strdup( tmp.c_str() );
 			new_master->num_references = 0;
@@ -808,14 +808,14 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	std::string buff;
 
 	if (myProxyEntry->myproxy_server_dn) {
-		sprintf( buff, "MYPROXY_SERVER_DN=%s",
+		formatstr( buff, "MYPROXY_SERVER_DN=%s",
 				 myProxyEntry->myproxy_server_dn);
 		myEnv.SetEnv(buff.c_str());
 		dprintf (D_FULLDEBUG, "%s\n", buff.c_str());
 	}
 
 
-	sprintf(buff, "X509_USER_PROXY=%s", proxy_filename);
+	formatstr(buff, "X509_USER_PROXY=%s", proxy_filename);
 	myEnv.SetEnv (buff.c_str());
 	dprintf (D_FULLDEBUG, "%s\n", buff.c_str());
 

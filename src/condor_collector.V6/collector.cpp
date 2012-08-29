@@ -988,7 +988,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
 		if (!checks_absent) {
 			MyString modified_filter;
-			modified_filter.sprintf("(%s) && (%s =!= True)",
+			modified_filter.formatstr("(%s) && (%s =!= True)",
 				ExprTreeToString(__filter__),ATTR_ABSENT);
 			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
 			__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
@@ -1521,12 +1521,12 @@ void CollectorDaemon::init_classad(int interval)
     MyString id;
     if( CollectorName ) {
             if( strchr( CollectorName, '@' ) ) {
-               id.sprintf( "%s", CollectorName );
+               id.formatstr( "%s", CollectorName );
             } else {
-               id.sprintf( "%s@%s", CollectorName, get_local_fqdn().Value() );
+               id.formatstr( "%s@%s", CollectorName, get_local_fqdn().Value() );
             }
     } else {
-            id.sprintf( "%s", get_local_fqdn().Value() );
+            id.formatstr( "%s", get_local_fqdn().Value() );
     }
     ad->Assign( ATTR_NAME, id.Value() );
 

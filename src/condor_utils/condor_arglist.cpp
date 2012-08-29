@@ -112,7 +112,7 @@ bool split_args(
 			}
 			if(!*args) {
 				if(error_msg) {
-					error_msg->sprintf("Unbalanced quote starting here: %s",quote);
+					error_msg->formatstr("Unbalanced quote starting here: %s",quote);
 				}
 				return false;
 			}
@@ -372,7 +372,7 @@ ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
 
 				if(*args != '"') {
 					MyString msg;
-					msg.sprintf("Unterminated quote in windows argument string starting here: %s",begin_quote);
+					msg.formatstr("Unterminated quote in windows argument string starting here: %s",begin_quote);
 					AddErrorMessage(msg.Value(),error_msg);
 					return false;
 				}
@@ -644,7 +644,7 @@ ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
 	while(it.Next(arg)) {
 		if(!IsSafeArgV1Value(arg->Value())) {
 			if(error_msg) {
-				error_msg->sprintf("Cannot represent '%s' in V1 arguments syntax.",arg->Value());
+				error_msg->formatstr("Cannot represent '%s' in V1 arguments syntax.",arg->Value());
 			}
 			return false;
 		}
@@ -886,7 +886,7 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 	if(*v1_input) {
 		if(errmsg) {
 			MyString msg;
-			msg.sprintf(
+			msg.formatstr(
 				"Unexpected characters following double-quote.  "
 				"Did you forget to escape the double-quote by repeating it?  "
 				"Here is the quote and trailing characters: %s\n",quote_terminated);
@@ -908,7 +908,7 @@ ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 		if(*v1_input == '"') {
 			if(errmsg) {
 				MyString msg;
-				msg.sprintf("Found illegal unescaped double-quote: %s",v1_input);
+				msg.formatstr("Found illegal unescaped double-quote: %s",v1_input);
 				AddErrorMessage(msg.Value(),errmsg);
 			}
 			return false;

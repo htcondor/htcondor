@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #ifndef __FORKWORK_H__
-#define __FORKWORD_H__
+#define __FORKWORK_H__
 
 #include "condor_daemon_core.h"
 

@@ -289,12 +289,12 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 
 					if (strcmp (Proc->rootdir, "/") == 0)
 					{
-						coreFile.sprintf( "%s/core.%d.%d", coredir.Value(),
+						coreFile.formatstr( "%s/core.%d.%d", coredir.Value(),
 							 	Proc->id.cluster, Proc->id.proc );
 					}
 					else
 					{
-						coreFile.sprintf( "%s%s/core.%d.%d", Proc->rootdir,
+						coreFile.formatstr( "%s%s/core.%d.%d", Proc->rootdir,
 							 	coredir.Value(), Proc->id.cluster, Proc->id.proc );
 					}
 				} 

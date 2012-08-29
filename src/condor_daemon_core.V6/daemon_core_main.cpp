@@ -358,7 +358,7 @@ static void
 kill_daemon_ad_file()
 {
 	MyString param_name;
-	param_name.sprintf( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
+	param_name.formatstr( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 	char *ad_file = param(param_name.Value());
 	if( !ad_file ) {
 		return;
@@ -385,7 +385,7 @@ drop_addr_file()
 
 	if( addrFile ) {
 		MyString newAddrFile;
-		newAddrFile.sprintf("%s.new",addrFile);
+		newAddrFile.formatstr("%s.new",addrFile);
 		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
@@ -608,7 +608,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	}
 
 		// First, create the new name.
-	newdir.sprintf( "%s.%s", val, append_str );
+	newdir.formatstr( "%s.%s", val, append_str );
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
@@ -2051,7 +2051,7 @@ int dc_main( int argc, char** argv )
 
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
-	debug_wait_param.sprintf("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
+	debug_wait_param.formatstr("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
 	if (param_boolean(debug_wait_param.Value(), false, false)) {
 		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
@@ -2063,7 +2063,7 @@ int dc_main( int argc, char** argv )
 	}
 
 #ifdef WIN32
-	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	debug_wait_param.formatstr("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
 	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
 	if (wait_for_win32_debugger) {
 		UINT ms = GetTickCount() - 10;

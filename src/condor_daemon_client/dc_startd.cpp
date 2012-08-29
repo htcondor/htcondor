@@ -971,7 +971,7 @@ DCStartd::checkVacateType( VacateType t )
 	case VACATE_FAST:
 		break;
 	default:
-		sprintf(err_msg, "Invalid VacateType (%d)", (int)t);
+		formatstr(err_msg, "Invalid VacateType (%d)", (int)t);
 		newError( CA_INVALID_REQUEST, err_msg.c_str() );
 		return false;
 	}
@@ -1013,7 +1013,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	ClassAd request_ad;
 	Sock *sock = startCommand( DRAIN_JOBS, Sock::reli_sock, 20 );
 	if( !sock ) {
-		sprintf(error_msg,"Failed to start DRAIN_JOBS command to %s",name());
+		formatstr(error_msg,"Failed to start DRAIN_JOBS command to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;
 	}
@@ -1025,7 +1025,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	}
 
 	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to compose DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to compose DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
 		return false;
@@ -1034,7 +1034,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	sock->decode();
 	ClassAd response_ad;
 	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to get response to DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to get response to DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
 		return false;
@@ -1049,7 +1049,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 		std::string remote_error_msg;
 		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
 		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
-		sprintf(error_msg,
+		formatstr(error_msg,
 				"Received failure from %s in response to DRAIN_JOBS request: error code %d: %s",
 				name(),error_code,remote_error_msg.c_str());
 		newError(CA_FAILURE,error_msg.c_str());
@@ -1068,7 +1068,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 	ClassAd request_ad;
 	Sock *sock = startCommand( CANCEL_DRAIN_JOBS, Sock::reli_sock, 20 );
 	if( !sock ) {
-		sprintf(error_msg,"Failed to start CANCEL_DRAIN_JOBS command to %s",name());
+		formatstr(error_msg,"Failed to start CANCEL_DRAIN_JOBS command to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;
 	}
@@ -1078,7 +1078,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 	}
 
 	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to compose CANCEL_DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to compose CANCEL_DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;
 	}
@@ -1086,7 +1086,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 	sock->decode();
 	ClassAd response_ad;
 	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to get response to CANCEL_DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to get response to CANCEL_DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
 		return false;
@@ -1099,7 +1099,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 		std::string remote_error_msg;
 		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
 		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
-		sprintf(error_msg,
+		formatstr(error_msg,
 				"Received failure from %s in response to CANCEL_DRAIN_JOBS request: error code %d: %s",
 				name(),error_code,remote_error_msg.c_str());
 		newError(CA_FAILURE,error_msg.c_str());

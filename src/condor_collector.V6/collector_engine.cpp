@@ -962,7 +962,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		{
 			EXCEPT ("Error reading system time!");
 		}	
-		buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
+		buf.formatstr( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
 		ad->Insert ( buf.Value() );
 	}
 

@@ -1713,13 +1713,13 @@ void Matchmaker::hgq_construct_tree() {
 
         // group quota setting 
         MyString vname;
-        vname.sprintf("GROUP_QUOTA_%s", gname.c_str());
+        vname.formatstr("GROUP_QUOTA_%s", gname.c_str());
         double quota = param_double(vname.Value(), -1.0, 0, INT_MAX);
         if (quota >= 0) {
             group->config_quota = quota;
             group->static_quota = true;
         } else {
-            vname.sprintf("GROUP_QUOTA_DYNAMIC_%s", gname.c_str());
+            vname.formatstr("GROUP_QUOTA_DYNAMIC_%s", gname.c_str());
             quota = param_double(vname.Value(), -1.0, 0.0, 1.0);
             if (quota >= 0) {
                 group->config_quota = quota;
@@ -1738,9 +1738,9 @@ void Matchmaker::hgq_construct_tree() {
         }
 
         // accept surplus
-	    vname.sprintf("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
+	    vname.formatstr("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
         group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
-	    vname.sprintf("GROUP_AUTOREGROUP_%s", gname.c_str());
+	    vname.formatstr("GROUP_AUTOREGROUP_%s", gname.c_str());
         group->autoregroup = param_boolean(vname.Value(), default_autoregroup);
         if (group->autoregroup) autoregroup = true;
         if (group->accept_surplus) accept_surplus = true;
@@ -2488,7 +2488,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					submitterAbsShare);
 				MyString starvation;
 				if( submitterLimitStarved > 0 ) {
-					starvation.sprintf(" (starved %f)",submitterLimitStarved);
+					starvation.formatstr(" (starved %f)",submitterLimitStarved);
 				}
 				dprintf (D_FULLDEBUG, "    submitterLimit    = %f%s\n",
 					submitterLimit, starvation.Value());
@@ -2724,7 +2724,7 @@ obtainAdsFromCollector (
     publicQuery.addORConstraint("(MyType == \"Scheduler\") || (MyType == \"Submitter\")");
     if (strSlotConstraint && strSlotConstraint[0]) {
         MyString machine;
-        machine.sprintf("((MyType == \"Machine\") && (%s))", strSlotConstraint);
+        machine.formatstr("((MyType == \"Machine\") && (%s))", strSlotConstraint);
         publicQuery.addORConstraint(machine.Value());
     } else {
         publicQuery.addORConstraint("(MyType == \"Machine\")");
@@ -3071,7 +3071,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	// Used for log messages to identify the schedd.
 	// Not for other uses, as it may change!
 	MyString schedd_id;
-	schedd_id.sprintf("%s (%s)", scheddName, scheddAddr.Value());
+	schedd_id.formatstr("%s (%s)", scheddName, scheddAddr.Value());
 	
 	// 0.  connect to the schedd --- ask the cache for a connection
 	sock = sockCache->findReliSock( scheddAddr.Value() );
@@ -3491,7 +3491,7 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 
 	endTime = time(NULL);
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
-	buffer.sprintf("%s = %ld", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
+	buffer.formatstr("%s = %ld", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
 					(endTime - startTime)) );
 	submitter->InsertOrUpdate(buffer.Value());
 }
@@ -4250,7 +4250,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		strcpy(remoteOwner, "none");
 	}
 	if (offer->LookupString(ATTR_ACCOUNTING_GROUP, accountingGroup)) {
-		sprintf(remoteUser,"%s (%s=%s)",
+		formatstr(remoteUser,"%s (%s=%s)",
 			remoteOwner,ATTR_ACCOUNTING_GROUP,accountingGroup);
 	} else {
 		remoteUser = remoteOwner;
@@ -4482,12 +4482,12 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+		expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
 		if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
-			expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
@@ -4515,11 +4515,11 @@ addRemoteUserPrios( ClassAd	*ad )
 	}
 		// This won't fire if total_slots is still 0...
 	for(i = 1; i <= total_slots; i++) {
-		slot_prefix.sprintf("%s%d_", resource_prefix, i);
-		buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_ACCOUNTING_GROUP);
-		buffer1.sprintf("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_USER);
-		buffer2.sprintf("%s%s", slot_prefix.Value(), ATTR_ACCOUNTING_GROUP);
-		buffer3.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_USER);
+		slot_prefix.formatstr("%s%d_", resource_prefix, i);
+		buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_ACCOUNTING_GROUP);
+		buffer1.formatstr("%s%s", slot_prefix.Value(), ATTR_PREEMPTING_USER);
+		buffer2.formatstr("%s%s", slot_prefix.Value(), ATTR_ACCOUNTING_GROUP);
+		buffer3.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_USER);
 			// If there is a preempting user, use that for computing remote user prio.
 		if( ad->LookupString( buffer.Value() , remoteUser ) ||
 			ad->LookupString( buffer1.Value() , remoteUser ) ||
@@ -4529,21 +4529,21 @@ addRemoteUserPrios( ClassAd	*ad )
 				// If there is a user on that VM, stick that user's priority
 				// information into the ad	
 			prio = (float) accountant.GetPriority( remoteUser.Value() );
-			buffer.sprintf("%s%s", slot_prefix.Value(), 
+			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_PRIO);
 			ad->Assign(buffer.Value(),prio);
-			buffer.sprintf("%s%s", slot_prefix.Value(), 
+			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(buffer.Value(),expr.Value());
 			if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 				// this is a group, so enter group usage info
-				buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
+				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
 				ad->Assign( buffer.Value(), temp_groupName );
-				buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
+				expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
 				ad->AssignExpr( buffer.Value(), expr.Value() );
-				buffer.sprintf("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
+				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );
 			}
 		}	
@@ -4899,12 +4899,12 @@ init_public_ad()
 	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
-	line.sprintf ("%s = \"%s\"", ATTR_NEGOTIATOR_IP_ADDR,
+	line.formatstr ("%s = \"%s\"", ATTR_NEGOTIATOR_IP_ADDR,
 			daemonCore->InfoCommandSinfulString() );
 	publicAd->Insert(line.Value());
 
 #if !defined(WIN32)
-	line.sprintf("%s = %d", ATTR_REAL_UID, (int)getuid() );
+	line.formatstr("%s = %d", ATTR_REAL_UID, (int)getuid() );
 	publicAd->Insert(line.Value());
 #endif
 
@@ -4958,7 +4958,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
 	cmd_ad.SetTargetTypeName( NEGOTIATOR_ADTYPE );
 
-	line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS,
+	line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS,
 				  ATTR_NAME,
 				  NegotiatorName );
 	cmd_ad.Insert( line.Value() );
@@ -5136,7 +5136,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 				// figure out the prefix
 			int prefix_len = strcspn(name.Value(),"0123456789");
 			if( prefix_len < at - name.Value() ) {
-				slot1_name.sprintf("%.*s1%s",prefix_len,name.Value(),at);
+				slot1_name.formatstr("%.*s1%s",prefix_len,name.Value(),at);
 			}
 		}
 	}
@@ -5147,7 +5147,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		slot1_update_ad.Assign(ATTR_NAME,slot1_name);
 		slot1_update_ad.CopyAttribute(ATTR_STARTD_IP_ADDR,ATTR_STARTD_IP_ADDR,startd_ad);
 		MyString slotX_last_match_time;
-		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
+		slotX_last_match_time.formatstr("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
 		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
 
 		classy_counted_ptr<ClassAdMsg> lmsg = \
@@ -5190,7 +5190,7 @@ static void
 DelAttrN( ClassAd *ad, char const *attr, int n )
 {
 	MyString attrn;
-	attrn.sprintf("%s%d",attr,n);
+	attrn.formatstr("%s%d",attr,n);
 	ad->Delete( attrn.Value() );
 }
 
@@ -5198,7 +5198,7 @@ static void
 SetAttrN( ClassAd *ad, char const *attr, int n, int value )
 {
 	MyString attrn;
-	attrn.sprintf("%s%d",attr,n);
+	attrn.formatstr("%s%d",attr,n);
 	ad->Assign(attrn.Value(),value);
 }
 
@@ -5206,7 +5206,7 @@ static void
 SetAttrN( ClassAd *ad, char const *attr, int n, double value )
 {
 	MyString attrn;
-	attrn.sprintf("%s%d",attr,n);
+	attrn.formatstr("%s%d",attr,n);
 	ad->Assign(attrn.Value(),value);
 }
 
@@ -5214,7 +5214,7 @@ static void
 SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_list )
 {
 	MyString attrn;
-	attrn.sprintf("%s%d",attr,n);
+	attrn.formatstr("%s%d",attr,n);
 
 	MyString value;
 	std::set<std::string>::iterator it;

@@ -619,7 +619,7 @@ procArg(const char* arg)
 		// delete the cluster
 		{
 			CondorError errstack;
-			constraint.sprintf( "%s == %d", ATTR_CLUSTER_ID, c );
+			constraint.formatstr( "%s == %d", ATTR_CLUSTER_ID, c );
 			if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 				fprintf( stdout, 
 						 "Cluster %d %s.\n", c,
@@ -664,7 +664,7 @@ procArg(const char* arg)
 	// process by user name
 	else {
 		CondorError errstack;
-		constraint.sprintf("%s == \"%s\"", ATTR_OWNER, arg );
+		constraint.formatstr("%s == \"%s\"", ATTR_OWNER, arg );
 		if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
 					 (mode == JA_REMOVE_JOBS) ?

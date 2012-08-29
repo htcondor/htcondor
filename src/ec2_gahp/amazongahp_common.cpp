@@ -331,14 +331,14 @@ bool check_access_and_secret_key_file(const char* accesskeyfile, const char* sec
 {
 	// check the accesskeyfile
 	if( !check_read_access_file(accesskeyfile) ) {
-		sprintf(err_msg, "Cannot_read_access_key_file(%s)", accesskeyfile? accesskeyfile:"");
+		formatstr(err_msg, "Cannot_read_access_key_file(%s)", accesskeyfile? accesskeyfile:"");
 		dprintf (D_ALWAYS, "Error: %s\n", err_msg.c_str());
 		return false;
 	}
 
 	// check the accesskeyfile and secretkeyfile
 	if( !check_read_access_file(secretkeyfile) ) {
-		sprintf(err_msg, "Cannot_read_secret_key_file(%s)", secretkeyfile? secretkeyfile:"");
+		formatstr(err_msg, "Cannot_read_secret_key_file(%s)", secretkeyfile? secretkeyfile:"");
 		dprintf (D_ALWAYS, "Error: %s\n", err_msg.c_str());
 		return false;
 	}
@@ -364,7 +364,7 @@ create_output_string (int req_id, const char ** results, const int argc)
 {
 	std::string buffer;
 
-	sprintf( buffer, "%d", req_id );
+	formatstr( buffer, "%d", req_id );
 
 	for ( int i = 0; i < argc; i++ ) {
 		buffer += ' ';

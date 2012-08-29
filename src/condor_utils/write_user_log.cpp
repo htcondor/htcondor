@@ -620,7 +620,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 		ret_val = writer.Write( *this );
 
 		MyString	s;
-		s.sprintf( "openGlobalLog: header: %s", m_global_path );
+		s.formatstr( "openGlobalLog: header: %s", m_global_path );
 		writer.dprint( D_FULLDEBUG, s );
 
 		// TODO: we should should add the number of events in the
@@ -784,7 +784,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 		}
 		else {
 			MyString	s;
-			s.sprintf( "read %s header:", m_global_path );
+			s.formatstr( "read %s header:", m_global_path );
 			header_reader.dprint( D_FULLDEBUG, s );
 		}
 
@@ -836,7 +836,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 	}
 
 	MyString	s;
-	s.sprintf( "checkGlobalLogRotation(): %s", m_global_path );
+	s.formatstr( "checkGlobalLogRotation(): %s", m_global_path );
 	header_writer.dprint( D_FULLDEBUG, s );
 
 	// And write the updated header
@@ -851,7 +851,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 		fclose( header_fp );
 
 		MyString	tmps;
-		tmps.sprintf( "WriteUserLog: Wrote header to %s", m_global_path );
+		tmps.formatstr( "WriteUserLog: Wrote header to %s", m_global_path );
 		header_writer.dprint( D_FULLDEBUG, tmps );
 	}
 	if ( fake_lock ) {

@@ -150,7 +150,7 @@ JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 	if (NULL == hook_path)
 	{
 		MyString _param;
-		_param.sprintf("%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
+		_param.formatstr("%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed
 		validateHookPath(_param.Value(), hook_path);

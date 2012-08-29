@@ -230,7 +230,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 		fclose(argfile_fp);
 
         //??
-		m_arg_file.sprintf("%s%c%s", m_workingpath.Value(), 
+		m_arg_file.formatstr("%s%c%s", m_workingpath.Value(), 
 				DIR_DELIM_CHAR, VM_UNIV_ARGUMENT_FILE);
 
     }
@@ -346,7 +346,7 @@ bool
 VMType::createTempFile(const char *template_string, const char *suffix, MyString &outname)
 {
 	MyString tmp_config_name;
-	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(), 
+	tmp_config_name.formatstr("%s%c%s",m_workingpath.Value(), 
 			DIR_DELIM_CHAR, template_string);
 
 	char *config_name = strdup(tmp_config_name.Value() );
@@ -366,7 +366,7 @@ VMType::createTempFile(const char *template_string, const char *suffix, MyString
 	outname = config_name;
 
 	if( suffix ) {
-		tmp_config_name.sprintf("%s%s",config_name, suffix);
+		tmp_config_name.formatstr("%s%s",config_name, suffix);
 
 		if( rename(config_name, tmp_config_name.Value()) < 0 ) {
 			vmprintf(D_ALWAYS, "Cannot rename the temporary config file(%s), '%s' (errno %d) in "
@@ -397,7 +397,7 @@ VMType::isTransferedFile(const char* file_name, MyString& fullname)
 				&m_initial_working_files, true) ) {
 		// this file was transferred.
 		// make full path with workingdir
-		tmp_fullname.sprintf("%s%c%s", m_workingpath.Value(), 
+		tmp_fullname.formatstr("%s%c%s", m_workingpath.Value(), 
 				DIR_DELIM_CHAR, condor_basename(file_name));
 		fullname = tmp_fullname;
 		return true;

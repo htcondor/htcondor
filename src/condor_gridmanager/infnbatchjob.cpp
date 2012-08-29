@@ -174,7 +174,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			gahp_args.AppendArg( token );
 		}
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -192,16 +192,16 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	if ( gahp_args.Count() > 0 ) {
 		gahp_path = param( "REMOTE_GAHP" );
 		if ( gahp_path == NULL ) {
-			sprintf( error_string, "REMOTE_GAHP not defined" );
+			formatstr( error_string, "REMOTE_GAHP not defined" );
 			goto error_exit;
 		}
 	} else {
-		sprintf( buff, "%s_GAHP", batchType );
+		formatstr( buff, "%s_GAHP", batchType );
 		gahp_path = param(buff.c_str());
 		if ( gahp_path == NULL ) {
 			gahp_path = param( "BATCH_GAHP" );
 			if ( gahp_path == NULL ) {
-				sprintf( error_string, "Neither %s nor %s defined", buff.c_str(),
+				formatstr( error_string, "Neither %s nor %s defined", buff.c_str(),
 						 "BATCH_GAHP" );
 				goto error_exit;
 			}
@@ -723,7 +723,7 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		sprintf( full_job_id, "%s %s", batchType, job_id );
+		formatstr( full_job_id, "%s %s", batchType, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }

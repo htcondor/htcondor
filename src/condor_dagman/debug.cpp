@@ -197,9 +197,9 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 
 	if ((HdrFlags & D_NOHEADER) == 0) {
 		if (UseTimestamps) {
-			tstamp.sprintf("(%d) ", (int)clock_now);
+			tstamp.formatstr("(%d) ", (int)clock_now);
 		} else {
-			tstamp.sprintf("%d/%d %02d:%02d:%02d ",
+			tstamp.formatstr("%d/%d %02d:%02d:%02d ",
 				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
 				tm->tm_min, tm->tm_sec );
 		}
@@ -209,7 +209,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 				// access to the dprintf FP.  For now we're just going
 				// to skip figuring out the FD *while caching*.
 				// wenger 2011-05-18
-			fds.sprintf("(fd:?) " );
+			fds.formatstr("(fd:?) " );
 		}
 
 		if (HdrFlags & D_PID) {
@@ -218,7 +218,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 #else
 			my_pid = (int) getpid();
 #endif
-			pid.sprintf("(pid:%d) ", my_pid );
+			pid.formatstr("(pid:%d) ", my_pid );
 
 		}
 
@@ -228,7 +228,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	}
 
 	// figure out the line the user needs to emit.
-	line.vsprintf(fmt, args);
+	line.vformatstr(fmt, args);
 
 	// build the cached line and add it to the cache
 	cache += (tstamp + fds + line);

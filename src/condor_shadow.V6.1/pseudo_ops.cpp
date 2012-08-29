@@ -142,13 +142,17 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 	// may be used, we need to rename the stdout/err files to
 	// StdoutRemapName and StderrRemapName. Otherwise, they won't transfer
 	// back correctly if they contain any path information.
+	// If we don't know what version the starter is and we know file
+	// transfer will be used, do the rename. It won't harm a new starter
+	// and allows us to work correctly with old starters in more cases.
 	const CondorVersionInfo *vi = syscall_sock->get_peer_version();
-	if ( vi && !vi->built_since_version(7,7,2) ) {
+	if ( vi == NULL || !vi->built_since_version(7,7,2) ) {
 		std::string value;
 		ad->LookupString( ATTR_SHOULD_TRANSFER_FILES, value );
 		ShouldTransferFiles_t should_transfer = getShouldTransferFilesNum( value.c_str() );
 
-		if ( should_transfer == STF_IF_NEEDED || should_transfer == STF_YES ) {
+		if ( should_transfer == STF_YES ||
+			 ( vi != NULL && should_transfer == STF_IF_NEEDED ) ) {
 			ad = new ClassAd( *ad );
 			delete_ad = true;
 
@@ -171,10 +175,6 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 					ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
 				}
 			}
-		} else if ( should_transfer != STF_NO ) {
-			dprintf( D_ALWAYS, "pseudo_get_job_info(): Unexpected value for %s: %s (%d)!\n",
-					 ATTR_SHOULD_TRANSFER_FILES, value.c_str(),
-					 should_transfer );
 		}
 	}
 
@@ -289,7 +289,7 @@ static void complete_path( const char *short_path, MyString &full_path )
 		full_path = short_path;
 	} else {
 		// strcpy(full_path,CurrentWorkingDir);
-		full_path.sprintf("%s%s%s",
+		full_path.formatstr("%s%s%s",
 						  Shadow->getIwd(),
 						  DIR_DELIM_STRING,
 						  short_path);
@@ -680,7 +680,7 @@ pseudo_ulog( ClassAd *ad )
 		}
 
 		if(err->isCriticalError()) {
-			CriticalErrorBuf.sprintf(
+			CriticalErrorBuf.formatstr(
 			  "Error from %s: %s",
 			  err->getExecuteHost(),
 			  err->getErrorText());
@@ -795,7 +795,7 @@ pseudo_constrain( const char *expr )
 		dprintf(D_SYSCALLS,"\tRequirements already refers to AgentRequirements\n");
 		return 0;
 	} else {
-		newreqs.sprintf("(%s) && AgentRequirements",reqs.Value());
+		newreqs.formatstr("(%s) && AgentRequirements",reqs.Value());
 		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs.Value());
 		return pseudo_set_job_attr("Requirements",newreqs.Value());
 	}

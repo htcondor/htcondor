@@ -1232,7 +1232,7 @@ test_printed_version(
 	ExprTree  *tree;
 
 	tree = classad->LookupExpr(attribute_name);
-	printed_version.sprintf( "%s = %s", attribute_name, ExprTreeToString( tree ) );
+	printed_version.formatstr( "%s = %s", attribute_name, ExprTreeToString( tree ) );
 
 	if (!strcmp(expected_string, printed_version.Value())) {
 		printf("Passed: ");

@@ -47,10 +47,10 @@ string formatter;
 template<typename T>
 const char* formatReal(T real) {
     if (real == 0.0 || real == 1.0) {
-        sprintf(formatter, "%.1G", real);
+        formatstr(formatter, "%.1G", real);
     }
     else {
-        sprintf(formatter, "%.6G", real);
+        formatstr(formatter, "%.6G", real);
     }
     return formatter.c_str();
 }
@@ -175,25 +175,25 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         isAcctGroup = false;
 
         // skip stale records unless we have none
-        sprintf( attrLastUsage , "LastUsageTime%d", i );
+        formatstr( attrLastUsage , "LastUsageTime%d", i );
         ad->LookupInteger  ( attrLastUsage.c_str(), lastUsage );
         if (lastUsage < minLastUsageTime && acct_count > 0)
             continue;
 
         // parse the horrid classad
-        sprintf( attrName , "Name%d", i );
-        sprintf( attrPrio , "Priority%d", i );
-        sprintf( attrResUsed , "ResourcesUsed%d", i );
-        sprintf( attrWtResUsed , "WeightedResourcesUsed%d", i );
-        sprintf( attrFactor , "PriorityFactor%d", i );
-        sprintf( attrBeginUsage , "BeginUsageTime%d", i );
-        sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
-        sprintf( attrAcctGroup, "AccountingGroup%d", i);
-        sprintf( attrIsAcctGroup, "IsAccountingGroup%d", i);
-        sprintf( attrConfigQuota, "ConfigQuota%d", i);
-        sprintf( attrEffectiveQuota, "EffectiveQuota%d", i);
-        sprintf( attrSubtreeQuota, "SubtreeQuota%d", i);
-        sprintf( attrSurplusPolicy, "SurplusPolicy%d", i);
+        formatstr( attrName , "Name%d", i );
+        formatstr( attrPrio , "Priority%d", i );
+        formatstr( attrResUsed , "ResourcesUsed%d", i );
+        formatstr( attrWtResUsed , "WeightedResourcesUsed%d", i );
+        formatstr( attrFactor , "PriorityFactor%d", i );
+        formatstr( attrBeginUsage , "BeginUsageTime%d", i );
+        formatstr( attrAccUsage , "WeightedAccumulatedUsage%d", i );
+        formatstr( attrAcctGroup, "AccountingGroup%d", i);
+        formatstr( attrIsAcctGroup, "IsAccountingGroup%d", i);
+        formatstr( attrConfigQuota, "ConfigQuota%d", i);
+        formatstr( attrEffectiveQuota, "EffectiveQuota%d", i);
+        formatstr( attrSubtreeQuota, "SubtreeQuota%d", i);
+        formatstr( attrSurplusPolicy, "SurplusPolicy%d", i);
 
         ad->LookupString   ( attrName.c_str(), name );
         ad->LookupFloat    ( attrPrio.c_str(), priority );

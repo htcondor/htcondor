@@ -1103,6 +1103,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				shallowOpts.bPostRun = false;
 			}
+			else if ( (strArg.find("-dont_use_default_node_log") != -1) )
+			{
+				deepOpts.always_use_node_log = false;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{

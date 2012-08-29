@@ -273,7 +273,7 @@ Defrag::queryDrainingCost()
 	startdQuery.setDesiredAttrs(desired_attrs);
 	std::string query;
 	// only want one ad per machine
-	sprintf(query,"%s==1 && (%s =!= undefined || %s =!= undefined)",
+	formatstr(query,"%s==1 && (%s =!= undefined || %s =!= undefined)",
 			ATTR_SLOT_ID,
 			ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME,
 			ATTR_TOTAL_MACHINE_DRAINING_BADPUT);
@@ -377,7 +377,7 @@ void Defrag::saveState()
 	ad.Assign(ATTR_LAST_POLL,(int)m_last_poll);
 
 	std::string new_state_file;
-	sprintf(new_state_file,"%s.new",m_state_file.c_str());
+	formatstr(new_state_file,"%s.new",m_state_file.c_str());
 	FILE *fp;
 	if( !(fp = safe_fopen_wrapper_follow(new_state_file.c_str(), "w")) ) {
 		EXCEPT("failed to save state to %s\n",new_state_file.c_str());
@@ -617,7 +617,7 @@ void Defrag::poll()
 
 	ClassAdList startdAds;
 	std::string requirements;
-	sprintf(requirements,"(%s) && Draining =!= true",m_defrag_requirements.c_str());
+	formatstr(requirements,"(%s) && Draining =!= true",m_defrag_requirements.c_str());
 	if( !queryMachines(requirements.c_str(),"DEFRAG_REQUIREMENTS",startdAds) ) {
 		dprintf(D_ALWAYS,"Doing nothing, because the query to select machines matching DEFRAG_REQUIREMENTS failed.\n");
 		return;
@@ -709,7 +709,7 @@ Defrag::drain(const ClassAd &startd_ad)
 	if( m_draining_schedule <= DRAIN_GRACEFUL ) {
 		dprintf(D_ALWAYS,"Expected draining completion time is %ds; expected draining badput is %d cpu-seconds\n",
 				(int)(graceful_completion-now),graceful_badput);
-		sprintf(draining_check_expr,"%s <= %d && %s <= %d",
+		formatstr(draining_check_expr,"%s <= %d && %s <= %d",
 				ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION,
 				graceful_completion + negligible_deadline_slippage,
 				ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT,
@@ -718,7 +718,7 @@ Defrag::drain(const ClassAd &startd_ad)
 	else { // DRAIN_FAST and DRAIN_QUICK are effectively equivalent here
 		dprintf(D_ALWAYS,"Expected draining completion time is %ds; expected draining badput is %d cpu-seconds\n",
 				(int)(quick_completion-now),quick_badput);
-		sprintf(draining_check_expr,"%s <= %d && %s <= %d",
+		formatstr(draining_check_expr,"%s <= %d && %s <= %d",
 				ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION,
 				quick_completion + negligible_deadline_slippage,
 				ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT,
@@ -791,7 +791,7 @@ Defrag::invalidatePublicAd() {
 	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
 	invalidate_ad.SetTargetTypeName("Defrag");
 
-	sprintf(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
+	formatstr(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 	invalidate_ad.Assign(ATTR_NAME, m_daemon_name.c_str());
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);

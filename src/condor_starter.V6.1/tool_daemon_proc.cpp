@@ -75,10 +75,10 @@ ToolDaemonProc::StartJob()
 	const char* base = NULL;
 	base = condor_basename( tmp );
 	if( Starter->jic->iwdIsChanged() ) {
-		DaemonNameStr.sprintf( "%s%c%s", Starter->GetWorkingDir(),
+		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(),
 							   DIR_DELIM_CHAR, base );
 	} else if( ! fullpath(tmp) ) {
-		DaemonNameStr.sprintf( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
+		DaemonNameStr.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
 	} else {
 		DaemonNameStr = tmp;
 	}
@@ -310,7 +310,7 @@ ToolDaemonProc::StartJob()
 		JobPid = -1;
 		if( create_process_error ) {
 			MyString err_msg;
-			err_msg.sprintf( "Failed to execute '%s': %s",
+			err_msg.formatstr( "Failed to execute '%s': %s",
 							 args_string.Value(), create_process_error );
 			Starter->jic->notifyStarterError( err_msg.Value(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
 		}

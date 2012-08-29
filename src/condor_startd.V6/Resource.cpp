@@ -69,7 +69,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	m_id_dispenser = NULL;
 
 		// we need this before we instantiate the Reqexp object...
-	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
+	tmp.formatstr( "SLOT_TYPE_%d_PARTITIONABLE", type() );
 	if( param_boolean( tmp.Value(), false ) ) {
 		set_feature( PARTITIONABLE_SLOT );
 
@@ -97,7 +97,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		tmpName = my_full_hostname();
 	}
 	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
-		tmp.sprintf( "%s@%s", r_id_str, tmpName );
+		tmp.formatstr( "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp.Value() );
 	} else {
 		r_name = strdup( tmpName );
@@ -113,7 +113,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		if (log) {
 			MyString avail_stats_ckpt_file(log);
 			free(log);
-			tmp.sprintf( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
+			tmp.formatstr( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
 			avail_stats_ckpt_file += tmp;
 			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
 		}
@@ -661,10 +661,10 @@ Resource::hackLoadForCOD( void )
 	}
 
 	MyString load;
-	load.sprintf( "%s=%.2f", ATTR_LOAD_AVG, r_pre_cod_total_load );
+	load.formatstr( "%s=%.2f", ATTR_LOAD_AVG, r_pre_cod_total_load );
 
 	MyString c_load;
-	c_load.sprintf( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
+	c_load.formatstr( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
@@ -1074,7 +1074,7 @@ Resource::final_update( void )
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
 	 ClassAd::EscapeStringValue( r_name, escaped_name );
-     line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
      invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
@@ -1209,7 +1209,7 @@ Resource::hold_job( bool soft )
 
 		want_hold_expr = r_classad->LookupExpr("WANT_HOLD");
 		if( want_hold_expr ) {
-			want_hold_str.sprintf( "%s = %s", "WANT_HOLD",
+			want_hold_str.formatstr( "%s = %s", "WANT_HOLD",
 								   ExprTreeToString( want_hold_expr ) );
 		}
 
@@ -2054,7 +2054,7 @@ Resource::publishDeathTime( ClassAd* cap )
         }
     }
 
-    classad_attribute.sprintf( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
+    classad_attribute.formatstr( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
     cap->Insert( classad_attribute.Value() );
     return;
 }
@@ -2677,7 +2677,7 @@ Resource::getHookKeyword()
 {
 	if (!m_hook_keyword_initialized) {
 		MyString param_name;
-		param_name.sprintf("%s_JOB_HOOK_KEYWORD", r_id_str);
+		param_name.formatstr("%s_JOB_HOOK_KEYWORD", r_id_str);
 		m_hook_keyword = param(param_name.Value());
 		if (!m_hook_keyword) {
 			m_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
@@ -2861,11 +2861,11 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
         for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
             string reqname;
-            sprintf(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
+            formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
             int reqval = 0;
             if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
             string attr;
-            sprintf(attr, " %s=%d", j->first.c_str(), reqval);
+            formatstr(attr, " %s=%d", j->first.c_str(), reqval);
             type += attr;
         }
 

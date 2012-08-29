@@ -837,8 +837,8 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     sprintf( attrBeginUsage , "BeginUsageTime%d", i );
     sprintf( attrLastUsage , "LastUsageTime%d", i );
     sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
-    attrAcctGroup.sprintf("AccountingGroup%d", i);
-    attrIsAcctGroup.sprintf("IsAccountingGroup%d", i);
+    attrAcctGroup.formatstr("AccountingGroup%d", i);
+    attrIsAcctGroup.formatstr("IsAccountingGroup%d", i);
 
     if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )

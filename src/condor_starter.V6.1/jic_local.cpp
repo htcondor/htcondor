@@ -473,7 +473,7 @@ JICLocal::getJobStdFile( const char* attr_name )
 	}
 	if ( !nullFile(tmp) ) {
 		if( ! fullpath(tmp) ) { 
-			filename.sprintf( "%s%c", job_iwd, DIR_DELIM_CHAR );
+			filename.formatstr( "%s%c", job_iwd, DIR_DELIM_CHAR );
 		}
 		filename += tmp;
 	}

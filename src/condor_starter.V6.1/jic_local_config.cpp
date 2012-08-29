@@ -94,7 +94,7 @@ JICLocalConfig::getLocalJobAd( void )
 		// Windows "owners" may be of the form domain\user,
 		// so we'll need to parse it...
 	MyString buffer;
-	buffer.sprintf( "%s_%s", key, ATTR_OWNER );
+	buffer.formatstr( "%s_%s", key, ATTR_OWNER );
 	char *owner_defined = param( buffer.Value () );
 	if ( owner_defined ) {			
 			// On Windows we need to set RunAsOwner for it to 
@@ -104,16 +104,16 @@ JICLocalConfig::getLocalJobAd( void )
 			"STARTER_ALLOW_RUNAS_OWNER", false, true, NULL, job_ad );
 		if ( run_as_owner ) {
 				// Add the RunAsOwner attribute:
-			buffer.sprintf( "%s = True", ATTR_JOB_RUNAS_OWNER );
+			buffer.formatstr( "%s = True", ATTR_JOB_RUNAS_OWNER );
 			job_ad->Insert( buffer.Value() );
 				// Parse the OWNER attribute and add the new
 				// OWNER and NTDOMAIN attributes:
 			char const *local_domain = ".";
 			char *name = NULL, *domain = NULL;
 			getDomainAndName ( owner_defined, domain, name );
-			buffer.sprintf( "%s = \"%s\"", ATTR_OWNER, name );
+			buffer.formatstr( "%s = \"%s\"", ATTR_OWNER, name );
 			job_ad->Insert( buffer.Value() );
-			buffer.sprintf( "%s = \"%s\"", ATTR_NT_DOMAIN, 
+			buffer.formatstr( "%s = \"%s\"", ATTR_NT_DOMAIN, 
 				domain ? domain : local_domain );
 			job_ad->Insert( buffer.Value() );
 		} else {

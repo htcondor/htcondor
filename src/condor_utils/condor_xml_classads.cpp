@@ -673,12 +673,12 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		((classad::Literal *)expression)->GetValue(v);
 		print_expr = false;
 		if ( v.IsIntegerValue( int_number ) ) {
-			number_string.sprintf("%d", int_number);
+			number_string.formatstr("%d", int_number);
 			add_tag(buffer, tag_Integer, true);
 			buffer += number_string;
 			add_tag(buffer, tag_Integer, false);
 		} else if ( v.IsRealValue( double_number ) ) {
-			number_string.sprintf("%1.15E", double_number);
+			number_string.formatstr("%1.15E", double_number);
 			add_tag(buffer, tag_Real, true);
 			buffer += number_string;
 			add_tag(buffer, tag_Real, false);

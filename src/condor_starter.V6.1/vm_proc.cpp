@@ -273,7 +273,7 @@ VMProc::StartJob()
 	// Get job name
 	MyString vm_job_name;
 	if( JobAd->LookupString( ATTR_JOB_CMD, vm_job_name) != 1 ) {
-		err_msg.sprintf("%s cannot be found in job classAd.", ATTR_JOB_CMD);
+		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
 		Starter->jic->notifyStarterError( err_msg.Value(), true, 
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
@@ -284,7 +284,7 @@ VMProc::StartJob()
 	// vm_type should be from ClassAd
 	MyString vm_type_name;
 	if( JobAd->LookupString( ATTR_JOB_VM_TYPE, vm_type_name) != 1 ) {
-		err_msg.sprintf("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
+		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
 		Starter->jic->notifyStarterError( err_msg.Value(), true, 
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
@@ -1230,9 +1230,9 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, float(sys_time));
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, float(user_time));
 
-		buf.sprintf("%s=%lu", ATTR_IMAGE_SIZE, max_image );
+		buf.formatstr("%s=%lu", ATTR_IMAGE_SIZE, max_image );
 		ad->InsertOrUpdate( buf.Value());
-		buf.sprintf("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
+		buf.formatstr("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
 		ad->InsertOrUpdate( buf.Value());
 		if( pss_available ) {
 			ad->Assign(ATTR_PROPORTIONAL_SET_SIZE,pss);

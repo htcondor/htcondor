@@ -196,7 +196,7 @@ UserLogHeader::dprint( int level, const char *label ) const
 	}
 
 	MyString	buf;
-	buf.sprintf( "%s header:", label );
+	buf.formatstr( "%s header:", label );
 	this->dprint( level, buf );
 }
 

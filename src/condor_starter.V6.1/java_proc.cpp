@@ -100,8 +100,8 @@ int JavaProc::StartJob()
 		}			
 	}
 
-	startfile.sprintf("%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
-	endfile.sprintf("%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
+	startfile.formatstr("%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
+	endfile.formatstr("%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
 
 	if( !java_config(java_cmd,&args,jarfiles_final_list) ) {
 		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
@@ -110,7 +110,7 @@ int JavaProc::StartJob()
 
 	JobAd->Assign(ATTR_JOB_CMD, java_cmd.Value());
 
-	arg_buf.sprintf("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
+	arg_buf.formatstr("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
 	args.AppendArg(arg_buf.Value());
 
 	char *jvm_args1 = NULL;

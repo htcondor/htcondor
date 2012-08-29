@@ -220,7 +220,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
-			sprintf( error_string, "%s not of type ec2",
+			formatstr( error_string, "%s not of type ec2",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -229,13 +229,13 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		if ( token && *token ) {
 			m_serviceUrl = token;
 		} else {
-			sprintf( error_string, "%s missing EC2 service URL",
+			formatstr( error_string, "%s missing EC2 service URL",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -294,7 +294,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "ec2" ) ) {
-			sprintf( error_string, "%s not of type ec2", ATTR_GRID_JOB_ID );
+			formatstr( error_string, "%s not of type ec2", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
@@ -1079,7 +1079,7 @@ void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
 {
 	string full_job_id;
 	if ( client_token && client_token[0] ) {
-		sprintf( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
+		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
 			sprintf_cat( full_job_id, " %s", instance_id );
 		}
@@ -1151,7 +1151,7 @@ std::string EC2Job::build_keypair()
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
 
 	std::string key_pair;
-	sprintf( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
+	formatstr( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
 
 	free( pool_name );
 	return key_pair;

@@ -283,7 +283,7 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 		// 7. Return identifier
 		// TODO: dag ids?
 	MyString tmp;
-	tmp.sprintf("%s#%d.%d", Name, cluster, proc);
+	tmp.formatstr("%s#%d.%d", Name, cluster, proc);
 	id = tmp.Value();
 
 	return STATUS_OK;

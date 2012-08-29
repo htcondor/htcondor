@@ -235,7 +235,7 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "HIBERNATE", false );
 	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
 		MyString default_expr;
-		default_expr.sprintf("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
+		default_expr.formatstr("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
 		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.Value() );
 	}
 #endif /* HAVE_HIBERNATION */
@@ -761,11 +761,11 @@ ResMgr::initTypes( bool except )
 		if( type_strings[i] ) {
 			continue;
 		}
-		buf.sprintf("SLOT_TYPE_%d", i);
+		buf.formatstr("SLOT_TYPE_%d", i);
 		tmp = param(buf.Value());
 		if (!tmp) {
 			if (param_boolean("ALLOW_VM_CRUFT", false)) {
-				buf.sprintf("VIRTUAL_MACHINE_TYPE_%d", i);
+				buf.formatstr("VIRTUAL_MACHINE_TYPE_%d", i);
 				if (!(tmp = param(buf.Value()))) {
 					continue;
 				}
@@ -798,9 +798,9 @@ ResMgr::countTypes( int** array_ptr, bool except )
 	_checkInvalidParam("NUM_VIRTUAL_MACHINES_TYPE_0", except);
 
 	for( i=1; i<max_types; i++ ) {
-		param_name.sprintf("NUM_SLOTS_TYPE_%d", i);
+		param_name.formatstr("NUM_SLOTS_TYPE_%d", i);
 		if (param_boolean("ALLOW_VM_CRUFT", false)) {
-			cruft_name.sprintf("NUM_VIRTUAL_MACHINES_TYPE_%d", i);
+			cruft_name.formatstr("NUM_VIRTUAL_MACHINES_TYPE_%d", i);
 			my_type_nums[i] = param_integer(param_name.Value(),
 											 param_integer(cruft_name.Value(),
 														   0));
@@ -1017,7 +1017,7 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
 {
 	MyString execute_param;
 	char *execute_value = NULL;
-	execute_param.sprintf("SLOT%d_EXECUTE",slot_id);
+	execute_param.formatstr("SLOT%d_EXECUTE",slot_id);
 	execute_value = param( execute_param.Value() );
 	if( !execute_value ) {
 		execute_value = param( "EXECUTE" );
@@ -2533,17 +2533,17 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 			classad::EvalState eval_state;
 			eval_state.SetScopes( resources[i]->r_classad );
 			if( !check_expr->Evaluate( eval_state, v ) ) {
-				sprintf(error_msg,"Failed to evaluate draining check expression against %s.", resources[i]->r_name );
+				formatstr(error_msg,"Failed to evaluate draining check expression against %s.", resources[i]->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
 			if( !v.IsBooleanValue(check_ok) ) {
-				sprintf(error_msg,"Draining check expression does not evaluate to a bool on %s.", resources[i]->r_name );
+				formatstr(error_msg,"Draining check expression does not evaluate to a bool on %s.", resources[i]->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
 			if( !check_ok ) {
-				sprintf(error_msg,"Draining check expression is false on %s.", resources[i]->r_name );
+				formatstr(error_msg,"Draining check expression is false on %s.", resources[i]->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
@@ -2553,7 +2553,7 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 	draining = true;
 	last_drain_start_time = time(NULL);
 	draining_id += 1;
-	sprintf(new_request_id,"%d",draining_id);
+	formatstr(new_request_id,"%d",draining_id);
 	this->resume_on_completion_of_draining = resume_on_completion;
 
 	if( how_fast <= DRAIN_GRACEFUL ) {
@@ -2602,7 +2602,7 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 	}
 
 	if( !request_id.empty() && atoi(request_id.c_str()) != this->draining_id ) {
-		sprintf(error_msg,"No matching draining request id %s.",request_id.c_str());
+		formatstr(error_msg,"No matching draining request id %s.",request_id.c_str());
 		error_code = DRAINING_NO_MATCHING_REQUEST_ID;
 		return false;
 	}
@@ -2694,7 +2694,7 @@ ResMgr::getDrainingRequestId( Resource * /*rip*/, std::string &request_id )
 	if( !draining ) {
 		return false;
 	}
-	sprintf(request_id,"%d",draining_id);
+	formatstr(request_id,"%d",draining_id);
 	return true;
 }
 

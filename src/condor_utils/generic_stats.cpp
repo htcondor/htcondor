@@ -297,9 +297,9 @@ void stats_recent_counter_timer::Unpublish(ClassAd & ad, const char * pattr) con
 {
    ad.Delete(pattr);
    MyString attr;
-   attr.sprintf("Recent%s",pattr);
+   attr.formatstr("Recent%s",pattr);
    ad.Delete(attr.Value());
-   attr.sprintf("Recent%sRuntime",pattr);
+   attr.formatstr("Recent%sRuntime",pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6); // +6 to skip "Recent" prefix
 }
@@ -401,31 +401,31 @@ double Probe::Std() const
 
 void ProbeToStringDebug(MyString & str, const Probe& probe)
 {
-   str.sprintf("%d M:%g m:%g S:%g s2:%g", 
+   str.formatstr("%d M:%g m:%g S:%g s2:%g", 
                probe.Count, probe.Max, probe.Min, probe.Sum, probe.SumSq);
 }
 
 int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) 
 {
    MyString attr;
-   attr.sprintf("%sCount", pattr);
+   attr.formatstr("%sCount", pattr);
    ad.Assign(attr.Value(), probe.Count);
 
-   attr.sprintf("%sSum", pattr);
+   attr.formatstr("%sSum", pattr);
    int ret = ad.Assign(attr.Value(), probe.Sum);
 
    if (probe.Count > 0)
       {
-      attr.sprintf("%sAvg", pattr);
+      attr.formatstr("%sAvg", pattr);
       ad.Assign(attr.Value(), probe.Avg());
 
-      attr.sprintf("%sMin", pattr);
+      attr.formatstr("%sMin", pattr);
       ad.Assign(attr.Value(), probe.Min);
 
-      attr.sprintf("%sMax", pattr);
+      attr.formatstr("%sMax", pattr);
       ad.Assign(attr.Value(), probe.Max);
 
-      attr.sprintf("%sStd", pattr);
+      attr.formatstr("%sStd", pattr);
       ad.Assign(attr.Value(), probe.Std());
       }
    return ret;
@@ -435,25 +435,25 @@ template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * 
 {
    MyString attr;
    ad.Delete(pattr);
-   attr.sprintf("Recent%s", pattr);
+   attr.formatstr("Recent%s", pattr);
    ad.Delete(attr.Value());
 
-   attr.sprintf("Recent%sCount", pattr);
+   attr.formatstr("Recent%sCount", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sSum", pattr);
+   attr.formatstr("Recent%sSum", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sAvg", pattr);
+   attr.formatstr("Recent%sAvg", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sMin", pattr);
+   attr.formatstr("Recent%sMin", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sMax", pattr);
+   attr.formatstr("Recent%sMax", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sStd", pattr);
+   attr.formatstr("Recent%sStd", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
 }
@@ -481,7 +481,7 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
    if (flags & this->PubRecent) {
       MyString attr(pattr);
       if (flags & this->PubDecorateAttr) {
-         attr.sprintf("Recent%s", pattr);
+         attr.formatstr("Recent%s", pattr);
       }
       ClassAdAssign(ad, attr.Value(), recent); 
    }

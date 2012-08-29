@@ -44,7 +44,7 @@ const char *CondorResource::HashName( const char *resource_name,
 {
 	static std::string hash_name;
 
-	sprintf( hash_name, "condor %s %s#%s", resource_name, 
+	formatstr( hash_name, "condor %s %s#%s", resource_name, 
 					   pool_name ? pool_name : "NULL",
 					   proxy_subject ? proxy_subject : "NULL" );
 
@@ -116,7 +116,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		//   a gahp server can handle multiple schedds
 		std::string buff;
 		ArgList args;
-		sprintf( buff, "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
+		formatstr( buff, "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
 					  scheddName, proxyFQAN ? proxyFQAN : "NULL" );
 		args.AppendArg("-f");
 		args.AppendArg("-s");
@@ -211,7 +211,7 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 
 	std::string buff;
 
-	sprintf( buff, "condor %s %s", resourceName, poolName );
+	formatstr( buff, "condor %s %s", resourceName, poolName );
 	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	if ( proxySubject ) {
 		resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
@@ -228,7 +228,7 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 	if ( submitter_ids.contains( submitter_id ) == false ) {
 		submitter_ids.append( submitter_id );
 		if ( submitter_constraint.empty() ) {
-			sprintf( submitter_constraint, "(%s=?=\"%s\")",
+			formatstr( submitter_constraint, "(%s=?=\"%s\")",
 										  ATTR_SUBMITTER_ID,
 										  submitter_id );
 		} else {
@@ -330,7 +330,7 @@ void CondorResource::DoScheddPoll()
 			}
 		}
 
-		sprintf( constraint, "(%s)", submitter_constraint.c_str() );
+		formatstr( constraint, "(%s)", submitter_constraint.c_str() );
 
 		rc = gahp->condor_job_status_constrained( scheddName,
 												  constraint.c_str(),
@@ -383,7 +383,7 @@ void CondorResource::DoScheddPoll()
 				status_ads[i]->LookupInteger( ATTR_CLUSTER_ID, cluster );
 				status_ads[i]->LookupInteger( ATTR_PROC_ID, proc );
 
-				sprintf( job_id_string, "condor %s %s %d.%d", scheddName,
+				formatstr( job_id_string, "condor %s %s %d.%d", scheddName,
 									   poolName, cluster, proc );
 
 				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( job_id_string.c_str() ),
@@ -514,7 +514,7 @@ dprintf( D_FULLDEBUG, "*** Lease udpate succeeded!\n" );
 		std::string id_str;
 		updated.Rewind();
 		while ( updated.Next( curr_id ) ) {
-			sprintf( id_str, "condor %s %s %d.%d", scheddName, poolName,
+			formatstr( id_str, "condor %s %s %d.%d", scheddName, poolName,
 							curr_id.cluster, curr_id.proc );
 			if ( BaseJob::JobsByRemoteId.lookup( HashKey( id_str.c_str() ),
 												 curr_job ) == 0 ) {

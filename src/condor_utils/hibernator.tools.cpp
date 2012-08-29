@@ -130,7 +130,7 @@ void UserDefinedToolsHibernator::configure ()
 			"S1" );
 		
 		/** Build the tool look-up parameter for the tool's path */
-		name.sprintf ( 
+		name.formatstr ( 
 			"%s_USER_%s_TOOL", 
 			"HIBERNATE",
 			"S1" );
@@ -145,7 +145,7 @@ void UserDefinedToolsHibernator::configure ()
 
 			/** Build the tool look-up parameter for the tool's
 				argument list */
-			name.sprintf ( 
+			name.formatstr ( 
 				"%s_USER_%s_ARGS", 
 				m_keyword.Value(),
 				description );

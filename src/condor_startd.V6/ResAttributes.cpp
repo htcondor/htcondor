@@ -582,7 +582,7 @@ void MachAttributes::init_machine_resources() {
 
         // If MACHINE_RESOURCE_<rname> is present, use that and move on:
         string pname;
-        sprintf(pname, "MACHINE_RESOURCE_%s", rname.c_str());
+        formatstr(pname, "MACHINE_RESOURCE_%s", rname.c_str());
         char* machresp = param(pname.c_str());
         if (machresp) {
             int v = param_integer(pname.c_str(), 0, 0, INT_MAX);
@@ -594,7 +594,7 @@ void MachAttributes::init_machine_resources() {
         // current definition of REMIND macro is not working with gcc
         #pragma message("MACHINE_RESOURCE_INVENTORY_<rname> is deprecated, and will be removed when a solution using '|' in config files is fleshed out")
         // if we didn't find MACHINE_RESOURCE_<rname>, then try MACHINE_RESOURCE_INVENTORY_<rname>
-        sprintf(pname, "MACHINE_RESOURCE_INVENTORY_%s", rname.c_str());
+        formatstr(pname, "MACHINE_RESOURCE_INVENTORY_%s", rname.c_str());
         char* invscriptp = param(pname.c_str());
         if (NULL == invscriptp) {
             EXCEPT("Missing configuration for local machine resource %s", rname.c_str());
@@ -629,7 +629,7 @@ void MachAttributes::init_machine_resources() {
         string ccname(rname.c_str());
         *(ccname.begin()) = toupper(*(ccname.begin()));
         string detname;
-        sprintf(detname, "%s%s", ATTR_DETECTED_PREFIX, ccname.c_str());
+        formatstr(detname, "%s%s", ATTR_DETECTED_PREFIX, ccname.c_str());
         int v = 0;
         if (!invad.LookupInteger(detname.c_str(), v)) {
             EXCEPT("Missing required attribute \"%s = <n>\" from output of %s\n", detname.c_str(),  invscript.c_str());
@@ -827,9 +827,9 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
             string rname(j->first.c_str());
             *(rname.begin()) = toupper(*(rname.begin()));
             string attr;
-            sprintf(attr, "%s%s", ATTR_DETECTED_PREFIX, rname.c_str());
+            formatstr(attr, "%s%s", ATTR_DETECTED_PREFIX, rname.c_str());
             cp->Assign(attr.c_str(), int(j->second));
-            sprintf(attr, "%s%s", ATTR_TOTAL_PREFIX, rname.c_str());
+            formatstr(attr, "%s%s", ATTR_TOTAL_PREFIX, rname.c_str());
             cp->Assign(attr.c_str(), int(j->second));
             machine_resources += " ";
             machine_resources += j->first;
@@ -1068,9 +1068,9 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
             string rname(j->first.c_str());
             *(rname.begin()) = toupper(*(rname.begin()));
             string attr;
-            sprintf(attr, "%s%s", "", rname.c_str());
+            formatstr(attr, "%s%s", "", rname.c_str());
             cp->Assign(attr.c_str(), int(j->second));
-            sprintf(attr, "%s%s", ATTR_TOTAL_SLOT_PREFIX, rname.c_str());
+            formatstr(attr, "%s%s", ATTR_TOTAL_SLOT_PREFIX, rname.c_str());
             cp->Assign(attr.c_str(), int(c_slottot_map[j->first]));
         }
 	}

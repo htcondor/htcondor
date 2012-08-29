@@ -341,7 +341,7 @@ static void setup() {
 	cut_assert_true( condor_getcwd(original_dir) );
 	
 	// Directory strings
-	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
+	cut_assert_true( tmp.formatstr("testtmp%d", getpid()) );
 	
 	// Make a temporary directory to test
 	cut_assert_z( mkdir(tmp.Value(), 0700) );
@@ -349,10 +349,10 @@ static void setup() {
 	
 	// Store some directories
 	cut_assert_true( condor_getcwd(tmp_dir) );
-	cut_assert_gz( empty_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir") );
-	cut_assert_gz( full_dir.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir") );
-	cut_assert_gz( invalid_dir.sprintf("%s%c", "DoesNotExist", DIR_DELIM_CHAR) );
-	cut_assert_gz( file_dir.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
+	cut_assert_gz( empty_dir.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir") );
+	cut_assert_gz( full_dir.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir") );
+	cut_assert_gz( invalid_dir.formatstr("%s%c", "DoesNotExist", DIR_DELIM_CHAR) );
+	cut_assert_gz( file_dir.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	
 	// Put some files/directories in there
 	cut_assert_z( mkdir("empty_dir", 0700) );
@@ -401,9 +401,9 @@ static void setup() {
 	// Create some symbolic links
 #ifndef WIN32
 	MyString link;
-	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
+	cut_assert_true( link.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
-	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
+	cut_assert_true( link.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
 #endif
 	// Get back to original directory
@@ -503,7 +503,7 @@ static bool test_path_constructor_file() {
 	emit_test("Test the Directory constructor when passed a file path as a "
 		"directory path.");
 	MyString path;
-	path.sprintf("%s%cfull_file", full_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cfull_file", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory Path", path.Value());
 	emit_output_expected_header();
@@ -554,7 +554,7 @@ static bool test_stat_constructor_file() {
 	emit_test("Test the Directory constructor when passed a StatInfo pointer "
 		"constructed from a file path as a directory path.");
 	MyString path;
-	path.sprintf("%s%cfull_file", full_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cfull_file", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory Path", path.Value());
 	emit_output_expected_header();
@@ -1112,7 +1112,7 @@ static bool test_get_access_time_close() {
 	emit_param("Current File", "%s", next);
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
@@ -1188,7 +1188,7 @@ static bool test_get_modify_time_close() {
 	emit_param("Current File", "%s", next);
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
@@ -1264,7 +1264,7 @@ static bool test_get_create_time_close() {
 	emit_param("Current File", "%s", next);
 	struct stat st;
 	MyString file;
-	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
+	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
 	stat(file.Value(), &st);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
@@ -1356,7 +1356,7 @@ static bool test_get_file_size_same() {
 	emit_param("Current File", "full_file");
 	struct stat size;
 	MyString file;
-	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+	file.formatstr("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
 		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
@@ -1447,7 +1447,7 @@ static bool test_get_mode_same() {
 	emit_param("Current File", "full_file");
 	struct stat size;
 	MyString file;
-	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+	file.formatstr("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
 		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
@@ -1518,7 +1518,7 @@ static bool test_get_directory_size_same() {
 	emit_param("Directory", "%s", full_dir.Value());
 	struct stat size;
 	MyString file;
-	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+	file.formatstr("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
 		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
@@ -1577,7 +1577,7 @@ static bool test_get_full_path_file() {
 	emit_param("Directory", "%s", original_dir.Value());
 	emit_param("Current File", "%s", readme);
 	MyString full_path;
-	full_path.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
+	full_path.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
 	emit_output_expected_header();
 	emit_retval("%s", full_path.Value());
 	Directory dir(original_dir.Value());
@@ -1598,7 +1598,7 @@ static bool test_get_full_path_dir() {
 	emit_param("Directory", "%s", original_dir.Value());
 	emit_param("Current File", "%s", tmp.Value());
 	MyString full_path;
-	full_path.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	full_path.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("%s", full_path.Value());
@@ -1985,7 +1985,7 @@ static bool test_remove_full_path_not_exist() {
 	emit_test("Test that Remove_Full_Path() returns true for a path that "
 		"doesn't exist or was already removed.");
 	MyString path;
-	path.sprintf("%s%cDoesNotExist", tmp_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cDoesNotExist", tmp_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", tmp_dir.Value());
 	emit_param("Path", "%s", path.Value());
@@ -2005,7 +2005,7 @@ static bool test_remove_full_path_file() {
 	emit_test("Test that Remove_Full_Path() returns true and removes a "
 		"file.");
 	MyString path;
-	path.sprintf("%s%cdelete_file_3", full_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cdelete_file_3", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", full_dir.Value());
 	emit_param("Path", "%s", path.Value());
@@ -2032,7 +2032,7 @@ static bool test_remove_full_path_filepath() {
 	emit_test("Test that Remove_Full_Path() returns true and removes a file "
 		"for a Directory constructed from a file path.");
 	MyString path;
-	path.sprintf("%s%cdelete_file_4", full_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cdelete_file_4", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", path.Value());
 	emit_param("Path", "%s", path.Value());
@@ -2060,7 +2060,7 @@ static bool test_remove_full_path_dir_empty() {
 	emit_test("Test that Remove_Full_Path() returns true and removes an "
 		"empty directory.");
 	MyString path;
-	path.sprintf("%s%cdelete_dir_2", full_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cdelete_dir_2", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", full_dir.Value());
 	emit_param("Path", "%s", path.Value());
@@ -2087,7 +2087,7 @@ static bool test_remove_full_path_dir_full() {
 	emit_test("Test that Remove_Full_Path() returns true and removes a non-"
 		"empty directory.");
 	MyString path;
-	path.sprintf("%s%cdelete_dir_12", full_dir.Value(), DIR_DELIM_CHAR);
+	path.formatstr("%s%cdelete_dir_12", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", full_dir.Value());
 	emit_param("Path", "%s", path.Value());
@@ -2114,7 +2114,7 @@ static bool test_remove_full_path_dir_current() {
 	emit_test("Test that Remove_Full_Path() returns true and removes the "
 		"directory it was constructed with.");
 	MyString delete_dir;
-	delete_dir.sprintf("%s%cdelete_dir_3", full_dir.Value(), DIR_DELIM_CHAR);
+	delete_dir.formatstr("%s%cdelete_dir_3", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", delete_dir.Value());
 	emit_param("Path", "%s", delete_dir.Value());
@@ -2143,7 +2143,7 @@ static bool test_remove_entire_directory_filepath() {
 		"Directory constructed from a file path.");
 	emit_comment("See ticket #1625.");
 	MyString delete_dir;
-	delete_dir.sprintf("%s%cempty_file", full_dir.Value(), DIR_DELIM_CHAR);
+	delete_dir.formatstr("%s%cempty_file", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", delete_dir.Value());
 	emit_output_expected_header();
@@ -2163,7 +2163,7 @@ static bool test_remove_entire_directory_dir_empty() {
 	emit_test("Test that Remove_Entire_Directory() returns true for an empty "
 		"directory.");
 	MyString delete_dir;
-	delete_dir.sprintf("%s%cempty_dir", tmp_dir.Value(), DIR_DELIM_CHAR);
+	delete_dir.formatstr("%s%cempty_dir", tmp_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", delete_dir.Value());
 	emit_output_expected_header();
@@ -2185,7 +2185,7 @@ static bool test_remove_entire_directory_dir_full() {
 	emit_test("Test that Remove_Entire_Directory() returns true and removes "
 		"everything in a non-empty directory.");
 	MyString delete_dir;
-	delete_dir.sprintf("%s%cdir", full_dir.Value(), DIR_DELIM_CHAR);
+	delete_dir.formatstr("%s%cdir", full_dir.Value(), DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Directory", "%s", delete_dir.Value());
 	emit_output_expected_header();
@@ -2278,7 +2278,7 @@ static bool test_standalone_is_directory_file() {
 	emit_test("Test that the standalone IsDirectory() returns false for a file "
 		"path.");
 	MyString path;
-	path.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	path.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -2312,7 +2312,7 @@ static bool test_standalone_is_directory_symlink_file() {
 	emit_test("Test that the standalone IsDirectory() returns false for a "
 		"symlink file path.");
 	MyString path;
-	path.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -2330,7 +2330,7 @@ static bool test_standalone_is_directory_symlink_dir() {
 	emit_test("Test that the standalone IsDirectory() returns true for a "
 		"symlink directory path.");
 	MyString path;
-	path.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -2380,7 +2380,7 @@ static bool test_standalone_is_symlink_file() {
 	emit_test("Test that the standalone IsSymlink() returns false for a file "
 		"path.");
 	MyString path;
-	path.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	path.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -2414,7 +2414,7 @@ static bool test_standalone_is_symlink_symlink_file() {
 	emit_test("Test that the standalone IsSymlink() returns true for a "
 		"symlink file path.");
 	MyString path;
-	path.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -2432,7 +2432,7 @@ static bool test_standalone_is_symlink_symlink_dir() {
 	emit_test("Test that the standalone IsSymlink() returns true for a "
 		"symlink directory path.");
 	MyString path;
-	path.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_output_expected_header();
@@ -2478,7 +2478,7 @@ static bool test_dircat_empty_path() {
 	emit_param("Path", "");
 	emit_param("File name", "File");
 	MyString expect;
-	expect.sprintf("%c%s", DIR_DELIM_CHAR, "File");
+	expect.formatstr("%c%s", DIR_DELIM_CHAR, "File");
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
 	const char* ret_val = dircat("", "File");
@@ -2498,7 +2498,7 @@ static bool test_dircat_empty_file() {
 	emit_param("Path", "Path");
 	emit_param("File name", "");
 	MyString expect;
-	expect.sprintf("%s%c", "Path", DIR_DELIM_CHAR);
+	expect.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
 	const char* ret_val = dircat("Path", "");
@@ -2516,12 +2516,12 @@ static bool test_dircat_empty_file_delim() {
 	emit_test("Test dircat() when passed an empty file name, when the path "
 		"name includes the directory delimiter.");
 	MyString path;
-	path.sprintf("%s%c", "Path", DIR_DELIM_CHAR);
+	path.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_param("File name", "");
 	MyString expect;
-	expect.sprintf("%s%c", "Path", DIR_DELIM_CHAR);
+	expect.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
 	const char* ret_val = dircat(path.Value(), "");
@@ -2541,7 +2541,7 @@ static bool test_dircat_non_empty() {
 	emit_param("Path", "Path");
 	emit_param("File name", "File");
 	MyString expect;
-	expect.sprintf("%s%c%s", "Path", DIR_DELIM_CHAR, "File");
+	expect.formatstr("%s%c%s", "Path", DIR_DELIM_CHAR, "File");
 	emit_output_expected_header();
 	emit_retval("Path%cFile", DIR_DELIM_CHAR);
 	const char* ret_val = dircat("Path", "File");
@@ -2559,13 +2559,13 @@ static bool test_dircat_non_empty_delim() {
 	emit_test("Test dircat() when passed a non-empty file name and a non-empty "
 		"path name that include the directory delimiter.");
 	MyString path;
-	path.sprintf("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR,
+	path.formatstr("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR,
 				 DIR_DELIM_CHAR);
 	emit_input_header();
 	emit_param("Path", "%s", path.Value());
 	emit_param("File name", "File");
 	MyString expect;
-	expect.sprintf("%s%s", path.Value(), "File");
+	expect.formatstr("%s%s", path.Value(), "File");
 	emit_output_expected_header();
 	emit_retval("%s", expect.Value());
 	const char* ret_val = dircat(path.Value(), "File");
@@ -2653,7 +2653,7 @@ static bool test_delete_file_later_file() {
 	emit_test("Test that the DeleteFileLater class deletes the file when the "
 		"class instance is deleted.");
 	MyString path;
-	path.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "delete_file_6");
+	path.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "delete_file_6");
 	emit_input_header();
 	emit_param("File Name", "%s", path.Value());
 	emit_output_expected_header();
@@ -2678,7 +2678,7 @@ static bool test_delete_file_later_dir() {
 	emit_test("Test that the DeleteFileLater class doesn't delete the directory"
 		" when the class instance is deleted.");
 	MyString path;
-	path.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir");
+	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir");
 	emit_input_header();
 	emit_param("File Name", "%s", path.Value());
 	emit_output_expected_header();
