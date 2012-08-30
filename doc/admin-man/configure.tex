@@ -6440,6 +6440,13 @@ do not specify their own with:
   When \Expr{True}, \Condor{submit} issues warnings when a job requests
   features that are no longer supported. 
 
+\label{param:InteractiveSubmitFile}
+\item[\Macro{INTERACTIVE\_SUBMIT\_FILE}]
+  The path and file name of a submit description file that \Condor{submit}
+  will use in the specification of an interactive job.
+  The default is \File{\MacroUNI{RELEASE\_DIR}/libexec/interactive.sub}
+  when not defined.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
