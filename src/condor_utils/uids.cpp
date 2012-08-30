@@ -1394,6 +1394,19 @@ get_condor_gid()
 	return CondorGid;
 }
 
+bool
+get_condor_uid_if_inited(uid_t &uid,gid_t &gid)
+{
+	if( !CondorIdsInited ) {
+		uid = 0;
+		gid = 0;
+		return false;
+	}
+
+	uid = CondorUid;
+	gid = CondorGid;
+	return true;
+}
 
 /* This returns the string containing the username of whatever uid
    priv_state condor gives you. */

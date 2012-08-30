@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a case where a daemon could crash and leave behind a log
+file owned by root.  This root-owned file would then cause
+subsequent attempts to restart the daemon to fail.
+\Ticket{2894}
 
 \end{itemize}
 
