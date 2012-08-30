@@ -4211,22 +4211,27 @@ WANT_HOLD_REASON = \
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
   A comma separated list of directories. 
   For each directory in the list, 
-  Condor creates a directory in the job's temporary scratch directory,
-  but make it available at the given name using bind mounts.
+  Condor creates a directory in the job's temporary scratch directory with that name,
+  and makes it available at the given name using bind mounts.
   This is available on Linux systems which provide bind mounts 
   and per-process tree mount tables,
-  such as Red Hat Enterprise Linux 5.
+  such as Red Hat Enterprise Linux 5.  A bind mount is like a symbolic link, but is
+  not globally visible to all processes, it is only visible to the job and the
+  job's child processes.
   As an example:
 \begin{verbatim}
   MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
 \end{verbatim}
-  The job will think that it sees the usual \File{/tmp} and \File{/var/tmp}
-  directories, 
-  but they will actually exist as subdirectories in 
-  the job's temporary scratch directory. 
+  The job will see the usual \File{/tmp} and \File{/var/tmp}
+  directories, but when accessing files via these paths, the
+  system will redirect the access. The resultant files 
+  will actually end up in directories named tmp or var/tmp
+  under the the job's temporary scratch directory. 
   This is useful, because the job's scratch directory will be cleaned up 
-  after the job completes,
+  after the job completes, two concurrent jobs will not interfere with each other,
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
+  Another use case might be for home directories, which some jobs might want
+  to write to, but that should be cleaned up after each job run.
 
 \end{description}
 
