@@ -630,6 +630,17 @@ This is the same as the configuration setting
 page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
 the user log instead of the system event log.
 
+%%% ClassAd attribute: JobDescription
+\index{ClassAd job attribute!JobDescription}
+\index{JobDescription!job ClassAd attribute}
+\label{JobDescription-job-attribute}
+\item[\AdAttr{JobDescription}:]  A string that may be defined for
+a job by setting \SubmitCmd{description} in the submit description file.
+When set, tools which display the executable such as \Condor{q}
+will instead use this string.
+For interactive jobs that do not have a submit description file,
+this string will default to \Expr{"Interactive job"}.
+
 %%% ClassAd attribute: JobCurrentStartDate
 \index{ClassAd job attribute!JobCurrentStartDate}
 \index{JobCurrentStartDate!job ClassAd attribute}
@@ -643,7 +654,7 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 \index{JobCurrentStartExecutingDate!job ClassAd attribute}
 \label{JobCurrentStartExecutingDate-job-attribute}
 \item[\AdAttr{JobCurrentStartExecutingDate}:]  Time at which the job most recently finished
-transfering its input sandbox and began executing.  Measured in the
+transferring its input sandbox and began executing.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
 %%% ClassAd attribute: JobCurrentStartTransferOutputDate

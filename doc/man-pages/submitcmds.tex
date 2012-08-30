@@ -2852,6 +2852,18 @@ miss their deferral time to begin execution.
 See section~\ref{sec:JobDeferral} for further details and examples.
 
 %%%%%%%%%%%%%%%%%%%
+%% description
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!description}
+\label{condor-submit-description}
+\item[description = $<$string$>$]
+A string that sets the value of the job ClassAd attribute
+\Attr{JobDescription}.
+When set, tools which display the executable such as \Condor{q}
+will instead use this string.
+
+%%%%%%%%%%%%%%%%%%%
 %% email_attributes
 %%%%%%%%%%%%%%%%%%%
 
