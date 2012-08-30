@@ -144,7 +144,9 @@ sysapi_get_windows_info(void)
 	opsys_legacy = strdup( tmp_info );
 	opsys = strdup( "WINDOWS" );
 	
-	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
+	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 2) {
+		opsys_super_short_name = strdup("8");
+	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
 		opsys_super_short_name = strdup("7");
 	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 0) {
 		opsys_super_short_name = strdup("Vista");
@@ -393,7 +395,7 @@ init_arch(void)
 	opsys_long_name = sysapi_get_darwin_info();  
 	opsys_major_version = sysapi_find_darwin_major_version( opsys_long_name );
 	opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_version );
+	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_major_version );
 	opsys_name = sysapi_find_darwin_opsys_name( opsys_major_version );
 	
 #elif defined( CONDOR_FREEBSD )
@@ -709,7 +711,6 @@ sysapi_get_unix_info( const char *sysname,
 	if( !strcmp(sysname, "SunOS")
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
-        sprintf( tmp, "SOLARIS" );
 		if ( !strcmp(release, "2.11") //LDAP entry
 			|| !strcmp(release, "5.11") )
 		{
@@ -753,6 +754,7 @@ sysapi_get_unix_info( const char *sysname,
 		else {
             pver = release;
 		}
+        sprintf( tmp, "Solaris%s", pver );
 	}
 
 	else if( !strcmp(sysname, "HP-UX") ) {
