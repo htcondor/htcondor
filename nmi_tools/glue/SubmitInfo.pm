@@ -386,6 +386,9 @@ our %submit_info = (
 	},
 
     'x86_64_sl_6.0' => 'x86_64_rhap_6.1',
+    'x86_64_sl_6.1' => 'x86_64_rhap_6.1',
+    'x86_64_sl_6.2' => 'x86_64_rhap_6.1',
+    'x86_64_sl_6.3' => 'x86_64_rhap_6.1',
 
 	# And now, 6.1 has become 6.2 through the magic of auto-update
     'x86_64_rhap_6.2' => 'x86_64_rhap_6.1',
@@ -593,6 +596,8 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_sl_5.8' => 'x86_sl_5.7',
+	'x86_sl_5.9' => 'x86_sl_5.7',
 
 
 
