@@ -52,8 +52,8 @@ void PrintEvent(ULogEvent *event);
 int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("test_multi_log", get_param_functions());
+	Termlog = 1;
+	dprintf_config("test_multi_log", get_param_functions(), Termlog);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	int		result = 0;

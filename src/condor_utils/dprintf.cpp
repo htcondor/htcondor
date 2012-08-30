@@ -65,7 +65,7 @@ static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic);
 
 FILE *open_debug_file( int debug_level, const char flags[] );
 
-void preserve_log_file(int debug_level);
+//void preserve_log_file(int debug_level);
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
@@ -1310,7 +1310,7 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 	struct DebugFileInfo* dFIptr = it;
 
 	struct DebugFileInfo stderrBackup(*it);
-	stderrBackup.debugFP = stderr;
+	stderrBackup.debugFP = NULL;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1325,9 +1325,8 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 			_condor_fd_panic( __LINE__, __FILE__ );
 		}
 #endif
-		if (fp == NULL) {
-			dFIptr = &stderrBackup;
-		}
+		dFIptr = &stderrBackup;
+		stderrBackup.debugFP = stderr;
 		_condor_dfprintf( dFIptr, "Can't open \"%s\"\n", filePath.c_str() );
 		if( ! dont_panic ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
@@ -1338,6 +1337,7 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 			}
 		}
 		// fp is guaranteed to be NULL here.
+		stderrBackup.debugFP = NULL;
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);

@@ -94,7 +94,7 @@ main(int argc, char* argv[])
 
   config();
   Termlog = 1;
-  dprintf_config("TOOL", get_param_functions());
+  dprintf_config("TOOL", get_param_functions(), Termlog);
 
   for(i=1; i<argc; i++) {
 

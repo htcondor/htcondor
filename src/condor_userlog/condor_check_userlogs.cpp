@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 		// Set up dprintf.
 	Termlog = 1;
 	p_funcs = get_param_functions();
-	dprintf_config("condor_check_userlogs", p_funcs, NULL, 0, Termlog);
+	dprintf_config("condor_check_userlogs", p_funcs, Termlog);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	StringList	logFiles;

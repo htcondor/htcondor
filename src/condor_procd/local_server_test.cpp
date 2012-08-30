@@ -32,7 +32,7 @@ int
 main()
 {
 	Termlog = 1;
-	dprintf_config("TOOL", get_param_functions());
+	dprintf_config("TOOL", get_param_functions(), Termlog);
 
 	LocalServer* server = new LocalServer;
 	ASSERT(server != NULL);

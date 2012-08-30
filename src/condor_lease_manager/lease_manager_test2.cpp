@@ -462,7 +462,7 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("TEST_LEASE_MANAGER", get_param_functions());
+	dprintf_config("TEST_LEASE_MANAGER", get_param_functions(), Termlog);
 
 	int		status;
 	status = tests.CmdLine( argc, argv );

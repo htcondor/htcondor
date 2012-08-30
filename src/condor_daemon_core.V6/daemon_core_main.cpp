@@ -1963,7 +1963,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
+		dprintf_config(get_mySubSystem()->getName(), get_param_functions(), Termlog);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.

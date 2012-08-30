@@ -278,7 +278,7 @@ main(int argc, char *argv[] )
 
 	if( argc > 1 ) {
 		if( strcmp("-t",argv[1]) == MATCH ) {
-			Termlog++;
+			Termlog = 1;
 			argv++;
 			argc--;
 		}
@@ -299,7 +299,7 @@ main(int argc, char *argv[] )
 	*/ 
 	set_condor_priv();
 
-	dprintf_config( get_mySubSystem()->getName(), get_param_functions() );
+	dprintf_config( get_mySubSystem()->getName(), get_param_functions(), Termlog );
 	DebugId = whoami;
 
 	// create a database connection object
