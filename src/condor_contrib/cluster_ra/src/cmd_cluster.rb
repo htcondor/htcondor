@@ -28,11 +28,11 @@ module Mrg
              "SCHEDD.#{name}.SCHEDD_NAME"=>"ha-schedd-#{name}@",
              "SCHEDD.#{name}.SPOOL"=>spool,
              "SCHEDD.#{name}.HISTORY"=>"$(SCHEDD.#{name}.SPOOL)/history",
-             "SCHEDD.#{name}.SCHEDD_LOG"=>"$(LOG)/SchedLog-#{name}.log",
+             "SCHEDD.#{name}.SCHEDD_LOG"=>"$(SCHEDD_LOG)-#{name}",
              "SCHEDD.#{name}.SCHEDD_ADDRESS_FILE"=>"$(LOG)/.schedd-#{name}_address",
              "SCHEDD.#{name}.SCHEDD_DAEMON_AD_FILE"=>"$(LOG)/.schedd-#{name}_classad",
              "SCHEDD.#{name}.USE_PROCD"=>"TRUE",
-             "#{name}_ENVIRONMENT"=>"_CONDOR_PROCD_ADDRESS=$(PROCD_ADDRESS).#{name}",
+             "#{name}_ENVIRONMENT"=>"_CONDOR_PROCD_ADDRESS=$(PROCD_ADDRESS).#{name} _CONDOR_SPOOL=$(SCHEDD.#{name}.SPOOL) _CONDOR_SHADOW_LOG=$(SHADOW_LOG)-#{name} _CONDOR_SHADOW_LOCK=$(SHADOW_LOCK)-#{name}",
              "SCHEDD.#{name}.RESTART_PROCD_ON_ERROR"=>"TRUE"
             }
           end
