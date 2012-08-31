@@ -430,7 +430,8 @@ init_arch(void)
 		//    opsys_short_name is "Solaris"
 		//    opsys_versioned  is "Solaris11"
 		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
-		opsys_name = strdup( opsys_long_name ); char * p = strchr(opsys_name, ' '); if (p) *p = 0;
+		char * p = strdup( opsys_long_name );
+		opsys_name = p; p = strchr(p, ' '); if (p) *p = 0;
 		opsys_legacy = p = strdup( opsys_name ); for (; *p; ++p) { *p = toupper(*p); }
 		opsys = strdup( opsys_legacy );
 		opsys_short_name = strdup( opsys_name );
