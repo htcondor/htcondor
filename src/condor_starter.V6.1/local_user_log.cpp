@@ -40,9 +40,8 @@ LocalUserLog::~LocalUserLog()
 		// don't delete the jic, since it's not really ours
 }
 
-
 bool
-LocalUserLog::init( const char* filename, bool is_xml, 
+LocalUserLog::init( const std::vector<const char*>& filename, bool is_xml, 
 					int cluster, int proc, int subproc )
 {
 	if( ! jic->userPrivInitialized() ) { 
@@ -61,14 +60,11 @@ LocalUserLog::init( const char* filename, bool is_xml,
 	}
 
 	set_priv( priv );
-
-	if( is_xml ) {
-		u_log.setUseXML( true );
-	} else {
-		u_log.setUseXML( false );
+	u_log.setUseXML( is_xml );
+	for(std::vector<const char*>::const_iterator p = filename.begin();
+			p != filename.end(); ++p) {
+		dprintf( D_FULLDEBUG, "Starter's UserLog: %s\n", *p );
 	}
-	
-	dprintf( D_FULLDEBUG, "Starter's UserLog: %s\n", filename );
 	is_initialized = true;
 	should_log = true;
 	return true;
@@ -79,37 +75,96 @@ bool
 LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 							 const char* xml_attr )
 {
-    MyString tmp, logfilename;
-	int use_xml = FALSE;
+	MyString tmp, dagmanLogFilename, logfilename;
+	bool use_xml = false;
 	const char* iwd = jic->jobIWD();
 	int cluster = jic->jobCluster();
 	int proc = jic->jobProc();
 	int subproc = jic->jobSubproc();
-
-    if( ! ad->LookupString(path_attr, tmp) ) {
-        dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
+	std::vector<const char*> logfiles;
+	
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: path_attr = %s\n",
+		path_attr?path_attr:"");
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: xml_attr = %s\n",
+		xml_attr?xml_attr:"");
+	if( ! ad->LookupString(path_attr, tmp) ) {
+			// The fact that this attribute is not found in the ClassAd
+			// indicates we do not want logging.
+			// These semantics are defined in JICShadow::init.
+		dprintf( D_FULLDEBUG, "No %s found in job ClassAd\n", path_attr );
+		return initNoLogging();
+	} else {
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
+			tmp.Value());
+		if( fullpath (tmp.Value() ) ) {
+				// we have a full pathname in the job ad.  however, if the
+				// job is using a different iwd (namely, filetransfer is
+				// being used), we want to just stick it in the local iwd
+				// for the job, instead.
+			if( jic->iwdIsChanged() ) {
+				const char* base = condor_basename(tmp.Value());
+				logfilename.formatstr( "%s/%s", iwd, base);
+			} else {
+				logfilename = tmp;
+			}
+		} else {
+				// no full path, so, use the job's iwd...
+			logfilename.formatstr( "%s/%s", iwd, tmp.Value());
+		}
+		logfiles.push_back( logfilename.Value());
+	}
+	std::vector<ULogEventNumber> mask_vec;
+	if( ad->LookupString(ATTR_DAGMAN_WORKFLOW_LOG, tmp) ) {
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: %s is defined\n",
+			ATTR_DAGMAN_WORKFLOW_LOG);
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: tmp = %s\n",
+			tmp.Value());
+		if( fullpath (tmp.Value() ) ) {
+				// we have a full pathname in the job ad.  however, if the
+				// job is using a different iwd (namely, filetransfer is
+				// being used), we want to just stick it in the local iwd
+				// for the job, instead.
+			if( jic->iwdIsChanged() ) {
+				const char* base = condor_basename(tmp.Value());
+				dagmanLogFilename.formatstr( "%s/%s", iwd, base);
+			} else {
+				dagmanLogFilename = tmp;
+			}
+		} else {
+				// no full path, so, use the job's iwd...
+			dagmanLogFilename.formatstr( "%s/%s", iwd, tmp.Value());
+		}
+		logfiles.push_back( dagmanLogFilename.Value());
+		MyString msk;
+		if( ad->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk) ) {
+				// Check the mask of the DAGMan log
+			dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: msk = %s\n",
+				msk.Value());
+			Tokenize(msk.Value());
+			while(const char* mask = GetNextToken(",",true)) {
+				mask_vec.push_back(ULogEventNumber(atoi(mask)));
+			}
+		}
+	}
+	if( logfiles.empty() ) {
 		return initNoLogging();
 	}
-
-	if( fullpath(tmp.Value()) ) {
-			// we have a full pathname in the job ad.  however, if the
-			// job is using a different iwd (namely, filetransfer is
-			// being used), we want to just stick it in the local iwd
-			// for the job, instead.
-		if( jic->iwdIsChanged() ) {
-			const char* base = condor_basename(tmp.Value());
-			logfilename.formatstr( "%s/%s", iwd, base);
-		} else {
-			logfilename = tmp;
-		}
-	} else {
-			// no full path, so, use the job's iwd...
-		logfilename.formatstr( "%s/%s", iwd, tmp.Value());
-	}
-
 	ad->LookupBool( xml_attr, use_xml );
-
-	return init( logfilename.Value(), (bool)use_xml, cluster, proc, subproc );
+	for(std::vector<const char*>::iterator p = logfiles.begin();
+			p != logfiles.end(); ++p) {
+		dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: UserLog "
+			"file %s\n",*p);
+	}
+	bool ret = init( logfiles, use_xml, cluster, proc, subproc );
+	if(ret) { 
+		for(std::vector<ULogEventNumber>::iterator m = mask_vec.begin();
+				m != mask_vec.end(); ++m) {
+			u_log.AddToMask(*m);
+		}
+	}
+	dprintf( D_FULLDEBUG, "LocalUserLog::initFromJobAd: returning %s\n",
+		ret?"True":"False");
+	return ret;
 }
 
 
@@ -121,8 +176,6 @@ LocalUserLog::initNoLogging( void )
 	should_log = false;
 	return true;
 }
-
-
 
 bool
 LocalUserLog::logExecute( ClassAd*  ad  )

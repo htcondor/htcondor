@@ -1220,11 +1220,8 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 			// can finally log the execute event.
 		ExecuteEvent event;
 		event.setExecuteHost( "MPI_job" );
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-				p != uLog.end(); ++p){
-			if ( !(*p)->writeEvent( &event, jobAd )) {
-				dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
-			}
+		if ( !uLog.writeEvent( &event, jobAd )) {
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}
 		
 			// Now that everything is started, we can finally invoke

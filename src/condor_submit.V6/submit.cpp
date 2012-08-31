@@ -1175,7 +1175,7 @@ main( int argc, char *argv[] )
 
 	if ( !DumpClassAdToFile ) {
 		if (Quiet) {
-			fprintf(stdout, "Submitting job(s)");
+			fprintf(stdout, "Submitting job(s)\n");
 		}
 	} else {
 		fprintf(stdout, "Storing job ClassAd(s)");
@@ -7410,8 +7410,9 @@ log_submit()
 			
 			// we don't know the gjid here, so pass in NULL as the last 
 			// parameter - epaulson 2/09/2007
-			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
-									  0, 0, 0, NULL) ) {
+			if ( ! usr_log.initialize(owner, ntdomain,
+					std::vector<const char*>(1,simple_name),
+					0, 0, 0, NULL ) ) {
 				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 			} else {
 				// Output the information

@@ -1356,12 +1356,9 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	event.sent_bytes = recv_bytes - last_recv_bytes;
 	last_recv_bytes = recv_bytes;
 
-	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
-			p != shadow->uLog.end(); ++p) {
-		if( !(*p)->writeEventNoFsync(&event, jobAd) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
-			rval = false;
-		}
+	if( !shadow->uLog.writeEventNoFsync(&event, jobAd) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
+		rval = false;
 	}
 
 	// Now, update our in-memory copy of the job ClassAd
@@ -1435,14 +1432,10 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 bool
 RemoteResource::writeULogEvent( ULogEvent* event )
 {
-	bool ret = true;
-	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
-			p != shadow->uLog.end(); ++p) {
-		if( !(*p)->writeEvent(event, jobAd) ) {
-			ret = false;
-		}
+	if( !shadow->uLog.writeEvent(event, jobAd) ) {
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 

@@ -1790,7 +1790,8 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		}
 		debug_printf(DEBUG_QUIET,"Initializing logfile %s, %d, %d, %d\n",
 			s,job->_CondorID._cluster,procID,subprocID);
-		ulog.initialize( s, job->_CondorID._cluster, procID, subprocID, NULL );
+		ulog.initialize( std::vector<const char*>(1,s), job->_CondorID._cluster,
+			procID, subprocID, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,

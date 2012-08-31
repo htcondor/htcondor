@@ -2585,26 +2585,24 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 // events and must be deleted when you're done.  This returns NULL if
 // the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
-std::vector<WriteUserLog*>
+WriteUserLog*
 Scheduler::InitializeUserLog( PROC_ID job_id ) 
 {
-	std::vector<WriteUserLog*> ulogs;
 	MyString logfilename;
 	MyString dagmanNodeLog;
 	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
-	bool has_log = false;
+	std::vector<const char*> logfiles;
 	if( getPathToUserLog(ad, logfilename) ) {
-		has_log = true;
+		logfiles.push_back(logfilename.Value());	
 	}
 	if( getPathToUserLog(ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {			
-		has_log = true;
+		logfiles.push_back(dagmanNodeLog.Value());
 	}
-	if(!has_log) {
+	if( logfiles.empty() ) {
 			// if there is no userlog file defined, then our work is
 			// done...  
-		return ulogs;
+		return NULL;
 	}
-
 	MyString owner;
 	MyString domain;
 	MyString iwd;
@@ -2615,84 +2613,40 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_GLOBAL_JOB_ID, gjid);
 
-	std::string logfile(logfilename.Value());
-	if(!logfile.empty()) {
-		dprintf( D_FULLDEBUG,
-				"Writing record to user logfile=%s owner=%s\n",
-				logfile.c_str(), owner.Value() );
-
-		WriteUserLog* ULog=new WriteUserLog();
-		ULog->setUseXML(0 <= GetAttributeBool(job_id.cluster, job_id.proc,
-					ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml);
-		ULog->setCreatorName( Name );
-		if (ULog->initialize(owner.Value(), domain.Value(),
-					logfile.c_str(), job_id.cluster, job_id.proc, 0,
-					gjid.Value())) {
-			ulogs.push_back(ULog);
-		} else {
-			// If the user log is in the spool directory, try writing to
-			// it as user condor. The spool directory spends some of its
-			// time owned by condor.
-			char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
-			std::string SpoolDir(tmp);
-			SpoolDir += DIR_DELIM_CHAR;
-			free( tmp );
-			if ( !strncmp( SpoolDir.c_str(), logfile.c_str(),
-						SpoolDir.length() ) &&
-					ULog->initialize( logfile.c_str(), job_id.cluster,
-						job_id.proc, 0, gjid.Value() ) ) {
-				ulogs.push_back(ULog);
-			} else {
-				dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: %s\n",
-						logfile.c_str());
-				delete ULog;
-			}
-		}
+	for(std::vector<const char*>::iterator p = logfiles.begin(); p != logfiles.end();
+			++p) {
+		dprintf( D_FULLDEBUG, 
+				 "Writing record to user logfile=%s owner=%s\n",
+				 *p, owner.Value() );
 	}
-	logfile = dagmanNodeLog.Value();
-	if(!logfile.empty()) {
-		dprintf( D_FULLDEBUG,
-				"Writing record to user logfile=%s owner=%s\n",
-				logfile.c_str(), owner.Value() );
 
-		WriteUserLog* ULog=new WriteUserLog();
-		ULog->setUseXML(false); // Dagman log is never xml
-		ULog->setCreatorName( Name );
-		if(!ulogs.empty()) { // Only write the global log once
-			ULog->setEnableGlobalLog( false );
-			MyString msk; // Mask only the dagman log
-			GetAttributeString(job_id.cluster, job_id.proc, ATTR_DAGMAN_WORKFLOW_MASK,
-				msk);
-			Tokenize(msk.Value());
-			while(const char* mask = GetNextToken(",",true)) {
-				ULog->AddToMask(ULogEventNumber(atoi(mask)));
-			}
-		}
-		if (ULog->initialize(owner.Value(), domain.Value(),
-					logfile.c_str(), job_id.cluster, job_id.proc, 0,
-					gjid.Value())) {
-			ulogs.push_back(ULog);
-		} else {
+	WriteUserLog* ULog=new WriteUserLog();
+	ULog->setUseXML(0 <= GetAttributeBool(job_id.cluster, job_id.proc,
+		ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml);
+	ULog->setCreatorName( Name );
+	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
+		job_id.cluster, job_id.proc, 0, gjid.Value())) {
+		return ULog;
+	} else {
 			// If the user log is in the spool directory, try writing to
 			// it as user condor. The spool directory spends some of its
 			// time owned by condor.
-			char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
-			std::string SpoolDir(tmp);
-			SpoolDir += DIR_DELIM_CHAR;
-			free( tmp );
-			if ( !strncmp( SpoolDir.c_str(), logfile.c_str(),
-						SpoolDir.length() ) &&
-					ULog->initialize( logfile.c_str(), job_id.cluster,
-						job_id.proc, 0, gjid.Value() ) ) {
-				ulogs.push_back(ULog);
-			} else {
-				dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: %s\n",
-						logfile.c_str());
-				delete ULog;
-			}
+		char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
+		std::string SpoolDir(tmp);
+		SpoolDir += DIR_DELIM_CHAR;
+		free( tmp );
+		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(), SpoolDir.length() ) &&
+			 ULog->initialize( logfiles, job_id.cluster, job_id.proc,
+				0, gjid.Value() ) ) {
+			return ULog;
 		}
-	}	
-	return ulogs;
+		for(std::vector<const char*>::iterator p = logfiles.begin();
+				p != logfiles.end(); ++p) {
+			dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: %s\n", *p);
+		}
+		delete ULog;
+		return NULL;
+	}
 }
 
 bool
@@ -2709,8 +2663,8 @@ Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
 		}
 	}
 
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2725,29 +2679,25 @@ Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
 	}
 
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		(*p)->setEnableFsync(do_fsync);
-		bool status = (*p)->writeEvent(&event, job_ad);
-		delete *p;
+	ULog->setEnableFsync(do_fsync);
+	bool status = ULog->writeEvent(&event, job_ad);
+	delete ULog;
 
-		if (!status) {
-			dprintf( D_ALWAYS,
-					"Unable to log ULOG_SUBMIT event for job %d.%d\n",
-					job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_SUBMIT event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
 bool
 Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2760,28 +2710,25 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		free( reason );
 	}
 
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool status = (*p)->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
+	bool status =
+		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
 
-		if (!status) {
-			dprintf( D_ALWAYS,
-					 "Unable to log ULOG_JOB_ABORTED event for job %d.%d\n",
-					 job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_JOB_ABORTED event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
 bool
 Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2812,27 +2759,24 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 		event.setReasonSubCode(hold_reason_subcode);
 	}
 
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool status = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
 
-		if (!status) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event for job %d.%d\n",
-					 job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
 bool
 Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2845,28 +2789,25 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 		free( reason );
 	}
 
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool status = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
 
-		if (!status) {
-			dprintf( D_ALWAYS,
-					 "Unable to log ULOG_JOB_RELEASED event for job %d.%d\n",
-					 job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_JOB_RELEASED event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
 bool
 Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2880,52 +2821,47 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 	ExecuteEvent event;
 	event.setExecuteHost( host );
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool status = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
-		if (!status) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event for job %d.%d\n",
-					job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
+	
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event for job %d.%d\n",
+				job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
 bool
-Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
+Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed ) 
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool status = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
-		if (!status) {
-			dprintf( D_ALWAYS,
-					 "Unable to log ULOG_JOB_EVICTED event for job %d.%d\n",
-					 job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	bool status =
+		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_JOB_EVICTED event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
 bool
-Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
+Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2952,28 +2888,23 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		event.normal = false;
 		event.signalNumber = WTERMSIG(status);
 	}
-	bool ret = false;
-	dprintf(D_ALWAYS, "Writing TERMINATE event for %d.%d\n", job_id.cluster,job_id.proc);
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool rval = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
+	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
 
-		if (!rval) {
-			dprintf( D_ALWAYS,
-					 "Unable to log ULOG_JOB_TERMINATED event for job %d.%d\n",
-					 job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	if (!rval) {
+		dprintf( D_ALWAYS, 
+				 "Unable to log ULOG_JOB_TERMINATED event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 bool
 Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason ) 
 {
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
@@ -2999,19 +2930,15 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 	if(reason) {
 		event.setReason(reason);
 	}
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool rval = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
+	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	delete ULog;
 
-		if (!rval) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED (requeue) event "
-					 "for job %d.%d\n", job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+	if (!rval) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED (requeue) event "
+				 "for job %d.%d\n", job_id.cluster, job_id.proc );
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
@@ -3022,9 +2949,9 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 {
 	PROC_ID job_id;
 	StrToProcId(job_id_str, job_id);
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( job_id );
-	if( ULog.empty() ) {
-		// User didn't want log
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
 		return true;
 	}
 
@@ -3033,20 +2960,16 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 	event.setName(attr);
 	event.setValue(attr_value);
 	event.setOldValue(old_value);
-	bool ret = false;
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
-		bool rval = (*p)->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
-		delete *p;
+        bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+        delete ULog;
 
-		if (!rval) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_ATTRIBUTE_UPDATE event "
-					"for job %d.%d\n", job_id.cluster, job_id.proc );
-		} else {
-			ret = true;
-		}
+        if (!rval) {
+                dprintf( D_ALWAYS, "Unable to log ULOG_ATTRIBUTE_UPDATE event "
+                                 "for job %d.%d\n", job_id.cluster, job_id.proc );
+                return false;
+        }
 
-	}
-	return ret;
+	return true;
 }
 
 
@@ -5820,8 +5743,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		startd_principal = NULL;
 	}
 
-	std::vector<WriteUserLog*> ULog = this->InitializeUserLog( *job );
-	for(std::vector<WriteUserLog*>::iterator p = ULog.begin(); p != ULog.end(); ++p) {
+	WriteUserLog* ULog = this->InitializeUserLog( *job );
+	if ( ULog ) {
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
 			"schedd now running again";
@@ -5829,10 +5752,11 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		event.setStartdAddr( startd_addr );
 		event.setStartdName( startd_name );
 
-		if( !(*p)->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
+		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 		}
-		delete *p;
+		delete ULog;
+		ULog = NULL;
 	}
 
 	dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "

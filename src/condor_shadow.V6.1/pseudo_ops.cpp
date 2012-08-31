@@ -699,19 +699,14 @@ pseudo_ulog( ClassAd *ad )
 		}
 	}
 
-	if( !event_already_logged ) {
-		for(std::vector<WriteUserLog*>::iterator p = Shadow->uLog.begin();
-				p != Shadow->uLog.end(); ++p) {
-			if(!(*p)->writeEvent( event, ad ) ) {
-				MyString add_str;
-				ad->sPrint(add_str);
-				dprintf(
-				  D_ALWAYS,
-				  "unable to log event in pseudo_ulog: %s\n",
-				  add_str.Value());
-				result = -1;
-			}
-		}
+	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
+		MyString add_str;
+		ad->sPrint(add_str);
+		dprintf(
+		  D_ALWAYS,
+		  "unable to log event in pseudo_ulog: %s\n",
+		  add_str.Value());
+		result = -1;
 	}
 
 	if(put_job_on_hold) {

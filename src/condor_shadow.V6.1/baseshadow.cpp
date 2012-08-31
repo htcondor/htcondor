@@ -36,9 +36,7 @@
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
-// Using pointers here because it has been too
-// hairy to use plain structures
-std::vector<WriteUserLog*> BaseShadow::uLog;
+WriteUserLog BaseShadow::uLog;
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
@@ -830,98 +828,39 @@ BaseShadow::emailUser( const char *subjectline )
 
 void BaseShadow::initUserLog()
 {
-	MyString logfilename;
+	MyString logfilename,dagmanLogFile;
 	int  use_xml;
-	bool result;
 
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
 		// the log
 	ASSERT( job_updater );
 
-		// For some reason, this routine gets called more than once
-		// during the lifetime of the shadow.  We clear uLog so
-		// we do not write events more than once.
-
-	if(!uLog.empty()) {
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-				p != uLog.end(); ++p) {
-			delete *p;
-		}
-		uLog.clear();
-	}
-	bool have_a_log = false;
+	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(jobAd, logfilename) ) {
-		have_a_log = true;
-		std::string logfile(logfilename.Value());
-		WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
-		if(!uLogi) {
-			EXCEPT("Out of memory!");
-		}
-		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
-			// It is important to NOT ignore a failure to initialize the user log,
-			// since if we fail to initialize here, then all event logging
-			// in the shadow from this point forward are effectively ignored.
-			// So if we fail to initialize the user log, put this job on hold.
-			// Future work: it would be good to pass use the error stack to
-			// figure out -why- the initialization failed, allowing the shadow
-			// to retry automatically -vs- go on hold depending upon the details
-			// of the failure.
-		if ( !result ) {
+		logfiles.push_back(logfilename.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());	
+	}
+	if ( getPathToUserLog(jobAd, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		logfiles.push_back(dagmanLogFile.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.Value());	
+	}
+	if( !logfiles.empty()) {
+		if( !uLog.initialize (owner.Value(), domain.Value(), logfiles,
+				cluster, proc, 0, gjid)) {
 			MyString hold_reason;
 			hold_reason.formatstr(
-					"Failed to initialize user log to %s", logfile.c_str());
+					"Failed to initialize user log to %s or %s", logfilename.Value(),
+						dagmanLogFile.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does EXCEPT
-			EXCEPT("Failed to initialize user log to %s",logfile.c_str());
+			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
 		}
-			// Only the first user log is allowed to be an xml log
-		uLogi->setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
-		uLog.push_back(uLogi);
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
-	}
-	if ( getPathToUserLog(jobAd, logfilename, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		have_a_log = true;
-		std::string logfile(logfilename.Value());
-		WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
-		if(!uLogi) {
-			EXCEPT("Out of memory!");
-		}
-		if(!uLog.empty()) { // Write to the Global log at most once
-			uLogi->setEnableGlobalLog(false);
-			MyString msk; // Mask only the dagman log
-			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			Tokenize(msk.Value());
-			while(const char* mask = GetNextToken(",",true)) {
-				uLogi->AddToMask(ULogEventNumber(atoi(mask)));
-			}
-		}
-		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
-			// It is important to NOT ignore a failure to initialize the user log,
-			// since if we fail to initialize here, then all event logging
-			// in the shadow from this point forward are effectively ignored.
-			// So if we fail to initialize the user log, put this job on hold.
-			// Future work: it would be good to pass use the error stack to
-			// figure out -why- the initialization failed, allowing the shadow
-			// to retry automatically -vs- go on hold depending upon the details
-			// of the failure.
-		if ( !result ) {
-			MyString hold_reason;
-			hold_reason.formatstr(
-					"Failed to initialize user log to %s", logfile.c_str());
-			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does EXCEPT
-			EXCEPT("Failed to initialize user log to %s",logfile.c_str());
-		}
-			// Only the first user log is allowed to be an xml log
-		uLogi->setUseXML(false); // Dagman log is never xml
-		uLog.push_back(uLogi);
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
-	}
-	if(!have_a_log) {
+		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 
@@ -1061,12 +1000,10 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.setCoreFile( corefile.Value() );
 		}
 
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-			if (!(*p)->writeEvent (&event,jobAd)) {
-				dprintf (D_ALWAYS,"Unable to log "
-						"ULOG_JOB_TERMINATED event\n");
-				EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
-			}
+		if (!uLog.writeEvent (&event,jobAd)) {
+			dprintf (D_ALWAYS,"Unable to log "
+				 	"ULOG_JOB_TERMINATED event\n");
+			EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
 		}
 
 		return;
@@ -1144,12 +1081,10 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	}
 #endif
 	
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!(*p)->writeEvent (&event,jobAd)) {
-			dprintf (D_ALWAYS,"Unable to log "
-					"ULOG_JOB_TERMINATED event\n");
-			EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
-		}
+	if (!uLog.writeEvent (&event,jobAd)) {
+		dprintf (D_ALWAYS,"Unable to log "
+				 "ULOG_JOB_TERMINATED event\n");
+		EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
 	}
 }
 
@@ -1193,10 +1128,8 @@ BaseShadow::logEvictEvent( int exitReason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 	
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!(*p)->writeEvent (&event,jobAd)) {
-			dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
-		}
+	if (!uLog.writeEvent (&event,jobAd)) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
 	}
 }
 
@@ -1242,11 +1175,9 @@ BaseShadow::logRequeueEvent( const char* reason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 	
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!(*p)->writeEvent (&event,jobAd)) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
-					"(and requeued) event\n" );
-		}
+	if (!uLog.writeEvent (&event,jobAd)) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
+				 "(and requeued) event\n" );
 	}
 }
 
@@ -1307,11 +1238,9 @@ BaseShadow::log_except(const char *msg)
 		event.sent_bytes = 0.0;
 	}
 
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!exception_already_logged && !(*p)->writeEventNoFsync (&event,NULL))
-		{
-			::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
-		}
+	if (!exception_already_logged && !uLog.writeEventNoFsync (&event,NULL))
+	{
+		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
 }
 

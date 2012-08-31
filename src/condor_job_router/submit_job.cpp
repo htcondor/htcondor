@@ -854,19 +854,27 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	std::string userLogFile;
 	std::string domain;
 	std::string gjid;
+	std::string dagmanLogFile;
 	bool use_xml = false;
 
 	ASSERT(ulog);
 	ASSERT(no_ulog);
 
 	userLogFile[0] = '\0';
+	dagmanLogFile[0] = '\0';
+	std::vector<const char*> logfiles;
 	job_ad.EvaluateAttrString( ATTR_ULOG_FILE, userLogFile );
-	if ( userLogFile[0] == '\0' ) {
-		// User doesn't want a log
-		*no_ulog = true;
+	if ( userLogFile[0] != '\0' ) {
+		logfiles.push_back( userLogFile.c_str());
+	}
+	job_ad.EvaluateAttrString( ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile );
+	if( dagmanLogFile[0] != '\0') {
+		logfiles.push_back( dagmanLogFile.c_str() );
+	}
+	*no_ulog = logfiles.empty();
+	if(*no_ulog) {
 		return true;
 	}
-	*no_ulog = false;
 
 	job_ad.EvaluateAttrString(ATTR_OWNER,owner);
 	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
@@ -875,7 +883,7 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
 	job_ad.EvaluateAttrString( ATTR_GLOBAL_JOB_ID, gjid );
 
-	if(!ulog->initialize(owner.c_str(), domain.c_str(), userLogFile.c_str(), cluster, proc, 0, gjid.c_str())) {
+	if(!ulog->initialize(owner.c_str(), domain.c_str(), logfiles, cluster, proc, 0, gjid.c_str())) {
 		return false;
 	}
 	ulog->setUseXML( use_xml );

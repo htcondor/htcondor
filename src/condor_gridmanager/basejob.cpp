@@ -970,12 +970,18 @@ WriteUserLog*
 InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString userLogFile;
+	MyString userLogFile, dagmanNodeLog;
 	std::string gjid;
 	bool use_xml = false;
+	std::vector<const char*> logfiles;
 
-	if( !getPathToUserLog(job_ad, userLogFile) ) {
-		// User doesn't want a log
+	if( getPathToUserLog(job_ad, userLogFile) ) {
+		logfiles.push_back(userLogFile.Value());
+	}
+	if( getPathToUserLog(job_ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {                   
+		logfiles.push_back(dagmanNodeLog.Value());
+	}
+	if(logfiles.empty()) {
 		return NULL;
 	}
 
@@ -985,7 +991,7 @@ InitializeUserLog( ClassAd *job_ad )
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	WriteUserLog *ULog = new WriteUserLog();
-	ULog->initialize(userLogFile.Value(), cluster, proc, 0, gjid.c_str());
+	ULog->initialize(logfiles, cluster, proc, 0, gjid.c_str());
 	ULog->setUseXML( use_xml );
 	return ULog;
 }
