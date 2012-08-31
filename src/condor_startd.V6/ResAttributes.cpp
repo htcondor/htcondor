@@ -356,28 +356,28 @@ MachAttributes::compute( amask_t how_much )
 		if( m_opsys_and_ver ) {
 			free( m_opsys_and_ver );
 		}
-		m_opsys_and_ver = param( "OPSYS_AND_VER" );
-		m_opsys_major_ver = param_integer( "OPSYS_MAJOR_VER", 0 );
+		m_opsys_and_ver = param( "OPSYSANDVER" );
+		m_opsys_major_ver = param_integer( "OPSYSMAJORVER", 0 );
 
 		if( m_opsys_name ) {
 			free( m_opsys_name );
                 } 
-		m_opsys_name = param( "OPSYS_NAME" );
+		m_opsys_name = param( "OPSYSNAME" );
 
 		if( m_opsys_long_name ) {
 			free( m_opsys_long_name );
                 } 
-		m_opsys_long_name = param( "OPSYS_LONG_NAME" );
+		m_opsys_long_name = param( "OPSYSLONGNAME" );
 
 		if( m_opsys_short_name ) {
 			free( m_opsys_short_name );
                 } 
-		m_opsys_short_name = param( "OPSYS_SHORT_NAME" );
+		m_opsys_short_name = param( "OPSYSSHORTNAME" );
 
 		if( m_opsys_legacy ) {
 			free( m_opsys_legacy );
                 } 
-		m_opsys_legacy = param( "OPSYS_LEGACY" );
+		m_opsys_legacy = param( "OPSYSLEGACY" );
 
        		// temporary attributes for raw utsname info
 		if( m_utsname_sysname ) {

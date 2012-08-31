@@ -1286,8 +1286,8 @@ fill_attributes()
 	}
 
 	if( (tmp = sysapi_opsys_versioned()) != NULL ) {
-		insert( "OPSYS_AND_VER", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_AND_VER");
+		insert( "OPSYSANDVER", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYSANDVER");
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
@@ -1298,28 +1298,28 @@ fill_attributes()
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.formatstr("%d", major_ver);
-		insert( "OPSYS_MAJOR_VER", val.Value(), ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_MAJOR_VER");
+		insert( "OPSYSMAJORVER", val.Value(), ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYSMAJORVER");
 	}
 
 	if( (tmp = sysapi_opsys_name()) != NULL ) {
-		insert( "OPSYS_NAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_NAME");
+		insert( "OPSYSNAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYSNAME");
 	}
 	
 	if( (tmp = sysapi_opsys_long_name()) != NULL ) {
-		insert( "OPSYS_LONG_NAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_LONG_NAME");
+		insert( "OPSYSLONGNAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYSLONGNAME");
 	}
 
 	if( (tmp = sysapi_opsys_short_name()) != NULL ) {
-		insert( "OPSYS_SHORT_NAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_SHORT_NAME");
+		insert( "OPSYSSHORTNAME", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYSSHORTNAME");
 	}
 
 	if( (tmp = sysapi_opsys_legacy()) != NULL ) {
-		insert( "OPSYS_LEGACY", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS_LEGACY");
+		insert( "OPSYSLEGACY", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYSLEGACY");
 	}
 
 #if ! defined WIN32

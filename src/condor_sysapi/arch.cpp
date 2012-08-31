@@ -379,7 +379,7 @@ init_arch(void)
 	// NAME             OLD  ==> Linux       | BSD          | UNIX    | Windows
 	// ---------------------------------------------------------------------------
 	// OpSys =         LINUX ==> LINUX       | OSX          | AIX     | WINDOWS
-	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX703    | AIX53   | WINDOWS601
+	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX7      | AIX53   | WINDOWS601
 	// OpSysVer =        206 ==> 501         | 703          | 503     | 601
 	// OpSysShortName =  N/A ==> Linux       | MACOSX       | AIX     | Win7 
 	// OpSysLongName =   N/A ==> Red Hat 5.1 | MACOSX 7.3   | AIX 5.3 | Windows 7 SP2
@@ -423,14 +423,20 @@ init_arch(void)
 
      	} else
         {
+		// if opsys_long_name is "Solaris 11.250"
+		//    opsys_name      is "Solaris"
+		//    opsys_legacy    is "SOLARIS"
+		//    opsys           is "SOLARIS"
+		//    opsys_short_name is "Solaris"
+		//    opsys_versioned  is "Solaris11"
 		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
-		opsys = strdup( opsys_long_name );
-		opsys_legacy = strdup( opsys );
+		opsys_name = strdup( opsys_long_name ); char * p = strchr(opsys_name, ' '); if (p) *p = 0;
+		opsys_legacy = p = strdup( opsys_name ); for (; *p; ++p) { *p = toupper(*p); }
+		opsys = strdup( opsys_legacy );
+		opsys_short_name = strdup( opsys_name );
 		opsys_major_version = sysapi_find_major_version( opsys_long_name );
 		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-		opsys_versioned = sysapi_find_opsys_versioned( opsys, opsys_major_version );
-		opsys_name = strdup( opsys );
-		opsys_short_name = strdup( opsys );
+		opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
         }
 
 #endif
@@ -754,7 +760,8 @@ sysapi_get_unix_info( const char *sysname,
 		else {
             pver = release;
 		}
-        sprintf( tmp, "Solaris%s", pver );
+		if (!strcmp(version,"11.0")) version = "11";
+        sprintf( tmp, "Solaris %s.%s", version, pver );
 	}
 
 	else if( !strcmp(sysname, "HP-UX") ) {
