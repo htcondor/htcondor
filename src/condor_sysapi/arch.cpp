@@ -402,8 +402,8 @@ init_arch(void)
 
 	opsys = strdup( "FREEBSD" );
 	opsys_legacy = strdup( opsys );
-	opsys_name = strdup ( opsys );
  	opsys_short_name = strdup( "FreeBSD" );
+	opsys_name = strdup ( opsys_short_name );
 	opsys_long_name = sysapi_get_bsd_info( opsys_short_name, buf.release ); 
 	opsys_major_version = sysapi_find_major_version( buf.release );
 	opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
