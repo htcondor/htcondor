@@ -1728,8 +1728,8 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 void
 dprintf_dump_stack(void) {
 	priv_state	orig_priv_state;
-	int orig_euid;
-	int orig_egid;
+	uid_t orig_euid;
+	uid_t orig_egid;
 	int fd;
 	void *trace[50];
 	int trace_size;
