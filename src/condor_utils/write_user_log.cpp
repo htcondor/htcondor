@@ -459,9 +459,6 @@ WriteUserLog::FreeGlobalResources( bool final )
 		free(m_global_path);
 		m_global_path = NULL;
 	}
-	if(final) {
-		logs.clear();
-	}
 
 	closeGlobalLog();	// Close & release global file handle & lock
 
