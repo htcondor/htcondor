@@ -824,17 +824,7 @@ ClassAd::Insert( const char *str )
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
 	string newAdStr;
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-        if (str[i] == '\\') {
-			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
-			{
-				newAdStr.append( 1, '\\' );
-			}
-		}
-		newAdStr.append( 1, str[i] );
-	}
-	//newAdStr += "]";
+	ConvertEscapingOldToNew( str, newAdStr );
 	
 	if (!classad::ClassAd::Insert(newAdStr))
 	{
