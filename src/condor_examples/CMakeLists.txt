@@ -46,6 +46,7 @@ install (FILES
 		#condor_config.generic.rpm.patch
 		#condor_config.local.generic
 		condor.init
+		condor.plist
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES
