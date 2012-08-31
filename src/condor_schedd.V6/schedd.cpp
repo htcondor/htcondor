@@ -11904,7 +11904,7 @@ Scheduler::publish( ClassAd *cad ) {
 		free( temp );
 	}
 
-	temp = param( "OPSYS_AND_VER" );
+	temp = param( "OPSYSANDVER" );
 	if ( temp ) {
 		cad->Assign( ATTR_OPSYS_AND_VER, temp );
 		free( temp );
