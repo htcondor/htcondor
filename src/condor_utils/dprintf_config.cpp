@@ -475,24 +475,27 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 			}
 
 			// check to see if we can open the log file.
-			bool dont_panic = true;
-			bool fOk = debug_check_it(*it, (first_time && it->want_truncate), dont_panic);
-			if( ! fOk && ii == 0 )
+			if(it->outputTarget == FILE_OUT)
 			{
+				bool dont_panic = true;
+				bool fOk = debug_check_it(*it, (first_time && it->want_truncate), dont_panic);
+				if( ! fOk && ii == 0 )
+				{
 #ifdef WIN32
-				/*
-				** If we could not open the log file, we might want to keep running anyway.
-				** If we do, then set the log filename to NUL so we don't keep trying
-				** (and failing) to open the file.
-				*/
-				if (DebugContinueOnOpenFailure) 
-				{
-					// change the debug file to point to the NUL device.
-					it->logPath.insert(0, NULL_FILE);
-				} else
+					/*
+					** If we could not open the log file, we might want to keep running anyway.
+					** If we do, then set the log filename to NUL so we don't keep trying
+					** (and failing) to open the file.
+					*/
+					if (DebugContinueOnOpenFailure) 
+					{
+						// change the debug file to point to the NUL device.
+						it->logPath.insert(0, NULL_FILE);
+					} else
 #endif
-				{
-					EXCEPT("Cannot open log file '%s'", logPath.c_str());
+					{
+						EXCEPT("Cannot open log file '%s'", logPath.c_str());
+					}
 				}
 			}
 		}
