@@ -60,8 +60,9 @@ See definition at section~\ref{param:JobRouterSchedd2Pool}.
 rather than creating a second transformed version of the job.
 \Ticket{3185}
 
-\item \Condor{defrag} now has a policy option to cancel draining
-of a machine that is in draining mode.  This can be used to effect
+\item The \Condor{defrag} daemon now has a policy option implemented
+by configuration to cancel the draining
+of a machine that is in the Draining mode.  This can be used to effect
 partial draining of machines.
 \Ticket{2993}
 
@@ -90,7 +91,7 @@ names of all jobs that these daemons will manage.
 \Ticket{3030}
 
 
-\item The new configuration variable \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}
+\item The new configuration variable \Macro{DEFRAG\_CANCEL\_REQUIREMENTS}
 is an expression that specifies which draining machines should have 
 draining be canceled.  
 This defaults to \MacroUNI{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  
