@@ -1649,7 +1649,7 @@ format_remote_host (char *, AttrList *ad)
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
+	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
 		MyString hostname = get_hostname(addr);
 		if (hostname.Length() > 0) {
