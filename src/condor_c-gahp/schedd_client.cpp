@@ -29,8 +29,6 @@
 #include "format_time.h"  // for format_time and friends
 #include "daemon.h"
 #include "dc_schedd.h"
-#include "condor_xml_classads.h"
-#include "condor_new_classads.h"
 #include "setenv.h"
 #include "globus_utils.h"
 #include "PipeBuffer.h"
@@ -1043,7 +1041,7 @@ submit_report_result:
 		}
 
 		if (qmgr_connection != NULL) {
-			SimpleList <MyString *> matching_ads;
+			SimpleList <std::string *> matching_ads;
 
 			error = FALSE;
 			
@@ -1076,15 +1074,14 @@ submit_report_result:
 
 			adlist.Rewind();
 			while( (next_ad=adlist.Next()) ) {
-				MyString * da_buffer = new MyString();	// Use a ptr to avoid excessive copying
+				std::string * da_buffer = new std::string();	// Use a ptr to avoid excessive copying
 				if ( useXMLClassads ) {
-					ClassAdXMLUnparser unparser;
-					unparser.SetUseCompactSpacing(true);
-					unparser.Unparse (next_ad, *da_buffer);
+					classad::ClassAdXMLUnParser unparser;
+					unparser.SetCompactSpacing( true );
+					unparser.Unparse( *da_buffer, next_ad );
 				} else {
-					NewClassAdUnparser unparser;
-					unparser.SetUseCompactSpacing(true);
-					unparser.Unparse (next_ad, *da_buffer);
+					classad::ClassAdUnParser unparser;
+					unparser.Unparse( *da_buffer, next_ad );
 				}
 				matching_ads.Append (da_buffer);
 			}
@@ -1105,10 +1102,10 @@ submit_report_result:
 			result[count++] = NULL;
 			result[count++] = _ad_count.c_str();
 
-			MyString *next_string;
+			std::string *next_string;
 			matching_ads.Rewind();
 			while (matching_ads.Next(next_string)) {
-				result[count++] = next_string->Value();
+				result[count++] = next_string->c_str();
 			}
 
 			enqueue_result (current_command->request_id, result, count);
@@ -1532,11 +1529,19 @@ get_job_id (const char * s, int * cluster_id, int * proc_id) {
 int
 get_class_ad (const char * s, ClassAd ** class_ad) {
 	if ( useXMLClassads ) {
-		ClassAdXMLParser parser;
-		*class_ad = parser.ParseClassAd (s);
+		classad::ClassAdXMLParser parser;
+		*class_ad = new ClassAd;
+		if ( !parser.ParseClassAd( s, **class_ad ) ) {
+			delete *class_ad;
+			*class_ad = NULL;
+		}
 	} else {
-		NewClassAdParser parser;
-		*class_ad = parser.ParseClassAd (s);
+		classad::ClassAdParser parser;
+		*class_ad = new ClassAd;
+		if ( !parser.ParseClassAd( s, **class_ad ) ) {
+			delete *class_ad;
+			*class_ad = NULL;
+		}
 	}
 	if ( *class_ad ) {
 		return TRUE;

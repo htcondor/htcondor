@@ -29,7 +29,6 @@
 #include "spooled_job_files.h"
 #include "filename_tools.h"
 #include "job_lease.h"
-#include "condor_new_classads.h"
 
 #include "gridmanager.h"
 #include "creamjob.h"
@@ -1602,12 +1601,13 @@ char *CreamJob::buildSubmitAd()
 	submitAd.Assign("outputsandboxbasedesturi", "gsiftp://localhost");
 
 	MyString ad_string;
+	std::string ad_str;
 
-	NewClassAdUnparser unparser;
-	unparser.SetUseCompactSpacing( true );
-	unparser.SetOutputType( false );
-	unparser.SetOutputTargetType( false );
-	unparser.Unparse( &submitAd, ad_string );
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse( ad_str, &submitAd );
+	ad_string = ad_str;
+	// TODO Insert following lists directly into classad and unparse
+	//   full ad into std::string and use that.
 
 		// Attributes that use new ClassAd lists have to be manually
 		// inserted after unparsing the ad.

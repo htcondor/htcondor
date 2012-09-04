@@ -33,7 +33,6 @@
 #include "iso_dates.h"
 #include "basename.h" // for condor_dirname
 #include "match_prefix.h"
-#include "condor_xml_classads.h"
 #include "subsystem_info.h"
 
 #include "historyFileFinder.h"

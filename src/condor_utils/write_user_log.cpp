@@ -42,7 +42,6 @@
 #include "read_user_log.h"
 #include <time.h>
 #include "condor_uid.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "utc_time.h"
 #include "stat_wrapper.h"
@@ -51,6 +50,7 @@
 #include "condor_fsync.h"
 #include <string>
 #include <algorithm>
+#include "condor_attributes.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
@@ -1274,17 +1274,18 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 					 event->eventNumber);
 			success = false;
 		} else {
-			MyString adXML;
-			ClassAdXMLUnparser xmlunp;
-			xmlunp.SetUseCompactSpacing(false);
-			xmlunp.SetOutputTargetType(false);
-			xmlunp.Unparse(eventAd, adXML);
-			if ( adXML.Length() < 1 ) {
+			std::string adXML;
+			classad::ClassAdXMLUnParser xmlunp;
+
+			eventAd->Delete( ATTR_TARGET_TYPE );
+			xmlunp.SetCompactSpacing(false);
+			xmlunp.Unparse(adXML, eventAd);
+			if ( adXML.length() < 1 ) {
 				dprintf( D_ALWAYS,
 						 "WriteUserLog Failed to convert event type # %d to XML.\n",
 						 event->eventNumber);
 			}
-			if (fprintf ( fp, "%s", adXML.Value()) < 0) {
+			if (fprintf ( fp, "%s", adXML.c_str()) < 0) {
 				success = false;
 			} else {
 				success = true;

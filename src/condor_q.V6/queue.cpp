@@ -46,7 +46,6 @@
 #include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
-#include "condor_xml_classads.h"
 #include "condor_open.h"
 #include "condor_sockaddr.h"
 #include "condor_id.h"
@@ -2349,11 +2348,9 @@ void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char c
 	}
 	if( use_xml ) {
 			// keep this consistent with AttrListList::fPrintAttrListList()
-		ClassAdXMLUnparser  unparser;
-		MyString xml;
-		unparser.SetUseCompactSpacing(false);
-		unparser.AddXMLFileHeader(xml);
-		printf("%s\n", xml.Value());
+		std::string xml;
+		AddClassAdXMLFileHeader(xml);
+		printf("%s\n", xml.c_str());
 	}
 }
 
@@ -2840,11 +2837,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		}
 		if( use_xml ) {
 				// keep this consistent with AttrListList::fPrintAttrListList()
-			ClassAdXMLUnparser  unparser;
-			MyString xml;
-			unparser.SetUseCompactSpacing(false);
-			unparser.AddXMLFileFooter(xml);
-			printf("%s\n", xml.Value());
+			std::string xml;
+			AddClassAdXMLFileFooter(xml);
+			printf("%s\n", xml.c_str());
 		}
 	}
 
@@ -2967,10 +2962,10 @@ process_buffer_line( ClassAd *job )
 	}
 
 	if (use_xml) {
-		MyString s;
+		std::string s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
-		tempCPS->string = strnewp( s.Value() );
+		tempCPS->string = strnewp( s.c_str() );
 	} else if( verbose ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
