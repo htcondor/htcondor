@@ -33,7 +33,6 @@
 #include "iso_dates.h"
 #include "basename.h" // for condor_dirname
 #include "match_prefix.h"
-#include "condor_xml_classads.h"
 #include "subsystem_info.h"
 #include "historyFileFinder.h"
 #include "condor_id.h"
@@ -1108,10 +1107,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
     while(!EndFlag) {
@@ -1192,10 +1190,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         }
     }
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
     fclose(LogFile);
     return;
@@ -1271,10 +1268,9 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 static void printJobAds(ClassAdList & jobs)
 {
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
 	jobs.Open();
@@ -1285,10 +1281,9 @@ static void printJobAds(ClassAdList & jobs)
 	jobs.Close();
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
 }
 
@@ -1316,10 +1311,9 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
 	std::string line;        // holds the current line from the log file.
@@ -1381,10 +1375,9 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
 	reader.Close();
 }

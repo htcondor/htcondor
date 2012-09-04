@@ -24,7 +24,6 @@
 #include <time.h>
 #include "MyString.h"
 #include "condor_uid.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "read_user_log_state.h"

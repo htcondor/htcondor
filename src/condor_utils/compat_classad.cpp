@@ -23,7 +23,6 @@
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
@@ -2056,31 +2055,47 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
         return FALSE;
     }
 
-    MyString out;
+    std::string out;
     sPrintAsXML(out,attr_white_list);
-    fprintf(fp, "%s", out.Value());
+    fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int ClassAd::
 sPrintAsXML(MyString &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml;
-	return TRUE;
+	std::string std_output;
+	int rc = sPrintAsXML(std_output, attr_white_list);
+	output += std_output;
+	return rc;
 }
 
 int ClassAd::
 sPrintAsXML(std::string &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml.Value();
+	classad::ClassAdXMLUnParser unparser;
+	std::string xml;
+
+	unparser.SetCompactSpacing(false);
+	if ( attr_white_list ) {
+		ClassAd tmp_ad;
+		classad::ExprTree *expr;
+		const char *attr;
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			if ( (expr = this->Lookup( attr )) ) {
+				tmp_ad.Insert( attr, expr, false );
+			}
+		}
+		unparser.Unparse( xml, &tmp_ad );
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			tmp_ad.Remove( attr );
+		}
+	} else {
+		unparser.Unparse( xml, this );
+	}
+	output += xml;
 	return TRUE;
 }
 ///////////// end XML functions /////////

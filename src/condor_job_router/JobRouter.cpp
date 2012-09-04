@@ -131,8 +131,6 @@ JobRouter::~JobRouter() {
 	}
 }
 
-#include "condor_new_classads.h"
-
 void
 JobRouter::init() {
 #if HAVE_JOB_HOOKS

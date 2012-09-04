@@ -286,3 +286,33 @@ void AttrList_setPublishServerTime( bool publish )
 {
 	AttrList_setPublishServerTimeMangled( publish );
 }
+
+/**************************************************************************
+ *
+ * Function: AddClassAdXMLFileHeader
+ * Purpose:  Print the stuff that should appear at the beginning of an
+ *           XML file that contains a series of ClassAds.
+ *
+ **************************************************************************/
+void AddClassAdXMLFileHeader(std::string &buffer)
+{
+	buffer += "<?xml version=\"1.0\"?>\n";
+	buffer += "<!DOCTYPE classads SYSTEM \"classads.dtd\">\n";
+	buffer += "<classads>\n";
+	return;
+
+}
+
+/**************************************************************************
+ *
+ * Function: AddClassAdXMLFileFooter
+ * Purpose:  Print the stuff that should appear at the end of an XML file
+ *           that contains a series of ClassAds.
+ *
+ **************************************************************************/
+void AddClassAdXMLFileFooter(std::string &buffer)
+{
+	buffer += "</classads>\n";
+	return;
+
+}

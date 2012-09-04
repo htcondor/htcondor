@@ -26,8 +26,6 @@
 #include "get_port_range.h"
 #include "MyString.h"
 #include "util_lib_proto.h"
-#include "condor_xml_classads.h"
-#include "condor_new_classads.h"
 #include "gahp_common.h"
 #include "env.h"
 #include "condor_string.h"
@@ -2574,7 +2572,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 {
 	static const char* command = "CONDOR_JOB_SUBMIT";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -2587,22 +2585,17 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, job_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, job_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc2 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
@@ -2663,7 +2656,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 {
 	static const char* command = "CONDOR_JOB_UPDATE_CONSTRAINED";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -2677,23 +2670,18 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, update_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, update_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(constraint) );
-	char *esc3 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc3 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr( reqline, "%s %s %s", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );
@@ -2808,11 +2796,19 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 			int idst = 0;
 			for ( int i = 0; i < *num_ads; i++,idst++ ) {
 				if ( useXMLClassads ) {
-					ClassAdXMLParser parser;
-					(*ads)[idst] = parser.ParseClassAd( result->argv[4 + i] );
+					classad::ClassAdXMLParser parser;
+					(*ads)[idst] = new ClassAd;
+					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
+						delete (*ads)[idst];
+						(*ads)[idst] = NULL;
+					}
 				} else {
-					NewClassAdParser parser;
-					(*ads)[idst] = parser.ParseClassAd( result->argv[4 + i] );
+					classad::ClassAdParser parser;
+					(*ads)[idst] = new ClassAd;
+					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
+						delete (*ads)[idst];
+						(*ads)[idst] = NULL;
+					}
 				}
 				if( (*ads)[idst] == NULL) {
 					dprintf(D_ALWAYS, "ERROR: Condor-C GAHP returned "
@@ -2912,7 +2908,7 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 {
 	static const char* command = "CONDOR_JOB_UPDATE";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -2925,22 +2921,17 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, update_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, update_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc2 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free( esc1 );
@@ -3133,7 +3124,7 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 {
 	static const char* command = "CONDOR_JOB_STAGE_IN";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -3146,22 +3137,17 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, job_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, job_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc2 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr(reqline, "%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
@@ -3444,7 +3430,7 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 {
 	static const char* command = "BLAH_JOB_SUBMIT";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -3455,14 +3441,11 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		NewClassAdUnparser unparser;
-		unparser.SetUseCompactSpacing( true );
-		unparser.SetOutputType( false );
-		unparser.SetOutputTargetType( false );
-		unparser.Unparse( job_ad, ad_string );
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
-	int x = formatstr( reqline, "%s", escapeGahpString(ad_string.Value()) );
+	int x = formatstr( reqline, "%s", escapeGahpString(ad_string.c_str()) );
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 
@@ -3554,8 +3537,12 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 			error_string = "";
 		}
 		if ( strcasecmp( result->argv[4], NULLSTRING ) ) {
-			NewClassAdParser parser;
-			*status_ad = parser.ParseClassAd( result->argv[4] );
+			classad::ClassAdParser parser;
+			*status_ad = new ClassAd;
+			if ( !parser.ParseClassAd( result->argv[4], **status_ad ) ) {
+				delete *status_ad;
+				*status_ad = NULL;
+			}
 		}
 		if ( *status_ad != NULL ) {
 			(*status_ad)->Assign( ATTR_JOB_STATUS, atoi( result->argv[3] ) );
