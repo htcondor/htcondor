@@ -66,17 +66,6 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 	ParseMapFile();
 #endif
 	if ( !m_globusActivated ) {
-		// The Globus callout module is a system-wide setting.  There are several
-		// cases where a user may not want it to apply to Condor by default
-		// (for example, if it causes crashes when mixed with Condor libs!).
-		// Setting GSI_AUTHZ_CONF=/dev/null works for disabling the callouts.
-		std::string gsi_authz_conf;
-		if (param(gsi_authz_conf, "GSI_AUTHZ_CONF")) {
-			if (globus_libc_setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
-				dprintf(D_ALWAYS, "Failed to set the GSI_AUTHZ_CONF environment variable.\n");
-				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
-			}
-		}
 		// In 99% of cases, this is a no-op because the Globus threading model defaults
 		// to "none".  However, this can be overridden by a user's environment variable
 		// and I'd prefer to take no chances.  This call can fail if a globus module
@@ -765,9 +754,18 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		// store the raw subject name for later mapping
 		setAuthenticatedName(server);
 
-		// Default to user name "gsi".
-		// Later on, if configured, we will invoke the callout in nameGssToLocal.
-		setRemoteUser("gsi");
+        // Try to map DN to local name (in the format of name@domain)
+        if ( !nameGssToLocal(server) ) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to gss_assist_gridmap %s to a local user.  "
+				"Check the grid-mapfile.", server );
+			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", server );
+			setRemoteUser("gsi");
+        }
+        else {
+            dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 
+                    server);
+        }
 
 		// extract and store VOMS attributes
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
@@ -954,8 +952,6 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
     else {
 		// store the raw subject name for later mapping
 		setAuthenticatedName(GSSClientname);
-		setRemoteUser("gsi");
-
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 
 			// get the voms attributes from the peer
@@ -971,6 +967,18 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
+
+        // Try to map DN to local name (in the format of name@domain)
+        if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to gss_assist_gridmap %s to a local user.  "
+				"Check the grid-mapfile.", GSSClientname);
+			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", GSSClientname);
+        }
+        else {
+            dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 
+                    GSSClientname);
+        }
 
 		// XXX FIXME ZKM
 		// i am making failure to be mapped a non-fatal error at this point.
