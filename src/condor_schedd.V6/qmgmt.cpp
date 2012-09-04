@@ -3457,6 +3457,13 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						fallback++;
 					}
 
+					if (strchr(name, '.')) {
+						// . is a legal character for some find_config_macros, but not other
+						// check here if one snuck through
+						attribute_not_found = true;
+						break;
+						
+					}
 					// Look for the name in the ad.
 					// If it is not there, use the fallback.
 					// If no fallback value, then fail.
