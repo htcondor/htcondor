@@ -129,9 +129,11 @@ This bug was introduced when these functions were added in Condor version 7.7.6.
   \end{itemize}
 
 \item Changes introduced in Condor version 7.9.0 caused jobs submitted by
-\Condor{dagman} in the local universt to not write to the default node log
-file, when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is true (the default), and a
-user log is also defined. This is fixed. \Ticket{3111}
+\Condor{dagman} in the local universe to not write to the default node log file,
+when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was \Expr{True} (the default),
+and a user log was also defined. This is fixed. 
+\Ticket{3111}
+
 \end{itemize}
 
 \noindent Known Bugs:
