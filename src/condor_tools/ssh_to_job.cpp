@@ -474,7 +474,7 @@ bool SSHToJob::execute_ssh()
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
 		unsigned int r = get_random_uint();
-		m_session_dir.sprintf("%s%c%s.condor_ssh_to_job_%x",
+		m_session_dir.formatstr("%s%c%s.condor_ssh_to_job_%x",
 							  temp_dir,DIR_DELIM_CHAR,local_username,r);
 		if( mkdir(m_session_dir.Value(),0700)==0 ) {
 			break;
@@ -494,9 +494,9 @@ bool SSHToJob::execute_ssh()
 
 
 	MyString known_hosts_file;
-	known_hosts_file.sprintf("%s%cknown_hosts",m_session_dir.Value(),DIR_DELIM_CHAR);
+	known_hosts_file.formatstr("%s%cknown_hosts",m_session_dir.Value(),DIR_DELIM_CHAR);
 	MyString private_client_key_file;
-	private_client_key_file.sprintf("%s%cssh_key",m_session_dir.Value(),DIR_DELIM_CHAR);
+	private_client_key_file.formatstr("%s%cssh_key",m_session_dir.Value(),DIR_DELIM_CHAR);
 
 	ReliSock sock;
 	MyString remote_user; // this will be filled in with the remote user name
@@ -520,7 +520,7 @@ bool SSHToJob::execute_ssh()
 
 
 	MyString fdpass_sock_name;
-	fdpass_sock_name.sprintf("%s%cfdpass",m_session_dir.Value(),DIR_DELIM_CHAR);
+	fdpass_sock_name.formatstr("%s%cfdpass",m_session_dir.Value(),DIR_DELIM_CHAR);
 
 	// because newer versions of openssh (e.g. 5.8) close
 	// all file descriptors > 2, we have to pass the ssh connection
@@ -638,9 +638,9 @@ bool SSHToJob::execute_ssh()
 	MyString ssh_cmd;
 	ArgList ssh_arglist;
 	MyString param_name;
-	param_name.sprintf("SSH_TO_JOB_%s_CMD",m_ssh_basename.Value());
+	param_name.formatstr("SSH_TO_JOB_%s_CMD",m_ssh_basename.Value());
 	MyString default_ssh_cmd;
-	default_ssh_cmd.sprintf("\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
+	default_ssh_cmd.formatstr("\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
 							ssh_options_arglist.GetArg(0),
 							is_scp ? "" : " condor-job.%h");
 	param(ssh_cmd,param_name.Value(),default_ssh_cmd.Value());

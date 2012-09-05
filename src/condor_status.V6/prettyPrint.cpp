@@ -23,7 +23,6 @@
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
-#include "condor_xml_classads.h"
 #include "string_list.h"
 
 extern ppOption				ppStyle;
@@ -832,23 +831,23 @@ printVerbose (ClassAd *ad)
 void
 printXML (ClassAd *ad, bool first_ad, bool last_ad)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
+	classad::ClassAdXMLUnParser  unparser;
+	std::string            xml;
 
 	if (first_ad) {
-		unparser.AddXMLFileHeader(xml);
+		AddClassAdXMLFileHeader(xml);
 	}
 
-	unparser.SetUseCompactSpacing(false);
+	unparser.SetCompactSpacing(false);
 	if ( NULL != ad ) {
-		unparser.Unparse(ad, xml);
+		unparser.Unparse(xml, ad);
 	}
 
 	if (last_ad) {
-		unparser.AddXMLFileFooter(xml);
+		AddClassAdXMLFileFooter(xml);
 	}
 
-	printf("%s\n", xml.Value());
+	printf("%s\n", xml.c_str());
 	return;
 }
 

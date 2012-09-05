@@ -109,7 +109,7 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 	char* path = hook_paths[(int)hook_type];
 	if (!path) {
 		MyString _param;
-		_param.sprintf("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
+		_param.formatstr("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
 		bool hperr = !validateHookPath(_param.Value(), path);
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed
@@ -210,7 +210,7 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 		char* keyword = rip->getHookKeyword();
 		ASSERT(keyword && keyword != UNDEFINED);
 		MyString keyword_attr;
-		keyword_attr.sprintf("%s = \"%s\"", ATTR_HOOK_KEYWORD, keyword);
+		keyword_attr.formatstr("%s = \"%s\"", ATTR_HOOK_KEYWORD, keyword);
 		job_ad->Insert(keyword_attr.Value());
 	}
 

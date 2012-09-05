@@ -821,7 +821,7 @@ Dag::RemoveBatchJob(Job *node) {
 			// Adding this DAGMan's cluster ID as a constraint to
 			// be extra-careful to avoid removing someone else's
 			// job.
-		constraint.sprintf( "%s == %d && %s == %d",
+		constraint.formatstr( "%s == %d && %s == %d",
 					ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
 					ATTR_CLUSTER_ID, node->_CondorID._cluster);
 		args.AppendArg( constraint.Value() );
@@ -1000,16 +1000,16 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				MyString	errMsg;
 
 				if( mainJobRetval > 0 ) {
-					errMsg.sprintf( "Job exited with status %d and ",
+					errMsg.formatstr( "Job exited with status %d and ",
 								mainJobRetval);
 				}
 				else if( mainJobRetval < 0  &&
 							mainJobRetval >= -MAX_SIGNAL ) {
-					errMsg.sprintf( "Job died on signal %d and ",
+					errMsg.formatstr( "Job died on signal %d and ",
 								0 - mainJobRetval);
 				}
 				else {
-					errMsg.sprintf( "Job failed due to DAGMAN error %d and ",
+					errMsg.formatstr( "Job failed due to DAGMAN error %d and ",
 								mainJobRetval);
 				}
 
@@ -1790,7 +1790,8 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		}
 		debug_printf(DEBUG_QUIET,"Initializing logfile %s, %d, %d, %d\n",
 			s,job->_CondorID._cluster,procID,subprocID);
-		ulog.initialize( s, job->_CondorID._cluster, procID, subprocID, NULL );
+		ulog.initialize( std::vector<const char*>(1,s), job->_CondorID._cluster,
+			procID, subprocID, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,
@@ -1953,7 +1954,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 		args.AppendArg( _condorRmExe );
 		args.AppendArg( "-const" );
 
-		constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
+		constraint.formatstr( "%s == %d", ATTR_DAGMAN_JOB_ID,
 					dm.DAGManJobId._cluster );
 		args.AppendArg( constraint.Value() );
 		if ( util_popen( args ) != 0 ) {
@@ -3219,7 +3220,7 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 		while (!found_unused_file) {
 			FILE *fp;
 
-			dot_file_name.sprintf("%s.%d", _dot_file_name, _dot_file_name_suffix);
+			dot_file_name.formatstr("%s.%d", _dot_file_name, _dot_file_name_suffix);
 			fp = safe_fopen_wrapper_follow(dot_file_name.Value(), "r");
 			if (fp != NULL) {
 				fclose(fp);
@@ -3272,12 +3273,12 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 		return false;
 	}
 	if( node->IsActive() ) {
-		whynot.sprintf( "is active (%s)", node->GetStatusName() );
+		whynot.formatstr( "is active (%s)", node->GetStatusName() );
 		return false;
 	}
 	if( !node->IsEmpty( Job::Q_CHILDREN ) ||
 		!node->IsEmpty( Job::Q_PARENTS ) ) {
-		whynot.sprintf( "dependencies exist" );
+		whynot.formatstr( "dependencies exist" );
 		return false;
 	}
 
@@ -3328,7 +3329,7 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 			// fail to handle it above...
 		debug_printf( DEBUG_QUIET, "ERROR: node %s in unexpected state (%s)\n",
 					  node->GetJobName(), node->GetStatusName() );
-		whynot.sprintf( "node in unexpected state (%s)",
+		whynot.formatstr( "node in unexpected state (%s)",
 						node->GetStatusName() );
 		return false;
 	}
@@ -3591,7 +3592,7 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 	}
 
 	MyString message;
-	message.sprintf( "ERROR: node %s: job ID in userlog submit event (%d.%d.%d) "
+	message.formatstr( "ERROR: node %s: job ID in userlog submit event (%d.%d.%d) "
 				"doesn't match ID reported earlier by submit command "
 				"(%d.%d.%d)!", 
 				node->GetJobName(), condorID._cluster, condorID._proc,

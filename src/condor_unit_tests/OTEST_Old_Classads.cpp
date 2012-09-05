@@ -27,7 +27,6 @@
 #include "function_test_driver.h"
 #include "emit.h"
 #include "unit_test_utils.h"
-#include "condor_xml_classads.h"
 
 #ifdef WIN32
 	#define strcasecmp _stricmp
@@ -713,15 +712,17 @@ static bool test_xml() {
 	emit_comment("This doesn't look like it preserves tabs.");
 	const char* classad_string = "\tA=1\n\t\tB=TRUE\n\t\tC=\"String\"\n\t\t"
 		"D=\"\"\n\t\tE=\" \"";
-	ClassAdXMLUnparser unparser;
-	ClassAdXMLParser parser;
+	classad::ClassAdXMLUnParser unparser;
+	classad::ClassAdXMLParser parser;
 	compat_classad::ClassAd classad, *classadAfter;
-	MyString xml, before, after;
+	MyString before, after;
+	std::string xml;
 	classad.initFromString(classad_string, NULL);
 	classad.sPrint(before);
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(&classad, xml);
-	classadAfter = parser.ParseClassAd(xml.Value());
+	unparser.SetCompactSpacing(false);
+	unparser.Unparse(xml, &classad);
+	classadAfter = new compat_classad::ClassAd();
+	parser.ParseClassAd(xml, *classadAfter);
 	classadAfter->sPrint(after);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);

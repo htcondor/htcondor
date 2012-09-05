@@ -131,7 +131,7 @@ main_init(int argc, char* argv[])
 
 	if (job_queue_param_name == NULL) {
 		// the default place for the job_queue.log is in spool
-		job_queue_name.sprintf( "%s/job_queue.log", Spool);
+		job_queue_name.formatstr( "%s/job_queue.log", Spool);
 	} else {
 		job_queue_name = job_queue_param_name; // convert char * to MyString
 		free(job_queue_param_name);
@@ -143,7 +143,7 @@ main_init(int argc, char* argv[])
 			UtcTime now(true);
 			hostname = get_local_hostname();
 			MyString		job_queue_backup;
-			job_queue_backup.sprintf( "%s/job_queue.bak.%s.%ld",
+			job_queue_backup.formatstr( "%s/job_queue.bak.%s.%ld",
 									  Spool, hostname.Value(), now.seconds() );
 			if ( copy_file( job_queue_name.Value(), job_queue_backup.Value() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",

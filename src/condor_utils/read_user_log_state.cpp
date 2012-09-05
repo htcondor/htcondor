@@ -24,7 +24,6 @@
 #include <time.h>
 #include "MyString.h"
 #include "condor_uid.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "read_user_log_state.h"
@@ -762,7 +761,7 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 {
 	str = "";
 	if ( NULL != label ) {
-		str.sprintf( "%s:\n", label );
+		str.formatstr( "%s:\n", label );
 	}
 	str.sprintf_cat (
 		"  BasePath = %s\n"
@@ -788,7 +787,7 @@ ReadUserLogState::GetStateString(
 	const ReadUserLogFileState::FileState *istate;
 	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		if ( label ) {
-			str.sprintf( "%s: no state", label );
+			str.formatstr( "%s: no state", label );
 		}
 		else {
 			str = "no state\n";
@@ -798,7 +797,7 @@ ReadUserLogState::GetStateString(
 
 	str = "";
 	if ( NULL != label ) {
-		str.sprintf( "%s:\n", label );
+		str.formatstr( "%s:\n", label );
 	}
 	str.sprintf_cat (
 		"  signature = '%s'; version = %d; update = %ld\n"

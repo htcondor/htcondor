@@ -2212,3 +2212,26 @@ The following line should be placed in the job's submit description file:
 \begin{verbatim}
 +IsSuspendableJob = True
 \end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Interactive-Job-Policy}With Interactive Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{policy!utilizing interactive jobs}
+
+Policy may be set based on whether a job is an interactive one or not.
+Each interactive job has the job ClassAd attribute
+\begin{verbatim}
+  InteractiveJob = True
+\end{verbatim}
+and this may be used to identify interactive jobs,
+distinguishing them from all other jobs.
+
+\MoreTodo
+
+% Initial thought as to an example
+%Use the \MacroNI{RANK} expression to give preference to running an 
+%interactive job on a particular slot.
+%As an example, presume that slot 1 prefers interactive jobs.
+%\begin{verbatim}
+%RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
+%\end{verbatim}

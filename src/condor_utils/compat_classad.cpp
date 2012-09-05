@@ -23,7 +23,6 @@
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
@@ -824,17 +823,7 @@ ClassAd::Insert( const char *str )
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
 	string newAdStr;
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-        if (str[i] == '\\') {
-			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
-			{
-				newAdStr.append( 1, '\\' );
-			}
-		}
-		newAdStr.append( 1, str[i] );
-	}
-	//newAdStr += "]";
+	ConvertEscapingOldToNew( str, newAdStr );
 	
 	if (!classad::ClassAd::Insert(newAdStr))
 	{
@@ -1384,7 +1373,7 @@ initFromString( char const *str,MyString *err_msg )
 
 		if (!Insert(exprbuf)) {
 			if( err_msg ) {
-				err_msg->sprintf("Failed to parse ClassAd expression: '%s'",
+				err_msg->formatstr("Failed to parse ClassAd expression: '%s'",
 					exprbuf);
 			} else {
 				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
@@ -2066,31 +2055,47 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
         return FALSE;
     }
 
-    MyString out;
+    std::string out;
     sPrintAsXML(out,attr_white_list);
-    fprintf(fp, "%s", out.Value());
+    fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int ClassAd::
 sPrintAsXML(MyString &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml;
-	return TRUE;
+	std::string std_output;
+	int rc = sPrintAsXML(std_output, attr_white_list);
+	output += std_output;
+	return rc;
 }
 
 int ClassAd::
 sPrintAsXML(std::string &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml.Value();
+	classad::ClassAdXMLUnParser unparser;
+	std::string xml;
+
+	unparser.SetCompactSpacing(false);
+	if ( attr_white_list ) {
+		ClassAd tmp_ad;
+		classad::ExprTree *expr;
+		const char *attr;
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			if ( (expr = this->Lookup( attr )) ) {
+				tmp_ad.Insert( attr, expr, false );
+			}
+		}
+		unparser.Unparse( xml, &tmp_ad );
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			tmp_ad.Remove( attr );
+		}
+	} else {
+		unparser.Unparse( xml, this );
+	}
+	output += xml;
 	return TRUE;
 }
 ///////////// end XML functions /////////
@@ -2816,7 +2821,7 @@ static void InitTargetAttrLists()
 
 	tmp = param( "STARTD_RESOURCE_PREFIX" );
 	if ( tmp ) {
-		buff.sprintf( "%s*", tmp );
+		buff.formatstr( "%s*", tmp );
 		machine_attrs_strlist.append( buff.Value() );
 		free( tmp );
 	} else {
@@ -2849,10 +2854,10 @@ static void InitTargetAttrLists()
 		tmp_strlist.clearAll();
 	}
 
-	buff.sprintf( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
+	buff.formatstr( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
 	job_attrs_strlist.append( buff.Value() );
 
-	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
+	buff.formatstr( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
 	job_attrs_strlist.append( buff.Value() );
 
 	tmp = param( "TARGET_JOB_ATTRS" );

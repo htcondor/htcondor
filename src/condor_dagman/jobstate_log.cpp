@@ -237,7 +237,7 @@ JobstateLog::WriteDagmanStarted( const CondorID &DAGManJobId )
 	}
 
 	MyString info;
-	info.sprintf( "%s *** %s %d.%d ***", INTERNAL_NAME, DAGMAN_STARTED_NAME,
+	info.formatstr( "%s *** %s %d.%d ***", INTERNAL_NAME, DAGMAN_STARTED_NAME,
 				DAGManJobId._cluster, DAGManJobId._proc );
 
 	Write( NULL, info );
@@ -253,7 +253,7 @@ JobstateLog::WriteDagmanFinished( int exitCode )
 	}
 
 	MyString info;
-	info.sprintf( "%s *** %s %d ***", INTERNAL_NAME, DAGMAN_FINISHED_NAME,
+	info.formatstr( "%s *** %s %d ***", INTERNAL_NAME, DAGMAN_FINISHED_NAME,
 				exitCode );
 
 	Write( NULL, info );
@@ -269,7 +269,7 @@ JobstateLog::WriteRecoveryStarted()
 	}
 
 	MyString info;
-	info.sprintf( "%s *** %s ***", INTERNAL_NAME, RECOVERY_STARTED_NAME );
+	info.formatstr( "%s *** %s ***", INTERNAL_NAME, RECOVERY_STARTED_NAME );
 	Write( NULL, info );
 }
 
@@ -282,7 +282,7 @@ JobstateLog::WriteRecoveryFinished()
 	}
 
 	MyString info;
-	info.sprintf( "%s *** %s ***", INTERNAL_NAME, RECOVERY_FINISHED_NAME );
+	info.formatstr( "%s *** %s ***", INTERNAL_NAME, RECOVERY_FINISHED_NAME );
 	Write( NULL, info );
 	Flush();
 }
@@ -296,7 +296,7 @@ JobstateLog::WriteRecoveryFailure()
 	}
 
 	MyString info;
-	info.sprintf( "%s *** %s ***", INTERNAL_NAME, RECOVERY_FAILURE_NAME );
+	info.formatstr( "%s *** %s ***", INTERNAL_NAME, RECOVERY_FAILURE_NAME );
 	Write( NULL, info );
 	Flush();
 }
@@ -343,7 +343,7 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 	const char *eventName = node->retval == 0 ?
 				JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
 	MyString retval;
-	retval.sprintf( "%d", node->retval );
+	retval.formatstr( "%d", node->retval );
 
 	time_t timestamp = node->GetLastEventTime();
 	Write( &timestamp, node, eventName, retval.Value() );
@@ -420,7 +420,7 @@ JobstateLog::Write( const time_t *eventTimeP, Job *node,
 {
 	MyString info;
 
-	info.sprintf( "%s %s %s %s - %d", node->GetJobName(), eventName,
+	info.formatstr( "%s %s %s %s - %d", node->GetJobName(), eventName,
 				condorID, node->GetJobstateJobTag(),
 				node->GetJobstateSequenceNum() );
 	Write( eventTimeP, info );
@@ -454,7 +454,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 	}
 
 	MyString outline;
-	outline.sprintf( "%lu %s", (unsigned long)eventTime, info.Value() );
+	outline.formatstr( "%lu %s", (unsigned long)eventTime, info.Value() );
 
 		//
 		// If this event's time matches the time of the last "real"
@@ -487,7 +487,7 @@ JobstateLog::CondorID2Str( int cluster, int proc, MyString &idStr )
 {
 		// Make sure Condor ID is valid.
 	if ( cluster != DEFAULT_CONDOR_ID._cluster ) {
-		idStr.sprintf( "%d.%d", cluster, proc );
+		idStr.formatstr( "%d.%d", cluster, proc );
 	} else {
 		idStr = "-";
 	}

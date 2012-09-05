@@ -250,7 +250,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	//tmp.sprintf("%s#%d.%d", Name, cluster, proc);
 	// we have other API compositions for job id and submission id
 	// so let's return raw cluster.proc
-	tmp.sprintf("%d.%d", cluster, proc);
+	tmp.formatstr("%d.%d", cluster, proc);
 	id = tmp.Value();
 
 	return true;

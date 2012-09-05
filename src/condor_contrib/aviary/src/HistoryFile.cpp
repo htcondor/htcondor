@@ -124,7 +124,7 @@ HistoryFile::init(CondorError &errstack)
 	ASSERT(buf);
 	long unsigned int id;
 	ASSERT(getId(id));
-	tmp.sprintf("%s%shistory.%ld%s", dirname(buf), DIR_DELIM_STRING, id, HISTORY_INDEX_SUFFIX);
+	tmp.formatstr("%s%shistory.%ld%s", dirname(buf), DIR_DELIM_STRING, id, HISTORY_INDEX_SUFFIX);
 	m_index_name = tmp.Value();
 	free(buf);
 

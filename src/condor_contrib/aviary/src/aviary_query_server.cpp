@@ -72,7 +72,7 @@ void main_init(int /* argc */, char * /* argv */ [])
 	init_classad();
 
     string log_name;
-    sprintf(log_name,"aviary_query.log");
+    formatstr(log_name,"aviary_query.log");
 	string myname = "query@" + getScheddName();
     provider = AviaryProviderFactory::create(log_name,myname,
 											 "CUSTOM",QUERY_SERVER, "services/query/");

@@ -339,7 +339,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 	if( _port <= 0 ) {
 			// If it's still 0, we've got to give up and fail.
 		std::string err_msg;
-		sprintf(err_msg, "Can't send update: invalid collector port (%d)",
+		formatstr(err_msg, "Can't send update: invalid collector port (%d)",
 						 _port );
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
@@ -662,7 +662,7 @@ DCCollector::initDestinationStrings( void )
 			// we're using (which either came from them, or is the
 			// default COLLECTOR_PORT if unspecified).
 
-		sprintf(dest, "%s (port: %d)", tcp_collector_addr ? tcp_collector_addr : "", tcp_collector_port);
+		formatstr(dest, "%s (port: %d)", tcp_collector_addr ? tcp_collector_addr : "", tcp_collector_port);
 		tcp_update_destination = strnewp( dest.c_str() );
 	}
 }

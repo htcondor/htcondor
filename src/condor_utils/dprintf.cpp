@@ -1787,8 +1787,8 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 void
 dprintf_dump_stack(void) {
 	priv_state	orig_priv_state;
-	int orig_euid;
-	int orig_egid;
+	uid_t orig_euid;
+	uid_t orig_egid;
 	int fd;
 	void *trace[50];
 	int trace_size;
@@ -1815,18 +1815,39 @@ dprintf_dump_stack(void) {
 		orig_euid = geteuid();
 		orig_egid = getegid();
 		orig_priv_state = get_priv_state();
+		bool did_seteuid = false;
+		bool create_log = true;
 		if( orig_priv_state != PRIV_CONDOR ) {
-				// To keep things simple, rather than trying to become
-				// the correct condor id, just switch to our real
-				// user id, which is probably either the same as
-				// our effective id (no-op) or root.
-			setegid(getgid());
-			seteuid(getuid());
+			uid_t condor_uid = 0;
+			gid_t condor_gid = 0;
+			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
+				setegid(condor_gid);
+				seteuid(condor_uid);
+				did_seteuid = true;
+			}
+			else if( orig_euid != getuid() || orig_egid != getgid() ) {
+				// To keep things simple, we do not bother trying to
+				// find out the correct condor uid if it is not
+				// already known.  Just use our real user id, which is
+				// probably either the same as our effective id
+				// (no-op) or root.
+
+				setegid(getgid());
+				seteuid(getuid());
+				did_seteuid = true;
+					// Do not open with O_CREAT in this case, so
+					// we don't leave behind a file owned by root,
+					// which could cause the daemon to fail to
+					// restart.  This means we will fail to log
+					// the backtrace if we get here and the log
+					// file does not already exist.
+				create_log = false;
+			}
 		}
 
-		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|O_CREAT,0644);
+		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|(create_log ? O_CREAT : 0),0644);
 
-		if( orig_priv_state != PRIV_CONDOR ) {
+		if( did_seteuid ) {
 			setegid(orig_egid);
 			seteuid(orig_euid);
 		}

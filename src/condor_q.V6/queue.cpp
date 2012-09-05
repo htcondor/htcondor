@@ -46,13 +46,22 @@
 #include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
-#include "condor_xml_classads.h"
 #include "condor_open.h"
 #include "condor_sockaddr.h"
+#include "condor_id.h"
+#include "userlog_to_classads.h"
 #include "ipv6_hostname.h"
 #include <map>
 #include <vector>
 #include "../classad_analysis/analysis.h"
+
+/*
+#ifndef WIN32
+#include <sys/types.h>
+#include <unistd.h>
+#include <pwd.h>
+#endif
+*/
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -127,7 +136,7 @@ static void init_output_mask();
 /* a type used to point to one of the above two functions */
 typedef bool (*show_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
-static bool read_classad_file(const char *filename, ClassAdList &classads);
+static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
 
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
@@ -166,6 +175,12 @@ static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
+
+static  char *userlog_file = NULL;
+
+// Constraint on JobIDs for faster filtering
+// a list and not set since we expect a very shallow depth
+static std::vector<CondorID> constrID;
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -417,7 +432,7 @@ int main (int argc, char **argv)
 	// Since we are assuming that we want to talk to a DB in the normal
 	// case, this will ensure that we don't try to when loading the job queue
 	// classads from file.
-	if (jobads_file != NULL) {
+	if ((jobads_file != NULL) || (userlog_file != NULL)) {
 		useDB = FALSE;
 	}
 
@@ -480,7 +495,7 @@ int main (int argc, char **argv)
            	// to the schedd time's out and the user gets nothing
            	// useful printed out. Therefore, we use show_queue,
            	// which fetches all of the ads, then analyzes them. 
-			if ( (unbuffered || verbose || better_analyze || jobads_file) && !g_stream_results ) {
+			if ( (unbuffered || verbose || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
 				sqfp = show_queue;
 			} else {
 				sqfp = show_queue_buffered;
@@ -957,16 +972,17 @@ processCommandLineArguments (int argc, char *argv[])
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
 				sprintf( constraint, "((%s == %d) && (%s == %d))",
 					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
-                                Q.addOR( constraint );
-   
+				Q.addOR( constraint );
 				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				Q.addDBConstraint(CQ_PROC_ID, proc);
+				constrID.push_back(CondorID(cluster,proc,-1));
 				summarize = 0;
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
 				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
 				Q.addOR( constraint );
-   				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				constrID.push_back(CondorID(cluster,-1,-1));
 				summarize = 0;
 			} 
 			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
@@ -1335,7 +1351,7 @@ processCommandLineArguments (int argc, char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					mask_head.Append(hd);
 				}
-				else if (flabel) { lbl.sprintf("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fCapV ? "%V" : "%v";
 				mask.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
@@ -1364,7 +1380,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix( arg, "run")) {
 			std::string expr;
-			sprintf( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
+			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			run = true;
@@ -1466,6 +1482,15 @@ processCommandLineArguments (int argc, char *argv[])
 			} else {
                 i++;
                 jobads_file = strdup(argv[i]);
+            }
+        }
+        else if (match_prefix(arg, "userlog")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -userlog require filename\n");
+				exit(1);
+			} else {
+                i++;
+                userlog_file = strdup(argv[i]);
             }
         }
         else if (match_prefix(arg, "machineads")) {
@@ -1690,12 +1715,12 @@ bufferJobShort( ClassAd *ad ) {
 
 	ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
 	if ( !description.empty() ){
-		buffer.sprintf("%s", description.c_str());
+		buffer.formatstr("%s", description.c_str());
 	}
 	else if (!args_string.IsEmpty()) {
-		buffer.sprintf( "%s %s", condor_basename(cmd), args_string.Value() );
+		buffer.formatstr( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
-		buffer.sprintf( "%s", condor_basename(cmd) );
+		buffer.formatstr( "%s", condor_basename(cmd) );
 	}
 	free(cmd);
 	utime = job_time(utime,ad);
@@ -2267,6 +2292,7 @@ usage (const char *myName)
 		"\t\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
+		"\t\t-userlog <file>\t\tFile of user log to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-direct <rdbms | schedd>\n"
@@ -2322,11 +2348,9 @@ void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char c
 	}
 	if( use_xml ) {
 			// keep this consistent with AttrListList::fPrintAttrListList()
-		ClassAdXMLUnparser  unparser;
-		MyString xml;
-		unparser.SetUseCompactSpacing(false);
-		unparser.AddXMLFileHeader(xml);
-		printf("%s\n", xml.Value());
+		std::string xml;
+		AddClassAdXMLFileHeader(xml);
+		printf("%s\n", xml.c_str());
 	}
 }
 
@@ -2813,11 +2837,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		}
 		if( use_xml ) {
 				// keep this consistent with AttrListList::fPrintAttrListList()
-			ClassAdXMLUnparser  unparser;
-			MyString xml;
-			unparser.SetUseCompactSpacing(false);
-			unparser.AddXMLFileFooter(xml);
-			printf("%s\n", xml.Value());
+			std::string xml;
+			AddClassAdXMLFileFooter(xml);
+			printf("%s\n", xml.c_str());
 		}
 	}
 
@@ -2940,10 +2962,10 @@ process_buffer_line( ClassAd *job )
 	}
 
 	if (use_xml) {
-		MyString s;
+		std::string s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
-		tempCPS->string = strnewp( s.Value() );
+		tempCPS->string = strnewp( s.c_str() );
 	} else if( verbose ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
@@ -3003,14 +3025,38 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 	char *lastUpdate=NULL;
 
+	// setup constraint variables to use in some of the later code.
+	const char * constr = NULL;
+	CondorID * JobIds = NULL;
+	int cJobIds = constrID.size();
+	if (cJobIds > 0) JobIds = &constrID[0];
+
+	std::string constr_string; // to hold the return from ExprTreeToString()
+	ExprTree *tree = NULL;
+	Q.rawQuery(tree);
+	if (tree) {
+		constr_string = ExprTreeToString(tree);
+		constr = constr_string.c_str();
+		delete tree;
+	}
+
     if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
-        if (!read_classad_file(jobads_file, jobs)) {
+        if (!read_classad_file(jobads_file, jobs, constr)) {
             return false;
         }
 		
 		/* The variable UseDB should be false in this branch since it was set 
 			in main() because jobads_file had a good value. */
+
+    } else if (userlog_file != NULL) {
+        if (!userlog_to_classads(userlog_file, jobs, JobIds, cJobIds, constr)) {
+            fprintf(stderr, "Can't open user log: %s\n", userlog_file);
+            return false;
+        }
+		
+		/* The variable UseDB should be false in this branch since it was set 
+			in main() because userlog_file had a good value. */
 
     } else {
 		/* else get the job queue either from quill or the schedd. */
@@ -3294,7 +3340,7 @@ setupAnalysis()
 
 	// fetch startd ads
     if (machineads_file != NULL) {
-        if (!read_classad_file(machineads_file, startdAds)) {
+        if (!read_classad_file(machineads_file, startdAds, NULL)) {
             exit ( 1 );
         }
     } else {
@@ -3875,36 +3921,47 @@ fixSubmittorName( char *name, int niceUser )
 	return NULL;
 }
 
-static bool read_classad_file(const char *filename, ClassAdList &classads)
+static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr)
 {
-    int is_eof, is_error, is_empty;
-    bool success;
-    ClassAd *classad;
-    FILE *file;
+	int is_eof, is_error, is_empty;
+	bool success;
+	bool include_classad;
+	ClassAd *classad;
+	FILE *file;
 
-    file = safe_fopen_wrapper_follow(filename, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+	file = safe_fopen_wrapper_follow(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
-    } else {
-        do {
-            classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
-            if (!is_error && !is_empty) {
-                classads.Insert(classad);
-            }
-			else {
+	} else {
+		do {
+			classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
+			include_classad = !is_error && !is_empty;
+			if (constr) {
+				classad::Value result;
+				if (classad->EvaluateExpr(constr,result)) {
+					if ( ! result.IsBooleanValueEquiv(include_classad)) {
+						include_classad=false;
+					}
+				}
+			}
+			if (include_classad) {
+				classads.Insert(classad);
+			} else {
 				delete classad;
 			}
-        } while (!is_eof && !is_error);
-        if (is_error) {
-            success = false;
-        } else {
-            success = true;
-        }
+		} while (!is_eof && !is_error);
+
+		if (is_error) {
+			success = false;
+		} else {
+			success = true;
+		}
 		fclose(file);
-    }
-    return success;
+	}
+	return success;
 }
+
 
 #ifdef HAVE_EXT_POSTGRESQL
 

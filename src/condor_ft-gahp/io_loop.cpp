@@ -214,7 +214,7 @@ stdin_pipe_handler(Service*, int) {
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 					// Print number of results
 				std::string rn_buff;
-				sprintf( rn_buff, "%d", result_list.number() );
+				formatstr( rn_buff, "%d", result_list.number() );
 				const char * commands [] = {
 					GAHP_RESULT_SUCCESS,
 					rn_buff.c_str() };
@@ -574,7 +574,7 @@ enqueue_result (int req_id, const char ** results, const int argc)
 	std::string buffer;
 
 	// how is this legit??!?  ZKM
-	sprintf( buffer, "%d", req_id );
+	formatstr( buffer, "%d", req_id );
 
 	for ( int i = 0; i < argc; i++ ) {
 		buffer += ' ';

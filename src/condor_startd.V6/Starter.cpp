@@ -635,7 +635,7 @@ Starter::exited(int status)
 		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
 		jobAd->Assign(ATTR_JOB_CMD, "boinc");
 		MyString gjid;
-		gjid.sprintf("%s#%d#%d#%d", get_local_hostname().Value(), 
+		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), 
 					 now, 1, now);
 		jobAd->Assign(ATTR_GLOBAL_JOB_ID, gjid);
 	}

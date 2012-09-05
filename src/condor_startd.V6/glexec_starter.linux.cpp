@@ -222,9 +222,9 @@ glexec_starter_prepare(const char* starter_path,
 
 	// _CONDOR_GSI_DAEMON_PROXY - starter's proxy
 	MyString var_name;
-	var_name.sprintf("_CONDOR_%s", STR_GSI_DAEMON_PROXY);
+	var_name.formatstr("_CONDOR_%s", STR_GSI_DAEMON_PROXY);
 	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
-	var_name.sprintf("_condor_%s", STR_GSI_DAEMON_PROXY);
+	var_name.formatstr("_condor_%s", STR_GSI_DAEMON_PROXY);
 	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
 #endif
 

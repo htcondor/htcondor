@@ -238,7 +238,7 @@ ClassAdLog::SaveHistoricalLogs()
 	if(!max_historical_logs) return true;
 
 	MyString new_histfile;
-	if(!new_histfile.sprintf("%s.%lu",logFilename(),historical_sequence_number))
+	if(!new_histfile.formatstr("%s.%lu",logFilename(),historical_sequence_number))
 	{
 		dprintf(D_ALWAYS,"Aborting save of historical log: out of memory.\n");
 		return false;
@@ -252,7 +252,7 @@ ClassAdLog::SaveHistoricalLogs()
 	}
 
 	MyString old_histfile;
-	if(!old_histfile.sprintf("%s.%lu",logFilename(),historical_sequence_number - max_historical_logs))
+	if(!old_histfile.formatstr("%s.%lu",logFilename(),historical_sequence_number - max_historical_logs))
 	{
 		dprintf(D_ALWAYS,"Aborting cleanup of historical logs: out of memory.\n");
 		return true; // this is not a fatal error
@@ -297,7 +297,7 @@ ClassAdLog::TruncLog()
 		return false;
 	}
 
-	tmp_log_filename.sprintf( "%s.tmp", logFilename());
+	tmp_log_filename.formatstr( "%s.tmp", logFilename());
 	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
 	if (new_log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to rotate log: safe_open_wrapper(%s) returns %d\n",

@@ -284,7 +284,7 @@ KeyCache::makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *
 			// never query by PID alone.
 		return;
 	}
-	result->sprintf("%s.%d",parent_id.Value(),server_pid);
+	result->formatstr("%s.%d",parent_id.Value(),server_pid);
 }
 
 bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {

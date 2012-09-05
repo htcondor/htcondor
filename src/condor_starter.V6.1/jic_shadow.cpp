@@ -1471,7 +1471,7 @@ JICShadow::getJobStdFile( const char* attr_name )
 			base = tmp;
 		}
 		if( ! fullpath(base) ) {	// prepend full path
-			filename.sprintf( "%s%c", job_iwd, DIR_DELIM_CHAR );
+			filename.formatstr( "%s%c", job_iwd, DIR_DELIM_CHAR );
 		}
 		filename += base;
 	}
@@ -2109,7 +2109,7 @@ JICShadow::initIOProxy( void )
 	}
 
 	if( want_io_proxy || job_universe==CONDOR_UNIVERSE_JAVA ) {
-		io_proxy_config_file.sprintf( "%s%cchirp.config",
+		io_proxy_config_file.formatstr( "%s%cchirp.config",
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR );
 		if( !io_proxy.init(io_proxy_config_file.Value()) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 

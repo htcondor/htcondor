@@ -49,7 +49,7 @@ TransferQueueRequest::~TransferQueueRequest() {
 
 char const *
 TransferQueueRequest::Description() {
-	m_description.sprintf("%s %s job %s (initial file %s)",
+	m_description.formatstr("%s %s job %s (initial file %s)",
 					m_sock ? m_sock->peer_description() : "",
 					m_downloading ? "downloading" : "uploading",
 					m_jobid.Value(),

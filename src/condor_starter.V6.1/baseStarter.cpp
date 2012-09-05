@@ -136,7 +136,7 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 			// EXECUTE is, or our CWD if that's not defined...
 		WorkingDir = Execute;
 	} else {
-		WorkingDir.sprintf( "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+		WorkingDir.formatstr( "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
 	}
 
@@ -668,7 +668,7 @@ int
 CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
 {
 	MyString error_msg;
-	error_msg.vsprintf( fmt, args );
+	error_msg.vformatstr( fmt, args );
 
 		// old classads cannot handle a string ending in a double quote
 		// followed by a newline, so strip off any trailing newline
@@ -744,7 +744,7 @@ static bool extract_delimited_data_as_base64(
 	int end = find_str_in_buffer(input_buffer,input_len,end_marker);
 	if( start < 0 ) {
 		if( error_msg ) {
-			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+			error_msg->formatstr("Failed to find '%s' in input: %.*s",
 							   begin_marker,input_len,input_buffer);
 		}
 		return false;
@@ -752,7 +752,7 @@ static bool extract_delimited_data_as_base64(
 	start += strlen(begin_marker);
 	if( end < 0 || end < start ) {
 		if( error_msg ) {
-			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+			error_msg->formatstr("Failed to find '%s' in input: %.*s",
 							   end_marker,input_len,input_buffer);
 		}
 		return false;
@@ -776,7 +776,7 @@ static bool extract_delimited_data(
 	int end = find_str_in_buffer(input_buffer,input_len,end_marker);
 	if( start < 0 ) {
 		if( error_msg ) {
-			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+			error_msg->formatstr("Failed to find '%s' in input: %.*s",
 							   begin_marker,input_len,input_buffer);
 		}
 		return false;
@@ -784,12 +784,12 @@ static bool extract_delimited_data(
 	start += strlen(begin_marker);
 	if( end < 0 || end < start ) {
 		if( error_msg ) {
-			error_msg->sprintf("Failed to find '%s' in input: %.*s",
+			error_msg->formatstr("Failed to find '%s' in input: %.*s",
 							   end_marker,input_len,input_buffer);
 		}
 		return false;
 	}
-	output_buffer.sprintf("%.*s",end-start,input_buffer+start);
+	output_buffer.formatstr("%.*s",end-start,input_buffer+start);
 	return true;
 }
 
@@ -867,9 +867,9 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	}
 	MyString ssh_to_job_sshd_setup;
 	MyString ssh_to_job_shell_setup;
-	ssh_to_job_sshd_setup.sprintf(
+	ssh_to_job_sshd_setup.formatstr(
 		"%s%ccondor_ssh_to_job_sshd_setup",libexec.Value(),DIR_DELIM_CHAR);
-	ssh_to_job_shell_setup.sprintf(
+	ssh_to_job_shell_setup.formatstr(
 		"%s%ccondor_ssh_to_job_shell_setup",libexec.Value(),DIR_DELIM_CHAR);
 
 	if( access(ssh_to_job_sshd_setup.Value(),X_OK)!=0 ) {
@@ -1040,7 +1040,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 		// look for magic success string
 	if( find_str_in_buffer(setup_output,setup_output_len,"condor_ssh_to_job_sshd_setup SUCCESS") < 0 ) {
-		error_msg.sprintf("condor_ssh_to_job_sshd_setup failed: %s",
+		error_msg.formatstr("condor_ssh_to_job_sshd_setup failed: %s",
 						  setup_output);
 		free( setup_output );
 		return SSHDFailed(s,"%s",error_msg.Value());
@@ -1107,7 +1107,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.Value());
 
 	MyString sshd_config_file;
-	sshd_config_file.sprintf("%s%csshd_config",session_dir.Value(),DIR_DELIM_CHAR);
+	sshd_config_file.formatstr("%s%csshd_config",session_dir.Value(),DIR_DELIM_CHAR);
 
 
 
@@ -1196,7 +1196,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 
 	MyString sshd_log_fname;
-	sshd_log_fname.sprintf(
+	sshd_log_fname.formatstr(
 		"%s%c%s",session_dir.Value(),DIR_DELIM_CHAR,"sshd.log");
 
 
@@ -1614,12 +1614,12 @@ CStarter::jobWaitUntilExecuteTime( void )
 		 	// got a positive integer. Otherwise we'll have to kick out
 		 	//
 		if ( ! jobAd->EvalInteger( ATTR_DEFERRAL_TIME, NULL, deferralTime ) ) {
-			error.sprintf( "Invalid deferred execution time for Job %d.%d.",
+			error.formatstr( "Invalid deferred execution time for Job %d.%d.",
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
 			abort = true;
 		} else if ( deferralTime <= 0 ) {
-			error.sprintf( "Invalid execution time '%d' for Job %d.%d.",
+			error.formatstr( "Invalid execution time '%d' for Job %d.%d.",
 							deferralTime,
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
@@ -1673,7 +1673,7 @@ CStarter::jobWaitUntilExecuteTime( void )
 				//
 			if ( deltaT < 0 ) {
 				if ( abs( deltaT ) > deferralWindow ) {
-					error.sprintf( "Job %d.%d missed its execution time.",
+					error.formatstr( "Job %d.%d missed its execution time.",
 								this->jic->jobCluster(),
 								this->jic->jobProc() );
 					abort = true;
@@ -2026,11 +2026,11 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 	}
 
 	if ( m_recoveryFile.Length() == 0 ) {
-		m_recoveryFile.sprintf( "%s%cdir_%ld.recover", Execute,
+		m_recoveryFile.formatstr( "%s%cdir_%ld.recover", Execute,
 								DIR_DELIM_CHAR, (long)daemonCore->getpid() );
 	}
 
-	tmp_file.sprintf( "%s.tmp", m_recoveryFile.Value() );
+	tmp_file.formatstr( "%s.tmp", m_recoveryFile.Value() );
 
 	tmp_fp = safe_fcreate_replace_if_exists( tmp_file.Value(), "w" );
 	if ( tmp_fp == NULL ) {
@@ -2515,7 +2515,7 @@ CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 	if (m_deferred_job_update)
 	{
 		MyString buf;
-		buf.sprintf( "%s=\"Exited\"", ATTR_JOB_STATE );
+		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
 	}
 	
 	UserProc *job;
@@ -2702,7 +2702,7 @@ CStarter::getMySlotNumber( void )
 
 		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
 		if( resource_prefix ) {
-			prefix.sprintf(".%s",resource_prefix);
+			prefix.formatstr(".%s",resource_prefix);
 			free( resource_prefix );
 		}
 		else {
@@ -2740,7 +2740,7 @@ CStarter::getMySlotName(void) {
 
 		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
 		if( resource_prefix ) {
-			prefix.sprintf(".%s",resource_prefix);
+			prefix.formatstr(".%s",resource_prefix);
 			free( resource_prefix );
 		}
 		else {
@@ -2846,7 +2846,7 @@ CStarter::removeTempExecuteDir( void )
 #if !defined(WIN32)
 	if (condorPrivSepHelper() != NULL) {
 		MyString path_name;
-		path_name.sprintf("%s/%s", Execute, dir_name.Value());
+		path_name.formatstr("%s/%s", Execute, dir_name.Value());
 		if (!privsep_remove_dir(path_name.Value())) {
 			dprintf(D_ALWAYS,
 			        "privsep_remove_dir failed for %s\n",
@@ -2928,7 +2928,7 @@ CStarter::WriteAdFiles()
 	ad = this->jic->jobClassAd();
 	if (ad != NULL)
 	{
-		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
 		fp = safe_fopen_wrapper_follow(filename.Value(), "w");
 		if (!fp)
 		{
@@ -2955,7 +2955,7 @@ CStarter::WriteAdFiles()
 	ad = this->jic->machClassAd();
 	if (ad != NULL)
 	{
-		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+		filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
 		fp = safe_fopen_wrapper_follow(filename.Value(), "w");
 		if (!fp)
 		{

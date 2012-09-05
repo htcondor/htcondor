@@ -131,8 +131,6 @@ JobRouter::~JobRouter() {
 	}
 }
 
-#include "condor_new_classads.h"
-
 void
 JobRouter::init() {
 #if HAVE_JOB_HOOKS
@@ -2258,7 +2256,7 @@ JobRouter::InvalidatePublicAd() {
 	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
 	invalidate_ad.SetTargetTypeName("Job_Router");
 
-	line.sprintf("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
+	line.formatstr("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
@@ -2303,7 +2301,7 @@ JobRoute::ThrottleDesc(double throttle) {
 	}
 	else {
 		MyString buf;
-		buf.sprintf("%g jobs/sec",throttle/THROTTLE_UPDATE_INTERVAL);
+		buf.formatstr("%g jobs/sec",throttle/THROTTLE_UPDATE_INTERVAL);
 		desc = buf.Value();
 	}
 	return desc;

@@ -189,7 +189,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			gahp_args.AppendArg( token );
 		}
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -224,16 +224,16 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	if ( gahp_args.Count() > 0 ) {
 		gahp_path = param( "REMOTE_GAHP" );
 		if ( gahp_path == NULL ) {
-			sprintf( error_string, "REMOTE_GAHP not defined" );
+			formatstr( error_string, "REMOTE_GAHP not defined" );
 			goto error_exit;
 		}
 	} else {
-		sprintf( buff, "%s_GAHP", batchType );
+		formatstr( buff, "%s_GAHP", batchType );
 		gahp_path = param(buff.c_str());
 		if ( gahp_path == NULL ) {
 			gahp_path = param( "BATCH_GAHP" );
 			if ( gahp_path == NULL ) {
-				sprintf( error_string, "Neither %s nor %s defined", buff.c_str(),
+				formatstr( error_string, "Neither %s nor %s defined", buff.c_str(),
 						 "BATCH_GAHP" );
 				goto error_exit;
 			}
@@ -255,11 +255,11 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	if ( gahp_args.Count() > 0 ) {
 		gahp_path = param( "REMOTE_GAHP" );
 		if ( gahp_path == NULL ) {
-			sprintf( error_string, "REMOTE_GAHP not defined" );
+			formatstr( error_string, "REMOTE_GAHP not defined" );
 			goto error_exit;
 		}
 
-		sprintf( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
+		formatstr( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
 		gahp_args.RemoveArg( 1 );
 		gahp_args.InsertArg( "condor_ft-gahp", 1 );
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
@@ -980,7 +980,7 @@ void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 
 	std::string full_job_id;
 	if ( remoteSandboxId ) {
-		sprintf( full_job_id, "batch %s %s", batchType, remoteSandboxId );
+		formatstr( full_job_id, "batch %s %s", batchType, remoteSandboxId );
 	}
 	if ( remoteJobId ) {
 		sprintf_cat( full_job_id, " %s", remoteJobId );
@@ -1228,7 +1228,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		if ( xfer_exec ) {
 			//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
 			//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
-			sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
+			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
 			submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
 		}
 
@@ -1390,7 +1390,7 @@ void INFNBatchJob::CreateSandboxId()
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
 
 	std::string unique_id;
-	sprintf( unique_id, "%s_%s", pool_name, job_id.c_str() );
+	formatstr( unique_id, "%s_%s", pool_name, job_id.c_str() );
 
 	free( pool_name );
 

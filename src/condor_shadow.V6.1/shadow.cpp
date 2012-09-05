@@ -91,11 +91,8 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 		event.proportional_set_size_kb = cur_pss;
 
 			// for performance, do not bother fsyncing this event
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-				p != uLog.end(); ++p) {
-			if (!(*p)->writeEventNoFsync(&event, job_ad)) {
-				dprintf(D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
-			}
+		if (!uLog.writeEventNoFsync(&event, job_ad)) {
+			dprintf(D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n");
 		}
 	}
 
@@ -170,12 +167,9 @@ UniShadow::logExecuteEvent( void )
 	remRes->getStartdName(remote_name);
 	event.setRemoteName(remote_name);
 	delete[] remote_name;
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-			p != uLog.end(); ++p) {
-		if( !(*p)->writeEvent(&event, getJobAd()) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
-					 "can't write to UserLog!\n" );
-		}
+	if( !uLog.writeEvent(&event, getJobAd()) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
+				 "can't write to UserLog!\n" );
 	}
 }
 
@@ -454,11 +448,8 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-			p != uLog.end(); ++p) {
-		if( !(*p)->writeEventNoFsync(&event,getJobAd()) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
-		}
+	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 	}
 }
 
@@ -480,11 +471,9 @@ UniShadow::logReconnectedEvent( void )
 	event.setStarterAddr( starter );
 	delete [] starter;
 	starter = NULL;
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-			p != uLog.end(); ++p) {
-		if( !(*p)->writeEventNoFsync(&event,getJobAd()) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
-		}
+
+	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
 	}
 }
 
@@ -502,11 +491,8 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	}
 	event.setStartdName( dc_startd->name() );
 
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-			p != uLog.end(); ++p) {
-		if( !(*p)->writeEventNoFsync(&event,getJobAd()) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
-		}
+	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
 }
 

@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_xml_classads.h"
 #include "stringSpace.h"
 #include "iso_dates.h"
 #define HAVE_DLOPEN 1
@@ -311,29 +310,31 @@ main(
 		for (  int classad_index = 0; 
 			   classad_index < (int) NUMBER_OF_CLASSAD_STRINGS;
 			   classad_index++) {
-			ClassAdXMLUnparser unparser;
-			ClassAdXMLParser   parser;
+			classad::ClassAdXMLUnParser unparser;
+			classad::ClassAdXMLParser   parser;
 			ClassAd            *after_classad;
-			MyString xml, before_classad_string, after_classad_string;
+			MyString before_classad_string, after_classad_string;
+			std::string xml;
 			
 			// 1) Print each ClassAd to a string.
 			// 2) Convert it to XML and back and 
 			// 3) see if the string is the same. 
 			classads[classad_index]->sPrint(before_classad_string);
 
-			unparser.SetUseCompactSpacing(false);
-			unparser.Unparse(classads[classad_index], xml);
+			unparser.SetCompactSpacing(false);
+			unparser.Unparse(xml, classads[classad_index]);
 			if (parameters.verbose) {
-				printf("Classad %d in XML:\n%s", classad_index, xml.Value());
+				printf("Classad %d in XML:\n%s", classad_index, xml.c_str());
 			}
-			after_classad = parser.ParseClassAd(xml.Value());
+			after_classad = new ClassAd();
+			parser.ParseClassAd(xml, *after_classad);
 
 			after_classad->sPrint(after_classad_string);
 			if (strcmp(before_classad_string.Value(), after_classad_string.Value()) != 0) {
 				printf("Failed: XML Parse and UnParse for classad %d\n", classad_index);
 				printf("---- Original ClassAd:\n%s\n", before_classad_string.Value());
 				printf("---- After ClassAd:\n%s\n", after_classad_string.Value());
-				printf("---- Intermediate XML:\n%s\n", xml.Value());
+				printf("---- Intermediate XML:\n%s\n", xml.c_str));
 				test_results.AddResult(false);
 			} else {
 				printf("Passed: XML Parse and Unparse for classad %d\n\n", classad_index);
@@ -1232,7 +1233,7 @@ test_printed_version(
 	ExprTree  *tree;
 
 	tree = classad->LookupExpr(attribute_name);
-	printed_version.sprintf( "%s = %s", attribute_name, ExprTreeToString( tree ) );
+	printed_version.formatstr( "%s = %s", attribute_name, ExprTreeToString( tree ) );
 
 	if (!strcmp(expected_string, printed_version.Value())) {
 		printf("Passed: ");

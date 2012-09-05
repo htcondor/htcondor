@@ -725,9 +725,9 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 	}
 
 	if (port_offset) {
-		sprintf(out, "<%s:%s>", my_ip_string(), str.substr(port_offset).c_str());
+		formatstr(out, "<%s:%s>", my_ip_string(), str.substr(port_offset).c_str());
 	} else {
-		sprintf(out, "<%s>", str.c_str());
+		formatstr(out, "<%s>", str.c_str());
 	}
 }
 
@@ -860,7 +860,7 @@ static void init_program_for_pid(pid_t pid)
 	cmdargs.AppendArg("tasklist");
 	cmdargs.AppendArg("/FI");
 	std::string eqpid;
-	sprintf(eqpid, "PID eq %u", pid);
+	formatstr(eqpid, "PID eq %u", pid);
 	cmdargs.AppendArg(eqpid.c_str());
 	const char * fld_name = "Image Name";
 	const int    parse_type = 0;
@@ -869,7 +869,7 @@ static void init_program_for_pid(pid_t pid)
 	cmdargs.AppendArg("ps");
 	cmdargs.AppendArg("-F");
 	std::string eqpid;
-	sprintf(eqpid, "%u", pid);
+	formatstr(eqpid, "%u", pid);
 	cmdargs.AppendArg(eqpid.c_str());
 	const char * fld_name = "CMD";
 	const  int    parse_type = 0;
@@ -1103,7 +1103,7 @@ void parse_args(int /*argc*/, char *argv[])
 						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 						App.print_head.Append(hd);
 					}
-					else if (flabel) { lbl.sprintf("%s = ", parg); wid = 0; opts = 0; }
+					else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
 
 					lbl += fCapV ? "%V" : "%v";
 					if (App.diagnostic) {
@@ -1633,7 +1633,7 @@ static void scan_a_log_for_info(
 	LOG_INFO * pliDaemon = it->second;
 
 	std::string filename;
-	sprintf(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
+	formatstr(filename, "%s%c%s", pliDaemon->log_dir.c_str(), DIR_DELIM_CHAR, pliDaemon->log.c_str());
 	if (App.diagnostic) {
 		printf("scanning %s log file '%s' for pids and addresses\n", pszDaemon, filename.c_str());
 		printf("using '%s' as banner\n", startup_banner_text.c_str());

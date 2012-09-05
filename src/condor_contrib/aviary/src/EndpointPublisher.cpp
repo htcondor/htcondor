@@ -66,7 +66,7 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 		return false;
 	}
 	m_port = probe_sock.get_port();
-	sprintf(port,":%d/",m_port);
+	formatstr(port,":%d/",m_port);
 	m_location = scheme + my_full_hostname() + port + uri_suffix;
 
 	// populate the publish ad
@@ -136,7 +136,7 @@ EndpointPublisher::invalidate()
    invalidate_ad.SetTargetTypeName(ENDPOINT);
    invalidate_ad.Assign(ENDPOINT_URI,m_location.c_str());
    invalidate_ad.Assign(ATTR_NAME,m_name.c_str());
-   sprintf(line,"%s == \"%s\"", ATTR_NAME, m_name.c_str()); 
+   formatstr(line,"%s == \"%s\"", ATTR_NAME, m_name.c_str()); 
    invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 
 	dprintf(D_FULLDEBUG, "EndpointPublisher sending INVALIDATE_ADS_GENERIC: '%s'\n", m_location.c_str());

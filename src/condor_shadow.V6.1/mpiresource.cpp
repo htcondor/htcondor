@@ -34,7 +34,7 @@ void
 MpiResource::printExit( FILE *fp )
 {
 	MyString line;
-	line.sprintf( "%25s    ", machineName ? machineName : "Unknown machine" );
+	line.formatstr( "%25s    ", machineName ? machineName : "Unknown machine" );
 	printExitString( jobAd, exit_reason, line );
 	fprintf( fp, "%s\n", line.Value() );
 }
@@ -116,20 +116,14 @@ MpiResource::resourceExit( int reason, int status )
 bool
 MpiResource::writeULogEvent( ULogEvent* event )
 {
-	bool rval = true;
+	bool rval;
 	// FIXME - we dont' have the gjid here (grr) so pass NULL to initialize
 	// the userlog
-
-	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
-			p != shadow->uLog.end(); ++p) {
-		(*p)->initialize( shadow->getCluster(), shadow->getProc(), node_num, NULL );
-	}
-		// This loops over the logs too
+	shadow->uLog.initialize( shadow->getCluster(), 
+							 shadow->getProc(), node_num, NULL );
 	rval = RemoteResource::writeULogEvent( event );
-	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
-			p != shadow->uLog.end(); ++p) {
-		(*p)->initialize( shadow->getCluster(), shadow->getProc(), 0, NULL );
-	}
+	shadow->uLog.initialize( shadow->getCluster(), 
+							 shadow->getProc(), 0, NULL ); 
 	return rval;
 }
 

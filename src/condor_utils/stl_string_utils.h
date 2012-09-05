@@ -26,14 +26,14 @@
 #include "condor_header_features.h"
 #include "MyString.h"
 
-// sprintf() will try to write to a fixed buffer first, for reasons of 
+// formatstr() will try to write to a fixed buffer first, for reasons of 
 // efficiency.  This is the size of that buffer.
 #define STL_STRING_UTILS_FIXBUF 500
 
 // Analogous to standard sprintf(), but writes to std::string 's', and is
 // memory/buffer safe.
-int sprintf(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
-int sprintf(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 // Appending versions of above.
 // These return number of new chars appended.

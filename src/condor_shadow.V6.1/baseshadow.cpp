@@ -36,9 +36,7 @@
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
-// Using pointers here because it has been too
-// hairy to use plain structures
-std::vector<WriteUserLog*> BaseShadow::uLog;
+WriteUserLog BaseShadow::uLog;
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
@@ -329,7 +327,7 @@ int BaseShadow::cdToIwd() {
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
 		MyString hold_reason;
-		hold_reason.sprintf("Cannot access initial working directory %s: %s",
+		hold_reason.formatstr("Cannot access initial working directory %s: %s",
 		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
@@ -574,7 +572,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* The first thing we do is record that we are in a termination pending
 		state. */
 	if (kind == US_NORMAL) {
-		str.sprintf("%s = TRUE", ATTR_TERMINATION_PENDING);
+		str.formatstr("%s = TRUE", ATTR_TERMINATION_PENDING);
 		jobAd->Insert(str.Value());
 	}
 
@@ -607,7 +605,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 		if (exited_by_signal == TRUE) {
 			reason = JOB_COREDUMPED;
-			str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
+			str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
 			jobAd->Insert(str.Value());
 		} else {
 			reason = JOB_EXITED;
@@ -638,7 +636,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* also store the corefilename into the jobad so we can recover this 
 		during a termination pending scenario. */
 	if( reason == JOB_COREDUMPED ) {
-		str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
+		str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
 		jobAd->Insert(str.Value());
 	}
 
@@ -728,7 +726,7 @@ BaseShadow::evictJob( int reason )
 	MyString from_where;
 	MyString machine;
 	if( getMachineName(machine) ) {
-		from_where.sprintf(" from %s",machine.Value());
+		from_where.formatstr(" from %s",machine.Value());
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
 			 getCluster(), getProc(), from_where.Value() );
@@ -830,98 +828,39 @@ BaseShadow::emailUser( const char *subjectline )
 
 void BaseShadow::initUserLog()
 {
-	MyString logfilename;
+	MyString logfilename,dagmanLogFile;
 	int  use_xml;
-	bool result;
 
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
 		// the log
 	ASSERT( job_updater );
 
-		// For some reason, this routine gets called more than once
-		// during the lifetime of the shadow.  We clear uLog so
-		// we do not write events more than once.
-
-	if(!uLog.empty()) {
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin();
-				p != uLog.end(); ++p) {
-			delete *p;
-		}
-		uLog.clear();
-	}
-	bool have_a_log = false;
+	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(jobAd, logfilename) ) {
-		have_a_log = true;
-		std::string logfile(logfilename.Value());
-		WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
-		if(!uLogi) {
-			EXCEPT("Out of memory!");
-		}
-		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
-			// It is important to NOT ignore a failure to initialize the user log,
-			// since if we fail to initialize here, then all event logging
-			// in the shadow from this point forward are effectively ignored.
-			// So if we fail to initialize the user log, put this job on hold.
-			// Future work: it would be good to pass use the error stack to
-			// figure out -why- the initialization failed, allowing the shadow
-			// to retry automatically -vs- go on hold depending upon the details
-			// of the failure.
-		if ( !result ) {
+		logfiles.push_back(logfilename.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());	
+	}
+	if ( getPathToUserLog(jobAd, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		logfiles.push_back(dagmanLogFile.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.Value());	
+	}
+	if( !logfiles.empty()) {
+		if( !uLog.initialize (owner.Value(), domain.Value(), logfiles,
+				cluster, proc, 0, gjid)) {
 			MyString hold_reason;
-			hold_reason.sprintf(
-					"Failed to initialize user log to %s", logfile.c_str());
+			hold_reason.formatstr(
+					"Failed to initialize user log to %s or %s", logfilename.Value(),
+						dagmanLogFile.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does EXCEPT
-			EXCEPT("Failed to initialize user log to %s",logfile.c_str());
+			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
 		}
-			// Only the first user log is allowed to be an xml log
-		uLogi->setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
-		uLog.push_back(uLogi);
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
-	}
-	if ( getPathToUserLog(jobAd, logfilename, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		have_a_log = true;
-		std::string logfile(logfilename.Value());
-		WriteUserLog* uLogi = new WriteUserLog; // Instance of a user log
-		if(!uLogi) {
-			EXCEPT("Out of memory!");
-		}
-		if(!uLog.empty()) { // Write to the Global log at most once
-			uLogi->setEnableGlobalLog(false);
-			MyString msk; // Mask only the dagman log
-			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			Tokenize(msk.Value());
-			while(const char* mask = GetNextToken(",",true)) {
-				uLogi->AddToMask(ULogEventNumber(atoi(mask)));
-			}
-		}
-		result = uLogi->initialize (owner.Value(), domain.Value(), logfile.c_str(), cluster, proc, 0, gjid);
-			// It is important to NOT ignore a failure to initialize the user log,
-			// since if we fail to initialize here, then all event logging
-			// in the shadow from this point forward are effectively ignored.
-			// So if we fail to initialize the user log, put this job on hold.
-			// Future work: it would be good to pass use the error stack to
-			// figure out -why- the initialization failed, allowing the shadow
-			// to retry automatically -vs- go on hold depending upon the details
-			// of the failure.
-		if ( !result ) {
-			MyString hold_reason;
-			hold_reason.sprintf(
-					"Failed to initialize user log to %s", logfile.c_str());
-			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does EXCEPT
-			EXCEPT("Failed to initialize user log to %s",logfile.c_str());
-		}
-			// Only the first user log is allowed to be an xml log
-		uLogi->setUseXML(false); // Dagman log is never xml
-		uLog.push_back(uLogi);
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfile.c_str());
-	}
-	if(!have_a_log) {
+		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 
@@ -973,19 +912,19 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 		while ((resname = reslist.next()) != NULL) {
 			MyString attr;
 			int64_value = -1;
-			attr.sprintf("%s", resname); // provisioned value
+			attr.formatstr("%s", resname); // provisioned value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(resname, int64_value);
 			} 
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			int64_value = -2;
-			attr.sprintf("Request%s", resname);	// requested value
+			attr.formatstr("Request%s", resname);	// requested value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
 			int64_value = -3;
-			attr.sprintf("%sUsage", resname); // usage value
+			attr.formatstr("%sUsage", resname); // usage value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
@@ -1061,12 +1000,10 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.setCoreFile( corefile.Value() );
 		}
 
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-			if (!(*p)->writeEvent (&event,jobAd)) {
-				dprintf (D_ALWAYS,"Unable to log "
-						"ULOG_JOB_TERMINATED event\n");
-				EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
-			}
+		if (!uLog.writeEvent (&event,jobAd)) {
+			dprintf (D_ALWAYS,"Unable to log "
+				 	"ULOG_JOB_TERMINATED event\n");
+			EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
 		}
 
 		return;
@@ -1123,19 +1060,19 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		while ((resname = reslist.next()) != NULL) {
 			MyString attr;
 			int64_value = -1;
-			attr.sprintf("%s", resname); // provisioned value
+			attr.formatstr("%s", resname); // provisioned value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(resname, int64_value);
 			} 
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			int64_value = -2;
-			attr.sprintf("Request%s", resname);	// requested value
+			attr.formatstr("Request%s", resname);	// requested value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
 			int64_value = -3;
-			attr.sprintf("%sUsage", resname); // usage value
+			attr.formatstr("%sUsage", resname); // usage value
 			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
 				puAd->Assign(attr.Value(), int64_value);
 			}
@@ -1144,12 +1081,10 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	}
 #endif
 	
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!(*p)->writeEvent (&event,jobAd)) {
-			dprintf (D_ALWAYS,"Unable to log "
-					"ULOG_JOB_TERMINATED event\n");
-			EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
-		}
+	if (!uLog.writeEvent (&event,jobAd)) {
+		dprintf (D_ALWAYS,"Unable to log "
+				 "ULOG_JOB_TERMINATED event\n");
+		EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
 	}
 }
 
@@ -1193,10 +1128,8 @@ BaseShadow::logEvictEvent( int exitReason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 	
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!(*p)->writeEvent (&event,jobAd)) {
-			dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
-		}
+	if (!uLog.writeEvent (&event,jobAd)) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
 	}
 }
 
@@ -1242,11 +1175,9 @@ BaseShadow::logRequeueEvent( const char* reason )
 	event.recvd_bytes = bytesSent();
 	event.sent_bytes = bytesReceived();
 	
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!(*p)->writeEvent (&event,jobAd)) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
-					"(and requeued) event\n" );
-		}
+	if (!uLog.writeEvent (&event,jobAd)) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
+				 "(and requeued) event\n" );
 	}
 }
 
@@ -1307,11 +1238,9 @@ BaseShadow::log_except(const char *msg)
 		event.sent_bytes = 0.0;
 	}
 
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if (!exception_already_logged && !(*p)->writeEventNoFsync (&event,NULL))
-		{
-			::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
-		}
+	if (!exception_already_logged && !uLog.writeEventNoFsync (&event,NULL))
+	{
+		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
 }
 
@@ -1340,10 +1269,10 @@ BaseShadow::updateJobInQueue( update_t type )
 		// won't actually connect to the job queue for it.  we do this
 		// here since we want it for all kinds of updates...
 	MyString buf;
-	buf.sprintf( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
+	buf.formatstr( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
 											  bytesReceived()) );
 	jobAd->Insert( buf.Value() );
-	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
+	buf.formatstr( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
 	jobAd->Insert( buf.Value() );
 

@@ -24,7 +24,7 @@ set<MyString> open_files_in_pid(pid_t pid)
 	// Dig around in the proc file system looking for open files for the 
 	// specified pid. This is Linux only, for now.
 
-	tmp.sprintf("/proc/%lu/fd", (long unsigned) pid);
+	tmp.formatstr("/proc/%lu/fd", (long unsigned) pid);
 	Directory fds(tmp.Value());
 
 	// If a file is open multiple times, that's fine, we only record it once.

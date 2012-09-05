@@ -385,27 +385,27 @@ void UserPolicy::SetDefaults()
 	/* if the default user policy expressions do not exist, then add them
 		here and now with the usual defaults */
 	if (ph_expr == NULL) {
-		buf.sprintf( "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
+		buf.formatstr( "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
 		m_ad->Insert( buf.Value() );
 	}
 
 	if (pr_expr == NULL) {
-		buf.sprintf( "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
+		buf.formatstr( "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
 		m_ad->Insert( buf.Value() );
 	}
 
 	if (pl_expr == NULL) {
-		buf.sprintf( "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
+		buf.formatstr( "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
 		m_ad->Insert( buf.Value() );
 	}
 
 	if (oeh_expr == NULL) {
-		buf.sprintf( "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
+		buf.formatstr( "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
 		m_ad->Insert( buf.Value() );
 	}
 
 	if (oer_expr == NULL) {
-		buf.sprintf( "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
+		buf.formatstr( "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
 		m_ad->Insert( buf.Value() );
 	}
 }
@@ -640,8 +640,8 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 			}
 			else {
 				reason_code = CONDOR_HOLD_CODE_JobPolicy;
-				sprintf(reason_expr_attr,"%sReason", m_fire_expr);
-				sprintf(subcode_expr_attr,"%sSubCode", m_fire_expr);
+				formatstr(reason_expr_attr,"%sReason", m_fire_expr);
+				formatstr(subcode_expr_attr,"%sSubCode", m_fire_expr);
 			}
 			break;
 		}
@@ -657,8 +657,8 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 			}
 			else {
 				reason_code = CONDOR_HOLD_CODE_SystemPolicy;
-				sprintf(reason_expr_param,"%s_REASON", m_fire_expr);
-				sprintf(subcode_expr_param,"%s_SUBCODE", m_fire_expr);
+				formatstr(reason_expr_param,"%s_REASON", m_fire_expr);
+				formatstr(subcode_expr_param,"%s_SUBCODE", m_fire_expr);
 			}
 			break;
 		}
@@ -703,7 +703,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 
 	// Format up the reason string
-	reason.sprintf( "The %s %s expression '%s' evaluated to ",
+	reason.formatstr( "The %s %s expression '%s' evaluated to ",
 					expr_src,
 					m_fire_expr,
 					exprString.Value());

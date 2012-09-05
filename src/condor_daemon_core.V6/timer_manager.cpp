@@ -543,7 +543,7 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 
 		MyString slice_desc;
 		if( !timer_ptr->timeslice ) {
-			slice_desc.sprintf("period = %d, ", timer_ptr->period);
+			slice_desc.formatstr("period = %d, ", timer_ptr->period);
 		}
 		else {
 			slice_desc.sprintf_cat("timeslice = %.3g, ",

@@ -164,7 +164,7 @@ bool dynuser::init_user() {
 			MyString prefix;
 			char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
 			if (resource_prefix != NULL) {
-				prefix.sprintf(".%s", resource_prefix);
+				prefix.formatstr(".%s", resource_prefix);
 				free(resource_prefix);
 			}
 			else {

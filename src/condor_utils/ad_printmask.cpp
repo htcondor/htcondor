@@ -351,7 +351,7 @@ display_Headings(List<const char> & headings)
 
 		MyString tmp_fmt;
 		if (fmt->width) {
-			tmp_fmt.sprintf("%%-%ds", fmt->width);
+			tmp_fmt.formatstr("%%-%ds", fmt->width);
 			retval.sprintf_cat(tmp_fmt.Value(), pszHead);
 		} else {
 			retval += pszHead;
@@ -586,7 +586,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							}
 						}
 					} else if( al->EvalString( attr, target, &value_from_classad ) ) {
-						stringValue.sprintf( fmt->printfFmt,
+						stringValue.formatstr( fmt->printfFmt,
 											 value_from_classad );
 						retval += stringValue;
 						free( value_from_classad );
@@ -594,7 +594,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					} else {
 						bool_str = ExprTreeToString( tree );
 						if( bool_str ) {
-							stringValue.sprintf(fmt->printfFmt, bool_str);
+							stringValue.formatstr(fmt->printfFmt, bool_str);
 							retval += stringValue;
 						} else {
 							if ( alt ) {
@@ -632,7 +632,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 								} else {
 									sprintf(tfmt, "%%%d.%ds", width, fmt->width);
 								}
-								stringValue.sprintf( tfmt, pszValue );
+								stringValue.formatstr( tfmt, pszValue );
 							}
 						} else {
 							char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
@@ -640,7 +640,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							//bool fQuote = (*ptag == 'V');
 							if (*ptag == 'v' || *ptag == 'V')
 								*ptag = 's'; // convert printf format to %s
-							stringValue.sprintf( tfmt, pszValue );
+							stringValue.formatstr( tfmt, pszValue );
 							free(tfmt);
 						}
 						retval += stringValue;
@@ -684,10 +684,10 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							double d;
 							result.IsRealValue( d );
 							if( fmt_type == PFT_INT ) {
-								stringValue.sprintf( fmt->printfFmt, 
+								stringValue.formatstr( fmt->printfFmt, 
 													 (int)d );
 							} else {
-								stringValue.sprintf( fmt->printfFmt, 
+								stringValue.formatstr( fmt->printfFmt, 
 													 (float)d );
 							}
 							retval += stringValue;
@@ -697,10 +697,10 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							int i;
 							result.IsIntegerValue( i );
 							if( fmt_type == PFT_INT ) {
-								stringValue.sprintf( fmt->printfFmt, 
+								stringValue.formatstr( fmt->printfFmt, 
 													 i );
 							} else {
-								stringValue.sprintf( fmt->printfFmt, 
+								stringValue.formatstr( fmt->printfFmt, 
 													 (float)i );
 							}
 							retval += stringValue;
@@ -710,10 +710,10 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							bool b;
 							result.IsBooleanValue( b );
 							if( fmt_type == PFT_INT ) {
-								stringValue.sprintf( fmt->printfFmt, 
+								stringValue.formatstr( fmt->printfFmt, 
 													 b ? 1 : 0 );
 							} else {
-								stringValue.sprintf( fmt->printfFmt, 
+								stringValue.formatstr( fmt->printfFmt, 
 													 b ? 1.0 : 0.0 );
 							}
 							retval += stringValue;

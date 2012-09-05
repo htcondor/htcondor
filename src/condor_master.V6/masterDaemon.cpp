@@ -1071,7 +1071,7 @@ void
 daemon::Exited( int status )
 {
 	MyString msg;
-	msg.sprintf( "The %s (pid %d) ", name_in_config_file, pid );
+	msg.formatstr( "The %s (pid %d) ", name_in_config_file, pid );
 	bool had_failure = true;
 	if (daemonCore->Was_Not_Responding(pid)) {
 		msg += "was killed because it was no longer responding";
@@ -1185,16 +1185,16 @@ daemon::Obituary( int status )
     char buf[1000];
 
 	MyString email_subject;
-	email_subject.sprintf("Problem %s: %s ", get_local_fqdn().Value(), 
+	email_subject.formatstr("Problem %s: %s ", get_local_fqdn().Value(), 
 						  condor_basename(process_name));
 	if ( was_not_responding ) {
 		email_subject += "killed (unresponsive)";
 	} else {
 		MyString fmt;
 		if( WIFSIGNALED(status) ) {
-			fmt.sprintf("died (%d)", WTERMSIG(status));
+			fmt.formatstr("died (%d)", WTERMSIG(status));
 		} else {
-			fmt.sprintf("exited (%d)", WEXITSTATUS(status));
+			fmt.formatstr("exited (%d)", WEXITSTATUS(status));
 		}
 		email_subject += fmt;
 	}
@@ -1416,7 +1416,7 @@ daemon::SetupHighAvailability( void )
 	MyString	name;
 
 	// Get the URL
-	name.sprintf("HA_%s_LOCK_URL", name_in_config_file );
+	name.formatstr("HA_%s_LOCK_URL", name_in_config_file );
 	tmp = param( name.Value() );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_URL" );
@@ -1431,7 +1431,7 @@ daemon::SetupHighAvailability( void )
 
 	// Get the length of the lock
 	time_t		lock_hold_time = 60 * 60;	// One hour
-	name.sprintf( "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
+	name.formatstr( "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
 	tmp = param( name.Value( ) );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_HOLD_TIME" );
@@ -1449,7 +1449,7 @@ daemon::SetupHighAvailability( void )
 
 	// Get the lock poll time
 	time_t		poll_period = 5 * 60;		// Five minutes
-	name.sprintf( "HA_%s_POLL_PERIOD", name_in_config_file );
+	name.formatstr( "HA_%s_POLL_PERIOD", name_in_config_file );
 	tmp = param( name.Value() );
 	if ( ! tmp ) {
 		tmp = param( "HA_POLL_PERIOD" );
@@ -2217,7 +2217,7 @@ Daemons::ExecMaster()
 				runfor = 1; // minimum 1
 			}
 			MyString runfor_str;
-			runfor_str.sprintf("%d",runfor);
+			runfor_str.formatstr("%d",runfor);
 			argv[i++] = strdup(runfor_str.Value());
 		}
 	}
@@ -2257,7 +2257,7 @@ Daemons::FinalRestartMaster()
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
 			MyString command;
-			command.sprintf("net stop %s & net start %s", 
+			command.formatstr("net stop %s & net start %s", 
 				_condor_myServiceName, _condor_myServiceName);
 			dprintf( D_ALWAYS, "Doing exec( \"%s /Q /C %s\" )\n", 
 				 systemshell,command.Value());

@@ -32,13 +32,13 @@ PipeEnd::PipeEnd(HANDLE handle, bool overlapped, bool nonblocking, int pipe_size
 
 	// create a manual reset Event, set initially to signaled
 	// to be used for overlapped operations
-	event_name.sprintf("pipe_event_%d_%x", GetCurrentProcessId(), m_handle);
+	event_name.formatstr("pipe_event_%d_%x", GetCurrentProcessId(), m_handle);
 	m_event = CreateEvent( NULL, TRUE, TRUE, event_name.Value() );
 	ASSERT(m_event);
 	
 	// create the event for waiting until a PID-watcher
 	// is done using this object
-	event_name.sprintf("pipe_watched_event_%d_%x", 
+	event_name.formatstr("pipe_watched_event_%d_%x", 
 		GetCurrentProcessId(), m_handle);
 	m_watched_event = CreateEvent(NULL, TRUE, TRUE, event_name.Value());
 	ASSERT(m_watched_event);

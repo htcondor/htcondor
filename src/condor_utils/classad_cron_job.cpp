@@ -125,7 +125,7 @@ ClassAdCronJob::ProcessOutput( const char *line )
 			const char      *lu_prefix = GetPrefix( );
 			if ( lu_prefix ) {
 				MyString    Update;
-				Update.sprintf( "%sLastUpdate = %ld",
+				Update.formatstr( "%sLastUpdate = %ld",
 								lu_prefix, (long) time(NULL) );
 				const char  *UpdateStr = Update.Value( );
 

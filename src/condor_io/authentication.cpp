@@ -476,17 +476,15 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			//
 			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
 #if defined(HAVE_EXT_GLOBUS)
-				// it's already been done.  we just need to return here so we don't
-				// set anything below.
 
-				// ((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
+				// nameGssToLocal calls setRemoteFoo directly.
+				int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
 
-				// that function calls setRemoteUser() and setRemoteDomain().
-				//
-				// this api should actually just return the canonical user,
-				// and we should split it into user and domain in this function,
-				// and not invoke setRemoteFoo() directly in nameGssToLocal().
-				dprintf (D_SECURITY, "ZKM: GRIDMAPPED!\n");
+				if (retval) {
+					dprintf (D_SECURITY, "Globus-based mapping was successful.\n");
+				} else {
+					dprintf (D_SECURITY, "Globus-based mapping failed; will use gsi@unmapped.\n");
+				}
 #else
 				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!");
 #endif

@@ -96,7 +96,7 @@ chirp_client_connect_starter()
 	if (NULL == (dir = getenv("_CONDOR_SCRATCH_DIR"))) {
 		dir = ".";
 	}
-	path.sprintf( "%s%c%s",dir,DIR_DELIM_CHAR,"chirp.config");
+	path.formatstr( "%s%c%s",dir,DIR_DELIM_CHAR,"chirp.config");
     file = safe_fopen_wrapper_follow(path.Value(),"r");
     if(!file) {
 		fprintf(stderr, "Can't open %s file\n",path.Value());

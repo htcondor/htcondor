@@ -256,6 +256,11 @@ our %submit_info = (
 	'x86_64_rhap_6.8'	=> 'x86_64_rhap_6.2',
 	'x86_64_rhap_6.9'	=> 'x86_64_rhap_6.2',
 
+    'x86_64_sl_6.0' => 'x86_64_rhap_6.2',
+    'x86_64_sl_6.1' => 'x86_64_rhap_6.2',
+    'x86_64_sl_6.2' => 'x86_64_rhap_6.2',
+    'x86_64_sl_6.3' => 'x86_64_rhap_6.2',
+
 	'x86_64_rhap_5.7'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,

@@ -131,7 +131,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 	MyString requested_by_buf;
 	if( !requested_by ) {
-		requested_by_buf.sprintf(
+		requested_by_buf.formatstr(
 			" as requested by %s", sock_to_pass->peer_description());
 		requested_by = requested_by_buf.Value();
 	}
@@ -250,7 +250,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 	MyString requested_by_buf;
 	if( !requested_by ) {
-		requested_by_buf.sprintf(
+		requested_by_buf.formatstr(
 			" as requested by %s", sock_to_pass->peer_description());
 		requested_by = requested_by_buf.Value();
 	}

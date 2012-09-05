@@ -45,19 +45,19 @@ QuillErrCode schedd_files_ins_file(
 	ClassAd *tmpClP1 = &tmpCl1;
 	MyString tmp;
 
-	tmp.sprintf("f_name = \"%s\"", fileName);
+	tmp.formatstr("f_name = \"%s\"", fileName);
 	tmpClP1->Insert(tmp.Value());		
 
-	tmp.sprintf("f_host = \"%s\"", fs_domain);
+	tmp.formatstr("f_host = \"%s\"", fs_domain);
 	tmpClP1->Insert(tmp.Value());	
 
-	tmp.sprintf("f_path = \"%s\"", path);
+	tmp.formatstr("f_path = \"%s\"", path);
 	tmpClP1->Insert(tmp.Value());	
 
-	tmp.sprintf("f_ts = %d", (int)f_ts);
+	tmp.formatstr("f_ts = %d", (int)f_ts);
 	tmpClP1->Insert(tmp.Value());	
 		
-	tmp.sprintf("f_size = %d", fsize);
+	tmp.formatstr("f_size = %d", fsize);
 	tmpClP1->Insert(tmp.Value());	
 
 	return FILEObj->file_newEvent("Files", tmpClP1);
@@ -75,22 +75,22 @@ void schedd_files_ins_usage(
 	ClassAd *tmpClP1 = &tmpCl1;
 	MyString tmp;
 
-	tmp.sprintf("f_name = \"%s\"", fileName);
+	tmp.formatstr("f_name = \"%s\"", fileName);
 	tmpClP1->Insert(tmp.Value());	
 
-	tmp.sprintf("f_host = \"%s\"", fs_domain);
+	tmp.formatstr("f_host = \"%s\"", fs_domain);
 	tmpClP1->Insert(tmp.Value());	
 
-	tmp.sprintf("f_path = \"%s\"", path);
+	tmp.formatstr("f_path = \"%s\"", path);
 	tmpClP1->Insert(tmp.Value());	
 
-	tmp.sprintf("f_ts = %d", (int) f_ts);
+	tmp.formatstr("f_ts = %d", (int) f_ts);
 	tmpClP1->Insert(tmp.Value());	
 
-	tmp.sprintf("globalJobId = \"%s\"", globalJobId);
+	tmp.formatstr("globalJobId = \"%s\"", globalJobId);
 	tmpClP1->Insert(tmp.Value());	
 	
-	tmp.sprintf("type = \"%s\"", type);
+	tmp.formatstr("type = \"%s\"", type);
 	tmpClP1->Insert(tmp.Value());	
 
 	FILEObj->file_newEvent("Fileusages", tmpClP1);
@@ -139,7 +139,7 @@ void schedd_files_ins(
 		free(dir_tmp);
 	}
 	else {
-		pathname.sprintf("%s/%s", path.Value(), tmpFile.Value());
+		pathname.formatstr("%s/%s", path.Value(), tmpFile.Value());
 		fileName = tmpFile;
 	}
 

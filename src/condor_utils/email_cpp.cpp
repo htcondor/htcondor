@@ -304,7 +304,7 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 	ad->LookupInteger( ATTR_PROC_ID, proc );
 
 	MyString full_subject;
-	full_subject.sprintf( "Condor Job %d.%d", cluster, proc );
+	full_subject.formatstr( "Condor Job %d.%d", cluster, proc );
 	if( subject ) {
 		full_subject += " ";
 		full_subject += subject;

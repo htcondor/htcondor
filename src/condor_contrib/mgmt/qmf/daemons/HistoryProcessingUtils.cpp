@@ -76,7 +76,7 @@ process ( const HistoryEntry &entry )
 {
     MyString key;
 
-    key.sprintf ( "%d.%d", entry.cluster, entry.proc );
+    key.formatstr ( "%d.%d", entry.cluster, entry.proc );
 
     const char* key_cstr = key.StrDup();
 

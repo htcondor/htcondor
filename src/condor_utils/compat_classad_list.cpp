@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "compat_classad_list.h"
-#include "condor_xml_classads.h"
+#include "compat_classad_util.h"
 
 #include <vector>
 #include <algorithm>
@@ -233,21 +233,19 @@ ClassAdListDoesNotDeleteAds::Shuffle()
 void ClassAdListDoesNotDeleteAds::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
 {
 	ClassAd            *tmpAttrList;
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
+	std::string            xml;
 
 	if (use_xml) {
-		unparser.SetUseCompactSpacing(false);
-		unparser.AddXMLFileHeader(xml);
-		printf("%s\n", xml.Value());
+		AddClassAdXMLFileHeader(xml);
+		printf("%s\n", xml.c_str());
 		xml = "";
 	}
 
     Open();
     for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next()) {
 		if (use_xml) {
-			unparser.Unparse((ClassAd *) tmpAttrList, xml, attr_white_list);
-			printf("%s\n", xml.Value());
+			tmpAttrList->sPrintAsXML(xml, attr_white_list);
+			printf("%s\n", xml.c_str());
 			xml = "";
 		} else {
 			tmpAttrList->fPrint(f,attr_white_list);
@@ -255,8 +253,8 @@ void ClassAdListDoesNotDeleteAds::fPrintAttrListList(FILE* f, bool use_xml, Stri
         fprintf(f, "\n");
     }
 	if (use_xml) {
-		unparser.AddXMLFileFooter(xml);
-		printf("%s\n", xml.Value());
+		AddClassAdXMLFileFooter(xml);
+		printf("%s\n", xml.c_str());
 		xml = "";
 	}
     Close();

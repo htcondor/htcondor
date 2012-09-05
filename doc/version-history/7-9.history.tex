@@ -60,8 +60,9 @@ See definition at section~\ref{param:JobRouterSchedd2Pool}.
 rather than creating a second transformed version of the job.
 \Ticket{3185}
 
-\item \Condor{defrag} now has a policy option to cancel draining
-of a machine that is in draining mode.  This can be used to effect
+\item The \Condor{defrag} daemon now has a policy option implemented
+by configuration to cancel the draining
+of a machine that is in the Draining mode.  This can be used to effect
 partial draining of machines.
 \Ticket{2993}
 
@@ -90,7 +91,7 @@ names of all jobs that these daemons will manage.
 \Ticket{3030}
 
 
-\item The new configuration variable \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}
+\item The new configuration variable \Macro{DEFRAG\_CANCEL\_REQUIREMENTS}
 is an expression that specifies which draining machines should have 
 draining be canceled.  
 This defaults to \MacroUNI{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  
@@ -102,6 +103,10 @@ This could be used to drain partial rather than whole machines.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The \Condor{negotiator} now sanity-checks accountant log file once only
+on startup.  Iteration through the accountant ClassAd log structure is faster.
+\Ticket{3011}
 
 \item The ClassAd functions \Procedure{splitUserName} and 
 \Procedure{splitSlotName}
@@ -119,10 +124,14 @@ This bug was introduced when these functions were added in Condor version 7.7.6.
     to become held. \Ticket{3016}
   \item Added work-around for \Condor{history} bug when submitting jobs to
     a Condor pool running Condor 7.7.6 through 7.8.1. \Ticket{3133}
-  \item Improved handling of job files when the batch system has a shared
-    filesystem. \Ticket{3195}
+  \item Improved the handling of job files when the batch system has a shared
+    file system. \Ticket{3195}
   \end{itemize}
 
+\item Changes introduced in Condor version 7.9.0 caused jobs submitted by
+\Condor{dagman} in the local universt to not write to the default node log
+file, when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is true (the default), and a
+user log is also defined. This is fixed. \Ticket{3111}
 \end{itemize}
 
 \noindent Known Bugs:

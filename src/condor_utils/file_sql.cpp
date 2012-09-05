@@ -439,7 +439,7 @@ FILESQL::createInstance(bool use_sql_log) {
 	MyString outfilename = "";
 
 	MyString param_name;
-	param_name.sprintf("%s_SQLLOG", get_mySubSystem()->getName());
+	param_name.formatstr("%s_SQLLOG", get_mySubSystem()->getName());
 
 	char *tmp = param(param_name.Value());
 	if( tmp ) {
@@ -450,11 +450,11 @@ FILESQL::createInstance(bool use_sql_log) {
 		tmp = param ("LOG");		
 
 		if (tmp) {
-			outfilename.sprintf("%s/sql.log", tmp);
+			outfilename.formatstr("%s/sql.log", tmp);
 			free(tmp);
 		}
 		else {
-			outfilename.sprintf("sql.log");
+			outfilename.formatstr("sql.log");
 		}
 	}
 
@@ -481,13 +481,13 @@ int &prevLHF)
 		// make a copy so that we can add timestamp attribute into it
 	clCopy = *cl;
 	
-	tmp.sprintf("%s = %d", "PrevLastReportedTime", prevLHF);
+	tmp.formatstr("%s = %d", "PrevLastReportedTime", prevLHF);
 	(&clCopy)->Insert(tmp.Value());
 
 		// set the lastReportedTime and make it the new prevLHF
 	prevLHF = (int)time(NULL);
 
-	tmp.sprintf("%s = %d", "LastReportedTime", prevLHF);
+	tmp.formatstr("%s = %d", "LastReportedTime", prevLHF);
 	(&clCopy)->Insert(tmp.Value());
 
 	ASSERT( dbh );

@@ -961,10 +961,8 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 			// can finally log the execute event.
 		ExecuteEvent event;
 		event.setExecuteHost( "MPI_job" );
-		for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-			if ( !(*p)->writeEvent( &event, jobAd )) {
-				dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
-			}
+		if ( !uLog.writeEvent( &event, jobAd )) {
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}
 		
 			// Now that everything is started, we can finally invoke
@@ -1022,11 +1020,10 @@ ParallelShadow::logReconnectedEvent( void )
 	starter = NULL;
 
 */
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if( !(*p)->writeEvent(&event,jobAd) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
-		}
+	if( !uLog.writeEvent(&event,jobAd) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
 	}
+
 }
 
 
@@ -1045,10 +1042,8 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 	event.setStartdName( dc_startd->name() );
 */
 
-	for(std::vector<WriteUserLog*>::iterator p = uLog.begin(); p != uLog.end(); ++p){
-		if( !(*p)->writeEvent(&event,jobAd) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
-		}
+	if( !uLog.writeEvent(&event,jobAd) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
 	}
 		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
 }

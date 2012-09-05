@@ -511,9 +511,8 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 	WriteUserLog ulog;
 	ulog.setEnableGlobalLog( false );
 	ulog.setUseXML( logIsXml );
-	ulog.initialize( logFile, condorID._cluster, condorID._proc,
-				condorID._subproc, NULL );
-
+	ulog.initialize( std::vector<const char*>(1,logFile), condorID._cluster,
+		condorID._proc, condorID._subproc, NULL );
 
 	SubmitEvent subEvent;
 	subEvent.cluster = condorID._cluster;

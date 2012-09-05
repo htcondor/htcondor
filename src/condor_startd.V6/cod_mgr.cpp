@@ -360,7 +360,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	}
 
 	MyString line;
-	line.sprintf( "%s = \"%s\"", ATTR_RESULT, 
+	line.formatstr( "%s = \"%s\"", ATTR_RESULT, 
 				  rval ? getCAResultString(CA_SUCCESS)
 				       : getCAResultString(CA_FAILURE) );
 

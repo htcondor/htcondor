@@ -1349,7 +1349,7 @@ case CONDOR_getlongdir:
 		while((next = directory.Next())) {
 			dprintf(D_ALWAYS, "next: %s\n", next);
 			msg.sprintf_cat("%s\n", next);
-			check.sprintf("%s%c%s", path, DIR_DELIM_CHAR, next);
+			check.formatstr("%s%c%s", path, DIR_DELIM_CHAR, next);
 			rval = stat(check.Value(), &stat_buf);
 			terrno = (condor_errno_t)errno;
 			if(rval == -1) {
