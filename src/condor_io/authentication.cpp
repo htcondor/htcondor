@@ -362,6 +362,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 		} else {
 			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
 		}
+#if defined(HAVE_EXT_GLOBUS)
 	} else if (auth_status == CAUTH_GSI ) {
 		// Fall back to using the globus mapping mechanism.  GSI is a bit unique in that
 		// it may be horribly expensive - or cause a SEGFAULT - to do an authorization callout.
@@ -374,6 +375,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 		} else {
 			dprintf (D_SECURITY, "ZKM: name to map is null, not calling GSI authorization.\n");
 		}
+#endif
 	}
 	// for now, let's be a bit more verbose and print this to D_SECURITY.
 	// yeah, probably all of the log lines that start with ZKM: should be
@@ -525,10 +527,15 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
         // Theoretically, it should be impossible to hit this case - the invoking function thought
 		// we had a mapfile, but we couldnt create one.  This just covers weird corner cases.
 
+#if defined(HAVE_EXT_GLOBUS)
 		int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(authentication_name);
 		dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
+#else
+		dprintf(D_ALWAYS, "ZKM: GSI not compiled, so can't call nameGssToLocal!!");
+#endif
+	} else {
+		dprintf (D_FULLDEBUG, "ZKM: global_map_file not present!\n");
 	}
-
 }
 
 void Authentication::split_canonical_name(char const *can_name,char **user,char **domain) {
