@@ -501,6 +501,28 @@ sub WhichCondorConfig
 	}
 }
 
+# Retreive a configuration value from the Condor environment.
+#
+# Assumes the presence of the program condor_config_val in the PATH.
+#
+# condor_config_val($param_name, $config_file)
+#
+# $param_name - the configuration value to retrieve
+# $config_file - Optional. the configuration file to query. If ommitted, 
+#                uses the "default" one chosen by condor_config_val.
+#
+# Returns the configuration value.  If there is a problem getting the value,
+# or it isn't present, returned undef.
+sub condor_config_val {
+	my($param_name, $config_file) = @_;
+	my $old_config_file = $ENV{CONDOR_CONFIG};
+	if(defined $config_file) { $ENV{CONDOR_CONFIG} = $config_file; }
+	my $result = `condor_config_val $param_name`;
+	chomp $result;
+	$ENV{CONDOR_CONFIG} = $old_config_file;
+	return $result;
+}
+
 ##################################################################
 #
 # Run condor_config_val using the specified configuration file.
@@ -1271,6 +1293,53 @@ sub IsPersonalRunning
 	close(MADDR);
 }
 
+# wait_for_file($filename, $duration, $sleep)
+#
+# Wait up to $duration seconds for $filename to appear, sleeping
+# $sleep seconds between checks.  $sleep is optional and defaults
+# to a "small" number chosen for reasonable responsiveness; don't
+# rely on any particular default value.
+# Returns 0 if the file doesn't appear in time.
+# Returns a positive number if the file does appear in time.
+sub wait_for_file
+{
+	my($filename, $duration, $sleep) = @_;
+	if(not defined $sleep)  { $sleep = 0.1; }
+	debug("Waiting up to $duration seconds for \"$filename\" to exist\n", $debuglevel);
+	my $start = time();
+	my $end = time() + $duration;
+	while($end > time()) {
+		if(-e $filename) {
+			debug("    \"$filename\" appeared.\n", $debuglevel);
+			return 1;
+		}
+		# Use select so we can have sub-second sleeps.
+		select(undef,undef,undef, $sleep);
+	}
+	debug("    \"$filename\" never appeared\n", $debuglevel);
+	return 0;
+}
+
+# wait_for_address_file($daemon_name, $duration)
+#
+# Wait for $daemon_name's address file to appear.
+# Will wait for up to $duration seconds.
+# If the file appears, returns a positive number. If the file
+# doesn't appear in time or another error occurs, returns 0.
+sub wait_for_address_file
+{
+	my($daemon_name, $duration) = @_;
+	my $filename = condor_config_val($daemon_name."_ADDRESS_FILE");
+	if(not defined $filename) {
+		print "Unable to read $daemon_name _ADDRESS_FILE using condor_config_val\n";
+		return 0;
+	}
+	print "Waiting for $daemon_name to create $filename -";
+	my $result = wait_for_file($filename, $duration);
+	if($result > 0) { print "ok\n"; }
+	return $result;
+}
+
 #################################################################
 #
 # IsRunningYet
@@ -1331,152 +1400,13 @@ sub IsRunningYet {
 		close(CCV);
 	}
 
-
-	if($daemonlist =~ /MASTER/i) {
-		print "Has master dropped an address file yet - ";
-		# now wait for the master to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $masteradr = `condor_config_val MASTER_ADDRESS_FILE`;
-		$masteradr =~ s/\012+$//;
-		$masteradr =~ s/\015+$//;
-		debug( "MASTER_ADDRESS_FILE is <<<<<$masteradr>>>>>\n",$debuglevel);
-    	debug( "We are waiting for the file to exist\n",$debuglevel);
-    	# Where is the master address file? wait for it to exist
-    	my $havemasteraddr = "no";
-    	$loopcount = 0;
-    	while($havemasteraddr ne "yes") {
-        	$loopcount++;
-        	debug( "Looking for $masteradr\n",$debuglevel);
-        	if( -f $masteradr ) {
-            	debug( "Found it!!!! master address file\n",$debuglevel);
-            	$havemasteraddr = "yes";
-        	} elsif ( $loopcount == $runlimit ) {
-				debug( "Gave up waiting for master address file\n",$debuglevel);
+	my $max_wait_for_address_file = 60;
+	foreach my $daemon (qw(MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD)) {
+		if($daemonlist =~ /$daemon/) {
+			if( ! wait_for_address_file($daemon, $max_wait_for_address_file)) {
 				return 0;
-        	} else {
-            	sleep ($loopcount * $backoff);
-        	}
-    	}
-		print "ok\n";
-	}
-
-	if($daemonlist =~ /COLLECTOR/i){
-		print "Has collector dropped an address file yet - ";
-		# now wait for the collector to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $collectoradr = `condor_config_val COLLECTOR_ADDRESS_FILE`;
-		$collectoradr =~ s/\012+$//;
-		$collectoradr =~ s/\015+$//;
-		debug( "COLLECTOR_ADDRESS_FILE is <<<<<$collectoradr>>>>>\n",$debuglevel);
-    	debug( "We are waiting for the file to exist\n",$debuglevel);
-    	# Where is the collector address file? wait for it to exist
-    	my $havecollectoraddr = "no";
-    	$loopcount = 0;
-    	while($havecollectoraddr ne "yes") {
-        	$loopcount++;
-        	debug( "Looking for $collectoradr\n",$debuglevel);
-        	if( -f $collectoradr ) {
-            	debug( "Found it!!!! collector address file\n",$debuglevel);
-            	$havecollectoraddr = "yes";
-        	} elsif ( $loopcount == $runlimit ) {
-				debug( "Gave up waiting for collector address file\n",$debuglevel);
-				return 0;
-        	} else {
-            	sleep ($loopcount * $backoff);
-        	}
-    	}
-		print "ok\n";
-	}
-
-	if($daemonlist =~ /NEGOTIATOR/i) {
-		print "Has negotiator dropped an address file yet - ";
-		# now wait for the negotiator to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $negotiatoradr = `condor_config_val NEGOTIATOR_ADDRESS_FILE`;
-		$negotiatoradr =~ s/\012+$//;
-		$negotiatoradr =~ s/\015+$//;
-		debug( "NEGOTIATOR_ADDRESS_FILE is <<<<<$negotiatoradr>>>>>\n",$debuglevel);
-    	debug( "We are waiting for the file to exist\n",$debuglevel);
-    	# Where is the negotiator address file? wait for it to exist
-    	my $havenegotiatoraddr = "no";
-    	$loopcount = 0;
-    	while($havenegotiatoraddr ne "yes") {
-        	$loopcount++;
-        	debug( "Looking for $negotiatoradr\n",$debuglevel);
-        	if( -f $negotiatoradr ) {
-            	debug( "Found it!!!! negotiator address file\n",$debuglevel);
-            	$havenegotiatoraddr = "yes";
-        	} elsif ( $loopcount == $runlimit ) {
-				debug( "Gave up waiting for negotiator address file\n",$debuglevel);
-				return 0;
-        	} else {
-            	sleep ($loopcount * $backoff);
-        	}
-    	}
-		print "ok\n";
-	}
-
-	if($daemonlist =~ /STARTD/i) {
-		print "Has startd dropped an address file yet - ";
-		# now wait for the startd to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $startdadr = `condor_config_val STARTD_ADDRESS_FILE`;
-		$startdadr =~ s/\012+$//;
-		$startdadr =~ s/\015+$//;
-		debug( "STARTD_ADDRESS_FILE is <<<<<$startdadr>>>>>\n",$debuglevel);
-    	debug( "We are waiting for the file to exist\n",$debuglevel);
-    	# Where is the startd address file? wait for it to exist
-    	my $havestartdaddr = "no";
-    	$loopcount = 0;
-    	while($havestartdaddr ne "yes") {
-        	$loopcount++;
-        	debug( "Looking for $startdadr\n",$debuglevel);
-        	if( -f $startdadr ) {
-            	debug( "Found it!!!! startd address file\n",$debuglevel);
-            	$havestartdaddr = "yes";
-        	} elsif ( $loopcount == $runlimit ) {
-				debug( "Gave up waiting for startd address file\n",$debuglevel);
-				return 0;
-        	} else {
-            	sleep ($loopcount * $backoff);
-        	}
-    	}
-		print "ok\n";
-	}
-
-	####################################################################
-
-	if($daemonlist =~ /SCHEDD/i) {
-		print "Has schedd dropped an address file yet - ";
-		# now wait for the schedd to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $scheddadr = `condor_config_val SCHEDD_ADDRESS_FILE`;
-		$scheddadr =~ s/\012+$//;
-		$scheddadr =~ s/\015+$//;
-		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n",$debuglevel);
-    	debug( "We are waiting for the file to exist\n",$debuglevel);
-    	# Where is the schedd address file? wait for it to exist
-    	my $havescheddaddr = "no";
-    	$loopcount = 0;
-    	while($havescheddaddr ne "yes") {
-        	$loopcount++;
-        	debug( "Looking for $scheddadr\n",$debuglevel);
-        	if( -f $scheddadr ) {
-            	debug( "Found it!!!! schedd address file\n",$debuglevel);
-            	$havescheddaddr = "yes";
-        	} elsif ( $loopcount == $runlimit ) {
-				debug( "Gave up waiting for schedd address file\n",$debuglevel);
-				return 0;
-        	} else {
-            	sleep 1;
-        	}
-    	}
-		print "ok\n";
+			}
+		}
 	}
 
 	if($daemonlist =~ /STARTD/i) {
