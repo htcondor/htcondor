@@ -2355,6 +2355,21 @@ For transferring files other than \File{stdout},
 see \SubmitCmd{transfer\_output\_files}.
 
 %%%%%%%%%%%%%%%%%%%
+%% use_x509userproxy
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!use\_x509userproxy}
+\label{condor-submit-use-x509userproxy}
+\item[use\_x509userproxy = $<$True \Bar\ False$>$]
+Set this command to \Expr{True} to indicate that the job requires an
+X.509 user proxy.
+If \SubmitCmd{x509userproxy} is set, then that file is used for the proxy.
+Otherwise, the proxy is looked for in the standard locations.
+If \SubmitCmd{x509userproxy} is set or if the job is a grid universe job
+of grid-type gt2, gt2, cream, or nordugrid, then the value of
+\SubmitCmd{use\_x509userproxy} is forced to \Expr{True}.
+
+%%%%%%%%%%%%%%%%%%%
 %% x509userproxy
 %%%%%%%%%%%%%%%%%%%
 
@@ -2369,7 +2384,7 @@ this value would allow Condor to access the proxy in a shared file system
 (for example, AFS).
 Condor will use the proxy specified in the submit description file first.
 If nothing is specified in the submit description file,
-it will use the environment variable X509\_USER\_CERT.
+it will use the environment variable X509\_USER\_PROXY.
 If that variable is not present,
 it will search in the default location.
 

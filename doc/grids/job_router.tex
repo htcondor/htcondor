@@ -486,9 +486,10 @@ ClassAd.  A value assigned to this attribute in the routing table
 entry is ignored.
 
 \index{Job Router Routing Table ClassAd attribute!EditJobInPlace}
-\item[EditJobInPlace] A boolean expression that, when true, causes the
-original job to be transformed in place rather than creating a new
-transformed version of the job.  In this mode, the routing hook
+\item[EditJobInPlace] A boolean expression that, when \Expr{True},
+causes the original job to be transformed in place rather than creating a new
+transformed version (a routed copy) of the job.  
+In this mode, the Job Router Hook
 \Macro{<Keyword>\_HOOK\_TRANSLATE\_JOB} and transformation
 rules in the routing table are applied during the job
 transformation.  The routing table attribute \Attr{GridResource} is
@@ -497,10 +498,10 @@ vanilla job to a grid universe job as there is otherwise.  Once
 transformed, the job is still a candidate for matching routing rules,
 so it is up to the routing logic to control whether the job may be
 transformed multiple times or not.  For example, to transform the job
-only once, an attribute could be set in the job ad to prevent it from
+only once, an attribute could be set in the job ClassAd to prevent it from
 matching the same routing rule in the future.  To transform the job
 multiple times with limited frequency, a timestamp could be inserted
-into the job ad marking the time of the last transformation, and the
+into the job ClassAd marking the time of the last transformation, and the
 routing entry could require that this timestamp either be undefined
 or older than some limit.
 
