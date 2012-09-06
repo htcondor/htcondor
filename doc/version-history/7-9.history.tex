@@ -118,8 +118,10 @@ This bug was introduced when these functions were added in Condor version 7.7.6.
   \begin{itemize}
   \item Monitoring the status of jobs submitted to PBS and SGE has been
     improved. \Ticket{3067} \Ticket{3157} \Ticket{3181}
-  \item Job command-line arguments containing characters `(', `)', and `\&'
-    are now handled properly. \Ticket{3057}
+  \item Job command-line arguments containing 
+    left parenthesis, \verb@(@, right parenthesis, \verb@)@, 
+    and ampersand, \verb@&@, characters are now handled properly. 
+    \Ticket{3057}
   \item Removing PBS jobs that have just completed no longer causes the jobs
     to become held. \Ticket{3016}
   \item Added a work-around for a bug when submitting jobs to
