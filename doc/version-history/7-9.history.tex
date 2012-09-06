@@ -98,6 +98,12 @@ This defaults to \MacroUNI{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
 This could be used to drain partial rather than whole machines.
 \Ticket{2993}
 
+\item The new submit command \SubmitCmd{use\_x509userproxy} can be set
+to \Expr{True} to indicate that an X.509 user proxy is required for the
+job. If \SubmitCmd{x509userproxy} isn't set, then the proxy file
+will be looked for in the standard locations.
+\Ticket{3025}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
