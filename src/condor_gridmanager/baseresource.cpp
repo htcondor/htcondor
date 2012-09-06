@@ -118,7 +118,7 @@ void BaseResource::Reconfig()
 		if ( limits.number() > 0 ) {
 			jobLimit = atoi( limits.next() );
 			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strcmp( tmp1, resourceName ) == 0 ) {
+				if ( strstr( resourceName, tmp1 ) != 0 ) {
 					jobLimit = atoi( tmp2 );
 				}
 			}
