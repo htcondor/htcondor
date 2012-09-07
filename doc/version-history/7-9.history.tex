@@ -110,8 +110,10 @@ will be looked for in the standard locations.
 
 \begin{itemize}
 
-\item The \Condor{negotiator} now sanity-checks accountant log file once only
-on startup.  Iteration through the accountant ClassAd log structure is faster.
+\item The \Condor{negotiator} now checks the accountant log file for sanity
+once only on start up,  
+thereby increasing efficiency of iteration through 
+the accountant ClassAd log structure.
 \Ticket{3011}
 
 \item The ClassAd functions \Procedure{splitUserName} and 
