@@ -581,16 +581,15 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
             else {
                 start = g_qdate_submissions.begin();
             }
-            it = g_qdate_submissions.end();
+            it = --g_qdate_submissions.end();
             // TODO: integer rollover, but interop of xsd:unsignedInt?
             if (qdate<it->second->getOldest() && qdate<INT_MAX)  {
-                it = --g_qdate_submissions.end();
                 for (it=start; it!=g_qdate_submissions.end() && i<size; it++) {
                     response->addIds(makeSubmissionID((*it).second));
                     i++;
                 }
             }
-            response->setRemaining(distance(it,g_qdate_submissions.end()));
+            response->setRemaining(i?distance(it,g_qdate_submissions.end()):0);
         }
 
         return response;
