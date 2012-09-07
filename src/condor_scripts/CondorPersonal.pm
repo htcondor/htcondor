@@ -53,6 +53,7 @@ use Cwd;
 use POSIX qw/sys_wait_h strftime/;
 use Socket;
 use Sys::Hostname;
+use Time::HiRes qw(usleep);
 
 use CondorUtils;
 
@@ -1313,8 +1314,7 @@ sub wait_for_file
 			debug("    \"$filename\" appeared.\n", $debuglevel);
 			return 1;
 		}
-		# Use select so we can have sub-second sleeps.
-		select(undef,undef,undef, $sleep);
+		usleep($sleep * 1_000_000);
 	}
 	debug("    \"$filename\" never appeared\n", $debuglevel);
 	return 0;
