@@ -327,7 +327,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 				int verb = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
 				if (cat_and_flags & D_FULLDEBUG) verb = 2;
 				sprintf_error = sprintf(verbosity, ":%d", verb);
-				if(sprintf_error)
+				if(sprintf_error < 0)
 				{
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
