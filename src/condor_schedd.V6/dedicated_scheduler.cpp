@@ -618,10 +618,10 @@ CandidateList::markScheduled()
 {
 	Rewind();
 	while (ClassAd *c = Next()) {
-		char buf[512];
+		std::string buf;
 		match_rec *mrec = dedicated_scheduler.getMrec(c, buf);
 		if( ! mrec) {
-			EXCEPT(" no match for %s, but listed as available", buf);
+			EXCEPT(" no match for %s, but listed as available", buf.c_str());
 		}
 		mrec->scheduled = true;
 	}
@@ -1798,7 +1798,8 @@ DedicatedScheduler::sortResources( void )
 
         // getMrec from the dec sched -- won't have matches for non dedicated jobs
         match_rec* mrec = NULL;
-        if( ! (mrec = getMrec(res, NULL)) ) {
+	std::string buf;
+        if( ! (mrec = getMrec(res, buf)) ) {
 			// We don't have a match_rec for this resource yet, so
 			// put it in our unclaimed_resources list
 			unclaimed_resources->Append( res );
@@ -2803,7 +2804,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		// Foreach machine we've matched
 	while( (machine = idle_candidates->Next()) ) {
 		match_rec *mrec;
-		char buf[256];
+		std::string buf;
 
 			// Get the job for this machine
 		job = idle_candidates_jobs->Next();
@@ -2816,7 +2817,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		if( ! (mrec = getMrec(machine, buf)) ) {
  			EXCEPT( "no match for %s in all_matches table, yet " 
  					"allocated to dedicated job %d.0!",
- 					buf, cluster ); 
+ 					buf.c_str(), cluster ); 
 		}
 			// and mark it scheduled & allocated
 		mrec->scheduled = true;
@@ -3467,7 +3468,8 @@ DedicatedScheduler::preemptResources() {
 	if( pending_preemptions->Length() > 0) {
 		pending_preemptions->Rewind();
 		while( ClassAd *machine = pending_preemptions->Next()) {
-			match_rec *mrec = getMrec(machine, NULL);
+			std::string buf;
+			match_rec *mrec = getMrec(machine, buf);
 			if( mrec) {
 				if( deactivateClaim(mrec)) {
 					char *s = NULL;
@@ -3671,25 +3673,16 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 
 
 match_rec*
-DedicatedScheduler::getMrec( ClassAd* ad, char* buf )
+DedicatedScheduler::getMrec( ClassAd* ad, std::string& buf )
 {
-	char my_buf[512];
-	char* match_name;
 	match_rec* mrec;
 
-	if( buf ) {
-		match_name = buf;
-	} else {
-		match_name = my_buf;
-	}
-	match_name[0] = '\0';
-
-	if( ! ad->LookupString(ATTR_NAME, match_name, sizeof(match_name)) ) {
+	if( ! ad->LookupString(ATTR_NAME, buf) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::getMrec(): "
 				 "No %s in ClassAd!\n", ATTR_NAME );
 		return NULL;
 	}
-	HashKey key(match_name);
+	HashKey key(buf.c_str());
 	if( all_matches->lookup(key, mrec) < 0 ) {
 		return NULL;
 	}
