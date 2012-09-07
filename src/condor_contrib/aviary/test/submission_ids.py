@@ -73,7 +73,7 @@ elif opts.name:
     subId.name = opts.name
 
 # sanity check for qdate
-if (long(opts.qdate) > sys.maxint):
+if (opts.qdate and long(opts.qdate) > sys.maxint):
     print 'Invalid input: Qdate is larger than system max integer'
     exit(1)
 
