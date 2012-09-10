@@ -166,11 +166,25 @@ an event log used exclusively by DAGMan to monitor the state of the DAG's jobs.
 %%% ClassAd attribute: DAGManNodesLog
 \index{ClassAd job attribute!DAGManNodesMask}
 \index{DAGManNodesMask!job ClassAd attribute}
-\item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, controls the
-events inserted in the log referred to by \Attr{DAGManNodesLog} (the auxiliary
-log). If the mask is empty or undefined, all events are written to the
-auxiliary job log.  Otherwise, it is a list of numbers; events are only written
-to the auxiliary log if they are found in the list. If \Attr{DAGManNodesLog} is
+\item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, 
+controls which job user log
+events are appended to the log referred to by \Attr{DAGManNodesLog} 
+(the auxiliary log). 
+If the mask is empty or undefined, these events are written to the
+auxiliary job log:  
+\begin{itemize}
+ \item \Expr{Submit}, event code is 0
+ \item \Expr{Execute}, event code is 1
+ \item \Expr{Job terminated}, event code is 5
+ \item \Expr{Job aborted}, event code is 9
+ \item \Expr{Job held}, event code is 12
+ \item \Expr{Job released}, event code is 13
+ \item \Expr{Post script terminated}, event code is 16
+\end{itemize}
+Otherwise, this string is a comma-separated list of integer 
+user log event codes;
+only events found in the list are written to the auxiliary log. 
+If \Attr{DAGManNodesLog} is
 not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
 affect events recorded in the user log file referred to by \Attr{UserLog}.
 
