@@ -49,16 +49,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed the \Condor{schedd} where it would crash when a submit file
-had a malformed dollar dollar expression.
+\item Fixed the \Condor{schedd} daemon; 
+it would crash when a submit description file
+contained a malformed \verb@$$()@ expansion macro that contained
+a period.
+\Ticket{3216}
 
-\item Fixed a case where a daemon could crash and leave behind a log
-file owned by root.  This root-owned file would then cause
+\item Fixed a case in which a daemon could crash and leave behind a log
+file owned by \Login{root}.  This \Login{root}-owned file would then cause
 subsequent attempts to restart the daemon to fail.
 \Ticket{2894}
 
-\item Macros that are prefixes of ``\MacroNI{DOLLAR}'' were not expanded
-properly.
+\item Fixed a special case bug in which configuration variables
+defined utilizing initial substrings of \Expr{\$(DOLLAR)},
+for example  \Expr{\$(D)} and  \Expr{\$(DO)},  
+were not expanded properly.
 \Ticket{3217}
 
 \end{itemize}
