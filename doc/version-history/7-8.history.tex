@@ -49,8 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed the \Condor{schedd} where it would crash when a submit file
-had a malformed dollar dollar expression.
+\item Fixed the \Condor{schedd} daemon; 
+it would crash when a submit description file
+contained a malformed \verb@$$()@ expansion macro that contained
+a period.
+\Ticket{3216}
 
 \item Fixed a case in which a daemon could crash and leave behind a log
 file owned by \Login{root}.  This \Login{root}-owned file would then cause
