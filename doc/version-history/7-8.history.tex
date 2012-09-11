@@ -52,8 +52,8 @@ The details of each version are described below.
 \item Fixed the \Condor{schedd} where it would crash when a submit file
 had a malformed dollar dollar expression.
 
-\item Fixed a case where a daemon could crash and leave behind a log
-file owned by root.  This root-owned file would then cause
+\item Fixed a case in which a daemon could crash and leave behind a log
+file owned by \Login{root}.  This \Login{root}-owned file would then cause
 subsequent attempts to restart the daemon to fail.
 \Ticket{2894}
 
