@@ -9579,7 +9579,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		int job_start_exec_date = 0; 
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date)) {
 			job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
-			job_executing_time = updateTime - job_start_exec_date;
+			job_executing_time = updateTime - MAX(job_start_date, job_start_exec_date);
 			if (job_executing_time < 0) {
 				stats.JobsWierdTimestamps += 1;
 				OTHER.JobsWierdTimestamps += 1;
@@ -9595,7 +9595,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)
 			&& job_start_xfer_out_date >= job_start_date) {
 			job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
-			job_executing_time = job_start_xfer_out_date - job_start_exec_date;
+			job_executing_time = job_start_xfer_out_date - MAX(job_start_date, job_start_exec_date);
 			if (job_executing_time < 0 || job_executing_time > updateTime) {
 				stats.JobsWierdTimestamps += 1;
 				OTHER.JobsWierdTimestamps += 1;
