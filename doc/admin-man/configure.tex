@@ -8788,6 +8788,14 @@ section~\ref{sec:Security} on Security.
   When this configuration variable is defined, use of this proxy
   takes precedence over use of a certificate and key.
 
+\label{param:GSIAuthzConf}
+\item[\Macro{GSI\_AUTHZ\_CONF}]
+  A complete path and file name of the
+  Globus mapping library that looks for the mapping call out configuration.
+  There is no default value; as such, Condor uses the environment
+  variable \Env{GSI\_AUTHZ\_CONF} when this variable is not defined.
+  Setting this variable to \Expr{/dev/null} disables callouts.
+
 \label{param:DelegateJobGSICredentials} 
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]
   A boolean value that defaults to \Expr{True} for Condor version 6.7.19
