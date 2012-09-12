@@ -41,7 +41,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{GSI\_AUTHZ\_CONF}
+fixes a bug in which an instance of Condor may utilize the  
+wrong Globus mapping.
+The configuration variable defines a path and file name 
+to the file that contains the Globus mapping library. 
+See the complete definition at
+~\ref{param:GSIAuthzConf}.
+\Ticket{2103}
+
 
 \end{itemize}
 
