@@ -548,17 +548,26 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 void 
 ParallelShadow::shutDown( int exitReason )
 {
+	static unsigned int iNumberOfTriggeredCalls = 0; 
+	
 	if (exitReason != JOB_NOT_STARTED) {
 		if (shutdownPolicy == WAIT_FOR_ALL) {
+			
+			iNumberOfTriggeredCalls++;
+			unsigned int iResources = ResourceList.length();
+			
 			for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
 				RemoteResource *r = ResourceList[i];
 				// If the policy is wait for all nodes to exit
 				// see if any are still running.  If so,
 				// just return, and wait for them all to go
-				if (r->getResourceState() != RR_FINISHED) {
-					return;
+				if (r->getResourceState() != RR_FINISHED || iNumberOfTriggeredCalls < iResources ) {
+				    dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL - %d resources out of %d have checked in \n", iNumberOfTriggeredCalls, iResources);
+				    return;
 				}
 			}
+			
+			dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL - All resources have called exit/shutdown\n" );
 			
 		}
 			// If node0 is still running, don't really shut down
