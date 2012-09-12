@@ -346,6 +346,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 			}
 		}
 	}
+	else
+	{
+		return NULL;
+	}
 
 	//message.insert(0, formatter.str());
 	if( sprintf_errno != 0 ) {
@@ -366,9 +370,16 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 	static int buflen = 0;
 	//debug_lock_it(dbgInfo, NULL, 0);
 	const char* header = _format_global_header(cat_and_flags, hdr_flags, clock_now, tm);
-	rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s%s", header, message);
+	if(header)
+	{
+		rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s", header);
+		if (rc < 0) {
+			_condor_dprintf_exit(errno, "Error writing to debug header\n");	
+		}
+	}
+	rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s", message);
 	if (rc < 0) {
-		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+		_condor_dprintf_exit(errno, "Error writing to debug message\n");	
 	}
 
 		// We attempt to write the log record with one call to
