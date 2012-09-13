@@ -842,6 +842,8 @@ extern const char * const ATTR_EC2_VPC_SUBNET;
 extern const char * const ATTR_EC2_VPC_IP;
 extern const char * const ATTR_EC2_TAG_NAMES;
 extern const char * const ATTR_EC2_TAG_PREFIX;
+extern const char * const ATTR_EC2_SPOT_PRICE;
+extern const char * const ATTR_EC2_SPOT_REQUEST_ID;
 //************* End of changes for EC2 Jobs *****************//
 
 extern const char * const ATTR_REQUEST_CPUS;

@@ -784,9 +784,9 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
     int requestID;
     get_int( argv[1], & requestID );
     
-    if( ! verify_min_number_args( argc, 14 ) ) {
+    if( ! verify_min_number_args( argc, 15 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
-        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 14, argv[0] );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 15, argv[0] );
         return false;
     }
 
@@ -802,7 +802,7 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
 
     // Optional attributes / parameters.
     if( strcasecmp( argv[7], NULLSTRING ) ) {
-        vmSpotRequest.query_parameters[ "LaunchSpecification.KeyName" ] = argv[6];
+        vmSpotRequest.query_parameters[ "LaunchSpecification.KeyName" ] = argv[7];
     }
 
     if( strcasecmp( argv[10], NULLSTRING ) ) {
@@ -812,20 +812,26 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
     }
 
     if( strcasecmp( argv[11], NULLSTRING ) ) {
-        vmSpotRequest.query_parameters[ "LaunchSpecification.Placement.AvailabilityZone" ] = argv[10];
+        vmSpotRequest.query_parameters[ "LaunchSpecification.Placement.AvailabilityZone" ] = argv[11];
     }
 
     if( strcasecmp( argv[12], NULLSTRING ) ) {
-        vmSpotRequest.query_parameters[ "LaunchSpecification.SubnetId" ] = argv[11];
+        vmSpotRequest.query_parameters[ "LaunchSpecification.SubnetId" ] = argv[12];
     }
     
     if( strcasecmp( argv[13], NULLSTRING ) ) {
-        vmSpotRequest.query_parameters[ "LaunchSpecification.NetworkInterface.1.PrivateIpAddress" ] = argv[12];
+        vmSpotRequest.query_parameters[ "LaunchSpecification.NetworkInterface.1.PrivateIpAddress" ] = argv[13];
+    }
+ 
+    // Use LaunchGroup, which we don't otherwise support, as an idempotence
+    // token, since RequestSpotInstances doesn't support ClientToken.
+    if( strcasecmp( argv[14], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchGroup" ] = argv[14];
     }
     
-    for( int i = 14; i < argc; ++i ) {
+    for( int i = 15; i < argc; ++i ) {
         std::ostringstream groupName;
-        groupName << "LaunchSpecification.SecurityGroup." << (i - 13 + 1);
+        groupName << "LaunchSpecification.SecurityGroup." << (i - 14 + 1);
         vmSpotRequest.query_parameters[ groupName.str() ] = argv[ i ];
     }
     
@@ -865,7 +871,9 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
         } else {
             StringList resultList;
             resultList.append( vmSpotRequest.spotRequestID.c_str() );
-            resultList.append( nullStringIfEmpty( vmSpotRequest.instanceID ) );
+            // GM_SPOT_START -> GM_SPOT_SUBMITTED -> GM_SPOT_QUERY always
+            // happens, so simplify things and just don't report this.
+            // resultList.append( nullStringIfEmpty( vmSpotRequest.instanceID ) );
             result_string = create_success_result( requestID, & resultList );
         }
     }
@@ -1051,14 +1059,18 @@ struct vmStatusSpotUD_t {
     };
     typedef enum vmStatusSpotTags_t vmStatusSpotTags;
 
-    bool inItem;
+    // The groupSet member of the launchSpecification also contains
+    // an 'item' member.  Do NOT stop looking for tags of interest
+    // (like the instance ID) because of them.  XPath is looking more
+    // and more tasty...
+    unsigned short inItem;
     vmStatusSpotTags inWhichTag;
     AmazonStatusSpotResult * currentResult;
  
     std::vector< AmazonStatusSpotResult > & results;
     
     vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
-        inItem( false ),
+        inItem( 0 ),
         inWhichTag( vmStatusSpotUD_t::NONE ),
         currentResult( NULL ),
         results( assrList ) { };
@@ -1068,15 +1080,17 @@ typedef struct vmStatusSpotUD_t vmStatusSpotUD;
 void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
-    if( ! vsud->inItem ) {
-        if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+    // dprintf( D_FULLDEBUG, "vmStatusSpotESH(): inItem = %u, name = %s\n", vsud->inItem, (const char *)name );
+    if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+        if( vsud->inItem == 0 ) {
             vsud->currentResult = new AmazonStatusSpotResult();
             assert( vsud->currentResult != NULL );
-            vsud->inItem = true;
         }
+        vsud->inItem += 1;
         return;
     }
     
+    // dprintf( D_FULLDEBUG, "vmStatusSpotESH(), switching on name; inItem = %u, name = %s\n", vsud->inItem, (const char *)name );
     if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
     } else if( strcasecmp( (const char *)name, "state" ) == 0 ) {
@@ -1095,7 +1109,8 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
 
 void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
-    if( ! vsud->inItem ) { return; }
+    // dprintf( D_FULLDEBUG, "vmStatusSpotCDH(): inItem = %u, inWhichTag = %d\n", vsud->inItem, vsud->inWhichTag );
+    if( vsud->inItem != 1 ) { return; }
     
     std::string * targetString = NULL;
     switch( vsud->inWhichTag ) {
@@ -1123,17 +1138,22 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             break;
     }
     
+    // dprintf( D_FULLDEBUG, "vmStatusSpotCDH(): appending '%*s'\n", len, (const char *)cdata );
     appendToString( (void *)cdata, len, 1, (void *)targetString );
 }
 
 void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
-    if( vsud->inItem && strcasecmp( (const char *)name, "item" ) == 0 ) {
-        vsud->results.push_back( * vsud->currentResult );
-        delete vsud->currentResult;
-        vsud->currentResult = NULL;
-        vsud->inItem = false;
+    // dprintf( D_FULLDEBUG, "vmStatusSpotEEH(): inItem = %u, name = %s\n", vsud->inItem, (const char *)name );
+    if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+        if( vsud->inItem == 1 ) {
+            vsud->results.push_back( * vsud->currentResult );
+            delete vsud->currentResult;
+            vsud->currentResult = NULL;
+        }
+        
+        vsud->inItem -= 1;
     }
 
     vsud->inWhichTag = vmStatusSpotUD::NONE;
@@ -1147,6 +1167,7 @@ bool AmazonVMStatusSpot::SendRequest() {
         XML_SetElementHandler( xp, & vmStatusSpotESH, & vmStatusSpotEEH );
         XML_SetCharacterDataHandler( xp, & vmStatusSpotCDH );
         XML_SetUserData( xp, & vssud );
+        // dprintf( D_FULLDEBUG, "VM_STATUS_SPOT: %s\n", this->resultString.c_str() );
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
     }
@@ -1191,6 +1212,7 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
                 resultList.append( assr.request_id.c_str() );
                 resultList.append( assr.status.c_str() );
                 resultList.append( assr.ami_id.c_str() );
+                resultList.append( nullStringIfEmpty( assr.instance_id ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -1241,6 +1263,7 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
                 resultList.append( assr.request_id.c_str() );
                 resultList.append( assr.status.c_str() );
                 resultList.append( assr.ami_id.c_str() );
+                resultList.append( nullStringIfEmpty( assr.instance_id ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

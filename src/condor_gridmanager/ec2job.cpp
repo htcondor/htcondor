@@ -50,6 +50,12 @@ using namespace std;
 #define GM_PROBE_JOB					9
 #define GM_SAVE_CLIENT_TOKEN			10
 
+#define GM_SPOT_START                   11
+#define GM_SPOT_CANCEL                  12
+#define GM_SPOT_SUBMITTED               13
+#define GM_SPOT_QUERY                   14
+#define GM_SPOT_CHECK                   15
+
 static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_START_VM",
@@ -61,7 +67,12 @@ static const char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROBE_JOB",
-	"GM_SAVE_CLIENT_TOKEN"
+	"GM_SAVE_CLIENT_TOKEN",
+	"GM_SPOT_START",
+	"GM_SPOT_CANCEL",
+	"GM_SPOT_SUBMITTED",
+	"GM_SPOT_QUERY",
+	"GM_SPOT_CHECK"
 };
 
 #define EC2_VM_STATE_RUNNING			"running"
@@ -166,6 +177,10 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		error_string = "Private key file not defined";
 		goto error_exit;
 	}
+
+    // look for a spot price
+    jobAd->LookupString( ATTR_EC2_SPOT_PRICE, m_spot_price );
+    dprintf( D_FULLDEBUG, "Found EC2 spot price: %s\n", m_spot_price.c_str() );
 
     // lookup the elastic IP
     jobAd->LookupString( ATTR_EC2_ELASTIC_IP, m_elastic_ip );
@@ -444,6 +459,12 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 				
+				// We couldn't share the code for keypairs anyway.
+				if( ! m_spot_price.empty() ) {
+				    gmState = GM_SPOT_START;
+				    break;
+                }
+				
 				////////////////////////////////
 				// Here we create the keypair only 
 				// if we need to.  
@@ -608,9 +629,13 @@ void EC2Job::doEvaluateState()
 					// Wait for the instance id to be saved to the schedd
 					requestScheddUpdate( this, true );
 					break;
-				}					
-				gmState = GM_SUBMITTED;
-
+				}
+				
+				if( ! m_spot_price.empty() ) {
+				    gmState = GM_SPOT_CANCEL;
+                } else {				    
+    				gmState = GM_SUBMITTED;
+                }
 				break;
 				
 			
@@ -996,8 +1021,246 @@ void EC2Job::doEvaluateState()
 				DoneWithJob();
 				// This object will be deleted when the update occurs
 				break;							
-				
-			
+
+            //
+            // Except for the three exceptions above (search for GM_SPOT),
+            // and exits to terminal states, the state machine for spot
+            // instance requests is a disjoint subgraph.  Although this
+            // enforces certain limits (e.g., at most one instance per
+            // spot request), it makes reasoning about them much simpler.
+            //
+
+            // Actually submit the spot request to the cloud.  Note that
+            // this occurs *after* we've saved the client token, so we
+            // can never lose track of it.
+            
+            // FIXME: Add the retry loop.
+            case GM_SPOT_START: {
+                // Don't bother to do anything if we've been held or removed.
+                if( condorState == HELD || condorState == REMOVED ) {
+                    // Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
+                    // an instance-status probe.
+                    remoteJobState = EC2_VM_STATE_TERMINATED;
+                    gmState = GM_SPOT_CANCEL;
+                    break;
+                }
+            
+                // Why is this necessary?
+                m_ami_id = build_ami_id();
+                if( m_group_names == NULL ) {
+                    m_group_names = build_groupnames();
+                }
+                
+                // Send a command to the GAHP, or poll for its result(s).
+                char * spot_request_id = NULL;
+                rc = gahp->ec2_spot_start(  m_serviceUrl,
+                                            m_public_key_file,
+                                            m_private_key_file,
+                                            m_ami_id,
+                                            m_spot_price,
+                                            m_key_pair,
+                                            m_user_data, m_user_data_file,
+                                            m_instance_type,
+                                            m_availability_zone,
+                                            m_vpc_subnet, m_vpc_ip,
+                                            m_client_token,
+                                            * m_group_names,
+                                            spot_request_id,
+                                            gahp_error_code );
+
+                // If the command hasn't terminated yet, return to this
+                // state and poll again.
+                if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+                    rc == GAHPCLIENT_COMMAND_PENDING ) {
+                    break;
+                }
+
+                // If the command succeeded, write the request ID back to
+                // the schedd, but don't block.  We'll discover the request
+                // ID based on the client token during recovery.  Note that
+                // we don't overload the remote job ID, because we need to
+                // distinguish between instance and spot request IDs, and
+                // it's not clear they're required to be distinguishable.
+                if( rc == 0 ) {
+                    ASSERT( spot_request_id != NULL );
+                    m_spot_request_id = spot_request_id;
+                    free( spot_request_id );
+                    
+                    jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, m_spot_request_id );
+                    requestScheddUpdate( this, false );
+                    
+                    gmState = GM_SPOT_SUBMITTED;
+                    break;
+                } else {
+                    errorString = gahp->getErrorString();
+                    dprintf( D_ALWAYS, "(%d.%d) spot instance request failed: %s: %s\n",
+                                procID.cluster, procID.proc, gahp_error_code,
+                                errorString.c_str() );
+                    gmState = GM_HOLD;
+                    break;
+                }
+
+                } break;
+
+            // Cancel the request with the cloud.  Once we're done with
+            // the request proper, handle any instance(s) that it may
+            // have spawned.
+            case GM_SPOT_CANCEL:
+                if( ! m_spot_request_id.empty() ) {
+                    // Send a command to the GAHP, or poll for its result(s).
+                    rc = gahp->ec2_spot_stop(   m_serviceUrl,
+                                                m_public_key_file,
+                                                m_private_key_file,
+                                                m_spot_request_id,
+                                                gahp_error_code );
+
+                    // If the command hasn't terminated yet, return to this
+                    // state and poll again.
+                    if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+                        rc == GAHPCLIENT_COMMAND_PENDING ) {
+                        break;
+                    }
+                    
+                    if( rc != 0 ) {
+                        errorString = gahp->getErrorString();
+                        dprintf( D_ALWAYS, "(%d.%d) spot request stop failed: %s: %s\n",
+                                    procID.cluster, procID.proc, gahp_error_code,
+                                    errorString.c_str() );
+                        gmState = GM_HOLD;
+                        break;
+                    }
+                    
+                    // Clear the request ID, now that it's been cancelled.
+                    m_spot_request_id.clear();
+                }
+            
+                gmState = GM_SUBMITTED;
+                break;
+
+            // Alternates with GM_SPOT_QUERY to watch for an instance start.
+            case GM_SPOT_SUBMITTED:
+                // If the Condor job has been held or removed, we need to
+                // know what the state of the remote job is (whether it's
+                // spawned an instance) before we can decide what to do.
+                if( condorState == HELD || condorState == REMOVED ) {
+                    gmState = GM_SPOT_QUERY;
+                    break;
+                }
+                
+                // Always wait at least interval before probing. 
+                if( lastProbeTime < enteredCurrentGmState ) {
+                    lastProbeTime = enteredCurrentGmState;
+                }
+
+                if( now >= lastProbeTime + probeInterval ) {
+                    gmState = GM_SPOT_QUERY;
+                    break;
+                } else {
+                    // Why is this more complicated in GM_SUBMITTED?
+                    unsigned int delay = (lastProbeTime + probeInterval) - now;
+                    daemonCore->Reset_Timer( evaluateStateTid, delay );
+                }
+                break;
+
+            // Alternates with GM_SPOT_SUBMITTED to watch for instance start.
+            case GM_SPOT_QUERY: {
+                // Send a command to the GAHP, or poll for its result(s).
+                StringList returnStatus;
+                rc = gahp->ec2_spot_status( m_serviceUrl,
+                                            m_public_key_file,
+                                            m_private_key_file,
+                                            m_spot_request_id,
+                                            returnStatus,
+                                            gahp_error_code );
+
+                // If the command hasn't terminated yet, return to this
+                // state and poll again.
+                if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+                    rc == GAHPCLIENT_COMMAND_PENDING ) {
+                    break;
+                }
+
+                // If the command fails, put the job on hold.
+                if( rc != 0 ) {
+                    errorString = gahp->getErrorString();
+                    dprintf( D_ALWAYS, "(%d.%d) spot request probe failed: %s: %s\n",
+                                procID.cluster, procID.proc, gahp_error_code,
+                                errorString.c_str() );
+                    gmState = GM_HOLD;
+                    break;
+                }
+                
+                // Update the job state.
+                if( returnStatus.number() == 0 ) {
+                    // The spot instance request has been purged.  This should
+                    // only happen during recovery.  Put the job on hold so
+                    // we get a chance to tell the user that an instance may
+                    // have escaped.  (We can't tag or set a ClientToken for
+                    // an instance in the spot request, so we can't just check
+                    // all instances to see if we own any of them.)
+                    errorString = "Spot request purged; an instance may still be running.";
+                    dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                    gmState = GM_HOLD;
+                    break;
+                }
+                
+                // Spot status results are 4-tuples of request IDs, status
+                // strings, AMI IDs (probably superflous), and instance IDs.
+                // There should only ever be one result when probing a job.
+                std::string status;
+                std::string instanceID;
+                returnStatus.rewind();
+                for( int i = 0; i < returnStatus.number(); i += 3 ) {
+                    std::string requestID = returnStatus.next();
+                    status = returnStatus.next();
+                    std::string amiID = returnStatus.next();
+                    instanceID = returnStatus.next();
+                    
+                    if( requestID == m_spot_request_id ) { break; }
+                }
+                
+                // If the request spawned an instance, we must save the
+                // instance ID.  This (GM_SAVE_INSTANCE_ID) will then cancel
+                // the request (GM_SPOT_CANCEL) and after checking the job
+                // state (GM_SUBMITTED), cancel the instance.
+                if( ! instanceID.empty() ) {
+                    SetInstanceId( instanceID.c_str() );
+                    gmState = GM_SAVE_INSTANCE_ID;
+                    break;
+                }
+
+                // All 'active'-status requests have instance IDs.
+                ASSERT( status != "active" );
+                
+                // If the request didn't spawn an instance, but the Condor
+                // job has been held or removed, cancel the request.  (It's
+                // OK to cancel the request twice.)
+                if( condorState == HELD || condorState == REMOVED ) {
+                    // Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
+                    // an instance-status probe.
+                    remoteJobState = EC2_VM_STATE_TERMINATED;
+                    gmState = GM_SPOT_CANCEL;
+                    break;
+                }
+
+                // Is the SIR still valid?  The status must be one of 'active',
+                // 'cancelled', 'open', 'closed', or 'failed', and all 'active'
+                // requests have an instance ID.
+                if( status != "open" ) {
+                    gmState = GM_DONE_SAVE;
+                }
+                
+                // If nothing interesting happened, wait a while before
+                // polling the job state again.
+                gmState = GM_SPOT_SUBMITTED;
+                } break;
+
+            // If, during recovery of a spot request, we have a client token
+            // but not a spot instance ID, look at all spot requests to see
+            // if we actually made the request or not.
+            case GM_SPOT_CHECK:
+                break;
+                
 			default:
 				EXCEPT( "(%d.%d) Unknown gmState %d!",
 						procID.cluster, procID.proc, gmState );

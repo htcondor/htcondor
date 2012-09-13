@@ -934,7 +934,8 @@ const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
 const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
 const char * const ATTR_EC2_TAG_NAMES = "EC2TagNames";
 const char * const ATTR_EC2_TAG_PREFIX = "EC2Tag";
-
+const char * const ATTR_EC2_SPOT_PRICE = "EC2SpotPrice";
+const char * const ATTR_EC2_SPOT_REQUEST_ID = "EC2SpotRequestID";
 //************* End of changes for EC2 Jobs *****************//
 
 //************* Added for Lease Manager *******************//

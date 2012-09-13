@@ -113,8 +113,7 @@ class AmazonVMStartSpot : public AmazonVMStart {
         
         virtual bool SendRequest();
         
-        // EC2_VM_START_SPOT uses the same argument structure as EC2_VM_START.
-        // static bool ioCheck( char ** argv, int argc );
+        static bool ioCheck( char ** argv, int argc );
         static bool workerFunction( char ** argv, int argc, std::string & result_string );
 
     protected:
