@@ -861,7 +861,14 @@ FileTransfer::DownloadFiles(bool blocking)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_UPLOAD, &sock, 0, NULL, NULL, false, m_sec_session_id);
+		CondorError err_stack;
+		if ( !d.startCommand(FILETRANS_UPLOAD, &sock, 0, &err_stack, NULL, false, m_sec_session_id) ) {
+			Info.success = 0;
+			Info.in_progress = 0;
+			formatstr( Info.error_desc, "FileTransfer: Unable to start "
+					   "transfer with server %s: %s", TransSock,
+					   err_stack.getFullText().c_str() );
+		}
 
 		sock.encode();
 
@@ -1216,7 +1223,14 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, NULL, NULL, false, m_sec_session_id);
+		CondorError err_stack;
+		if ( !d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, &err_stack, NULL, false, m_sec_session_id) ) {
+			Info.success = 0;
+			Info.in_progress = 0;
+			formatstr( Info.error_desc, "FileTransfer: Unable to start "
+					   "transfer with server %s: %s", TransSock,
+					   err_stack.getFullText().c_str() );
+		}
 
 		sock.encode();
 
