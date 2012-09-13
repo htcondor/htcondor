@@ -72,6 +72,12 @@ partial draining of machines.
 
 \begin{itemize}
 
+\item Dynamic slots now fill the values for attributes of the form TotalSlotXxx, 
+for configured local resources, in a way consistent with standard resources
+such as TotalSlotCpus.  Previously those values were all filled with zero on
+dynamic slots.
+\Ticket{3229}
+
 \item The \Condor{schedd} now advertises the value of the configuration parameter
 COLLECTOR\_HOST in its daemon ad.  This allows one to determine if a given
 schedd reporting to a collector is flocking to that collector or not.
