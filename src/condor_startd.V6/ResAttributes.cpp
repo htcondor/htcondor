@@ -1002,6 +1002,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
     c_slotres_map = slotres_map;
+    c_slottot_map = slotres_map;
 	c_execute_dir = execute_dir;
 	c_execute_partition_id = execute_partition_id;
 	c_idle = -1;
