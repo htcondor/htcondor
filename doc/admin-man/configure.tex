@@ -4215,20 +4215,23 @@ WANT_HOLD_REASON = \
   and makes it available at the given name using bind mounts.
   This is available on Linux systems which provide bind mounts 
   and per-process tree mount tables,
-  such as Red Hat Enterprise Linux 5.  A bind mount is like a symbolic link, but is
-  not globally visible to all processes, it is only visible to the job and the
-  job's child processes.
+  such as Red Hat Enterprise Linux 5.  
+  A bind mount is like a symbolic link,
+  but is not globally visible to all processes.
+  It is only visible to the job and the job's child processes.
   As an example:
 \begin{verbatim}
   MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
 \end{verbatim}
   The job will see the usual \File{/tmp} and \File{/var/tmp}
   directories, but when accessing files via these paths, the
-  system will redirect the access. The resultant files 
-  will actually end up in directories named tmp or var/tmp
+  system will redirect the access. 
+  The resultant files will actually end up in directories named 
+  \File{tmp} or \File{var/tmp}
   under the the job's temporary scratch directory. 
   This is useful, because the job's scratch directory will be cleaned up 
-  after the job completes, two concurrent jobs will not interfere with each other,
+  after the job completes, 
+  two concurrent jobs will not interfere with each other,
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
   Another use case might be for home directories, which some jobs might want
   to write to, but that should be cleaned up after each job run.
@@ -6892,30 +6895,31 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:DefaultPrioFactor} 
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
-  This macro sets the priority factor for local users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 1.
+  Sets the priority factor for local users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 1.0.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
-  This macro sets the priority factor for nice users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000000.
+  Sets the priority factor for nice users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 10000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
-  This macro defines the priority factor for remote users (users who
-  who do not belong to the accountant's local domain - see
-  below). See section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000.
+  Defines the priority factor for remote users,
+  which are those users who who do not belong to the local domain.
+  See section~\ref{sec:UserPrio} for details.  
+  Defaults to 10000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
-  This macro is used to decide if a user is local or remote. A user
-  is considered to be in the local domain if the UID\_DOMAIN matches
-  the value of this macro. Usually, this macro is set
-  to the local UID\_DOMAIN. If it is not defined, all users are considered
-  local.
+  Describes the local UID domain.
+  This variable is used to decide if a user is local or remote. 
+  A user is considered to be in the local domain if their UID domain matches
+  the value of this variable. Usually, this variable is set
+  to the local UID domain. 
+  If not defined, all users are considered local.
 
 \label{param:MaxAccountantDatabaseSize}
 \item[\Macro{MAX\_ACCOUNTANT\_DATABASE\_SIZE}] 
@@ -9014,6 +9018,14 @@ section~\ref{sec:Security} on Security.
   X.509 proxy to be used in GSI authentication.
   When this configuration variable is defined, use of this proxy
   takes precedence over use of a certificate and key.
+
+\label{param:GSIAuthzConf}
+\item[\Macro{GSI\_AUTHZ\_CONF}]
+  A complete path and file name of the
+  Globus mapping library that looks for the mapping call out configuration.
+  There is no default value; as such, Condor uses the environment
+  variable \Env{GSI\_AUTHZ\_CONF} when this variable is not defined.
+  Setting this variable to \Expr{/dev/null} disables callouts.
 
 \label{param:DelegateJobGSICredentials} 
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]

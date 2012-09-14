@@ -259,6 +259,7 @@ const char	*NiceUser		= "nice_user";
 
 const char	*GridResource	= "grid_resource";
 const char	*X509UserProxy	= "x509userproxy";
+const char	*UseX509UserProxy = "use_x509userproxy";
 const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
@@ -5708,6 +5709,7 @@ SetGSICredentials()
 {
 	char *tmp;
 	MyString buffer;
+	bool use_proxy = false;
 
 		// Find the X509 user proxy
 		// First param for it in the submit file. If it's not there
@@ -5716,19 +5718,31 @@ SetGSICredentials()
 		// bomb out if we can't find it.
 
 	char *proxy_file = condor_param( X509UserProxy );
+	tmp = condor_param( UseX509UserProxy );
+	if ( tmp ) {
+		if( tmp[0] == 'T' || tmp[0] == 't' ) {
+			use_proxy = true;
+		}
+		free( tmp );
+	}
 
-	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
+	if ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (strcasecmp (JobGridType, "gt2") == MATCH ||
 		  strcasecmp (JobGridType, "gt5") == MATCH ||
 		  strcasecmp (JobGridType, "cream") == MATCH ||
-		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
+		  strcasecmp (JobGridType, "nordugrid") == MATCH) ) {
+
+		use_proxy = true;
+	}
+
+	if ( proxy_file == NULL && use_proxy ) {
 
 		proxy_file = get_x509_proxy_filename();
 		if ( proxy_file == NULL ) {
 
-			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, nordugrid or cream jobs\n");
+			fprintf( stderr, "\nERROR: Can't determine proxy filename\n" );
+			fprintf( stderr, "X509 user proxy is required for this job.\n");
 			exit (1);
 		}
 	}

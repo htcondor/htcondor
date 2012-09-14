@@ -56,8 +56,8 @@ See definition at section~\ref{param:JobRouterSchedd2Pool}.
 \end{itemize}
 \Ticket{3030}
 
-\item \Condor{job\_router} can now optionally transform jobs in place
-rather than creating a second transformed version of the job.
+\item The \Condor{job\_router} can now optionally transform jobs in place,
+rather than creating a second transformed version (copy) of the job.
 \Ticket{3185}
 
 \item The \Condor{defrag} daemon now has a policy option implemented
@@ -71,6 +71,12 @@ partial draining of machines.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item Dynamic slots now fill the values for attributes of the form TotalSlotXxx, 
+for configured local resources, in a way consistent with standard resources
+such as TotalSlotCpus.  Previously those values were all filled with zero on
+dynamic slots.
+\Ticket{3229}
 
 \item The \Condor{schedd} now advertises the value of the configuration parameter
 COLLECTOR\_HOST in its daemon ad.  This allows one to determine if a given
@@ -98,14 +104,22 @@ This defaults to \MacroUNI{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
 This could be used to drain partial rather than whole machines.
 \Ticket{2993}
 
+\item The new submit command \SubmitCmd{use\_x509userproxy} can be set
+to \Expr{True} to indicate that an X.509 user proxy is required for the
+job. If \SubmitCmd{x509userproxy} isn't set, then the proxy file
+will be looked for in the standard locations.
+\Ticket{3025}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item The \Condor{negotiator} now sanity-checks accountant log file once only
-on startup.  Iteration through the accountant ClassAd log structure is faster.
+\item The \Condor{negotiator} now checks the accountant log file for sanity
+once only on start up,  
+thereby increasing efficiency of iteration through 
+the accountant ClassAd log structure.
 \Ticket{3011}
 
 \item The ClassAd functions \Procedure{splitUserName} and 
@@ -114,24 +128,31 @@ no longer leak a small amount of memory each time they are evaluated.
 This bug was introduced when these functions were added in Condor version 7.7.6.
 \Ticket{3082}
 
-\item Several bug fixes for grid-type batch jobs:
+\item There are several bug fixes for grid-type batch jobs:
   \begin{itemize}
   \item Monitoring the status of jobs submitted to PBS and SGE has been
     improved. \Ticket{3067} \Ticket{3157} \Ticket{3181}
-  \item Job command-line arguments containing characters `(', `)', and `\&'
-    are now handled properly. \Ticket{3057}
+  \item Job command-line arguments containing 
+    left parenthesis, \verb@(@, right parenthesis, \verb@)@, 
+    and ampersand, \verb@&@, characters are now handled properly. 
+    \Ticket{3057}
   \item Removing PBS jobs that have just completed no longer causes the jobs
     to become held. \Ticket{3016}
-  \item Added work-around for \Condor{history} bug when submitting jobs to
-    a Condor pool running Condor 7.7.6 through 7.8.1. \Ticket{3133}
+  \item Added a work-around for a bug when submitting jobs to
+    a Condor pool running Condor versions 7.7.6 through 7.8.2.
+    A bug in \Condor{history} \Opt{-f} caused an error in determining
+    a job's status.
+    \Ticket{3133}
   \item Improved the handling of job files when the batch system has a shared
     file system. \Ticket{3195}
   \end{itemize}
 
 \item Changes introduced in Condor version 7.9.0 caused jobs submitted by
-\Condor{dagman} in the local universt to not write to the default node log
-file, when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is true (the default), and a
-user log is also defined. This is fixed. \Ticket{3111}
+\Condor{dagman} in the local universe to not write to the default node log file,
+when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was \Expr{True} (the default),
+and a user log was also defined. This is fixed. 
+\Ticket{3111}
+
 \end{itemize}
 
 \noindent Known Bugs:

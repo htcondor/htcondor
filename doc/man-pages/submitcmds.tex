@@ -2355,6 +2355,21 @@ For transferring files other than \File{stdout},
 see \SubmitCmd{transfer\_output\_files}.
 
 %%%%%%%%%%%%%%%%%%%
+%% use_x509userproxy
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!use\_x509userproxy}
+\label{condor-submit-use-x509userproxy}
+\item[use\_x509userproxy = $<$True \Bar\ False$>$]
+Set this command to \Expr{True} to indicate that the job requires an
+X.509 user proxy.
+If \SubmitCmd{x509userproxy} is set, then that file is used for the proxy.
+Otherwise, the proxy is looked for in the standard locations.
+If \SubmitCmd{x509userproxy} is set or if the job is a grid universe job
+of grid-type gt2, gt2, cream, or nordugrid, then the value of
+\SubmitCmd{use\_x509userproxy} is forced to \Expr{True}.
+
+%%%%%%%%%%%%%%%%%%%
 %% x509userproxy
 %%%%%%%%%%%%%%%%%%%
 
@@ -2369,7 +2384,7 @@ this value would allow Condor to access the proxy in a shared file system
 (for example, AFS).
 Condor will use the proxy specified in the submit description file first.
 If nothing is specified in the submit description file,
-it will use the environment variable X509\_USER\_CERT.
+it will use the environment variable X509\_USER\_PROXY.
 If that variable is not present,
 it will search in the default location.
 
@@ -3416,21 +3431,25 @@ In addition to the normal macro, there is also a special kind of macro
 called a \Term{substitution macro}
 \index{substitution macro!in submit description file}
 that allows the substitution of
-a ClassAd attribute value defined on the resource machine itself
+a machine ClassAd attribute value defined on the resource machine itself
 (gotten after a match to the machine has been made)
 into specific commands within the
 submit description file. The substitution macro is of the form:
 \begin{verbatim} 
 $$(attribute)
 \end{verbatim}
+As this form of the substitution macro is only evaluated within
+the context of the machine ClassAd,
+use of a scope resolution prefix 
+\Expr{TARGET.} or \Expr{MY.} is not allowed.
 
-A common use of this macro is for the heterogeneous
+A common use of this form of the substitution macro is for the heterogeneous
 submission of an executable:
 \begin{verbatim}
-executable = povray.$$(opsys).$$(arch)
+executable = povray.$$(OpSys).$$(Arch)
 \end{verbatim}
-Values for the \AdAttr{opsys} and \AdAttr{arch} attributes are substituted at
-match time for any given resource. This allows Condor to automatically
+Values for the \AdAttr{OpSys} and \AdAttr{Arch} attributes are substituted at
+match time for any given resource. This example allows Condor to automatically
 choose the correct executable for the matched machine.
 
 An extension to the syntax of the substitution macro provides an
@@ -3447,16 +3466,14 @@ Since the file can be placed in different locations on
 different machines, the file's path name is given as an argument
 to the program.
 \begin{verbatim} 
-argument = $$(input_file_path:/usr/foo)
+arguments = $$(input_file_path:/usr/foo)
 \end{verbatim}
 On the machine, if the attribute \Attr{input\_file\_path} is not
 defined, then the path \File{/usr/foo} is used instead.
 
 A further extension to the syntax of the substitution macro allows the
 evaluation of a ClassAd expression to define the value.
-As all substitution macros, the expression is evaluated after
-a match has been made.
-Therefore, the expression may refer to machine attributes
+In this form, the expression may refer to machine attributes
 by prefacing them with the scope resolution prefix \Attr{TARGET.},
 as specified in section~\ref{ClassAd:evaluation}.
 To place a ClassAd expression into the substitution macro,
@@ -3475,7 +3492,7 @@ to account for miscellaneous overhead,
 and passes this as a command line argument to the application.
 In the submit description file will be
 \begin{verbatim} 
-arguments=--memory $$([TARGET.Memory * 0.9])
+arguments = --memory $$([TARGET.Memory * 0.9])
 \end{verbatim}
 
 \index{\$\$!as literal characters in a submit description file}

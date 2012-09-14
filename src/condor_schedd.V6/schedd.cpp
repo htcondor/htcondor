@@ -9579,7 +9579,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		int job_start_exec_date = 0; 
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date)) {
 			job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
-			job_executing_time = updateTime - job_start_exec_date;
+			job_executing_time = updateTime - MAX(job_start_date, job_start_exec_date);
 			if (job_executing_time < 0) {
 				stats.JobsWierdTimestamps += 1;
 				OTHER.JobsWierdTimestamps += 1;
@@ -9589,11 +9589,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			OTHER.JobsAccumChurnTime += job_running_time;
 		}
 		// this time is also set in the shadow, but there is no gurantee that transfer output ever happened
-		// so it may not exist.
+		// so it may not exist. it's possible for transfer out date to be from a previous run, so we
+		// have to make sure that it's at least later than the start time for this run before we use it.
 		int job_start_xfer_out_date = 0;
-		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)) {
+		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)
+			&& job_start_xfer_out_date >= job_start_date) {
 			job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
-			job_executing_time = job_start_xfer_out_date - job_start_exec_date;
+			job_executing_time = job_start_xfer_out_date - MAX(job_start_date, job_start_exec_date);
 			if (job_executing_time < 0 || job_executing_time > updateTime) {
 				stats.JobsWierdTimestamps += 1;
 				OTHER.JobsWierdTimestamps += 1;
