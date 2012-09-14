@@ -146,7 +146,7 @@ class Cluster:
                    "REMOTE_FACTORY": remote_factory_location, \
                    "REMOTE_CLUSTER": remote_cluster, \
                    "REMOTE_SCHEDULER": self.cluster_type, \
-                   "GLIDEIN_DIR": get_option("GLIDEIN_DIRRECTORY"), \
+                   "GLIDEIN_DIR": get_option("GLIDEIN_DIRECTORY"), \
                    "PASSWDFILE_LOCATION": get_option("SEC_PASSWORD_FILE")}
         
         options_str = ""
