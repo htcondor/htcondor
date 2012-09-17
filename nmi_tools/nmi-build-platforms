@@ -16,6 +16,7 @@ x86_winnt_5.1
 # We want to build all branches on Fedora because it is our "warning check" platform
 x86_64_fedora_15
 x86_64_fedora_16
+x86_64_fedora_17
 
 # We might as well build on SL
 x86_64_sl_6.2
