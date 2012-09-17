@@ -1773,7 +1773,7 @@ SecManStartCommand::authenticate_inner()
 		// we can tell easily if the other side is 6.6.1 or higher by the
 		// mere presence of the version, since that is when it was added.
 
-		if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+		if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 			if ((!m_new_session)) {
 				if( !m_remote_version.IsEmpty() ) {
 					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.Value() );

@@ -426,6 +426,7 @@ Starter::reallykill( int signo, int type )
 				// stale NFS mount.  So, we can at least EXCEPT with a
 				// more specific error message.
 		case ESTALE:
+			(void)first_time; // Shut the compiler up
 			EXCEPT( "Condor binaries are on a stale NFS mount.  Aborting." );
 			break;
 #else

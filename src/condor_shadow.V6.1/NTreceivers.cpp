@@ -165,7 +165,7 @@ do_REMOTE_syscall()
 	int condor_sysnum;
 	int	rval = -1, result = -1, fd = -1, mode = -1, uid = -1, gid = -1;
 	int length = -1;
-	condor_errno_t terrno;
+	condor_errno_t terrno = (condor_errno_t)0;
 	char *path = NULL, *buffer = NULL;
 	void *buf = NULL;
 

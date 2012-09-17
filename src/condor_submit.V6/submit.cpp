@@ -7102,7 +7102,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 #else
 	// will just do nothing here and leave
 	// it up to the runtime to nicely report errors.
-	pathname = pathname;
+	(void)pathname;
 	return (err == EISDIR);
 #endif
 }

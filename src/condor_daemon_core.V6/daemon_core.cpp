@@ -1798,9 +1798,9 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
-	can_register_read = can_register_read;
-	can_register_write = can_register_write;
-	psize = psize;
+	(void)can_register_read;
+	(void)can_register_write;
+	(void)psize;
 
 	bool failed = false;
 	int filedes[2];
@@ -1868,10 +1868,10 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 #else
 		// Shut the compiler up
 		// These parameters are needed on Windows
-	is_write = is_write;
-	can_register = can_register;
-	nonblocking = nonblocking;
-	psize = psize;
+	(void)is_write;
+	(void)can_register;
+	(void)nonblocking;
+	(void)psize;
 
 	pipe_handle = fd;
 #endif
@@ -5309,6 +5309,8 @@ enum {
         STACK_GROWS_UP,
         STACK_GROWS_DOWN
 };
+
+#if HAVE_CLONE
 static int stack_direction(volatile int *ptr=NULL) {
     volatile int location;
     if(!ptr) return stack_direction(&location);
@@ -5318,6 +5320,7 @@ static int stack_direction(volatile int *ptr=NULL) {
 
     return STACK_GROWS_DOWN;
 }
+#endif
 
 pid_t CreateProcessForkit::clone_safe_getpid() {
 #if HAVE_CLONE

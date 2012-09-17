@@ -45,7 +45,7 @@ class ThreadArg
 // This handler is called when a client wishes to read files from the
 // transferd's storage.
 int
-TransferD::read_files_handler(int cmd, Stream *sock) 
+TransferD::read_files_handler(int /* cmd */, Stream *sock) 
 {
 	ReliSock *rsock = (ReliSock*)sock;
 	MyString capability;
@@ -57,8 +57,6 @@ TransferD::read_files_handler(int cmd, Stream *sock)
 	int tid;
 	ClassAd reqad;
 	ClassAd respad;
-
-	cmd = cmd; // quiet the compiler
 
 	dprintf(D_ALWAYS, "Got TRANSFERD_READ_FILES!\n");
 

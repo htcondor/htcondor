@@ -762,7 +762,6 @@ Scheduler::count_jobs()
 {
 	ClassAd * cad = m_adSchedd;
 	int		i, j;
-	int		prio_compar();
 
 	 // copy owner data to old-owners table
 	ExtArray<OwnerData> OldOwners(Owners);
@@ -5473,7 +5472,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// now that we've completed authentication (if enabled),
 	// authorize this startd for READ operations
 	//
-	if ((match->auth_hole_id == NULL)) {
+	if ( match->auth_hole_id == NULL ) {
 		match->auth_hole_id = new MyString;
 		ASSERT(match->auth_hole_id != NULL);
 		if (msg->startd_fqu() && *msg->startd_fqu()) {

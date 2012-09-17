@@ -742,7 +742,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 				// if filesize is -1, it's a special flag meaning to compare
 				// the file in the old way, i.e. only checking if it is newer
 				// than the stored spool_date.
-				if((filesize==-1)) {
+				if(filesize==-1) {
 					if(spool_space.GetModifyTime() <= mod_time) {
 						dprintf( D_FULLDEBUG,
 					 		"Not including file %s, t: %ld<=%ld, s: N/A\n",

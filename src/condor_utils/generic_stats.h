@@ -466,6 +466,7 @@ public:
    stats_entry_count() : value(0) {}
    T value;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      (void)flags;
       ClassAdAssign(ad, pattr, value); 
       };
    void Unpublish(ClassAd & ad, const char * pattr) const {

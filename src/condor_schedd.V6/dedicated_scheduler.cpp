@@ -1634,7 +1634,7 @@ DedicatedScheduler::sortResources( void )
 
 			// If it is active, or on its way to becoming active,
 			// mark it as busy
-		if( (mrec->status == M_ACTIVE) ){
+		if( mrec->status == M_ACTIVE ){
 			busy_resources->Append( res );
 			continue;
 		}

@@ -772,7 +772,10 @@ else(MSVC)
 
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.
-	if (NOT AIX)
+	# Clang on Mac OS X doesn't support -fstack-protector, but the
+	# check below claims it does. This is probably because the compiler
+	# just prints a warning, rather than failing.
+	if (NOT AIX AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		check_cxx_compiler_flag(-fstack-protector cxx_fstack_protector)
 		if (cxx_fstack_protector)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
@@ -782,12 +785,17 @@ else(MSVC)
 		if (cxx_fnostack_protector)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fnostack-protector")
 		endif(cxx_fnostack_protector)
-	endif(NOT AIX)
+	endif()
 
-	check_cxx_compiler_flag(-rdynamic cxx_rdynamic)
-	if (cxx_rdynamic)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
-	endif(cxx_rdynamic)
+	# Clang on Mac OS X doesn't support -rdynamic, but the
+	# check below claims it does. This is probably because the compiler
+	# just prints a warning, rather than failing.
+	if ( NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		check_cxx_compiler_flag(-rdynamic cxx_rdynamic)
+		if (cxx_rdynamic)
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+		endif(cxx_rdynamic)
+	endif()
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")

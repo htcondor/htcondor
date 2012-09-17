@@ -45,7 +45,7 @@ class ThreadArg
 // This handler is called when a client wishes to write files from the
 // transferd's storage.
 int
-TransferD::write_files_handler(int cmd, Stream *sock) 
+TransferD::write_files_handler(int /* cmd */, Stream *sock) 
 {
 	ReliSock *rsock = (ReliSock*)sock;
 	MyString capability;
@@ -57,8 +57,6 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 	int tid;
 	ClassAd reqad;
 	ClassAd respad;
-
-	cmd = cmd; // quiet the compiler.
 
 	dprintf(D_ALWAYS, "Got TRANSFERD_WRITE_FILES!\n");
 
