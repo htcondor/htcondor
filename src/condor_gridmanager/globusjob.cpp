@@ -2262,7 +2262,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				jobAd->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
 				jobAd->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
 				if ( holdReason[0] == '\0' && errorString != "" ) {

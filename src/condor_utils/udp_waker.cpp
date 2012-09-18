@@ -114,8 +114,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
     found = ad->LookupString (
         ATTR_SUBNET_MASK,
         m_subnet,
-        MAX_IP_ADDRESS_LENGTH-1 );
-	m_subnet[MAX_IP_ADDRESS_LENGTH-1] = '\0';
+        MAX_IP_ADDRESS_LENGTH );
 
     if ( !found ) {
 

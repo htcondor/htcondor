@@ -1083,7 +1083,7 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
     char buf[80];
 	int iRet = 0;
 
-	if ( cad && cad->LookupString( ATTR_STATE, buf ) )
+	if ( cad && cad->LookupString( ATTR_STATE, buf, sizeof(buf) ) )
 	{
 		machinesTotal++;
 		switch ( buf[0] )

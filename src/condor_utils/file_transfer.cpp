@@ -271,7 +271,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	simple_sock = sock_to_use;
 
 	// user must give us an initial working directory.
-	if (Ad->LookupString(ATTR_JOB_IWD, buf) != 1) {
+	if (Ad->LookupString(ATTR_JOB_IWD, buf, sizeof(buf)) != 1) {
 		dprintf(D_FULLDEBUG, 
 			"FileTransfer::SimpleInit: Job Ad did not have an iwd!\n");
 		return 0;
@@ -281,7 +281,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// if the user want us to check file permissions, pull out the Owner
 	// from the classad and instantiate a perm object.
 	if ( want_check_perms ) {
-		if (Ad->LookupString(ATTR_OWNER, buf) != 1) {
+		if (Ad->LookupString(ATTR_OWNER, buf, sizeof(buf)) != 1) {
 			// no owner specified in ad
 			dprintf(D_FULLDEBUG, 
 				"FileTransfer::SimpleInit: Job Ad did not have an owner!\n");
@@ -316,7 +316,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
-	if (Ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
+	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf) ) {			
 			if ( !InputFiles->file_contains(buf) )
@@ -340,14 +340,14 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		free(list);
 	}
 	
-	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
+	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
 		// For 7.5.6 and earlier, we want to transfer the user log as
 		// an input file if we're in condor_submit. Otherwise, we don't.
 		// At this point, we don't know what version our peer is,
 		// so we have to delay this decision until UploadFiles().
 	}
-	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf) == 1 ) {
+	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf, sizeof(buf)) == 1 ) {
 		X509UserProxy = strdup(buf);
 			// add to input files
 		if ( !nullFile(buf) ) {			
@@ -355,7 +355,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, buf) == 1 ) {
+	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, buf, sizeof(buf)) == 1 ) {
 		OutputDestination = strdup(buf);
 		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", buf);
 	}
@@ -385,7 +385,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 
-		 (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) 
+		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) ) 
 	{
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
@@ -451,7 +451,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// and now check stdout/err
 	int streaming = 0;
 	JobStdoutFile = "";
-	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1 ) {
+	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf, sizeof(buf)) == 1 ) {
 		JobStdoutFile = buf;
 		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
@@ -471,7 +471,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// ATTR_STREAM_OUTPUT if ATTR_STREAM_ERROR isn't defined
 	streaming = 0;
 	JobStderrFile = "";
-	if( Ad->LookupString(ATTR_JOB_ERROR, buf) == 1 ) {
+	if( Ad->LookupString(ATTR_JOB_ERROR, buf, sizeof(buf)) == 1 ) {
 		JobStderrFile = buf;
 		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
@@ -504,28 +504,28 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf, sizeof(buf)) == 1) {
 		EncryptInputFiles = new StringList(buf,",");
 	} else {
 		EncryptInputFiles = new StringList(NULL,",");
 	}
 
 	// Set EncryptOutputFiles to be ATTR_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, buf, sizeof(buf)) == 1) {
 		EncryptOutputFiles = new StringList(buf,",");
 	} else {
 		EncryptOutputFiles = new StringList(NULL,",");
 	}
 
 	// Set DontEncryptInputFiles to be ATTR_DONT_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, buf, sizeof(buf)) == 1) {
 		DontEncryptInputFiles = new StringList(buf,",");
 	} else {
 		DontEncryptInputFiles = new StringList(NULL,",");
 	}
 
 	// Set DontEncryptOutputFiles to be ATTR_DONT_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, buf, sizeof(buf)) == 1) {
 		DontEncryptOutputFiles = new StringList(buf,",");
 	} else {
 		DontEncryptOutputFiles = new StringList(NULL,",");
@@ -674,7 +674,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
 	}
 
-	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf) != 1) {
+	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
@@ -704,7 +704,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	}
 
 		// At this point, we'd better have a transfer socket
-	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf) != 1) {
+	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf, sizeof(buf)) != 1) {
 		return 0;		
 	}
 	TransSock = strdup(buf);

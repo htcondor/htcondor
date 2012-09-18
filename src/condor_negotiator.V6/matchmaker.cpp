@@ -4256,10 +4256,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		return MM_ERROR;
 	}
 
-	if (offer->LookupString(ATTR_REMOTE_USER, remoteOwner) == 0) {
+	if (offer->LookupString(ATTR_REMOTE_USER, remoteOwner, sizeof(remoteOwner)) == 0) {
 		strcpy(remoteOwner, "none");
 	}
-	if (offer->LookupString(ATTR_ACCOUNTING_GROUP, accountingGroup)) {
+	if (offer->LookupString(ATTR_ACCOUNTING_GROUP, accountingGroup, sizeof(accountingGroup))) {
 		sprintf(remoteUser,"%s (%s=%s)",
 			remoteOwner,ATTR_ACCOUNTING_GROUP,accountingGroup);
 	} else {
@@ -4992,7 +4992,7 @@ void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 
 	job.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	job.LookupInteger (ATTR_PROC_ID, proc);
-	job.LookupString( ATTR_GLOBAL_JOB_ID, globaljobid); 
+	job.LookupString( ATTR_GLOBAL_JOB_ID, globaljobid, sizeof(globaljobid)); 
 	get_scheddname_from_gjid(globaljobid,scheddName);
 //	machine.LookupString(ATTR_NAME, startdname);
 
@@ -5032,9 +5032,9 @@ void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, Cla
 
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
-	request.LookupString( ATTR_GLOBAL_JOB_ID, globaljobid); 
+	request.LookupString( ATTR_GLOBAL_JOB_ID, globaljobid, sizeof(globaljobid)); 
 	get_scheddname_from_gjid(globaljobid,scheddName);
-	offer.LookupString( ATTR_NAME, startdname); 
+	offer.LookupString( ATTR_NAME, startdname, sizeof(startdname)); 
 
 	snprintf(tmp, 512, "match_time = %d", (int) clock);
 	tmpClP->Insert(tmp);
@@ -5056,7 +5056,7 @@ void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, Cla
 	snprintf(tmp, 512, "machine_id = \"%s\"", startdname);
 	tmpClP->Insert(tmp);
 
-	if(offer.LookupString( ATTR_REMOTE_USER, remote_user) != 0)
+	if(offer.LookupString( ATTR_REMOTE_USER, remote_user, sizeof(remote_user)) != 0)
 	{
 		remote_prio = (float) accountant.GetPriority(remote_user);
 
