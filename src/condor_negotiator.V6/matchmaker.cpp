@@ -3211,10 +3211,10 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority,
 				continue;
 			}
 
-			if ((offer->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser, sizeof(remoteUser))==1) ||
-				(offer->LookupString(ATTR_PREEMPTING_USER, remoteUser, sizeof(remoteUser))==1) ||
-				(offer->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser, sizeof(remoteUser))==1) ||
-			    (offer->LookupString(ATTR_REMOTE_USER, remoteUser, sizeof(remoteUser))==1))
+			if ((offer->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)==1) ||
+				(offer->LookupString(ATTR_PREEMPTING_USER, remoteUser)==1) ||
+				(offer->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)==1) ||
+			    (offer->LookupString(ATTR_REMOTE_USER, remoteUser)==1))
 			{
                 char	*remoteHost = NULL;
                 double	remotePriority;
@@ -3578,10 +3578,10 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		remoteUser = "";
 			// If there is already a preempting user, we need to preempt that user.
 			// Otherwise, we need to preempt the user who is running the job.
-		if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser, sizeof(remoteUser))) {
-			if (!candidate->LookupString(ATTR_PREEMPTING_USER, remoteUser, sizeof(remoteUser))) {
-				if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser, sizeof(remoteUser))) {
-					candidate->LookupString(ATTR_REMOTE_USER, remoteUser, sizeof(remoteUser));
+		if (!candidate->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, remoteUser)) {
+			if (!candidate->LookupString(ATTR_PREEMPTING_USER, remoteUser)) {
+				if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
+					candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
 				}
 			}
 		}

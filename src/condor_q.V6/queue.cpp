@@ -2918,7 +2918,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		sprintf( return_buff, "%s\tLast failed match: %s",
 				 return_buff, ctime(&t) );
 		buffer[0] = '\0';
-		request->LookupString(ATTR_LAST_REJ_MATCH_REASON, buffer);
+		request->LookupString(ATTR_LAST_REJ_MATCH_REASON, buffer, sizeof(buffer));
 		if (buffer[0]) {
 			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
 					 return_buff, buffer );
