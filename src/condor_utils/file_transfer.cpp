@@ -291,7 +291,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// lookup the domain
 		char ntdomain[80];
 		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain) != 1) {
+		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain, sizeof(ntdomain)) != 1) {
 			// no nt domain specified in the ad; assume local account
 			p_ntdomain = NULL;
 		}
