@@ -546,22 +546,22 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 			slice_desc.formatstr("period = %d, ", timer_ptr->period);
 		}
 		else {
-			slice_desc.sprintf_cat("timeslice = %.3g, ",
+			slice_desc.formatstr_cat("timeslice = %.3g, ",
 								   timer_ptr->timeslice->getTimeslice());
 			if( !IS_ZERO(timer_ptr->timeslice->getDefaultInterval()) ) {
-				slice_desc.sprintf_cat("period = %.1f, ",
+				slice_desc.formatstr_cat("period = %.1f, ",
 								   timer_ptr->timeslice->getDefaultInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getInitialInterval()) ) {
-				slice_desc.sprintf_cat("initial period = %.1f, ",
+				slice_desc.formatstr_cat("initial period = %.1f, ",
 								   timer_ptr->timeslice->getInitialInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getMinInterval()) ) {
-				slice_desc.sprintf_cat("min period = %.1f, ",
+				slice_desc.formatstr_cat("min period = %.1f, ",
 								   timer_ptr->timeslice->getMinInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getMaxInterval()) ) {
-				slice_desc.sprintf_cat("max period = %.1f, ",
+				slice_desc.formatstr_cat("max period = %.1f, ",
 								   timer_ptr->timeslice->getMaxInterval());
 			}
 		}

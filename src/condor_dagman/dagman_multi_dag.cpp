@@ -188,7 +188,7 @@ RescueDagName(const char *primaryDagFile, bool multiDags,
 		fileName += "_multi";
 	}
 	fileName += ".rescue";
-	fileName.sprintf_cat( "%.3d", rescueDagNum );
+	fileName.formatstr_cat( "%.3d", rescueDagNum );
 
 	return fileName;
 }

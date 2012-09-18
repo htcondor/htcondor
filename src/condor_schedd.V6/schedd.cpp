@@ -3672,7 +3672,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	if( proxy_path && is_relative_to_cwd(proxy_path) ) {
 		MyString iwd;
 		if( jobad->LookupString(ATTR_JOB_IWD,iwd) ) {
-			iwd.sprintf_cat("%c%s",DIR_DELIM_CHAR,proxy_path);
+			iwd.formatstr_cat("%c%s",DIR_DELIM_CHAR,proxy_path);
 			free(proxy_path);
 			proxy_path = strdup(iwd.Value());
 		}

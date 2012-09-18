@@ -1348,7 +1348,7 @@ case CONDOR_getlongdir:
 		// Get directory's contents
 		while((next = directory.Next())) {
 			dprintf(D_ALWAYS, "next: %s\n", next);
-			msg.sprintf_cat("%s\n", next);
+			msg.formatstr_cat("%s\n", next);
 			check.formatstr("%s%c%s", path, DIR_DELIM_CHAR, next);
 			rval = stat(check.Value(), &stat_buf);
 			terrno = (condor_errno_t)errno;
@@ -1359,11 +1359,11 @@ case CONDOR_getlongdir:
 				rval = -1;
 				break;
 			}
-			msg.sprintf_cat("%s", line);
+			msg.formatstr_cat("%s", line);
 		}
 		terrno = (condor_errno_t)errno;
 		if(msg.Length() > 0) {
-			msg.sprintf_cat("\n");	// Needed to signify end of data
+			msg.formatstr_cat("\n");	// Needed to signify end of data
 			rval = msg.Length();
 		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -1400,12 +1400,12 @@ case CONDOR_getdir:
 
 		// Get directory's contents
 		while((next = directory.Next())) {
-			msg.sprintf_cat("%s", next);
-			msg.sprintf_cat("\n");
+			msg.formatstr_cat("%s", next);
+			msg.formatstr_cat("\n");
 		}
 		terrno = (condor_errno_t)errno;
 		if(msg.Length() > 0) {
-			msg.sprintf_cat("\n");	// Needed to signify end of data
+			msg.formatstr_cat("\n");	// Needed to signify end of data
 			rval = msg.Length();
 		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );

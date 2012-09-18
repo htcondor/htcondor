@@ -1007,7 +1007,7 @@ void DCloudJob::SetRemoteJobId( const char *instance_name, const char *instance_
 	if ( instance_name && instance_name[0] ) {
 		full_job_id.formatstr( "deltacloud %s", instance_name );
 		if ( instance_id && instance_id[0] ) {
-			full_job_id.sprintf_cat( " %s", instance_id );
+			full_job_id.formatstr_cat( " %s", instance_id );
 		}
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );

@@ -1686,7 +1686,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			hold_code = CONDOR_HOLD_CODE_DownloadFileError;
 			hold_subcode = EPERM;
 
-			error_buf.sprintf_cat(
+			error_buf.formatstr_cat(
 				" Attempt to write to illegal sandbox path: %s",
 				filename.Value());
 
@@ -1971,10 +1971,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// defined state
 
 				if (rc == GET_FILE_PLUGIN_FAILED) {
-					error_buf.sprintf_cat(": %s", errstack.getFullText().c_str());
+					error_buf.formatstr_cat(": %s", errstack.getFullText().c_str());
 				} else {
 					error_buf.replaceString("receive","write to");
-					error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+					error_buf.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
 				}
 
 				// Since there is a well-defined errno describing what just
@@ -2580,7 +2580,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			// condor_basename works for URLs
-			dest_filename.sprintf_cat( "%s", condor_basename(filename) );
+			dest_filename.formatstr_cat( "%s", condor_basename(filename) );
 		}
 
 		// check for read permission on this file, if we are supposed to check.
@@ -2894,16 +2894,16 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					// the while loop.
 
 					error_desc.replaceString("sending","reading from");
-					error_desc.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+					error_desc.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
 					if( fail_because_mkdir_not_supported ) {
-						error_desc.sprintf_cat("; Remote condor version is too old to transfer directories.");
+						error_desc.formatstr_cat("; Remote condor version is too old to transfer directories.");
 					}
 					if( fail_because_symlink_not_supported ) {
-						error_desc.sprintf_cat("; Transfer of symlinks to directories is not supported.");
+						error_desc.formatstr_cat("; Transfer of symlinks to directories is not supported.");
 					}
 				} else {
 					// add on the error string from the errstack used
-					error_desc.sprintf_cat(": %s", errstack.getFullText().c_str());
+					error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
 				}
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE_UploadFileError;
@@ -3315,7 +3315,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 										   s->my_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
-					error_desc_to_send.sprintf_cat(": %s",upload_error_desc);
+					error_desc_to_send.formatstr_cat(": %s",upload_error_desc);
 				}
 			}
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
@@ -3347,11 +3347,11 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 						  get_mySubSystem()->getName(),
 						  s->my_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
-			error_buf.sprintf_cat(": %s",upload_error_desc);
+			error_buf.formatstr_cat(": %s",upload_error_desc);
 		}
 
 		if(!download_error_buf.IsEmpty()) {
-			error_buf.sprintf_cat("; %s",download_error_buf.Value());
+			error_buf.formatstr_cat("; %s",download_error_buf.Value());
 		}
 
 		error_desc = error_buf.Value();
@@ -4044,7 +4044,7 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 		else {
 			FileTransferList filelist;
 			if( !ExpandFileTransferList( path, "", iwd, 1, filelist ) ) {
-				error_msg.sprintf_cat("Failed to expand '%s' in transfer input file list. ",path);
+				error_msg.formatstr_cat("Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}
 			FileTransferList::iterator filelist_it;

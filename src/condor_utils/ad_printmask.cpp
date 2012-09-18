@@ -352,7 +352,7 @@ display_Headings(List<const char> & headings)
 		MyString tmp_fmt;
 		if (fmt->width) {
 			tmp_fmt.formatstr("%%-%ds", fmt->width);
-			retval.sprintf_cat(tmp_fmt.Value(), pszHead);
+			retval.formatstr_cat(tmp_fmt.Value(), pszHead);
 		} else {
 			retval += pszHead;
 		}
@@ -442,7 +442,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	}
 
 	if (printfFmt && (fmt.fmt_type == PFT_STRING)) {
-		prow->sprintf_cat(printfFmt, value ? value : "");
+		prow->formatstr_cat(printfFmt, value ? value : "");
 	} else if (value) {
 		(*prow) += value;
 	}
@@ -578,7 +578,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						std::string buff;
 						if( EvalExprTree(tree, al, target, result) &&
 							result.IsStringValue(buff) ) {
-							retval.sprintf_cat(fmt->printfFmt, buff.c_str());
+							retval.formatstr_cat(fmt->printfFmt, buff.c_str());
 						} else {
 							// couldn't eval
 							if( alt ) {

@@ -1011,7 +1011,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				sprintf_cat( *rsl, " \"%s\")", file );
+				formatstr_cat( *rsl, " \"%s\")", file );
 			} else {
 				*rsl += " \"\")";
 			}
@@ -1054,7 +1054,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( local_file ) ) {
-				sprintf_cat( *rsl, " \"%s\")", local_file );
+				formatstr_cat( *rsl, " \"%s\")", local_file );
 			} else {
 				*rsl += " \"\")";
 			}

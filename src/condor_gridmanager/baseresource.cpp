@@ -656,7 +656,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 update_succeeded.Rewind();
 PROC_ID id;
 std::string msg = "    update_succeeded:";
- while(update_succeeded.Next(id)) sprintf_cat(msg, " %d.%d", id.cluster, id.proc);
+ while(update_succeeded.Next(id)) formatstr_cat(msg, " %d.%d", id.cluster, id.proc);
 dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
 		BaseJob *curr_job;
 		leaseUpdates.Rewind();

@@ -312,14 +312,14 @@ Env::WriteToDelimitedString(char const *input,MyString &output) {
 
 	while(*input) {
 		end = input + strcspn(input,specials);
-		ret = output.sprintf_cat("%.*s", (int)(end-input), input);
+		ret = output.formatstr_cat("%.*s", (int)(end-input), input);
 		ASSERT(ret);
 		input = end;
 
 		if(*input != '\0') {
 			// Escape this special character.
 			// Escaping is not yet implemented, so we will never get here.
-			ret = output.sprintf_cat("%c",*input);
+			ret = output.formatstr_cat("%c",*input);
 			ASSERT(ret);
 			input++;
 		}

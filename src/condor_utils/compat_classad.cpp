@@ -1492,7 +1492,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
-				output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 									value.c_str() );
 			}
 		}
@@ -1506,7 +1506,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
-			output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 								value.c_str() );
 		}
 	}

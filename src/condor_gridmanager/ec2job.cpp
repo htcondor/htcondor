@@ -1081,7 +1081,7 @@ void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
 	if ( client_token && client_token[0] ) {
 		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
-			sprintf_cat( full_job_id, " %s", instance_id );
+			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );

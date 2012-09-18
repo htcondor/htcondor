@@ -1618,11 +1618,11 @@ char *CreamJob::buildSubmitAd()
 		isb.rewind();
 		for (int i = 0; i < isb.number(); i++) {
 			if (i == 0)
-				sprintf_cat(buf, "\"%s\"", isb.next());
+				formatstr_cat(buf, "\"%s\"", isb.next());
 			else
-				sprintf_cat(buf, ",\"%s\"", isb.next());
+				formatstr_cat(buf, ",\"%s\"", isb.next());
 		}
-		sprintf_cat(buf, "}; ]");
+		formatstr_cat(buf, "}; ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
@@ -1634,11 +1634,11 @@ char *CreamJob::buildSubmitAd()
 		osb.rewind();
 		for (int i = 0; i < osb.number(); i++) {
 			if (i == 0)
-				sprintf_cat(buf, "\"%s\"", osb.next());
+				formatstr_cat(buf, "\"%s\"", osb.next());
 			else
-				sprintf_cat(buf, ",\"%s\"", osb.next());
+				formatstr_cat(buf, ",\"%s\"", osb.next());
 		}
-		sprintf_cat(buf, "}; ]");
+		formatstr_cat(buf, "}; ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
@@ -1661,12 +1661,12 @@ char *CreamJob::buildSubmitAd()
 
 		for ( int i = 0; env_vec[i]; i++ ) {
 			if ( i == 0 ) {
-				sprintf_cat( buf, "\"%s\"", env_vec[i] );
+				formatstr_cat( buf, "\"%s\"", env_vec[i] );
 			} else {
-				sprintf_cat( buf, ",\"%s\"", env_vec[i] );
+				formatstr_cat( buf, ",\"%s\"", env_vec[i] );
 			}
 		}
-		sprintf_cat( buf, "}; ]" );
+		formatstr_cat( buf, "}; ]" );
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );

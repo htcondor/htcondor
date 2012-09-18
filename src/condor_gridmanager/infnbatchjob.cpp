@@ -210,7 +210,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	buff = batchType;
 	if ( gahp_args.Count() > 0 ) {
-		sprintf_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
+		formatstr_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
 	}
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
@@ -894,7 +894,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 	if ( expr.FindChar( '/' ) < 0 ) {
 		std::string fullpath;
 		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-		sprintf_cat( fullpath, "/%s", expr.Value() );
+		formatstr_cat( fullpath, "/%s", expr.Value() );
 		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
 	} else {
 		submit_ad->Assign( ATTR_JOB_CMD, expr );
@@ -906,7 +906,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		if ( expr[0] != '/' ) {
 			std::string fullpath;
 			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-			sprintf_cat( fullpath, "/%s", expr.Value() );
+			formatstr_cat( fullpath, "/%s", expr.Value() );
 			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
 		} else {
 			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );

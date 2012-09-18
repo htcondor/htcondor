@@ -37,8 +37,8 @@ int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 // Appending versions of above.
 // These return number of new chars appended.
-int sprintf_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
-int sprintf_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 // comparison ops between the two houses divided
 bool operator==(const MyString& L, const std::string& R);

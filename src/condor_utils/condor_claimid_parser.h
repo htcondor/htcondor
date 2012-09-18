@@ -145,7 +145,7 @@ class ClaimIdParser {
 
 		MyString new_claim_id = secSessionId(true);
 		char const *session_key = secSessionKey();
-		new_claim_id.sprintf_cat("#%s%s",
+		new_claim_id.formatstr_cat("#%s%s",
 			session_info ? session_info : "",
 			session_key ? session_key : "");
 

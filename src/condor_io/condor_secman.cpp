@@ -320,7 +320,7 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 				// First see if there is a specific config entry for the
 				// specified condor subsystem.
 			buf.formatstr( fmt, PermString(*perms) );
-			buf.sprintf_cat("_%s",check_subsystem);
+			buf.formatstr_cat("_%s",check_subsystem);
 			if( int_result ) {
 				found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
 			}

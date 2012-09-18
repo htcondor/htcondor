@@ -384,7 +384,7 @@ Daemon::idStr( void )
 		formatstr( buf, "%s at %s", dt_str,
 					 sinful.getSinful() ? sinful.getSinful() : _addr );
 		if( _full_hostname ) {
-			sprintf_cat( buf, " (%s)", _full_hostname );
+			formatstr_cat( buf, " (%s)", _full_hostname );
 		}
 	} else {
 		return "unknown daemon";

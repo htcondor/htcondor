@@ -232,7 +232,7 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 										  ATTR_SUBMITTER_ID,
 										  submitter_id );
 		} else {
-			sprintf_cat( submitter_constraint, "||(%s=?=\"%s\")",
+			formatstr_cat( submitter_constraint, "||(%s=?=\"%s\")",
 											  ATTR_SUBMITTER_ID,
 											  submitter_id );
 		}

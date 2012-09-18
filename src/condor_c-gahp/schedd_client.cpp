@@ -441,7 +441,7 @@ doContactSchedd()
 		stage_out_batch.Rewind();
 		int jobsexpected = stage_out_batch.Number();
 		while (stage_out_batch.Next(current_command)) {
-			sprintf_cat( constraint, "(ClusterId==%d&&ProcId==%d)||",
+			formatstr_cat( constraint, "(ClusterId==%d&&ProcId==%d)||",
 									current_command->cluster_id,
 									current_command->proc_id );
 		}
@@ -770,7 +770,7 @@ update_report_result:
 					if (success_job_ids.length() > 0)
 						success_job_ids += ",";
 
-					sprintf_cat( success_job_ids,
+					formatstr_cat( success_job_ids,
 						"%d.%d",
 						current_command->expirations[i].cluster,
 						current_command->expirations[i].proc);

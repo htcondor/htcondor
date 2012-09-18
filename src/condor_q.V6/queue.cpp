@@ -4101,11 +4101,11 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 		bool exhausted = false;
 		ad->LookupBool("SwapSpaceExhausted", exhausted);
 		if (exhausted) {
-			result_buf.sprintf_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
-			result_buf.sprintf_cat("           would exhaust swap space and cause thrashing.\n");
-			result_buf.sprintf_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
-			result_buf.sprintf_cat("           Or add more swap space.\n");
-			result_buf.sprintf_cat("           The analysis code does not take this into consideration\n");
+			result_buf.formatstr_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
+			result_buf.formatstr_cat("           would exhaust swap space and cause thrashing.\n");
+			result_buf.formatstr_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
+			result_buf.formatstr_cat("           Or add more swap space.\n");
+			result_buf.formatstr_cat("           The analysis code does not take this into consideration\n");
 		}
 
 		int maxJobsRunning 	= -1;
@@ -4116,9 +4116,9 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 		if ((maxJobsRunning > -1) && (totalRunningJobs > -1) && 
 			(maxJobsRunning == totalRunningJobs)) { 
-			result_buf.sprintf_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
-			result_buf.sprintf_cat("       to run more concurrent jobs, raise this limit in the config file\n");
-			result_buf.sprintf_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
+			result_buf.formatstr_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
+			result_buf.formatstr_cat("       to run more concurrent jobs, raise this limit in the config file\n");
+			result_buf.formatstr_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
 		}
 
 		int status = -1;
@@ -4150,10 +4150,10 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 				int req = 0;
 				if( !ad->EvalBool(schedd_requirements_attr,job,req) ) {
-					result_buf.sprintf_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
+					result_buf.formatstr_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
 				}
 				else if( !req ) {
-					result_buf.sprintf_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
+					result_buf.formatstr_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
 				}
 			}
 		}

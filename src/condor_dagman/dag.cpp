@@ -1014,16 +1014,16 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				}
 
 				if ( termEvent->normal ) {
-					errMsg.sprintf_cat( "POST Script failed with status %d",
+					errMsg.formatstr_cat( "POST Script failed with status %d",
 								termEvent->returnValue );
 				} else {
-					errMsg.sprintf_cat( "POST Script died on signal %d",
+					errMsg.formatstr_cat( "POST Script died on signal %d",
 								termEvent->signalNumber );
 				}
 
 				if( job->GetRetryMax() > 0 ) {
 						// add # of retries to error_text
-					errMsg.sprintf_cat( " (after %d node retries)",
+					errMsg.formatstr_cat( " (after %d node retries)",
 							job->GetRetries() );
 				}
 

@@ -56,9 +56,9 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 	if( _parent ) {
 		r_sub_id = _parent->m_id_dispenser->next();
-		tmp.sprintf_cat( "%d_%d", r_id, r_sub_id );
+		tmp.formatstr_cat( "%d_%d", r_id, r_sub_id );
 	} else {
-		tmp.sprintf_cat( "%d", r_id );
+		tmp.formatstr_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
 
@@ -2826,7 +2826,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				cpus = 1; // reasonable default, for sure
 			}
 		}
-		type.sprintf_cat( "cpus=%d ", cpus );
+		type.formatstr_cat( "cpus=%d ", cpus );
 
 			// Look to see how much MEMORY is being requested.
 		schedd_requested_attr = "_condor_";
@@ -2840,7 +2840,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				return NULL;
 			}
 		}
-		type.sprintf_cat( "memory=%d ", memory );
+		type.formatstr_cat( "memory=%d ", memory );
 
 
 			// Look to see how much DISK is being requested.
@@ -2855,7 +2855,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				return NULL;
 			}
 		}
-		type.sprintf_cat( "disk=%d%%",
+		type.formatstr_cat( "disk=%d%%",
 			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 

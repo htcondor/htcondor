@@ -1492,7 +1492,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 		char const *working_name = StdoutRemapName;
 		if ( !output_remaps.empty() ) output_remaps += ";";
-		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
+		formatstr_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_OUTPUT, working_name );
 	}
 
@@ -1502,7 +1502,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 		char const *working_name = StderrRemapName;
 		if ( !output_remaps.empty() ) output_remaps += ";";
-		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
+		formatstr_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_ERROR, working_name );
 	}
 
@@ -1516,7 +1516,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
-		sprintf_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
+		formatstr_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
 	submit_ad->Insert( expr.c_str() );

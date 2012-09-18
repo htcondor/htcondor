@@ -104,7 +104,7 @@ passwd_cache::getUseridMap(MyString &usermap)
 		if( !usermap.IsEmpty() ) {
 			usermap += " ";
 		}
-		usermap.sprintf_cat("%s=%ld,%ld",index.Value(),(long)uent->uid,(long)uent->gid);
+		usermap.formatstr_cat("%s=%ld,%ld",index.Value(),(long)uent->uid,(long)uent->gid);
 		if( group_table->lookup(index,gent) == 0 ) {
 			unsigned i;
 			for(i=0;i<gent->gidlist_sz;i++) {
@@ -112,12 +112,12 @@ passwd_cache::getUseridMap(MyString &usermap)
 					// already included this gid, because it is the primary
 					continue;
 				}
-				usermap.sprintf_cat(",%ld",(long)gent->gidlist[i]);
+				usermap.formatstr_cat(",%ld",(long)gent->gidlist[i]);
 			}
 		}
 		else {
 			// indicate that supplemental groups are unknown
-			usermap.sprintf_cat(",?");
+			usermap.formatstr_cat(",?");
 		}
 	}
 }
