@@ -1661,7 +1661,7 @@ format_remote_host (char *, AttrList *ad)
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
 		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
 			return host_result;
-		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result) == 1)
+		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result,sizeof(host_result)) == 1)
 			return host_result;
 		else
 			return unknownHost;
