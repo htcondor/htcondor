@@ -772,15 +772,12 @@ else(MSVC)
 
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.
-	# Clang on Mac OS X doesn't support -fstack-protector, but the
-	# check below claims it does. This is probably because the compiler
-	# just prints a warning, rather than failing.
-	if (NOT AIX AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	if (NOT AIX)
 		check_cxx_compiler_flag(-fstack-protector cxx_fstack_protector)
 		if (cxx_fstack_protector)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
 		endif(cxx_fstack_protector)
-	endif()
+	endif(NOT AIX)
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
 	# check below claims it does. This is probably because the compiler
