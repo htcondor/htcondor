@@ -978,16 +978,16 @@ Assign(char const *name,char const *value)
 //  ExprTree* ClassAd::
 //  Lookup(const char*) const{}
 
-int ClassAd::
-LookupString( const char *name, char *value ) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	strcpy( value, strVal.c_str( ) );
-	return 1;
-} 
+//int ClassAd::
+//LookupString( const char *name, char *value ) const 
+//{
+//	string strVal;
+//	if( !EvaluateAttrString( string( name ), strVal ) ) {
+//		return 0;
+//	}
+//	strcpy( value, strVal.c_str( ) );
+//	return 1;
+//} 
 
 int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
@@ -997,6 +997,7 @@ LookupString(const char *name, char *value, int max_len) const
 		return 0;
 	}
 	strncpy( value, strVal.c_str( ), max_len );
+	if ( value && max_len && value[max_len - 1] ) value[max_len - 1] = '\0';
 	return 1;
 }
 

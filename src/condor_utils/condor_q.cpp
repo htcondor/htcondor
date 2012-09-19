@@ -239,7 +239,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	else
 	{
 		// remote case to handle condor_globalq
-		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
+		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString, sizeof(scheddString)))
 			return Q_NO_SCHEDD_IP_ADDR;
 
 		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) )

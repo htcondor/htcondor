@@ -338,6 +338,7 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_rhap_6.3' => 'x86_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 6 on x86. Unmanaged.
@@ -431,6 +432,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_rhap_5.8'	=> 'x86_rhap_5',
 
 
 	##########################################################################

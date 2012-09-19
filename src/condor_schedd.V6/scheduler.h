@@ -301,9 +301,6 @@ class Scheduler : public Service
 		// requires a new round of negotiation
 	void            needReschedule();
 
-	// job managing
-	int				abort_job(int, Stream *);
-
 	// [IPV6] These two functions are never called by others.
 	// It is non-IPv6 compatible, though.
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);

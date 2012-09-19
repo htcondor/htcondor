@@ -97,8 +97,9 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 #else /* ! MPI_USES_RSH */
 
 		// initialize mpich_jobid, since we'll need it to spawn later
-	sprintf( buf, "%s.%d.%d", my_full_hostname(), getCluster(),
+	snprintf( buf, sizeof(buf), "%s.%d.%d", my_full_hostname(), getCluster(),
 			 getProc() );
+	buf[sizeof(buf)-1] = '\0';
 	mpich_jobid = strdup( buf );
 
 #endif /* ! MPI_USES_RSH */
@@ -106,7 +107,8 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
 
-    sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
+    snprintf( buf, sizeof(buf), "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
+	buf[sizeof(buf)-1] = '\0';
     if( !job_ad->Insert(buf) ) {
         dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
         shutDown( JOB_NOT_STARTED );
@@ -114,7 +116,8 @@ MPIShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
-	sprintf( buf, "%s = 0", ATTR_NODE );
+	snprintf( buf, sizeof(buf), "%s = 0", ATTR_NODE );
+	buf[sizeof(buf)-1] = '\0';
 	job_ad->InsertOrUpdate( buf );
     rr->setJobAd( job_ad );
 
@@ -353,8 +356,9 @@ MPIShadow::startMaster()
 
         // first we open up the procgroup file (in working dir of job)
     char pgfilename[128];
-    sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
+    snprintf( pgfilename, sizeof(pgfilename), "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
+	pgfilename[sizeof(pgfilename)-1] = '\0';	
     if( (pg=safe_fopen_wrapper_follow( pgfilename, "w" )) == NULL ) {
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
@@ -640,7 +644,8 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// NPROC is easy, since numNodes already holds the total
 		// number of nodes we're going to spawn
 	char numNodesString[127];
-	sprintf(numNodesString,"%d",numNodes);
+	snprintf(numNodesString,sizeof(numNodesString),"%d",numNodes);
+	numNodesString[sizeof(numNodesString)-1] = '\0';
 	env.SetEnv("MPICH_NPROC",numNodesString);
 
 		// We need the delimiter for all the rest of them... 
@@ -655,7 +660,8 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// value for IPROC, since that's what we use to keep track of
 		// what node we're spawning...
 	char nextResourceToStartStr[127];
-	sprintf(nextResourceToStartStr,"%d",nextResourceToStart);
+	snprintf(nextResourceToStartStr,sizeof(nextResourceToStartStr),"%d",nextResourceToStart);
+	nextResourceToStartStr[sizeof(nextResourceToStartStr)-1] = '\0';
 	env.SetEnv("MPICH_IPROC",nextResourceToStartStr);
 
 		// Now, if we're a comrade (rank > 0), we also need to add
@@ -718,8 +724,9 @@ MPIShadow::cleanUp( void )
 {
         // unlink the procgroup file:
     char pgfilename[512];
-    sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
+    snprintf( pgfilename, sizeof(pgfilename), "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
+	pgfilename[sizeof(pgfilename)-1] = '\0';
     if( unlink( pgfilename ) == -1 ) {
         if( errno != ENOENT ) {
             dprintf( D_ALWAYS, "Problem removing %s: errno %d.\n", 
@@ -964,7 +971,8 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	char node[9];
 	const char *lhstr, *rhstr;
 
-	sprintf( node, "%d", nodenum );
+	snprintf( node, sizeof(node), "%d", nodenum );
+	node[sizeof(node)-1] = '\0';
 
 	ad->ResetExpr();
 	while( ad->NextExpr(lhstr, tree) ) {

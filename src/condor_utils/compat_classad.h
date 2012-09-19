@@ -238,7 +238,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param value The string, copied with strcpy (DANGER)
 		 *  @return true if the attribute exists and is a string, false otherwise
 		 */
-	int LookupString(const char *name, char *value) const; 
+//	int LookupString(const char *name, char *value) const; 
 
 		/** Lookup (don't evaluate) an attribute that is a string.
 		 *  @param name The attribute
