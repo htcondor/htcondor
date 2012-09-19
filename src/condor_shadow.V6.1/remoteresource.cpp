@@ -1057,6 +1057,18 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 
+	// Copy through Network* attributes
+	ExprTree* expr;
+	const char * attr_name;
+	update_ad->ResetExpr();
+	size_t prefix_len = strlen("Network");
+	while (update_ad->NextExpr(attr_name, expr)) {
+		if (strncmp("Network", attr_name, prefix_len) == 0) {
+			dprintf( D_FULLDEBUG, "Adding attribute to jobAd: %s\n", attr_name );
+			jobAd->CopyAttribute(attr_name, update_ad);
+		}
+	}
+
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
 		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, float_value);

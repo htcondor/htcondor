@@ -321,6 +321,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
 	}
 
+	size_t network_prefix_len = strlen("Network");
 	job_ad->ResetExpr();
 	while( job_ad->NextDirtyExpr(name, tree) ) {
 		// There used to be a check for tree->invisible here,
@@ -332,7 +333,8 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			// update into the job queue...  If either of these lists
 			// aren't defined, we're careful here to not dereference a
 			// NULL pointer...
-		if( (common_job_queue_attrs &&
+		if( (strncmp("Network", name, network_prefix_len) == 0) ||
+			(common_job_queue_attrs &&
 			 common_job_queue_attrs->contains_anycase(name)) || 
 			(job_queue_attrs &&
 			 job_queue_attrs->contains_anycase(name)) ) {

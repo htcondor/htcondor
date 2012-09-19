@@ -5222,7 +5222,8 @@ public:
 		size_t *core_hard_limit,
 		long    as_hard_limit,
 		int		*affinity_mask,
-		FilesystemRemap *fs_remap
+		FilesystemRemap *fs_remap,
+		NetworkNamespaceManager * network_manager
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
 	   m_inheritbuf(the_inheritbuf),
@@ -5241,7 +5242,8 @@ public:
 	   m_affinity_mask(affinity_mask),
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
-	   m_no_dprintf_allowed(false)
+	   m_no_dprintf_allowed(false),
+	   m_network_manager(network_manager)
 	{
 	}
 
@@ -5302,6 +5304,7 @@ private:
     FilesystemRemap *m_fs_remap;
 	bool m_wrote_tracking_gid;
 	bool m_no_dprintf_allowed;
+	NetworkNamespaceManager * m_network_manager;
 	priv_state m_priv_state;
 };
 
@@ -5346,6 +5349,13 @@ pid_t CreateProcessForkit::clone_safe_getppid() {
 
 pid_t CreateProcessForkit::fork_exec() {
 	pid_t newpid;
+	priv_state tmp_priv_state;
+
+	// The network manager has special synchronization, regardless of clone or fork.
+	if (m_network_manager && m_network_manager->PreClone()) {
+		dprintf(D_ALWAYS, "Preparation for clone failed in the network manager.\n");
+		return -1;
+	}
 
 #if HAVE_CLONE
 		// Why use clone() instead of fork?  In current versions of
@@ -5365,6 +5375,8 @@ pid_t CreateProcessForkit::fork_exec() {
 	if( daemonCore->UseCloneToCreateProcesses() ) {
 		dprintf(D_FULLDEBUG,"Create_Process: using fast clone() "
 		                    "to create child process.\n");
+
+		bool killed_child = false;
 
 			// The stack size must be big enough for everything that
 			// happens in CreateProcessForkit::clone_fn().  In some
@@ -5400,16 +5412,29 @@ pid_t CreateProcessForkit::fork_exec() {
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
 			child_stack_ptr,
-			(CLONE_VM|CLONE_VFORK|SIGCHLD),
+			(CLONE_VM|(m_network_manager ? CLONE_VFORK : 0 )|SIGCHLD),
 			this );
+
+		if (m_network_manager) {
+			// Always call PostClone*, even if priv state can't change.
+			tmp_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+			if ((m_network_manager->PostCloneParent(newpid))) {
+				kill(newpid, SIGKILL);
+				dprintf(D_ALWAYS, "Failed to alter the child (%d) network namespace in post-clone of parent.\n", newpid);
+			} else {
+				dprintf(D_FULLDEBUG, "Post-clone network namespace operation in parent successful.\n");
+			}
+			set_priv_no_memory_changes(tmp_priv_state);
+		}
 
 		exitCreateProcessChild();
 
-			// Since we used the CLONE_VFORK flag, the child has exited
-			// or called exec by now.
-
 			// restore state
 		dprintf_after_shared_mem_clone();
+
+		if (killed_child) {
+			dprintf(D_ALWAYS, "Killed child PID %d because network manager failed.\n", newpid);
+		}
 
 		return newpid;
 	}
@@ -5420,6 +5445,17 @@ pid_t CreateProcessForkit::fork_exec() {
 			// in child
 		enterCreateProcessChild(this);
 		exec(); // never returns
+	}
+
+	if (m_network_manager) {
+		tmp_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+		if ((m_network_manager->PostCloneParent(newpid))) {
+			kill(newpid, SIGKILL);
+			dprintf(D_ALWAYS, "Failed to alter the child (%d) network namespace in post-clone of parent.\n", newpid);
+		} else {
+			dprintf(D_FULLDEBUG, "Post-clone network namespace operation in parent successful.\n");
+		}
+		set_priv_no_memory_changes(tmp_priv_state);
 	}
 
 	return newpid;
@@ -5610,7 +5646,7 @@ void CreateProcessForkit::exec() {
 		// environment
 	if ( HAS_DCJOBOPT_NO_ENV_INHERIT(m_job_opt_mask) ) {
 		int i;
-			// The parent process could not have been exec'ed if there were 
+			// The parent process could not have been exec'ed if there were
 			// too many ancestor markers in its environment, so this check
 			// is more of an assertion.
 		if (pidenvid_filter_and_insert(&penvid, GetEnviron()) ==
@@ -5650,8 +5686,8 @@ void CreateProcessForkit::exec() {
 			_exit(errno);
 		}
 
-		// if the new entry fits into the penvid, then add it to the 
-		// environment, else EXCEPT cause it is programmer's error 
+		// if the new entry fits into the penvid, then add it to the
+		// environment, else EXCEPT cause it is programmer's error
 	if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
 		m_envobject.SetEnv( envid );
 	} else {
@@ -5761,6 +5797,22 @@ void CreateProcessForkit::exec() {
 		}
 	}
 
+	if (m_network_manager) {
+		int net_rc;
+		// Note we call PostCloneChild *regardless* of whether we can actually set the root privs.
+		// This is because PostCloneChild contains necessary synchronization primitives.
+		m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+		if ((net_rc = m_network_manager->PostCloneChild())) {
+			dprintf(D_ALWAYS, "Failed to finish creating network namespace in child (rc=%d)\n", net_rc);
+			writeExecError(net_rc);
+			_exit(4);
+		} else {
+			dprintf(D_FULLDEBUG, "Child believes network namespace is completely configured.\n");
+		}
+		set_priv_no_memory_changes( m_priv_state );
+	}
+
+
 		// This _must_ be called before calling exec().
 	writeTrackingGid(tracking_gid);
 
@@ -5857,29 +5909,17 @@ void CreateProcessForkit::exec() {
 
 	// This requires rootly power
 	if (m_fs_remap) {
-		int ret = 0;
 		if (can_switch_ids()) {
 			m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
 #ifdef HAVE_UNSHARE
 			int rc = ::unshare(CLONE_NEWNS|CLONE_FS);
 			if (rc) {
 				dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
-				ret = write(m_errorpipe[1], &errno, sizeof(errno));
-				if (ret < 1) {
-					_exit(errno);
-				} else {
-					_exit(errno);
-				}
+				writeExecError(errno);
 			}
 #else
 			dprintf(D_ALWAYS, "Can not remount filesystems because this system does not have unshare(2)\n");
-			errno = ENOSYS;
-			ret = write(m_errorpipe[1], &errno, sizeof(errno));
-			if (ret < 1) {
-				_exit(errno);
-			} else {
-				_exit(errno);
-			}
+			writeExecError(errno);
 #endif
 		} else {
 			dprintf(D_ALWAYS, "Not remapping FS as requested, due to lack of privileges.\n");
@@ -5888,12 +5928,7 @@ void CreateProcessForkit::exec() {
 	}
 
 	if (m_fs_remap && m_fs_remap->PerformMappings()) {
-		int ret = write(m_errorpipe[1], &errno, sizeof(errno));
-		if (ret < 1) {
-			_exit(errno);
-		} else {
-			_exit(errno);
-		}
+		writeExecError(errno);
 	}
 
 	// And back to normal userness
@@ -6108,8 +6143,9 @@ int DaemonCore::Create_Process(
 			int			  *affinity_mask,
 			char const    *daemon_sock,
 			MyString      *err_return_msg,
-			FilesystemRemap *remap,
-			long		  as_hard_limit
+			FilesystemRemap * remap,
+			long		  as_hard_limit,
+			NetworkNamespaceManager * network_manager
             )
 {
 	int i, j;
@@ -7163,7 +7199,8 @@ int DaemonCore::Create_Process(
 			core_hard_limit,
 			as_hard_limit,
 			affinity_mask,
-			remap);
+			remap,
+			network_manager);
 
 		newpid = forkit.fork_exec();
 	}

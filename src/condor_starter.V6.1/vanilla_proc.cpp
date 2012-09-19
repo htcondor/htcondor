@@ -32,10 +32,14 @@
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
+#include "network_namespaces.h"
 #include "filesystem_remap.h"
 #include "directory.h"
 #include "subsystem_info.h"
 #include "cgroup_limits.h"
+
+#include <memory>
+#include <sstream>
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -44,7 +48,7 @@ extern dynuser* myDynuser;
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd)
+VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd), m_network_manager(NULL), m_cleanup_manager(false)
 {
 #if !defined(WIN32)
 	m_escalation_tid = -1;
@@ -376,21 +380,38 @@ VanillaProc::StartJob()
 					}
 				} else {
 					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir.c_str(), next_dir, next_dir);
-				}
-			}
+ 				}
+				// Create mount.
+ 			}
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir.c_str());
+			return FALSE;
+ 		}
+		// Long term, we'd like to squash $(EXECUTE) to prevent a job from poking
+		// around inside other job's sandboxes.  However, to do this, we'd need to
+		// rewrite the environment, the job ad, and the machine ad.  Don't know where
+		// this hooks in yet.
+		//
+	}
+
+	if (param_boolean("USE_NETWORK_NAMESPACES", false)) {
+		std::stringstream namespace_name_ss;
+		namespace_name_ss << "slot";
+		namespace_name_ss << (Starter->getMySlotNumber());
+		std::string namespace_name = namespace_name_ss.str();
+		m_network_manager.reset(new NetworkNamespaceManager(namespace_name));
+		priv_state orig_priv = set_priv(PRIV_ROOT);
+		int rc = m_network_manager->CreateNamespace();
+		set_priv(orig_priv);
+		if (rc) {
+			dprintf(D_ALWAYS, "Failed to create network namespace - bailing.\n");
 			return FALSE;
 		}
 	}
 
 	// have OsProc start the job
 	//
-	int retval = OsProc::StartJob(&fi, fs_remap);
-
-	if (fs_remap != NULL) {
-		delete fs_remap;
-	}
+	int retval = OsProc::StartJob(&fi, m_network_manager.get(), fs_remap);
 
 #if defined(HAVE_EXT_LIBCGROUP)
 
@@ -428,6 +449,15 @@ VanillaProc::StartJob()
 	}
 
 #endif
+	if (!retval && m_network_manager.get()) {
+		priv_state orig_priv = set_priv(PRIV_ROOT);
+		int rc = m_network_manager->Cleanup();
+		set_priv(orig_priv);
+		dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+	}
+	if (fs_remap) {
+		delete fs_remap;
+	}
 
 	return retval;
 }
@@ -487,6 +517,12 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;
 
+	if (m_network_manager.get()) {
+		priv_state orig_priv = set_priv(PRIV_ROOT);
+		m_network_manager->PerformJobAccounting(ad);
+		set_priv(orig_priv);
+	}
+
 		// Now, call our parent class's version
 	return OsProc::PublishUpdateAd( ad );
 }
@@ -508,6 +544,16 @@ VanillaProc::JobReaper(int pid, int status)
 		if (daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage for pid %d in "
 					"VanillaProc::JobReaper()\n", JobPid);
+		}
+		if (m_network_manager.get()) {
+			priv_state orig_priv = set_priv(PRIV_ROOT);
+			// Call this before removing the statistics; PublishUpdateAd is called after JobReaper
+			m_network_manager->PerformJobAccounting(NULL);
+			int rc = m_network_manager->Cleanup();
+			set_priv(orig_priv);
+			if (rc) {
+				dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+			}
 		}
 	}
 
