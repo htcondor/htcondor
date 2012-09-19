@@ -51,21 +51,30 @@ should upgrade as soon as possible.
 
 \begin{itemize}
 
-\item \Security Although not user-visible, there were multiple updates to remove places
-in the code where potential buffer overruns could occur, thus removing
-potential attacks.  None were known to be exploitable.
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could expose information which would allow an attacker to control
+another user's job.  (CVE-2012-3493)
 
-\item \Security Although not user-visible, there were updates to the code to improve
-error checking of system calls, removing some potential security threats.  None
-were known to be exploitable.
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could have lead to a Denial-of-Service attack which would allow
+an attacker to remove another user's idle job.  (CVE-2012-3491)
 
-\item \Security Although not user-visible, some code that was no longer used was removed.
-The presence of this code could have lead to a Denial-of-Service attack which
-would allow an attacker to stop another user's jobs from running.
+\item \Security Filesystem (FS) authentication was improved to check the UNIX
+permissions of the directory used for authentication.  Without this, an
+attacker may have been able to impersonate another submitter on the same submit
+machine.  (CVE-2012-3492)
 
-\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
-of the directory used for authentication.  Without this, an attacker may have
-been able to impersonate another submitter on the same submit machine.
+\item \Security Although not user-visible, there were multiple updates to
+remove places in the code where potential buffer overruns could occur, thus
+removing potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to
+improve error checking of system calls, removing some potential security
+threats.  None were known to be exploitable.
+
+
+% https://access.redhat.com/security/cve/CVE-2012-349X
+
 
 \end{itemize}
 
