@@ -23,7 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.6.10 released on Sep 19, 2012.
+\item Condor version 7.6.10 released on September 19, 2012.
 
 \item This release contains several important security fixes and all users
 should upgrade as soon as possible.
@@ -51,19 +51,19 @@ should upgrade as soon as possible.
 
 \begin{itemize}
 
-\item Although not user-visible, there were multiple updates to remove places
-in the code where potential buffer overrruns could occur, thus removing
+\item \Security Although not user-visible, there were multiple updates to remove places
+in the code where potential buffer overruns could occur, thus removing
 potential attacks.  None were known to be exploitable.
 
-\item Although not user-visible, there were updates to the code to improve
+\item \Security Although not user-visible, there were updates to the code to improve
 error checking of system calls, removing some potential security threats.  None
 were known to be exploitable.
 
-\item Although not user-visible, some code that was no longer used was removed.
+\item \Security Although not user-visible, some code that was no longer used was removed.
 The presence of this code could have lead to a Denial-of-Service attack which
 would allow an attacker to stop another user's jobs from running.
 
-\item Filesystem (FS) authentication was improved to check the unix permissions
+\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
 of the directory used for authentication.  Without this, an attacker may have
 been able to impersonate another submitter on the same submit machine.
 
