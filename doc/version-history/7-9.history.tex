@@ -169,6 +169,11 @@ when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was \Expr{True} (the default),
 and a user log was also defined. This is fixed. 
 \Ticket{3111}
 
+\item Fixed a bug introduced in Condor version 7.9.0 that caused grid-type
+cream jobs to be held with a hold reason of 
+``CREAM\_Delegate Error: Cannot set credentials in the gsoap-plugin context''.
+\Ticket{3234}
+
 \end{itemize}
 
 \noindent Known Bugs:
