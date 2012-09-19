@@ -363,7 +363,7 @@ class DedicatedScheduler : public Service {
 			@param buf An optional buffer to store ATTR_NAME
 			@return pointer to the mrec if found, NULL if not
 		*/
-	match_rec* getMrec( ClassAd* ad, char* buf = NULL );
+	match_rec* getMrec( ClassAd* ad, std::string & buf );
 
 		/** Figure out if it's possible to ever schedule this job,
 			given all of the dedicated resources we know about. 

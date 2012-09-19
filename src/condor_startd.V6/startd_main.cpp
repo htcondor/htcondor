@@ -267,9 +267,6 @@ main_init( int, char* argv[] )
 								  "GIVE_TOTALS_CLASSAD",
 								  (CommandHandler)command_give_totals_classad,
 								  "command_give_totals_classad", 0, READ );
-	daemonCore->Register_Command( GIVE_REQUEST_AD, "GIVE_REQUEST_AD",
-								  (CommandHandler)command_give_request_ad,
-								  "command_give_request_ad", 0, READ );
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
 								  (CommandHandler)command_query_ads,
 								  "command_query_ads", 0, READ );

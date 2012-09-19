@@ -173,7 +173,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] ) {
 		const char *token;
 		MyString str = buff;
@@ -231,7 +231,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_DELTACLOUD_USER_DATA, &m_userdata );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] ) {
 		const char *token;
 		MyString str = buff;
@@ -888,7 +888,7 @@ void DCloudJob::doEvaluateState()
 					char holdReason[1024];
 					holdReason[0] = '\0';
 					holdReason[sizeof(holdReason)-1] = '\0';
-					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) - 1 );
+					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) );
 					if ( holdReason[0] == '\0' && errorString != "" ) {
 						strncpy( holdReason, errorString.Value(), sizeof(holdReason) - 1 );
 					} else if ( holdReason[0] == '\0' ) {

@@ -131,8 +131,8 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 		candidatePreemptState = NO_PREEMPTION;
 		// if there is a remote user, consider preemption ....
-		if (candidate->LookupString (ATTR_ACCOUNTING_GROUP, remoteUser) ||
-			candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) 
+		if (candidate->LookupString (ATTR_ACCOUNTING_GROUP, remoteUser, sizeof(remoteUser)) ||
+			candidate->LookupString (ATTR_REMOTE_USER, remoteUser, sizeof(remoteUser))) 
 		{
 				// check if we are preempting for rank or priority
 			if( EvalExprTree( rankCondStd, candidate, &request, result ) &&
@@ -359,7 +359,7 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !al.LookupString( attrName, name ) || 
+    	if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, sub_priority ) )
             break;
 
@@ -527,8 +527,8 @@ main(int argc, char *argv[])
 	int index;
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
-			ad->LookupString( ATTR_REMOTE_USER , remoteUser )) 
+		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser, sizeof(remoteUser) ) ||
+			ad->LookupString( ATTR_REMOTE_USER , remoteUser, sizeof(remoteUser) )) 
 		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
@@ -555,7 +555,7 @@ main(int argc, char *argv[])
 
 		// If we want the entire machine, and not just a slot...
 		if(WantMachineNames) {
-			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
+			if (offer->LookupString (ATTR_MACHINE, remoteHost, sizeof(remoteHost)) ) {
 				int slot_count;
 				int slot_count_thus_far;
 
@@ -600,9 +600,9 @@ main(int argc, char *argv[])
 		// here we found a machine; spit out the name to stdout
 		remoteHost[0] = '\0';
 		if(WantMachineNames)
-			offer->LookupString(ATTR_MACHINE, remoteHost);
+			offer->LookupString(ATTR_MACHINE, remoteHost, sizeof(remoteHost));
 		else
-			offer->LookupString(ATTR_NAME, remoteHost);
+			offer->LookupString(ATTR_NAME, remoteHost, sizeof(remoteHost));
 
 		if ( remoteHost[0] ) {
 			printf("%s\n", remoteHost);
