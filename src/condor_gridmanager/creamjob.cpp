@@ -1614,7 +1614,7 @@ char *CreamJob::buildSubmitAd()
 
 		//INPUT SANDBOX
 	if (isb.number() > 0) {
-		formatstr(buf, "%s = {", ATTR_INPUT_SB);
+		formatstr(buf, "; %s = {", ATTR_INPUT_SB);
 		isb.rewind();
 		for (int i = 0; i < isb.number(); i++) {
 			if (i == 0)
@@ -1622,7 +1622,7 @@ char *CreamJob::buildSubmitAd()
 			else
 				formatstr_cat(buf, ",\"%s\"", isb.next());
 		}
-		formatstr_cat(buf, "}; ]");
+		formatstr_cat(buf, "} ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
@@ -1630,7 +1630,7 @@ char *CreamJob::buildSubmitAd()
 
 		//OUTPUT SANDBOX
 	if (osb.number() > 0) {
-		formatstr(buf, "%s = {", ATTR_OUTPUT_SB);
+		formatstr(buf, "; %s = {", ATTR_OUTPUT_SB);
 		osb.rewind();
 		for (int i = 0; i < osb.number(); i++) {
 			if (i == 0)
@@ -1638,7 +1638,7 @@ char *CreamJob::buildSubmitAd()
 			else
 				formatstr_cat(buf, ",\"%s\"", osb.next());
 		}
-		formatstr_cat(buf, "}; ]");
+		formatstr_cat(buf, "} ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
