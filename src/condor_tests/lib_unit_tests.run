@@ -1,0 +1,73 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+my @got;
+$testdesc =  'lib_unit_tests - runs prebuilt unit tests';
+$testname = "lib_unit_tests";
+$test = "condor_unit_tests";
+
+print scalar localtime() . "\n";
+
+open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
+while(<ELOG>) {
+	push  @got, $_;
+	print $_;
+}
+close(ELOG);
+
+my $objects = 0;
+my $total = 0;
+my $passed = 0;
+my $failed = 0;
+my $aborted = 0;
+my $skipped = 0;
+
+foreach $line (@got) {
+	chomp($line);
+	if($line =~ /^.*Total\s+Tested\s+Objects:\s+(\d+).*$/) {
+		$objects = $1;
+	} elsif($line =~ /^.*Total\s+Unit\s+Tests:\s+(\d+).*$/) {
+		$total = $1;
+	} elsif($line =~ /^.*Passed\s+Unit\s+Tests:\s+(\d+).*$/) {
+		$passed = $1;
+	} elsif($line =~ /^.*Failed\s+Unit\s+Tests:\s+(\d+).*$/) {
+		$failed = $1;
+	} elsif($line =~ /^.*Aborted\s+Unit\s+Tests:\s+(\d+).*$/) {
+		$aborted = $1;
+	} elsif($line =~ /^.*Skipped\s+Unit\s+Tests:\s+(\d+).*$/) {
+		$skipped = $1;
+	} else {
+		#print "$line\n";
+	}
+}
+
+print "\n";
+print "[$0]\n";
+print "There were $total tests including $objects objects\n";
+if($total == $passed && $total != 0) {
+	print "Tests passed($passed) ALL did pass so Success\n";
+	print "Failed($failed) / Aborted($aborted) / Skipped($skipped) \n";
+} else {
+	print "Tests passed($passed) NOT ALL did pass so Failure\n";
+	die "Failed($failed) / Aborted($aborted) / Skipped($skipped) \n";
+}
+
+exit(0);

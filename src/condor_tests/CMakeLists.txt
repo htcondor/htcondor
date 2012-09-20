@@ -283,9 +283,10 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_final-G "Simple Dagman Final Node G" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
-	
-        ##### generic lib tests
-        
+	##### generic lib tests
+	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
+	# on condor_config ++ deps. 
+	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_config "Run Authorization Config Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_protocol-fs "FS authentication test" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_protocol-ctb "CTB authentication test" "core;quick;full;quicknolink")
