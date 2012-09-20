@@ -120,6 +120,11 @@ then the proxy file will be looked for in the standard locations.
 
 \begin{itemize}
 
+\item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute in
+the ad for all daemons would be reset to the current time when they are
+reconfigured.
+\Ticket{3235}
+
 \item \Security Although not user-visible, there were multiple updates to remove places
 in the code where potential buffer overruns could occur, thus removing
 potential attacks.  None were known to be exploitable.
