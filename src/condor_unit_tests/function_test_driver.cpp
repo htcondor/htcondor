@@ -47,14 +47,11 @@ void FunctionDriver::register_function(test_func_ptr function) {
 bool FunctionDriver::do_all_functions(bool increment_tests_run) {
 	bool test_passed = true;
 
-	// ensure that at least one test ran...
-	bool at_least_one = false;
 	int i;
 	std::list<test_func_ptr>::iterator itr;
 	for ( itr = pointers.begin(), i = 0; itr != pointers.end() && 
 		i <	num_funcs_or_objs && num_tests_run < num_tests_to_run; itr++, i++ ) 
 	{
-		at_least_one = true;
 		if ( !(**itr)() ) {
 			test_passed = false;
 		}
@@ -62,7 +59,7 @@ bool FunctionDriver::do_all_functions(bool increment_tests_run) {
 			num_tests_run++;
 	}
 
-	return at_least_one && test_passed;
+	return test_passed;
 }
 
 

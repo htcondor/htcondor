@@ -16,4 +16,4 @@
  # 
  ############################################################### 
 
-condor_unit_test ( _collector_tester collector_tests.cpp "" )
+condor_unit_test ( _collector_tester collector_tests.cpp "" ON )
