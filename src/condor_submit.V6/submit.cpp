@@ -372,6 +372,10 @@ const char	*LoadProfile = "load_profile";
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
 
+// Accounting Group parameters
+const char* Group = "group";
+const char* GroupUser = "group_user";
+
 //
 // VM universe Parameters
 //
@@ -524,6 +528,7 @@ void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
 void SetConcurrencyLimits();
+void SetAccountingGroup();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -6481,6 +6486,7 @@ queue(int num)
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
+        SetAccountingGroup();
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
@@ -8036,6 +8042,44 @@ SetConcurrencyLimits()
 		}
 	}
 }
+
+
+void SetAccountingGroup() {
+    // is a group setting in effect?
+    char* group = condor_param(Group);
+    if (NULL == group) return;
+
+    // identify the configured separator character between group and user
+    char* s = param("GROUP_SEPARATOR");
+    std::string sep = (s) ? s : "";
+    if (sep.size() != 1) {
+        fprintf(stderr, "Configuration variable GROUP_SEPARATOR expects a single character\n");
+        DoCleanup(0, 0, NULL);
+        exit(1);
+    }
+
+    // look for the group_user setting, or default to owner
+    std::string group_user;
+    char* gu = condor_param(GroupUser);
+    if (NULL == gu) {
+        ASSERT(owner);
+        group_user = owner;
+    } else {
+        group_user = gu;
+        free(gu);
+    }
+
+    // set attributes Group, GroupUser and AccountingGroup on the job ad:
+    std::string assign;
+    formatstr(assign, "%s = \"%s%c%s\"", ATTR_ACCOUNTING_GROUP, group, sep[0], group_user.c_str()); 
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_GROUP, group);
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_GROUP_USER, group_user.c_str());
+    InsertJobExpr(assign.c_str());
+    free(group);
+}
+
 
 // this function must be called after SetUniverse
 void
