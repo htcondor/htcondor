@@ -213,7 +213,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -251,7 +251,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( strrchr( buff, ' ' )+1 );
 		job_already_submitted = true;
@@ -260,7 +260,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		char *ptr = strchr( buff, '#' );
 		if ( ptr != NULL ) {
@@ -1141,7 +1141,7 @@ void CondorJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+								  sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );

@@ -144,7 +144,9 @@ sysapi_get_windows_info(void)
 	opsys_legacy = strdup( tmp_info );
 	opsys = strdup( "WINDOWS" );
 	
-	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
+	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 2) {
+		opsys_super_short_name = strdup("8");
+	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
 		opsys_super_short_name = strdup("7");
 	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 0) {
 		opsys_super_short_name = strdup("Vista");
@@ -377,7 +379,7 @@ init_arch(void)
 	// NAME             OLD  ==> Linux       | BSD          | UNIX    | Windows
 	// ---------------------------------------------------------------------------
 	// OpSys =         LINUX ==> LINUX       | OSX          | AIX     | WINDOWS
-	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX703    | AIX53   | WINDOWS601
+	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX7      | AIX53   | WINDOWS601
 	// OpSysVer =        206 ==> 501         | 703          | 503     | 601
 	// OpSysShortName =  N/A ==> Linux       | MACOSX       | AIX     | Win7 
 	// OpSysLongName =   N/A ==> Red Hat 5.1 | MACOSX 7.3   | AIX 5.3 | Windows 7 SP2
@@ -393,15 +395,15 @@ init_arch(void)
 	opsys_long_name = sysapi_get_darwin_info();  
 	opsys_major_version = sysapi_find_darwin_major_version( opsys_long_name );
 	opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_version );
+	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_major_version );
 	opsys_name = sysapi_find_darwin_opsys_name( opsys_major_version );
 	
 #elif defined( CONDOR_FREEBSD )
 
 	opsys = strdup( "FREEBSD" );
 	opsys_legacy = strdup( opsys );
-	opsys_name = strdup ( opsys );
  	opsys_short_name = strdup( "FreeBSD" );
+	opsys_name = strdup ( opsys_short_name );
 	opsys_long_name = sysapi_get_bsd_info( opsys_short_name, buf.release ); 
 	opsys_major_version = sysapi_find_major_version( buf.release );
 	opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
@@ -421,14 +423,21 @@ init_arch(void)
 
      	} else
         {
+		// if opsys_long_name is "Solaris 11.250"
+		//    opsys_name      is "Solaris"
+		//    opsys_legacy    is "SOLARIS"
+		//    opsys           is "SOLARIS"
+		//    opsys_short_name is "Solaris"
+		//    opsys_versioned  is "Solaris11"
 		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
-		opsys = strdup( opsys_long_name );
-		opsys_legacy = strdup( opsys );
+		char * p = strdup( opsys_long_name );
+		opsys_name = p; p = strchr(p, ' '); if (p) *p = 0;
+		opsys_legacy = p = strdup( opsys_name ); for (; *p; ++p) { *p = toupper(*p); }
+		opsys = strdup( opsys_legacy );
+		opsys_short_name = strdup( opsys_name );
 		opsys_major_version = sysapi_find_major_version( opsys_long_name );
 		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-		opsys_versioned = sysapi_find_opsys_versioned( opsys, opsys_major_version );
-		opsys_name = strdup( opsys );
-		opsys_short_name = strdup( opsys );
+		opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
         }
 
 #endif
@@ -580,39 +589,51 @@ sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release)
 const char *
 sysapi_get_linux_info(void)
 {
-        char* info_str;
-        FILE *my_fp;
-        const char * etc_issue_path = "/etc/issue";
+	char* info_str;
+	FILE *my_fp;
+	const char * etc_issue_path = "/etc/issue";
 
-        // read the first line only
-        my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
-        if ( my_fp != NULL ) {
+	// read the first line only
+	my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
+	if ( my_fp != NULL ) {
 		char tmp_str[200] = {0};
 		char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
 		if (ret == 0) {
-	        	dprintf(D_FULLDEBUG, "Result of reading /etc/issue:  %s \n", ret);
-			strcpy( tmp_str, "Unknown" );			
+			dprintf(D_FULLDEBUG, "Result of reading /etc/issue:  %s \n", ret);
+			strcpy( tmp_str, "Unknown" );
 		}
 		fclose(my_fp);
 
+		// trim trailing spaces and other cruft
 		int len = strlen(tmp_str);
-		if ( len > 0 ) {
-			if( tmp_str[len-1] == '\n' )
-			{
-    				tmp_str[len-1] = 0;
+		while (len > 0) {
+			while (len > 0 && 
+				   (isspace((int)(tmp_str[len-1])) || tmp_str[len-1] == '\n') ) {
+				tmp_str[--len] = 0;
+			}
+
+			// Ubuntu and Debian have \n \l at the end of the issue string
+			// this looks like a bug, in any case, we want to strip it
+			if (len > 2 && 
+				tmp_str[len-2] == '\\' && (tmp_str[len-1] == 'n' || tmp_str[len-1] == 'l')) {
+				tmp_str[--len] = 0;
+				tmp_str[--len] = 0;
+			} else {
+				break;
 			}
 		}
+
 		info_str = strdup( tmp_str );
-        } else 
-	{
+
+	} else {
 		info_str = strdup( "Unknown" );
 	}
-  
-	if( !info_str ) {
-               	EXCEPT( "Out of memory!" );
-       	}
 
-        return info_str;
+	if( !info_str ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	return info_str;
 }
 
 const char *
@@ -648,15 +669,15 @@ sysapi_find_linux_name( const char *info_str )
 	}
    	else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "cern") )
         {
-                distro = strdup("ScientificLinuxCern");
+                distro = strdup("SLCern");
         }
         else if ( strstr(distro_name_lc, "scientific") && strstr(distro_name_lc, "slf") )
         {
-                distro = strdup("ScientificLinuxFermi");
+                distro = strdup("SLFermi");
         }
    	else if ( strstr(distro_name_lc, "scientific") )
         {
-                distro = strdup("ScientificLinux");
+                distro = strdup("SL");
         }
         else if ( strstr(distro_name_lc, "centos") )
         {
@@ -677,6 +698,7 @@ sysapi_find_linux_name( const char *info_str )
   	if( !distro ) {
                 EXCEPT( "Out of memory!" );
         }
+	free( distro_name_lc );
 	return distro;
 }
 
@@ -696,7 +718,6 @@ sysapi_get_unix_info( const char *sysname,
 	if( !strcmp(sysname, "SunOS")
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
-        sprintf( tmp, "SOLARIS" );
 		if ( !strcmp(release, "2.11") //LDAP entry
 			|| !strcmp(release, "5.11") )
 		{
@@ -740,6 +761,8 @@ sysapi_get_unix_info( const char *sysname,
 		else {
             pver = release;
 		}
+		if (!strcmp(version,"11.0")) version = "11";
+        sprintf( tmp, "Solaris %s.%s", version, pver );
 	}
 
 	else if( !strcmp(sysname, "HP-UX") ) {

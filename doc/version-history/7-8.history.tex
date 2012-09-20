@@ -16,6 +16,306 @@ New features will be added in the 7.9.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-4}Version 7.8.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.4 released on September 19, 2012.
+
+\item This release contains several important security fixes and all users should upgrade as soon as possible.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{GSI\_AUTHZ\_CONF}
+fixes a bug in which an instance of Condor may utilize the  
+wrong Globus mapping.
+The configuration variable defines a path and file name 
+to the file that contains the Globus mapping library. 
+See the complete definition at
+~\ref{param:GSIAuthzConf}.
+\Ticket{2103}
+
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Security Although not user-visible, there were multiple updates to remove places
+in the code where potential buffer overruns could occur, thus removing
+potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to improve
+error checking of system calls, removing some potential security threats.  None
+were known to be exploitable.
+
+\item \Security Although not user-visible, some code that was no longer used was removed.
+The presence of this code could have lead to a Denial-of-Service attack which
+would allow an attacker to stop another user's jobs from running.
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
+of the directory used for authentication.  Without this, an attacker may have
+been able to impersonate another submitter on the same submit machine.
+
+\item Fixed the \Condor{schedd} daemon; 
+it would crash when a submit description file
+contained a malformed \verb@$$()@ expansion macro that contained
+a period.
+\Ticket{3216}
+
+\item Fixed a case in which a daemon could crash and leave behind a log
+file owned by \Login{root}.  This \Login{root}-owned file would then cause
+subsequent attempts to restart the daemon to fail.
+\Ticket{2894}
+
+\item Fixed a special case bug in which configuration variables
+defined utilizing initial substrings of \Expr{\$(DOLLAR)},
+for example  \Expr{\$(D)} and  \Expr{\$(DO)},  
+were not expanded properly.
+\Ticket{3217}
+
+\item The command \Condor{q} \Opt{-run} now displays correct HOST field 
+information for local universe jobs.
+\Ticket{3150}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-3}Version 7.8.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.3 released on September 6, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The \File{libcondorapi} library for reading and writing job event
+logs is again available as a shared library on Linux and Mac OS platforms.
+Since Condor 7.5.x, it had only been available as a static library.
+\Ticket{3047}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item To avoid the output of an unnecessary DAGMan error message,
+the value of \Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}
+is ignored when both \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK}
+and \MacroNI{ENABLE\_USERLOG\_LOCKING} are \Expr{True}.
+\Ticket{3087}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in which usage of cgroups incorrectly included the
+page cache in the maximum memory usage.
+This bug fix is also included in Condor version 7.9.0.
+\Ticket{3003}
+
+\item Jobs from a hook to fetch work, 
+where the hook is defined by configuration variable 
+\MacroNI{<Keyword>\_HOOK\_FETCH\_WORK},
+now correctly receive dynamic slots from a partitionable slot 
+instead of claiming the entire partitionable slot.
+\Ticket{2819}
+
+\item Fixed a bug in which a slot might become stuck in the Preempting state
+when a \Condor{startd} is configured with a hook to fetch work,
+as defined by \Macro{<Keyword>\_HOOK\_FETCH\_WORK}.
+\Ticket{3076}
+
+\item Fixed a bug that caused Condor to transfer a job's input files from
+the execute machine back to the submit machine as if they were output files.
+This would happen if the
+job's input files were stored in Condor's spool directory;
+occurred if the job was submitted via Condor-C or via 
+\Condor{submit} with the \Opt{-spool} or \Opt{-remote} options.
+\Ticket{2406}
+
+\item Fixed a bug that could cause the first grid-type cream jobs destined 
+for a particular CREAM server to never be submitted to that server.
+This bug was probably introduced in Condor version 7.6.5.
+\Ticket{3054}
+
+\item Fixed several problems with the XML parsing class
+\Code{ClassAdXMLParser} in the ClassAds library:
+  \begin{itemize}
+  \item Several methods named \Procedure{ParseClassAd} were declared, 
+  but never implemented. 
+\Ticket{3049}
+  \item The parser silently dropped leading white space in string values.
+\Ticket{3042}
+  \item The parser could go into an infinite loop or leak memory when
+    reading a malformed ClassAd XML document. 
+\Ticket{3045}
+  \end{itemize}
+
+\item Fixed a bug that prevented the \Opt{-f} command line option to
+\Condor{history} from being recognized.
+The \Opt{-f} option was being interpreted as \Opt{-forward}. 
+At least four letters are now required for the \Opt{-forward} option
+(\Opt{-forw}) to prevent ambiguity.
+\Ticket{3044}
+
+\item The implementation of the \Condor{history} \Opt{-backwards} option, 
+which is the default ordering for reading the history file,
+in the 7.7 series did not work on Windows platforms.
+This has been fixed.
+\Ticket{3055}
+
+\item Fixed a bug that caused an invalid proxy to be delegated when
+refreshing the job's X.509 proxy when configuration variable
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} was set to 0.
+\Ticket{3059}
+
+\item Fixed a bug in which DAGMan did not account properly for jobs being
+suspended and then unsuspended.
+\Ticket{3108}
+
+\item \Condor{dagman} now takes note of job reconnect failed 
+events (event code 24) in the user log, for counting idle jobs.
+\Ticket{3189}
+
+\item Job IDs generated by NorduGrid ARC 12.05 and above are now
+properly recognized.
+\Ticket{3062}
+
+\item Fixed a bug in which Condor would not mark grid-type nordugrid jobs
+as Running due to variation in the format of the job status value.
+NorduGrid ARC job statuses of the form \Expr{INLRMS: ?} are now
+properly recognized both with and without the space after the colon.
+\Ticket{3118}
+
+\item The \Condor{gridmanager} now properly handles X.509 proxy files
+that are specified in the job ClassAd with a relative path name.
+\Ticket{3027}
+
+\item Fixed a bug that caused daemon names,
+as set in configuration variables such as \MacroNI{STARTD\_NAME},
+containing a period character to be ignored.
+\Ticket{3172}
+
+\item Fixed a bug that prevented the \Condor{schedd} from removing old
+execute directories for local universe jobs on start up.
+\Ticket{3176}
+
+\item The \Condor{defrag} daemon sometimes scheduled fewer draining attempts 
+than specified.
+\Ticket{3199}
+
+\item Fixed a bug that could cause the \Condor{gridmanager} to crash if a
+grid universe job's X.509 user certificate did not contain an e-mail
+address.
+\Ticket{3203}
+
+\item Fixed a bug introduced in Condor version 7.7.5 that caused multiple
+\Condor{schedd} daemons running on the same machine to share the job queue
+with each other due to way in which the default value of configuration
+variable \MacroNI{JOB\_QUEUE\_LOG} was set.
+\Ticket{3196}
+
+\item Fixed a bug that could cause \Condor{q} to not print all jobs when
+it thought it was querying an old \Condor{schedd} daemon.
+\Ticket{3206}
+
+\item Fixed a bug that could cause a job's standard output and standard
+error files to be written in the job's initial working directory,
+despite the submit description file's specification to write them 
+to a different directory.
+This would happen when the file transfer mechanism was used, 
+the execution machine was running Condor version 7.7.1 or earlier, 
+and either Condor's security negotiation
+was disabled or the configuration variable
+\MacroNI{SEC\_ENABLE\_MATCH\_PASSWORD\_AUTHENTICATION} was set to \Expr{True}.
+\Ticket{3208}
+
+\item The log message generated when the \MacroNI{EXECUTE} directory
+is missing is now more helpful.
+\Ticket{3194}
+
+\item The load average was incorrect for non-English versions on 
+Windows platforms.
+This has been fixed for Windows Vista and more recent versions.
+\Ticket{3182}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item There is now documentation for the submit description file commands
+\SubmitCmd{encrypt\_input\_files},
+\SubmitCmd{encrypt\_output\_files},
+\SubmitCmd{dont\_encrypt\_input\_files}, and
+\SubmitCmd{dont\_encrypt\_output\_files} in the \Condor{submit}
+manual page.
+These commands have been available since Condor version 6.7.2,
+but were never documented.
+See descriptions starting at
+~\ref{man-condor-submit-dont-encrypt-input-files}.
+\Ticket{3174}
+
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-2}Version 7.8.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -69,7 +369,6 @@ The details of each version are described below.
 
 \end{itemize}
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-1}Version 7.8.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,14 +401,31 @@ warnings when a job requests features that are no longer supported.
 
 \item (Added in 7.7.6) The new configuration variable
 \Macro{BATCH\_GAHP} should be used instead of \Macro{PBS\_GAHP},
-\Macro{LSF\_GAHP} and \Macro{SGE\_GAHP}. The older parameters are
-still recognized, but their use is now discouraged.
+\Macro{LSF\_GAHP} and \Macro{SGE\_GAHP}. These older configuration
+variables are still recognized, but their use is now discouraged.
+\Ticket{2670}
+
+\item The default value for \Macro{GROUP\_SORT\_EXPR} was changed 
+so that the \Expr{<none>} group would always negotiate last 
+when using hierarchical group quotas.
+Associated with that, 
+the default value for \Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} 
+was changed to \Expr{True}.  
+These changes were made to make negotiation behave more like it did 
+in the stable 7.4 series of Condor,
+before hierarchical group quotas were added.
+\Ticket{3040}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that caused events to not be written to the job event
+log when the log is written in XML and a job policy expression triggering
+the event contains any double quote marks.
+\Ticket{3048}
 
 \item Fixed a bug in the Condor init script that would cause
 the init script to hang if Condor was not running.
@@ -154,10 +470,20 @@ draining badput and completion time were sometimes nonsensical
 because of integer overflow.
 \Ticket{3001}
 
-\item Fixed a bug where per-job sub-directories and their contents
-in \MacroNI{SPOOL} would not be removed when the associated job
+\item Fixed a bug where per-job subdirectories and their contents
+in \MacroUNI{SPOOL} would not be removed when the associated job
 left the queue.
 \Ticket{2942}
+
+\item Fixed a bug that could cause the \Condor{schedd} to 
+occasionally crash due to a race condition when running local universe jobs.
+Associated with the bug would be the error message
+\footnotesize
+\begin{verbatim}
+No local universe jobs were expected to be running, but one just exited!
+\end{verbatim}
+\normalsize
+\Ticket{3009}
 
 \end{itemize}
 
@@ -189,6 +515,14 @@ the newly added definitions of
 \item There is now a manual page for \Condor{router\_rm}, 
 a script that provides additional features convenient for removing
 jobs managed by the Condor Job Router.
+
+\item Documentation not completed for the 7.7.6 release is now available.
+The use of configuration variable \MacroNI{BATCH\_GAHP},
+as well as the use of the new \SubmitCmd{grid\_resource} of
+type \Expr{batch} for local submission of PBS, LSF, and SGE
+jobs is documented.
+See section ~\ref{sec:batch} for details.
+\Ticket{2670}
 
 \end{itemize}
 

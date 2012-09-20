@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryJob_CONTROLJOB_H
-        #define AviaryJob_CONTROLJOB_H
-
+          #ifndef AviaryJob_CONTROLJOB_H
+          #define AviaryJob_CONTROLJOB_H
+        
+      
        /**
         * ControlJob.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_JobID.h"
-          
+                #include "AviaryCommon_JobID.h"
+              
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -86,6 +86,11 @@ namespace AviaryJob
          */
         ControlJob(AviaryCommon::JobID* arg_Id,std::string arg_Reason);
         
+
+        /**
+         * resetAll for ControlJob
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

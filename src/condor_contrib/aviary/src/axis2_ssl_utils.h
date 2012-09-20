@@ -47,7 +47,7 @@ extern "C"
 
     AXIS2_EXTERN axis2_status_t AXIS2_CALL
     axis2_ssl_utils_cleanup_ssl(
-        const axutil_env_t * env,
+        /*const axutil_env_t * env,*/
         SSL_CTX * ctx,
         SSL * ssl);
 

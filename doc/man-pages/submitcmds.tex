@@ -695,6 +695,86 @@ that can be used in the ClassAd expression.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% dont_encrypt_input_files
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!dont\_encrypt\_input\_files}
+\index{file transfer mechanism!input file(s) encryption}
+\label{man-condor-submit-dont-encrypt-input-files}
+\item[dont\_encrypt\_input\_files = $<$ file1,file2,file... $>$] 
+A comma and/or space separated list of input files that are \emph{not} to be
+encrypted when transferred with the file transfer mechanism.
+Specification of files in this manner overrides configuration that would
+use encryption.
+Each input file must also be in the list given by
+\SubmitCmd{transfer\_input\_files}.
+When a path to an input file or directory is specified, 
+this specifies the path to the file on the submit side.
+A single wild card character (\Expr{*}) may be used in each file name.
+
+%%%%%%%%%%%%%%%%%%%
+%% dont_encrypt_output_files
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!dont\_encrypt\_output\_files}
+\index{file transfer mechanism!output file(s) encryption}
+\label{man-condor-submit-dont-encrypt-output-files}
+\item[dont\_encrypt\_output\_files = $<$ file1,file2,file... $>$] 
+A comma and/or space separated list of output files that are \emph{not} to be
+encrypted when transferred back with the file transfer mechanism.
+Specification of files in this manner overrides configuration that would
+use encryption.
+The output file(s) must also either be in the list given by
+\SubmitCmd{transfer\_output\_files} or be discovered and to be transferred
+back with the file transfer mechanism.
+When a path to an output file or directory is specified, 
+this specifies the path to the file on the execute side.
+A single wild card character (\Expr{*}) may be used in each file name.
+
+%%%%%%%%%%%%%%%%%%%
+%% encrypt_input_files
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!encrypt\_input\_files}
+\index{file transfer mechanism!input file(s) encryption}
+\label{man-condor-submit-encrypt-input-files}
+\item[encrypt\_input\_files = $<$ file1,file2,file... $>$] 
+A comma and/or space separated list of input files that are to be
+encrypted when transferred with the file transfer mechanism.
+Specification of files in this manner overrides configuration that would
+\emph{not} use encryption.
+Each input file must also be in the list given by
+\SubmitCmd{transfer\_input\_files}.
+When a path to an input file or directory is specified, 
+this specifies the path to the file on the submit side.
+A single wild card character (\Expr{*}) may be used in each file name.
+The method of encryption utilized will be as agreed upon in security
+negotiation; if that negotiation failed, then the file transfer
+mechanism must also fail for files to be encrypted.
+
+%%%%%%%%%%%%%%%%%%%
+%% encrypt_output_files
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!encrypt\_output\_files}
+\index{file transfer mechanism!output file(s) encryption}
+\label{man-condor-submit-encrypt-output-files}
+\item[encrypt\_output\_files = $<$ file1,file2,file... $>$] 
+A comma and/or space separated list of output files that are to be
+encrypted when transferred back with the file transfer mechanism.
+Specification of files in this manner overrides configuration that would
+\emph{not} use encryption.
+The output file(s) must also either be in the list given by
+\SubmitCmd{transfer\_output\_files} or be discovered and to be transferred
+back with the file transfer mechanism.
+When a path to an output file or directory is specified, 
+this specifies the path to the file on the execute side.
+A single wild card character (\Expr{*}) may be used in each file name.
+The method of encryption utilized will be as agreed upon in security
+negotiation; if that negotiation failed, then the file transfer
+mechanism must also fail for files to be encrypted.
+
+%%%%%%%%%%%%%%%%%%%
 %% output_destination
 %%%%%%%%%%%%%%%%%%%
 
@@ -2000,6 +2080,7 @@ there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
+\SubmitCmd{batch}, 
 \SubmitCmd{condor}, \SubmitCmd{cream}, 
 \SubmitCmd{deltacloud}, 
 \SubmitCmd{ec2},
@@ -2009,6 +2090,11 @@ Allowable \SubmitCmd{grid-type-string} values are
 and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
 grid types.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{batch},
+the single parameter is the name of the local batch system,
+and will be one of \Expr{pbs}, \Expr{lsf}, or \Expr{sge}.
+See section~\ref{sec:batch} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
 the first parameter is the name of the remote \Condor{schedd}
@@ -3254,21 +3340,25 @@ In addition to the normal macro, there is also a special kind of macro
 called a \Term{substitution macro}
 \index{substitution macro!in submit description file}
 that allows the substitution of
-a ClassAd attribute value defined on the resource machine itself
+a machine ClassAd attribute value defined on the resource machine itself
 (gotten after a match to the machine has been made)
 into specific commands within the
 submit description file. The substitution macro is of the form:
 \begin{verbatim} 
 $$(attribute)
 \end{verbatim}
+As this form of the substitution macro is only evaluated within
+the context of the machine ClassAd,
+use of a scope resolution prefix 
+\Expr{TARGET.} or \Expr{MY.} is not allowed.
 
-A common use of this macro is for the heterogeneous
+A common use of this form of the substitution macro is for the heterogeneous
 submission of an executable:
 \begin{verbatim}
-executable = povray.$$(opsys).$$(arch)
+executable = povray.$$(OpSys).$$(Arch)
 \end{verbatim}
-Values for the \AdAttr{opsys} and \AdAttr{arch} attributes are substituted at
-match time for any given resource. This allows Condor to automatically
+Values for the \AdAttr{OpSys} and \AdAttr{Arch} attributes are substituted at
+match time for any given resource. This example allows Condor to automatically
 choose the correct executable for the matched machine.
 
 An extension to the syntax of the substitution macro provides an
@@ -3285,16 +3375,14 @@ Since the file can be placed in different locations on
 different machines, the file's path name is given as an argument
 to the program.
 \begin{verbatim} 
-argument = $$(input_file_path:/usr/foo)
+arguments = $$(input_file_path:/usr/foo)
 \end{verbatim}
 On the machine, if the attribute \Attr{input\_file\_path} is not
 defined, then the path \File{/usr/foo} is used instead.
 
 A further extension to the syntax of the substitution macro allows the
 evaluation of a ClassAd expression to define the value.
-As all substitution macros, the expression is evaluated after
-a match has been made.
-Therefore, the expression may refer to machine attributes
+In this form, the expression may refer to machine attributes
 by prefacing them with the scope resolution prefix \Attr{TARGET.},
 as specified in section~\ref{ClassAd:evaluation}.
 To place a ClassAd expression into the substitution macro,
@@ -3313,7 +3401,7 @@ to account for miscellaneous overhead,
 and passes this as a command line argument to the application.
 In the submit description file will be
 \begin{verbatim} 
-arguments=--memory $$([TARGET.Memory * 0.9])
+arguments = --memory $$([TARGET.Memory * 0.9])
 \end{verbatim}
 
 \index{\$\$!as literal characters in a submit description file}

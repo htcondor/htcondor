@@ -428,8 +428,9 @@ void Defrag::slotNameToDaemonName(std::string const &name,std::string &machine)
 // n is a number per period.  If we are partly through
 // the interval, make n be in proportion to how much
 // is left.
-static int prorate(int n,int time_remaining,int period,int granularity)
+static int prorate(int n,int period_elapsed,int period,int granularity)
 {
+	int time_remaining = period-period_elapsed;
 	double frac = ((double)time_remaining)/period;
 
 		// Add in maximum time in this interval that could have been
@@ -595,7 +596,7 @@ void Defrag::poll()
 	startdAds.Close();
 
 	dprintf(D_ALWAYS,"Drained %d machines (wanted to drain %d machines).\n",
-			num_drained,num_drained);
+			num_drained,num_to_drain);
 
 	dprintf(D_FULLDEBUG,"Done evaluating defragmentation policy.\n");
 }

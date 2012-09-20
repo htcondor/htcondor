@@ -460,7 +460,7 @@ void
     }
     if ( fseek ( hFile , m_he.start , SEEK_SET ) )
     {
-		sprintf(_text,"bad seek in '%s' at index %d", m_he.file.c_str(),m_he.start);
+		sprintf(_text,"bad seek in '%s' at index %ld", m_he.file.c_str(),m_he.start);
         dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
         return;
@@ -646,7 +646,19 @@ Job::setSubmission ( const char* _subName, int cluster )
 	m_submission->setOldest(qdate);
 	
 	// update our qdate index collection
-	g_qdate_submissions.insert(make_pair(qdate,submission));
+    SubmissionMultiIndexType::iterator qdate_it;
+    qdate_it = g_qdate_submissions.find(qdate);
+    if (qdate_it!=g_qdate_submissions.end()) {
+        // are we updating for an older qdate or a qdate collision
+        // with another submission (multimap)?
+        if (strcmp(qdate_it->second->getName(),_subName)==0 && qdate_it->second->getOldest() > qdate) {
+            g_qdate_submissions.erase(qdate_it);
+            g_qdate_submissions.insert(make_pair(qdate,submission));
+        }
+    }
+    else {
+        g_qdate_submissions.insert(make_pair(qdate,submission));
+    }
 
 }
 

@@ -72,9 +72,9 @@ endif()
 ##################################################
 # condorapi & tests
 
-condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;stl_string_utils.*;MyString.*;condor_xml_classads.*;directory*;param_functions.*;${SAFE_OPEN_SRC}" ApiSrcs)
+condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;stl_string_utils.*;MyString.*;condor_xml_classads.*;directory*;param_functions.*;filename_tools_cpp.*;filename_tools.*;stat_info.*;${SAFE_OPEN_SRC}" ApiSrcs)
 if(WINDOWS)
-    condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;filename_tools.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
+    condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
@@ -86,6 +86,13 @@ if (HAVE_LIBDL)
 endif()
 
 target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP})
+
+if (LINUX OR DARWIN)
+	condor_shared_lib( condorapi_shared "${ApiSrcs}" )
+	add_dependencies( condorapi_shared condor_utils )
+	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${APILIBDEP})
+	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
+endif()
 
 if (WANT_FULL_DEPLOYMENT)
 	install (FILES MyString.h
@@ -102,6 +109,9 @@ if (WANT_FULL_DEPLOYMENT)
 			DESTINATION ${C_INCLUDE})
 
     install ( TARGETS condorapi DESTINATION ${C_LIB} )
+    if (LINUX OR DARWIN)
+        install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
+    endif()
 endif(WANT_FULL_DEPLOYMENT)
 
 add_definitions(-DENABLE_STATE_DUMP)

@@ -1222,7 +1222,8 @@ BaseShadow::log_except(const char *msg)
 	bool exception_already_logged = false;
 
 	if(!msg) msg = "";
-	sprintf(event.message, "%s", msg);
+	snprintf(event.message, sizeof(event.message), "%s", msg);
+	event.message[sizeof(event.message)-1] = '\0';
 
 	if ( BaseShadow::myshadow_ptr ) {
 		BaseShadow *shadow = BaseShadow::myshadow_ptr;

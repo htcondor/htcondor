@@ -587,6 +587,8 @@ int SafeSock::handle_incoming_packet()
 	_condorInMsg *tempMsg, *delMsg, *prev = NULL;
 	time_t curTime;
 
+    addr_changed(); // Not yet, but it is about to
+
 	if( _msgReady ) {
 		char const *existing_msg_type;
 		bool existing_consumed;

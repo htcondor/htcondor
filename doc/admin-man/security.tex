@@ -778,14 +778,16 @@ These variables list the authentication methods that are available
 to be used.
 The ordering of the list defines preference;
 the first item in the list indicates the highest preference.
-Defined values are
+As not all of the authentication methods work on Windows platforms, 
+which ones do \emph{not} work on Windows are indicated in 
+the following list of defined values:
 \begin{verbatim}
-    GSI
+    GSI       (not available on Windows platforms)
     SSL
     KERBEROS
     PASSWORD
-    FS
-    FS_REMOTE
+    FS        (not available on Windows platforms)
+    FS_REMOTE (not available on Windows platforms)
     NTSSPI
     CLAIMTOBE
     ANONYMOUS

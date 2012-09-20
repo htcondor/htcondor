@@ -39,28 +39,42 @@ if opts.size is None:
     parser.print_help()
     exit(1)
 
-if opts.name and opts.qdate:
-    print 'Either name (lexical) OR qdate (time) can be specified for index, not both'
-    parser.print_help()
-    exit(1)
-
 client = create_suds_client(opts,wsdl,None)
 client.set_options(location=opts.url)
 
 scanMode = None
 subId = None
-if opts.name:
-    subId = client.factory.create("ns0:SubmissionID")
-    subId.name = opts.name
+
 # set up our ID and scanMode
-elif opts.mode and opts.qdate:
+if opts.mode and opts.qdate:
     scanMode = client.factory.create("ns0:ScanMode")
     scanMode = opts.mode
     subId = client.factory.create("ns0:SubmissionID")
     subId.qdate = opts.qdate
-else:
-    print "Mode must be specified with qdate arg"
+elif opts.name and opts.qdate:
+    print 'Either name (lexical) OR qdate (time) can be specified for index, not both'
     parser.print_help()
+    exit(1)
+elif opts.mode and opts.name:
+    print "Mode arg incompatible with name arg"
+    parser.print_help()
+    exit(1)
+elif opts.qdate:
+    print "Mode arg must be specified with qdate arg"
+    parser.print_help()
+    exit(1)
+elif opts.mode:
+    print "Qdate arg must be specified with mode arg"
+    parser.print_help()
+    exit(1)
+# we only scan forward if using a name
+elif opts.name:
+    subId = client.factory.create("ns0:SubmissionID")
+    subId.name = opts.name
+
+# sanity check for qdate
+if (opts.qdate and long(opts.qdate) > sys.maxint):
+    print 'Invalid input: Qdate is larger than system max integer'
     exit(1)
 
 try:

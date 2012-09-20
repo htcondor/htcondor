@@ -199,6 +199,16 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagStatus = DAG_STATUS_OK;
 
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+	if(_nfsLogIsError) {
+		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+		if(userlog_locking) {
+			bool locks_on_local = param_boolean( "CREATE_LOCKS_ON_LOCAL_DISK", true);
+			if(locks_on_local) {
+				dprintf( D_ALWAYS, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR.\n");
+				_nfsLogIsError = false;
+			}
+		}
+	}
 
 	return;
 }
@@ -605,6 +615,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessIsIdleEvent(job);
 				break;
 
+			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
 			case ULOG_SHADOW_EXCEPTION:
@@ -616,6 +627,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessIsIdleEvent(job);
 				break;
 
+			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_EXECUTE:
 				ProcessNotIdleEvent(job);
 				break;
@@ -624,7 +636,6 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				ProcessReleasedEvent(job);
 				break;
 
-			case ULOG_JOB_UNSUSPENDED:
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:

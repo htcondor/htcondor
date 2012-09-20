@@ -39,6 +39,8 @@
 #include "gridmanager.h"
 #include "condor_string.h"
 
+#include <sstream>
+
 #define HASH_TABLE_SIZE			500
 
 
@@ -273,6 +275,19 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		return NULL;
 	}
 
+	// If Condor-C submitted the job, the proxy_path is relative to the
+	// spool directory.  For the purposes of this function, extend the
+	// proxy path with the ATTR_JOB_IWD
+	if (proxy_path[0] != DIR_DELIM_CHAR) {
+		std::string iwd;
+		job_ad->LookupString(ATTR_JOB_IWD, iwd);
+		if (!iwd.empty()) {
+			std::stringstream ss;
+			ss << iwd << DIR_DELIM_CHAR << proxy_path;
+			proxy_path = ss.str();
+		}
+	}
+
 	if ( ProxiesByFilename.lookup( HashKey(proxy_path.c_str()), proxy ) == 0 ) {
 		// We already know about this proxy,
 		// use the existing Proxy struct
@@ -351,7 +366,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			std::string tmp;
 			proxy_subject = new ProxySubject;
 			proxy_subject->subject_name = strdup( subject_name );
-			proxy_subject->email = strdup( email );
+			proxy_subject->email = email ? strdup( email ) : NULL;
 			proxy_subject->fqan = strdup( fqan );
 			proxy_subject->first_fqan = first_fqan ? strdup( first_fqan ) : NULL;
 			proxy_subject->has_voms_attrs = true;

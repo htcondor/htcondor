@@ -83,10 +83,15 @@ static const char *GMStateNames[] = {
 #define REMOTE_STATE_PREPARED		"PREPARED"
 #define REMOTE_STATE_SUBMITTING		"SUBMITTING"
 #define REMOTE_STATE_INLRMS_R		"INLRMS: R"
+#define REMOTE_STATE_INLRMS_R2		"INLRMS:R"
 #define REMOTE_STATE_INLRMS_Q		"INLRMS: Q"
+#define REMOTE_STATE_INLRMS_Q2		"INLRMS:Q"
 #define REMOTE_STATE_INLRMS_S		"INLRMS: S"
+#define REMOTE_STATE_INLRMS_S2		"INLRMS:S"
 #define REMOTE_STATE_INLRMS_E		"INLRMS: E"
+#define REMOTE_STATE_INLRMS_E2		"INLRMS:E"
 #define REMOTE_STATE_INLRMS_O		"INLRMS: O"
+#define REMOTE_STATE_INLRMS_O2		"INLRMS:O"
 #define REMOTE_STATE_KILLING		"KILLING"
 #define REMOTE_STATE_EXECUTED		"EXECUTED"
 #define REMOTE_STATE_FINISHING		"FINISHING"
@@ -215,7 +220,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	gahp_path = NULL;
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -248,7 +253,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( strrchr( buff, ' ' ) ) {
 		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
 		myResource->AlreadySubmitted( this );
@@ -829,7 +834,7 @@ void NordugridJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -1221,7 +1226,9 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 
 		if ( condorState == IDLE &&
 			 ( remoteJobState == REMOTE_STATE_INLRMS_R ||
+			   remoteJobState == REMOTE_STATE_INLRMS_R2 ||
 			   remoteJobState == REMOTE_STATE_INLRMS_E ||
+			   remoteJobState == REMOTE_STATE_INLRMS_E2 ||
 			   remoteJobState == REMOTE_STATE_EXECUTED ||
 			   remoteJobState == REMOTE_STATE_FINISHING ||
 			   remoteJobState == REMOTE_STATE_FINISHED ||
@@ -1229,7 +1236,9 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 			JobRunning();
 		} else if ( condorState == RUNNING &&
 					( remoteJobState == REMOTE_STATE_INLRMS_Q ||
-					  remoteJobState == REMOTE_STATE_INLRMS_S ) ) {
+					  remoteJobState == REMOTE_STATE_INLRMS_Q2 ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S2 ) ) {
 			JobIdle();
 		}
 	}

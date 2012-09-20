@@ -8361,7 +8361,7 @@ id=505
 
 [LOCAL_UNIV_EXECUTE]
 aliases=
-default=
+default=$(SPOOL)/local_univ_execute
 version=0.0.0
 range=.*
 state=default
@@ -10360,22 +10360,6 @@ friendly_name=Collector Log
 usage=Log files
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag,log
-id=550
-
-[JOB_QUEUE_LOG]
-aliases=
-default=$(SPOOL)/job_queue.log
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Job Queue Log file
-usage=Job Queue File
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=log
 id=550
 
 [DEFRAG_UPDATE_INTERVAL]

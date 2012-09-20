@@ -332,7 +332,7 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	buff[0] = '\0';
 	
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 			//since GridJobId = <cream> <ResourceManager> <jobid>
 		SetRemoteJobId(strchr((strchr(buff, ' ') + 1), ' ') + 1);
@@ -354,7 +354,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 
 	if ( job_already_submitted &&
-		 jobAd->LookupString( ATTR_CREAM_DELEGATION_URI, buff ) ) {
+		 jobAd->LookupString( ATTR_CREAM_DELEGATION_URI, buff, sizeof(buff) ) ) {
 
 		delegatedCredentialURI = strdup( buff );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
@@ -1262,7 +1262,7 @@ void CreamJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );

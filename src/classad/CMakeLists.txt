@@ -86,8 +86,15 @@ if (NOT WINDOWS)
 
   ###### Test executables
   condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
-  condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
-  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+  ##condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+  add_executable( classad_functional_tester "classad_functional_tester.cpp" )
+  condor_set_link_libs( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
+  install (TARGETS classad_functional_tester DESTINATION ${C_BIN} )
+  
+  ##condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+  add_executable( classad_version "classad_version.cpp" )
+  condor_set_link_libs( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
+  install (TARGETS classad_version DESTINATION ${C_BIN} )
   
   ###### Install elements with our distribution
   install( TARGETS classads DESTINATION ${C_LIB_PUBLIC} )

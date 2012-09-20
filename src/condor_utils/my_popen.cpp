@@ -397,7 +397,7 @@ my_popenv_impl( const char *const args[],
 		seteuid( 0 );
 		setgroups( 1, &egid );
 		setgid( egid );
-		setuid( euid );
+		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE
 			   to SIG_DFL
@@ -677,7 +677,7 @@ my_spawnv( const char* cmd, const char *const argv[] )
 		seteuid( 0 );
 		setgroups( 1, &egid );
 		setgid( egid );
-		setuid( euid );
+		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
 			/* Now it's safe to exec whatever we were given */
 		execv( cmd, const_cast<char *const*>(argv) );

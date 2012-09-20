@@ -529,7 +529,7 @@ handle_terminate_pending()
 	WroteExecuteEvent  = TRUE;
 	// Restore a bunch of global variables hacked into the jobad.
 	JobAd->LookupInteger(ATTR_WAITPID_STATUS, JobStatus);
-	JobAd->LookupString(ATTR_TERMINATION_REASON, notification);
+	JobAd->LookupString(ATTR_TERMINATION_REASON, notification, sizeof(notification));
 	JobAd->LookupInteger(ATTR_TERMINATION_EXITREASON, ExitReason);
 	JobAd->LookupFloat(ATTR_BYTES_SENT, BytesSent);
 	JobAd->LookupFloat(ATTR_BYTES_RECVD, BytesRecvd);
@@ -775,7 +775,7 @@ bool periodic_policy(void)
 	result->EvalBool(ATTR_TAKE_ACTION, result, val);
 	if (val == 1)
 	{
-		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
 
 		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
 		switch(action)
@@ -842,7 +842,7 @@ void static_policy(void)
 	result->EvalBool(ATTR_TAKE_ACTION, result, val);
 	if (val == 1)
 	{
-		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
 
 		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
 		switch(action)
@@ -1099,7 +1099,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							ATTR_JOB_COMMITTED_TIME, CommittedTime);
 
 			// if there is a core file, update that too.
-			if (JobAd->LookupString(ATTR_JOB_CORE_FILENAME, buf)) {
+			if (JobAd->LookupString(ATTR_JOB_CORE_FILENAME, buf, sizeof(buf))) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 			   		ATTR_JOB_CORE_FILENAME, buf);
 			}
@@ -1138,7 +1138,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			}
 
 			// store the reason why the job is marked completed.
-			if (JobAd->LookupString(ATTR_TERMINATION_REASON, buf)) {
+			if (JobAd->LookupString(ATTR_TERMINATION_REASON, buf, sizeof(buf))) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 				   			ATTR_TERMINATION_REASON, buf);
 			}

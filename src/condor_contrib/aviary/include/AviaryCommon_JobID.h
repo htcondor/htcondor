@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_JOBID_H
-        #define AviaryCommon_JOBID_H
-
+          #ifndef AviaryCommon_JOBID_H
+          #define AviaryCommon_JOBID_H
+        
+      
        /**
         * JobID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jul 17, 2012 (04:42:24 EDT)
         */
 
        /**
@@ -20,8 +20,8 @@
         
 
         
-       #include "AviaryCommon_SubmissionID.h"
-          
+                #include "AviaryCommon_SubmissionID.h"
+              
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -104,6 +104,11 @@ namespace AviaryCommon
          */
         JobID(std::string arg_Job,std::string arg_Pool,std::string arg_Scheduler,AviaryCommon::SubmissionID* arg_Submission);
         
+
+        /**
+         * resetAll for JobID
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

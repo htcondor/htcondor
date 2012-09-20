@@ -6,8 +6,20 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryJob_SubmitJob.h"
+          
 
-        #include "AviaryJob_SubmitJob.h"
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -122,15 +134,24 @@
         }
         AviaryJob::SubmitJob::~SubmitJob()
         {
-            if (property_Requirements) {
-                while(!property_Requirements->empty()) delete property_Requirements->back(), property_Requirements->pop_back();
-                delete property_Requirements;
-            }
-            if (property_Extra) {
-                while(!property_Extra->empty()) delete property_Extra->back(), property_Extra->pop_back();
-                delete property_Extra;
-            }
-            axutil_qname_free (qname,Environment::getEnv());
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryJob::SubmitJob::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+             resetRequirements();//AviaryCommon::ResourceConstraint
+             resetExtra();//AviaryCommon::Attribute
+          if(qname != NULL)
+          {
+            axutil_qname_free( qname, Environment::getEnv());
+            qname = NULL;
+          }
+        
+            return true;
+
         }
 
         

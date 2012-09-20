@@ -14,7 +14,8 @@ The
 settings that control the policy under which Condor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
+section~\ref{sec:Configuring-Policy} on Policy Configuration for the
+\Condor{startd}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
@@ -27,7 +28,7 @@ Condor works well for most sites.
 
 Each Condor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
-various configuration files that might be used including pool-wide,
+various configuration files that might be used, including pool-wide,
 platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
@@ -162,7 +163,7 @@ Recursively defined macros such as
 A = $(B)
 B = $(A)
 \end{verbatim}
-are not allowed.
+are \emph{not} allowed.
 They create definitions that Condor refuses to parse. 
 
 All entries in a configuration file must have an operator,
@@ -193,14 +194,10 @@ For example,
 the ports that Condor may use can be restricted to a range 
 using the \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} configuration
 variables.
-If the range of intended ports is different for specific
-daemons, this syntax may be used.
 
 \begin{verbatim}
   MASTER.LOWPORT   = 20000
   MASTER.HIGHPORT  = 20100
-  NEGOTIATOR.LOWPORT   =  22000 
-  NEGOTIATOR.HIGHPORT  =  22100
 \end{verbatim}
 
 Note that all configuration variables may utilize this syntax,
@@ -314,7 +311,7 @@ and
   ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
   stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
   bigbird.cs.wisc.edu
-  HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
+  HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
 Note that a line continuation character may currently be used within
@@ -324,8 +321,7 @@ configuration variable \MacroNI{FOO}:
   # This comment includes the following line, so FOO is NOT set \
   FOO = BAR
 \end{verbatim}
-It is a poor idea to use this functionality, as it is likely to
-stop working in future Condor releases.
+It is a poor idea to use this functionality.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
@@ -407,7 +403,7 @@ the changed value.
   
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
-  The host name of the local machine (no domain name).
+  The host name of the local machine, \emph{without} a domain name.
   
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
@@ -416,7 +412,7 @@ the changed value.
 \label{param:Tilde}
 \item[\MacroU{TILDE}]
   The full path to the
-  home directory of the Unix user condor, if such a user exists on the
+  home directory of the Unix user \Login{condor}, if such a user exists on the
   local machine.
 
   \label{sec:Condor-Subsystem-Names}
@@ -527,7 +523,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{USERNAME}]
   The user name of the UID of the daemon or tool.
   For daemons started as root, but running under another UID
-  (typically the user condor), this will be the other UID.
+  (typically the user \Login{condor}), this will be the other UID.
 
 \label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
@@ -535,7 +531,7 @@ determined automatically at run time but which can be overwritten.
   qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
-  its use and under what conditions you would want to change it.
+  its use and under what conditions it could be desirable to change it.
 
 \label{param:UIDDomain}
 \item[\MacroU{UID\_DOMAIN}]
@@ -548,8 +544,6 @@ determined automatically at run time but which can be overwritten.
 
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
-Only do so if you know what you are doing.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -568,7 +562,7 @@ For example,
 \begin{verbatim}
   A = $ENV(HOME)
 \end{verbatim}
-binds \MacroNI{A} to the value of the HOME environment variable.
+binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
 Environment references are not currently used in standard Condor
 configurations.
 However, they can sometimes be useful in custom configurations.
@@ -1509,8 +1503,7 @@ of the subsystem corresponding to the daemon.
   that defaults to \Expr{True}. 
   This variable is only relevant if \MacroNI{ENABLE\_USERLOG\_LOCKING}
   is \Expr{True}.
-  When \Expr{True}, job user logs and the global job event log are
-  written to a directory named \File{condorLocks},
+  When \Expr{True}, lock files are written to a directory named \File{condorLocks},
   thereby using a local drive to avoid known problems with locking on NFS.
   The location of the \File{condorLocks} directory is determined by
   \begin{enumerate}
@@ -5705,12 +5698,26 @@ SYSTEM_PERIODIC_REMOVE = \
   STATISTICS_TO_PUBLISH = SCHEDD:2
 \end{verbatim}
   
-
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   The amount of time given in seconds defining the interval of time over
   which \Condor{schedd} daemon Statistics attributes are quantized.
   Defaults to 1200 seconds, which is 20 minutes.
+
+\label{param:ScheddCollectStatsForName}
+\item[\Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>}]
+  A boolean expression that when \Expr{True} creates a set of \Condor{schedd}
+  ClassAd attributes of statistics collected for a particular set.
+  These attributes are named using the prefix of \Expr{<Name>}.
+  The set includes each entity for which this expression is \Expr{True}.
+  As an example, assume that \Condor{schedd} statistics attributes are to
+  be created for only user Einstein's jobs.
+  Defining
+\begin{verbatim}
+  SCHEDD_COLLECT_STATS_FOR_Einstein = (Owner=="einstein")
+\end{verbatim}
+  causes the creation of the set of statistics attributes with names such as
+  \Attr{EinsteinJobsCompleted} and \Attr{EinsteinJobsCoredumped}.
 
 \end{description}
 
@@ -5931,58 +5938,63 @@ These settings affect the \Condor{starter}.
 
 \label{param:UserJobWrapper} 
 \item[\Macro{USER\_JOB\_WRAPPER}]
-  The full path to an executable or script.
-  This macro allows an administrator to specify a wrapper script to handle the
-  execution of all user jobs.  
+  The full path and file name of an executable or script.
   If specified, Condor never directly executes a job, but instead
-  invokes the program specified by this macro.
+  invokes this executable,
+  allowing an administrator to specify the executable (wrapper script) 
+  that will handle the execution of all user jobs.  
   The command-line arguments passed to this program will include the
-  full-path to the actual user job which should be executed, followed by all
+  full path to the actual user job which should be executed, followed by all
   the command-line parameters to pass to the user job.
-  This wrapper program must ultimately replace its image with the user job;
-  in other words,
-  it must \Procedure{exec} the user job, not \Procedure{fork} it.
+  This wrapper script must ultimately replace its image with the user job;
+  thus, it must \Procedure{exec} the user job, not \Procedure{fork} it.
 
-  For Bourne type shells (sh, bash, ksh), the last line should be:
+  For Bourne type shells (\Prog{sh}, \Prog{bash}, \Prog{ksh}), 
+  the last line should be:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
-  For the C type shells (csh, tcsh), the last line should be:
+  For the C type shells (\Prog{csh}, \Prog{tcsh}), the last line should be:
 \begin{verbatim}
         exec $*:q
 \end{verbatim}
 
-	These precise syntaxes are needed to correctly handle program arguments
-which contain whitespace.
-
+  This syntax is precise, to correctly handle program arguments
+  which contain white space characters.
 
   For Windows machines, the wrapper will either be
-  a batch script (with a file extension of \File{.bat} or \File{.cmd})
-  or an executable (with a file extension of \File{.exe} or \File{.com}).
+  a batch script with a file extension of \File{.bat} or \File{.cmd},
+  or an executable with a file extension of \File{.exe} or \File{.com}.
 
-  If the wrapper encounters an error, and is unable to run the user
-  job, it is important that the wrapper indicate this to the Condor system
-  so that Condor does not assign the exit code of the wrapper to the
-  user.  To do this, the wrapper should write a useful error message
-  to the file named in the environment variable \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
-  and exit with a non-zero value.
-  If this file is created by the wrapper, Condor assumes that the wrapper
-  has failed, and will mark the job as idle in the queue, and try to 
-  re-run it.  The starter will also copy the contents of this file to
-  the starter log, so the administrator can debug the problem.
+  If the wrapper script encounters an error as it runs,
+  and it is unable to run the user job, 
+  it is important that the wrapper script indicate this to the Condor system
+  so that Condor does not assign the exit code of the wrapper script to the
+  job.  
+  To do this, the wrapper script should write a useful error message
+  to the file named in the environment variable 
+  \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
+  and then the wrapper script should exit with a non-zero value.
+  If this file is created by the wrapper script, 
+  Condor assumes that the wrapper script has failed, 
+  and Condor will place the job back in the queue marking it as Idle, 
+  such that the job will again be run.
+  The \Condor{starter} will also copy the contents of this error file to
+  the \Condor{starter} log, so the administrator can debug the problem.
 
-  When a wrapper is in use, the executable of a job submission may be
-  kept relative and resolved by the user's path by setting:
+  When a wrapper script is in use, the executable of a job submission may be
+  specified by a relative path, as long as the submit description file
+  also contains:
 \begin{verbatim}
         +PreserveRelativeExecutable = True
 \end{verbatim}
-  in the job submission file.  If this is set, then the executable does
-  not need to be fully qualified, for example
+  For example,
 \begin{verbatim}
         # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
+        +PreserveRelativeExecutable = True
 \end{verbatim}
-  As opposed to
+  Without this extra attribute:
 \begin{verbatim}
         # A typical fully-qualified executable path
         cmd = /bin/sleep
@@ -6764,30 +6776,31 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:DefaultPrioFactor} 
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
-  This macro sets the priority factor for local users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 1.
+  Sets the priority factor for local users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 1.0.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
-  This macro sets the priority factor for nice users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000000.
+  Sets the priority factor for nice users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 10000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
-  This macro defines the priority factor for remote users (users who
-  who do not belong to the accountant's local domain - see
-  below). See section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000.
+  Defines the priority factor for remote users,
+  which are those users who who do not belong to the local domain.
+  See section~\ref{sec:UserPrio} for details.  
+  Defaults to 10000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
-  This macro is used to decide if a user is local or remote. A user
-  is considered to be in the local domain if the UID\_DOMAIN matches
-  the value of this macro. Usually, this macro is set
-  to the local UID\_DOMAIN. If it is not defined, all users are considered
-  local.
+  Describes the local UID domain.
+  This variable is used to decide if a user is local or remote. 
+  A user is considered to be in the local domain if their UID domain matches
+  the value of this variable. Usually, this variable is set
+  to the local UID domain. 
+  If not defined, all users are considered local.
 
 \label{param:MaxAccountantDatabaseSize}
 \item[\Macro{MAX\_ACCOUNTANT\_DATABASE\_SIZE}] 
@@ -7232,31 +7245,32 @@ The following configuration macros affect negotiation for group users.
   machine ClassAd attribute \Attr{SlotWeight}. 
   When \Expr{False}, each slot effectively has a weight of 1.
 
-%\label{param:GroupSortExpr}
-%\item[\Macro{GROUP\_SORT\_EXPR}]
-%  A classad expression which evaluates to a numeric value that is used
-%  to sort accounting groups to determine which order they negotiate in.
-%  The classad expression for \Macro{GROUP\_SORT\_EXPR} may involve any of
-%  the following:
-%  \begin{itemize}
-%      \item AccountingGroup -- the name of the accounting group
-%      \item GroupQuota -- the resource quota assigned to the group for the current negotiation cycle
-%      \item GroupResourcesAllocated -- the resources allocated to this group by the HGQ algorithm
-%      \item GroupResourcesInUse -- the resources currently in use by jobs associated with this group
-%  \end{itemize}
-%  An example group sorting expression that causes the root group (``<none>'') to always negotiate 
-%  last, and other groups to negotiate in order of quota-based starvation:
+\label{param:GroupSortExpr}
+\item[\Macro{GROUP\_SORT\_EXPR}]
+  \fbox{This definition is not complete.}
+  A ClassAd expression that controls the order in which the 
+  \Condor{negotiator} considers groups when allocating resources.
+  The default value is set such that group \Expr{<none>} always
+  goes last when considering hierarchical group quotas.
+%  The default value uses the expression
+%\footnotesize
 %\begin{verbatim}
-%GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="<none>", 3.4e+38,
-%  ifThenElse(GroupQuota > 0, GroupResourcesInUse/GroupQuota, 3.3e+38))
 %\end{verbatim}
-%  If an expression fails to evaluate to a numeric value for a group, then
-%  that group's sorting value will default to FLT\_MAX (3.40282e+38).
-%  GROUP\_SORT\_EXPR defaults to the backward compatible starvation ratio:
-%\begin{verbatim}
-%GROUP_SORT_EXPR = ifThenElse(GroupResourcesAllocated>0.0,
-%  GroupResourcesInUse/GroupResourcesAllocated, 3.40282e+38)
-%\end{verbatim}
+%\normalsize
+
+\label{param:NegotiatorAllowQuotaOversubscription}
+\item[\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION}]
+  A boolean value that defaults to \Expr{True}.
+  When \Expr{True}, 
+  the behavior of resource allocation when considering groups is
+  more like it was in the 7.4 stable series of Condor.
+  In implementation, when \Expr{True}, the static quotas of subgroups
+  will \emph{not} be scaled when the sum of these static quotas of subgroups
+  sums to more than the group's static quota.
+  This behavior is desirable when using static quotas,
+  unless the sum of subgroup quotas is considerably less than the group's
+  quota, as scaling is currently based on the number of machines available,
+  not assigned quotas (for static quotas).
 
 \end{description}
 
@@ -7711,19 +7725,36 @@ These macros affect the \Condor{gridmanager}.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/gahp\_server}.
 
+\label{param:BatchGAHP}
+\item[\Macro{BATCH\_GAHP}]
+  The complete path and file name of the batch GAHP executable,
+  to be used for PBS, LSF, SGE, and similar batch systems.
+  The default location is
+  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+
 \label{param:PBSGAHP}
 \item[\Macro{PBS\_GAHP}]
   The complete path and file name of the PBS GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \label{param:LSFGAHP}
 \item[\Macro{LSF\_GAHP}]
   The complete path and file name of the LSF GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \label{param:UnicoreGAHP}
 \item[\Macro{UNICORE\_GAHP}]
@@ -7756,9 +7787,14 @@ These macros affect the \Condor{gridmanager}.
 \label{param:SGEGAHP}
 \item[\Macro{SGE\_GAHP}]
   The complete path and file name of the SGE GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{GLITE\_LOCATION}/bin/batch\_gahp}.
+  The use of the configuration variable \MacroNI{BATCH\_GAHP}
+  is preferred and encouraged,
+  as this variable may no longer be supported in a future
+  version of Condor.
+  A value given with this configuration variable will override
+  a value specified by \MacroNI{BATCH\_GAHP},
+  and the value specified by \MacroNI{BATCH\_GAHP} is the default
+  if this variable is not defined.
 
 \end{description}
 
@@ -8390,6 +8426,9 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
   node job submit description files with user log files on NFS.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
+  \Expr{True} and
+  \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
   If a DAG references such a submit description file and
   \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
   the DAG will abort during the initialization process. 
@@ -8750,6 +8789,14 @@ section~\ref{sec:Security} on Security.
   When this configuration variable is defined, use of this proxy
   takes precedence over use of a certificate and key.
 
+\label{param:GSIAuthzConf}
+\item[\Macro{GSI\_AUTHZ\_CONF}]
+  A complete path and file name of the
+  Globus mapping library that looks for the mapping call out configuration.
+  There is no default value; as such, Condor uses the environment
+  variable \Env{GSI\_AUTHZ\_CONF} when this variable is not defined.
+  Setting this variable to \Expr{/dev/null} disables callouts.
+
 \label{param:DelegateJobGSICredentials} 
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]
   A boolean value that defaults to \Expr{True} for Condor version 6.7.19
@@ -8772,7 +8819,7 @@ section~\ref{sec:Security} on Security.
   A value of 0 indicates that the delegated proxy should be valid for as
   long as allowed by the credential used to create the proxy.  
   The job may override this configuration setting by using the
-  \SubmitCmd{delegated\_job\_GSI\_credentials\_lifetime} submit file
+  \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
   command.  This configuration variable currently only applies to
   proxies delegated for non-grid jobs and Condor-C jobs.  It does not
   currently apply to globus grid jobs, which always behave as though

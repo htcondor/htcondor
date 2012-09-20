@@ -34,6 +34,7 @@
 #include "HashTable.h"
 #include "ConcurrencyLimitUtils.h"
 #include "matchmaker.h"
+#include "hashkey.h"
 #include <string>
 #include <deque>
 
@@ -943,7 +944,11 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
     ResourceName = GetResourceName(ResourceAd);
-    ASSERT( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    if (!success) {
+      dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.Value());
+      ResourceAd->dPrint(D_FULLDEBUG);
+    }
   }
   ResourceList.Close();
 
@@ -1307,24 +1312,10 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  MyString startdName;
-  MyString startdAddr;
-  
-  if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
-    //This should never happen, because unnamed startd ads are rejected.
-    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
-  }
-  MyString Name=startdName;
-  Name+="@";
-
-  if (!ResourceAd->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)) {
-    //This may happen for grid site ClassAds.
-    //Actually, the collector now inserts an IP address if none is provided,
-    //but it is more robust to not assume that behavior here.
-	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.Value());
-  }
-  Name+=startdAddr;
-  
+  AdNameHashKey hk;
+  MyString Name;
+  makeStartdAdHashKey(hk, ResourceAd);
+  hk.sprint(Name);
   return Name;
 }
 
@@ -1361,15 +1352,15 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
   if (state!=claimed_state && state!=preempting_state) return 0;
   
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser, sizeof(RemoteUser))) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser, sizeof(RemoteUser))) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
 		return 0;
 	  }
   }
   if(DiscountSuspendedResources) {
     char RemoteActivity[512];
-    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity, sizeof(RemoteActivity))) {
        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
        return 0;
     }
@@ -1404,8 +1395,8 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser, sizeof(RemoteUser))) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser, sizeof(RemoteUser))) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
 		return 0;
 	  }
@@ -1431,7 +1422,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
 
   if(DiscountSuspendedResources) {
     char RemoteActivity[512];
-    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity, sizeof(RemoteActivity))) {
         dprintf(D_ALWAYS, "Could not lookup remote activity\n");
         return 0;
     }

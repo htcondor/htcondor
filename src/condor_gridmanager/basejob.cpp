@@ -1011,7 +1011,7 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 
 	hostname[0] = '\0';
 	job_ad->LookupString( ATTR_GRID_RESOURCE, hostname,
-						  sizeof(hostname) - 1 );
+						  sizeof(hostname) );
 
 	ExecuteEvent event;
 	event.setExecuteHost( hostname );
@@ -1050,7 +1050,7 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	removeReason[0] = '\0';
 	job_ad->LookupString( ATTR_REMOVE_REASON, removeReason,
-						   sizeof(removeReason) - 1 );
+						   sizeof(removeReason) );
 
 	event.setReason( removeReason );
 

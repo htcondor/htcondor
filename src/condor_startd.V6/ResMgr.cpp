@@ -1021,7 +1021,13 @@ ResMgr::GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *parti
 	char *partition_value = NULL;
 	bool partition_rc = sysapi_partition_id( execute_dir->Value(), &partition_value );
 	if( !partition_rc ) {
-		EXCEPT("Failed to get partition id for %s=%s\n",
+		struct stat statbuf;
+		if( stat(execute_dir->Value(), &statbuf)!=0 ) {
+			int stat_errno = errno;
+			EXCEPT("Error accessing execute directory %s specified in the configuration setting %s: (errno=%d) %s",
+				   execute_dir->Value(), execute_param.Value(), stat_errno, strerror(stat_errno) );
+		}
+		EXCEPT("Failed to get partition id for %s=%s",
 			   execute_param.Value(), execute_dir->Value());
 	}
 	ASSERT( partition_value );

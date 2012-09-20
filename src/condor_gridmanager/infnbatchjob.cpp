@@ -509,7 +509,7 @@ void INFNBatchJob::doEvaluateState()
 						 "(%d.%d) blah_job_status() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
 				errorString = gahp->getErrorString();
-				gmState = GM_CANCEL;
+				gmState = GM_HOLD;
 				break;
 			}
 			ProcessRemoteAd( status_ad );
@@ -670,7 +670,7 @@ void INFNBatchJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -870,7 +870,6 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 //		ATTR_MIN_HOSTS,
 //		ATTR_JOB_PRIO,
 		ATTR_JOB_IWD,
-		ATTR_X509_USER_PROXY,
 		ATTR_GRID_RESOURCE,
 		NULL };		// list must end with a NULL
 
@@ -899,6 +898,19 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
 	} else {
 		submit_ad->Assign( ATTR_JOB_CMD, expr );
+	}
+
+	// The blahp expects the proxy attribute to contain the full pathname
+	// of the proxy file.
+	if ( jobAd->LookupString( ATTR_X509_USER_PROXY, expr ) ) {
+		if ( expr[0] != '/' ) {
+			std::string fullpath;
+			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
+			sprintf_cat( fullpath, "/%s", expr.Value() );
+			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
+		} else {
+			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
+		}
 	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'

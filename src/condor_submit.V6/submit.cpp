@@ -2232,7 +2232,7 @@ SetImageSize()
 	// we should only call calc_image_size_kb on the first
 	// proc in the cluster, since the executable cannot change.
 	if ( ProcId < 1 || ! got_exe_size ) {
-		ASSERT (job->LookupString (ATTR_JOB_CMD, buff));
+		ASSERT (job->LookupString (ATTR_JOB_CMD, buff, sizeof(buff)));
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) { 
 			executable_size_kb = 0;
 		}else {
@@ -5435,9 +5435,11 @@ SetGridParams()
 		}
 	}
 
-	buffer.sprintf("%s = \"%s\"",
-				   ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
-	InsertJobExpr(buffer.Value());
+	if ( !tagNames.isEmpty() ) {
+		buffer.sprintf("%s = \"%s\"",
+					ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
+		InsertJobExpr(buffer.Value());
+	}
 
 
 	//
