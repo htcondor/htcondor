@@ -1040,6 +1040,7 @@ void EC2Job::doEvaluateState()
                 if( condorState == HELD || condorState == REMOVED ) {
                     // Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
                     // an instance-status probe.
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + HELD|REMOVED = GM_SPOT_CANCEL\n" );
                     remoteJobState = EC2_VM_STATE_TERMINATED;
                     gmState = GM_SPOT_CANCEL;
                     break;
@@ -1067,6 +1068,14 @@ void EC2Job::doEvaluateState()
                                             * m_group_names,
                                             spot_request_id,
                                             gahp_error_code );
+
+                dprintf( D_ALWAYS, "GM_FAILURE_INJECTION = '%s'\n", getenv( "GM_FAILURE_INJECTION" ) );
+                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "1" ) == 0 ) {
+                    rc = 1;
+                    // gahp_error_code is free()d below.
+                    gahp_error_code = strdup( "E_TESTING" );
+                    gahp->setErrorString( "GM_FAILURE_INJECTION #1" );
+                }
 
                 // If the command hasn't terminated yet, return to this
                 // state and poll again.
@@ -1096,6 +1105,7 @@ void EC2Job::doEvaluateState()
                     dprintf( D_ALWAYS, "(%d.%d) spot instance request failed: %s: %s\n",
                                 procID.cluster, procID.proc, gahp_error_code,
                                 errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + <GAHP failure> = GM_HOLD\n" );
                     gmState = GM_HOLD;
                     break;
                 }
@@ -1114,6 +1124,13 @@ void EC2Job::doEvaluateState()
                                                 m_spot_request_id,
                                                 gahp_error_code );
 
+                    if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "2" ) == 0 ) {
+                        rc = 1;
+                        // gahp_error_code is free()d below.
+                        gahp_error_code = strdup( "E_TESTING" );
+                        gahp->setErrorString( "GM_FAILURE_INJECTION #2" );
+                    }
+
                     // If the command hasn't terminated yet, return to this
                     // state and poll again.
                     if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1126,12 +1143,19 @@ void EC2Job::doEvaluateState()
                         dprintf( D_ALWAYS, "(%d.%d) spot request stop failed: %s: %s\n",
                                     procID.cluster, procID.proc, gahp_error_code,
                                     errorString.c_str() );
+                        dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CANCEL + <GAHP failure> = GM_HOLD\n" );
                         gmState = GM_HOLD;
                         break;
                     }
                     
                     // Clear the request ID, now that it's been cancelled.
                     m_spot_request_id.clear();
+                    
+                    // Rather than decide if we crashed after cancelling a
+                    // request but before removing its ID from the job ad,
+                    // just never remove it.  It won't hurt to try to cancel
+                    // the request again, and since we already have the
+                    // instance ID, we know we're not done when we cancel it.
                 }
             
                 gmState = GM_SUBMITTED;
@@ -1143,6 +1167,7 @@ void EC2Job::doEvaluateState()
                 // know what the state of the remote job is (whether it's
                 // spawned an instance) before we can decide what to do.
                 if( condorState == HELD || condorState == REMOVED ) {
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_SUBMITTED + HELD|REMOVED = GM_SPOT_QUERY\n" );
                     gmState = GM_SPOT_QUERY;
                     break;
                 }
@@ -1173,6 +1198,13 @@ void EC2Job::doEvaluateState()
                                             returnStatus,
                                             gahp_error_code );
 
+                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "3" ) == 0 ) {
+                    rc = 1;
+                    // gahp_error_code is free()d below.
+                    gahp_error_code = strdup( "E_TESTING" );
+                    gahp->setErrorString( "GM_FAILURE_INJECTION #3" );
+                }
+
                 // If the command hasn't terminated yet, return to this
                 // state and poll again.
                 if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1186,10 +1218,13 @@ void EC2Job::doEvaluateState()
                     dprintf( D_ALWAYS, "(%d.%d) spot request probe failed: %s: %s\n",
                                 procID.cluster, procID.proc, gahp_error_code,
                                 errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <GAHP failure> = GM_HOLD\n" );
                     gmState = GM_HOLD;
                     break;
                 }
                 
+                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "4" ) == 0 ) { returnStatus.clearAll(); }
+
                 // Update the job state.
                 if( returnStatus.number() == 0 ) {
                     // The spot instance request has been purged.  This should
@@ -1200,6 +1235,7 @@ void EC2Job::doEvaluateState()
                     // all instances to see if we own any of them.)
                     errorString = "Spot request purged; an instance may still be running.";
                     dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + <spot purged> = GM_HOLD\n" );
                     gmState = GM_HOLD;
                     break;
                 }
@@ -1239,15 +1275,20 @@ void EC2Job::doEvaluateState()
                     // Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
                     // an instance-status probe.
                     remoteJobState = EC2_VM_STATE_TERMINATED;
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + HELD|REMOVED = GM_SPOT_CANCEL\n" );
                     gmState = GM_SPOT_CANCEL;
                     break;
                 }
+
+                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "5" ) == 0 ) { status = "not-open"; }
 
                 // Is the SIR still valid?  The status must be one of 'active',
                 // 'cancelled', 'open', 'closed', or 'failed', and all 'active'
                 // requests have an instance ID.
                 if( status != "open" ) {
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <status != 'open'> = GM_DONE_SAVE\n" );
                     gmState = GM_DONE_SAVE;
+                    break;
                 }
                 
                 // If nothing interesting happened, wait a while before

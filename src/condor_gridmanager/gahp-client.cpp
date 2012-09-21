@@ -78,6 +78,10 @@ void GahpReconfig()
 	}
 }
 
+void GahpClient::setErrorString( const std::string & newErrorString ) {
+    error_string = newErrorString;
+}
+
 GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 											   const char *path,
 											   const ArgList *args)

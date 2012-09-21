@@ -743,6 +743,8 @@ class GahpClient : public Service {
 
 		//@}
 
+    void setErrorString( const std::string & newErrorString );
+
 	private:
 
 	/// Enum used by now_pending for the waiting queues
