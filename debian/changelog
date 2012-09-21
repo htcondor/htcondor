@@ -1,3 +1,29 @@
+condor (7.8.4~dfsg.1-1) experimental; urgency=low
+
+  * New upstream bug fix release (missed 7.8.3). This release addresses four
+    security-related issues, as well as numerous other bug fixes
+    (Closes: #688210):
+    - Security Item: Some code that was no longer used was removed. The presence
+      of this code could expose information which would allow an attacker to
+      control another user's job. (CVE-2012-3493)
+    - Security Item: Some code that was no longer used was removed. The presence
+      of this code could have lead to a Denial-of-Service attack which would
+      allow an attacker to remove another user's idle job. (CVE-2012-3491)
+    - Security Item: Filesystem (FS) authentication was improved to check the
+      UNIX permissions of the directory used for authentication. Without this,
+      an attacker may have been able to impersonate another submitter on the
+      same submit machine. (CVE-2012-3492)
+    - Security Item: Although not user-visible, there were multiple updates to
+      remove places in the code where potential buffer overruns could occur,
+      thus removing potential attacks. None were known to be exploitable.
+    - Security Item: Although not user-visible, there were updates to the code
+      to improve error checking of system calls, removing some potential
+      security threats. None were known to be exploitable.
+    - The full changelog listing numerous additional bugs is available at
+      http://research.cs.wisc.edu/condor/manual/v7.8/9_3Stable_Release.html
+
+ -- Michael Hanke <mih@debian.org>  Fri, 21 Sep 2012 20:56:32 +0200
+
 condor (7.8.2~dfsg.1-2) experimental; urgency=low
 
   * Make postinst script more robust against missing config variables (Closes:
