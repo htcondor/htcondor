@@ -21,6 +21,8 @@ condor (7.8.4~dfsg.1-1) experimental; urgency=low
       security threats. None were known to be exploitable.
     - The full changelog listing numerous additional bugs is available at
       http://research.cs.wisc.edu/condor/manual/v7.8/9_3Stable_Release.html
+  * Added patch to fix a FTBFS on alpha, due to missing getpid syscall.
+    Courtesy of Michael Cree <mcree@orcon.net.nz> (Closes: #685892).
 
  -- Michael Hanke <mih@debian.org>  Fri, 21 Sep 2012 20:56:32 +0200
 

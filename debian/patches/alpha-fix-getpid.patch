@@ -1,0 +1,37 @@
+From: Michael Cree <mcree@orcon.net.nz>
+Subject: condor FTBFS on Alpha: patch to fix getpid syscall
+
+Alpha Linux provides the getxpid syscall (to be compatible with OSF/1).
+
+Bug-Debian: http://bugs.debian.org/685892
+
+--- condor-7.8.2~dfsg.1/src/condor_daemon_core.V6/daemon_core.cpp	2012-08-16 18:19:43.000000000 +1200
++++ condor-7.8.2~dfsg.1-new/src/condor_daemon_core.V6/daemon_core.cpp	2012-08-26 13:43:06.000000000 +1200
+@@ -5323,7 +5323,11 @@
+ 		// the pid of the parent process (presumably due to internal
+ 		// caching in libc).  Therefore, use the syscall to get
+ 		// the answer directly.
++#ifdef __alpha__
++	return syscall(SYS_getxpid);
++#else
+ 	return syscall(SYS_getpid);
++#endif
+ #else
+ 	return ::getpid();
+ #endif
+@@ -5332,7 +5336,14 @@
+ #if HAVE_CLONE
+ 		// See above comment for clone_safe_getpid() for explanation of
+ 		// why we need to do this.
++#if defined(__alpha__) && defined(__GNUC__)
++	pid_t ppid;
++	syscall(SYS_getxpid);
++	__asm__("mov $20, %0" : "=r"(ppid) : :);
++	return ppid;
++#else
+ 	return syscall(SYS_getppid);
++#endif
+ #else
+ 	return ::getppid();
+ #endif
+
