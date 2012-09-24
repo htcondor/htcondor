@@ -73,8 +73,8 @@ void
 checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
 {
 	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
-	if (!(_jobId->getPool() == schedulerObj->getPool()) ||
-		!(_jobId->getScheduler() == schedulerObj->getName())) {
+	if (!(_jobId->getSubmission()->getPool() == schedulerObj->getPool()) ||
+		!(_jobId->getSubmission()->getName() == schedulerObj->getName())) {
 	_text = "WARNING: the pool and scheduler names of the requested jobid were empty or did not match this scheduler!";
 	}
 }
@@ -203,7 +203,6 @@ addDefaultHiddenAttributes(AttributeMapType& attr_map) {
 // Interface implementation START
 //
 
-
 AviaryJob::SubmitJobResponse*
 AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::SubmitJob* _submitJob)
 {
@@ -272,9 +271,12 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 			submissionId.append("#");
 			submissionId.append(jobId);
 		}
-        submitJobResponse->setId(new AviaryCommon::JobID(
-				jobId,schedulerObj->getPool(),schedulerObj->getName(),
-				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str(),time(NULL))));
+        submitJobResponse->setId(new AviaryCommon::JobID(jobId, schedulerObj->getPool(), schedulerObj->getName(),
+				new AviaryCommon::SubmissionID(
+                        submissionId,_submitJob->getOwner().c_str(),
+                        time(NULL),schedulerObj->getPool(),
+                        schedulerObj->getName()
+                )));
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),""));
     }
     qmgmt_all_users_trusted = false;
