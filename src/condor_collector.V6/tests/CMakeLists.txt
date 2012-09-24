@@ -16,4 +16,4 @@
  # 
  ############################################################### 
 
-condor_unit_test ( _collector_tester collector_tests.cpp "" ON )
+condor_unit_test ( _collector_tester collector_tests.cpp "${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF};plugable_collector" ON )

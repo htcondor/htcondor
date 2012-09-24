@@ -1,1 +1,10 @@
 .*.swp
+*CMakeFiles*
+CTestTestfile.cmake
+cmake_install.cmake
+CMakeCache.txt
+*.so
+*.dll
+*.a
+Makefile
+
