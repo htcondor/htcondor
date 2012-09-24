@@ -448,7 +448,7 @@ void EC2Job::doEvaluateState()
 				break;
 
 
-			case GM_SAVE_CLIENT_TOKEN:
+			case GM_SAVE_CLIENT_TOKEN: {
 				if (m_client_token.empty()) {
 					SetClientToken(build_client_token().c_str());
 				}
@@ -459,10 +459,9 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 				
-				// We couldn't share the code for keypairs anyway.
+				int gmTargetState = GM_START_VM;
 				if( ! m_spot_price.empty() ) {
-				    gmState = GM_SPOT_START;
-				    break;
+				    gmTargetState = GM_SPOT_START;
                 }
 				
 				////////////////////////////////
@@ -489,7 +488,7 @@ void EC2Job::doEvaluateState()
 
 				    if (rc == 0) {
 				      m_keypair_created = true;
-				      gmState = GM_START_VM;
+				      gmState = gmTargetState;
 				    } else {
 				
 					    // May need to add back retry logic, but why?
@@ -503,10 +502,10 @@ void EC2Job::doEvaluateState()
 				}
 				else
 				{
-				  gmState = GM_START_VM;
+				  gmState = gmTargetState;
 				}
 				
-				break;
+				} break;
 
 
 			case GM_START_VM:
