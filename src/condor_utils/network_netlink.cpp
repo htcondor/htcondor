@@ -31,6 +31,9 @@
  * set_status(fd, "i_pipe", IFF_UP);
  * close(fd);
  *
+ * Netlink is one of the less-documented parts of the kernel.  To help, we
+ * have exhaustively documented the add_address function below.  If you want
+ * to understand the code, start there.
  */
 
 #ifdef __cplusplus
@@ -285,48 +288,90 @@ int set_status(int sock, const char * eth, int status) {
 #define INET_PREFIX_LEN 32
 int add_address(int sock, const char * addr, const char * eth) {
 
+	/**
+	 *  The message we send to the kernel will have four parts.  The netlink
+	 *  packet has a header and body.  The body consists of an ifaddrmsg and
+	 *  an RTA packet.  The RTA packet has a header and a body.
+	 *   (1) The netlink header.  Contains the length, the message type,
+	 *       packet sequence number, and the flags.  Type is struct nlmsghdr.
+	 *   (2) A structure about which ethernet device to add the address too.
+	 *       Specifies the address type, the prefix length, and the ethernet
+	 *       device number.  Type is struct ifaddrmsg
+	 *   (3) A RTA packet header.  Specifies the RTA packet type (IFA_LOCAL)
+	 *       and total RTA length.
+	 *   (4) RTA body.  Specifies the IPv4 address to use.
+	 *
+	 *   We construct the message piecemeal with an io-vector.  This results
+	 *   (I think) in code a bit more readable than manually mucking about with
+	 *   offsets.
+	 *
+	 */
 	struct iovec iov[4];
 
 	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(struct nlmsghdr));
+	// Compute the size of the packet (as it is fixed-size).  NLMSG_LENGTH is the
+	// aligned size of the nlmsghdr plus a body of one (struct ifaddrmsg).  We add
+	// a RTA packet too - RTA_LENGTH is the aligned size of the rtattr header and
+	// an IPv4 address.
 	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg)) + RTA_LENGTH(INET_LEN);
-	nlmsghdr.nlmsg_type = RTM_NEWADDR;
+	nlmsghdr.nlmsg_type = RTM_NEWADDR; // This message is requesting to add a new address.
+	// Flags are documented in /usr/include/linux/netlink.h, but copied here for completeness:
+	//   NLM_F_REQUEST - It is request message
+	//   NLM_F_CREATE  - Create, if it does not exist
+	//   NLM_F_EXCL    - Do not touch, if it exists
+	//   NLM_F_ACK     - Reply with ack, with zero or error code
 	nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
-	nlmsghdr.nlmsg_seq = ++seq;
-	nlmsghdr.nlmsg_pid = 0;
+	nlmsghdr.nlmsg_seq = ++seq; // The sequence number of the packet.  The kernel must
+                                    // see an ordered sequence of netlink messages.
+	nlmsghdr.nlmsg_pid = 0; // The destination of the message - PID 0, the kernel.
 
+	// The first element of the packet will be the header created above.
 	iov[0].iov_base = &nlmsghdr;
 	iov[0].iov_len = NLMSG_LENGTH(0);
 
 	// TODO: ipv6 support
 	unsigned char ipv4_addr[4];
+	// Take the string representing the IPv4 address and convert it into the
+	// 4-byte binary representation.
 	if (inet_pton(AF_INET, addr, (void *)&ipv4_addr) != 1) {
 		dprintf(D_ALWAYS, "Invalid IP address: %s\n", addr);
 		return 1;
 	}
 
 	unsigned eth_dev;
+	// Each ethernet device is represented internally by an unsigned int.  Convert
+	// the string name into this index number, as the kernel will want to operate
+	// only on the offsets
 	if (!(eth_dev = if_nametoindex(eth))) {
 		dprintf(D_ALWAYS, "Unable to determine index of %s.\n", eth);
 		return 1;
 	}
 
+	// Specify the kind of address we will be adding, the netmask, and the 
+	// ethernet device to change.
 	struct ifaddrmsg info_msg; memset(&info_msg, 0, sizeof(struct ifaddrmsg));
-	info_msg.ifa_family = AF_INET;
-	info_msg.ifa_prefixlen = INET_PREFIX_LEN;
+	info_msg.ifa_family = AF_INET; // Hardcode to IPv4 for now.
+	info_msg.ifa_prefixlen = INET_PREFIX_LEN; // Hardcoded to 32 bits for IPv4 - i.e., an address.
 	info_msg.ifa_index = if_nametoindex(eth);
 
 	iov[1].iov_base = &info_msg;
+	// NLMSG_ALIGN specifies the size of this part of the packet; unlike the NLMSG_LENGTH, it does
+	// not include any header bits.
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct ifaddrmsg));
 
+	// Finally, we create our RTA packet.  The RTA packet, embedded in the netlink packet, has
+	// a header and a fairly simple body.
 	struct rtattr rta;
 	rta.rta_type = IFA_LOCAL;
 	rta.rta_len = RTA_LENGTH(INET_LEN);
 	iov[2].iov_base = &rta;
 	iov[2].iov_len = RTA_LENGTH(0);
 
+	// ipv4_addr is the binary encoding of the IPv4 address done above.
 	iov[3].iov_base = ipv4_addr;
 	iov[3].iov_len = RTA_ALIGN(INET_LEN);
-        
+
+	// Finally, send the constructed packet to the kernel and wait for a response. 
 	return send_and_ack(sock, iov, 4);
 
 }
