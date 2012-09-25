@@ -349,7 +349,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 	}
 
 		// CRUFT
-		// Starting in 7.9.??, in ATTR_GRID_JOB_ID, the grid-types
+		// Starting in 7.9.1, in ATTR_GRID_JOB_ID, the grid-types
 		// pbs, sge, lsf, nqs, and naregi were made sub-types of
 		// 'batch'.
 	std::string orig_value;
