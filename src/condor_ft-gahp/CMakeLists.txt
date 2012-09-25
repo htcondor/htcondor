@@ -16,20 +16,10 @@
  # 
  ############################################################### 
 
-##########################################################################
-# add the contrib subtree for build & test only
+if (NOT WIN_EXEC_NODE_ONLY)
 
-if (WANT_CONTRIB)
-  string(REGEX REPLACE "-Werror" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-  #dprint( "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+	condor_selective_glob( "Pipe*;io*;ftgahp*" FTGahpSrcs )
 
-  if (HAVE_EXT_POSTGRESQL AND WANT_FULL_DEPLOYMENT)
-    option(WANT_QUILL "Support for quill" ON)
-  endif()
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/utils")
-  add_subdirectories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/utils" "")
-else(WANT_CONTRIB)
-  dprint("skipping contrib modules")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/campus_factory")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/bosco")
-endif(WANT_CONTRIB)
+	condor_exe( condor_ft-gahp "${FTGahpSrcs}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF )
+
+endif(NOT WIN_EXEC_NODE_ONLY)

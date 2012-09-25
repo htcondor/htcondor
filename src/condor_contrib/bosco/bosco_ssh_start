@@ -1,0 +1,60 @@
+#!/usr/bin/python
+
+import pty
+import os
+import re
+import sys
+import time
+
+BOSCO_KEY = os.path.expanduser("~/.ssh/bosco_key.rsa")
+BOSCO_PASS = os.path.expanduser("~/.bosco/.pass")
+
+def main():
+    max_read = 1024
+    
+    # Start the pty
+    pid, child = pty.fork()
+    if pid == 0:
+        os.execv ("/usr/bin/ssh-add", [''] + [ BOSCO_KEY ] )
+    else:
+        # Read from the input
+        sent_pass = False
+        while True:
+            time.sleep(0.3)
+            read = os.read(child, max_read)
+
+            # No authentication agent
+            if re.search('.*authentication agent.*', read):
+                sys.exit(-1)
+
+            # No password required
+            elif re.search('.*Identity added.*', read):
+                sys.exit(0)
+
+            # Send password
+            elif re.search('.*passphrase.*', read):
+                if sent_pass == True:
+                    # Already sent pass, means it failed
+                    sys.exit(-1)
+                else:
+                    sent_pass = True
+
+                # Read in the password
+                f = open(BOSCO_PASS)
+                bosco_pass = f.read()
+                f.close()
+                
+                # Write the password out
+                os.write(child, bosco_pass + "\n")
+
+                continue
+
+            if len(read) == 0:
+                break
+
+
+
+
+if __name__ == "__main__":
+    main()
+

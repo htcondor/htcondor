@@ -1,0 +1,59 @@
+#!/usr/bin/python
+from optparse import OptionParser
+
+from campus_factory.Factory import Factory
+
+import os,sys
+
+
+def add_args(parser):
+    """
+    Add arguments to the parser.
+
+    @param parser: An OptionParser
+
+    """
+    # Guess the configuration location
+    script_dir = os.path.dirname(sys.argv[0])
+    guessed_configuration = os.path.join(script_dir, "../etc/campus_factory.conf")
+
+    parser.add_option(	"-d", "--daemonize", dest="daemonize", 
+                        help="Daemonize the factory", 
+                        action="store_true", default="true")
+    
+    parser.add_option(	"-c", "--config", dest="config", 
+                        help="Location of configuration file", 
+                        action="store", 
+                        default=guessed_configuration)
+
+def parse_args():
+    """
+    Used to parse the args
+
+    @return (options, args): values returned from parser.parse_args()
+    """
+    usage = "usage: %prog [options] [start|stop|restart]"
+    parser = OptionParser(usage)
+    add_args(parser)
+    (returned_options, returned_args) = parser.parse_args()
+    return returned_options, returned_args
+
+
+OPTIONS, ARGS = parse_args()
+
+if __name__ == "__main__":
+    new_factory = Factory(OPTIONS)
+    if len(ARGS) > 0:
+        if ARGS[0] == "restart":
+            new_factory.Restart()
+        elif ARGS[0] == "stop":
+            new_factory.Stop()
+        elif ARGS[0] == "start":
+            new_factory.Start()
+        else:
+            print "Unknown argument %s" % ARGS[0]
+    else:
+        new_factory.Start()
+
+
+
