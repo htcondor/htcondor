@@ -2896,6 +2896,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		return true;
 	}
 	JobEvictedEvent event;
+	event.terminate_and_requeued = true;
 	struct rusage r;
 	memset( &r, 0, sizeof(struct rusage) );
 
