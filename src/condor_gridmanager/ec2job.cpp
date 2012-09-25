@@ -433,18 +433,45 @@ void EC2Job::doEvaluateState()
 
 				errorString = "";
 
+                // If we're not doing recovery, start with GM_CLEAR_REQUEST.
 				gmState = GM_CLEAR_REQUEST;
-				if (!m_client_token.empty()) {
-					gmState = GM_START_VM;
-				}
-				if (!m_remoteJobId.empty()) {
-					submitLogged = true;
-					if ( condorState == RUNNING || condorState == COMPLETED ) {
-						executeLogged = true;
-					}
-					gmState = GM_SUBMITTED;
-				}
-				
+
+                if( ! m_client_token.empty() ) {
+                    // Recovery happens differently for spot instances.
+	    			if( ! m_spot_price.empty() ) {
+	    			    // If we have only a client token, check to see if
+	    			    // a corresponding request exists.  We can't just
+	    			    // ignore the possibility and got to GM_SPOT_START
+	    			    // (like a normal instance) because indempotence
+	    			    // isn't baked into the EC2 API for spot instances.
+	    			    // (Although, see the question below; we might have
+	    			    // to jump to GM_SAVE_CLIENT_TOKEN anyway.)
+	    			    gmState = GM_SPOT_CHECK;
+	    			    
+	    			    if( ! m_spot_request_id.empty() ) {
+	    			        // If we have a request ID, GM_SPOT_SUBMITTED
+	    			        // will check to see if the request has spawned
+	    			        // an instance.
+	    			        gmState = GM_SPOT_SUBMITTED;
+	    			    }
+	    			    
+	    			    if( ! m_remoteJobId.empty() ) {
+	    			        // If we've already spawned an instance, cancel
+	    			        // the spot request immediately.
+	    			        gmState = GM_SPOT_CANCEL;
+	    			    }
+	    		    } else {
+      				    // Why doesn't this skip ssh keypair generation?
+           				gmState = GM_START_VM;
+	    		    	if (!m_remoteJobId.empty()) {
+		    		    	submitLogged = true;
+    		    			if ( condorState == RUNNING || condorState == COMPLETED ) {
+	    		    			executeLogged = true;
+		    		    	}
+    			    		gmState = GM_SUBMITTED;
+	    			    }
+                    }
+                }
 				break;
 
 
@@ -1245,10 +1272,10 @@ void EC2Job::doEvaluateState()
                 std::string status;
                 std::string instanceID;
                 returnStatus.rewind();
-                for( int i = 0; i < returnStatus.number(); i += 3 ) {
+                for( int i = 0; i < returnStatus.number(); i += 4 ) {
                     std::string requestID = returnStatus.next();
                     status = returnStatus.next();
-                    std::string amiID = returnStatus.next();
+                    std::string launchGroup = returnStatus.next();
                     instanceID = returnStatus.next();
                     
                     if( requestID == m_spot_request_id ) { break; }
@@ -1298,8 +1325,73 @@ void EC2Job::doEvaluateState()
             // If, during recovery of a spot request, we have a client token
             // but not a spot instance ID, look at all spot requests to see
             // if we actually made the request or not.
-            case GM_SPOT_CHECK:
-                break;
+            case GM_SPOT_CHECK: {
+                // Send a command to the GAHP, or poll for its result(s).
+                StringList returnStatus;
+                rc = gahp->ec2_spot_status_all( m_serviceUrl,
+                                                m_public_key_file,
+                                                m_private_key_file,
+                                                returnStatus,
+                                                gahp_error_code );
+
+                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "6" ) == 0 ) {
+                    rc = 1;
+                    // gahp_error_code is free()d below.
+                    gahp_error_code = strdup( "E_TESTING" );
+                    gahp->setErrorString( "GM_FAILURE_INJECTION #6" );
+                }
+
+                // If the command hasn't terminated yet, return to this
+                // state and poll again.
+                if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+                    rc == GAHPCLIENT_COMMAND_PENDING ) {
+                    break;
+                }
+                
+                // Place the job on hold if we can't look for the corresponding
+                // spot instance; this may not be optimal, but at least the
+                // user could notice and try again later.
+                if( rc != 0 ) {
+                    errorString = "Spot check failed.";
+                    dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CHECK + <spot check failed> = GM_HOLD\n" );
+                    gmState = GM_HOLD;
+                    break;                    
+                }
+
+                // Look for the stray SIR.
+                returnStatus.rewind();
+                for( int i = 0; i < returnStatus.number(); i += 4 ) {
+                    std::string requestID = returnStatus.next();
+                    std::string status = returnStatus.next();
+                    std::string launchGroup = returnStatus.next();
+                    std::string instanceID = returnStatus.next();
+                    
+                    if( launchGroup == m_client_token ) {
+                        m_spot_request_id = requestID;
+
+                        jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, m_spot_request_id );
+                        requestScheddUpdate( this, false );
+
+                        if( ! instanceID.empty() ) {
+                            SetInstanceId( instanceID.c_str() );
+                            gmState = GM_SAVE_INSTANCE_ID;
+                            break;
+                        }
+                        
+                        gmState = GM_SPOT_SUBMITTED;
+                        break;
+                    }                    
+                }
+                
+                // If we didn't find the SIR, it's gone.  Don't check if the
+                // job is being removed; make sure to report the error; let
+                // people run condor_rm -f if they really want the job gone.
+                errorString = "Spot request purged; an instance may still be running.";
+                dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CHECK + <spot purged> = GM_HOLD\n" );
+                gmState = GM_HOLD;
+                } break;
                 
 			default:
 				EXCEPT( "(%d.%d) Unknown gmState %d!",

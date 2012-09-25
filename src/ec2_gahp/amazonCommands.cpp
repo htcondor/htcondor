@@ -1054,7 +1054,7 @@ struct vmStatusSpotUD_t {
         NONE,
         INSTANCE_ID,
         STATUS,
-        AMI_ID,
+        LAUNCH_GROUP,
         REQUEST_ID
     };
     typedef enum vmStatusSpotTags_t vmStatusSpotTags;
@@ -1097,11 +1097,8 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
         vsud->inWhichTag = vmStatusSpotUD::STATUS;
     } else if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::INSTANCE_ID;
-    // Strictly speaking, this is part of the launch specification,
-    // but since there can be only one of those, and imageId is
-    // unique in this response, we can ignore that.
-    } else if( strcasecmp( (const char *)name, "imageId" ) == 0 ) {
-        vsud->inWhichTag = vmStatusSpotUD::AMI_ID;
+    } else if( strcasecmp( (const char *)name, "launchGroup" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::LAUNCH_GROUP;
     } else {
         vsud->inWhichTag = vmStatusSpotUD::NONE;
     }
@@ -1125,8 +1122,8 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             targetString = & vsud->currentResult->status;
             break;
         
-        case vmStatusSpotUD::AMI_ID:
-            targetString = & vsud->currentResult->ami_id;
+        case vmStatusSpotUD::LAUNCH_GROUP:
+            targetString = & vsud->currentResult->launch_group;
             break;
         
         case vmStatusSpotUD::INSTANCE_ID:
@@ -1167,7 +1164,7 @@ bool AmazonVMStatusSpot::SendRequest() {
         XML_SetElementHandler( xp, & vmStatusSpotESH, & vmStatusSpotEEH );
         XML_SetCharacterDataHandler( xp, & vmStatusSpotCDH );
         XML_SetUserData( xp, & vssud );
-        // dprintf( D_FULLDEBUG, "VM_STATUS_SPOT: %s\n", this->resultString.c_str() );
+        dprintf( D_FULLDEBUG, "VM_STATUS_SPOT: %s\n", this->resultString.c_str() );
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
     }
@@ -1211,7 +1208,7 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
                 resultList.append( assr.request_id.c_str() );
                 resultList.append( assr.status.c_str() );
-                resultList.append( assr.ami_id.c_str() );
+                resultList.append( assr.launch_group.c_str() );
                 resultList.append( nullStringIfEmpty( assr.instance_id ) );
             }
             result_string = create_success_result( requestID, & resultList );
@@ -1262,7 +1259,7 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
                 resultList.append( assr.request_id.c_str() );
                 resultList.append( assr.status.c_str() );
-                resultList.append( assr.ami_id.c_str() );
+                resultList.append( assr.launch_group.c_str() );
                 resultList.append( nullStringIfEmpty( assr.instance_id ) );
             }
             result_string = create_success_result( requestID, & resultList );

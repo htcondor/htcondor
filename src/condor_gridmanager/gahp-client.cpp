@@ -6909,8 +6909,70 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
                                         StringList & returnStatus,
                                         char * & error_code )
 {
-    // FIXME
-    return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    static const char * command = "EC2_VM_STATUS_ALL_SPOT";
+
+    if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    if( service_url.empty()
+     || publickeyfile.empty()
+     || privatekeyfile.empty() ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    std::string space = " ";
+    std::string requestLine;
+    requestLine += escapeGahpString( service_url ) + space;
+    requestLine += escapeGahpString( publickeyfile ) + space;
+    requestLine += escapeGahpString( privatekeyfile );
+    
+    const char * arguments = requestLine.c_str();
+    if( ! is_pending( command, arguments ) ) {
+        if( m_mode == results_only ) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending( command, arguments, deleg_proxy );
+    }
+
+    Gahp_Args * result = get_pending_result( command, arguments );        
+    if( result ) {
+        // We expect results of the form
+        //      <request ID> 0 
+        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL>)+
+        //      <request ID> 1
+        //      <request ID> 1 <error code> <error string>
+        if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
+
+        int rc = atoi( result->argv[1] );
+        if( result->argc == 2 ) {
+            if( rc == 1 ) { error_string = ""; }
+        } else if( result->argc == 4 ) {
+            if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
+            error_code = strdup( result->argv[2] );
+            error_string = result->argv[3];
+        } else if( (result->argc - 2) % 4 == 0 ) {
+            for( int i = 2; i < result->argc; ++i ) {
+                if( strcmp( result->argv[i], NULLSTRING ) ) {
+                    returnStatus.append( strdup( result->argv[i] ) );
+                } else {
+                    returnStatus.append( strdup( "" ) );
+                }
+            }
+        } else {
+            EXCEPT( "Bad %s result", command );
+        }
+        
+        delete result;
+        return rc;
+    }
+    
+    if( check_pending_timeout( command, arguments ) ) {
+        sprintf( error_string, "%s timed out", command );
+        return GAHPCLIENT_COMMAND_TIMED_OUT;
+    }
+    
+    return GAHPCLIENT_COMMAND_PENDING;    
 }
 
 

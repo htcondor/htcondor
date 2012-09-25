@@ -183,7 +183,7 @@ class AmazonVMStatus : public AmazonVMStatusAll {
 class AmazonStatusSpotResult {
     public:
         std::string status;
-        std::string ami_id;
+        std::string launch_group;
         std::string request_id;
         std::string instance_id;
 };
