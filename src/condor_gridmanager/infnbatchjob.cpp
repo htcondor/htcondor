@@ -980,7 +980,7 @@ void INFNBatchJob::SetRemoteIds( const char *sandbox_id, const char *job_id )
 		formatstr( full_job_id, "batch %s %s", batchType, remoteSandboxId );
 	}
 	if ( remoteJobId ) {
-		sprintf_cat( full_job_id, " %s", remoteJobId );
+		formatstr_cat( full_job_id, " %s", remoteJobId );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }

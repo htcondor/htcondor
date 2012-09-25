@@ -3704,7 +3704,7 @@ GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
 	}
 	std::string reqline;
 	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
-	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -3776,7 +3776,7 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 	}
 	std::string reqline;
 	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
-	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -3843,7 +3843,7 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 	}
 	std::string reqline;
 	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
-	sprintf_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
