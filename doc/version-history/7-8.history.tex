@@ -16,6 +16,61 @@ New features will be added in the 7.9.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-5}Version 7.8.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.5 not yet released.
+%\item Condor version 7.8.5 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-4}Version 7.8.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +78,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.8.4 not yet released.
-%\item Condor version 7.8.4 released on Month Date, 2012.
+\item Condor version 7.8.4 released on September 19, 2012.
+
+\item This release contains several important security fixes and all users should upgrade as soon as possible.
 
 \end{itemize}
 
@@ -56,6 +112,22 @@ See the complete definition at
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Security Although not user-visible, there were multiple updates to remove places
+in the code where potential buffer overruns could occur, thus removing
+potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to improve
+error checking of system calls, removing some potential security threats.  None
+were known to be exploitable.
+
+\item \Security Although not user-visible, some code that was no longer used was removed.
+The presence of this code could have lead to a Denial-of-Service attack which
+would allow an attacker to stop another user's jobs from running.
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
+of the directory used for authentication.  Without this, an attacker may have
+been able to impersonate another submitter on the same submit machine.
 
 \item Fixed the \Condor{schedd} daemon; 
 it would crash when a submit description file

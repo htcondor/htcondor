@@ -823,8 +823,8 @@ int ViewServer::SubmittorScanFunc(ClassAd* cad)
 
 	// Get Data From Class Ad
 
-	if (cad->LookupString(ATTR_NAME,Name)<0) return 1;
-	if (cad->LookupString(ATTR_MACHINE,Machine)<0) return 1;
+	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))<0) return 1;
+	if (cad->LookupString(ATTR_MACHINE,Machine,sizeof(Machine))<0) return 1;
 	GroupName=Name;
 	strcat(Name,"/");
 	strcat(Name,Machine);
@@ -894,10 +894,10 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 	
 	// Get Data From Class Ad
 
-	if ( !cad->LookupString(ATTR_NAME,Name) ) return 1;
+	if ( !cad->LookupString(ATTR_NAME,Name,sizeof(Name)) ) return 1;
 	if ( !cad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle) ) KbdIdle=0;
 	if ( !cad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
-	if ( !cad->LookupString(ATTR_STATE,StateDesc) ) strcpy(StateDesc,"");
+	if ( !cad->LookupString(ATTR_STATE,StateDesc,sizeof(StateDesc)) ) strcpy(StateDesc,"");
 	State StateEnum=string_to_state( StateDesc );
 
 	// This block should be kept in sync with view_server.h and
@@ -941,9 +941,9 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 	// Get Group Name
 
 	char tmp[200];
-	if (cad->LookupString(ATTR_ARCH,tmp)<0) strcpy(tmp,"Unknown");
+	if (cad->LookupString(ATTR_ARCH,tmp,sizeof(tmp))<0) strcpy(tmp,"Unknown");
 	MyString GroupName=MyString(tmp)+"/";
-	if (cad->LookupString(ATTR_OPSYS,tmp)<0) strcpy(tmp,"Unknown");
+	if (cad->LookupString(ATTR_OPSYS,tmp,sizeof(tmp))<0) strcpy(tmp,"Unknown");
 	GroupName+=tmp;
 
 	// Add to group Totals
@@ -1022,7 +1022,7 @@ int ViewServer::CkptScanFunc(ClassAd* cad)
 	
 	// Get Data From Class Ad
 
-	if (cad->LookupString(ATTR_NAME,Name)<0) return 1;
+	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))<0) return 1;
 	if (cad->LookupInteger("BytesReceived",Bytes)<0) Bytes=0;
 	BytesReceived=float(Bytes)/(1024*1024);
 	if (cad->LookupInteger("BytesSent",Bytes)<0) Bytes=0;

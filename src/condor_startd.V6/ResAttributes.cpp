@@ -1149,6 +1149,9 @@ void
 CpuAttributes::show_totals( int dflag )
 {
 	::dprintf( dflag | D_NOHEADER, 
+			 "slot type %d: " , c_type);
+
+	::dprintf( dflag | D_NOHEADER, 
 			 "Cpus: %d", c_num_cpus);
 
 	if( c_phys_mem == AUTO_MEM ) {
@@ -1397,8 +1400,8 @@ AvailAttributes::show_totals( int dflag, CpuAttributes *cap )
 {
 	AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
 	::dprintf( dflag | D_NOHEADER, 
-			 "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
-			 a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
+			 "Slot #%d: Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
+			 cap->c_type, a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
 			 100*partition.m_disk_fraction );
     for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
         ::dprintf(dflag | D_NOHEADER, ", %s: %d", j->first.c_str(), int(j->second));
