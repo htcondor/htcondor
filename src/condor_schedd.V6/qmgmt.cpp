@@ -4703,6 +4703,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					 char const * user)
 {
 	ClassAd				*ad;
+
+	if (user && (strlen(user) == 0)) {
+		user = NULL;
+	}
+
 	bool match_any_user = (user == NULL) ? true : false;
 
 	ASSERT(my_match_ad);
