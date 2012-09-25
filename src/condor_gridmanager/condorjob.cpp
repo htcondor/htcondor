@@ -111,9 +111,6 @@ void CondorJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "CONDOR_JOB_POLL_INTERVAL", 5 * 60 );
-	CondorResource::setPollInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 8 * 60 * 60 );
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT_CONDOR", tmp_int );
 	CondorJob::setGahpCallTimeout( tmp_int );

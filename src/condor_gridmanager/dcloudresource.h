@@ -62,7 +62,6 @@ public:
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
-	int BatchStatusInterval() const;
 	BatchStatusResult StartBatchStatus();
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp();

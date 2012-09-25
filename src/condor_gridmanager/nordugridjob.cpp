@@ -124,9 +124,6 @@ void NordugridJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	NordugridJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	NordugridJob::setGahpCallTimeout( tmp_int );
 
@@ -158,7 +155,6 @@ BaseJob *NordugridJobCreate( ClassAd *jobad )
 	return (BaseJob *)new NordugridJob( jobad );
 }
 
-int NordugridJob::probeInterval = 300;	// default value
 int NordugridJob::submitInterval = 300;	// default value
 int NordugridJob::gahpCallTimeout = 300;	// default value
 int NordugridJob::maxConnectFailures = 3;	// default value
@@ -528,13 +524,14 @@ void NordugridJob::doEvaluateState()
 					probeNow = false;
 				}
 /*
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOB;
 					break;
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 */

@@ -85,9 +85,6 @@ void INFNBatchJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "INFN_JOB_POLL_INTERVAL", 5 * 60 );
-	INFNBatchJob::setPollInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	INFNBatchJob::setGahpCallTimeout( tmp_int );
 
@@ -124,7 +121,6 @@ BaseJob *INFNBatchJobCreate( ClassAd *jobad )
 }
 
 
-int INFNBatchJob::pollInterval = 300;			// default value
 int INFNBatchJob::submitInterval = 300;			// default value
 int INFNBatchJob::gahpCallTimeout = 300;		// default value
 int INFNBatchJob::maxConnectFailures = 3;		// default value
@@ -477,13 +473,14 @@ void INFNBatchJob::doEvaluateState()
 					lastPollTime = 0;
 					pollNow = false;
 				}
-				if ( now >= lastPollTime + pollInterval ) {
+				int poll_interval = myResource->GetJobPollInterval();
+				if ( now >= lastPollTime + poll_interval ) {
 					gmState = GM_POLL_ACTIVE;
 					break;
 				}
 				unsigned int delay = 0;
-				if ( (lastPollTime + pollInterval) > now ) {
-					delay = (lastPollTime + pollInterval) - now;
+				if ( (lastPollTime + poll_interval) > now ) {
+					delay = (lastPollTime + poll_interval) - now;
 				}
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}

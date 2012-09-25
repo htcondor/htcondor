@@ -55,7 +55,6 @@ public:
 
 	void StatusUpdate( const char *new_status );
 
-	static int probeInterval;
 	static int submitInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
@@ -63,7 +62,6 @@ public:
 	static int pendingWaitTime;
 	static int maxRetryTimes;
 	
-	static void setProbeInterval( int new_interval ) 	{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )	{ submitInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )	{ gahpCallTimeout = new_timeout; }
 	static void setConnectFailureRetry( int count )		{ maxConnectFailures = count; }

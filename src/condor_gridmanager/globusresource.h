@@ -88,6 +88,8 @@ class GlobusResource : public BaseResource
 		// This is the gram job contact string for the grid monitor job.
 	char *monitorGramJobId;
 
+	virtual void SetJobPollInterval();
+
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );

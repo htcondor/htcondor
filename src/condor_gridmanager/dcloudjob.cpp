@@ -79,10 +79,6 @@ void DCloudJobInit()
 
 void DCloudJobReconfig()
 {
-	// change interval time for 5 minute
-	int tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 60 * 5 );
-	DCloudJob::setProbeInterval( tmp_int );
-
 	// Tell all the resource objects to deal with their new config values
 	DCloudResource *next_resource;
 
@@ -115,7 +111,6 @@ BaseJob* DCloudJobCreate( ClassAd *jobad )
 }
 
 int DCloudJob::gahpCallTimeout = 600;
-int DCloudJob::probeInterval = 300;
 int DCloudJob::submitInterval = 300;
 int DCloudJob::maxConnectFailures = 3;
 int DCloudJob::funcRetryInterval = 15;
