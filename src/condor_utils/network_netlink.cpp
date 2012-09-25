@@ -16,12 +16,21 @@
 #include "condor_sys_linux.h"
 #include "condor_debug.h"
 
-// Below is the raw nasty netlink stuff
-// I find it much easier to do this in straight-up C.
-
 /**
- *  Create a socket to talk to the kernel via netlink
- *  Returns the socket fd upon success, or -errno upon failure
+ * This module exports a few interfaces for manipulating the kernel's
+ * network configuration.
+ *
+ * It can create ethernet devices, assign IP addresses, setup routes, etc.
+ *
+ * For example, to create an ethernet device and assign an IP address
+ * (a real example should check the return codes):
+ *
+ * fd = create_socket();
+ * create_veth(fd, "e_pipe", "i_pipe");
+ * add_address(fd, "192.168.0.1", "i_pipe");
+ * set_status(fd, "i_pipe", IFF_UP);
+ * close(fd);
+ *
  */
 
 #ifdef __cplusplus
@@ -29,6 +38,12 @@ extern "C" {
 #endif
 
 int seq = time(NULL);
+
+
+/**
+ *  Create a socket to talk to the kernel via netlink
+ *  Returns the socket fd upon success, or -errno upon failure
+ */
 
 int create_socket() {
 	int sock;
@@ -53,6 +68,12 @@ int create_socket() {
 		return sock;
 }
 
+/**
+ * Internal function - send a netlink message to the kernel.
+ * Appends the header for you - just input the raw data.
+ *
+ * Returns 0 on success, errno on failure.
+ */
 static int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 
 	if (sock < 0) {
@@ -82,6 +103,12 @@ static int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 // Forward decl
 int recv_message(int sock);
 
+/**
+ * Internal function - 
+ * Sends a message to the kernel; block until an ACK is recieved.
+ *
+ * Returns 0 on success, errno on failure.
+ */
 static int send_and_ack(int sock, struct iovec* iov, size_t ioveclen) {
 
 	int rc;
@@ -251,6 +278,9 @@ int set_status(int sock, const char * eth, int status) {
 
 }
 
+/**
+ * Add a given IPv4 address to an ethernet device.
+ */
 #define INET_LEN 4
 #define INET_PREFIX_LEN 32
 int add_address(int sock, const char * addr, const char * eth) {
@@ -422,6 +452,14 @@ int add_default_route(int sock, const char * gw) {
 	return send_and_ack(sock, iov, 4);
 }
 
+/**
+ * Move a ethernet device into a specified network namespace.
+ *
+ * Takes the ethernet device named $eth and moves it from the system
+ * namespace into the network namespace inhabited by $pid.
+ *
+ * Returns 0 on sucecss, errno on failure.
+ */
 #define PID_T_LEN sizeof(pid_t)
 int set_netns(int sock, const char * eth, pid_t pid) {
 
