@@ -9055,11 +9055,6 @@ Scheduler::child_exit(int pid, int status)
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
 		}
-		if( WIFEXITED( status ) ) {
-			this->jobExitCode(job_id,JOB_EXITED);
-		} else if( WIFSIGNALED( status ) ) {
-			this->jobExitCode(job_id,JOB_KILLED);
-		}
 	} else if (srec) {
 		const char* name = NULL;
 			//
