@@ -246,8 +246,7 @@ main( int argc, char *argv[] )
 		if( arg[0] == '-' ) {
             if (match_prefix(arg, "-debug")) {
 				// dprintf to console
-				Termlog = 1;
-				dprintf_config ("TOOL", get_param_functions(), Termlog);
+				dprintf_set_tool_debug("TOOL", 0);
             } else if (match_prefix(arg, "-constraint")) {
 				args[nArgs] = arg;
 				nArgs++;

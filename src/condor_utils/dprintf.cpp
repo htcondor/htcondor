@@ -84,7 +84,7 @@ extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
 extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
 extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
 //extern  int		DebugFlags;
-extern param_functions *dprintf_param_funcs;
+//extern param_functions *dprintf_param_funcs;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -178,7 +178,7 @@ int InDBX = 0;
 
 DebugFileInfo::~DebugFileInfo()
 {
-	if(debugFP)
+	if(outputTarget == FILE_OUT && debugFP)
 	{
 		fclose(debugFP);
 		debugFP = NULL;
@@ -793,7 +793,9 @@ debug_open_lock(void)
 	if ( DebugLockIsMutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		//DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
+		DebugLockIsMutex = TRUE;
 #else
 		// Use file locking by default on Unix.  We should 
 		// call param_boolean_int here, but since locking via

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -22,6 +22,7 @@
 // to have any effect.
 #include <string>
 #include <map>
+#include <stdint.h>
 
 struct DebugFileInfo;
 
@@ -98,6 +99,8 @@ struct dprintf_output_settings
 
 	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
 };
+
+void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
 
 const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
 //Global dprint functions meant as fallbacks.

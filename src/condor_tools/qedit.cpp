@@ -75,8 +75,7 @@ main(int argc, char *argv[])
 	// if -debug is present, it must be first. sigh.
 	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
 		// output dprintf messages to stderror at TOOL_DEBUG level
-		Termlog = 1;
-		dprintf_config ("TOOL", get_param_functions(), Termlog);
+		dprintf_set_tool_debug("TOOL", 0);
 		nextarg++;
 	}
 

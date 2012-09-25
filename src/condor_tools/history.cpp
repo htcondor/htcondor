@@ -321,9 +321,7 @@ main(int argc, char* argv[])
     }
     else if (is_dash_arg_prefix(argv[i],"debug",1)) {
           // dprintf to console
-          Termlog = 1;
-		  p_funcs = get_param_functions();
-          dprintf_config ("TOOL", p_funcs, Termlog);
+          dprintf_set_tool_debug("TOOL", 0);
     }
     else {
 		if (constraint!="") {

@@ -699,8 +699,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
-			Termlog = 1;
-			dprintf_config ("TOOL", get_param_functions(), Termlog);
+			dprintf_set_tool_debug("TOOL", 0);
 		} else
 		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();

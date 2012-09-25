@@ -379,8 +379,6 @@ static bool checkDBconfig() {
 }
 #endif /* HAVE_EXT_POSTGRESQL */
 
-extern 	"C"	int		Termlog;
-
 int main (int argc, char **argv)
 {
 	ClassAd		*ad;
@@ -1050,7 +1048,6 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit( 1 );
 			}
-			Termlog = 1;
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
@@ -1429,8 +1426,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
-			Termlog = 1;
-			dprintf_config ("TOOL", get_param_functions(), Termlog);
+			dprintf_set_tool_debug("TOOL", 0);
 		}
 		else
 		if (match_prefix(arg,"io")) {

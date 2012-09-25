@@ -52,8 +52,7 @@ void Emitter::init(bool failures_printed, bool successes_printed) {
 	print_successes = successes_printed;
 	buf = new MyString();
 	test_buf = new MyString();
-	Termlog = 1;
-	dprintf_config("TOOL", get_param_functions(), Termlog);
+	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 	config();
 	global_start = time(0);

@@ -216,9 +216,7 @@ main_pre_dc_init( int argc, char* argv[] )
 			// cases.
 
 		//Termlog = 1;
-
-		p_funcs = get_param_functions();
-		dprintf_config(get_mySubSystem()->getName(), p_funcs);
+		dprintf_config(get_mySubSystem()->getName());
 
 		printClassAd();
 		exit(0);

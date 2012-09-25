@@ -132,7 +132,7 @@ main( int argc, char *argv[] )
 			switch( (*argv)[1] ) {
 			
 			  case 'd':
-                Termlog = 1;
+                dprintf_set_tool_debug("TOOL", 0);
 			  case 'v':
 				VerboseFlag = TRUE;
 				break;
@@ -154,7 +154,6 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	dprintf_config("TOOL", get_param_functions(), Termlog);
 	if (VerboseFlag)
 	{
 		// always append D_FULLDEBUG locally when verbose.

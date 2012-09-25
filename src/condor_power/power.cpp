@@ -111,8 +111,7 @@ usage( void )
 static void
 enable_debug( void )
 {
-	Termlog = 1;
-	dprintf_config ( "TOOL", get_param_functions(), Termlog );
+	dprintf_set_tool_debug("TOOL", 0);
 }
 
 static void PREFAST_NORETURN

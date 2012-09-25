@@ -117,9 +117,7 @@ usage( bool error = true )
 static void
 enable_debug( void )
 {
-	Termlog = true;
-	dprintf_config( "TOOL", get_param_functions(), Termlog );
-	set_debug_flags( NULL, D_FULLDEBUG );
+	dprintf_set_tool_debug("TOOL", 0);
 }
 
 static void
