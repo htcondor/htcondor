@@ -2896,6 +2896,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		return true;
 	}
 	JobEvictedEvent event;
+	event.terminate_and_requeued = true;
 	struct rusage r;
 	memset( &r, 0, sizeof(struct rusage) );
 
@@ -9041,11 +9042,6 @@ Scheduler::child_exit(int pid, int status)
 			// count_jobs(), try to keep it accurate here, too.  
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
-		}
-		if( WIFEXITED( status ) ) {
-			this->jobExitCode(job_id,JOB_EXITED);
-		} else if( WIFSIGNALED( status ) ) {
-			this->jobExitCode(job_id,JOB_KILLED);
 		}
 	} else if (srec) {
 		const char* name = NULL;
