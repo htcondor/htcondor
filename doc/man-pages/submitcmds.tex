@@ -2366,8 +2366,10 @@ X.509 user proxy.
 If \SubmitCmd{x509userproxy} is set, then that file is used for the proxy.
 Otherwise, the proxy is looked for in the standard locations.
 If \SubmitCmd{x509userproxy} is set or if the job is a grid universe job
-of grid-type gt2, gt2, cream, or nordugrid, then the value of
-\SubmitCmd{use\_x509userproxy} is forced to \Expr{True}.
+of grid type 
+\SubmitCmd{gt2}, \SubmitCmd{gt5}, \SubmitCmd{cream}, or \SubmitCmd{nordugrid},
+then the value of \SubmitCmd{use\_x509userproxy} is forced to \Expr{True}.
+Defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
 %% x509userproxy
@@ -2392,7 +2394,8 @@ it will search in the default location.
 the \SubmitCmd{universe} is \SubmitCmd{vanilla},
 or when the \SubmitCmd{universe} is \SubmitCmd{grid}
 and the type of grid system is one of \SubmitCmd{gt2},
-\SubmitCmd{gt5}, or \SubmitCmd{nordugrid}.
+\SubmitCmd{gt5}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
+or \SubmitCmd{nordugrid}.
 Defining a value causes the proxy to be delegated to the execute machine.
 Further, VOMS attributes defined in the proxy will appear in
 the job ClassAd.

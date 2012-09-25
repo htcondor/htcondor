@@ -111,9 +111,6 @@ void CondorJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "CONDOR_JOB_POLL_INTERVAL", 5 * 60 );
-	CondorResource::setPollInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 8 * 60 * 60 );
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT_CONDOR", tmp_int );
 	CondorJob::setGahpCallTimeout( tmp_int );
@@ -213,7 +210,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -251,7 +248,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( strrchr( buff, ' ' )+1 );
 		job_already_submitted = true;
@@ -260,7 +257,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		char *ptr = strchr( buff, '#' );
 		if ( ptr != NULL ) {
@@ -1141,7 +1138,7 @@ void CondorJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-								  sizeof(holdReason) - 1 );
+								  sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -1492,7 +1489,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 		char const *working_name = StdoutRemapName;
 		if ( !output_remaps.empty() ) output_remaps += ";";
-		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
+		formatstr_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_OUTPUT, working_name );
 	}
 
@@ -1502,7 +1499,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 		char const *working_name = StderrRemapName;
 		if ( !output_remaps.empty() ) output_remaps += ";";
-		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
+		formatstr_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_ERROR, working_name );
 	}
 
@@ -1516,7 +1513,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
-		sprintf_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
+		formatstr_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
 	submit_ad->Insert( expr.c_str() );

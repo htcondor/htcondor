@@ -100,7 +100,6 @@ class CreamResource : public BaseResource
 
 protected:
 
-	int BatchStatusInterval() const;
 	BatchStatusResult StartBatchStatus();
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp();

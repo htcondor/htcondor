@@ -28,6 +28,8 @@
 #include "gahp-client.h"
 
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
+#define DEFAULT_JOB_POLL_RATE 5
+#define DEFAULT_JOB_POLL_INTERVAL 60
 
 int BaseResource::probeInterval = 300;	// default value
 int BaseResource::probeDelay = 15;		// default value
@@ -138,6 +140,43 @@ void BaseResource::Reconfig()
 		submitsAllowed.Append( wanted_job );
 		wanted_job->SetEvaluateState();
 	}
+
+	formatstr( param_name, "GRIDMANAGER_JOB_PROBE_RATE_%s", ResourceType() );
+	m_paramJobPollRate = param_integer( param_name.c_str(), -1 );
+	if ( m_paramJobPollRate <= 0 ) {
+		m_paramJobPollRate = param_integer( "GRIDMANAGER_JOB_PROBE_RATE",
+											DEFAULT_JOB_POLL_RATE );
+	}
+	if ( m_paramJobPollRate <= 0 ) {
+		m_paramJobPollRate = DEFAULT_JOB_POLL_RATE;
+	}
+
+	const char *legacy_job_poll_param = NULL;
+	const char *type = ResourceType();
+	if ( strcmp( type, "condor" ) == 0 ) {
+		legacy_job_poll_param = "CONDOR_JOB_POLL_INTERVAL";
+	} else if ( strcmp( type, "batch" ) == 0 ||
+				strcmp( type, "pbs" ) == 0 ||
+				strcmp( type, "lsf" ) == 0 ||
+				strcmp( type, "nqs" ) == 0 ||
+				strcmp( type, "sge" ) == 0 ||
+				strcmp( type, "naregi" ) == 0 ) {
+		legacy_job_poll_param = "INFN_JOB_POLL_INTERVAL";
+	}
+
+	formatstr( param_name, "GRIDMANAGER_JOB_PROBE_INTERVAL_%s", ResourceType() );
+	m_paramJobPollInterval = param_integer( param_name.c_str(), -1 );
+	if ( m_paramJobPollInterval <= 0 ) {
+		m_paramJobPollInterval = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", -1 );
+	}
+	if ( m_paramJobPollInterval <= 0 && legacy_job_poll_param ) {
+		m_paramJobPollInterval = param_integer( legacy_job_poll_param, -1 );
+	}
+	if ( m_paramJobPollInterval <= 0 ) {
+		m_paramJobPollInterval = DEFAULT_JOB_POLL_INTERVAL;
+	}
+
+	SetJobPollInterval();
 
 	_collectorUpdateInterval = param_integer ( 
 		"GRIDMANAGER_COLLECTOR_UPDATE_INTERVAL", 5*60 );
@@ -329,6 +368,14 @@ bool BaseResource::IsEmpty()
 	return registeredJobs.IsEmpty();
 }
 
+void BaseResource::SetJobPollInterval()
+{
+	m_jobPollInterval = submitsAllowed.Length() / m_paramJobPollRate;
+	if ( m_jobPollInterval < m_paramJobPollInterval ) {
+		m_jobPollInterval = m_paramJobPollInterval;
+	}
+}
+
 void BaseResource::RequestPing( BaseJob *job )
 {
 		// A child resource object may request a ping in response to a
@@ -365,6 +412,7 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 	}
 	if ( submitsAllowed.Length() < jobLimit ) {
 		submitsAllowed.Append( job );
+		SetJobPollInterval();
 		return true;
 	} else {
 		submitsWanted.Append( job );
@@ -390,12 +438,15 @@ void BaseResource::CancelSubmit( BaseJob *job )
 
 	leaseUpdates.Delete( job );
 
+	SetJobPollInterval();
+
 	return;
 }
 
 void BaseResource::AlreadySubmitted( BaseJob *job )
 {
 	submitsAllowed.Append( job );
+	SetJobPollInterval();
 }
 
 void BaseResource::Ping()
@@ -656,7 +707,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 update_succeeded.Rewind();
 PROC_ID id;
 std::string msg = "    update_succeeded:";
- while(update_succeeded.Next(id)) sprintf_cat(msg, " %d.%d", id.cluster, id.proc);
+ while(update_succeeded.Next(id)) formatstr_cat(msg, " %d.%d", id.cluster, id.proc);
 dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
 		BaseJob *curr_job;
 		leaseUpdates.Rewind();
@@ -719,12 +770,7 @@ void BaseResource::StartBatchStatusTimer()
 
 int BaseResource::BatchStatusInterval() const
 {
-	/*
-		Likely cause: someone called StartBatchStatusTimer
-		but failed to reimplement this.
-	*/
-	EXCEPT("Internal consistency error: BaseResource::BatchStatusInterval() called.");
-	return 0; // Required by Visual C++ compiler
+	return m_paramJobPollInterval;
 }
 
 BaseResource::BatchStatusResult BaseResource::StartBatchStatus()

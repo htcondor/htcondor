@@ -141,9 +141,6 @@ void CreamJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	CreamJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	CreamResource::setProbeInterval( tmp_int );
 
@@ -182,7 +179,6 @@ BaseJob *CreamJobCreate( ClassAd *jobad )
 	return (BaseJob *)new CreamJob( jobad );
 }
 
-int CreamJob::probeInterval = 300;			// default value
 int CreamJob::submitInterval = 300;			// default value
 int CreamJob::gahpCallTimeout = 300;		// default value
 int CreamJob::maxConnectFailures = 3;		// default value
@@ -331,7 +327,7 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	buff[0] = '\0';
 	
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 			//since GridJobId = <cream> <ResourceManager> <jobid>
 		SetRemoteJobId(strchr((strchr(buff, ' ') + 1), ' ') + 1);
@@ -353,7 +349,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 
 	if ( job_already_submitted &&
-		 jobAd->LookupString( ATTR_CREAM_DELEGATION_URI, buff ) ) {
+		 jobAd->LookupString( ATTR_CREAM_DELEGATION_URI, buff, sizeof(buff) ) ) {
 
 		delegatedCredentialURI = strdup( buff );
 		myResource->registerDelegationURI( delegatedCredentialURI, jobProxy );
@@ -1261,7 +1257,7 @@ void CreamJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -1614,15 +1610,15 @@ char *CreamJob::buildSubmitAd()
 
 		//INPUT SANDBOX
 	if (isb.number() > 0) {
-		formatstr(buf, "%s = {", ATTR_INPUT_SB);
+		formatstr(buf, "; %s = {", ATTR_INPUT_SB);
 		isb.rewind();
 		for (int i = 0; i < isb.number(); i++) {
 			if (i == 0)
-				sprintf_cat(buf, "\"%s\"", isb.next());
+				formatstr_cat(buf, "\"%s\"", isb.next());
 			else
-				sprintf_cat(buf, ",\"%s\"", isb.next());
+				formatstr_cat(buf, ",\"%s\"", isb.next());
 		}
-		sprintf_cat(buf, "}; ]");
+		formatstr_cat(buf, "} ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
@@ -1630,15 +1626,15 @@ char *CreamJob::buildSubmitAd()
 
 		//OUTPUT SANDBOX
 	if (osb.number() > 0) {
-		formatstr(buf, "%s = {", ATTR_OUTPUT_SB);
+		formatstr(buf, "; %s = {", ATTR_OUTPUT_SB);
 		osb.rewind();
 		for (int i = 0; i < osb.number(); i++) {
 			if (i == 0)
-				sprintf_cat(buf, "\"%s\"", osb.next());
+				formatstr_cat(buf, "\"%s\"", osb.next());
 			else
-				sprintf_cat(buf, ",\"%s\"", osb.next());
+				formatstr_cat(buf, ",\"%s\"", osb.next());
 		}
-		sprintf_cat(buf, "}; ]");
+		formatstr_cat(buf, "} ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
@@ -1661,12 +1657,12 @@ char *CreamJob::buildSubmitAd()
 
 		for ( int i = 0; env_vec[i]; i++ ) {
 			if ( i == 0 ) {
-				sprintf_cat( buf, "\"%s\"", env_vec[i] );
+				formatstr_cat( buf, "\"%s\"", env_vec[i] );
 			} else {
-				sprintf_cat( buf, ",\"%s\"", env_vec[i] );
+				formatstr_cat( buf, ",\"%s\"", env_vec[i] );
 			}
 		}
-		sprintf_cat( buf, "}; ]" );
+		formatstr_cat( buf, "}; ]" );
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );

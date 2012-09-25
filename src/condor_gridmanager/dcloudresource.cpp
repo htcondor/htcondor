@@ -158,11 +158,6 @@ void DCloudResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping
 	return;
 }
 
-int DCloudResource::BatchStatusInterval() const
-{
-	return DCloudJob::probeInterval;
-}
-
 DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 {
 	ASSERT(status_gahp);

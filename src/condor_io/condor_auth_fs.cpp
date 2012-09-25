@@ -332,12 +332,25 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				// making a conservative change in 7.6.5 that allows
 				// the link count to be 1 or 2.  -Dan 11/11
 
+				// The CREATE_LOCKS_ON_LOCAL_DISK code relies on
+				// creating directories with mode=0777 that may be
+				// owned by any user who happens to need a lock. This
+				// is especially true for users with running
+				// jobs. Because local lock code uses a tree of these
+				// directories, it is possibly for a malicious user to
+				// satify FS authentication requirements by renamed a
+				// target user's lock directory into /tmp. To avoid
+				// this attack, the server side must also fail
+				// authentication for any directories whose mode is
+				// not 0700. -matt July 2012
+
 				// assume it is wrong until we see otherwise
 				bool stat_is_okay = false;
 
 				if ((stat_buf.st_nlink == 1 || stat_buf.st_nlink == 2) &&
 					(!S_ISLNK(stat_buf.st_mode)) && // check for soft link
-					(S_ISDIR(stat_buf.st_mode)) )   // check for directory
+					(S_ISDIR(stat_buf.st_mode)) &&      // check for directory
+					((stat_buf.st_mode & 07777) == 0700)) // check for mode=0700
 				{
 					// client created a directory as instructed
 					stat_is_okay = true;

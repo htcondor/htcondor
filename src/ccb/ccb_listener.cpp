@@ -425,7 +425,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 	msg.LookupString( ATTR_NAME, name );
 
 	if( name.find(address.Value())<0 ) {
-		name.sprintf_cat(" with reverse connect address %s",address.Value());
+		name.formatstr_cat(" with reverse connect address %s",address.Value());
 	}
 	dprintf(D_FULLDEBUG|D_NETWORK,
 			"CCBListener: received request to connect to %s, request id %s.\n",

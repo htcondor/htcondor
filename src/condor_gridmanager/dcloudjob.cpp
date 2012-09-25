@@ -79,10 +79,6 @@ void DCloudJobInit()
 
 void DCloudJobReconfig()
 {
-	// change interval time for 5 minute
-	int tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 60 * 5 );
-	DCloudJob::setProbeInterval( tmp_int );
-
 	// Tell all the resource objects to deal with their new config values
 	DCloudResource *next_resource;
 
@@ -115,7 +111,6 @@ BaseJob* DCloudJobCreate( ClassAd *jobad )
 }
 
 int DCloudJob::gahpCallTimeout = 600;
-int DCloudJob::probeInterval = 300;
 int DCloudJob::submitInterval = 300;
 int DCloudJob::maxConnectFailures = 3;
 int DCloudJob::funcRetryInterval = 15;
@@ -173,7 +168,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] ) {
 		const char *token;
 		MyString str = buff;
@@ -231,7 +226,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	jobAd->LookupString( ATTR_DELTACLOUD_USER_DATA, &m_userdata );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( buff[0] ) {
 		const char *token;
 		MyString str = buff;
@@ -888,7 +883,7 @@ void DCloudJob::doEvaluateState()
 					char holdReason[1024];
 					holdReason[0] = '\0';
 					holdReason[sizeof(holdReason)-1] = '\0';
-					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) - 1 );
+					jobAd->LookupString( ATTR_HOLD_REASON, holdReason, sizeof(holdReason) );
 					if ( holdReason[0] == '\0' && errorString != "" ) {
 						strncpy( holdReason, errorString.Value(), sizeof(holdReason) - 1 );
 					} else if ( holdReason[0] == '\0' ) {
@@ -1007,7 +1002,7 @@ void DCloudJob::SetRemoteJobId( const char *instance_name, const char *instance_
 	if ( instance_name && instance_name[0] ) {
 		full_job_id.formatstr( "deltacloud %s", instance_name );
 		if ( instance_id && instance_id[0] ) {
-			full_job_id.sprintf_cat( " %s", instance_id );
+			full_job_id.formatstr_cat( " %s", instance_id );
 		}
 	}
 	BaseJob::SetRemoteJobId( full_job_id.Value() );

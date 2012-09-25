@@ -577,7 +577,7 @@ PGSQLDatabase::getJobQueueDB( int *clusterarray, int numclusters,
 			clusterpredicate.sprintf("%s%d)", 
 					" AND ( (cluster_id = ",clusterarray[0]);
 			for(i=1; i < numclusters; i++) {
-				clusterpredicate.sprintf_cat( 
+				clusterpredicate.formatstr_cat( 
 				"%s%d) ", " OR (cluster_id = ", clusterarray[i] );
       		}
 
@@ -597,10 +597,10 @@ PGSQLDatabase::getJobQueueDB( int *clusterarray, int numclusters,
 			// numprocs because procarray has holes and clusterarray does not
 			for(i=1; i < numclusters; i++) {
 				if(procarray[i] != -1) {
-					procpredicate.sprintf_cat( "%s%d%s%d) ", 
+					procpredicate.formatstr_cat( "%s%d%s%d) ", 
 					" OR (cluster_id = ",clusterarray[i]," AND proc_id = ",procarray[i]);
 				} else { 
-					procpredicate.sprintf_cat( "%s%d) ", 
+					procpredicate.formatstr_cat( "%s%d) ", 
 						" OR (cluster_id = ", clusterarray[i]);
 				}
 			} //end offor loop

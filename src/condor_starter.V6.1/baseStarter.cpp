@@ -884,7 +884,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString sshd_config_template;
 	if( !param(sshd_config_template,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE") ) {
 		if( param(sshd_config_template,"LIB") ) {
-			sshd_config_template.sprintf_cat("%ccondor_ssh_to_job_sshd_config_template",DIR_DELIM_CHAR);
+			sshd_config_template.formatstr_cat("%ccondor_ssh_to_job_sshd_config_template",DIR_DELIM_CHAR);
 		}
 		else {
 			return SSHDFailed(s,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE and LIB are not defined.  At least one of them is required.");
@@ -2560,7 +2560,7 @@ CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
 	ASSERT( job_env );
 	if( !job_env->MergeFromV1RawOrV2Quoted(env_str,env_errors) ) {
 		if( env_errors ) {
-			env_errors->sprintf_cat(
+			env_errors->formatstr_cat(
 				" The full value for STARTER_JOB_ENVIRONMENT: %s\n",env_str);
 		}
 		free(env_str);
@@ -2570,7 +2570,7 @@ CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
 
 	if(!job_env->MergeFrom(jobad,env_errors)) {
 		if( env_errors ) {
-			env_errors->sprintf_cat(
+			env_errors->formatstr_cat(
 				" (This error was from the environment string in the job "
 				"ClassAd.)");
 		}
@@ -2606,7 +2606,7 @@ CStarter::PublishToEnv( Env* proc_env )
 		if( ! job_pids.IsEmpty() ) {
 			job_pids += " ";
 		}
-		job_pids.sprintf_cat("%d",uproc->GetJobPid());		
+		job_pids.formatstr_cat("%d",uproc->GetJobPid());		
 	}
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);

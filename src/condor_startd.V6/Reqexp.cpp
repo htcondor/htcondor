@@ -37,7 +37,7 @@ Reqexp::Reqexp( Resource* res_ip )
 		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
 
 	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
-		tmp.sprintf_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+		tmp.formatstr_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
 	}
 
 	origreqexp = strdup( tmp.Value() );

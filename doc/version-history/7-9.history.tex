@@ -78,12 +78,16 @@ such as TotalSlotCpus.  Previously those values were all filled with zero on
 dynamic slots.
 \Ticket{3229}
 
-\item The \Condor{schedd} now advertises the value of the configuration parameter
-COLLECTOR\_HOST in its daemon ad.  This allows one to determine if a given
-schedd reporting to a collector is flocking to that collector or not.
+\item The \Condor{schedd} now advertises the value of configuration variable
+\MacroNI{COLLECTOR\_HOST} as attribute \Attr{CollectorHost} in 
+its daemon ClassAd.  This allows one to determine if a given
+\Condor{schedd} reporting to a \Condor{collector} is flocking to that 
+\Condor{collector} or not.
+\Ticket{3202}
 
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
+\Ticket{2807}
 
 \item The new configuration variable
 \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
@@ -105,9 +109,9 @@ This could be used to drain partial rather than whole machines.
 \Ticket{2993}
 
 \item The new submit command \SubmitCmd{use\_x509userproxy} can be set
-to \Expr{True} to indicate that an X.509 user proxy is required for the
-job. If \SubmitCmd{x509userproxy} isn't set, then the proxy file
-will be looked for in the standard locations.
+to \Expr{True} to indicate that an X.509 user proxy is required for the job. 
+If \SubmitCmd{x509userproxy} is not set, 
+then the proxy file will be looked for in the standard locations.
 \Ticket{3025}
 
 \end{itemize}
@@ -115,6 +119,27 @@ will be looked for in the standard locations.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute in
+the ad for all daemons would be reset to the current time when they are
+reconfigured.
+\Ticket{3235}
+
+\item \Security Although not user-visible, there were multiple updates to remove places
+in the code where potential buffer overruns could occur, thus removing
+potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to improve
+error checking of system calls, removing some potential security threats.  None
+were known to be exploitable.
+
+\item \Security Although not user-visible, some code that was no longer used was removed.
+The presence of this code could have lead to a Denial-of-Service attack which
+would allow an attacker to stop another user's jobs from running.
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
+of the directory used for authentication.  Without this, an attacker may have
+been able to impersonate another submitter on the same submit machine.
 
 \item The \Condor{negotiator} now checks the accountant log file for sanity
 once only on start up,  
@@ -152,6 +177,15 @@ This bug was introduced when these functions were added in Condor version 7.7.6.
 when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was \Expr{True} (the default),
 and a user log was also defined. This is fixed. 
 \Ticket{3111}
+
+\item Fixed a bug introduced in Condor version 7.9.0 that caused grid type
+cream jobs to be held with a hold reason of 
+\footnotesize
+\begin{verbatim}
+  CREAM_Delegate Error: Cannot set credentials in the gsoap-plugin context.
+\end{verbatim}
+\normalsize
+\Ticket{3234}
 
 \end{itemize}
 

@@ -273,7 +273,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	simple_sock = sock_to_use;
 
 	// user must give us an initial working directory.
-	if (Ad->LookupString(ATTR_JOB_IWD, buf) != 1) {
+	if (Ad->LookupString(ATTR_JOB_IWD, buf, sizeof(buf)) != 1) {
 		dprintf(D_FULLDEBUG, 
 			"FileTransfer::SimpleInit: Job Ad did not have an iwd!\n");
 		return 0;
@@ -283,7 +283,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// if the user want us to check file permissions, pull out the Owner
 	// from the classad and instantiate a perm object.
 	if ( want_check_perms ) {
-		if (Ad->LookupString(ATTR_OWNER, buf) != 1) {
+		if (Ad->LookupString(ATTR_OWNER, buf, sizeof(buf)) != 1) {
 			// no owner specified in ad
 			dprintf(D_FULLDEBUG, 
 				"FileTransfer::SimpleInit: Job Ad did not have an owner!\n");
@@ -293,7 +293,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// lookup the domain
 		char ntdomain[80];
 		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain) != 1) {
+		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain, sizeof(ntdomain)) != 1) {
 			// no nt domain specified in the ad; assume local account
 			p_ntdomain = NULL;
 		}
@@ -318,7 +318,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
-	if (Ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
+	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf) ) {			
 			if ( !InputFiles->file_contains(buf) )
@@ -342,14 +342,14 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		free(list);
 	}
 	
-	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
+	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
 		// For 7.5.6 and earlier, we want to transfer the user log as
 		// an input file if we're in condor_submit. Otherwise, we don't.
 		// At this point, we don't know what version our peer is,
 		// so we have to delay this decision until UploadFiles().
 	}
-	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf) == 1 ) {
+	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf, sizeof(buf)) == 1 ) {
 		X509UserProxy = strdup(buf);
 			// add to input files
 		if ( !nullFile(buf) ) {			
@@ -357,7 +357,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, buf) == 1 ) {
+	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, buf, sizeof(buf)) == 1 ) {
 		OutputDestination = strdup(buf);
 		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", buf);
 	}
@@ -387,7 +387,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 
-		 (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) 
+		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) ) 
 	{
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
@@ -453,7 +453,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// and now check stdout/err
 	int streaming = 0;
 	JobStdoutFile = "";
-	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1 ) {
+	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf, sizeof(buf)) == 1 ) {
 		JobStdoutFile = buf;
 		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
@@ -473,7 +473,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// ATTR_STREAM_OUTPUT if ATTR_STREAM_ERROR isn't defined
 	streaming = 0;
 	JobStderrFile = "";
-	if( Ad->LookupString(ATTR_JOB_ERROR, buf) == 1 ) {
+	if( Ad->LookupString(ATTR_JOB_ERROR, buf, sizeof(buf)) == 1 ) {
 		JobStderrFile = buf;
 		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
@@ -506,28 +506,28 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf, sizeof(buf)) == 1) {
 		EncryptInputFiles = new StringList(buf,",");
 	} else {
 		EncryptInputFiles = new StringList(NULL,",");
 	}
 
 	// Set EncryptOutputFiles to be ATTR_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, buf, sizeof(buf)) == 1) {
 		EncryptOutputFiles = new StringList(buf,",");
 	} else {
 		EncryptOutputFiles = new StringList(NULL,",");
 	}
 
 	// Set DontEncryptInputFiles to be ATTR_DONT_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, buf, sizeof(buf)) == 1) {
 		DontEncryptInputFiles = new StringList(buf,",");
 	} else {
 		DontEncryptInputFiles = new StringList(NULL,",");
 	}
 
 	// Set DontEncryptOutputFiles to be ATTR_DONT_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, buf) == 1) {
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, buf, sizeof(buf)) == 1) {
 		DontEncryptOutputFiles = new StringList(buf,",");
 	} else {
 		DontEncryptOutputFiles = new StringList(NULL,",");
@@ -676,7 +676,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		set_seed( time(NULL) + (unsigned long)this + (unsigned long)Ad );
 	}
 
-	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf) != 1) {
+	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
@@ -706,7 +706,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	}
 
 		// At this point, we'd better have a transfer socket
-	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf) != 1) {
+	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf, sizeof(buf)) != 1) {
 		return 0;		
 	}
 	TransSock = strdup(buf);
@@ -744,7 +744,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 				// if filesize is -1, it's a special flag meaning to compare
 				// the file in the old way, i.e. only checking if it is newer
 				// than the stored spool_date.
-				if((filesize==-1)) {
+				if(filesize==-1) {
 					if(spool_space.GetModifyTime() <= mod_time) {
 						dprintf( D_FULLDEBUG,
 					 		"Not including file %s, t: %ld<=%ld, s: N/A\n",
@@ -1731,7 +1731,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			hold_code = CONDOR_HOLD_CODE_DownloadFileError;
 			hold_subcode = EPERM;
 
-			error_buf.sprintf_cat(
+			error_buf.formatstr_cat(
 				" Attempt to write to illegal sandbox path: %s",
 				filename.Value());
 
@@ -2016,10 +2016,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// defined state
 
 				if (rc == GET_FILE_PLUGIN_FAILED) {
-					error_buf.sprintf_cat(": %s", errstack.getFullText().c_str());
+					error_buf.formatstr_cat(": %s", errstack.getFullText().c_str());
 				} else {
 					error_buf.replaceString("receive","write to");
-					error_buf.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+					error_buf.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
 				}
 
 				// Since there is a well-defined errno describing what just
@@ -2625,7 +2625,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			// condor_basename works for URLs
-			dest_filename.sprintf_cat( "%s", condor_basename(filename) );
+			dest_filename.formatstr_cat( "%s", condor_basename(filename) );
 		}
 
 		// check for read permission on this file, if we are supposed to check.
@@ -2939,16 +2939,16 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					// the while loop.
 
 					error_desc.replaceString("sending","reading from");
-					error_desc.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+					error_desc.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
 					if( fail_because_mkdir_not_supported ) {
-						error_desc.sprintf_cat("; Remote condor version is too old to transfer directories.");
+						error_desc.formatstr_cat("; Remote condor version is too old to transfer directories.");
 					}
 					if( fail_because_symlink_not_supported ) {
-						error_desc.sprintf_cat("; Transfer of symlinks to directories is not supported.");
+						error_desc.formatstr_cat("; Transfer of symlinks to directories is not supported.");
 					}
 				} else {
 					// add on the error string from the errstack used
-					error_desc.sprintf_cat(": %s", errstack.getFullText().c_str());
+					error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
 				}
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE_UploadFileError;
@@ -3360,7 +3360,7 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 										   s->my_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
-					error_desc_to_send.sprintf_cat(": %s",upload_error_desc);
+					error_desc_to_send.formatstr_cat(": %s",upload_error_desc);
 				}
 			}
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
@@ -3392,11 +3392,11 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 						  get_mySubSystem()->getName(),
 						  s->my_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
-			error_buf.sprintf_cat(": %s",upload_error_desc);
+			error_buf.formatstr_cat(": %s",upload_error_desc);
 		}
 
 		if(!download_error_buf.IsEmpty()) {
-			error_buf.sprintf_cat("; %s",download_error_buf.Value());
+			error_buf.formatstr_cat("; %s",download_error_buf.Value());
 		}
 
 		error_desc = error_buf.Value();
@@ -4089,7 +4089,7 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 		else {
 			FileTransferList filelist;
 			if( !ExpandFileTransferList( path, "", iwd, 1, filelist ) ) {
-				error_msg.sprintf_cat("Failed to expand '%s' in transfer input file list. ",path);
+				error_msg.formatstr_cat("Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}
 			FileTransferList::iterator filelist_it;

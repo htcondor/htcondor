@@ -396,7 +396,7 @@ ReadUserLogState::GeneratePath( int rotation,
 	path = m_base_path;
 	if ( rotation ) {
 		if ( m_max_rotations > 1 ) {
-			path.sprintf_cat( ".%d", rotation );
+			path.formatstr_cat( ".%d", rotation );
 		}
 		else {
 			path += ".old";
@@ -763,7 +763,7 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 	if ( NULL != label ) {
 		str.formatstr( "%s:\n", label );
 	}
-	str.sprintf_cat (
+	str.formatstr_cat (
 		"  BasePath = %s\n"
 		"  CurPath = %s\n"
 		"  UniqId = %s, seq = %d\n"
@@ -799,7 +799,7 @@ ReadUserLogState::GetStateString(
 	if ( NULL != label ) {
 		str.formatstr( "%s:\n", label );
 	}
-	str.sprintf_cat (
+	str.formatstr_cat (
 		"  signature = '%s'; version = %d; update = %ld\n"
 		"  base path = '%s'\n"
 		"  cur path = '%s'\n"

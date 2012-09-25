@@ -259,7 +259,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	MyString name;
 	if( msg.LookupString(ATTR_NAME,name) ) {
 			// target daemon name is purely for debugging purposes
-		name.sprintf_cat(" on %s",sock->peer_description());
+		name.formatstr_cat(" on %s",sock->peer_description());
 		sock->set_peer_description(name.Value());
 	}
 
@@ -345,7 +345,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 	MyString name;
 	if( msg.LookupString(ATTR_NAME,name) ) {
 			// client name is purely for debugging purposes
-		name.sprintf_cat(" on %s",sock->peer_description());
+		name.formatstr_cat(" on %s",sock->peer_description());
 		sock->set_peer_description(name.Value());
 	}
 	MyString target_ccbid_str;
@@ -1149,7 +1149,7 @@ CCBServer::SaveAllReconnectInfo()
 	}
 
 	MyString orig_reconnect_fname = m_reconnect_fname;
-	m_reconnect_fname.sprintf_cat(".new");
+	m_reconnect_fname.formatstr_cat(".new");
 
 	if( !OpenReconnectFile() ) {
 		m_reconnect_fname = orig_reconnect_fname;

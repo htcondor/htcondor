@@ -52,13 +52,10 @@ class INFNBatchJob : public BaseJob
 	void doEvaluateState();
 	BaseResource *GetResource();
 
-	static int pollInterval;
 	static int submitInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 
-	static void setPollInterval( int new_interval )
-		{ pollInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )

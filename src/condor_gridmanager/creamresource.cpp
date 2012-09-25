@@ -662,12 +662,6 @@ void CreamResource::DoPing( time_t& ping_delay, bool& ping_complete,
 }
 
 
-
-int CreamResource::BatchStatusInterval() const
-{
-	return CreamJob::probeInterval;
-}
-
 CreamResource::BatchStatusResult CreamResource::StartBatchStatus()
 {
 	ASSERT(status_gahp);

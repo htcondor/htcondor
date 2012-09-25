@@ -93,7 +93,7 @@ elsif ($taskname eq $UNSTRIPPED_TASK) {
 	}
 
     #Append extra argument
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make && make install && make targz && make tests";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install tests && ctest --output-on-failure && make targz";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -107,7 +107,7 @@ elsif ($taskname eq $TAR_TASK) {
     $execstr = get_cmake_args();
 
     # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make && make install/strip && make targz tests";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && ctest --output-on-failure && make targz";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -188,6 +188,8 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 }
 else {
     $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
+    $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
 }
 
 ######################################################################
@@ -201,6 +203,12 @@ else {
 # since it is nice to have that available, but it is annoying to have it at
 # the top of every step.
 open STDERR,">&STDOUT";
+
+print "------------------------- ENV DUMP ------------------------\n";
+foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
+    print "$key=".$ENV{$key}."\n";
+}
+print "------------------------- ENV DUMP ------------------------\n";
 
 print "Executing the following command:\n$execstr\n";
 my $buildstatus = system("$execstr");

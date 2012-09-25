@@ -1830,7 +1830,7 @@ SetExecutable()
 				}
 				else {
 					for (int i = 0; i < MAC_SIZE; i++) {
-						md5.sprintf_cat("%02x", static_cast<int>(md5_raw[i]));
+						md5.formatstr_cat("%02x", static_cast<int>(md5_raw[i]));
 					}
 					free(md5_raw);
 				}
@@ -2327,7 +2327,7 @@ SetImageSize()
 	// we should only call calc_image_size_kb on the first
 	// proc in the cluster, since the executable cannot change.
 	if ( ProcId < 1 || ! got_exe_size ) {
-		ASSERT (job->LookupString (ATTR_JOB_CMD, buff));
+		ASSERT (job->LookupString (ATTR_JOB_CMD, buff, sizeof(buff)));
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) { 
 			executable_size_kb = 0;
 		}else {
@@ -2978,7 +2978,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
+			output_remaps.formatstr_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
 		}
 
 		if(error.Length() && error != condor_basename(error.Value()) && 
@@ -2999,7 +2999,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
+			output_remaps.formatstr_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
 		}
 	}
 
@@ -7101,7 +7101,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 #else
 	// will just do nothing here and leave
 	// it up to the runtime to nicely report errors.
-	pathname = pathname;
+	(void)pathname;
 	return (err == EISDIR);
 #endif
 }

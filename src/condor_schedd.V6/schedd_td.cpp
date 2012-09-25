@@ -61,7 +61,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	int direction;
 	MyString desc;
 
-	mode = mode; // quiet the compiler
+	(void)mode; // quiet the compiler
 
 	dprintf(D_ALWAYS, "Entering requestSandboxLocation()\n");
 

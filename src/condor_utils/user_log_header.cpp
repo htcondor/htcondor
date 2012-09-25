@@ -146,7 +146,7 @@ void
 UserLogHeader::sprint_cat( MyString &buf ) const
 {
 	if ( m_valid ) {
-		buf.sprintf_cat( "id=%s"
+		buf.formatstr_cat( "id=%s"
 						 " seq=%d"
 						 " ctime=%lu"
 						 " size="FILESIZE_T_FORMAT

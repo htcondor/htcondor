@@ -1846,13 +1846,17 @@ GRIDMANAGER_LOCK = $(LOCK)/GridmanagerLock.$(USERNAME)
 ##  Various other settings that the Condor-G can use. 
 ##--------------------------------------------------------------------
 
-## The number of seconds between status update requests. You can make 
-## this short (5 seconds) if you want Condor to respond quickly to 
-## instances as they terminate, or you can make it long (300 seconds = 5 
-## minutes) if you know your instances will run for awhile and don't 
-## mind delay between when they stop and when Condor responds to them 
-## stopping.
-GRIDMANAGER_JOB_PROBE_INTERVAL = 300
+## Adjust how frequently the gridmanager checks the status of grid jobs.
+## GRIDMANAGER_JOB_PROBE_INTERVAL sets the minimum time between checks
+## for each job's status in seconds. For grid-types where each job's
+## status must be checked individually (gt2, gt5, nordugrid, batch),
+## GRIDMANAGER_JOB_PROBE_RATE sets the maximum number of status check
+## requests the gridmanager will send to each remote resource per
+## second. If enough jobs are submitted to a remote resource, the
+## interval between checks for each job will increase so as not to
+## exceed the set rate.
+#GRIDMANAGER_JOB_PROBE_INTERVAL = 60
+#GRIDMANAGER_JOB_PROBE_RATE = 5
 
 ## For grid-type gt2 jobs (pre-WS GRAM), limit the number of jobmanager
 ## processes the gridmanager will let run on the headnode. Letting too

@@ -91,7 +91,7 @@ public:
 		}
 		va_list args;
 		va_start(args,fmt);
-		msg.vsprintf_cat(fmt,args);
+		msg.vformatstr_cat(fmt,args);
 		va_end(args);
 
 

@@ -304,17 +304,17 @@ GahpServer::Reaper(Service *,int pid,int status)
 	formatstr( buf, "Gahp Server (pid=%d) ", pid );
 
 	if( WIFSIGNALED(status) ) {
-		sprintf_cat( buf, "died due to %s", 
+		formatstr_cat( buf, "died due to %s", 
 			daemonCore->GetExceptionString(status) );
 	} else {
-		sprintf_cat( buf, "exited with status %d", WEXITSTATUS(status) );
+		formatstr_cat( buf, "exited with status %d", WEXITSTATUS(status) );
 	}
 
 	if ( dead_server ) {
-		sprintf_cat( buf, " unexpectedly" );
+		formatstr_cat( buf, " unexpectedly" );
 		EXCEPT( "%s", buf.c_str() );
 	} else {
-		sprintf_cat( buf, "\n" );
+		formatstr_cat( buf, "\n" );
 		dprintf( D_ALWAYS, "%s", buf.c_str() );
 	}
 }
@@ -3357,7 +3357,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 	PROC_ID next_job;
 	int next_exp;
 	while ( jobs_i.Next( next_job ) && exps_i.Next( next_exp ) ) {
-		x = sprintf_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
+		x = formatstr_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
 								 next_exp );
 		ASSERT( x > 0 );
 	}
@@ -4185,7 +4185,7 @@ GahpClient::nordugrid_stage_in(const char *hostname, const char *job_id,
 	const char *filename;
 	files.rewind();
 	while ( (filename = files.next()) ) {
-		sprintf_cat(reqline, " %s", filename);
+		formatstr_cat(reqline, " %s", filename);
 		cnt++;
 	}
 	ASSERT( cnt == files.number() );
@@ -4257,7 +4257,7 @@ GahpClient::nordugrid_stage_out(const char *hostname, const char *job_id,
 	const char *filename;
 	files.rewind();
 	while ( (filename = files.next()) ) {
-		sprintf_cat(reqline," %s", filename);
+		formatstr_cat(reqline," %s", filename);
 		cnt++;
 	}
 	ASSERT( cnt == files.number() );
@@ -4334,7 +4334,7 @@ GahpClient::nordugrid_stage_out2(const char *hostname, const char *job_id,
 			(dest_filename = dest_files.next()) ) {
 		esc1 = strdup( escapeGahpString(src_filename) );
 		esc2 = strdup( escapeGahpString(dest_filename) );
-		sprintf_cat(reqline," %s %s", esc1, esc2);
+		formatstr_cat(reqline," %s %s", esc1, esc2);
 		cnt++;
 		free( esc1 );
 		free( esc2 );
@@ -5881,7 +5881,7 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( groupnames.number() > 0 ) {
 		while ( (group_name = groupnames.next()) ) {
 			esc_groupname = strdup( escapeGahpString(group_name) );
-			sprintf_cat(reqline, " %s", esc_groupname);
+			formatstr_cat(reqline, " %s", esc_groupname);
 			cnt++;
 			free( esc_groupname );
 		}
@@ -6683,7 +6683,7 @@ GahpClient::ec2_create_tags(std::string service_url,
 	if (tags.number() > 0) {
 		while ((tag = tags.next())) {
 			char *esc_tag = strdup(escapeGahpString(tag));
-			sprintf_cat(reqline, " %s", esc_tag);
+			formatstr_cat(reqline, " %s", esc_tag);
 			count++;
 			free(esc_tag);
 		}

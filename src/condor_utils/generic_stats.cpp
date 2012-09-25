@@ -42,7 +42,7 @@ void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int f
    str += this->value;
    str += " ";
    str += this->recent;
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
@@ -65,7 +65,7 @@ void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr,
    str += (long)this->value;
    str += " ";
    str += (long)this->recent;
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
@@ -85,12 +85,12 @@ void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr,
 template <>
 void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
    MyString str;
-   str.sprintf_cat("%g %g", this->value, this->recent);
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat("%g %g", this->value, this->recent);
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.sprintf_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
+         str.formatstr_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
          }
       str += "]";
       }
@@ -108,11 +108,11 @@ void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pa
    this->value.AppendToString(str);
    str += ") (";
    this->recent.AppendToString(str);
-   str.sprintf_cat(") {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat(") {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.sprintf_cat(!ix ? "[(" : (ix == this->buf.cMax ? ")|(" : ") ("));
+         str.formatstr_cat(!ix ? "[(" : (ix == this->buf.cMax ? ")|(" : ") ("));
          this->buf.pbuf[ix].AppendToString(str);
          }
       str += ")]";
@@ -496,13 +496,13 @@ void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, i
    ProbeToStringDebug(var1, this->value);
    ProbeToStringDebug(var2, this->recent);
 
-   str.sprintf_cat("(%s) (%s)", var1.Value(), var2.Value());
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat("(%s) (%s)", var1.Value(), var2.Value());
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          ProbeToStringDebug(var1, this->buf.pbuf[ix]);
-         str.sprintf_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         str.formatstr_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
          }
       str += "]";
       }

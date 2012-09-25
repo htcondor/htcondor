@@ -1856,7 +1856,7 @@ JobPreCkptServerScheddNameChange()
 {
 	char job_version[150];
 	job_version[0] = '\0';
-	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version)) {
+	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version, sizeof(job_version))) {
 		CondorVersionInfo ver(job_version, "JOB");
 		if (ver.built_since_version(6,2,0) &&
 			ver.built_since_date(11,16,2000)) {

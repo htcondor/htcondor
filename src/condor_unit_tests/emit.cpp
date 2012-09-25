@@ -63,17 +63,17 @@ void Emitter::init(bool failures_printed, bool successes_printed) {
  * output_expected, or output_actual.  format can use printf formatting.
  */
 void Emitter::emit_param(const char* pname, const char* format, va_list args) {
-	buf->sprintf_cat("    %s:  ",pname);
-	buf->vsprintf_cat(format, args);
-	buf->sprintf_cat("\n");
+	buf->formatstr_cat("    %s:  ",pname);
+	buf->vformatstr_cat(format, args);
+	buf->formatstr_cat("\n");
 	print_now_if_possible();
 }
 
 /* A version of emit_param() for return values. */
 void Emitter::emit_retval(const char* format, va_list args) {
-	buf->sprintf_cat("    RETURN:  ");
-	buf->vsprintf_cat(format, args);
-	buf->sprintf_cat("\n");
+	buf->formatstr_cat("    RETURN:  ");
+	buf->vformatstr_cat(format, args);
+	buf->formatstr_cat("\n");
 	print_now_if_possible();
 }
 
@@ -106,14 +106,14 @@ void Emitter::emit_object(const char* object) {
 /* Prints a comment indicating what the function does.
  */
 void Emitter::emit_comment(const char* comment) {
-	buf->sprintf_cat("COMMENT:  %s\n", comment);
+	buf->formatstr_cat("COMMENT:  %s\n", comment);
 	print_now_if_possible();
 }
 
 /* Prints a known problem of the function.
  */
 void Emitter::emit_problem(const char* problem) {
-	buf->sprintf_cat("KNOWN PROBLEM:  %s\n", problem);
+	buf->formatstr_cat("KNOWN PROBLEM:  %s\n", problem);
 	print_now_if_possible();
 }
 
@@ -133,7 +133,7 @@ void Emitter::emit_test(const char* test) {
 	}
 	emit_test_break();
 	function_tests++;
-	buf->sprintf_cat("TEST:  %s\n", test);
+	buf->formatstr_cat("TEST:  %s\n", test);
 	print_now_if_possible();
 	cur_test_name = new MyString(test);
 	start = time(0);
@@ -142,21 +142,21 @@ void Emitter::emit_test(const char* test) {
 /* A header saying that the function's input is going to follow.
  */
 void Emitter::emit_input_header() {
-	buf->sprintf_cat("INPUT:\n");
+	buf->formatstr_cat("INPUT:\n");
 	print_now_if_possible();
 }
 
 /* A header saying that the function's expected output is going to follow.
  */
 void Emitter::emit_output_expected_header() {
-	buf->sprintf_cat("EXPECTED OUTPUT:\n");
+	buf->formatstr_cat("EXPECTED OUTPUT:\n");
 	print_now_if_possible();
 }
 
 /* A header saying that the function's actual output is going to follow.
  */
 void Emitter::emit_output_actual_header() {
-	buf->sprintf_cat("ACTUAL OUTPUT:\n");
+	buf->formatstr_cat("ACTUAL OUTPUT:\n");
 	print_now_if_possible();
 }
 
@@ -167,7 +167,7 @@ void Emitter::emit_result_success(int line, const char * file) {
 	if( ! cur_test_name) {
 		emit_alert("A test succeeded, but we're not in a test!");
 	}
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at %s:%d (%ld seconds)\n",
+	buf->formatstr_cat("RESULT:  SUCCESS, test passed at %s:%d (%ld seconds)\n",
 		file, line, time(0) - start);
 	print_now_if_possible();
 	if(print_successes && !print_failures) {
@@ -190,7 +190,7 @@ void Emitter::emit_result_failure(int line, const char * file) {
 	if( ! cur_test_name) {
 		emit_alert("A test failed, but we're not in a test!");
 	}
-	buf->sprintf_cat("RESULT:  FAILURE, test failed at %s:%d (%ld seconds)\n", 
+	buf->formatstr_cat("RESULT:  FAILURE, test failed at %s:%d (%ld seconds)\n", 
 		file, line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
@@ -207,7 +207,7 @@ void Emitter::emit_result_abort(int line, const char * file) {
 	if( ! cur_test_name) {
 		emit_alert("A test was aborted, but we're not in a test!");
 	}
-	buf->sprintf_cat("RESULT:  ABORTED, test failed at %s:%d (%ld seconds)\n", 
+	buf->formatstr_cat("RESULT:  ABORTED, test failed at %s:%d (%ld seconds)\n", 
 		file, line, time(0) - start);
 	print_now_if_possible();
 	print_result_failure();
@@ -220,7 +220,7 @@ void Emitter::emit_result_abort(int line, const char * file) {
  * Usually the testing function should return true after calling this.
  */
 void Emitter::emit_skipped(const char* skipped) {
-	buf->sprintf_cat("SKIPPED:  %s", skipped);
+	buf->formatstr_cat("SKIPPED:  %s", skipped);
 	print_now_if_possible();
 	print_result_failure();
 	skipped_tests++;
@@ -231,14 +231,14 @@ void Emitter::emit_skipped(const char* skipped) {
  * anyway.
  */
 void Emitter::emit_alert(const char* alert) {
-	buf->sprintf_cat("ALERT:  %s\n", alert);
+	buf->formatstr_cat("ALERT:  %s\n", alert);
 	print_now_if_possible();
 }
 
 /* Emits a break between two tests of the same function.
  */
 void Emitter::emit_test_break() {
-	buf->sprintf_cat("\n");
+	buf->formatstr_cat("\n");
 	print_now_if_possible();
 }
 

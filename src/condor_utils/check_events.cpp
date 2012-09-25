@@ -57,7 +57,7 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 	CondorID	id(event->cluster, event->proc, event->subproc);
 
 	MyString	idStr("BAD EVENT: job ");
-	idStr.sprintf_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
+	idStr.formatstr_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
 	JobInfo *info = NULL;
 	if ( jobHash.lookup(id, info) == 0 ) {
@@ -305,7 +305,7 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 		}
 
 		MyString	idStr("BAD EVENT: job ");
-		idStr.sprintf_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
+		idStr.formatstr_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
 		MyString	tmpMsg;
 		CheckJobFinal(idStr, id, info, tmpMsg, result);

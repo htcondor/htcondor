@@ -92,7 +92,10 @@ void UnicoreJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
+	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL_UNICORE", -1 );
+	if ( tmp_int <= 0 ) {
+		tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
+	}
 	UnicoreJob::setProbeInterval( tmp_int );
 
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
@@ -677,7 +680,7 @@ if ( unicoreState != COMPLETED ) {
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );

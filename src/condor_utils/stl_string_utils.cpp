@@ -121,7 +121,7 @@ int formatstr(MyString& s, const char* format, ...) {
     return r;
 }
 
-int sprintf_cat(std::string& s, const char* format, ...) {
+int formatstr_cat(std::string& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
@@ -131,7 +131,7 @@ int sprintf_cat(std::string& s, const char* format, ...) {
     return r;
 }
 
-int sprintf_cat(MyString& s, const char* format, ...) {
+int formatstr_cat(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);

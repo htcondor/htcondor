@@ -1078,12 +1078,12 @@ WriteUserLog::doRotation( const char *path, FILE *&fp,
 		rotated += ".1";
 		for( int i=max_rotations;  i>1;  i--) {
 			MyString old1( path );
-			old1.sprintf_cat(".%d", i-1 );
+			old1.formatstr_cat(".%d", i-1 );
 
 			StatWrapper	s( old1, StatWrapper::STATOP_STAT );
 			if ( 0 == s.GetRc() ) {
 				MyString old2( path );
-				old2.sprintf_cat(".%d", i );
+				old2.formatstr_cat(".%d", i );
 				if (rename( old1.Value(), old2.Value() )) {
 					dprintf(D_FULLDEBUG, "WriteUserLog failed to rotate old log from '%s' to '%s' errno=%d\n",
 							old1.Value(), old2.Value(), errno);

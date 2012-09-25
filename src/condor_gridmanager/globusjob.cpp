@@ -294,9 +294,6 @@ void GlobusJobReconfig()
 	bool tmp_bool;
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	GlobusJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
@@ -607,7 +604,6 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 	return true;
 }
 
-int GlobusJob::probeInterval = 300;		// default value
 int GlobusJob::submitInterval = 300;	// default value
 int GlobusJob::restartInterval = 60;	// default value
 int GlobusJob::gahpCallTimeout = 300;	// default value
@@ -1403,13 +1399,14 @@ void GlobusJob::doEvaluateState()
 					lastProbeTime = 0;
 					probeNow = false;
 				}
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOBMANAGER;
 					break;
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
@@ -2008,7 +2005,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					lastProbeTime = 0;
 					probeNow = false;
 				}
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					GOTO_RESTART_IF_JM_DOWN;
 					CHECK_PROXY;
 					rc = gahp->globus_gram_client_job_status( jobContact,
@@ -2036,8 +2034,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					GetCallbacks();
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
@@ -2262,7 +2260,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				jobAd->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
 				jobAd->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
 				if ( holdReason[0] == '\0' && errorString != "" ) {
@@ -3268,8 +3266,9 @@ std::string *GlobusJob::buildSubmitRSL()
 	*rsl += buff;
 
 	int default_timeout = JM_COMMIT_TIMEOUT;
-	if ( default_timeout < 2 * probeInterval ) {
-		default_timeout = 2 * probeInterval;
+	int probe_interval = myResource->GetJobPollInterval();
+	if ( default_timeout < 2 * probe_interval ) {
+		default_timeout = 2 * probe_interval;
 	}
 	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", default_timeout);
 

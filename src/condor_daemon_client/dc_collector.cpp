@@ -43,6 +43,8 @@ DCCollector::DCCollector( const char* dcName, UpdateType uType )
 void
 DCCollector::init( bool needs_reconfig )
 {
+	static long bootTime = 0;
+
 	pending_update_list = NULL;
 	update_rsock = NULL;
 	tcp_collector_host = NULL;
@@ -52,7 +54,12 @@ DCCollector::init( bool needs_reconfig )
 	use_nonblocking_update = true;
 	udp_update_destination = NULL;
 	tcp_update_destination = NULL;
-	startTime = time( NULL );
+
+	if (bootTime == 0) {
+		bootTime = time( NULL );
+	} 
+	startTime = bootTime;
+
 	adSeqMan = NULL;
 
 	if( needs_reconfig ) {

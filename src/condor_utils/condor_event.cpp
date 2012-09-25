@@ -1372,9 +1372,7 @@ GenericEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Info", info, sizeof(info)-1 ) ) {
-		info[ sizeof(info) - 1 ] = '\0';
-	}
+	ad->LookupString("Info", info, sizeof(info) );
 }
 
 void
@@ -1603,12 +1601,8 @@ RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Daemon", daemon_name, sizeof(daemon_name)) ) {
-		daemon_name[sizeof(daemon_name)-1] = '\0';
-	}
-	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
-		execute_host[sizeof(execute_host)-1] = '\0';
-	}
+	ad->LookupString("Daemon", daemon_name, sizeof(daemon_name));
+	ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host));
 	if( ad->LookupString("ErrorMsg", &buf) ) {
 		setErrorText(buf);
 		free(buf);
@@ -3389,9 +3383,7 @@ ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Message", message, BUFSIZ) ) {
-		message[BUFSIZ - 1] = 0;
-	}
+	ad->LookupString("Message", message, BUFSIZ);
 
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);

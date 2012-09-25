@@ -43,8 +43,8 @@ struct GahpProxyInfo
 
 typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
-static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
-static const char *GAHPCLIENT_DEFAULT_SERVER_PATH = "DEFAULT";
+#define GAHPCLIENT_DEFAULT_SERVER_ID "DEFAULT"
+#define GAHPCLIENT_DEFAULT_SERVER_PATH "DEFAULT"
 
 // Additional error values that GAHP calls can return
 ///

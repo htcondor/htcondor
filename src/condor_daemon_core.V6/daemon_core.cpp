@@ -1798,9 +1798,9 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
-	can_register_read = can_register_read;
-	can_register_write = can_register_write;
-	psize = psize;
+	(void)can_register_read;
+	(void)can_register_write;
+	(void)psize;
 
 	bool failed = false;
 	int filedes[2];
@@ -1868,10 +1868,10 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 #else
 		// Shut the compiler up
 		// These parameters are needed on Windows
-	is_write = is_write;
-	can_register = can_register;
-	nonblocking = nonblocking;
-	psize = psize;
+	(void)is_write;
+	(void)can_register;
+	(void)nonblocking;
+	(void)psize;
 
 	pipe_handle = fd;
 #endif
@@ -2466,7 +2466,7 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.Length() ? "," : "";
-				res.sprintf_cat( "%s%i", comma, comTable[i].num );
+				res.formatstr_cat( "%s%i", comma, comTable[i].num );
 			}
 		}
 	}
@@ -5309,6 +5309,8 @@ enum {
         STACK_GROWS_UP,
         STACK_GROWS_DOWN
 };
+
+#if HAVE_CLONE
 static int stack_direction(volatile int *ptr=NULL) {
     volatile int location;
     if(!ptr) return stack_direction(&location);
@@ -5318,6 +5320,7 @@ static int stack_direction(volatile int *ptr=NULL) {
 
     return STACK_GROWS_DOWN;
 }
+#endif
 
 pid_t CreateProcessForkit::clone_safe_getpid() {
 #if HAVE_CLONE
@@ -10073,7 +10076,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	bytes = daemonCore->Read_Pipe(pipe_fd, buf, max_read_bytes);
 	if (bytes > 0) {
 		// Actually read some data, so append it to our MyString.
-		// First, null-terminate the buffer so that sprintf_cat()
+		// First, null-terminate the buffer so that formatstr_cat()
 		// doesn't go berserk. This is always safe since buf was
 		// created on the stack with 1 extra byte, just in case.
 		buf[bytes] = '\0';
