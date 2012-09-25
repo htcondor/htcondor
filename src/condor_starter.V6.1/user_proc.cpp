@@ -49,6 +49,7 @@ UserProc::initialize( void )
 	exit_status = -1;
 	requested_exit = false;
 	m_proc_exited = false;
+	m_dedicated_account = NULL;
 	job_universe = 0;  // we'll fill in a real value if we can...
 	int i;
 	for(i=0;i<3;i++) {
