@@ -943,7 +943,11 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
     ResourceName = GetResourceName(ResourceAd);
-    ASSERT( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    if (!success) {
+      dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.Value());
+      ResourceAd->dPrint(D_FULLDEBUG);
+    }
   }
   ResourceList.Close();
 
