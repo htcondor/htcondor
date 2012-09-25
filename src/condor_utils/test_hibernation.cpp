@@ -63,8 +63,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = 1;
-	dprintf_config("TEST_NETWORK_ADAPTER", get_param_functions(), Termlog);
+	dprintf_set_tool_debug("TEST_NETWORK_ADAPTER", 0);
 
 	const char	*tmp;
 	int			 status = 0;

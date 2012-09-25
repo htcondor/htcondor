@@ -42,8 +42,7 @@ main(int argc, char **argv)
 	myDistro->Init(argc, argv);
 	config();
 
-	Termlog = 1;
-	dprintf_config("TEST", get_param_functions(), Termlog);
+	dprintf_set_tool_debug("TEST", 0);
 
 	ad.Assign("REEVALUATE_ATTRIBUTES", "INTEGER, FLOAT, STRING, BOOL, REF");
 	ad.AssignExpr("REEVALUATE_INTEGER_EXPR", "MY.INTEGER + 1");

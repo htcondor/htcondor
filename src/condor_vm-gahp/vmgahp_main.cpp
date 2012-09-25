@@ -54,7 +54,6 @@ extern uid_t caller_uid;
 extern uid_t caller_gid;
 extern uid_t job_user_uid;
 extern uid_t job_user_gid;
-extern int Termlog;
 
 void
 vm_cleanup(void)
@@ -89,7 +88,7 @@ void Reconfig()
 	}
 #else // the old way
 	oriDebugFlags = DebugFlags;
-	if( Termlog ) {
+	if( dprintf_to_term_check() ) {
 		DebugFlags = 0;
 	}
 

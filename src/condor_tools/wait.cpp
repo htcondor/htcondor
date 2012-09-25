@@ -51,8 +51,6 @@ Any other exit should indicate EXIT_FAILURE.
 
 #define ANY_NUMBER -1
 
-extern int Termlog;
-
 static void usage( char *cmd )
 {
 	fprintf(stderr,"\nUse: %s [options] <log-file> [job-number]\n",cmd);

@@ -201,7 +201,7 @@ int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,const char*);
-extern int Termlog;
+static int Termlog = 0;
 
 StdUnivSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 StdUnivSock	*RSC_MyShadowInit(int rscsock, int errsock);
@@ -299,7 +299,10 @@ main(int argc, char *argv[] )
 	*/ 
 	set_condor_priv();
 
-	dprintf_config( get_mySubSystem()->getName(), get_param_functions(), Termlog );
+	if(Termlog)
+		dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
+	else
+		dprintf_config( get_mySubSystem()->getName() );
 	DebugId = whoami;
 
 	// create a database connection object

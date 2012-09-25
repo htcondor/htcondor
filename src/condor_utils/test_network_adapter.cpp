@@ -51,8 +51,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = 1;
-	dprintf_config("TEST_HIBERNATION", get_param_functions(), Termlog);
+	dprintf_set_tool_debug("TEST_NETWORK_ADAPTOR", 0);
 
 	const char	*tmp;
 	int			 result = 0;
