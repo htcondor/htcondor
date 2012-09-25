@@ -66,6 +66,12 @@ of a machine that is in the Draining mode.  This can be used to effect
 partial draining of machines.
 \Ticket{2993}
 
+\item Communication between the \Condor{c-gahp} and \Condor{schedd} has
+been improved. A large number of Condor-C jobs should no longer cause
+other clients of the remote \Condor{schedd} to time out trying to get the
+\Condor{schedd}'s attention.
+\Ticket{2575}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
