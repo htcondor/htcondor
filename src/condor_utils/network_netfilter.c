@@ -46,6 +46,8 @@ static int find_rules(struct ipt_entry * entry, int (*match_fcn)(const unsigned 
 int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char *, long long, void *), void * callback_data) {
 	int sockfd;
 
+	// Create a raw socket.  We won't actually be communicating with this socket, but
+	// rather using it to call getsockopt for firewall interaction.
 	if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
 		fprintf(stderr, "Unable to open raw socket. (errno=%d) %s\n", errno, strerror(errno));
 		return errno;
@@ -54,24 +56,38 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 	struct ipt_getinfo info;
 	socklen_t info_size = sizeof(struct ipt_getinfo);
 
-	// Possible names: filter (default for iptables), nat
-	// Note this must be less than XT_TABLE_MAXNAMELEN
-	strcpy(info.name, "filter");
+	// Set the name of the table to query.  Right now, we hardcode the "filter" table, which
+	// Linux uses for the firewall.
+	// Note info.name is a fixed-size array of length XT_TABLE_MAXNAMELEN.
+	const char TABLE_NAME[] = "filter";
+	// I am unsure if the table name must be null-terminated, so I err on the safe side here.
+	if (strlen(TABLE_NAME) > XT_TABLE_MAXNAMELEN-1) {
+		fprintf(stderr, "Table name %s is too long.\n", TABLE_NAME);
+		return 1;
+	}
+	strncpy(info.name, "filter", XT_TABLE_MAXNAMELEN);
 
+	// Using the fixed-size ipt_getinfo structure, query to see how large the
+	// table is.
 	if (getsockopt(sockfd, IPPROTO_IP, IPT_SO_GET_INFO, &info, &info_size) < 0) {
 		fprintf(stderr, "Unable to get socket info. (errno=%d) %s\n", errno, strerror(errno));
 		return errno;
 	}
 
+	// Now that we know the size of the table, we will do the actual query with an
+	// appropriately-sized data structure.  Note that the size is the query object
+	// itself, followed by a binary blob we will later parse.
 	info_size = sizeof(struct ipt_get_entries) + info.size;
 	struct ipt_get_entries *entries = (struct ipt_get_entries *)malloc(info_size);
 	if (!entries) {
 		fprintf(stderr, "Unable to malloc memory for routing table.\n");
 		return 1;
 	}
-	strcpy(entries->name, "filter");
+	// We are less careful about string sizes here as we already checked above.
+	strcpy(entries->name, TABLE_NAME);
 	entries->size = info.size;
 
+	// Finally, read out the firewall.
 	if (getsockopt(sockfd, IPPROTO_IP, IPT_SO_GET_ENTRIES, entries, &info_size) < 0) {
 		fprintf(stderr, "Unable to get table entries. (errno=%d) %s\n", errno, strerror(errno));
 		return errno;
