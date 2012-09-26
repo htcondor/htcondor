@@ -91,7 +91,7 @@ CCBListener::RegisterWithCCBServer(bool blocking)
 
 		// for debugging purposes only, identify ourselves to the CCB server
 	MyString name;
-	name.sprintf("%s %s",get_mySubSystem()->getName(),daemonCore->publicNetworkIpAddr());
+	name.formatstr("%s %s",get_mySubSystem()->getName(),daemonCore->publicNetworkIpAddr());
 	msg.Assign( ATTR_NAME, name.Value() );
 
 	bool success = SendMsgToCCB(msg,blocking);
@@ -425,7 +425,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 	msg.LookupString( ATTR_NAME, name );
 
 	if( name.find(address.Value())<0 ) {
-		name.sprintf_cat(" with reverse connect address %s",address.Value());
+		name.formatstr_cat(" with reverse connect address %s",address.Value());
 	}
 	dprintf(D_FULLDEBUG|D_NETWORK,
 			"CCBListener: received request to connect to %s, request id %s.\n",
@@ -461,7 +461,7 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 		char const *peer_ip = sock->peer_ip_str();
 		if( peer_ip && !strstr(peer_description,peer_ip)) {
 			MyString desc;
-			desc.sprintf("%s at %s",peer_description,sock->get_sinful_peer());
+			desc.formatstr("%s at %s",peer_description,sock->get_sinful_peer());
 			sock->set_peer_description(desc.Value());
 		}
 		else {

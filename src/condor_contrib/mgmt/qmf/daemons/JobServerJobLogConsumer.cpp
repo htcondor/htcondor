@@ -92,7 +92,7 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 		PROC_ID proc = getProcByString(_key);
 		MyString cluster_key;
 
-		cluster_key.sprintf("0%d.-1", proc.cluster);
+		cluster_key.formatstr("0%d.-1", proc.cluster);
 
 		const char *cluster_dup = cluster_key.StrDup();
 		JobCollectionType::const_iterator element = g_jobs.find(cluster_dup);

@@ -41,7 +41,7 @@ extern "C" {
 #define USER_NAME_MAX 256
 
 const char STR_DAEMON_NAME_FORMAT[]="$$(FULL_HOST_NAME)";
-StringList * getDaemonList(ReliSock * sock);
+StringList * getDaemonList(char const *param_name,char const *fqh);
 
 
 #ifdef WIN32
@@ -58,6 +58,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
     : Condor_Auth_Base (sock, CAUTH_GSI),
       credential_handle(GSS_C_NO_CREDENTIAL),
       context_handle   (GSS_C_NO_CONTEXT),
+      m_gss_server_name(NULL),
       token_status     (0),
       ret_flags        (0)
 {
@@ -65,6 +66,26 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 	ParseMapFile();
 #endif
 	if ( !m_globusActivated ) {
+		// The Globus callout module is a system-wide setting.  There are several
+		// cases where a user may not want it to apply to Condor by default
+		// (for example, if it causes crashes when mixed with Condor libs!).
+		// Setting GSI_AUTHZ_CONF=/dev/null works for disabling the callouts.
+		std::string gsi_authz_conf;
+		if (param(gsi_authz_conf, "GSI_AUTHZ_CONF")) {
+			if (globus_libc_setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
+				dprintf(D_ALWAYS, "Failed to set the GSI_AUTHZ_CONF environment variable.\n");
+				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
+			}
+		}
+		// In 99% of cases, this is a no-op because the Globus threading model defaults
+		// to "none".  However, this can be overridden by a user's environment variable
+		// and I'd prefer to take no chances.  This call can fail if a globus module
+		// has already been activated (i.e., in the GAHP).  As the defaults are OK,
+		// the logging is done at FULLDEBUG, not ALWAYS.
+		if (globus_thread_set_model( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS) {
+			dprintf(D_FULLDEBUG, "Unable to explicitly turn-off Globus threading."
+				"  Will proceed with the default.\n");
+		}
 		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
 		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
 		m_globusActivated = true;
@@ -84,6 +105,11 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
         OM_uint32 major_status = 0; 
         gss_release_cred(&major_status, &credential_handle);
     }
+
+	if( m_gss_server_name != NULL ) {
+		OM_uint32 major_status = 0;
+		gss_release_name( &major_status, &m_gss_server_name );
+	}
 }
 
 int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack)
@@ -413,7 +439,7 @@ int Condor_Auth_X509::condor_gss_assist_gridmap(const char * from, char ** to) {
 	if (GridMap) {
 		MyString f(from), t;
 		if (GridMap->lookup(f, t) != -1) {
-			if (DebugFlags & D_FULLDEBUG) {
+			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "GSI: subject %s is mapped to user %s.\n", 
 					f.Value(), t.Value());
 			}
@@ -487,18 +513,16 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	return 1;
 }
 
-StringList * getDaemonList(ReliSock * sock)
+StringList * getDaemonList(char const *param_name,char const *fqh)
 {
     // Now, we substitu all $$FULL_HOST_NAME with actual host name, then
     // build a string list, then do a search to see if the target is 
     // in the list
-    char * daemonNames = param( "GSI_DAEMON_NAME" );
-	MyString fqh_str = get_hostname(sock->peer_addr());
-    const char * fqh  = fqh_str.Value();
+    char * daemonNames = param( param_name );
     char * entry       = NULL;
 
 	if (!daemonNames) {
-		daemonNames = strdup("*");
+		return NULL;
 	}
 
     StringList * original_names = new StringList(daemonNames, ",");
@@ -549,7 +573,6 @@ char * Condor_Auth_X509::get_server_info()
     OM_uint32	major_status = 0;
     OM_uint32	minor_status = 0;            
     OM_uint32   lifetime, flags;
-    gss_name_t  target = NULL;
     gss_OID     mech, name_type;
     gss_buffer_desc name_buf;
     char *      server = NULL;
@@ -558,7 +581,7 @@ char * Condor_Auth_X509::get_server_info()
     major_status = gss_inquire_context(&minor_status,
                                        context_handle,
                                        NULL,    
-                                       &target,
+                                       &m_gss_server_name,
                                        &lifetime,
                                        &mech, 
                                        &flags, 
@@ -568,23 +591,21 @@ char * Condor_Auth_X509::get_server_info()
         dprintf(D_SECURITY, "Unable to obtain target principal name\n");
         return NULL;
     }
-    else {
-        major_status = gss_display_name(&minor_status,
-                                             target,
-                                             &name_buf,
-                                             &name_type);
-		gss_release_name( &minor_status, &target );
-		if( major_status != GSS_S_COMPLETE) {
-            dprintf(D_SECURITY, "Unable to convert target principal name\n");
-            return NULL;
-        }
-        else {
-            server = new char[name_buf.length+1];
-            memset(server, 0, name_buf.length+1);
-            memcpy(server, name_buf.value, name_buf.length);
-			gss_release_buffer( &minor_status, &name_buf );
-        }
-    }
+
+	major_status = gss_display_name(&minor_status,
+									m_gss_server_name,
+									&name_buf,
+									&name_type);
+	if( major_status != GSS_S_COMPLETE) {
+		dprintf(D_SECURITY, "Unable to convert target principal name\n");
+		return NULL;
+	}
+
+	server = new char[name_buf.length+1];
+	memset(server, 0, name_buf.length+1);
+	memcpy(server, name_buf.value, name_buf.length);
+	gss_release_buffer( &minor_status, &name_buf );
+
     return server;
 }   
 
@@ -744,18 +765,10 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		// store the raw subject name for later mapping
 		setAuthenticatedName(server);
 
-        // Try to map DN to local name (in the format of name@domain)
-        if ( !nameGssToLocal(server) ) {
-			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to gss_assist_gridmap %s to a local user.  "
-				"Check the grid-mapfile.", server );
-			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", server );
-			setRemoteUser("gsi");
-        }
-        else {
-            dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 
-                    server);
-        }
+		// Default to user name "gsi@unmapped".
+		// Later on, if configured, we will invoke the callout in nameGssToLocal.
+		setRemoteUser("gsi");
+		setRemoteDomain( UNMAPPED_DOMAIN );
 
 		// extract and store VOMS attributes
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
@@ -774,22 +787,30 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 			}
 		}
 
-        StringList * daemonNames = getDaemonList(mySock_);
+        std::string fqh = get_full_hostname(mySock_->peer_addr());
+        StringList * daemonNames = getDaemonList("GSI_DAEMON_NAME",fqh.c_str());
 
         // Now, let's see if the name is in the list, I am not using
         // anycase here, so if the host name and what we are looking for
         // are in different cases, then we will run into problems.
-        status = daemonNames->contains_withwildcard(server) == TRUE? 1 : 0;
+		if( daemonNames ) {
+			status = daemonNames->contains_withwildcard(server) == TRUE? 1 : 0;
+
+			if( !status ) {
+				errstack->pushf("GSI", GSI_ERR_UNAUTHORIZED_SERVER,
+								"Failed to authenticate because the subject '%s' is not currently trusted by you.  "
+								"If it should be, add it to GSI_DAEMON_NAME or undefine GSI_DAEMON_NAME.", server);
+				dprintf(D_SECURITY,
+						"GSI_DAEMON_NAME is defined and the server %s is not specified in the GSI_DAEMON_NAME parameter\n",
+						server);
+			}
+		}
+		else {
+			status = CheckServerName(fqh.c_str(),mySock_->peer_ip_str(),mySock_,errstack);
+		}
 
         if (status) {
             dprintf(D_SECURITY, "valid GSS connection established to %s\n", server);            
-        }
-        else {
-			errstack->pushf("GSI", GSI_ERR_UNAUTHORIZED_SERVER,
-					"Failed to authenticate because the subject '%s' is not currently trusted by you.  "
-					"If it should be, add it to GSI_DAEMON_NAME in the condor_config, "
-					"or use the environment variable override (check the manual).", server);
-            dprintf(D_SECURITY, "The server %s is not specified in the GSI_DAEMON_NAME parameter\n", server);
         }
 
         mySock_->encode();
@@ -805,6 +826,91 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
     }
  clear:
     return (status == 0) ? FALSE : TRUE;
+}
+
+bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *sock,CondorError *errstack)
+{
+	if( param_boolean("GSI_SKIP_HOST_CHECK",false) ) {
+		return true;
+	}
+
+	char const *server_dn = getAuthenticatedName();
+	if( !server_dn ) {
+		std::string msg;
+		formatstr(msg,"Failed to find certificate DN for server on GSI connection to %s",ip);
+		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
+		return false;
+	}
+
+	std::string skip_check_pattern;
+	if( param(skip_check_pattern,"GSI_SKIP_HOST_CHECK_CERT_REGEX") ) {
+		Regex re;
+		const char *errptr=NULL;
+		int erroffset=0;
+		std::string full_pattern;
+		formatstr(full_pattern,"^(%s)$",skip_check_pattern.c_str());
+		if( !re.compile(full_pattern.c_str(),&errptr,&erroffset) ) {
+			dprintf(D_ALWAYS,"GSI_SKIP_HOST_CHECK_CERT_REGEX is not a valid regular expression: %s\n",skip_check_pattern.c_str());
+			return false;
+		}
+		if( re.match(server_dn,NULL) ) {
+			return true;
+		}
+	}
+
+	ASSERT( errstack );
+	ASSERT( m_gss_server_name );
+	ASSERT( ip );
+	if( !fqh || !fqh[0] ) {
+		std::string msg;
+		formatstr(msg,"Failed to look up server host address for GSI connection to server with IP %s and DN %s.  Is DNS correctly configured?  This server name check can be bypassed by making GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or by disabling all hostname checks by setting GSI_SKIP_HOST_CHECK=true or defining GSI_DAEMON_NAME.",ip,server_dn);
+		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
+		return false;
+	}
+
+	std::string connect_name;
+	gss_buffer_desc gss_connect_name_buf;
+	gss_name_t gss_connect_name;
+	OM_uint32 major_status = 0;
+	OM_uint32 minor_status = 0;
+
+	formatstr(connect_name,"%s/%s",fqh,sock->peer_ip_str());
+
+	gss_connect_name_buf.value = strdup(connect_name.c_str());
+	gss_connect_name_buf.length = connect_name.size()+1;
+
+	major_status = gss_import_name(&minor_status,
+								   &gss_connect_name_buf,
+								   GLOBUS_GSS_C_NT_HOST_IP,
+								   &gss_connect_name);
+
+	free( gss_connect_name_buf.value );
+
+	if( major_status != GSS_S_COMPLETE ) {
+		std::string comment;
+		formatstr(comment,"Failed to create gss connection name data structure for %s.\n",connect_name.c_str());
+		print_log( major_status, minor_status, 0, comment.c_str() );
+		return false;
+	}
+
+	int name_equal = 0;
+	major_status = gss_compare_name( &minor_status,
+									 m_gss_server_name,
+									 gss_connect_name,
+									 &name_equal );
+
+	gss_release_name( &major_status, &gss_connect_name );
+
+	if( !name_equal ) {
+		std::string msg;
+		formatstr(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If you wish to use a daemon certificate that does not match the daemon's host name, make GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true or by defining GSI_DAEMON_NAME.\n",
+				server_dn,
+				fqh,
+				ip,
+				sock->peer_description() );
+		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
+	}
+	return name_equal != 0;
 }
 
 int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
@@ -849,6 +955,9 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
     else {
 		// store the raw subject name for later mapping
 		setAuthenticatedName(GSSClientname);
+		setRemoteUser("gsi");
+		setRemoteDomain( UNMAPPED_DOMAIN );
+
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 
 			// get the voms attributes from the peer
@@ -864,18 +973,6 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
-
-        // Try to map DN to local name (in the format of name@domain)
-        if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
-			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
-				"Failed to gss_assist_gridmap %s to a local user.  "
-				"Check the grid-mapfile.", GSSClientname);
-			dprintf(D_SECURITY, "gss_assist_gridmap does not contain an entry for %s\n", GSSClientname);
-        }
-        else {
-            dprintf(D_SECURITY,"gss_assist_gridmap contains an entry for %s\n", 
-                    GSSClientname);
-        }
 
 		// XXX FIXME ZKM
 		// i am making failure to be mapped a non-fatal error at this point.

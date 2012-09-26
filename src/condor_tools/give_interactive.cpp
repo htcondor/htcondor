@@ -107,7 +107,8 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
-	EvalResult		result;
+	classad::Value	result;
+	bool			val;
 	float			tmp;
 	
 
@@ -130,12 +131,12 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 		candidatePreemptState = NO_PREEMPTION;
 		// if there is a remote user, consider preemption ....
-		if (candidate->LookupString (ATTR_ACCOUNTING_GROUP, remoteUser) ||
-			candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) 
+		if (candidate->LookupString (ATTR_ACCOUNTING_GROUP, remoteUser, sizeof(remoteUser)) ||
+			candidate->LookupString (ATTR_REMOTE_USER, remoteUser, sizeof(remoteUser))) 
 		{
 				// check if we are preempting for rank or priority
-			if( EvalExprTree( rankCondStd, candidate, &request, &result ) &&
-					result.type == LX_INTEGER && result.i == TRUE ) {
+			if( EvalExprTree( rankCondStd, candidate, &request, result ) &&
+				result.IsBooleanValue( val ) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -147,15 +148,15 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) {
+					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					  result.IsBooleanValue(val) && val) ) {
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,&result)&&
-						result.type == LX_INTEGER && result.i == TRUE ) ) {
+				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					continue;
 				}
@@ -187,10 +188,12 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
+			double rval;
 			if( PreemptionRank &&
-				EvalExprTree(PreemptionRank,candidate,&request,&result) &&
-					result.type == LX_FLOAT) {
-				candidatePreemptRankValue = result.f;
+				EvalExprTree(PreemptionRank,candidate,&request,result) &&
+				result.IsNumber(rval)) {
+
+				candidatePreemptRankValue = rval;
 			} else if( PreemptionRank ) {
 				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
 					"expression to a float.\n");
@@ -356,7 +359,7 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !al.LookupString( attrName, name ) || 
+    	if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, sub_priority ) )
             break;
 
@@ -524,8 +527,8 @@ main(int argc, char *argv[])
 	int index;
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
-			ad->LookupString( ATTR_REMOTE_USER , remoteUser )) 
+		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser, sizeof(remoteUser) ) ||
+			ad->LookupString( ATTR_REMOTE_USER , remoteUser, sizeof(remoteUser) )) 
 		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
@@ -552,7 +555,7 @@ main(int argc, char *argv[])
 
 		// If we want the entire machine, and not just a slot...
 		if(WantMachineNames) {
-			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
+			if (offer->LookupString (ATTR_MACHINE, remoteHost, sizeof(remoteHost)) ) {
 				int slot_count;
 				int slot_count_thus_far;
 
@@ -597,9 +600,9 @@ main(int argc, char *argv[])
 		// here we found a machine; spit out the name to stdout
 		remoteHost[0] = '\0';
 		if(WantMachineNames)
-			offer->LookupString(ATTR_MACHINE, remoteHost);
+			offer->LookupString(ATTR_MACHINE, remoteHost, sizeof(remoteHost));
 		else
-			offer->LookupString(ATTR_NAME, remoteHost);
+			offer->LookupString(ATTR_NAME, remoteHost, sizeof(remoteHost));
 
 		if ( remoteHost[0] ) {
 			printf("%s\n", remoteHost);

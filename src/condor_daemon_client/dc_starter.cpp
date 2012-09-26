@@ -103,14 +103,14 @@ DCStarter::reconnect( ClassAd* req, ClassAd* reply, ReliSock* rsock,
 {
 	setCmdStr( "reconnectJob" );
 
-	MyString line;
+	std::string line;
 
 		// Add our own attributes to the request ad we're sending
 	line = ATTR_COMMAND;
 	line += "=\"";
 	line += getCommandString( CA_RECONNECT_JOB );
 	line += '"';
-	req->Insert( line.Value() );
+	req->Insert( line.c_str() );
 
 	return sendCACmd( req, reply, rsock, false, timeout, sec_session_id );
 	
@@ -133,7 +133,7 @@ DCStarter::updateX509Proxy( const char * filename, char const *sec_session_id)
 	if( ! startCommand(UPDATE_GSI_CRED, &rsock, 0, &errstack, NULL, false, sec_session_id) ) {
 		dprintf( D_ALWAYS, "DCStarter::updateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
-				 errstack.getFullText());
+				 errstack.getFullText().c_str());
 		return XUS_Error;
 	}
 
@@ -179,7 +179,7 @@ DCStarter::delegateX509Proxy( const char * filename, time_t expiration_time, cha
 	if( ! startCommand(DELEGATE_GSI_CRED_STARTER, &rsock, 0, &errstack, NULL, false, sec_session_id) ) {
 		dprintf( D_ALWAYS, "DCStarter::delegateX509Proxy: "
 				 "Failed send command to the starter: %s\n",
-				 errstack.getFullText());
+				 errstack.getFullText().c_str());
 		return XUS_Error;
 	}
 
@@ -348,9 +348,9 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	bool success = false;
 	result.LookupBool(ATTR_RESULT,success);
 	if( !success ) {
-		MyString remote_error_msg;
+		std::string remote_error_msg;
 		result.LookupString(ATTR_ERROR_STRING,remote_error_msg);
-		error_msg.sprintf("%s: %s",slot_name,remote_error_msg.Value());
+		error_msg.formatstr("%s: %s",slot_name,remote_error_msg.c_str());
 		retry_is_sensible = false;
 		result.LookupBool(ATTR_RETRY,retry_is_sensible);
 		return false;
@@ -358,12 +358,12 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 
 	result.LookupString(ATTR_REMOTE_USER,remote_user);
 
-	MyString public_server_key;
+	std::string public_server_key;
 	if( !result.LookupString(ATTR_SSH_PUBLIC_SERVER_KEY,public_server_key) ) {
 		error_msg = "No public ssh server key received in reply to START_SSHD";
 		return false;
 	}
-	MyString private_client_key;
+	std::string private_client_key;
 	if( !result.LookupString(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key) ) {
 		error_msg = "No ssh client key received in reply to START_SSHD";
 		return false;
@@ -373,27 +373,27 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 		// store the private client key
 	unsigned char *decode_buf = NULL;
 	int length = -1;
-	condor_base64_decode(private_client_key.Value(),&decode_buf,&length);
+	condor_base64_decode(private_client_key.c_str(),&decode_buf,&length);
 	if( !decode_buf ) {
 		error_msg = "Error decoding ssh client key.";
 		return false;
 	}
 	FILE *fp = safe_fcreate_fail_if_exists(private_client_key_file,"a",0400);
 	if( !fp ) {
-		error_msg.sprintf("Failed to create %s: %s",
+		error_msg.formatstr("Failed to create %s: %s",
 						  private_client_key_file,strerror(errno));
 		free( decode_buf );
 		return false;
 	}
 	if( fwrite(decode_buf,length,1,fp)!=1 ) {
-		error_msg.sprintf("Failed to write to %s: %s",
+		error_msg.formatstr("Failed to write to %s: %s",
 						  private_client_key_file,strerror(errno));
 		fclose( fp );
 		free( decode_buf );
 		return false;
 	}
 	if( fclose(fp)!=0 ) {
-		error_msg.sprintf("Failed to close %s: %s",
+		error_msg.formatstr("Failed to close %s: %s",
 						  private_client_key_file,strerror(errno));
 		free( decode_buf );
 		return false;
@@ -405,14 +405,14 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 
 		// store the public server key in the known_hosts file
 	length = -1;
-	condor_base64_decode(public_server_key.Value(),&decode_buf,&length);
+	condor_base64_decode(public_server_key.c_str(),&decode_buf,&length);
 	if( !decode_buf ) {
 		error_msg = "Error decoding ssh server key.";
 		return false;
 	}
 	fp = safe_fcreate_fail_if_exists(known_hosts_file,"a",0600);
 	if( !fp ) {
-		error_msg.sprintf("Failed to create %s: %s",
+		error_msg.formatstr("Failed to create %s: %s",
 						  known_hosts_file,strerror(errno));
 		free( decode_buf );
 		return false;
@@ -423,7 +423,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	fprintf(fp,"* ");
 
 	if( fwrite(decode_buf,length,1,fp)!=1 ) {
-		error_msg.sprintf("Failed to write to %s: %s",
+		error_msg.formatstr("Failed to write to %s: %s",
 						  known_hosts_file,strerror(errno));
 		fclose( fp );
 		free( decode_buf );
@@ -431,7 +431,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	}
 
 	if( fclose(fp)!=0 ) {
-		error_msg.sprintf("Failed to close %s: %s",
+		error_msg.formatstr("Failed to close %s: %s",
 						  known_hosts_file,strerror(errno));
 		free( decode_buf );
 		return false;

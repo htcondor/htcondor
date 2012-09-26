@@ -43,8 +43,12 @@ static int cache_size = 0;
 // from condor_util_lib/dprintf.c
 // from condor_util_lib/dprintf_common.c
 //extern "C" {
+#ifdef D_CATEGORY_MASK
+extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_CAT, D_NOHEADER & D_TIMESTAMP
+#else
 extern int DebugFlags;
 extern int DebugUseTimestamps;
+#endif
 //}
 
 static void debug_cache_insert(int flags, const char *fmt, va_list args);
@@ -170,6 +174,13 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	MyString tstamp, fds, line, pid;
 	pid_t my_pid;
 
+#ifdef D_CATEGORY_MASK
+	int HdrFlags = (DebugHeaderOptions|flags) & ~D_CATEGORY_RESERVED_MASK;
+	bool UseTimestamps = (DebugHeaderOptions & D_TIMESTAMP) != 0;
+#else
+	int HdrFlags = DebugFlags|flags;
+	int UseTimestamps = DebugUseTimestamps;
+#endif
 	// XXX TODO
 	// handle flags...
 	// For now, always assume D_ALWAYS since the caller assumes it as well.
@@ -180,34 +191,34 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	// function, but this is a quick hack for LIGO. I'll come back to it
 	// and do it better later when I have time.
 	clock_now = time(NULL);
-	if (!DebugUseTimestamps) {
+	if (!UseTimestamps) {
 		tm = localtime(&clock_now);
 	}
 
-	if (((DebugFlags|flags) & D_NOHEADER) == 0) {
-		if (DebugUseTimestamps) {
-			tstamp.sprintf("(%d) ", (int)clock_now);
+	if ((HdrFlags & D_NOHEADER) == 0) {
+		if (UseTimestamps) {
+			tstamp.formatstr("(%d) ", (int)clock_now);
 		} else {
-			tstamp.sprintf("%d/%d %02d:%02d:%02d ",
+			tstamp.formatstr("%d/%d %02d:%02d:%02d ",
 				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
 				tm->tm_min, tm->tm_sec );
 		}
 
-		if ((DebugFlags|flags) & D_FDS) {
+		if (HdrFlags & D_FDS) {
 				// Because of Z's dprintf changes, we no longer have
 				// access to the dprintf FP.  For now we're just going
 				// to skip figuring out the FD *while caching*.
 				// wenger 2011-05-18
-			fds.sprintf("(fd:?) " );
+			fds.formatstr("(fd:?) " );
 		}
 
-		if ((DebugFlags|flags) & D_PID) {
+		if (HdrFlags & D_PID) {
 #ifdef WIN32
 			my_pid = (int) GetCurrentProcessId();
 #else
 			my_pid = (int) getpid();
 #endif
-			pid.sprintf("(pid:%d) ", my_pid );
+			pid.formatstr("(pid:%d) ", my_pid );
 
 		}
 
@@ -217,7 +228,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	}
 
 	// figure out the line the user needs to emit.
-	line.vsprintf(fmt, args);
+	line.vformatstr(fmt, args);
 
 	// build the cached line and add it to the cache
 	cache += (tstamp + fds + line);

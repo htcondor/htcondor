@@ -36,7 +36,7 @@ SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per )
 		name = strdup( "(unnamed)" );
 	}
 	MyString t_name;
-	t_name.sprintf( "SelfDrainingQueue::timerHandler[%s]", name );
+	t_name.formatstr( "SelfDrainingQueue::timerHandler[%s]", name );
 	timer_name = strdup( t_name.Value() );
 
 	handler_fn = NULL;

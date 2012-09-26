@@ -294,9 +294,6 @@ void GlobusJobReconfig()
 	bool tmp_bool;
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	GlobusJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	GlobusJob::setGahpCallTimeout( tmp_int );
 	GlobusResource::setGahpCallTimeout( tmp_int );
@@ -378,7 +375,7 @@ static bool write_classad_input_file( ClassAd *classad,
 		return false;
 	}
 
-	sprintf(out_filename, "_condor_private_classad_in_%d.%d", 
+	formatstr(out_filename, "_condor_private_classad_in_%d.%d", 
 		procID.cluster, procID.proc);
 
 	std::string out_filename_full;
@@ -607,7 +604,6 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 	return true;
 }
 
-int GlobusJob::probeInterval = 300;		// default value
 int GlobusJob::submitInterval = 300;	// default value
 int GlobusJob::restartInterval = 60;	// default value
 int GlobusJob::gahpCallTimeout = 300;	// default value
@@ -700,7 +696,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 							 (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			sprintf( error_string, "%s is not set in the job ad",
+			formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -724,7 +720,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 		free(args);
 	}
-	sprintf( grid_proxy_subject, "GT2/%s",
+	formatstr( grid_proxy_subject, "GT2/%s",
 			 jobProxy->subject->fqan );
 	gahp = new GahpClient( grid_proxy_subject.c_str(), gahp_path, &gahp_args );
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -739,7 +735,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || ( strcasecmp( token, "gt2" ) && strcasecmp( token, "gt5" ) ) ) {
-			sprintf( error_string, "%s not of type gt2 or gt5",
+			formatstr( error_string, "%s not of type gt2 or gt5",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -751,13 +747,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			sprintf( error_string, "%s missing GRAM service name",
+			formatstr( error_string, "%s missing GRAM service name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -770,7 +766,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || ( strcasecmp( token, "gt2" ) && strcasecmp( token, "gt5" ) ) ) {
-			sprintf( error_string, "%s not of type gt2 or gt5",
+			formatstr( error_string, "%s not of type gt2 or gt5",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -781,7 +777,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		token = GetNextToken( " ", false );
 		token = GetNextToken( " ", false );
 		if ( !token ) {
-			sprintf( error_string, "%s missing job ID",
+			formatstr( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -1216,7 +1212,7 @@ void GlobusJob::doEvaluateState()
 			} break;
 		case GM_SUBMIT: {
 			// Start a new gram submission for this job.
-			char *job_contact = NULL;
+			std::string job_contact;
 			if ( condorState == REMOVED || condorState == HELD ) {
 				myResource->CancelSubmit(this);
 				myResource->JMComplete(this);
@@ -1257,7 +1253,7 @@ void GlobusJob::doEvaluateState()
 										RSL->c_str(),
 										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
 													   false ) ? 0 : 1,
-										gramCallbackContact, &job_contact,
+										gramCallbackContact, job_contact,
 										false);
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -1284,13 +1280,12 @@ void GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_SUCCESS ) {
 					// Previously this supported GRAM 1.0
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM 1.6 is now required.\n", procID.cluster, procID.proc);
-					sprintf(errorString,"Unexpected remote response.  Remote server must speak GRAM 1.6");
+					formatstr(errorString,"Unexpected remote response.  Remote server must speak GRAM 1.6");
 					myResource->JMComplete( this );
 					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					callbackRegistered = true;
-					SetRemoteJobId( job_contact );
-					gahp->globus_gram_client_job_contact_free( job_contact );
+					SetRemoteJobId( job_contact.c_str() );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -1404,13 +1399,14 @@ void GlobusJob::doEvaluateState()
 					lastProbeTime = 0;
 					probeNow = false;
 				}
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOBMANAGER;
 					break;
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
@@ -1758,7 +1754,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) JEF: delaying restart for %d seconds\n",procID.clus
 else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",procID.cluster,procID.proc);}
 				}
 
-				char *job_contact = NULL;
+				std::string job_contact;
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
@@ -1778,7 +1774,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 										resourceManagerString,
 										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact,
+										gramCallbackContact, job_contact,
 										true );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -1851,6 +1847,10 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					// this to happen?
 					myResource->JMComplete( this );
 					jmDown = false;
+					if ( !job_contact.empty() ) {
+						SetRemoteJobId( job_contact.c_str() );
+						requestScheddUpdate( this, false );
+					}
 					gmState = GM_START;
 					break;
 				}
@@ -1864,8 +1864,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
 								   (int)jmProxyExpireTime );
 					jmDown = false;
-					SetRemoteJobId( job_contact );
-					gahp->globus_gram_client_job_contact_free( job_contact );
+					SetRemoteJobId( job_contact.c_str() );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
 					}
@@ -2006,7 +2005,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					lastProbeTime = 0;
 					probeNow = false;
 				}
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					GOTO_RESTART_IF_JM_DOWN;
 					CHECK_PROXY;
 					rc = gahp->globus_gram_client_job_status( jobContact,
@@ -2034,8 +2034,8 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					GetCallbacks();
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
@@ -2260,7 +2260,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				jobAd->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
 				jobAd->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
 				if ( holdReason[0] == '\0' && errorString != "" ) {
@@ -2392,7 +2392,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
-				char *job_contact = NULL;
+				std::string job_contact = NULL;
 
 				CHECK_PROXY;
 				// Once RequestSubmit() is called at least once, you must
@@ -2409,7 +2409,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 										resourceManagerString,
 										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact,
+										gramCallbackContact, job_contact,
 										true);
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -2441,8 +2441,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
 								   (int)jmProxyExpireTime );
 					jmDown = false;
-					SetRemoteJobId( job_contact );
-					gahp->globus_gram_client_job_contact_free( job_contact );
+					SetRemoteJobId( job_contact.c_str() );
 					gmState = GM_CLEANUP_COMMIT;
 				} else {
 					// unhandled error
@@ -2863,7 +2862,7 @@ void GlobusJob::SetRemoteJobId( const char *job_id, bool is_gt5 )
 	}
 	std::string full_job_id;
 	if ( job_id ) {
-		sprintf( full_job_id, "%s %s %s", is_gt5 ? "gt5" : "gt2",
+		formatstr( full_job_id, "%s %s %s", is_gt5 ? "gt5" : "gt2",
 							 resourceManagerString, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
@@ -2912,7 +2911,7 @@ std::string *GlobusJob::buildSubmitRSL()
 	}
 
 	//Start off the RSL
-	sprintf( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
+	formatstr( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
 				  gassServerUrl );
 
 	//We're assuming all job clasads have a command attribute
@@ -2950,7 +2949,7 @@ std::string *GlobusJob::buildSubmitRSL()
 	std::string input_classad_filename;
 	std::string output_classad_filename;
 	std::string gridshell_log_filename;
-	sprintf( gridshell_log_filename, "condor_gridshell.log.%d.%d",
+	formatstr( gridshell_log_filename, "condor_gridshell.log.%d.%d",
 			 procID.cluster, procID.proc );
 
 	if( useGridShell ) {
@@ -2988,7 +2987,7 @@ std::string *GlobusJob::buildSubmitRSL()
 				procID.cluster, procID.proc, input_classad_filename.c_str() );
 		}
 
-		sprintf(output_classad_filename, "%s.OUT", input_classad_filename.c_str());
+		formatstr(output_classad_filename, "%s.OUT", input_classad_filename.c_str());
 		outputClassadFilename = output_classad_filename;
 
 
@@ -3041,7 +3040,7 @@ std::string *GlobusJob::buildSubmitRSL()
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
-			sprintf(errorString, "Failed to read job arguments: %s\n",
+			formatstr(errorString, "Failed to read job arguments: %s\n",
 					arg_errors.Value());
 			delete rsl;
 			return NULL;
@@ -3078,7 +3077,7 @@ std::string *GlobusJob::buildSubmitRSL()
 
 	if ( streamOutput ) {
 		*rsl += ")(stdout=";
-		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+		formatstr( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff );
 	} else {
 		if ( stageOutput ) {
@@ -3098,7 +3097,7 @@ std::string *GlobusJob::buildSubmitRSL()
 
 	if ( streamError ) {
 		*rsl += ")(stderr=";
-		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
+		formatstr( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff );
 	} else {
 		if ( stageError ) {
@@ -3176,14 +3175,14 @@ std::string *GlobusJob::buildSubmitRSL()
 
 			if ( stageOutput ) {
 				*rsl += "($(GLOBUS_CACHED_STDOUT) ";
-				sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+				formatstr( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
 
 			if ( stageError ) {
 				*rsl += "($(GLOBUS_CACHED_STDERR) ";
-				sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
+				formatstr( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
@@ -3239,7 +3238,7 @@ std::string *GlobusJob::buildSubmitRSL()
 		if(!envobj.MergeFrom(jobAd,&env_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
 					procID.cluster, procID.proc, env_errors.Value());
-			sprintf(errorString, "Failed to read job environment: %s\n",
+			formatstr(errorString, "Failed to read job environment: %s\n",
 					env_errors.Value());
 			delete rsl;
 			return NULL;
@@ -3256,23 +3255,24 @@ std::string *GlobusJob::buildSubmitRSL()
 				continue;
 			}
 			*equals = '\0';
-			sprintf( buff, "(%s %s)", env_vec[i],
+			formatstr( buff, "(%s %s)", env_vec[i],
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
 		}
 		deleteStringArray(env_vec);
 	}
 
-	sprintf( buff, ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
+	formatstr( buff, ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
 	int default_timeout = JM_COMMIT_TIMEOUT;
-	if ( default_timeout < 2 * probeInterval ) {
-		default_timeout = 2 * probeInterval;
+	int probe_interval = myResource->GetJobPollInterval();
+	if ( default_timeout < 2 * probe_interval ) {
+		default_timeout = 2 * probe_interval;
 	}
 	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", default_timeout);
 
-	sprintf( buff, ")(save_state=yes)(two_phase=%d)"
+	formatstr( buff, ")(save_state=yes)(two_phase=%d)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
 				  commit_timeout);
 	*rsl += buff;
@@ -3293,23 +3293,23 @@ std::string *GlobusJob::buildRestartRSL()
 
 	DeleteOutput();
 
-	sprintf( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
+	formatstr( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))", gassServerUrl,
 				  jobContact );
 	if ( streamOutput ) {
 		*rsl += "(stdout=";
-		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+		formatstr( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff );
 		*rsl += ")(stdout_position=0)";
 	}
 	if ( streamError ) {
 		*rsl += "(stderr=";
-		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
+		formatstr( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff );
 		*rsl += ")(stderr_position=0)";
 	}
 
-	sprintf( buff, "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
+	formatstr( buff, "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
 	return rsl;
@@ -3323,16 +3323,16 @@ std::string *GlobusJob::buildStdioUpdateRSL()
 
 	DeleteOutput();
 
-	sprintf( *rsl, "&(remote_io_url=%s)", gassServerUrl );
+	formatstr( *rsl, "&(remote_io_url=%s)", gassServerUrl );
 	if ( streamOutput ) {
 		*rsl += "(stdout=";
-		sprintf( buff, "%s%s", gassServerUrl, localOutput );
+		formatstr( buff, "%s%s", gassServerUrl, localOutput );
 		*rsl += rsl_stringify( buff );
 		*rsl += ")(stdout_position=0)";
 	}
 	if ( streamError ) {
 		*rsl += "(stderr=";
-		sprintf( buff, "%s%s", gassServerUrl, localError );
+		formatstr( buff, "%s%s", gassServerUrl, localError );
 		*rsl += rsl_stringify( buff );
 		*rsl += ")(stderr_position=0)";
 	}

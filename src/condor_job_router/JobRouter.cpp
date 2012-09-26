@@ -35,7 +35,6 @@
 #include "util_lib_proto.h"
 #include "my_popen.h"
 #include "file_lock.h"
-#include "classad_newold.h"
 #include "user_job_policy.h"
 #include "get_daemon_name.h"
 #include "filename_tools.h"
@@ -58,11 +57,13 @@ const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
 const char JR_ATTR_OVERRIDE_ROUTING_ENTRY[] = "OverrideRoutingEntry";
 const char JR_ATTR_TARGET_UNIVERSE[] = "TargetUniverse";
+const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
-JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,rejectDuplicateKeys) {
-	m_scheduler = scheduler;
+JobRouter::JobRouter(): m_jobs(5000,hashFuncStdString,rejectDuplicateKeys) {
+	m_scheduler = NULL;
+	m_scheduler2 = NULL;
 	m_release_on_hold = true;
 	m_job_router_polling_timer = -1;
 	m_periodic_timer_id = -1;
@@ -119,9 +120,16 @@ JobRouter::~JobRouter() {
 	}
 #endif
 	InvalidatePublicAd();
-}
 
-#include "condor_new_classads.h"
+	m_scheduler->stop();
+	delete m_scheduler;
+	m_scheduler = NULL;
+	if( m_scheduler2 ) {
+		m_scheduler2->stop();
+		delete m_scheduler2;
+		m_scheduler2 = NULL;
+	}
+}
 
 void
 JobRouter::init() {
@@ -167,6 +175,34 @@ void
 JobRouter::config() {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
+
+	if( !m_scheduler ) {
+		NewClassAdJobLogConsumer *log_consumer = new NewClassAdJobLogConsumer();
+		m_scheduler = new Scheduler(log_consumer,"JOB_ROUTER_SCHEDD1_SPOOL");
+		m_scheduler->init();
+	}
+
+	std::string spool2;
+	if( param(spool2,"JOB_ROUTER_SCHEDD2_SPOOL") ) {
+		if( !m_scheduler2 ) {
+				// schedd2_spool is configured, but we have no schedd2, so create it
+			dprintf(D_ALWAYS,"Reading destination schedd spool %s\n",spool2.c_str());
+			NewClassAdJobLogConsumer *log_consumer2 = new NewClassAdJobLogConsumer();
+			m_scheduler2 = new Scheduler(log_consumer2,"JOB_ROUTER_SCHEDD2_SPOOL");
+			m_scheduler2->init();
+		}
+	}
+	else if( m_scheduler2 ) {
+			// schedd2_spool is not configured, but we have a schedd2, so delete it
+		dprintf(D_ALWAYS,"Destination schedd spool is now same as source schedd spool\n");
+		delete m_scheduler2;
+		m_scheduler2 = NULL;
+	}
+
+	m_scheduler->config();
+	if( m_scheduler2 ) {
+		m_scheduler2->config();
+	}
 
 #if HAVE_JOB_HOOKS
 	m_hook_mgr->reconfig();
@@ -373,6 +409,33 @@ JobRouter::config() {
 			"JobRouter::TimerHandler_UpdateCollector",
 			this);
 	}
+
+	param(m_schedd2_name_buf,"JOB_ROUTER_SCHEDD2_NAME");
+	param(m_schedd2_pool_buf,"JOB_ROUTER_SCHEDD2_POOL");
+	m_schedd2_name = m_schedd2_name_buf.empty() ? NULL : m_schedd2_name_buf.c_str();
+	m_schedd2_pool = m_schedd2_pool_buf.empty() ? NULL : m_schedd2_pool_buf.c_str();
+	if( m_schedd2_name ) {
+		dprintf(D_ALWAYS,"Routing jobs to schedd %s in pool %s\n",
+				m_schedd2_name_buf.c_str(),m_schedd2_pool_buf.c_str());
+	}
+
+	param(m_schedd1_name_buf,"JOB_ROUTER_SCHEDD1_NAME");
+	param(m_schedd1_pool_buf,"JOB_ROUTER_SCHEDD1_POOL");
+	m_schedd1_name = m_schedd1_name_buf.empty() ? NULL : m_schedd1_name_buf.c_str();
+	m_schedd1_pool = m_schedd1_pool_buf.empty() ? NULL : m_schedd1_pool_buf.c_str();
+	if( m_schedd1_name ) {
+		dprintf(D_ALWAYS,"Routing jobs from schedd %s in pool %s\n",
+				m_schedd1_name_buf.c_str(),m_schedd1_pool_buf.c_str());
+	}
+}
+
+classad::ClassAdCollection *
+JobRouter::GetSchedd1ClassAds() {
+	return m_scheduler->GetClassAds();
+}
+classad::ClassAdCollection *
+JobRouter::GetSchedd2ClassAds() {
+	return m_scheduler2 ? m_scheduler2->GetClassAds() : m_scheduler->GetClassAds();
 }
 
 void
@@ -423,7 +486,7 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 			}
 
 			job->SetSrcJobAd(job->src_key.c_str(), orig_ad, ad_collection);
-			if (false == push_dirty_attributes(job->src_ad,NULL,NULL))
+			if (false == push_dirty_attributes(job->src_ad,m_schedd1_name,m_schedd1_pool))
 			{
 				dprintf(D_ALWAYS, "JobRouter failure (%s): "
 						"failed to reset src job "
@@ -455,12 +518,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	int reason_subcode;
 	bool ret_val = false;
 
-	if (false == new_to_old(job->src_ad, converted_ad))
-	{
-		dprintf(D_ALWAYS, "JobRouter::EvalSrcJobPeriodicExpr(%s): "
-				"Failed to convert ClassAd.", job->JobDesc().c_str());
-		return false;
-	}
+	converted_ad = job->src_ad;
 	user_policy.Init(&converted_ad);
 
 	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
@@ -540,7 +598,7 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 
 		WriteHoldEventToUserLog(ad);
 
-		if(false == push_dirty_attributes(ad,NULL,NULL))
+		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
 		{
 			dprintf(D_ALWAYS,"JobRouter failure (%d.%d): failed to "
 					"place job on hold.\n", cluster, proc);
@@ -577,7 +635,7 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 		ad.InsertAttr(ATTR_JOB_STATUS, REMOVED);
 		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
 		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
-		if(false == push_dirty_attributes(ad,NULL,NULL))
+		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
 		{
 			dprintf(D_ALWAYS,"JobRouter failure (%d.%d): failed to "
 					"remove job.\n", cluster, proc);
@@ -779,6 +837,7 @@ RoutedJob::RoutedJob() {
 	proxy_file_copy_chowned = false;
 	target_universe = CONDOR_UNIVERSE_GRID;
 	saw_dest_job = false;
+	edit_job_in_place = false;
 }
 RoutedJob::~RoutedJob() {
 }
@@ -843,7 +902,7 @@ CombineParentAndChildClassAd(classad::ClassAd *dest,classad::ClassAd *ad,classad
 		dprintf(D_FULLDEBUG,"failed to copy %s value\n",itr->first.c_str());
 			return false;
 		}
-		if(!dest->Insert(itr->first,tree)) {
+		if(!dest->Insert(itr->first,tree, false)) {
 		dprintf(D_FULLDEBUG,"failed to insert %s\n",itr->first.c_str());	
 		return false;
 		}
@@ -858,7 +917,8 @@ JobRouter::AdoptOrphans() {
     classad::LocalCollectionQuery query;
 	classad::ExprTree *constraint_tree;
 	classad::ClassAdParser parser;
-	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+	classad::ClassAdCollection *ad_collection = GetSchedd1ClassAds();
+	classad::ClassAdCollection *ad_collection2 = GetSchedd2ClassAds();
 	std::string dest_key,src_key;
 	std::string dest_jobs,src_jobs;
 
@@ -879,7 +939,7 @@ JobRouter::AdoptOrphans() {
 		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'\n",dest_jobs.c_str());
 	}
 
-    query.Bind(ad_collection);
+    query.Bind(ad_collection2);
     if(!query.Query("root",constraint_tree)) {
 		dprintf(D_ALWAYS,"JobRouter: Error running orphan dest job query: %s\n",dest_jobs.c_str());
 		delete constraint_tree;
@@ -890,7 +950,7 @@ JobRouter::AdoptOrphans() {
     query.ToFirst();
     if( query.Current(dest_key) ) do {
 		std::string route_name;
-		classad::ClassAd *dest_ad = ad_collection->GetClassAd(dest_key);
+		classad::ClassAd *dest_ad = ad_collection2->GetClassAd(dest_key);
 		ASSERT(dest_ad);
 
 		if(!dest_ad->EvaluateAttrString(JR_ATTR_ROUTED_FROM_JOB_ID, src_key) ||
@@ -915,7 +975,7 @@ JobRouter::AdoptOrphans() {
 		if(!src_ad) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): removing orphaned destination job with no matching source job.\n",src_key.c_str(),dest_key.c_str());
 			MyString err_desc;
-			if(!remove_job(*dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",NULL,NULL,err_desc)) {
+			if(!remove_job(*dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): failed to remove dest job: %s\n",src_key.c_str(),dest_key.c_str(),err_desc.Value());
 			}
 			continue;
@@ -963,7 +1023,7 @@ JobRouter::AdoptOrphans() {
 		if(!AddJob(job)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to add orphaned job to my routed job list; aborting it.\n",job->JobDesc().c_str());
 			MyString err_desc;
-			if(!remove_job(job->dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",NULL,NULL,err_desc)) {
+			if(!remove_job(job->dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.Value());
 			}
 			delete job;
@@ -1009,7 +1069,7 @@ JobRouter::AdoptOrphans() {
 
 		MyString error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
-		if(!yield_job(*src_ad,NULL,NULL,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(), m_release_on_hold)) {
+		if(!yield_job(*src_ad,m_schedd1_name,m_schedd1_pool,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(),true,m_release_on_hold)) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.Value());
@@ -1094,7 +1154,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += " )";
 
 	//Add on basic requirements to keep things sane.
-	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
+	umbrella_constraint += " && (target.ProcId >= 0 && target.JobStatus == 1 && (target.StageInStart is undefined || target.StageInFinish isnt undefined) && target.Managed isnt \"ScheddDone\" && target.Managed isnt \"External\" && target.Owner isnt Undefined && target.";
 	umbrella_constraint += JR_ATTR_ROUTED_BY;
 	umbrella_constraint += " isnt \"";
 	umbrella_constraint += m_job_router_name;
@@ -1129,7 +1189,7 @@ JobRouter::GetCandidateJobs() {
 
 	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
 
-	constraint_tree = parser.ParseExpression(umbrella_constraint.c_str());
+	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
 		EXCEPT("JobRouter: Failed to parse umbrella constraint: '%s'\n",umbrella_constraint.c_str());
 	}
@@ -1179,6 +1239,7 @@ JobRouter::GetCandidateJobs() {
 			continue;
 		}
 		job->is_sandboxed = TestJobSandboxed(job);
+		job->edit_job_in_place = TestEditJobInPlace(job);
 
 		/*
 		dprintf(D_FULLDEBUG,"JobRouter DEBUG (%s): parent = %s\n",job->JobDesc().c_str(),ClassAdToString(parent).c_str());
@@ -1266,8 +1327,14 @@ void
 JobRouter::TakeOverJob(RoutedJob *job) {
 	if(job->state != RoutedJob::UNCLAIMED) return;
 
+	if(job->edit_job_in_place) {
+			// we do not claim the job if we are just editing the src job
+		job->state = RoutedJob::CLAIMED;
+		return;
+	}
+
 	MyString error_details;
-	ClaimJobResult cjr = claim_job(job->src_ad,NULL,NULL,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str());
+	ClaimJobResult cjr = claim_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str(), job->is_sandboxed);
 
 	switch(cjr) {
 	case CJR_ERROR: {
@@ -1328,7 +1395,11 @@ JobRouter::SubmitJob(RoutedJob *job) {
 	}
 #endif
 	job->dest_ad = job->src_ad;
-	VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
+		// If we are not just editing the src job, then we need to do
+		// the standard transformations to create a new job now.
+	if(!job->edit_job_in_place) {
+		VanillaToGrid::vanillaToGrid(&job->dest_ad,job->target_universe,job->grid_resource.c_str(),job->is_sandboxed);
+	}
 	FinishSubmitJob(job);
 }
 
@@ -1345,6 +1416,28 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	// The route ClassAd may change some things in the routed ad.
 	if(!route->ApplyRoutingJobEdits(&job->dest_ad)) {
 		dprintf(D_FULLDEBUG,"JobRouter failure (%s): failed to apply route ClassAd modifications to target ad.\n",job->JobDesc().c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+
+	if(job->edit_job_in_place) {
+		if(!push_classad_diff(job->src_ad,job->dest_ad,m_schedd1_name,m_schedd1_pool)) {
+			dprintf(D_ALWAYS, "JobRouter failure (%s): "
+					"Failed to edit job.\n",
+					job->JobDesc().c_str());
+		}
+		else {
+				// Update our local copy in the job queue mirror
+			classad::ClassAdCollection *ad_collection = GetSchedd1ClassAds();
+			ad_collection->RemoveClassAd(job->src_key);
+			ad_collection->AddClassAd(job->src_key, new ClassAd(job->dest_ad));
+
+			dprintf(D_ALWAYS, "JobRouter (%s): Done editing job.\n",
+					job->JobDesc().c_str());
+			job->is_success = true;
+			job->is_done = true;
+		}
+			// All done editing the job.
 		GracefullyRemoveJob(job);
 		return;
 	}
@@ -1367,7 +1460,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
 	bool rc;
-	rc = submit_job(job->dest_ad,NULL,NULL,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
+	rc = submit_job(job->dest_ad,m_schedd2_name,m_schedd2_pool,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
 
 		// Now that the job is submitted, we can clean up any temporary
 		// x509 proxy files, because these will have been copied into
@@ -1523,13 +1616,13 @@ static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 void
 JobRouter::UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update) {
 	classad::ClassAd *new_ad = NULL;
-	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+	classad::ClassAdCollection *ad_collection2 = GetSchedd2ClassAds();
 
 	// The dest_key (dest_ad) may have changed while we are running,
 	// meaning we'll be out of sync with the ClassAdCollection. To
 	// avoid writing stale data back into the collection we MUST pull
 	// from it before updating anything.
-	new_ad = ad_collection->GetClassAd(job->dest_key);
+	new_ad = ad_collection2->GetClassAd(job->dest_key);
 	if (NULL == new_ad)
 	{
 		dprintf (D_ALWAYS, "JobRouter failure (%s): Ad %s disappeared "
@@ -1563,7 +1656,7 @@ JobRouter::UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update) {
 	}
 
 	// Update the local copy
-	ad_collection->UpdateClassAd(job->dest_key, &job->dest_ad);
+	ad_collection2->UpdateClassAd(job->dest_key, &job->dest_ad);
 	dprintf(D_FULLDEBUG,"JobRouter (%s): updated routed job status\n",job->JobDesc().c_str());
 
 	FinishCheckSubmittedJobStatus(job);
@@ -1602,7 +1695,8 @@ JobRouter::CheckSubmittedJobStatus(RoutedJob *job) {
 
 void
 JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
-	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
+	classad::ClassAdCollection *ad_collection = GetSchedd1ClassAds();
+	classad::ClassAdCollection *ad_collection2 = GetSchedd2ClassAds();
 	classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
 	std::string keyword;
 	std::string copy_attr_param;
@@ -1634,7 +1728,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 		return;
 	}
 
-	classad::ClassAd *ad = ad_collection->GetClassAd(job->dest_key);
+	classad::ClassAd *ad = ad_collection2->GetClassAd(job->dest_key);
 
 	// If ad is not found, this could be because Quill hasn't seen
 	// it yet, in which case this is not a problem.  The following
@@ -1763,7 +1857,7 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 
 bool
 JobRouter::PushUpdatedAttributes(classad::ClassAd& src) {
-	if(false == push_dirty_attributes(src,NULL,NULL))
+	if(false == push_dirty_attributes(src,m_schedd1_name,m_schedd1_pool))
 	{
 		return false;
 	}
@@ -1776,7 +1870,7 @@ JobRouter::PushUpdatedAttributes(classad::ClassAd& src) {
 
 void
 JobRouter::FinishFinalizeJob(RoutedJob *job) {
-	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,NULL,NULL,job->is_sandboxed)) {
+	if(!finalize_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,m_schedd2_name,m_schedd2_pool,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
 			// Put the src job back in idle state to prevent it from
@@ -1869,6 +1963,45 @@ JobRouter::TestJobSandboxed(RoutedJob *job)
 	bool rc = mad.EvaluateAttrBool("leftJobSandboxedTest", test_result);
 	if(!rc) {
 			// UNDEFINED etc. are treated as NOT sandboxed
+		test_result = false;
+	}
+
+	mad.RemoveLeftAd();
+	mad.RemoveRightAd();
+
+	return test_result;
+}
+
+bool
+JobRouter::TestEditJobInPlace(RoutedJob *job)
+{
+	JobRoute *route = GetRouteByName(job->route_name.c_str());
+	if(!route) {
+			// It doesn't matter what we decide here, because there is no longer
+			// any route associated with this job.
+		return true;
+	}
+	classad::MatchClassAd mad;
+	bool test_result = false;
+
+	mad.ReplaceLeftAd(route->RouteAd());
+	mad.ReplaceRightAd(&job->src_ad);
+
+	classad::ClassAd *upd;
+	classad::ClassAdParser parser;
+	std::string upd_str;
+	upd_str = "[leftEditJobInPlace = LEFT.";
+	upd_str += JR_ATTR_EDIT_JOB_IN_PLACE;
+	upd_str += " ;]";
+	upd = parser.ParseClassAd(upd_str);
+	ASSERT(upd);
+
+	mad.Update(*upd);
+	delete upd;
+
+	bool rc = mad.EvaluateAttrBool("leftEditJobInPlace", test_result);
+	if(!rc) {
+			// UNDEFINED etc. are treated as false
 		test_result = false;
 	}
 
@@ -1977,7 +2110,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {
 		// Remove (abort) destination job.
 		MyString err_desc;
-		if(!remove_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",NULL,NULL,err_desc)) {
+		if(!remove_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",m_schedd2_name,m_schedd2_pool,err_desc)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.Value());
 		}
 		else {
@@ -1988,7 +2121,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(job->is_claimed) {
 		MyString error_details;
 		bool keep_trying = true;
-		if(!yield_job(job->src_ad,NULL,NULL,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),m_release_on_hold,&keep_trying))
+		if(!yield_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),
@@ -2073,7 +2206,8 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 		}
 	}
 
-	classad::ClassAd *dest_ad = ad_collection->GetClassAd(job->dest_key);
+	classad::ClassAdCollection *ad_collection2 = GetSchedd2ClassAds();
+	classad::ClassAd *dest_ad = ad_collection2->GetClassAd(job->dest_key);
 	if(!dest_ad) {
 		dest_job_synchronized = true;
 	}
@@ -2122,7 +2256,7 @@ JobRouter::InvalidatePublicAd() {
 	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
 	invalidate_ad.SetTargetTypeName("Job_Router");
 
-	line.sprintf("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
+	line.formatstr("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
@@ -2167,7 +2301,7 @@ JobRoute::ThrottleDesc(double throttle) {
 	}
 	else {
 		MyString buf;
-		buf.sprintf("%g jobs/sec",throttle/THROTTLE_UPDATE_INTERVAL);
+		buf.formatstr("%g jobs/sec",throttle/THROTTLE_UPDATE_INTERVAL);
 		desc = buf.Value();
 	}
 	return desc;
@@ -2344,7 +2478,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		else {
 			expr = expr->Copy();
 		}
-		if(!src_ad->Insert(new_attr,expr)) {
+		if(!src_ad->Insert(new_attr,expr,false)) {
 			return false;
 		}
 	}
@@ -2366,7 +2500,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree)) {
+		if(!src_ad->Insert(attr,tree, false)) {
 			return false;
 		}
 	}
@@ -2379,7 +2513,7 @@ JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			return false;
 		}
-		if(!src_ad->Insert(attr,tree)) {
+		if(!src_ad->Insert(attr,tree, false)) {
 			return false;
 		}
 		classad::Value val;

@@ -19,8 +19,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.7.6 not yet released.
-%\item Condor version 7.7.6 released on Month Date, 2012.
+\item Condor version 7.7.6 released on April 24, 2012.
+This release contains all bug fixes from Condor version 7.6.7,
+as listed in this manual's version history. 
+
+\item In the Condor directory defined by \MacroUNI{SBIN},
+\File{condor\_vm\_vmware.pl} was
+renamed to \File{condor\_vm\_vmware} and \File{grid\_monitor.sh} was
+renamed to \File{grid\_monitor}.
+This makes Condor more compliant with Linux native packaging rules.
+Symbolic links to the old locations are included to ease upgrading.
+\Ticket{2940}
 
 \end{itemize}
 
@@ -29,16 +38,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The values of \SubmitCmd{request\_memory}, \SubmitCmd{request\_disk} and
+\SubmitCmd{request\_cpus} submit description file commands will now be
+automatically included in the job \Attr{Requirements} expression by
+\Condor{submit}.  This is part of several changes
+in code and policy intended to make partitionable slots easier to deploy
+and use.  The requested values for memory, disk and cpus, as well as the
+amount of these resources that a job actually uses are now printed in the
+user log when the job exits.
+\Ticket{2843}
+
+\item The new \SubmitCmd{keep\_claim\_idle} submit description
+file command requests that the \Condor{schedd} keep a claim for a defined
+number of seconds after the job exits.
+The job ClassAd attribute \Attr{KeepClaimIdle} was introduced in
+Condor version 7.7.1 to implement this functionality.
+See the definition of this command at 
+section ~\ref{condor-submit-keep-claim-idle}.
+\Ticket{2094}
+
+\item Changed the default for \Condor{history} to print out
+items in reverse chronological order.  
+The new \Opt{-forwards} option enables the previous behavior of 
+printing historical jobs in chronological order.
+\Ticket{2808}
+
 \item Enhanced the \Condor{negotiator} to provide the name of 
 concurrency limits that cause negotiation to fail, so that 
 \Condor{q} -analyze can provide more informative failure information.
 \Ticket{2878}
-
-\item Added configuration parameter 
-\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE}, which causes the
-\Condor{negotiator} to re-read the configuration prior to each
-negotiation cycle when set to \Expr{True}.
-\Ticket{2851}
 
 \item Concurrency limit defaults may now be declared for named groups
 using \Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<group>} so that any
@@ -87,6 +115,19 @@ via the new \Opt{-X} option.
 
 \begin{itemize}
 
+\item The new machine ClassAd attributes \Attr{RemoteGroup}, 
+\Attr{RemoteNegotiatingGroup}, and \Attr{RemoteAutoregroup},
+and the new job ClassAd attributes \Attr{SubmitterGroup}, 
+\Attr{SubmitterNegotiatingGroup}, and \Attr{SubmitterAutoregroup}
+enhance support for preemption policies with accounting group awareness.
+\Ticket{2885}
+
+\item The new configuration variable
+\Macro{NEGOTIATOR\_READ\_CONFIG\_BEFORE\_CYCLE} is a boolean which causes the
+\Condor{negotiator} to re-read the configuration prior to each
+negotiation cycle when set to \Expr{True}.
+\Ticket{2851}
+
 \item The new configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} 
 specifies how the \Condor{master} will restart,
 when it notices that the \Condor{master} binary has changed. 
@@ -100,15 +141,68 @@ it only took effect if \MacroNI{WANT\_VACATE} was \Expr{True}.
 \Ticket{2855}
 
 \item The new configuration variables \Macro{MEMORY\_USAGE\_METRIC} and
-\Macro{MEMORY\_USAGE\_METRIC\_VM} specify the value that the \Condor{starter} will
+\Macro{MEMORY\_USAGE\_METRIC\_VM} specify the value that the 
+\Condor{starter} will
 set into the \Attr{MemoryUsage} attribute for a job.  It is expected that
 this will be a ClassAd expression that defines the job memory usage in terms
 of other job attributes.
+\Ticket{2843}
 
 \item The configuration variable \Macro{DAGMAN\_SUBMIT\_DELAY} can now be any
 non negative integer.  It was formerly limited to values between 0 and 60,
 inclusive.
 \Ticket{2864}
+
+\item New configuration variables have been added, 
+such that the \Condor{schedd} may
+define statistics that count subsets of jobs. 
+These variables
+have the form \Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<name>} and 
+are defined by a boolean ClassAd expression.
+<name> will be prefixed to the names of attributes in the \Condor{schedd} 
+ClassAd, such as \Attr{physicsJobsStarted}
+where \MacroNI{SCHEDD\_COLLECT\_STATS\_FOR\_physics} evaluates to \Expr{True},
+and this attribute would be the count of jobs that have started.
+\Ticket{2862}
+
+\item Several OpSys related attributes were added or updated to assist with selection of execute resources.
+\begin{description}
+\item [\AdAttr{OpSysAndVer}:] A string containing the value of the \Attr{OpSysName} attribute with the \Attr{OpSysMajorVersion} attribute appended.
+\item [\AdAttr{OpSysLegacy}:] A string that holds the long-standing values for the \Attr{OpSys} attribute.
+\item [\AdAttr{OpSysLongName}:] A string containing a full description of the operating system.
+\item [\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+\item [\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
+\item [\AdAttr{OpSysShortName}:] A string containing a short description of the operating system.
+\item [\AdAttr{OpSysVer}:] An integer value representing the operating system version number.
+\end{description}
+\Ticket{2366}
+
+\item New configuration variables have been added to provide default values for attributes needed to provision
+dynamic slots. \Condor{submit} will insert the values of these variables into the job ClassAd when the submit
+file does not provide a value for the attribute.
+\begin{description}
+\item [\AdAttr{RequestMemory}:] specified by \Macro{JOB\_DEFAULT\_REQUESTMEMORY}, defaults to \Attr{MemoryUsage}.
+\item [\AdAttr{RequestDisk}:] specified by \Macro{JOB\_DEFAULT\_REQUESTDISK}, defaults to \Attr{DiskUsage}.
+\item [\AdAttr{RequestCpus}:] specified by \Macro{JOB\_DEFAULT\_REQUESTCPUS}, defaults to 1.
+\end{description}
+\Ticket{2835}
+
+\item New configuration variables have been added for the \Condor{startd} to enable default rules for partitionable
+resources. The configuration variables are expected to be expressions that quantize or otherwise modify the job's
+requested sizes of resources.
+\begin{description}
+\item [\AdAttr{RequestMemory}:] modify with \Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY}.
+\item [\AdAttr{RequestDisk}:] modify with\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK}.
+\item [\AdAttr{RequestCpus}:] modify with \Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS}.
+\end{description}
+\item
+\Ticket{2850}
+
+\item There is a new configuration variable \Macro{MUST\_MODIFY\_REQUEST\_EXPRS} for the \Condor{startd}.
+If false, then \MacroNI{MODIFY\_REQUEST\_EXPRs} are only applied if the job claim still matches the partitionable
+slot after modification. If true, the modifications always take place, and if the modifications cause the claim
+to no longer match, then the startd will simply refuse the claim.  The default value is false.
+\Ticket{2850}
 
 \end{itemize}
 
@@ -116,15 +210,29 @@ inclusive.
 
 \begin{itemize}
 
+\item Fixed a bug in \Condor{vm-gahp} that caused 64-bit guest OSes that
+need network access to fail on start-up when run under VMware.
+\Ticket{2922}
+
+\item Submit command \Macro{remote\_initialdir} now works for pbs and lsf
+grid universe jobs.
+\Ticket{2913}
+
+\item Fixed the path to \Prog{sftp\_server} on Mac OS X and Debian
+platforms.
+\Ticket{2789}
+
 \item Fixed a rare problem that caused a 20 second timeout to occur in
 the \Condor{collector} when authenticating.
 \Ticket{2817}
 
-\item Fixed a rare bug where the schedd would sometimes not reuse
-an existing claim to run a new job when an existing job exited.  This
-would result in it waiting for a new negotiation cycle to get a new match,
-and thus a small performance penalty.  This bug was actually fixed
-in Condor version 7.7.5.
+\item Fixed a rare bug in which the \Condor{schedd} would sometimes not reuse
+an existing claim to run a new job when an existing job exited.  
+This would result in the \Condor{schedd} daemon
+waiting for a new negotiation cycle to make a new match,
+and thus producing a small performance penalty due to the
+wasted time during the interval between negotiation cycles.  
+This bug was actually fixed in Condor version 7.7.5.
 \Ticket{2802}
 
 \item Fixed a bug in \Condor{q}, such that it no longer emits a parse
@@ -171,6 +279,12 @@ to the GRAM job-manager in a timely manner. As a result, the occurrence of
 GRAM errors 111 and 130 should be greatly reduced.
 \Ticket{2859}
 
+\item Fixed a bug that caused \condor{submit} to warn about
+\MacroNI{dag\_status} and \MacroNI{failed\_count} not being used in the
+submit files of most DAG node jobs (DAGMan now automatically defines
+these macros for all node jobs).  This bug was introduced in 7.7.5.
+\Ticket{2814}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -185,7 +299,11 @@ GRAM errors 111 and 130 should be greatly reduced.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{submit} man page contains descriptions of \Condor{starter}
+prescripts and postscripts.
+See ~\ref{man-condor-submit-prescript} and ~\ref{man-condor-submit-postscript}
+for the descriptions.
+\Ticket{2379}
 
 \end{itemize}
 
@@ -444,6 +562,14 @@ refreshed proxy.
 The default value is 21600 seconds (6 hours).
 Previously, this value was not configurable.
 \Ticket{2792}
+
+\item New job ClassAd attributes were added to assist in tracking the time
+jobs spend transferring output.  \Attr{JobCurrentStartExecutingDate} is the
+time that execution actually begins, and \Attr{JobCurrentStartTransferOutputDate}
+is the time that transfer output begins (and execution ends).  In addition,
+\Attr{CumulativeTransferTime} is the total amount of time the job spent transferring
+data.  This includes input and output.
+\Ticket{2783}
 
 \end{itemize}
 
@@ -940,7 +1066,7 @@ changes to the original DAG input file take effect when running a Rescue DAG.
 POST scripts will be run regardless of the return value from 
 the PRE script of the same node as described in section~\ref{dagman:SCRIPT}.  
 The previous behavior of not running the POST script can be restored by
-either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+either adding the \Opt{-DontAlwaysRunPost} option to the \Condor{submit\_dag}
 command line, 
 or by setting the new configuration variable
 \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 
@@ -960,7 +1086,7 @@ This has been a cause of confusion for DAGMan users.
 %\item Filip Krikava supplied a patch that limits the number of 
 %file descriptors that DAGMan has open at a time.
 %The reason for creating this capability is that
-%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%DAGMan tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
 \item A matchmaking optimization has significantly improved the speed 
@@ -1187,7 +1313,7 @@ See section ~\ref{dagman:SCRIPT} for details.
 %\item Filip Krikava supplied a patch that limits the number of 
 %file descriptors that DAGMan has open at a time.
 %The reason for creating this capability is that
-%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%DAGMan tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
 \end{itemize}

@@ -402,6 +402,7 @@ static void test_classad(const Parameters &, Results &results)
     TEST("Have attribute D", (have_attribute == true));
     TEST("D is true", (b == true));
 
+/* These functions removed
     have_attribute = basic->EvaluateAttrList("E", l);
     TEST("Have attribute E", (have_attribute == true));
     TEST("E is list of size ", (l->size() == 1));
@@ -410,6 +411,7 @@ static void test_classad(const Parameters &, Results &results)
     TEST("Have attribute F", (have_attribute == true));
     have_attribute = c->EvaluateAttrInt("AA", i);
     TEST("F looks correct", (i == 3));
+*/
 
     /* ----- Test basic insert and delete ----- */
     success = basic->InsertAttr("new", 4);
@@ -672,6 +674,8 @@ static void test_exprlist(const Parameters &, Results &results)
     can_evaluate = classad->EvaluateExpr("member(foo, {1, 2, blah, 3})", value);
     TEST("Can evaluate list in member() outside of ClassAd", can_evaluate == true);
 
+	delete classad;
+
     return;
 }
 
@@ -753,13 +757,21 @@ static void test_value(const Parameters &, Results &results)
     TEST("GetType gives LIST_VALUE", (v.GetType() == Value::LIST_VALUE));
     delete l;
 
+    classad_shared_ptr<ExprList> sl(new ExprList());
+    ll = NULL;
+    v.SetListValue(sl);
+    is_expected_type = v.IsListValue(ll);
+    TEST("Value is list value", is_expected_type);
+    TEST("List value is correct", sl.get() == ll);
+    TEST("GetType gives SLIST_VALUE", (v.GetType() == Value::SLIST_VALUE));
+
     ClassAd *c = new ClassAd();
     ClassAd *cc = NULL;
     v.SetClassAdValue(c);
     is_expected_type = v.IsClassAdValue(cc);
     TEST("Value is ClassAd value", is_expected_type);
     TEST("ClassAd value is correct", c == cc);
-    TEST("GetType gives LIST_VALUE", (v.GetType() == Value::CLASSAD_VALUE));
+    TEST("GetType gives CLASSAD_VALUE", (v.GetType() == Value::CLASSAD_VALUE));
     delete c;
 
     return;
@@ -817,8 +829,8 @@ static void test_collection(const Parameters &, Results &results)
     success = collection->AddClassAd("machine3", machine3);
     TEST("Added machine3 to collection", success == true);
     /* ----- Put in one machine twice, to make sure it doesn't break ----- */
-    success = collection->AddClassAd("machine3", machine3);
-    TEST("Added machine3 to collection", success == true);
+    //success = collection->AddClassAd("machine3", machine3);
+    //TEST("Added machine3 to collection", success == true);
 
 
     /* ----- Make sure that they are in the collection ----- */

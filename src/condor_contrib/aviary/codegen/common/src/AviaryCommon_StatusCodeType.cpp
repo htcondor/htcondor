@@ -6,8 +6,28 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_StatusCodeType.h"
+          
 
-        #include "AviaryCommon_StatusCodeType.h"
+       #ifdef __GNUC__
+       # if __GNUC__ >= 4
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #  if __GNUC_MINOR__ >= 6
+       #pragma GCC diagnostic ignored "-Wenum-compare"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #  endif
+       #  if __GNUC_MINOR__ >= 7
+       #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+       #  endif
+       # endif
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -56,7 +76,22 @@
         }
         AviaryCommon::StatusCodeType::~StatusCodeType()
         {
-            axutil_qname_free(qname,Environment::getEnv());
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::StatusCodeType::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+          if(qname != NULL)
+          {
+            axutil_qname_free( qname, Environment::getEnv());
+            qname = NULL;
+          }
+        
+            return true;
+
         }
 
         
@@ -303,27 +338,39 @@
                    {
                      
                        case StatusCodeType_OK :
-                            property_StatusCodeType = ("OK");
+                            
+                            
+                            property_StatusCodeType = "OK";
                           break;
                      
                        case StatusCodeType_FAIL :
-                            property_StatusCodeType = ("FAIL");
+                            
+                            
+                            property_StatusCodeType = "FAIL";
                           break;
                      
                        case StatusCodeType_NO_MATCH :
-                            property_StatusCodeType = ("NO_MATCH");
+                            
+                            
+                            property_StatusCodeType = "NO_MATCH";
                           break;
                      
                        case StatusCodeType_INVALID_OFFSET :
-                            property_StatusCodeType = ("INVALID_OFFSET");
+                            
+                            
+                            property_StatusCodeType = "INVALID_OFFSET";
                           break;
                      
                        case StatusCodeType_UNIMPLEMENTED :
-                            property_StatusCodeType = ("UNIMPLEMENTED");
+                            
+                            
+                            property_StatusCodeType = "UNIMPLEMENTED";
                           break;
                      
                        case StatusCodeType_UNAVAILABLE :
-                            property_StatusCodeType = ("UNAVAILABLE");
+                            
+                            
+                            property_StatusCodeType = "UNAVAILABLE";
                           break;
                      
                      
@@ -343,6 +390,24 @@
                 
                 return true;
              }
+
+
+             /**
+             * specialized enum constructor for StatusCodeType.
+             */
+            AviaryCommon::StatusCodeType::StatusCodeType(const ADBStatusCodeTypeEnum  arg_StatusCodeType)
+             {             
+                   qname = NULL;
+             
+                 qname =  axutil_qname_create (Environment::getEnv(),
+                       "StatusCodeType",
+                       "http://common.aviary.grid.redhat.com",
+                       NULL);
+               
+
+            isValidStatusCodeType  = setStatusCodeTypeEnum( arg_StatusCodeType );
+            }
+
              
 
            /**

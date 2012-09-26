@@ -62,6 +62,8 @@ class RoutedJob {
 
 	bool saw_dest_job;// true if dest job ad showed up in job mirror
 
+	bool edit_job_in_place; // edit src job in place; do not submit a routed copy of the job
+
 	time_t submission_time;
 	time_t retirement_time;
 

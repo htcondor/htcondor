@@ -69,6 +69,14 @@ class CondorID : public ServiceData
         return Compare (condorID) == 0;
     }
 
+    /** Test for inequality between two CondorID's.
+        @param the other CondorID object
+        @return true if less, false if not
+    */
+    inline bool operator< (const CondorID &condorID) const {
+        return Compare (condorID) == -1;
+    }
+
 		/** Comparison function for use with SelfDrainingQueue.
 			This method is static (to live in the CondorID namespace).
 			Takes pointers to two CondorID objects (though the

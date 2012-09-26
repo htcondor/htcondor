@@ -50,7 +50,7 @@ use warnings;
 
 use Carp;
 use Cwd;
-use POSIX "sys_wait_h";
+use POSIX qw/sys_wait_h strftime/;
 use Socket;
 use Sys::Hostname;
 
@@ -320,15 +320,13 @@ sub StartCondorWithParams
 	return( $config_and_port );
 }
 
-sub debug
-{
+sub debug {
     my $string = shift;
-	my $markedstring = "CP:" . $string;
-	my $level = shift;
-    if(!(defined $level)) {
-        print( "", timestamp(), ": $markedstring" ) if $DEBUG;
-    } elsif($level <= $DEBUGLEVEL) {
-        print( "", timestamp(), ": $markedstring" ) if $DEBUG;
+    my $level = shift;
+    if($DEBUG) {
+        if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
+            print( "", timestamp(), ":<CondorPersonal> $string" );
+        }
     }
 }
 
@@ -349,7 +347,7 @@ sub DebugOff
 }
 
 sub timestamp {
-    return scalar localtime();
+    return strftime("%Y/%m/%d %H:%M:%S", localtime);
 }
 
 sub Reset
@@ -1072,6 +1070,16 @@ sub TunePersonalCondor
 	    print NEW "# Done appending from 'append_condor_config'\n";
 	}
 
+	# Gittrac Ticket 2889
+	# This is ok when tests are running as a slot user but if/when we start running tests as root we will
+	# need to put these into a directory with permissions 1777.
+	print NEW "# Relocate C_GAHP files to prevent collision from multiple tests (running on multiple slots) writing into /tmp\n";
+	print NEW "# If we are running tests as root we might need to relocate these to a directory with permissions 1777\n";
+	print NEW "C_GAHP_LOG = \$(LOG)/CGAHPLog.\$(USERNAME)\n";
+	print NEW "C_GAHP_LOCK = \$(LOCK)/CGAHPLock.\$(USERNAME)\n";
+	print NEW "C_GAHP_WORKER_THREAD_LOG = \$(LOG)/CGAHPWorkerLog.\$(USERNAME)\n";
+	print NEW "C_GAHP_WORKER_THREAD_LOCK = \$(LOCK)/CGAHPWorkerLock.\$(USERNAME)\n";
+
 	close(NEW);
 
 	PostTunePersonalCondor($personal_config_file);
@@ -1275,8 +1283,9 @@ sub IsPersonalRunning
 #
 #################################################################
 
-sub IsRunningYet
-{
+sub IsRunningYet {
+    print "Testing if Condor is up.\n";
+    print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
 	my $daemonlist = `condor_config_val daemon_list`;
 	CondorUtils::fullchomp($daemonlist);
 	my $collector = 0;
@@ -1294,8 +1303,8 @@ sub IsRunningYet
 	# was set. So we will check for bypasses to normal 
 	# operation and rewrite the daemon list
 
-	my $old_debuglevel = $debuglevel;
-	$debuglevel = $DEBUGLEVEL;
+	#my $old_debuglevel = $debuglevel;
+	#$debuglevel = $DEBUGLEVEL;
 	debug("In IsRunningYet DAEMON_LIST=$daemonlist\n",$debuglevel);
 	$daemonlist =~ s/\s*//g;
 	my @daemons = split /,/, $daemonlist;
@@ -1471,40 +1480,48 @@ sub IsRunningYet
 	}
 
 	if($daemonlist =~ /STARTD/i) {
-		# lets wait for the collector to know about it
-		# if we have a collector
-		my $havestartd = "";
-		my $done = "no";
-		my $currenthost = CondorTest::getFqdnHost();
-		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
-			print "Waiting for collector to see startd - ";
-			$loopcount = 0;
-			TRY: while( $done eq "no") {
-				$loopcount += 1;
-				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
+            # lets wait for the collector to know about it if we have a collector
+            my $currenthost = CondorTest::getFqdnHost();
+            if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+                print "Waiting for collector to see startd - ";
+                $loopcount = 0;
+                while(1) {
+                    $loopcount++;
+                    my $output = `condor_status -startd -format \"%s\\n\" name`;
+                    
+                    my $res = $?;
+                    if ($res != 0) {
+			# This might mean that the collector isn't running - but we also sometimes have
+			# a condition where the collector isn't ready yet.  So we'll retry a few times.
+                        print "\n", timestamp(), "condor_status returned error code $res\n";
+                        print timestamp(), " The collector probably is not running after all, giving up\n";
+                        print timestamp(), " Output from condor_status:\n";
+                        print $output;
 
-				my $res = $?;
-				if ($res != 0) {
-					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
-					return 0;
-				}
-
-    			foreach my $line (@cmd)
-    			{
-        			if( $line =~ /^.*$currenthost.*/)
-        			{
-            			$done = "yes";
-						print "ok\n";
-						last TRY;
-        			}
-    			}
-				if($loopcount == $runlimit) { 
-					print "bad\n";
-					last; 
-				}
-				sleep ($loopcount * $backoff);
+			if($loopcount < $runlimit) {
+			    print timestamp(), " Retrying...\n";
+			    sleep 1;
+			    next;
 			}
-		}
+			else {
+			    print timestamp(), " Hit the retry limit.  Erroring out.\n";
+			    return 0;
+			}
+                    }
+                    
+                    if($output =~ /$currenthost/) {
+                        print "ok\n";
+                        last;
+                    }
+
+                    if($loopcount == $runlimit) { 
+                        print "bad\n";
+                        print timestamp(), " Timed out waiting for collector to see startd\n";
+                        last; 
+                    }
+                    sleep ($loopcount * $backoff);
+                }
+            }
 	}
 
 	if($daemonlist =~ /SCHEDD/i) {
@@ -1573,7 +1590,7 @@ sub IsRunningYet
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
 	CollectDaemonPids();
 	debug("Leaving IsRunningYet\n",$debuglevel);
-	$debuglevel = $old_debuglevel;
+	#$debuglevel = $old_debuglevel;
 
 	return(1);
 }

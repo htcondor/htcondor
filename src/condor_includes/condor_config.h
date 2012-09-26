@@ -27,6 +27,10 @@
 #include "string_list.h"
 #include "simplelist.h"
 #include "extArray.h"
+
+#include <vector>
+#include <string>
+
 #endif
 
 #include "param_info.h"
@@ -102,6 +106,8 @@ class ParamValue {
 
 	ExtArray<ParamValue>* param_all(void);
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
+    int param_names_matching(Regex& re, std::vector<std::string>& names);
+
     bool param_defined(const char* name);
 	char* param_or_except( const char *name );
     int param_integer( const char *name, int default_value = 0,
@@ -158,6 +164,7 @@ class ParamValue {
 extern "C" {
 	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
 	void config_host( char* host=NULL );
+	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
 	int param_integer_c( const char *name, int default_value,
@@ -188,7 +195,7 @@ extern "C" {
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
-						  char *self=NULL, bool use_default_param_table=false );
+						  const char *self=NULL, bool use_default_param_table=false );
 
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
@@ -319,7 +326,7 @@ BEGIN_C_DECLS
 	*/
 	char * macro_expand ( const char *name );
 	void clear_config ( void );
-	void set_debug_flags( const char * strFlags);
+	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );
 	int  param_boolean_int_with_default( const char* name );

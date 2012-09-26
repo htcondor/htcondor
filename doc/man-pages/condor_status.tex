@@ -41,6 +41,8 @@ options} may be specified.
     \OptItem{\Opt{-help}}{(Help option) Display usage information}
     \OptItem{\Opt{-diagnose}}{(Help option) Print out query ClassAd without 
       performing query}
+    \OptItem{\Opt{-absent}}{(Query option) Query for and display only 
+      absent resources.}
     \OptItem{\Opt{-any}}{(Query option) Query all ClassAds and display their type,
       target type, and name}
     \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ClassAds and identify
@@ -56,7 +58,10 @@ options} may be specified.
     \OptItem{\Opt{-collector}}{(Query option) Query \Condor{collector} ClassAds
       and display attributes}
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
-      the given host name to get the ClassAds to display}
+      the given host name to get the ClassAds to display.  
+      By default, returns the \Condor{startd} ClassAd.  
+      If \Opt{-schedd} is also given, return the \Condor{schedd} ClassAd
+      on that host.}
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-license}}{(Query option) Display license attributes.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ClassAds 
@@ -68,8 +73,6 @@ options} may be specified.
       optional port number. 
       \Condor{status} queries the machine specified by the configuration
       variable \MacroNI{COLLECTOR\_HOST} by default.}
-    \OptItem{\Opt{-quill}}{(Query option) Display attributes of machines
-      running Quill.}
     \OptItem{\Opt{-run}}{(Query option) Display information about machines
       currently running jobs.}
     \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ClassAds and display
@@ -104,7 +107,7 @@ options} may be specified.
       the state of machine, the virtual machine memory,
       and the type of networking.}
 
-    \OptItem{\OptArg{-attributes}{Attr1 [,Attr2 \Dots]}}{(Display option)
+    \OptItem{\OptArg{-attributes}{Attr1[,Attr2 \Dots]}}{(Display option)
       Explicitly list the attributes in a comma separated list
       which should be displayed when using the \Opt{-xml} or \Opt{-long}
       options.  Limiting the number of attributes increases the efficiency 
@@ -172,6 +175,33 @@ options} may be specified.
       A format without any conversion specifiers may be specified,
       but an attribute is still required.
       Include \Bs n to specify a line break. }
+    \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}} {
+      (Custom option) Display machine ClassAd attribute values 
+      formatted in a default way according to their attribute types.  
+      This option takes an arbitrary number of attribute names as arguments,
+      and prints out their values.  It is like the \Opt{-format} option,
+      but no format strings are required.
+      It is assumed that no attribute names begin with a dash character,
+      so that the next word that begins with dash is the 
+      start of the next option.
+      The \Opt{autoformat} option may be followed by a colon character
+      and formatting qualifiers:
+
+      \textbf{t} add a tab character before each field instead of 
+      the default space character,
+
+      \textbf{n} add a newline character after each field,
+
+      \textbf{,} add a comma character after each field,
+
+      \textbf{l} label each field,
+
+      \textbf{V} use \%V rather than \%v for formatting,
+
+      \textbf{h} print headings before the first line of output.
+
+      The newline and comma characters may \emph{not} be used together.
+      }
 \end{Options}
 
 \GenRem
@@ -335,6 +365,17 @@ chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
        Total       3     1        1          1         0        0
 \end{verbatim}
 \normalsize
+
+\underline{-format option example}
+To display the name and memory attributes of each job ClassAd in a format
+that is easily parsable by other tools:
+\begin{verbatim}
+% condor_status -format "%s " Name -format "%d\n" Memory
+\end{verbatim}
+To do the same with the \Opt{autoformat} option, run
+\begin{verbatim}
+% condor_status -autoformat Name Memory
+\end{verbatim}
 
 
 \ExitStatus

@@ -4502,7 +4502,7 @@ id=256
 
 [GRID_MONITOR]
 aliases=
-default=$(SBIN)/grid_monitor.sh
+default=$(SBIN)/grid_monitor
 version=0.0.0
 range=.*
 state=default
@@ -5412,7 +5412,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,startd_cronmgr
 id=313
 
-[CLASSAD_LIB_PATH]
+[CLASSAD_USER_LIBS]
 aliases=
 default=
 version=0.0.0
@@ -5427,6 +5427,22 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
+
+[ENABLE_CLASSAD_CACHING]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable ClassAd Caching
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad
+id=315
 
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
@@ -6039,7 +6055,7 @@ id=370
 
 [RESTART_PROCD_ON_ERROR]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -6228,23 +6244,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=380
-
-[MASTER.USE_PROCD]
-# The master specifically does not want a procd
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Use Procd
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,proc_family_interface
-id=555
 
 [USE_PROCD]
 # All daemons want a procd (except for the master, defined above)
@@ -7479,6 +7478,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=454
 
+[NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Allow Quota Oversubscription
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
 [GROUP_QUOTA_MAX_ALLOCATION_ROUNDS]
 aliases=
 default=3
@@ -8119,6 +8134,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=491
 
+[QUEUE_SUPER_USER_MAY_IMPERSONATE]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Queue Super Users
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd,qmgmt
+id=491
+
 [QUEUE_ALL_USERS_TRUSTED]
 aliases=
 default=false
@@ -8345,7 +8376,7 @@ id=505
 
 [LOCAL_UNIV_EXECUTE]
 aliases=
-default=
+default=$(SPOOL)/local_univ_execute
 version=0.0.0
 range=.*
 state=default
@@ -9416,6 +9447,38 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ccb,ccb
 id=555
 
+[GSI_SKIP_HOST_CHECK_CERT_REGEX]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=GSI Skip Host Check Cert Regex
+usage=the directory that contains the public keys and signing policies of trusted certificate authorities
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=ccb,ccb
+id=555
+
+[GSI_SKIP_HOST_CHECK]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=GSI Skip Host Check
+usage=the directory that contains the public keys and signing policies of trusted certificate authorities
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=ccb,ccb
+id=555
+
 [TRUNC_MASTER_LOG_ON_OPEN]
 aliases=
 default=false
@@ -10202,6 +10265,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag
 id=602
 
+[DEFRAG_CANCEL_REQUIREMENTS]
+aliases=
+default=$(DEFRAG_WHOLE_MACHINE_EXPR)
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=602
+
 [DEFRAG_WHOLE_MACHINE_EXPR]
 aliases=
 default=Cpus == TotalCpus && Offline=!=True
@@ -10346,22 +10425,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag,log
 id=550
 
-[JOB_QUEUE_LOG]
-aliases=
-default=$(SPOOL)/job_queue.log
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Job Queue Log file
-usage=Job Queue File
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=log
-id=550
-
 [DEFRAG_UPDATE_INTERVAL]
 aliases=
 default=300
@@ -10396,7 +10459,7 @@ id=550
 
 [GROUP_SORT_EXPR]
 aliases=
-default=ifThenElse(GroupResourcesAllocated>0.0,GroupResourcesInUse/GroupResourcesAllocated,3.40282e+38)
+default=ifThenElse(AccountingGroup=?="<none>",3.4e+38,ifThenElse(GroupQuota>0,GroupResourcesInUse/GroupQuota,3.3e+38))
 version=0.0.0
 range=.*
 state=default
@@ -10489,3 +10552,179 @@ usage=
 url=
 tags=starter
 id=603
+
+[JOB_DEFAULT_REQUESTMEMORY]
+aliases=
+default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestMemory expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=604
+
+[JOB_DEFAULT_REQUESTDISK]
+aliases=
+default=DiskUsage
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestDisk expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=605
+
+[JOB_DEFAULT_REQUESTCPUS]
+aliases=
+default=1
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default RequestCpus expression if not specified in submit file
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit,submit
+id=606
+
+[MUST_MODIFY_REQUEST_EXPRS]
+aliases=
+default=false
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Should startd modify request exprs even if it causes match failure
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=607
+
+[MODIFY_REQUEST_EXPR_REQUESTCPUS]
+aliases=
+default=quantize(RequestCpus,{1})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a cpu resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=608
+
+[MODIFY_REQUEST_EXPR_REQUESTMEMORY]
+aliases=
+default=quantize(RequestMemory,{TotalSlotMemory / TotalSlotCpus / 4})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a memory resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=609
+
+[MODIFY_REQUEST_EXPR_REQUESTDISK]
+aliases=
+default=quantize(RequestDisk,{1024})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Default modification to a disk resource request
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
+
+[ENABLE_DEPRECATION_WARNINGS]
+aliases=
+default=true
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable warnings about the use of deprecated features
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
+
+[CLASSAD_LOG_STRICT_PARSING]
+aliases=
+default=true
+version=7.9.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable strict parse checking of classad RHS expressions in classad log files
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad_log
+id=612
+
+[STARTER_RLIMIT_AS]
+aliases=
+default=0
+version=7.8.1
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Classad expression used to set virtual memory rlimit for job
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=611
+
+[INTERACTIVE_SUBMIT_FILE]
+aliases=
+default=$(LIBEXEC)/interactive.sub
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Location of default submit file for condor_submit -i
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=submit
+id=612

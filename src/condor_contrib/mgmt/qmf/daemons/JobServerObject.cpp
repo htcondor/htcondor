@@ -132,7 +132,7 @@ JobServerObject::GetJobAd ( std::string key,
     }
 
     // debug
-//    if (DebugFlags & D_FULLDEBUG) {
+//    if (IsFulldebug(D_FULLDEBUG)) {
 //        classAd.dPrint(D_FULLDEBUG|D_NOHEADER);
 //        std::ostringstream oss;
 //        oss << _map;

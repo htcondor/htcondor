@@ -142,7 +142,7 @@ int
 DownloadReplicaTransferer::download( ) {
 	MyString extension;
 
-    extension.sprintf( "%d.%s",
+    extension.formatstr( "%d.%s",
                        daemonCore->getpid( ),
                        DOWNLOADING_TEMPORARY_FILES_EXTENSION );
 	// download version file                                                    

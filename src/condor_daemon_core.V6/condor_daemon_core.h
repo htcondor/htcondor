@@ -172,15 +172,17 @@ typedef enum {
 // constants for the DaemonCore::Create_Process job_opt_mask bitmask
 
 const int DCJOBOPT_SUSPEND_ON_EXEC  = (1<<1);
-const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);
+const int DCJOBOPT_NO_ENV_INHERIT   = (1<<2);        // do not pass our env or CONDOR_INHERIT to the child
 const int DCJOBOPT_NEVER_USE_SHARED_PORT   = (1<<3);
 const int DCJOBOPT_NO_UDP           = (1<<4);
+const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHERIT to the child
 
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
 #define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
 #define HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(mask) ((mask)&DCJOBOPT_NEVER_USE_SHARED_PORT)
 #define HAS_DCJOBOPT_NO_UDP(mask) ((mask)&DCJOBOPT_NO_UDP)
+#define HAS_DCJOBOPT_CONDOR_ENV_INHERIT(mask)  (!((mask)&DCJOBOPT_NO_CONDOR_ENV_INHERIT))
 
 // structure to be used as an argument to Create_Process for tracking process
 // families
@@ -485,6 +487,22 @@ class DaemonCore : public Service
     int InServiceCommandSocket() {
         return inServiceCommandSocket_flag;
     }
+    
+    void SetDelayReconfig(bool value) {
+        m_delay_reconfig = value;
+    }
+
+    bool GetDelayReconfig() const {
+        return m_delay_reconfig;
+    }
+
+    void SetNeedReconfig(bool value) {
+        m_need_reconfig = value;
+    }
+
+    bool GetNeedReconfig() const {
+        return m_need_reconfig;
+    }   
 	//@}
     
 
@@ -1128,7 +1146,8 @@ class DaemonCore : public Service
         int              *affinity_mask	     = NULL,
         char const      *daemon_sock         = NULL,
         MyString        *err_return_msg      = NULL,
-        FilesystemRemap *remap               = NULL
+        FilesystemRemap *remap               = NULL,
+        long		 	as_hard_limit        = 0l
         );
 
     //@}
@@ -1909,7 +1928,8 @@ class DaemonCore : public Service
 	int GetRegisteredSocketIndex( Stream *sock );
 
     int inServiceCommandSocket_flag;
-        
+    bool m_need_reconfig;
+    bool m_delay_reconfig;
 #ifndef WIN32
     static char **ParseArgsString(const char *env);
 #endif
@@ -2022,11 +2042,15 @@ extern void DC_Skip_Auth_Init();
 */
 extern void DC_Skip_Core_Init();
 
+
+extern void dc_reconfig();
+
 /** The main DaemonCore object.  This pointer will be automatically instatiated
     for you.  A perfect place to use it would be in your main_init, to access
     Daemon Core's wonderful services, like <tt>Register_Signal()</tt> or
     <tt>Register_Timer()</tt>.
 */
+
 extern DaemonCore* daemonCore;
 #endif
 

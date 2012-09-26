@@ -48,7 +48,7 @@ extern FILESQL *FILEObj;
 
 //extern ClassAd *JobAd;
 
-const char * ULogEventNumberNames[] = {
+const char ULogEventNumberNames[][30] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -85,7 +85,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_ATTRIBUTE_UPDATE"			// Job attribute updated
 };
 
-const char * ULogEventOutcomeNames[] = {
+const char * const ULogEventOutcomeNames[] = {
   "ULOG_OK       ",
   "ULOG_NO_EVENT ",
   "ULOG_RD_ERROR ",
@@ -324,12 +324,11 @@ ULogEvent::toClassAd(void)
 {
 	ClassAd* myad = new ClassAd;
 
-	char buf0[128];
-
 	if( eventNumber >= 0 ) {
-		snprintf(buf0, 128, "EventTypeNumber = %d", eventNumber);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if ( !myad->InsertAttr("EventTypeNumber", eventNumber) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	switch( (ULogEventNumber) eventNumber )
@@ -433,10 +432,7 @@ ULogEvent::toClassAd(void)
 	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
-		MyString buf1;
-		buf1.sprintf("EventTime = \"%s\"", eventTimeStr);
-		free(eventTimeStr);
-		if( !myad->Insert(buf1.Value()) ) {
+		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
 			delete myad;
 			return NULL;
 		}
@@ -446,27 +442,21 @@ ULogEvent::toClassAd(void)
 	}
 
 	if( cluster >= 0 ) {
-		snprintf(buf0, 128, "Cluster = %d", cluster);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("Cluster", cluster) ) {
 			delete myad;
 			return NULL;
 		}
 	}
 
 	if( proc >= 0 ) {
-		snprintf(buf0, 128, "Proc = %d", proc);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("Proc", proc) ) {
 			delete myad;
 			return NULL;
 		}
 	}
 
 	if( subproc >= 0 ) {
-		snprintf(buf0, 128, "Subproc = %d", subproc);
-		buf0[127] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("Subproc", subproc) ) {
 			delete myad;
 			return NULL;
 		}
@@ -509,6 +499,207 @@ ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
 	adToFill.Assign("cluster_id", cluster);
 	adToFill.Assign("proc_id", proc);
 	adToFill.Assign("spid", subproc);
+}
+
+
+// class is used to build up Usage/Request/Allocated table for each 
+// Partitionable resource before we print out the table.
+class  SlotResTermSumy {
+public:
+	std::string use;
+	std::string req;
+	std::string alloc;
+};
+
+// class to write the usage ClassAd to the userlog
+// The usage ClassAd should contain attrbutes that match the pattern
+// "<RES>", "Request<RES>", or "<RES>Usage", where <RES> can be
+// Cpus, Disk, Memory, or others as defined for use by the ProvisionedResources
+// attribute.
+//
+static void writeUsageAd(FILE * file, ClassAd * pusageAd)
+{
+	if ( ! pusageAd)
+		return;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
+
+	std::map<std::string, SlotResTermSumy*> useMap;
+
+	for (classad::ClassAd::iterator iter = pusageAd->begin();
+		 iter != pusageAd->end();
+		 iter++) {
+		int ixu = (int)iter->first.size() - 5; // size "Usage" == 5
+		std::string key = "";
+		int efld = -1;
+		if (0 == iter->first.find("Request")) {
+			key = iter->first.substr(7); // size "Request" == 7
+			efld = 1;
+		} else if (ixu > 0 && 0 == iter->first.substr(ixu).compare("Usage")) {
+			efld = 0;
+			key = iter->first.substr(0,ixu);
+		} 
+		else /*if (useMap[iter->first])*/ { // Allocated
+			efld = 2;
+			key = iter->first;
+		}
+		if (key.size() != 0) {
+			SlotResTermSumy * psumy = useMap[key];
+			if ( ! psumy) {
+				psumy = new SlotResTermSumy();
+				useMap[key] = psumy;
+				//fprintf(file, "\tadded %x for key %s\n", psumy, key.c_str());
+			} else {
+				//fprintf(file, "\tfound %x for key %s\n", psumy, key.c_str());
+			}
+			std::string val = "";
+			unp.Unparse(val, iter->second);
+
+			//fprintf(file, "\t%-8s \t= %4s\t(efld%d, key = %s)\n", iter->first.c_str(), val.c_str(), efld, key.c_str());
+
+			switch (efld)
+			{
+				case 0: // Usage
+					psumy->use = val;
+					break;
+				case 1: // Request
+					psumy->req = val;
+					break;
+				case 2:	// Allocated
+					psumy->alloc = val;
+					break;
+			}
+		} else {
+			std::string val = "";
+			unp.Unparse(val, iter->second);
+			fprintf(file, "\t%s = %s\n", iter->first.c_str(), val.c_str());
+		}
+	}
+	if (useMap.empty())
+		return;
+
+	int cchRes = sizeof("Memory (MB)"), cchUse = 8, cchReq = 8, cchAlloc = 0;
+	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
+		 it != useMap.end();
+		 ++it) {
+		SlotResTermSumy * psumy = it->second;
+		if ( ! psumy->alloc.size()) {
+			classad::ExprTree * tree = pusageAd->Lookup(it->first);
+			if (tree) {
+				unp.Unparse(psumy->alloc, tree);
+			}
+		}
+		//fprintf(file, "\t%s %s %s %s\n", it->first.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+		cchRes = MAX(cchRes, (int)it->first.size());
+		cchUse = MAX(cchUse, (int)psumy->use.size());
+		cchReq = MAX(cchReq, (int)psumy->req.size());
+		cchAlloc = MAX(cchAlloc, (int)psumy->alloc.size());
+	}
+
+	MyString fmt;
+	fmt.formatstr("\tPartitionable Resources : %%%ds %%%ds %%%ds\n", cchUse, cchReq, MAX(cchAlloc,9));
+	fprintf(file, fmt.Value(), "Usage", "Request", cchAlloc ? "Allocated" : "");
+	fmt.formatstr("\t   %%-%ds : %%%ds %%%ds %%%ds\n", cchRes+8, cchUse, cchReq, MAX(cchAlloc,9));
+	//fputs(fmt.Value(), file);
+	for (std::map<std::string, SlotResTermSumy*>::iterator it = useMap.begin();
+		 it != useMap.end();
+		 ++it) {
+		SlotResTermSumy * psumy = it->second;
+		std::string lbl = it->first.c_str(); 
+		if (lbl.compare("Memory") == 0) lbl += " (MB)";
+		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
+		fprintf(file, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+	}
+	//fprintf(file, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
+}
+
+static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
+{
+	ClassAd * puAd = *ppusageAd;
+	if ( ! puAd) {
+		puAd = new ClassAd();
+		if ( ! puAd)
+			return;
+	}
+	puAd->Clear();
+
+	int ixColon = -1;
+	int ixUse = -1;
+	int ixReq = -1;
+	int ixAlloc = -1;
+
+	for (;;) {
+		char sz[250];
+
+		// if we hit end of file or end of record "..." rewind the file pointer.
+		fpos_t filep;
+		fgetpos( file, &filep );
+		if ( ! fgets(sz, sizeof(sz), file) || 
+			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		// lines for reading the usageAd must be of the form "\tlabel : data\n"
+		// the ':' characters in each line will line up vertically, so we can find
+		// the colon in the first line, and use it as a quick to validate subsequent
+		// lines.
+		if (ixColon < 0) {
+			const char * pszColon = strchr(sz, ':');
+			if ( ! pszColon) 
+				ixColon = 0;
+			else
+				ixColon = (int)(pszColon - sz);
+		}
+		int cchLine = strlen(sz);
+		if (sz[0] != '\t' || ixColon <= 0 || ixColon+1 >= cchLine || 
+			sz[ixColon] != ':' || sz[ixColon-1] != ' ' || sz[ixColon+1] != ' ') {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		sz[ixColon] = 0; // separate sz into 2 strings
+		// parse out label
+		char * pszLbl = sz;
+		while (*pszLbl == '\t' || *pszLbl == ' ') ++pszLbl;
+		char * psz = pszLbl;
+		while (*psz && *psz != ' ') ++psz;
+		*psz = 0;
+
+		char * pszTbl = &sz[ixColon+1]; // pointer to the usage table
+
+		// 
+		if (MATCH == strcmp(pszLbl, "Partitionable")) {
+			psz = pszTbl;
+			while (*psz == ' ') ++psz;         // skip spaces
+			while (*psz && *psz != ' ') ++psz; // skip "Usage"
+			ixUse = (int)(psz - pszTbl)+1;     // save right edge of Usage
+			while (*psz == ' ') ++psz;         // skip spaces
+			while (*psz && *psz != ' ') ++psz; // skip "Request"
+			ixReq = (int)(psz - pszTbl)+1;     // save right edge of Request
+			while (*psz == ' ') ++psz;         // skip spaces
+			if (*psz) {                        // if there is an "Allocated"
+				while (*psz && *psz != ' ') ++psz; // skip "Allocated"
+				ixAlloc = (int)(psz - pszTbl)+1;
+			}
+		} else if (ixUse > 0) {
+			pszTbl[ixUse] = 0;
+			pszTbl[ixReq] = 0;
+			std::string exprstr;
+			formatstr(exprstr, "%sUsage = %s", pszLbl, pszTbl);
+			puAd->Insert(exprstr.c_str());
+			formatstr(exprstr, "Request%s = %s", pszLbl, &pszTbl[ixUse+1]);
+			puAd->Insert(exprstr.c_str());
+			if (ixAlloc > 0) {
+				pszTbl[ixAlloc] = 0;
+				formatstr(exprstr, "%s = %s", pszLbl, &pszTbl[ixReq+1]);
+				puAd->Insert(exprstr.c_str());
+			}
+		}
+	}
+
+	*ppusageAd = puAd;
 }
 
 
@@ -649,14 +840,14 @@ SubmitEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( submitHost && submitHost[0] ) {
-		if( !myad->Assign("SubmitHost",submitHost) ) return NULL;
+		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
 	if( submitEventLogNotes && submitEventLogNotes[0] ) {
-		if( !myad->Assign("LogNotes",submitEventLogNotes) ) return NULL;
+		if( !myad->InsertAttr("LogNotes",submitEventLogNotes) ) return NULL;
 	}
 	if( submitEventUserNotes && submitEventUserNotes[0] ) {
-		if( !myad->Assign("UserNotes",submitEventUserNotes) ) return NULL;
+		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
 	}
 
 	return myad;
@@ -794,22 +985,24 @@ GlobusSubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	if( rmContact && rmContact[0] ) {
-		MyString buf2;
-		buf2.sprintf("RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("RMContact", rmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( jmContact && jmContact[0] ) {
-		MyString buf3;
-		buf3.sprintf("JMContact = \"%s\"",jmContact);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("JMContact", jmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
-	snprintf(buf0, 512, "RestartableJM = %s", restartableJM ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("RestartableJM", restartableJM ? true : false) ){
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -916,9 +1109,10 @@ GlobusSubmitFailedEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( reason && reason[0] ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1004,9 +1198,10 @@ GlobusResourceUpEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
-		MyString buf2;
-		buf2.sprintf("RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("RMContact", rmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1093,9 +1288,10 @@ GlobusResourceDownEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( rmContact && rmContact[0] ) {
-		MyString buf2;
-		buf2.sprintf("RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("RMContact", rmContact) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1158,12 +1354,12 @@ GenericEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[2048];
 
 	if( info[0] ) {
-		snprintf(buf0, sizeof(buf0), "Info = \"%s\"", info);
-		buf0[sizeof(buf0)-1] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("Info", info) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1176,9 +1372,7 @@ GenericEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Info", info, sizeof(info)-1 ) ) {
-		info[ sizeof(info) - 1 ] = '\0';
-	}
+	ad->LookupString("Info", info, sizeof(info) );
 }
 
 void
@@ -1243,7 +1437,7 @@ RemoteErrorEvent::writeEvent(FILE *file)
 		insertCommonIdentifiers(tmpCl2);
 
 		MyString tmp;
-		tmp.sprintf("endtype = null");
+		tmp.formatstr("endtype = null");
 		tmpCl2.Insert(tmp.Value());
 
 			// critical error means this run is ended.
@@ -1407,12 +1601,8 @@ RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Daemon", daemon_name, sizeof(daemon_name)) ) {
-		daemon_name[sizeof(daemon_name)-1] = '\0';
-	}
-	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
-		execute_host[sizeof(execute_host)-1] = '\0';
-	}
+	ad->LookupString("Daemon", daemon_name, sizeof(daemon_name));
+	ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host));
 	if( ad->LookupString("ErrorMsg", &buf) ) {
 		setErrorText(buf);
 		free(buf);
@@ -1569,16 +1759,16 @@ ExecuteEvent::writeEvent (FILE *file)
 
 	tmpCl1.Assign("endts", (int)eventclock);
 
-	tmp.sprintf("endtype = -1");
+	tmp.formatstr("endtype = -1");
 	tmpCl1.Insert(tmp.Value());
 
-	tmp.sprintf("endmessage = \"UNKNOWN ERROR\"");
+	tmp.formatstr("endmessage = \"UNKNOWN ERROR\"");
 	tmpCl1.Insert(tmp.Value());
 
 	// this inserts scheddname, cluster, proc, etc
 	insertCommonIdentifiers(tmpCl2);
 
-	tmp.sprintf("endtype = null");
+	tmp.formatstr("endtype = null");
 	tmpCl2.Insert(tmp.Value());
 
 	if (FILEObj) {
@@ -1700,7 +1890,7 @@ ExecutableErrorEvent::writeEvent (FILE *file)
 	// this inserts scheddname, cluster, proc, etc
 	insertCommonIdentifiers(tmpCl2);
 
-	tmp.sprintf( "endtype = null");
+	tmp.formatstr( "endtype = null");
 	tmpCl2.Insert(tmp.Value());
 
 	if (FILEObj) {
@@ -1760,12 +1950,12 @@ ExecutableErrorEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	if( errType >= 0 ) {
-		snprintf(buf0, 512, "ExecuteErrorType = %d", errType);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ExecuteErrorType", errType) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -1872,23 +2062,27 @@ CheckpointedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -1931,11 +2125,13 @@ JobEvictedEvent::JobEvictedEvent(void)
 	signal_number = -1;
 	reason = NULL;
 	core_file = NULL;
+	pusageAd = NULL;
 }
 
 
 JobEvictedEvent::~JobEvictedEvent(void)
 {
+	if ( pusageAd ) delete pusageAd;
 	delete[] reason;
 	delete[] core_file;
 }
@@ -2191,12 +2387,18 @@ JobEvictedEvent::writeEvent( FILE *file )
 
   }
 
+	// print out resource request/useage values.
+	//
+	if (pusageAd) {
+		writeUsageAd(file, pusageAd);
+	}
+
   scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
   tmpCl1.Assign("endts", (int)eventclock);
   tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
 
-  tmp.sprintf( "endmessage = \"%s%s\"", messagestr, terminatestr);
+  tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
   tmpCl1.Insert(tmp.Value());
 
   tmpCl1.Assign("wascheckpointed", checkpointedstr);
@@ -2206,7 +2408,7 @@ JobEvictedEvent::writeEvent( FILE *file )
   // this inserts scheddname, cluster, proc, etc
   insertCommonIdentifiers(tmpCl2);
 
-  tmp.sprintf( "endtype = null");
+  tmp.formatstr( "endtype = null");
   tmpCl2.Insert(tmp.Value());
 
   if (FILEObj) {
@@ -2224,60 +2426,71 @@ JobEvictedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "Checkpointed = %s", checkpointed ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("Checkpointed", checkpointed ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
-	snprintf(buf0, 512, "TerminatedAndRequeued = %s",
-			 terminate_and_requeued ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TerminatedNormally = %s",
-			 normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedAndRequeued",
+					  terminate_and_requeued ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 
 	if( return_value >= 0 ) {
-		snprintf(buf0, 512, "ReturnValue = %d", return_value);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ReturnValue", return_value) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( signal_number >= 0 ) {
-		snprintf(buf0, 512, "TerminatedBySignal = %d", signal_number);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("TerminatedBySignal", signal_number) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	if( reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( core_file ) {
-		MyString buf3;
-		buf3.sprintf("CoreFile = \"%s\"", core_file);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("CoreFile", core_file) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -2448,9 +2661,10 @@ JobAbortedEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -2478,6 +2692,7 @@ TerminatedEvent::TerminatedEvent(void)
 	normal = false;
 	core_file = NULL;
 	returnValue = signalNumber = -1;
+	pusageAd = NULL;
 
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
 	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
@@ -2487,6 +2702,7 @@ TerminatedEvent::TerminatedEvent(void)
 
 TerminatedEvent::~TerminatedEvent(void)
 {
+	if ( pusageAd ) delete pusageAd;
 	delete[] core_file;
 }
 
@@ -2510,6 +2726,7 @@ TerminatedEvent::getCoreFile( void )
 {
 	return core_file;
 }
+
 
 int
 TerminatedEvent::writeEvent( FILE *file, const char* header )
@@ -2574,6 +2791,12 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 				total_recvd_bytes, header) < 0)
 		return 1;				// backwards compatibility
 
+	// print out resource request/useage values.
+	//
+	if (pusageAd) {
+		writeUsageAd(file, pusageAd);
+	}
+
 	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	tmpCl1.Assign("endmessage", messagestr);
@@ -2603,6 +2826,10 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 	int  normalTerm;
 	int  gotCore;
 	int  retval;
+
+	if (pusageAd) {
+		pusageAd->Clear();
+	}
 
 	if( (retval = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
 		return 0;
@@ -2640,6 +2867,52 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
 
+#if 1
+	for (;;) {
+		char sz[250];
+		char srun[sizeof("Total")];
+		char sdir[sizeof("Recieved")];
+		char sjob[22];
+
+		// if we hit end of file or end of record "..." rewind the file pointer.
+		fpos_t filep;
+		fgetpos( file, &filep );
+		if ( ! fgets(sz, sizeof(sz), file) || 
+			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		// expect for strings of the form "\t%f  -  Run Bytes Sent By Job"
+		// where "Run" "Sent" and "Job" can all vary. 
+		float val; srun[0] = sdir[0] = sjob[0] = 0;
+		bool fOK = false;
+		if (4 == sscanf(sz, "\t%f  -  %5s Bytes %8s By %21s", &val, srun, sdir, sjob)) {
+			if (!strcmp(sjob,header)) {
+				if (!strcmp(srun,"Run")) {
+					if (!strcmp(sdir,"Sent")) {
+						sent_bytes = val; fOK = true;
+					} else if (!strcmp(sdir,"Received")) {
+						recvd_bytes = val; fOK = true;
+					}
+				} else if (!strcmp(srun,"Total")) {
+					if (!strcmp(sdir,"Sent")) {
+						total_sent_bytes = val; fOK = true;
+					} else if (!strcmp(sdir,"Received")) {
+						total_recvd_bytes = val; fOK = true;
+					}
+				}
+			}
+		}
+		if ( ! fOK) {
+			fsetpos(file, &filep);
+			break;
+		}
+	}
+	// the useage ad is optional
+	readUsageAd(file, &pusageAd);
+#else
+
 		// THIS CODE IS TOTALLY BROKEN.  Please fix me.
 		// In particular: fscanf() when you don't convert anything to
 		// a local variable returns 0, but we think that's failure.
@@ -2660,6 +2933,7 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		fscanf (file, "\n") == 0 ) {
 		return 1;		// backwards compatibility
 	}
+#endif
 	return 1;
 }
 
@@ -2694,7 +2968,7 @@ JobTerminatedEvent::writeEvent (FILE *file)
   // this inserts scheddname, cluster, proc, etc
   insertCommonIdentifiers(tmpCl2);
 
-  tmp.sprintf( "endtype = null");
+  tmp.formatstr( "endtype = null");
   tmpCl2.Insert(tmp.Value());
 
   if (FILEObj) {
@@ -2725,62 +2999,77 @@ JobTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 	if( returnValue >= 0 ) {
-		snprintf(buf0, 512, "ReturnValue = %d", returnValue);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ReturnValue", returnValue) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( signalNumber >= 0 ) {
-		snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("TerminatedBySignal", signalNumber) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	const char* core = getCoreFile();
 	if( core ) {
-		MyString buf3;
-		buf3.sprintf("CoreFile = \"%s\"", core);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("CoreFile", core) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_local_rusage);
-	snprintf(buf0, 512, "TotalLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("TotalLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_remote_rusage);
-	snprintf(buf0, 512, "TotalRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("TotalRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalSentBytes = %f", total_sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalReceivedBytes = %f", total_recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalSentBytes", total_sent_bytes)  ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalReceivedBytes", total_recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -2854,15 +3143,15 @@ JobImageSizeEvent::writeEvent (FILE *file)
 
 	// when talking to older starters, memory_usage, rss & pss may not be set
 	if (memory_usage_mb >= 0 && 
-		fprintf (file, "\t%"PRId64"  -  Memory Usage of job (Mb)\n", memory_usage_mb) < 0)
+		fprintf (file, "\t%"PRId64"  -  MemoryUsage of job (MB)\n", memory_usage_mb) < 0)
 		return 0;
 
 	if (resident_set_size_kb >= 0 &&
-		fprintf (file, "\t%"PRId64"  -  Resident Set Size of job (Kb)\n", resident_set_size_kb) < 0)
+		fprintf (file, "\t%"PRId64"  -  ResidentSetSize of job (KB)\n", resident_set_size_kb) < 0)
 		return 0;
 
 	if (proportional_set_size_kb >= 0 &&
-		fprintf (file, "\t%"PRId64"  -  Proportional Set Size of job (Kb)\n", proportional_set_size_kb) < 0)
+		fprintf (file, "\t%"PRId64"  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb) < 0)
 		return 0;
 
 	return 1;
@@ -2884,25 +3173,30 @@ JobImageSizeEvent::readEvent (FILE *file)
 
 	for (;;) {
 		char sz[250];
+		char lbl[48+1];
 
 		// if we hit end of file or end of record "..." rewind the file pointer.
 		fpos_t filep;
-		fgetpos( file, &filep );
+		fgetpos(file, &filep);
 		if ( ! fgets(sz, sizeof(sz), file) || 
 			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
-			fsetpos( file, &filep );
+			fsetpos(file, &filep);
 			break;
 		}
 
-		int64_t val;
-		if (1 == sscanf(sz, "\t%"PRId64"  -  Memory Usage", &val)) {
-			memory_usage_mb = val;
-		}
-		else if (1 == sscanf(sz, "\t%"PRId64"  -  Resident Set Size", &val)) {
-			resident_set_size_kb = val;
-		}
-		else if (1 == sscanf(sz, "\t%"PRId64"  -  Proportional Set Size", &val)) {
-			proportional_set_size_kb = val;
+		int64_t val; lbl[0] = 0;
+		if (2 == sscanf(sz, "\t%"PRId64"  -  %48s", &val, lbl)) {
+			if (!strcmp(lbl,"MemoryUsage")) {
+				memory_usage_mb = val;
+			} else if (!strcmp(lbl, "ResidentSetSize")) {
+				resident_set_size_kb = val;
+			} else if (!strcmp(lbl, "ProportionalSetSize")) {
+				proportional_set_size_kb = val;
+			} else {
+				// rewind the file pointer so we don't consume what we can't parse.
+				fsetpos(file, &filep);
+				break;
+			}
 		}
 	}
 
@@ -3019,7 +3313,7 @@ ShadowExceptionEvent::writeEvent (FILE *file)
 		// this inserts scheddname, cluster, proc, etc
 		insertCommonIdentifiers(tmpCl2);
 
-		tmp.sprintf( "endtype = null");
+		tmp.formatstr( "endtype = null");
 		tmpCl2.Insert(tmp.Value());
 
 		if (FILEObj) {
@@ -3064,22 +3358,14 @@ ShadowExceptionEvent::toClassAd(void)
 	bool     success = true;
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( myad ) {
-		char buf0[512];
-
-		MyString buf2;
-		buf2.sprintf("Message = \"%s\"", message);
-		if( !myad->Insert(buf2.Value())) {
+		if( !myad->InsertAttr("Message", message) ) {
 			success = false;
 		}
 
-		snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
 			success = false;
 		}
-		snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) {
+		if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
 			success = false;
 		}
 	}
@@ -3097,9 +3383,7 @@ ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Message", message, BUFSIZ) ) {
-		message[BUFSIZ - 1] = 0;
-	}
+	ad->LookupString("Message", message, BUFSIZ);
 
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
@@ -3168,11 +3452,11 @@ JobSuspendedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "NumberOfPIDs = %d", num_pids);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("NumberOfPIDs", num_pids) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -3415,15 +3699,20 @@ JobHeldEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	const char* hold_reason = getReason();
-	MyString buf2;
 	if ( hold_reason ) {
-		buf2.sprintf("%s = \"%s\"", ATTR_HOLD_REASON,hold_reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr(ATTR_HOLD_REASON, hold_reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
-	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_CODE,code);
-	if( !myad->Insert(buf2.Value()) ) return NULL;
-	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_SUBCODE,code);
-	if( !myad->Insert(buf2.Value()) ) return NULL;
+	if( !myad->InsertAttr(ATTR_HOLD_REASON_CODE, code) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr(ATTR_HOLD_REASON_SUBCODE, subcode) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -3567,9 +3856,10 @@ JobReleasedEvent::toClassAd(void)
 
 	const char* release_reason = getReason();
 	if( release_reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", release_reason);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("Reason", release_reason) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -3759,14 +4049,14 @@ NodeExecuteEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
 	if( executeHost ) {
-		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
+		if( !myad->InsertAttr("ExecuteHost",executeHost) ) return NULL;
 	}
-	snprintf(buf0, 512, "Node = %d", node);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("Node", node) ) {
+		delete myad;
+		return NULL;
+	}
 
 	return myad;
 }
@@ -3826,63 +4116,78 @@ NodeTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReturnValue = %d", returnValue);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReturnValue", returnValue) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TerminatedBySignal", signalNumber) ) {
+		delete myad;
+		return NULL;
+	}
 
 	const char* core = getCoreFile();
 	if( core ) {
-		MyString buf3;
-		buf3.sprintf("CoreFile = \"%s\"", core);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("CoreFile", core) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	char* rs = rusageToStr(run_local_rusage);
-	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(run_remote_rusage);
-	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("RunRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_local_rusage);
-	snprintf(buf0, 512, "TotalLocalUsage = \"%s\"", rs);
+	if( !myad->InsertAttr("TotalLocalUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
 	rs = rusageToStr(total_remote_rusage);
-	snprintf(buf0, 512, "TotalRemoteUsage = \"%s\"", rs);
-	free(rs);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TotalRemoteUsage", rs) ) {
+		free(rs);
+		delete myad;
+		return NULL;
+	}
 
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalSentBytes = %f", total_sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "TotalReceivedBytes = %f", total_recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("SentBytes", sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("ReceivedBytes", recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalSentBytes", total_sent_bytes) ) {
+		delete myad;
+		return NULL;
+	}
+	if( !myad->InsertAttr("TotalReceivedBytes", total_recvd_bytes) ) {
+		delete myad;
+		return NULL;
+	}
 
 	if( node >= 0 ) {
-		snprintf(buf0, 512, "Node = %d", node);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("Node", node) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -4048,25 +4353,26 @@ PostScriptTerminatedEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( !myad->InsertAttr("TerminatedNormally", normal ? true : false) ) {
+		delete myad;
+		return NULL;
+	}
 	if( returnValue >= 0 ) {
-		snprintf(buf0, 512, "ReturnValue = %d", returnValue);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("ReturnValue", returnValue) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( signalNumber >= 0 ) {
-		snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+		if( !myad->InsertAttr("TerminatedBySignal", signalNumber) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( dagNodeName && dagNodeName[0] ) {
-		MyString buf1;
-		buf1.sprintf( "%s = \"%s\"", dagNodeNameAttr, dagNodeName );
-		if( !myad->Insert( buf1.Value() ) ) {
+		if( !myad->InsertAttr( dagNodeNameAttr, dagNodeName ) ) {
+			delete myad;
 			return NULL;
 		}
 	}
@@ -4335,33 +4641,32 @@ JobDisconnectedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	MyString line;
-	line.sprintf( "StartdAddr = \"%s\"", startd_addr );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdAddr", startd_addr) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "StartdName = \"%s\"", startd_name );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdName", startd_name) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "DisconnectReason = \"%s\"", disconnect_reason );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("DisconnectReason", disconnect_reason) ) {
+		delete myad;
 		return NULL;
 	}
 
-	line = "EventDescription = \"Job disconnected, ";
+	MyString line = "Job disconnected, ";
 	if( can_reconnect ) {
-		line += "attempting to reconnect\"";
+		line += "attempting to reconnect";
 	} else {
-		line += "can not reconnect, rescheduling job\"";
+		line += "can not reconnect, rescheduling job";
 	}
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("EventDescription", line.Value()) ) {
+		delete myad;
 		return NULL;
 	}
 
 	if( no_reconnect_reason ) {
-		line.sprintf( "NoReconnectReason = \"%s\"", no_reconnect_reason );
-		if( !myad->Insert(line.Value()) ) {
+		if( !myad->InsertAttr("NoReconnectReason", no_reconnect_reason) ) {
 			return NULL;
 		}
 	}
@@ -4570,20 +4875,20 @@ JobReconnectedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	MyString line;
-	line.sprintf( "StartdAddr = \"%s\"", startd_addr );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdAddr", startd_addr) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "StartdName = \"%s\"", startd_name );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdName", startd_name) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "StarterAddr = \"%s\"", starter_addr );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StarterAddr", starter_addr) ) {
+		delete myad;
 		return NULL;
 	}
-	if( !myad->Insert("EventDescription = \"Job reconnected\"") ) {
+	if( !myad->InsertAttr("EventDescription", "Job reconnected") ) {
+		delete myad;
 		return NULL;
 	}
 	return myad;
@@ -4770,17 +5075,16 @@ JobReconnectFailedEvent::toClassAd( void )
 		return NULL;
 	}
 
-	MyString line;
-	line.sprintf( "StartdName = \"%s\"", startd_name );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("StartdName", startd_name) ) {
+		delete myad;
 		return NULL;
 	}
-	line.sprintf( "Reason = \"%s\"", reason );
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("Reason", reason) ) {
+		delete myad;
 		return NULL;
 	}
-	line = "EventDescription=\"Job reconnect impossible: rescheduling job\"";
-	if( !myad->Insert(line.Value()) ) {
+	if( !myad->InsertAttr("EventDescription", "Job reconnect impossible: rescheduling job") ) {
+		delete myad;
 		return NULL;
 	}
 	return myad;
@@ -4881,9 +5185,10 @@ GridResourceUpEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
-		MyString buf2;
-		buf2.sprintf("GridResource = \"%s\"",resourceName);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridResource", resourceName) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -4970,9 +5275,10 @@ GridResourceDownEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
-		MyString buf2;
-		buf2.sprintf("GridResource = \"%s\"",resourceName);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridResource", resourceName) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -5077,14 +5383,16 @@ GridSubmitEvent::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if( resourceName && resourceName[0] ) {
-		MyString buf2;
-		buf2.sprintf("GridResource = \"%s\"",resourceName);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridResource", resourceName) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 	if( jobId && jobId[0] ) {
-		MyString buf3;
-		buf3.sprintf("GridJobId = \"%s\"",jobId);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->InsertAttr("GridJobId", jobId) ) {
+			delete myad;
+			return NULL;
+		}
 	}
 
 	return myad;
@@ -5494,10 +5802,10 @@ AttributeUpdate::toClassAd(void)
 	if( !myad ) return NULL;
 
 	if (name) {
-		myad->Assign("Attribute", name);
+		myad->InsertAttr("Attribute", name);
 	}
 	if (value) {
-		myad->Assign("Value", value);
+		myad->InsertAttr("Value", value);
 	}
 
 	return myad;

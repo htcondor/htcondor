@@ -99,6 +99,9 @@ class CondorQ
 
 		// return the results from a DB query directly to user
 	void rawDBQuery(const char *, CondorQQueryType);
+	// return the effective query constraint directly to the user.
+	// the caller is responsible for deleting the returned ExprTree.
+	int  rawQuery(ExprTree * &tree) { return query.makeQuery(tree); }
 
   private:
 	GenericQuery query;

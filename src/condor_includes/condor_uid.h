@@ -104,6 +104,8 @@ const char* priv_identifier( priv_state s );
 #if !defined(WIN32)
 uid_t get_condor_uid(void);
 gid_t get_condor_gid(void);
+// returns true if condor uid is already known and sets uid and gid
+bool get_condor_uid_if_inited(uid_t &uid,gid_t &gid);
 uid_t get_user_uid(void);
 gid_t get_user_gid(void);
 uid_t get_file_owner_uid(void);
@@ -135,9 +137,12 @@ bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
 }
 #endif
 
-#if defined(__cplusplus) && !defined( WIN32 )
+#if defined(__cplusplus)
+
+#if ! defined WIN32
 #include "passwd_cache.unix.h"
 extern passwd_cache* pcache(void);
+#endif
 
 // An object that automatically returns the previous privilege level when destroyed
 class TemporaryPrivSentry {
@@ -164,6 +169,6 @@ private:
 	priv_state m_orig_state;
 };
 
-#endif
+#endif // __cplusplus
 
 #endif /* _UID_H */

@@ -140,7 +140,7 @@ sysapi_load_avg_raw(void)
 
     fclose(proc);
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f %.2f %.2f\n", short_avg, 
 				 medium_avg, long_avg );
 	}
@@ -177,7 +177,7 @@ sysapi_load_avg_raw(void)
 	if (KernelLookupFailed)
 		val = lookup_load_avg_via_uptime();
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f\n", val );
 	}
 	return val;
@@ -257,7 +257,7 @@ sysapi_load_avg_raw(void)
 	second = (float)load.ldavg[1] / (float)load.fscale;
 	third = (float)load.ldavg[2] / (float)load.fscale;
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f %.2f %.2f\n", 
 			first, second, third );
 	}
@@ -295,6 +295,10 @@ static struct {
 } samples[NUM_SAMPLES];
 static int ncpus;
 
+typedef PDH_STATUS (WINAPI *PdhAddCounterPtr)(PDH_HQUERY,LPCSTR,DWORD_PTR,PDH_HCOUNTER*);
+static PdhAddCounterPtr pdhAddCounterPtr = NULL;
+static HMODULE pdhModule = NULL;
+
 static int WINAPI
 sample_load(void *thr_data)
 {
@@ -314,33 +318,49 @@ sample_load(void *thr_data)
 	}
 	LeaveCriticalSection(&cs);
 
+	if(!pdhAddCounterPtr)
+	{
+		if(!pdhModule)
+		{
+			pdhModule = GetModuleHandle(TEXT("pdh"));
+		}
+
+		if(pdhModule)
+			pdhAddCounterPtr = (PdhAddCounterPtr)GetProcAddress(pdhModule, "PdhAddEnglishCounterA");
+		
+		if(!pdhAddCounterPtr)
+			pdhAddCounterPtr = PdhAddCounter;
+	}
+
 	pdhStatus = PdhOpenQuery(NULL, 0, &hQuery);
 	if (pdhStatus != ERROR_SUCCESS) {
 		/* dprintf(D_ALWAYS, "PdhOpenQuery returns 0x%x\n", 
 			    (int)pdhStatus); */
-		return 1;
+		return pdhStatus;
 	}
-	pdhStatus = PdhAddCounter(hQuery, 
+
+	pdhStatus = pdhAddCounterPtr(hQuery, 
 							  "\\System\\Processor Queue Length", 
 							  0, &hCounterQueueLength);
+	
 	if (pdhStatus != ERROR_SUCCESS) {
 		/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 						   (int)pdhStatus); */
 		PdhCloseQuery(hQuery);
-		return 2;
+		return pdhStatus;
 	}
 	hCounterCpuLoad = (HCOUNTER *) malloc(sizeof(HCOUNTER)*ncpus);
 	ASSERT( hCounterCpuLoad );
 	for (i=0; i < ncpus; i++) {
 		sprintf(counterpath, "\\Processor(%d)\\%% Processor Time", i);
-		pdhStatus = PdhAddCounter(hQuery, counterpath, 0, 
+		pdhStatus = pdhAddCounterPtr(hQuery, counterpath, 0, 
 								  hCounterCpuLoad+i);
+		
 		if (pdhStatus != ERROR_SUCCESS) {
 			/* dprintf(D_ALWAYS, "PdhAddCounter returns 0x%x\n", 
 							   (int)pdhStatus); */
 			PdhCloseQuery(hQuery);
-			free(hCounterCpuLoad);
-			return 3;
+			return pdhStatus;
 		}
 	}
 
@@ -399,7 +419,6 @@ sample_load(void *thr_data)
 		nextsample %= NUM_SAMPLES;
 
 		Sleep(SAMPLE_INTERVAL);
-
 	}
 
 	// we encountered a problem, so clean up everything and exit.
@@ -516,7 +535,7 @@ sysapi_load_avg_raw(void)
 	sysapi_internal_reconfig();
 	val = lookup_load_avg_via_uptime();
 
-	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD, "Load avg: %.2f\n", val );
 	}
 	return val;

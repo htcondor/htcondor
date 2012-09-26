@@ -66,7 +66,7 @@ my $perl_exe = "perl";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     my $perlver = `$perl_exe -version`;
     print $perlver;
-    if ( ! $force_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) { # if new batlab
+    if ( !$force_cygwin ) {
         print "attempting to run tests using current perl\n";
 	if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
             print "removing base condor from the path\n";
@@ -152,7 +152,7 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 # personal condor configured from release generic config files.
 out("About to run batch_test.pl");
 
-system("$perl_exe batch_test.pl -d $compiler -t $testname -b");
+system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
@@ -247,6 +247,6 @@ sub c_die {
 
 sub out {
     my ($msg) = @_;
-    my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
     print "$time: $msg\n";
 }

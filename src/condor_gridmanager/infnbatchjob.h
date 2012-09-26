@@ -26,6 +26,7 @@
 #include "MyString.h"
 #include "globus_utils.h"
 #include "classad_hashtable.h"
+#include "file_transfer.h"
 
 #include "basejob.h"
 #include "infnbatchresource.h"
@@ -51,13 +52,10 @@ class INFNBatchJob : public BaseJob
 	void doEvaluateState();
 	BaseResource *GetResource();
 
-	static int pollInterval;
 	static int submitInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 
-	static void setPollInterval( int new_interval )
-		{ pollInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )
@@ -73,6 +71,7 @@ class INFNBatchJob : public BaseJob
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	char *batchType;
+	char *remoteSandboxId;
 	char *remoteJobId;
 	int lastPollTime;
 	bool pollNow;
@@ -82,11 +81,18 @@ class INFNBatchJob : public BaseJob
 
 	INFNBatchResource *myResource;
 	GahpClient *gahp;
+	GahpClient *m_xfer_gahp;
+	FileTransfer *m_filetrans;
+	std::string m_sandboxPath;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );
 
+	void SetRemoteSandboxId( const char *sandbox_id );
 	void SetRemoteJobId( const char *job_id );
+	void SetRemoteIds( const char *sandbox_id, const char *job_id );
 	ClassAd *buildSubmitAd();
+	ClassAd *buildTransferAd();
+	void CreateSandboxId();
 
 		// If we're in the middle of a condor call that requires a ClassAd,
 		// the ad is stored here (so that we don't have to reconstruct the

@@ -65,6 +65,7 @@ if( TestGlue::is_windows() ) {
 		if (-d "release_dir" && ! -d "condor") {
 		   print "Renaming release_dir/ to condor/\n";
 		   rename("release_dir","condor");
+		   system("chmod a+x condor/bin/*");
 		   TestGlue::dir_listing("condor");
 	       
 		   my ($release_zipfile) = glob("condor-*.zip");
@@ -219,21 +220,4 @@ else {
 			}
 		}
 	}
-}
-
-
-# move into the condor_tests directory first
-my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
-chdir($test_dir) || die "Can't chdir($test_dir for personal condor setup): $!\n";
-
-# -p means just set up the personal condor for the test run
-my $batch_test = File::Spec->catfile($test_dir, "batch_test.pl");
-my $command_line = "$batch_test --debug -p";
-print "About to run '$command_line'\n";
-system("perl $command_line");
-
-if( $? != 0 ) {
-    print "--- the last 50 lines of TestingPersonalCondor/local/log/MasterLog\n";
-    system("tail -50 $test_dir/TestingPersonalCondor/local/log/MasterLog");
-    exit 2;
 }

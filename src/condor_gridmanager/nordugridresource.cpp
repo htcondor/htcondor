@@ -38,7 +38,7 @@ const char *NordugridResource::HashName( const char *resource_name,
 {
 	static std::string hash_name;
 
-	sprintf( hash_name, "nordugrid %s#%s", resource_name, 
+	formatstr( hash_name, "nordugrid %s#%s", resource_name, 
 					   proxy_subject ? proxy_subject : "NULL" );
 
 	return hash_name.c_str();
@@ -77,7 +77,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 	gahp = NULL;
 
 	std::string buff;
-	sprintf( buff, "NORDUGRID/%s", proxyFQAN );
+	formatstr( buff, "NORDUGRID/%s", proxyFQAN );
 
 	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
@@ -175,7 +175,7 @@ void NordugridResource::DoJobStatus()
 		 m_jobStatusActive == false ) {
 			// No jobs or we can't talk to the resource, so no point
 			// in polling
-		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 		return;
 	}
 
@@ -202,7 +202,7 @@ void NordugridResource::DoJobStatus()
 		}
 
 		std::string filter;
-		sprintf( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
+		formatstr( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
 		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-globalid,nordugrid-job-status",
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
@@ -229,31 +229,40 @@ void NordugridResource::DoJobStatus()
 		}
 
 		if ( rc == 0 ) {
-			const char *next_job_id;
-			const char *next_status;
+			const char *next_job_id = NULL;
+			const char *next_status = NULL;
+			const char *next_attr;
 			std::string key;
 
 			results.rewind();
-			while ( (next_job_id = results.next()) &&
-					(next_status = results.next()) ) {
+			do {
+				next_attr = results.next();
 
-				int rc2;
-				BaseJob *base_job = NULL;
-				NordugridJob *job;
-				const char *dummy;
-				ASSERT( !strncmp( next_job_id, "nordugrid-job-globalid: ", 24 ) );
-				ASSERT( !strncmp( next_status, "nordugrid-job-status: ", 22 ) );
-				dummy = results.next();
-				ASSERT( dummy == NULL || *dummy == '\0' );
-				sprintf( key, "nordugrid %s %s", resourceName,
-							 strrchr( next_job_id, '/' ) + 1 );
-				rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
-													  base_job );
-				job = dynamic_cast<NordugridJob*>( base_job );
-				if ( rc2 == 0 ) {
-					job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
+				if ( next_attr != NULL && *next_attr != '\0' ) {
+						// Save the attributes we're interested in
+					if ( !strncmp( next_attr, "nordugrid-job-globalid: ", 24 ) ) {
+						next_job_id = next_attr;
+					} else if ( !strncmp( next_attr, "nordugrid-job-status: ", 22 ) ) {
+						next_status = next_attr;
+					}
+					continue;
 				}
-			}
+					// We just reached the end of a record. Process it.
+					// If we don't have the attributes we expect, skip it.
+				if ( next_job_id && next_status ) {
+					int rc2;
+					NordugridJob *job;
+					formatstr( key, "nordugrid %s %s", resourceName,
+							 strrchr( next_job_id, '/' ) + 1 );
+					rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
+														  (BaseJob*&)job );
+					if ( rc2 == 0 ) {
+						job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
+					}
+				}
+				next_job_id = NULL;
+				next_status = NULL;
+			} while ( next_attr );
 
 		}
 
@@ -261,6 +270,6 @@ void NordugridResource::DoJobStatus()
 
 		dprintf( D_FULLDEBUG, "ldap poll complete: %s\n", resourceName );
 
-		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 	}
 }

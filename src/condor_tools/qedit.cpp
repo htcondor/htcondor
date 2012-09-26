@@ -165,12 +165,12 @@ main(int argc, char *argv[])
 			}
 			UseConstraint = false;
 		} else {
-			constraint.sprintf("(%s == %d)", ATTR_CLUSTER_ID, cluster);
+			constraint.formatstr("(%s == %d)", ATTR_CLUSTER_ID, cluster);
 			UseConstraint = true;
 		}
 		nextarg++;
 	} else {
-		constraint.sprintf("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
+		constraint.formatstr("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
 		nextarg++;
 		UseConstraint = true;
 	}

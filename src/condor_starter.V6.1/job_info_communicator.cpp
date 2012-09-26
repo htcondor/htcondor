@@ -568,7 +568,7 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 
 		// force the matching of the whole string
 	MyString full_pattern;
-	full_pattern.sprintf("^%s$",pattern_string);
+	full_pattern.formatstr("^%s$",pattern_string);
 
 	Regex re;
 	char const *errstr = NULL;
@@ -778,7 +778,7 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 
 		// Also, if the starter has D_JOB turned on, we want to dump
 		// out the job ad to the log file...
-	if( DebugFlags & D_JOB ) {
+	if( IsDebugLevel( D_JOB ) ) {
 		dprintf( D_JOB, "*** Job ClassAd ***\n" );  
 		job_ad->dPrint( D_JOB );
         dprintf( D_JOB, "--- End of ClassAd ---\n" );

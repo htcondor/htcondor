@@ -59,17 +59,26 @@ public:
 		 * This also removes the shared proc directory from the
 		 * hierarchy if possible.
 		 */
-	static void removeJobSpoolDirectory(int cluster, int proc);
+	static void removeJobSpoolDirectory( ClassAd * ad);
 
 		/* Remove the .swap spool directory belonging to a job.
 		 */
-	static void removeJobSwapSpoolDirectory( int cluster, int proc);
+	static void removeJobSwapSpoolDirectory( ClassAd * ad);
 
 		/* Remove files spooled for a job cluster.
 		 * This also removes the shared cluster directory from the
 		 * hierarchy if possible.
 		 */
 	static void removeClusterSpooledFiles(int cluster);
+
+		/* Restore ownership of spool directory to condor after job ran.
+		   Returns true on success.
+		 */
+	static bool chownSpoolDirectoryToCondor(ClassAd const *job_ad);
+
+		/* Returns true if this job requires a spool directory.
+		 */
+	static bool jobRequiresSpoolDirectory(ClassAd const *job_ad);
 };
 
 char *gen_ckpt_name ( char const *dir, int cluster, int proc, int subproc );

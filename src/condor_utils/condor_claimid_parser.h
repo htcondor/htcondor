@@ -37,7 +37,7 @@ class ClaimIdParser {
 	ClaimIdParser(char const *session_id,char const *session_info,char const *session_key):
 		m_suppress_session(false)
 	{
-		m_claim_id.sprintf("%s#%s%s",
+		m_claim_id.formatstr("%s#%s%s",
 						   session_id ? session_id : "",
 						   session_info ? session_info : "",
 						   session_key ? session_key : "");
@@ -57,7 +57,7 @@ class ClaimIdParser {
 			char const *str = m_claim_id.Value();
 			char const *end = strchr(str,'#');
 			int length = end ? end - str : 0;
-			m_sinful_part.sprintf("%.*s",length,str);
+			m_sinful_part.formatstr("%.*s",length,str);
 		}
 		return m_sinful_part.Value();
 	}
@@ -66,7 +66,7 @@ class ClaimIdParser {
 			char const *str = m_claim_id.Value();
 			char const *end = strrchr(str,'#');
 			int length = end ? end - str : 0;
-			m_public_part.sprintf("%.*s#...",length,str);
+			m_public_part.formatstr("%.*s#...",length,str);
 		}
 		return m_public_part.Value();
 	}
@@ -89,7 +89,7 @@ class ClaimIdParser {
 			char const *str = m_claim_id.Value();
 			char const *end = strrchr(str,'#');
 			int length = end ? end - str : 0;
-			m_session_id.sprintf("%.*s",length,str);
+			m_session_id.formatstr("%.*s",length,str);
 		}
 		return m_session_id.Value();
 	}
@@ -127,7 +127,7 @@ class ClaimIdParser {
 			if(!endptr || endptr < ptr) {
 				return NULL;
 			}
-			m_session_info.sprintf("%.*s",(int)(endptr+1-ptr),ptr);
+			m_session_info.formatstr("%.*s",(int)(endptr+1-ptr),ptr);
 		}
 
 		if( m_session_info.IsEmpty() ) {
@@ -145,7 +145,7 @@ class ClaimIdParser {
 
 		MyString new_claim_id = secSessionId(true);
 		char const *session_key = secSessionKey();
-		new_claim_id.sprintf_cat("#%s%s",
+		new_claim_id.formatstr_cat("#%s%s",
 			session_info ? session_info : "",
 			session_key ? session_key : "");
 

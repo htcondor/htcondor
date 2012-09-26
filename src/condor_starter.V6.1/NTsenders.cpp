@@ -854,7 +854,7 @@ int REMOTE_CONDOR_ulog_error_printf( int hold_reason_code, int hold_reason_subco
 	int retval;
 
 	va_start(args,str);
-	buf.vsprintf(str,args);
+	buf.vformatstr(str,args);
 	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.Value() );
 	va_end(args);
 

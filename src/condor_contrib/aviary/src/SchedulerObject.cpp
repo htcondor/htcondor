@@ -89,7 +89,7 @@ SchedulerObject::update(const ClassAd &ad)
 	m_stats.System = m_stats.Machine;
 
 	// debug
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsFulldebug(D_FULLDEBUG)) {
 		const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
 	}
 }
@@ -230,7 +230,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	::SetAttribute(cluster, proc, ATTR_CLUSTER_ID, buf);
 	snprintf(buf, 22, "%d", proc);
 	::SetAttribute(cluster, proc, ATTR_PROC_ID, buf);
-	snprintf(buf, 22, "%d", time(NULL));
+	snprintf(buf, 22, "%ld", time(NULL));
 	::SetAttribute(cluster, proc, ATTR_Q_DATE, buf);
 
 		// Could check for some invalid attributes, e.g
@@ -250,7 +250,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	//tmp.sprintf("%s#%d.%d", Name, cluster, proc);
 	// we have other API compositions for job id and submission id
 	// so let's return raw cluster.proc
-	tmp.sprintf("%d.%d", cluster, proc);
+	tmp.formatstr("%d.%d", cluster, proc);
 	id = tmp.Value();
 
 	return true;
@@ -372,7 +372,7 @@ SchedulerObject::remove(std::string key, std::string &reason, std::string &text)
 }
 
 bool
-SchedulerObject::suspend(std::string key, std::string &reason, std::string &text)
+SchedulerObject::suspend(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
 	if (id.cluster < 0 || id.proc < 0) {
@@ -387,7 +387,7 @@ SchedulerObject::suspend(std::string key, std::string &reason, std::string &text
 }
 
 bool
-SchedulerObject::_continue(std::string key, std::string &reason, std::string &text)
+SchedulerObject::_continue(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
 	if (id.cluster < 0 || id.proc < 0) {

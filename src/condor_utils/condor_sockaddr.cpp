@@ -160,10 +160,10 @@ MyString condor_sockaddr::to_sinful() const
 		return ret;
 
 	if (is_ipv4()) {
-		ret.sprintf("<%s:%d>", tmp, ntohs(v4.sin_port));
+		ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
 	}
 	else if (is_ipv6()) {
-		ret.sprintf("<[%s]:%d>", tmp, ntohs(v6.sin6_port));
+		ret.formatstr("<[%s]:%d>", tmp, ntohs(v6.sin6_port));
 	}
 
 	return ret;

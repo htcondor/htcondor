@@ -198,13 +198,13 @@ bool AmazonRequest::SendRequest() {
     //
     // While we're at it, extract "the value of the Host header in lowercase"
     // and the "HTTP Request URI" from the service URL.  The service URL must
-    // be of the form '[http[s]|x509]://hostname[:port][/path]*'.
+    // be of the form '[http[s]|x509|euca3[s]]://hostname[:port][/path]*'.
     Regex r; int errCode = 0; const char * errString = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
     assert( patternOK );
     ExtArray<MyString> groups(5);
     bool matchFound = r.match( this->serviceURL.c_str(), & groups );
-    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" ) ) {
+    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" && groups[1] != "euca3" && groups[1] != "euca3s" ) ) {
         this->errorCode = "E_INVALID_SERVICE_URL";
         this->errorMessage = "Failed to parse service URL.";
         dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
@@ -219,6 +219,13 @@ bool AmazonRequest::SendRequest() {
                     & tolower );
     std::string httpRequestURI = groups[4];
     if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
+
+    //
+    // Eucalyptus 3 bombs if it sees this attribute.
+    //
+    if( protocol == "euca3" || protocol == "euca3s" ) {
+        query_parameters.erase( "InstanceInitiatedShutdownBehavior" );
+    }
 
     //
     // The AWSAccessKeyId is just the contents of this->accessKeyFile,
@@ -341,6 +348,10 @@ bool AmazonRequest::SendRequest() {
     std::string finalURI;
     if( protocol == "x509" ) {
         finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+    } else if( protocol == "euca3" ) {
+        finalURI = "http://" + hostAndPath + "?" + canonicalizedQueryString;
+    } else if( protocol == "euca3s" ) {
+        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
     } else {
         finalURI = this->serviceURL + "?" + canonicalizedQueryString;
     }
@@ -404,11 +415,62 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
     
+    //
+    // Set security options.
+    //
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
 
+    // NB: Contrary to libcurl's manual, it doesn't strdup() strings passed
+    // to it, so they MUST remain in scope until after we call
+    // curl_easy_cleanup().  Otherwise, curl_perform() will fail with
+    // a completely bogus error, number 60, claiming that there's a 
+    // 'problem with the SSL CA cert'.
     std::string CAFile = "";
     std::string CAPath = "";
+
+    char * x509_ca_dir = getenv( "X509_CERT_DIR" );
+    if( x509_ca_dir != NULL ) {
+        CAPath = x509_ca_dir;
+    }
+
+    char * x509_ca_file = getenv( "X509_CERT_FILE" );
+    if( x509_ca_file != NULL ) {
+        CAFile = x509_ca_file;
+    }
+        
+    if( CAPath.empty() ) {
+        char * soap_ssl_ca_dir = getenv( "SOAP_SSL_CA_DIR" );
+        if( soap_ssl_ca_dir != NULL ) {
+            CAPath = soap_ssl_ca_dir;
+        }
+    }
+
+    if( CAFile.empty() ) {
+        char * soap_ssl_ca_file = getenv( "SOAP_SSL_CA_FILE" );
+        if( soap_ssl_ca_file != NULL ) {
+            CAFile = soap_ssl_ca_file;
+        }
+    }
+
+    if( CAPath.empty() ) {
+        CAPath = "/etc/grid-security/certificates";
+    }
+    dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
+    SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
+        
+    if( ! CAFile.empty() ) {
+        dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
+    }
+        
+    if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
+        dprintf( D_FULLDEBUG, "Failed to set OPENSSL_ALLOW_PROXY.\n" );
+    }
+
+    //
+    // Configure for x.509 operation.
+    //
     if( protocol == "x509" ) {
         dprintf( D_FULLDEBUG, "Configuring x.509...\n" );
 
@@ -417,52 +479,6 @@ bool AmazonRequest::SendRequest() {
 
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
-
-        // Set CAPath.  The CAPath MUST remain in scope until after we
-        // call curl_easy_cleanup(), or else curl_perform() will fail with
-        // an error message claiming that there's a 'problem with the SSL
-        // CA cert', error 60.  The problem is that libcurl, contrary to
-        // the manual's assurances, doesn't strdup() strings passed to it,
-        // not anything with the certs.
-
-        char * x509_ca_dir = getenv( "X509_CERT_DIR" );
-        if( x509_ca_dir != NULL ) {
-            CAPath = x509_ca_dir;
-        }
-
-        char * x509_ca_file = getenv( "X509_CERT_FILE" );
-        if( x509_ca_file != NULL ) {
-            CAFile = x509_ca_file;
-        }
-        
-        if( CAPath.empty() ) {
-            char * soap_ssl_ca_dir = getenv( "SOAP_SSL_CA_DIR" );
-            if( soap_ssl_ca_dir != NULL ) {
-                CAPath = soap_ssl_ca_dir;
-            }
-        }
-
-        if( CAFile.empty() ) {
-            char * soap_ssl_ca_file = getenv( "SOAP_SSL_CA_FILE" );
-            if( soap_ssl_ca_file != NULL ) {
-                CAFile = soap_ssl_ca_file;
-            }
-        }
-
-        if( CAPath.empty() ) {
-            CAPath = "/etc/grid-security/certificates";
-        }
-        dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
-        
-        if( ! CAFile.empty() ) {
-            dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
-            SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
-        }
-        
-        if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
-            dprintf( D_FULLDEBUG, "Failed to set OPENSSL_ALLOW_PROXY.\n" );
-        }
     }
             
     amazon_gahp_release_big_mutex();
@@ -601,7 +617,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     int requestID;
     get_int( argv[1], & requestID );
     
-    if( ! verify_min_number_args( argc, 10 ) ) {
+    if( ! verify_min_number_args( argc, 14 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
                  argc, 10, argv[0] );
@@ -623,11 +639,11 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[6], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "KeyName" ] = argv[6];
     }
-    
+
     if( strcasecmp( argv[9], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "InstanceType" ] = argv[9];
     }
-    
+
     if( strcasecmp( argv[10], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "Placement.AvailabilityZone" ] = argv[10];
     }

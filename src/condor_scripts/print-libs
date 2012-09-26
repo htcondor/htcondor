@@ -9,8 +9,8 @@ if [ "$1" = "" ] ; then
   echo "Usage:" `basename $0` "<executable> [<pattern file>]"
   exit 1
 fi
-if [ ! -x $a ] ; then
-  echo "$a isn't an executable!"
+if [ ! -x $1 ] ; then
+  echo "$1 isn't an executable!"
   exit 1
 fi
 executable=$1

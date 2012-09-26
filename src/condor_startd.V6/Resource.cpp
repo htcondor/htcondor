@@ -34,6 +34,10 @@
 #endif
 #endif
 
+#ifndef max
+#define max(x,y) (((x) < (y)) ? (y) : (x))
+#endif
+
 extern FILESQL *FILEObj;
 
 Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
@@ -52,9 +56,9 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 	if( _parent ) {
 		r_sub_id = _parent->m_id_dispenser->next();
-		tmp.sprintf_cat( "%d_%d", r_id, r_sub_id );
+		tmp.formatstr_cat( "%d_%d", r_id, r_sub_id );
 	} else {
-		tmp.sprintf_cat( "%d", r_id );
+		tmp.formatstr_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
 
@@ -65,7 +69,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	m_id_dispenser = NULL;
 
 		// we need this before we instantiate the Reqexp object...
-	tmp.sprintf( "SLOT_TYPE_%d_PARTITIONABLE", type() );
+	tmp.formatstr( "SLOT_TYPE_%d_PARTITIONABLE", type() );
 	if( param_boolean( tmp.Value(), false ) ) {
 		set_feature( PARTITIONABLE_SLOT );
 
@@ -93,7 +97,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		tmpName = my_full_hostname();
 	}
 	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
-		tmp.sprintf( "%s@%s", r_id_str, tmpName );
+		tmp.formatstr( "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp.Value() );
 	} else {
 		r_name = strdup( tmpName );
@@ -109,7 +113,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		if (log) {
 			MyString avail_stats_ckpt_file(log);
 			free(log);
-			tmp.sprintf( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
+			tmp.formatstr( "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
 			avail_stats_ckpt_file += tmp;
 			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
 		}
@@ -657,12 +661,12 @@ Resource::hackLoadForCOD( void )
 	}
 
 	MyString load;
-	load.sprintf( "%s=%.2f", ATTR_LOAD_AVG, r_pre_cod_total_load );
+	load.formatstr( "%s=%.2f", ATTR_LOAD_AVG, r_pre_cod_total_load );
 
 	MyString c_load;
-	c_load.sprintf( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
+	c_load.formatstr( "%s=%.2f", ATTR_CONDOR_LOAD_AVG, r_pre_cod_condor_load );
 
-	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_LOAD ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
 			dprintf( D_LOAD, "COD job current running, using "
 					 "'%s', '%s' for internal policy evaluation\n",
@@ -1070,7 +1074,7 @@ Resource::final_update( void )
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
 	 ClassAd::EscapeStringValue( r_name, escaped_name );
-     line.sprintf( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
      invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
@@ -1205,7 +1209,7 @@ Resource::hold_job( bool soft )
 
 		want_hold_expr = r_classad->LookupExpr("WANT_HOLD");
 		if( want_hold_expr ) {
-			want_hold_str.sprintf( "%s = %s", "WANT_HOLD",
+			want_hold_str.formatstr( "%s = %s", "WANT_HOLD",
 								   ExprTreeToString( want_hold_expr ) );
 		}
 
@@ -1836,14 +1840,23 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
 
+        // include any attributes set via local resource inventory
+        cap->Update(r_attr->get_mach_attr()->machattr());
+
+        // advertise the slot type id number, as in SLOT_TYPE_<N>
+        cap->Assign(ATTR_SLOT_TYPE_ID, int(r_attr->type()));
+
 		switch (get_feature()) {
 		case PARTITIONABLE_SLOT:
 			cap->AssignExpr(ATTR_SLOT_PARTITIONABLE, "TRUE");
+            cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
 			break;
 		case DYNAMIC_SLOT:
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
+            cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
 			break;
 		default:
+            cap->Assign(ATTR_SLOT_TYPE, "Static");
 			break; // Do nothing
 		}
 	}		
@@ -2041,7 +2054,7 @@ Resource::publishDeathTime( ClassAd* cap )
         }
     }
 
-    classad_attribute.sprintf( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
+    classad_attribute.formatstr( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
     cap->Insert( classad_attribute.Value() );
     return;
 }
@@ -2158,7 +2171,7 @@ Resource::compute_condor_load( void )
 		cpu_usage = 0.0;
 	}
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n",
 				 num_since_last, cpu_usage );
 	}
@@ -2166,7 +2179,7 @@ Resource::compute_condor_load( void )
 
 	avg = (r_load_queue->avg() / numcpus);
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+	if( IsDebugVerbose( D_LOAD ) ) {
 		r_load_queue->display( this );
 		dprintf( D_FULLDEBUG,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
@@ -2408,11 +2421,11 @@ Resource::willingToRun(ClassAd* request_ad)
 		}
 
 			// Possibly print out the ads we just got to the logs.
-		if (DebugFlags & D_JOB) {
+		if (IsDebugLevel(D_JOB)) {
 			dprintf(D_JOB, "REQ_CLASSAD:\n");
 			request_ad->dPrint(D_JOB);
 		}
-		if (DebugFlags & D_MACHINE) {
+		if (IsDebugLevel(D_MACHINE)) {
 			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
 			r_classad->dPrint(D_MACHINE);
 		}
@@ -2664,7 +2677,7 @@ Resource::getHookKeyword()
 {
 	if (!m_hook_keyword_initialized) {
 		MyString param_name;
-		param_name.sprintf("%s_JOB_HOOK_KEYWORD", r_id_str);
+		param_name.formatstr("%s_JOB_HOOK_KEYWORD", r_id_str);
 		m_hook_keyword = param(param_name.Value());
 		if (!m_hook_keyword) {
 			m_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
@@ -2710,3 +2723,218 @@ Resource::compute_rank( ClassAd* req_classad ) {
 
 
 #endif /* HAVE_JOB_HOOKS */
+
+
+Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+{
+	ASSERT(rip);
+	ASSERT(req_classad);
+	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
+		ClassAd	*mach_classad = rip->r_classad;
+		CpuAttributes *cpu_attrs;
+		MyString type;
+		StringList type_list;
+		int cpus, memory, disk;
+		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
+		ClassAd *unmodified_req_classad = NULL;
+
+			// Modify the requested resource attributes as per config file.
+			// If must_modify_request is false (the default), then we only modify the request _IF_
+			// the result still matches.  So is must_modify_request is false, we first backup
+			// the request classad before making the modification - if after modification matching fails,
+			// fall back on the original backed-up ad.
+		if ( !must_modify_request ) {
+				// save an unmodified backup copy of the req_classad
+			unmodified_req_classad = new ClassAd( *req_classad );  
+		}
+
+			// Now make the modifications.
+		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
+		for (int i=0; resources[i]; i++) {
+			MyString knob("MODIFY_REQUEST_EXPR_");
+			knob += resources[i];
+			char *tmp = param(knob.Value());
+			if( tmp ) {
+				ExprTree *tree = NULL;
+				classad::Value result;
+				int val;
+				ParseClassAdRvalExpr(tmp, tree);
+				if ( tree &&
+					 EvalExprTree(tree,req_classad,mach_classad,result) &&
+					 result.IsIntegerValue(val) )
+				{
+					req_classad->Assign(resources[i],val);
+
+				}
+				if (tree) delete tree;
+				free(tmp);
+			}
+		}
+
+			// Now make sure the partitionable slot itself is satisfied by
+			// the job. If not there is no point in trying to
+			// partition it. This check also prevents
+			// over-partitioning. The acceptability of the dynamic
+			// slot and job will be checked later, in the normal
+			// course of accepting the claim.
+		int mach_requirements = 1;
+		do {
+			rip->r_reqexp->restore();
+			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
+			}
+				// If the pslot cannot support this request, ABORT iff there is not
+				// an unmodified_req_classad backup copy we can try on the next iteration of
+				// the while loop
+			if (mach_requirements == 0) {
+				if (unmodified_req_classad) {
+					// our modified req_classad no longer matches, put back the original
+					// so we can try again.
+					dprintf(D_ALWAYS, 
+						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
+					if ( req_classad ) delete req_classad;	// delete modified ad
+					req_classad = unmodified_req_classad;	// put back original					
+					unmodified_req_classad = NULL;
+				} else {
+					rip->dprintf(D_ALWAYS, 
+					  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
+					return NULL;
+				}
+			}
+		} while (mach_requirements == 0);
+
+			// No longer need this, make sure to free the memory.
+		if (unmodified_req_classad) {
+			delete unmodified_req_classad;
+			unmodified_req_classad = NULL;
+		}
+
+			// Pull out the requested attribute values.  If specified, we go with whatever
+			// the schedd wants, which is in request attributes prefixed with
+			// "_condor_".  This enables to schedd to request something different than
+			// what the end user specified, and yet still preserve the end-user's
+			// original request. If the schedd does not specify, go with whatever the user
+			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
+			// not exist, we either cons up a default or refuse the claim.
+		MyString schedd_requested_attr;
+
+			// Look to see how many CPUs are being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_CPUS;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, cpus ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
+				cpus = 1; // reasonable default, for sure
+			}
+		}
+		type.formatstr_cat( "cpus=%d ", cpus );
+
+			// Look to see how much MEMORY is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_MEMORY;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, memory ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
+					// some memory size must be available else we cannot
+					// match, plus a job ad without ATTR_MEMORY is sketchy
+				rip->dprintf( D_ALWAYS,
+						  "No memory request in incoming ad, aborting...\n" );
+				return NULL;
+			}
+		}
+		type.formatstr_cat( "memory=%d ", memory );
+
+
+			// Look to see how much DISK is being requested.
+		schedd_requested_attr = "_condor_";
+		schedd_requested_attr += ATTR_REQUEST_DISK;
+		if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, disk ) ) {
+			if( !req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
+					// some disk size must be available else we cannot
+					// match, plus a job ad without ATTR_DISK is sketchy
+				rip->dprintf( D_FULLDEBUG,
+						  "No disk request in incoming ad, aborting...\n" );
+				return NULL;
+			}
+		}
+		type.formatstr_cat( "disk=%d%%",
+			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
+
+
+        for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+            string reqname;
+            formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
+            int reqval = 0;
+            if (!req_classad->EvalInteger(reqname.c_str(), mach_classad, reqval)) reqval = 0;
+            string attr;
+            formatstr(attr, " %s=%d", j->first.c_str(), reqval);
+            type += attr;
+        }
+
+		rip->dprintf( D_FULLDEBUG,
+					  "Match requesting resources: %s\n", type.Value() );
+
+		type_list.initializeFromString( type.Value() );
+		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
+		if( ! cpu_attrs ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to parse attributes for request, aborting\n" );
+			return NULL;
+		}
+
+		Resource * new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
+		if( ! new_rip ) {
+			rip->dprintf( D_ALWAYS,
+						  "Failed to build new resource for request, aborting\n" );
+			return NULL;
+		}
+
+			// Initialize the rest of the Resource
+		new_rip->compute( A_ALL );
+		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
+		new_rip->init_classad();
+		new_rip->refresh_classad( A_EVALUATED ); 
+		new_rip->refresh_classad( A_SHARED_SLOT ); 
+
+			// The new resource needs the claim from its
+			// parititionable parent
+		delete new_rip->r_cur;
+		new_rip->r_cur = rip->r_cur;
+		new_rip->r_cur->setResource( new_rip );
+
+			// And the partitionable parent needs a new claim
+		rip->r_cur = new Claim( rip );
+
+			// Recompute the partitionable slot's resources
+		rip->change_state( unclaimed_state );
+			// Call update() in case we were never matched, i.e. no state change
+			// Note: update() may create a new claim if pass thru Owner state
+		rip->update();
+
+		resmgr->addResource( new_rip );
+
+			// XXX: This is overkill, but the best way, right now, to
+			// get many of the new_rip's attributes calculated.
+		resmgr->compute( A_ALL );
+		resmgr->compute( A_TIMEOUT | A_UPDATE );
+
+			// Stash pslot claim as the "leftover_claim", which
+			// we will send back directly to the schedd iff it supports
+			// receiving partitionable slot leftover info as part of the
+			// new-style extended claiming protocol. 
+		bool scheddWantsLeftovers = false;
+			// presence of this attr in request ad tells us in a 
+			// backwards/forwards compatible way if the schedd understands
+			// the claim protocol enhancement to accept leftovers
+		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
+		if ( scheddWantsLeftovers && 
+			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
+		{
+			leftover_claim = rip->r_cur;
+			ASSERT(leftover_claim);
+		}
+
+		return new_rip;
+	} else {
+		// Basic slot.
+		return rip;
+	}
+}

@@ -22,7 +22,10 @@
 
 #include <string>
 #include <list>
+#include <vector>
 #include <utility>
+
+
 
 /**
  * Represents a set of mappings to perform on the filesystem.
@@ -32,9 +35,20 @@
  * will perform the equivalent of this command:
  *    mount --bind /var/lib/condor/execute/1234 /tmp
  * This is meant to give Condor the ability to provide per-job temporary directories.
+ *
+ * The class does two special things:
+ *   1) For each remapping, if the parent mount is marked as shared-subtree, remount
+ *      it first as non-shared-subtree.  This prevents remappings we make from
+ *      escaping to the parent.
+ *   2) Promote each autofs mount to shared-subtree.  Autofs is not aware of
+ *      namespaces and when a job accesses the mount point in the job's namespaces,
+ *      autofs will do the real mount in the *parent* namespace, so the job cannot
+ *      access it unless we do the shared-subtree trick.
+ * 
  */
 typedef std::pair<std::string, std::string> pair_strings;
 typedef std::pair<std::string, bool> pair_str_bool;
+typedef std::vector<pair_strings> pair_strings_vector;
 
 class FilesystemRemap {
 
@@ -87,8 +101,28 @@ private:
 	 */
 	int CheckMapping(const std::string &);
 
+	/**
+	 * autofs does not understand namespaces and ends up making the "real" fs
+	 * invisible to the job - it goes into the parent namespace instead.  We
+	 * provide this hack to remount autofs mounts as shared-subtree so changes
+	 * to the parent namespace are visible to all jobs.
+	 */
+	int FixAutofsMounts();
+
 	std::list<pair_strings> m_mappings;
 	std::list<pair_str_bool> m_mounts_shared;
+	std::list<pair_strings> m_mounts_autofs;
 
 };
+
+/**
+ * Get a list of the named chroots
+ */
+pair_strings_vector root_dir_list();
+
+/**
+ * Given a chroot directory, make sure it isn't equivalent to "/"
+ */
+bool is_trivial_rootdir(const std::string &root_dir);
+
 #endif

@@ -182,6 +182,7 @@ class VMProc : public OsProc
 		// How much CPU time (in seconds) the domain has used so far. 
 		// Only used for Xen.
 		float m_vm_cputime;
+		float m_vm_utilization; 
 };
 
 #endif

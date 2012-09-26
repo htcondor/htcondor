@@ -261,8 +261,8 @@ ProcAPI::buildFamily( pid_t daddypid, PidEnvID *penvid, int &status ) {
 	// assume that I'm going to find the daddy and all of the descendants...
 	status = PROCAPI_FAMILY_ALL;
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
-		dprintf( D_FULLDEBUG, 
+	if( IsDebugVerbose(D_PROCFAMILY) ) {
+		dprintf( D_PROCFAMILY, 
 				 "ProcAPI::buildFamily() called w/ parent: %d\n", daddypid );
 	}
 
@@ -430,8 +430,8 @@ ProcAPI::isinfamily( pid_t *fam, int size, PidEnvID *penvid, piPTR child )
 		// the child is actually a child of one of the pids in the fam array.
 		if( child->ppid == fam[i] ) {
 
-			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
-				dprintf( D_FULLDEBUG, "Pid %u is in family of %u\n", 
+			if( IsDebugVerbose(D_PROCFAMILY) ) {
+				dprintf( D_PROCFAMILY, "Pid %u is in family of %u\n", 
 					child->pid, fam[i] );
 			}
 
@@ -442,8 +442,8 @@ ProcAPI::isinfamily( pid_t *fam, int size, PidEnvID *penvid, piPTR child )
 		// child's, if so, then the child is a descendent of the daddy pid.
 		if (pidenvid_match(penvid, &child->penvid) == PIDENVID_MATCH) {
 
-			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
-				dprintf( D_FULLDEBUG, 
+			if( IsDebugVerbose(D_PROCFAMILY) ) {
+				dprintf( D_PROCFAMILY, 
 					"Pid %u is predicted to be in family of %u\n", 
 					child->pid, fam[i] );
 			}

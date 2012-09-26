@@ -82,13 +82,11 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
     MpiResource *rr = new MpiResource( this );
 	parallelMasterResource = rr;
 
-	char buffer[1024];
 	char *lspool = param("SPOOL");
 	char *dir = gen_ckpt_name(lspool, getCluster(), 0, 0);
 	free(lspool);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 	free(dir); dir = NULL;
-	job_ad->Insert(buffer);
 
     snprintf( buf, 256, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if( !job_ad->Insert(buf) ) {
@@ -103,8 +101,6 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
     rr->setJobAd( job_ad );
 
 	rr->setStartdInfo( job_ad );
-
-	job_ad->Assign( ATTR_JOB_STATUS, RUNNING );
 
     ResourceList[ResourceList.getlast()+1] = rr;
 
@@ -301,13 +297,11 @@ ParallelShadow::getResources( void )
 					 daemonCore->InfoCommandSinfulString() );
 			job_ad->InsertOrUpdate( buf );
 
-			char buffer[1024];
 			char *lspool = param("SPOOL");
 			char *dir = gen_ckpt_name(lspool, job_cluster, 0, 0);
 			free(lspool);
 			job_ad->Assign(ATTR_REMOTE_SPOOL_DIR, dir);
 			free(dir); dir = NULL;
-			job_ad->Insert(buffer);
 
 				// Put the correct claim id into this ad's ClaimId attribute.
 				// Otherwise, it is the claim id of the master proc.
@@ -554,17 +548,26 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 void 
 ParallelShadow::shutDown( int exitReason )
 {
+	static unsigned int iNumberOfTriggeredCalls = 0; 
+	
 	if (exitReason != JOB_NOT_STARTED) {
 		if (shutdownPolicy == WAIT_FOR_ALL) {
+			
+			iNumberOfTriggeredCalls++;
+			unsigned int iResources = ResourceList.length();
+			
 			for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
 				RemoteResource *r = ResourceList[i];
 				// If the policy is wait for all nodes to exit
 				// see if any are still running.  If so,
 				// just return, and wait for them all to go
-				if (r->getResourceState() != RR_FINISHED) {
-					return;
+				if (r->getResourceState() != RR_FINISHED || iNumberOfTriggeredCalls < iResources ) {
+				    dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL - %d resources out of %d have checked in \n", iNumberOfTriggeredCalls, iResources);
+				    return;
 				}
 			}
+			
+			dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL - All resources have called exit/shutdown\n" );
 			
 		}
 			// If node0 is still running, don't really shut down

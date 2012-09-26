@@ -25,7 +25,6 @@
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
 #include "proc.h"
-#include "classad_newold.h"
 #include "condor_uid.h"
 #include "condor_event.h"
 #include "write_user_log.h"
@@ -37,6 +36,7 @@
 #include "set_user_from_ad.h"
 #include "file_transfer.h"
 #include "exit.h"
+#include "spooled_job_files.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
@@ -91,7 +91,7 @@ public:
 		}
 		va_list args;
 		va_start(args,fmt);
-		msg.vsprintf_cat(fmt,args);
+		msg.vformatstr_cat(fmt,args);
 		va_end(args);
 
 
@@ -127,13 +127,13 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	int status;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
 		if(error_details) {
-			error_details->sprintf("Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
+			error_details->formatstr("Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
 		}
 		return CJR_ERROR;
 	}
 	if(status != IDLE) {
 		if(error_details) {
-			error_details->sprintf("Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
+			error_details->formatstr("Job %d.%d isn't idle, is %s (%d)", cluster, proc, getJobStatusString(status), status); 
 		}
 		return CJR_BUSY;
 	}
@@ -145,7 +145,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 		free(managed);
 		if( ! ok ) {
 			if(error_details) {
-				error_details->sprintf("Job %d.%d is already managed by another process", cluster, proc); 
+				error_details->formatstr("Job %d.%d is already managed by another process", cluster, proc); 
 			}
 			return CJR_BUSY;
 		}
@@ -155,7 +155,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	// No one else has a claim.  Claim it ourselves.
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL) == -1 ) {
 		if(error_details) {
-			error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+			error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
 		}
 		return CJR_ERROR;
 	}
@@ -163,7 +163,7 @@ ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const 
 	if(my_identity) {
 		if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, my_identity) == -1 ) {
 			if(error_details) {
-				error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
+				error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, MANAGED_EXTERNAL); 
 			}
 			return CJR_ERROR;
 		}
@@ -177,7 +177,7 @@ static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &sc
 	CondorError errstack;
 	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner, schedd.version());
 	if( ! qmgr ) {
-		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true));
+		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true).c_str());
 		return NULL;
 	}
 	failobj.SetQmgr(qmgr);
@@ -238,7 +238,7 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res == CJR_OK) {
-			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
+			error_details->formatstr("Failed to commit job claim for schedd %s in pool %s",
 				schedd_name ? schedd_name : "local schedd",
 				pool_name ? pool_name : "local pool");
 		}
@@ -248,20 +248,36 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	return res;
 }
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity, bool target_is_sandboxed)
 {
 	priv_state priv = set_user_priv_from_ad(ad);
 
 	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity,ad);
 
 	set_priv(priv);
+	uninit_user_ids();
+
+		// chown the src job sandbox to the user if appropriate
+	if( result == CJR_OK && !target_is_sandboxed ) {
+		ClassAd old_job_ad(ad); // TODO: get rid of this copy
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
+			if( !SpooledJobFiles::createJobSpoolDirectory(&old_job_ad,PRIV_USER) ) {
+				if( error_details ) {
+					error_details->formatstr("Failed to create/chown source job spool directory to the user.");
+				}
+				yield_job(ad,pool_name,schedd_name,true,cluster,proc,error_details,my_identity,false);
+				return CJR_ERROR;
+			}
+		}
+	}
+
 	return result;
 }
 
 
 
 
-bool yield_job(bool done, int cluster, int proc, MyString * error_details, const char * my_identity, bool release_on_hold, bool *keep_trying) {
+bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, MyString * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -278,7 +294,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 	}
 	if( ! is_managed ) {
 		if(error_details) {
-			error_details->sprintf("Job %d.%d is not managed!", cluster, proc); 
+			error_details->formatstr("Job %d.%d is not managed!", cluster, proc); 
 		}
 		*keep_trying = false;
 		return false;
@@ -289,7 +305,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 		if( GetAttributeStringNew(cluster, proc, ATTR_JOB_MANAGED_MANAGER, &manager) >= 0) {
 			if(strcmp(manager, my_identity) != 0) {
 				if(error_details) {
-					error_details->sprintf("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
+					error_details->formatstr("Job %d.%d is managed by '%s' instead of expected '%s'", cluster, proc, manager, my_identity);
 				}
 				free(manager);
 				*keep_trying = false;
@@ -299,10 +315,18 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 		}
 	}
 
+		// chown the src job sandbox back to condor is appropriate
+	if( !target_is_sandboxed ) {
+		ClassAd old_job_ad(job_ad); // TODO: get rid of this copy
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
+			SpooledJobFiles::chownSpoolDirectoryToCondor(&old_job_ad);
+		}
+	}
+
 	const char * newsetting = done ? MANAGED_DONE : MANAGED_SCHEDD;
 	if( SetAttributeString(cluster, proc, ATTR_JOB_MANAGED, newsetting) == -1 ) {
 		if(error_details) {
-			error_details->sprintf("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
+			error_details->formatstr("Encountered problem setting %s = %s", ATTR_JOB_MANAGED, newsetting); 
 		}
 		return false;
 	}
@@ -344,7 +368,7 @@ bool yield_job(bool done, int cluster, int proc, MyString * error_details, const
 static bool yield_job_with_current_privs(
 	const char * pool_name, const char * schedd_name,
 	bool done, int cluster, int proc, MyString * error_details,
-	const char * my_identity, bool release_on_hold, bool *keep_trying,
+	const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying,
 	classad::ClassAd const &job)
 {
 	// Open a qmgr
@@ -362,7 +386,7 @@ static bool yield_job_with_current_privs(
 
 	//-------
 	// Do the actual yield
-	bool res = yield_job(done, cluster, proc, error_details, my_identity, release_on_hold, keep_trying);
+	bool res = yield_job(done, cluster, proc, job, error_details, my_identity, target_is_sandboxed, release_on_hold, keep_trying);
 	//-------
 
 
@@ -371,7 +395,7 @@ static bool yield_job_with_current_privs(
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res) {
-			error_details->sprintf("Failed to commit job claim for schedd %s in pool %s",
+			error_details->formatstr("Failed to commit job claim for schedd %s in pool %s",
 				schedd_name ? schedd_name : "local schedd",
 				pool_name ? pool_name : "local pool");
 		}
@@ -384,15 +408,16 @@ static bool yield_job_with_current_privs(
 
 bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
-	MyString * error_details, const char * my_identity, 
+	MyString * error_details, const char * my_identity, bool target_is_sandboxed,
         bool release_on_hold, bool *keep_trying)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,release_on_hold,keep_trying,ad);
+	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
 
 	set_priv(priv);
+	uninit_user_ids();
 
 	return success;
 }
@@ -451,7 +476,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 
 		// we want the job to hang around (taken from condor_submit.V6/submit.C)
 	MyString leaveinqueue;
-	leaveinqueue.sprintf("%s == %d", ATTR_JOB_STATUS, COMPLETED);
+	leaveinqueue.formatstr("%s == %d", ATTR_JOB_STATUS, COMPLETED);
 	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.Value());
 
 	ExprTree * tree;
@@ -481,7 +506,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		ClassAd * adlist[1];
 		adlist[0] = &src;
 		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
-			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true));
+			failobj.fail("Failed to spool job files: %s\n",errstack.getFullText(true).c_str());
 			return false;
 		}
 	}
@@ -500,44 +525,15 @@ bool submit_job( ClassAd & src, const char * schedd_name, const char * pool_name
 	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
 
 	set_priv(priv);
+	uninit_user_ids();
 
 	return success;
 }
 
 bool submit_job( classad::ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
-	ClassAd src2;
-	if( ! new_to_old(src, src2) ) {
-		dprintf(D_ALWAYS, "submit_job failed to convert job ClassAd from new to old form\n");
-		return false;
-	}
+	ClassAd src2 = src;
 	return submit_job(src2, schedd_name, pool_name, is_sandboxed, cluster_out, proc_out);
-}
-
-/*
-	Push the dirty attributes in src into the queue.  Does _not_ clear
-	the dirty attributes (use ClassAd::ClearAllDirtyFlags() if you want).
-	Assumes the existance of an open qmgr connection (via ConnectQ).
-*/
-bool push_dirty_attributes(int cluster, int proc, ClassAd & src)
-{
-	src.ResetExpr();
-	const char *lhstr = 0;
-	const char *rhstr = 0;
-	ExprTree * tree;
-	while( src.NextDirtyExpr(lhstr, tree) ) {
-		rhstr = ExprTreeToString( tree );
-		if( !lhstr || !rhstr) { 
-			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
-			return false;
-		}
-		dprintf(D_FULLDEBUG, "Setting %s = %s\n", lhstr, rhstr);
-		if( SetAttribute(cluster, proc, lhstr, rhstr) == -1 ) {
-			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to set %s = %s\n", cluster, proc, lhstr, rhstr);
-			return false;
-		}
-	}
-	return true;
 }
 
 /*
@@ -557,12 +553,27 @@ bool push_dirty_attributes(classad::ClassAd & src)
 		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
 		return false;
 	}
-	ClassAd src2;
-	if( ! new_to_old(src, src2) ) {
-		dprintf(D_ALWAYS, "push_dirty_attributes failed to convert job ClassAd from new to old form\n");
-		return false;
+	const char *rhstr = 0;
+	ExprTree * tree;
+	for( classad::ClassAd::dirtyIterator it = src.dirtyBegin();
+		 it != src.dirtyEnd(); ++it) {
+
+		rhstr = NULL;
+		tree = src.Lookup( *it );
+		if ( tree ) {
+			rhstr = ExprTreeToString( tree );
+		}
+		if( !rhstr) { 
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
+			return false;
+		}
+		dprintf(D_FULLDEBUG, "Setting %s = %s\n", it->c_str(), rhstr);
+		if( SetAttribute(cluster, proc, it->c_str(), rhstr) == -1 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to set %s = %s\n", cluster, proc, it->c_str(), rhstr);
+			return false;
+		}
 	}
-	return push_dirty_attributes(cluster, proc, src2);
+	return true;
 }
 
 static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
@@ -597,6 +608,121 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	success = push_dirty_attributes_with_current_priv(src,schedd_name,pool_name);
 
 	set_priv(priv);
+	uninit_user_ids();
+	return success;
+}
+
+/*
+	Update src in the queue so that it ends up looking like dest.
+    This handles attribute deletion as well as change of value.
+	Assumes the existance of an open qmgr connection (via ConnectQ).
+*/
+bool push_classad_diff(classad::ClassAd & src,classad::ClassAd & dest)
+{
+	int cluster;
+	if( ! src.EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
+		dprintf(D_ALWAYS, "push_classad_diff: job lacks a cluster\n");
+		return false;
+	}
+	int proc;
+	if( ! src.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
+		dprintf(D_ALWAYS, "push_classad_diff: job lacks a proc\n");
+		return false;
+	}
+
+	classad::References attrs;
+
+	for( classad::ClassAd::iterator src_it = src.begin();
+		 src_it != src.end(); ++src_it)
+	{
+		attrs.insert( src_it->first );
+	}
+	for( classad::ClassAd::iterator dest_it = dest.begin();
+		 dest_it != dest.end(); ++dest_it)
+	{
+		attrs.insert( dest_it->first );
+	}
+
+	for ( classad::References::iterator attrs_itr = attrs.begin();
+		  attrs_itr != attrs.end(); attrs_itr++ )
+	{
+		std::string src_rhstr;
+		std::string dest_rhstr;
+		ExprTree * src_tree;
+		ExprTree * dest_tree;
+
+		char const *attr = attrs_itr->c_str();
+
+		src_tree = src.Lookup( attr );
+		if ( src_tree ) {
+			char const *rhstr = ExprTreeToString( src_tree );
+			if( !rhstr) { 
+				dprintf(D_ALWAYS,"(%d.%d) push_classad_diff: Problem processing classad attribute %s\n", cluster, proc, attr);
+				return false;
+			}
+			src_rhstr = rhstr;
+		}
+
+		dest_tree = dest.Lookup( attr );
+		if ( dest_tree ) {
+			char const *rhstr = ExprTreeToString( dest_tree );
+			if( !rhstr) { 
+				dprintf(D_ALWAYS,"(%d.%d) push_classad_diff: Problem processing classad attribute %s\n", cluster, proc, attr);
+				return false;
+			}
+			dest_rhstr = rhstr;
+			if( dest_rhstr == src_rhstr ) {
+				continue;
+			}
+		}
+		else {
+			dprintf(D_FULLDEBUG, "Deleting %s\n", attr);
+			DeleteAttribute(cluster, proc, attr);
+			continue;
+		}
+
+		dprintf(D_FULLDEBUG, "Setting %s = %s\n", attr, dest_rhstr.c_str());
+		if( SetAttribute(cluster, proc, attr, dest_rhstr.c_str()) == -1 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_classad_diff: Failed to set %s = %s\n", cluster, proc, attr, dest_rhstr.c_str());
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool push_classad_diff_with_current_priv(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+{
+	FailObj failobj;
+	Qmgr_connection *qmgr = open_job(src,schedd_name,pool_name,failobj);
+	if( !qmgr ) {
+		return false;
+	}
+
+	bool ret = push_classad_diff(src,dest);
+
+	failobj.SetQmgr(0);
+	if( ! DisconnectQ(qmgr, ret /* commit */)) {
+		dprintf(D_ALWAYS, "push_dirty_attributes: Failed to commit changes\n");
+		return false;
+	}
+
+	return ret;
+}
+
+/*
+	Update src in the queue so that it ends up looking like dest.
+    This handles attribute deletion as well as change of value.
+	Establishes (and tears down) a qmgr connection.
+*/
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+{
+	bool success;
+	priv_state priv = set_user_priv_from_ad(src);
+
+	success = push_classad_diff_with_current_priv(src,dest,schedd_name,pool_name);
+
+	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
@@ -614,7 +740,7 @@ static bool finalize_job_with_current_privs(classad::ClassAd const &job,int clus
 	}
 
 	MyString constraint;
-	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	constraint.formatstr("(ClusterId==%d&&ProcId==%d)", cluster, proc);
 
 
 	if( is_sandboxed ) {
@@ -661,6 +787,7 @@ bool finalize_job(classad::ClassAd const &ad,int cluster, int proc, const char *
 	success = finalize_job_with_current_privs(ad,cluster,proc,schedd_name,pool_name,is_sandboxed);
 
 	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
@@ -674,12 +801,12 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 		if(!schedd_name) { schedd_name = "local schedd"; }
 		if(!pool_name) { pool_name = "local pool"; }
 		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
-		error_desc.sprintf("Unable to find address of %s at %s", schedd_name, pool_name);
+		error_desc.formatstr("Unable to find address of %s at %s", schedd_name, pool_name);
 		return false;
 	}
 
 	MyString constraint;
-	constraint.sprintf("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	constraint.formatstr("(ClusterId==%d&&ProcId==%d)", cluster, proc);
 	ClassAd *result_ad;
 
 	result_ad = schedd.removeJobs(constraint.Value(), reason, &errstack, AR_LONG);
@@ -716,6 +843,7 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 	success = remove_job_with_current_privs(cluster,proc,reason,schedd_name,pool_name,error_desc);
 
 	set_priv(priv);
+	uninit_user_ids();
 	return success;
 }
 
@@ -726,19 +854,27 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	std::string userLogFile;
 	std::string domain;
 	std::string gjid;
+	std::string dagmanLogFile;
 	bool use_xml = false;
 
 	ASSERT(ulog);
 	ASSERT(no_ulog);
 
 	userLogFile[0] = '\0';
+	dagmanLogFile[0] = '\0';
+	std::vector<const char*> logfiles;
 	job_ad.EvaluateAttrString( ATTR_ULOG_FILE, userLogFile );
-	if ( userLogFile[0] == '\0' ) {
-		// User doesn't want a log
-		*no_ulog = true;
+	if ( userLogFile[0] != '\0' ) {
+		logfiles.push_back( userLogFile.c_str());
+	}
+	job_ad.EvaluateAttrString( ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile );
+	if( dagmanLogFile[0] != '\0') {
+		logfiles.push_back( dagmanLogFile.c_str() );
+	}
+	*no_ulog = logfiles.empty();
+	if(*no_ulog) {
 		return true;
 	}
-	*no_ulog = false;
 
 	job_ad.EvaluateAttrString(ATTR_OWNER,owner);
 	job_ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
@@ -747,7 +883,7 @@ bool InitializeUserLog( classad::ClassAd const &job_ad, WriteUserLog *ulog, bool
 	job_ad.EvaluateAttrBool( ATTR_ULOG_USE_XML, use_xml );
 	job_ad.EvaluateAttrString( ATTR_GLOBAL_JOB_ID, gjid );
 
-	if(!ulog->initialize(owner.c_str(), domain.c_str(), userLogFile.c_str(), cluster, proc, 0, gjid.c_str())) {
+	if(!ulog->initialize(owner.c_str(), domain.c_str(), logfiles, cluster, proc, 0, gjid.c_str())) {
 		return false;
 	}
 	ulog->setUseXML( use_xml );
@@ -958,12 +1094,7 @@ EmailTerminateEvent(ClassAd * job_ad, bool   /*exit_status_known*/)
 
 bool EmailTerminateEvent( classad::ClassAd const &ad )
 {
-	ClassAd old_ad;
-	classad::ClassAd ad_copy = ad;
-	if(!new_to_old(ad_copy,old_ad)) {
-		dprintf(D_ALWAYS, "EmailTerminateEvent failed to convert job ClassAd from new to old form\n");
-		return false;
-	}
+	ClassAd old_ad = ad;
 
 	EmailTerminateEvent( &old_ad, true );
 	return true;

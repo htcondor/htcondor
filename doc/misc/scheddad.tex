@@ -1,6 +1,15 @@
 \index{ClassAd!Scheduler attributes}
 \begin{description}
 
+\index{ClassAd Scheduler attribute!CollectorHost}
+\item[\AdAttr{CollectorHost}:] The name of the main \Condor{collector}
+  which this \Condor{schedd} daemon reports to,
+  as copied from \Macro{COLLECTOR\_HOST}.  
+  If a \Condor{schedd} flocks to other \Condor{collector} daemons,
+  this attribute still represents the "home" \Condor{collector},
+  so this value can be used to discover if a \Condor{schedd} 
+  is currently flocking.
+
 \index{ClassAd Scheduler attribute!DaemonCoreDutyCycle}
 \item[\AdAttr{DaemonCoreDutyCycle}:] A Statistics attribute defining
   the ratio of the time spent handling 
@@ -296,12 +305,6 @@
 
 \index{ClassAd Scheduler attribute!PublicNetworkIpAddr}
 \item[\AdAttr{PublicNetworkIpAddr}:] Description is not yet written.
-
-\index{ClassAd Scheduler attribute!QuillEnabled}
-\item[\AdAttr{QuillEnabled}:] The same boolean value as set in the
-  configuration variable \Macro{QUILL\_ENABLED}.
-  See the definition at section~\ref{param:QuillEnabled} on
-  page~\pageref{param:QuillEnabled}.
 
 \index{ClassAd Scheduler attribute!RecentDaemonCoreDutyCycle}
 \item[\AdAttr{RecentDaemonCoreDutyCycle}:] A Statistics attribute defining

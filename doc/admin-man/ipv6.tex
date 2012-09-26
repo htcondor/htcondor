@@ -1,0 +1,73 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:ipv6}Running Condor on an IPv6 Network Stack}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{IPv6|(}
+
+Condor has limited support for running on IPv6 networks.
+
+Current Limitations
+
+\begin{itemize}
+    \item{Microsoft Windows platforms are \emph{not} supported.}
+    \item{Mixed IPv4/IPv6 pools are \emph{not} supported.}
+    \item{Security policies cannot use IP addresses, only host names.
+If using \Expr{NO\_DNS=TRUE}, the host names are reformatted IP addresses,
+and can be matched against those. }
+    \item{\MacroNI{NETWORK\_INTERFACE} \emph{must be set} to a 
+specific IPv6 address. 
+It is not possible to use multiple IPv6 interfaces on a single computer.}
+    \item{There must be valid IPv6 (AAAA) DNS and reverse DNS records for 
+the computers. 
+Setting the configuration \Expr{NO\_DNS=TRUE} removes this limitation.}
+\end{itemize}
+
+Enabling IPv6
+
+\begin{itemize}
+    \item{In the configuration, set \Expr{ENABLE\_IPV6 = TRUE}.}
+    \item{Specify the IPv6 interface to use. 
+Do \emph{not} put square brackets ([]) around this address.
+As an example,
+\begin{verbatim}
+NETWORK_INTERFACE = 2607:f388:1086:0:21b:24ff:fedf:b520
+\end{verbatim}
+}
+\end{itemize}
+
+Additional Notes
+
+Specification of  \MacroNI{CONDOR\_HOST} or \MacroNI{COLLECTOR\_HOST}
+as an IP address \emph{must} place the address, 
+but \emph{not} the port, in square brackets. 
+Host names may be specified. 
+For example:
+
+\begin{verbatim}
+CONDOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f]:6462
+# This configures the collector to listen on the non-standard port 5332.
+COLLECTOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+\end{verbatim}
+
+Because IPv6 addresses are not currently supported in Condor's 
+security settings, 
+\MacroUNI{CONDOR\_HOST} or \MacroUNI{COLLECTOR\_HOST} will not
+be permitted in the security configuration, 
+to specify an IP address.
+
+When using the configuration variable \MacroNI{NO\_DNS},
+IPv6 addresses are turned into host names by taking the IPv6 address, 
+changing colons to dashes, and appending \MacroUNI{DEFAULT\_DOMAIN\_NAME}. 
+So, 
+\begin{verbatim}
+2607:f388:1086:0:21b:24ff:fedf:b520
+\end{verbatim}
+becomes 
+\begin{verbatim}
+2607-f388-1086-0-21b-24ff-fedf-b520.example.com 
+\end{verbatim}
+assuming
+\begin{verbatim}
+DEFAULT_DOMAIN_NAME=example.com
+\end{verbatim}
+
+\index{IPv6|)}

@@ -584,7 +584,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 			return CommandProtocolFinished;
 		}
 
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
 			m_auth_info.dPrint (D_SECURITY);
 		}
@@ -695,7 +695,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				} else {
 					// the session->id() and the_sid strings should be identical.
 
-					if (DebugFlags & D_SECURITY) {
+					if (IsDebugLevel(D_SECURITY)) {
 						char *return_addr = NULL;
 						if(session->policy()) {
 							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,&return_addr);
@@ -718,7 +718,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				if (session->policy()) {
 					// copy this to the HandleReq() scope
 					m_policy = new ClassAd(*session->policy());
-					if (DebugFlags & D_FULLDEBUG) {
+					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
 						m_policy->dPrint (D_SECURITY);
 					}
@@ -761,7 +761,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					return CommandProtocolFinished;
 				}
 
-				if (DebugFlags & D_FULLDEBUG) {
+				if (IsDebugVerbose(D_SECURITY)) {
 					dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
 					our_policy.dPrint(D_SECURITY);
 				}
@@ -775,7 +775,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_result = FALSE;
 					return CommandProtocolFinished;
 				} else {
-					if (DebugFlags & D_FULLDEBUG) {
+					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
 						m_policy->dPrint(D_SECURITY);
 					}
@@ -793,7 +793,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 					// generate a unique ID.
 					MyString tmpStr;
-					tmpStr.sprintf( "%s:%i:%i:%i", 
+					tmpStr.formatstr( "%s:%i:%i:%i", 
 									get_local_hostname().Value(), daemonCore->mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
@@ -855,7 +855,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				// if they asked, tell them
 				if (m_is_tcp && (m_sec_man->sec_lookup_feat_act(m_auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
-					if (DebugFlags & D_FULLDEBUG) {
+					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
 						m_policy->dPrint( D_SECURITY );
 					}
@@ -916,7 +916,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				// 6.6.1 or higher, we will force will_authenticate to
 				// SEC_FEAT_ACT_NO.
 
-				if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
 						char * remote_version = NULL;
 						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
@@ -945,7 +945,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 
 				} else {
-					if (DebugFlags & D_FULLDEBUG) {
+					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
 					}
 					m_state = CommandProtocolPostAuthenticate;
@@ -977,7 +977,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		return CommandProtocolFinished;
 	}
 
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsDebugVerbose(D_SECURITY)) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 	}
 
@@ -1010,7 +1010,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		if( !auth_success ) {
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 		}
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -1037,7 +1037,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: required authentication of %s failed: %s\n",
 					 m_sock->peer_ip_str(),
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		}
@@ -1155,7 +1155,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_SID );
 		m_sec_man->sec_copy_attribute( *m_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
 
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
 			pa_ad.dPrint( D_SECURITY );
 		}
@@ -1167,7 +1167,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		} else {
-			if (DebugFlags & D_FULLDEBUG) {
+			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", m_sid);
 			}
 		}
@@ -1209,7 +1209,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		KeyCacheEntry tmp_key(m_sid, NULL, m_key, m_policy, expiration_time, session_lease );
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			m_policy->dPrint(D_SECURITY);
 		}
 
@@ -1360,7 +1360,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 
 		MyString command_desc;
-		command_desc.sprintf("command %d (%s)",m_req,m_comTable[cmd_index].command_descrip);
+		command_desc.formatstr("command %d (%s)",m_req,m_comTable[cmd_index].command_descrip);
 
 		if( m_comTable[cmd_index].force_authentication &&
 			!m_sock->isMappedFQU() )

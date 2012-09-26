@@ -86,7 +86,7 @@ void use(char *program)
 
 int main( int argc, char *argv[] )
 {
-	char	*filename="lseek.tempfile";
+	const char	*filename="lseek.tempfile";
 	int	filesize=10000;
 	int	operations=100;
 	int	random_key=time(0);
@@ -253,9 +253,9 @@ int main( int argc, char *argv[] )
 		return 0;
 	} else {
 		cout << "FAILURE" << endl;
-		volatile int i=5,j=5;
+		volatile int ii=5,j=5;
 		// Force a core dump.
-		i = i/i-j;
+		ii = ii/ii-j;
 		return -1;
 	}
 }

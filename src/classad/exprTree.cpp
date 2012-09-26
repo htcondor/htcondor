@@ -45,7 +45,7 @@ void ExprTree::debug_print(const char *message) const {
 
 void ExprTree::debug_format_value(Value &value) const {
 		bool boolValue = false;
-		int intValue = 0;
+		long long intValue = 0;
 		double doubleValue = 0;
 		string stringValue = "";
 
@@ -73,8 +73,8 @@ void ExprTree::debug_format_value(Value &value) const {
 				break;
 			case Value::INTEGER_VALUE:
 				if(value.IsIntegerValue(intValue)) {
-					char buf[12];
-					sprintf(buf, "%d", intValue);
+					char buf[32];
+					sprintf(buf, "%lld", intValue);
 					result += buf;
 					result += "\n";
 				}
@@ -105,6 +105,9 @@ void ExprTree::debug_format_value(Value &value) const {
 				break;
 			case Value::LIST_VALUE:
 				result += "LIST\n";
+				break;
+			case Value::SLIST_VALUE:
+				result += "SLIST\n";
 				break;
 		}
 		debug_print(result.c_str());
@@ -210,6 +213,28 @@ Flatten( EvalState &state, Value &val, ExprTree *&tree, int* op) const
 	return( _Flatten( state, val, tree, op ) );
 }
 
+bool ExprTree::isClassad(ClassAd ** ptr)
+{
+	bool bRet = false;
+	
+	
+	if ( CLASSAD_NODE == nodeKind )
+	{
+		if (ptr){
+			*ptr = (ClassAd *) this;
+		}
+		
+		bRet = true;
+	}
+	
+	return (bRet);
+}
+
+const ExprTree* ExprTree::self()
+{
+	ExprTree * pRet=this;
+	return (pRet);
+}
 
 void ExprTree::
 Puke( ) const
@@ -276,14 +301,14 @@ SetRootScope( )
     if (curAd == NULL) {
         rootAd = NULL;
     } else {
-        const ClassAd *curScope = curAd->parentScope;
+        const ClassAd *curScope = curAd->GetParentScope();
         
         while( curScope ) {
             if( curScope == curAd ) {	// NAC - loop detection
                 return;					// NAC
             }							// NAC
             prevScope = curScope;
-            curScope  = curScope->parentScope;
+            curScope  = curScope->GetParentScope();
         }
         
         rootAd = prevScope;
@@ -291,12 +316,12 @@ SetRootScope( )
     return;
 }
 
-ostream& operator<<(ostream &stream, const ExprTree &expr)
+ostream& operator<<(ostream &stream, const ExprTree *expr)
 {
-	PrettyPrint unparser;
+	ClassAdUnParser unparser;
 	string      string_representation;
 
-	unparser.Unparse(string_representation, &expr);
+	unparser.Unparse(string_representation, expr);
 	stream << string_representation;
 	
 	return stream;

@@ -98,7 +98,7 @@ SSHToJob::SSHToJob():
 	m_debug(false),
 	m_retry_sensible(false),
 	m_auto_retry(false),
-	m_retry_delay(30),
+	m_retry_delay(5),
 	m_x_forwarding(false)
 {
 	m_jobid.cluster = m_jobid.proc = -1;
@@ -158,7 +158,7 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 				// dprintf to console
 			Termlog = 1;
 			dprintf_config( "TOOL", get_param_functions() );
-			DebugFlags |= D_FULLDEBUG;
+			set_debug_flags(NULL, D_FULLDEBUG);
 			m_debug = true;
 		} else if( match_prefix( argv[nextarg], "-help" ) ) {
 			printUsage();
@@ -346,7 +346,14 @@ bool SSHToJob::execute_ssh_retry()
 	int attempt = 0;
 	for(attempt=0; attempt==0 || m_auto_retry; attempt++) {
 		if( attempt > 0 ) {
-			fprintf(stderr,"Will try again in %d seconds.\n",m_retry_delay);
+			// try every 10 seconds for first 5 min, then every 30 seconds
+			if ( m_retry_delay < 30 && ((m_retry_delay * attempt) >= 300) ) {
+				m_retry_delay = 30;
+			}
+			//fprintf(stderr,"Will try again in %d seconds.\n",m_retry_delay);
+			if (attempt==1) {
+				fprintf(stderr,"Waiting for job to start...\n");
+			}
 			sleep(m_retry_delay);
 		}
 		if( execute_ssh() ) {
@@ -424,7 +431,9 @@ bool SSHToJob::execute_ssh()
 	}
 
 	if( !success ) {
-		logError("%s\n",error_msg.Value());
+		if ( !m_retry_sensible ) {
+			logError("%s\n",error_msg.Value());
+		}
 		return false;
 	}
 
@@ -437,7 +446,9 @@ bool SSHToJob::execute_ssh()
 
 	DCStarter starter;
 	if( !starter.initFromClassAd(&starter_ad) ) {
-		logError("Failed to initialize starter object.\n");
+		if ( !m_retry_sensible ) {
+			logError("Failed to initialize starter object.\n");
+		}
 		return false;
 	}
 
@@ -463,7 +474,7 @@ bool SSHToJob::execute_ssh()
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
 		unsigned int r = get_random_uint();
-		m_session_dir.sprintf("%s%c%s.condor_ssh_to_job_%x",
+		m_session_dir.formatstr("%s%c%s.condor_ssh_to_job_%x",
 							  temp_dir,DIR_DELIM_CHAR,local_username,r);
 		if( mkdir(m_session_dir.Value(),0700)==0 ) {
 			break;
@@ -483,9 +494,9 @@ bool SSHToJob::execute_ssh()
 
 
 	MyString known_hosts_file;
-	known_hosts_file.sprintf("%s%cknown_hosts",m_session_dir.Value(),DIR_DELIM_CHAR);
+	known_hosts_file.formatstr("%s%cknown_hosts",m_session_dir.Value(),DIR_DELIM_CHAR);
 	MyString private_client_key_file;
-	private_client_key_file.sprintf("%s%cssh_key",m_session_dir.Value(),DIR_DELIM_CHAR);
+	private_client_key_file.formatstr("%s%cssh_key",m_session_dir.Value(),DIR_DELIM_CHAR);
 
 	ReliSock sock;
 	MyString remote_user; // this will be filled in with the remote user name
@@ -509,7 +520,7 @@ bool SSHToJob::execute_ssh()
 
 
 	MyString fdpass_sock_name;
-	fdpass_sock_name.sprintf("%s%cfdpass",m_session_dir.Value(),DIR_DELIM_CHAR);
+	fdpass_sock_name.formatstr("%s%cfdpass",m_session_dir.Value(),DIR_DELIM_CHAR);
 
 	// because newer versions of openssh (e.g. 5.8) close
 	// all file descriptors > 2, we have to pass the ssh connection
@@ -627,9 +638,9 @@ bool SSHToJob::execute_ssh()
 	MyString ssh_cmd;
 	ArgList ssh_arglist;
 	MyString param_name;
-	param_name.sprintf("SSH_TO_JOB_%s_CMD",m_ssh_basename.Value());
+	param_name.formatstr("SSH_TO_JOB_%s_CMD",m_ssh_basename.Value());
 	MyString default_ssh_cmd;
-	default_ssh_cmd.sprintf("\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
+	default_ssh_cmd.formatstr("\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
 							ssh_options_arglist.GetArg(0),
 							is_scp ? "" : " condor-job.%h");
 	param(ssh_cmd,param_name.Value(),default_ssh_cmd.Value());

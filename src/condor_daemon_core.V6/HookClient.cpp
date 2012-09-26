@@ -71,7 +71,7 @@ HookClient::hookExited(int exit_status) {
 	m_exit_status = exit_status;
 
 	MyString status_txt;
-	status_txt.sprintf("HookClient %s (pid %d) ", m_hook_path, m_pid);
+	status_txt.formatstr("HookClient %s (pid %d) ", m_hook_path, m_pid);
 	statusString(exit_status, status_txt);
 	dprintf(D_FULLDEBUG, "%s\n", status_txt.Value());
 

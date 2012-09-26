@@ -1,13 +1,13 @@
 
-
-        #ifndef AviaryCommon_JOBDATATYPE_H
-        #define AviaryCommon_JOBDATATYPE_H
-
+          #ifndef AviaryCommon_JOBDATATYPE_H
+          #define AviaryCommon_JOBDATATYPE_H
+        
+      
        /**
         * JobDataType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Sep 18, 2012 (08:44:08 EDT)
         */
 
        /**
@@ -85,7 +85,13 @@ namespace AviaryCommon
          * @return newly created JobDataType object
          */
         JobDataType(std::string arg_JobDataType);
+        JobDataType(const ADBJobDataTypeEnum arg_JobDataType);
         
+
+        /**
+         * resetAll for JobDataType
+         */
+        WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
         

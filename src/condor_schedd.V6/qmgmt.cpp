@@ -56,6 +56,7 @@
 #include "condor_holdcodes.h"
 #include "nullfile.h"
 #include "condor_url.h"
+#include "classad/classadCache.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -101,6 +102,7 @@ static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
 static int job_queued_count = 0;
+static Regex *queue_super_user_may_impersonate_regex = NULL;
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -346,6 +348,22 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		}
 	}
 
+		// CRUFT
+		// Starting in 7.9.??, in ATTR_GRID_JOB_ID, the grid-types
+		// pbs, sge, lsf, nqs, and naregi were made sub-types of
+		// 'batch'.
+	std::string orig_value;
+	if ( job_ad->LookupString( ATTR_GRID_JOB_ID, orig_value ) ) {
+		const char *orig_str = orig_value.c_str();
+		if ( strncasecmp( "pbs", orig_str, 3 ) == 0 ||
+			 strncasecmp( "sge", orig_str, 3 ) == 0 ||
+			 strncasecmp( "lsf", orig_str, 3 ) == 0 ||
+			 strncasecmp( "nqs", orig_str, 3 ) == 0 ||
+			 strncasecmp( "naregi", orig_str, 6 ) == 0 ) {
+			std::string new_value = "batch " + orig_value;
+			job_ad->Assign( ATTR_GRID_JOB_ID, new_value );
+		}
+	}
 }
 
 QmgmtPeer::QmgmtPeer()
@@ -548,7 +566,7 @@ InitQmgmt()
 		i++;
 	}
 
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
 		for( i=0; i<num_super_users; i++ ) {
 			dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
@@ -561,6 +579,18 @@ InitQmgmt()
 			"NOTE: QUEUE_ALL_USERS_TRUSTED=TRUE - "
 			"all queue access checks disabled!\n"
 			);
+	}
+
+	delete queue_super_user_may_impersonate_regex;
+	queue_super_user_may_impersonate_regex = NULL;
+	std::string queue_super_user_may_impersonate;
+	if( param(queue_super_user_may_impersonate,"QUEUE_SUPER_USER_MAY_IMPERSONATE") ) {
+		queue_super_user_may_impersonate_regex = new Regex;
+		const char *errptr=NULL;
+		int erroffset=0;
+		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errptr,&erroffset) ) {
+			EXCEPT("QUEUE_SUPER_USER_MAY_IMPERSONATE is an invalid regular expression: %s",queue_super_user_may_impersonate.c_str());
+		}
 	}
 
 	schedd_forker.Initialize();
@@ -591,7 +621,7 @@ static void
 RenamePre_7_5_5_SpoolPathsInJob( ClassAd *job_ad, char const *spool, int cluster, int proc )
 {
 	std::string old_path;
-	sprintf(old_path,"%s%ccluster%d.proc%d.subproc%d", spool, DIR_DELIM_CHAR, cluster, proc, 0);
+	formatstr(old_path,"%s%ccluster%d.proc%d.subproc%d", spool, DIR_DELIM_CHAR, cluster, proc, 0);
 	char *new_path = gen_ckpt_name( spool, cluster, proc, 0 );
 	ASSERT( new_path );
 
@@ -749,10 +779,10 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 		char *tmp;
 
 		if( proc == ICKPT ) {
-			sprintf(old_path,"%s%ccluster%d.ickpt.subproc%d",spool,DIR_DELIM_CHAR,cluster,0);
+			formatstr(old_path,"%s%ccluster%d.ickpt.subproc%d",spool,DIR_DELIM_CHAR,cluster,0);
 		}
 		else {
-			sprintf(old_path,"%s%ccluster%d.proc%d.subproc%d",spool,DIR_DELIM_CHAR,cluster,proc,0);
+			formatstr(old_path,"%s%ccluster%d.proc%d.subproc%d",spool,DIR_DELIM_CHAR,cluster,proc,0);
 		}
 		tmp = gen_ckpt_name(spool,cluster,proc,0);
 		new_path = tmp;
@@ -869,7 +899,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	correct_scheduler.sprintf( "DedicatedScheduler@%s", Name );
+	correct_scheduler.formatstr( "DedicatedScheduler@%s", Name );
 
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
@@ -944,7 +974,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
-			correct_user.sprintf( "%s%s@%s",
+			correct_user.formatstr( "%s%s@%s",
 					 (nice_user) ? "nice-user." : "", owner.Value(),
 					 scheduler.uidDomain() );
 
@@ -1142,6 +1172,9 @@ DestroyJobQueue( void )
 		}
 		delete [] super_users;
 	}
+
+	delete queue_super_user_may_impersonate_regex;
+	queue_super_user_may_impersonate_regex = NULL;
 }
 
 
@@ -1208,6 +1241,14 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 		// attribute of a job to a value we have seen before.
 		// The JobRouter depends on this when it is running as
 		// root/condor.
+
+	if( queue_super_user_may_impersonate_regex ) {
+		if( queue_super_user_may_impersonate_regex->match(user.Value()) ) {
+			return true;
+		}
+		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the ALLOW_QUEUE_SUPER_USER_TO_IMPERSONATE regular expression.\n",user.Value());
+		return false;
+	}
 
 	int junk = 0;
 	if( owner_history.lookup(user,junk) != -1 ) {
@@ -1731,6 +1772,9 @@ NewProc(int cluster_id)
 	IncrementClusterSize(cluster_id);
     job_queued_count += 1;
 
+	// can't increment the JobsSubmitted count for other pools yet
+	scheduler.OtherPoolStats.DeferJobsSubmitted(cluster_id, proc_id);
+
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
 	MyString gjid = "\"";
@@ -2106,7 +2150,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// just fill in the value of Owner with the owner name
 				// of the authenticated socket.
 			if ( sock_owner && *sock_owner ) {
-				new_value.sprintf("\"%s\"",sock_owner);
+				new_value.formatstr("\"%s\"",sock_owner);
 				attr_value  = new_value.Value();
 			} else {
 				// socket not authenticated and Owner is UNDEFINED.
@@ -2187,7 +2231,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
 						 &nice_user );
-		user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
+		user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 				 owner, scheduler.uidDomain() );
 		SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
 
@@ -2217,7 +2261,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
 			>= 0 ) {
-			user.sprintf( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
+			user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
 					 "", owner.Value(), scheduler.uidDomain() );
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags );
 		}
@@ -2302,21 +2346,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	char *round_param = param(round_param_name.Value());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
-		LexemeType attr_type = LX_EOF;
+		classad::Value::ValueType attr_type = classad::Value::NULL_VALUE;
 		ExprTree *tree = NULL;
 		classad::Value val;
 		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
 			 tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
 			((classad::Literal *)tree)->GetValue( val );
 			if ( val.GetType() == classad::Value::INTEGER_VALUE ) {
-				attr_type = LX_INTEGER;
+				attr_type = classad::Value::INTEGER_VALUE;
 			} else if ( val.GetType() == classad::Value::REAL_VALUE ) {
-				attr_type = LX_FLOAT;
+				attr_type = classad::Value::REAL_VALUE;
 			}
 		}
 		delete tree;
 
-		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
+		if ( attr_type == classad::Value::INTEGER_VALUE || classad::Value::REAL_VALUE ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
@@ -2334,7 +2378,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			int ivalue;
 			double fvalue;
 
-			if ( attr_type == LX_INTEGER ) {
+			if ( attr_type == classad::Value::INTEGER_VALUE ) {
 				val.IsIntegerValue( ivalue );
 				fvalue = ivalue;
 			} else {
@@ -2362,11 +2406,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					double roundto = pow((double)10,magnitude) * percent/100.0;
 					fvalue = ceil( fvalue/roundto )*roundto;
 
-					if( attr_type == LX_INTEGER ) {
-						new_value.sprintf("%d",(int)fvalue);
+					if( attr_type == classad::Value::INTEGER_VALUE ) {
+						new_value.formatstr("%d",(int)fvalue);
 					}
 					else {
-						new_value.sprintf("%f",fvalue);
+						new_value.formatstr("%f",fvalue);
 					}
 				}
 			}
@@ -2386,7 +2430,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				new_value = ivalue;
 
 					// if it was a float, append ".0" to keep it a float
-				if ( attr_type == LX_FLOAT ) {
+				if ( attr_type == classad::Value::REAL_VALUE ) {
 					new_value += ".0";
 				}
 			}
@@ -2559,7 +2603,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 
 	// Create filename
 	MyString filename;
-	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
@@ -2618,7 +2662,7 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 	}
 
 	MyString filename;
-	filename.sprintf( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
+	filename.formatstr( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
 					  cluster_id, proc_id );
 
   	// Swith to root temporarily
@@ -2659,7 +2703,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	priv_state old_priv = set_root_priv();
 	
 	MyString filename;
-	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
@@ -2838,7 +2882,14 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 						scheduler.WriteSubmitToUserLog( job_id, doFsync );
 					}
 				}
+				
+				int iDup, iTotal;
+				iDup = procad->PruneChildAd();
+				iTotal = procad->size();
+				
+				dprintf(D_FULLDEBUG,"New job: %s, Duplicate Keys: %d, Total Keys: %d \n",key, iDup, iTotal);
 			}	
+			
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
 
@@ -3106,7 +3157,8 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
-				updated_attrs->Insert(name, expr->Copy());
+				ExprTree * pTree = expr->Copy();
+				updated_attrs->Insert(name, pTree, false);
 			}
 			else
 			{
@@ -3349,7 +3401,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// This is a classad expression to be considered
 
 					MyString expr_to_add;
-					expr_to_add.sprintf("string(%s", name + 1);
+					expr_to_add.formatstr("string(%s", name + 1);
 					expr_to_add.setChar(expr_to_add.Length()-1, ')');
 
 						// Any backwacked double quotes or backwacks
@@ -3421,6 +3473,13 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						fallback++;
 					}
 
+					if (strchr(name, '.')) {
+						// . is a legal character for some find_config_macros, but not other
+						// check here if one snuck through
+						attribute_not_found = true;
+						break;
+						
+					}
 					// Look for the name in the ad.
 					// If it is not there, use the fallback.
 					// If no fallback value, then fail.
@@ -3451,13 +3510,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 								+ strlen(fallback)
 								+ 1  // optional '"'
 								+ 1); // null terminator
-							if(strlen(fallback) == 0) {
-								// fallback is nothing?  That confuses all sorts of
-								// things.  How about a nothing string instead?
-								sprintf(rebuild,"%s = \"%s\"",name,fallback);
-							} else {
-								sprintf(rebuild,"%s = %s",name,fallback);
-							}
+                            // fallback is defined as being a string value, encode it thusly:
+                            sprintf(rebuild,"%s = \"%s\"", name, fallback);
 							value = rebuild;
 						}
 						if(!fallback || !value) {
@@ -3598,7 +3652,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			// Don't put the $$(expr) literally in the hold message, otherwise
 			// if we fix the original problem, we won't be able to expand the one
 			// in the hold message
-			hold_reason.sprintf("Cannot expand $$ expression (%s).",name);
+			hold_reason.formatstr("Cannot expand $$ expression (%s).",name);
 
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
@@ -3656,7 +3710,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			{
 				attribute_not_found = true;
 				MyString hold_reason;
-				hold_reason.sprintf(
+				hold_reason.formatstr(
 					"Failed to convert environment to target syntax"
 					" for starter (opsys=%s): %s",
 					opsys ? opsys : "NULL",env_error_msg.Value());
@@ -3689,7 +3743,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			{
 				attribute_not_found = true;
 				MyString hold_reason;
-				hold_reason.sprintf(
+				hold_reason.formatstr(
 					"Failed to convert arguments to target syntax"
 					" for starter: %s",
 					arg_error_msg.Value());
@@ -3872,7 +3926,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		const char *base = NULL;
 		while ( (old_path_buf=old_paths.next()) ) {
 			base = condor_basename(old_path_buf);
-			if ((AttrsToModify[attrIndex] == ATTR_TRANSFER_INPUT_FILES) && IsUrl(old_path_buf)) {
+			if ((strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf)) {
 				base = old_path_buf;
 			} else if ( strcmp(base,old_path_buf)!=0 ) {
 				changed = true;
@@ -4436,9 +4490,7 @@ int mark_idle(ClassAd *job)
 	} else if ( status == REMOVED ) {
 		// a globus job with a non-null contact string should be left alone
 		if ( universe == CONDOR_UNIVERSE_GRID ) {
-			char grid_job_id[20];
-			if ( job->LookupString( ATTR_GRID_JOB_ID, grid_job_id,
-									sizeof(grid_job_id) ) )
+			if ( job->LookupString( ATTR_GRID_JOB_ID, NULL, 0 ) )
 			{
 				// looks like the job's remote job id is still valid,
 				// so there is still a job submitted remotely somewhere.

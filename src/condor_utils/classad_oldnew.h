@@ -31,8 +31,6 @@
 #include "classad/matchClassad.h"
 
 
-using namespace std;
-
 void AttrList_setPublishServerTimeMangled( bool publish);
 
 classad::ClassAd* getOldClassAd( Stream *sock );

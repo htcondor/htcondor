@@ -46,7 +46,9 @@ if not quiet:
 
 try:
 	session = Session();
-	broker = session.addBroker(url)
+	# ensure that the value of sasl mechanisms is installed and
+	# configured in /etc/sasl2/qpidd.conf
+	broker = session.addBroker(url,mechanisms='PLAIN')
 except Exception, e:
 	print "unable to access broker or scheduler"
 	print e

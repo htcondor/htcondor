@@ -75,7 +75,9 @@ condor_isidchar(int c)
 
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
-
+// The length of the DOLLAR_ID string
+// Should probably use constexpr here when we use C++11 in earnest
+#define DOLLAR_ID_LEN (6)
 
 int is_valid_param_name(const char *name)
 {
@@ -432,7 +434,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	register BUCKET	*ptr;
 	int		loc;
 	BUCKET	*bucket;
-	char	tmp_name[ MAX_PARAM_LEN ];
+	char	tmp_name[ MAX_PARAM_LEN ],*tvalue;
 
 		/* Make sure not already in hash table */
 	snprintf( tmp_name, MAX_PARAM_LEN, "%s", name);
@@ -441,8 +443,9 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	loc = condor_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
+			tvalue = expand_macro(value,table,table_size,name,true);
 			FREE( ptr->value );
-			ptr->value = strdup( value );
+			ptr->value = tvalue;
 			return;
 		}
 	}
@@ -628,7 +631,7 @@ char *
 expand_macro( const char *value,
 			  BUCKET **table,
 			  int table_size,
-			  char *self,
+			  const char *self,
 			  bool use_default_param_table )
 {
 	char *tmp = strdup( value );
@@ -1040,7 +1043,8 @@ tryagain:
 							// we treat it like anything else, and it is up
 							// to the caller to advance search_pos, so we
 							// don't run into the literal $$ again.
-						if ( !self && strncasecmp(name,DOLLAR_ID,namelen) == MATCH ) {
+						if ( !self && namelen == DOLLAR_ID_LEN &&
+								strncasecmp(name,DOLLAR_ID,namelen) == MATCH ) {
 							tvalue = name;
 							goto tryagain;
 						}

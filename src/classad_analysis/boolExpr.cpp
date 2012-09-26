@@ -269,7 +269,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 	if( kind == classad::ExprTree::ATTRREF_NODE ) {
 		( ( classad::AttributeReference * )expr )->GetComponents( base, attr,
 																  junkBool);
-		if( !c->Init( attr, expr->Copy( ), true ) ) {
+		if( !c->Init( attr, expr->Copy( ), false ) ) {
   				cerr << "error: problem with Condition::Init" << endl;
   				return false;
 		}

@@ -252,6 +252,12 @@
 /* Define to 1 if you have the 'unshare' systemcall.*/
 #cmakedefine HAVE_UNSHARE 1
 
+/* Define to 1 if the system has the MS_PRIVATE flag. */
+#cmakedefine HAVE_MS_PRIVATE 1
+
+/* Define to 1 if the system has the MS_SHARED flag. */
+#cmakedefine HAVE_MS_SHARED 1
+
 /* Do we have the blahp external (used Imake)*/
 #cmakedefine HAVE_EXT_BLAHP 1
 
@@ -566,5 +572,11 @@
 
 /* Define to 1 if the system has proportional set size (PSS).*/
 #cmakedefine HAVE_PSS 1
+
+/* Define to 1 if the compiler supports C++11 conventions */
+#cmakedefine PREFER_CPP11
+
+/* Define to 1 if the compiler does not support C++11 but does support TR1 */
+#cmakedefine PREFER_TR1
 
 #endif

@@ -201,7 +201,7 @@ void handle_sig(int sig)
 int
 main(int argc, const char **argv)
 {
-	DebugFlags = D_ALWAYS;
+	set_debug_flags(NULL, D_ALWAYS);
 	param_functions *p_funcs = NULL;
 
 	set_mySubSystem( "TEST_LOG_READER_STATE", SUBSYSTEM_TYPE_TOOL );
@@ -851,7 +851,7 @@ Options::handleOpt( SimpleArg &arg, int &argno )
 
 	} else if ( arg.Match('d', "debug") ) {
 		if ( arg.hasOpt() ) {
-			set_debug_flags( const_cast<char *>(arg.getOpt()) );
+			set_debug_flags( const_cast<char *>(arg.getOpt()), 0 );
 			argno = arg.ConsumeOpt( );
 		} else {
 			fprintf(stderr, "Value needed for '%s'\n", arg.Arg() );

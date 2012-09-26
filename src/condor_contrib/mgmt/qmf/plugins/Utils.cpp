@@ -218,7 +218,7 @@ PopulateVariantMapFromAd(compat_classad::ClassAd &ad, Variant::Map &_map)
 	}
 
 	// TODO: debug
-//	if (DebugFlags & D_FULLDEBUG) {
+//	if (IsFulldebug(D_FULLDEBUG)) {
 //		ad.dPrint(D_FULLDEBUG|D_NOHEADER);
 //	}
 
@@ -302,7 +302,7 @@ PopulateAdFromVariantMap(Variant::Map &_map, compat_classad::ClassAd &ad, std::s
 	}
 
 	// TODO: debug
-//	if (DebugFlags & D_FULLDEBUG) {
+//	if (IsFulldebug(D_FULLDEBUG)) {
 //		ad.dPrint(D_FULLDEBUG|D_NOHEADER);
 //	}
 

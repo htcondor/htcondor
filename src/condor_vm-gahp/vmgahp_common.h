@@ -30,11 +30,15 @@
 
 #define ROOT_UID	0
 
+#define vmprintf dprintf
+
 extern int vmgahp_stdout_pipe;
 extern int vmgahp_stderr_pipe;
 extern PBuffer vmgahp_stderr_buffer;
 extern int vmgahp_stderr_tid;
+#ifndef vmprintf
 extern int oriDebugFlags;
+#endif
 extern int vmgahp_mode;
 
 bool parse_vmgahp_command(const char* raw, Gahp_Args& args);
@@ -54,7 +58,9 @@ bool verify_digit_arg(const char *s);
 bool verify_number_args(const int is, const int should_be);
 bool validate_vmgahp_result_string(const char *result_string);
 
+#ifndef vmprintf
 void vmprintf( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
+#endif
 void write_to_daemoncore_pipe(int pipefd, const char* str, int len);
 void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void write_stderr_to_pipe();

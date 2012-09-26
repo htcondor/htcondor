@@ -64,7 +64,7 @@ CCBClient::CCBClient( char const *ccb_contact, ReliSock *target_sock ):
 	unsigned char *keybuf = Condor_Crypt_Base::randomKey(keylen);
 	size_t i;
 	for(i=0;i<keylen;i++) {
-		m_connect_id.sprintf_cat("%02x",keybuf[i]);
+		m_connect_id.formatstr_cat("%02x",keybuf[i]);
 	}
 	free( keybuf );
 }
@@ -127,11 +127,11 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		shared_listener->InitAndReconfig();
 		MyString errmsg;
 		if( !shared_listener->CreateListener() ) {
-			errmsg.sprintf("Failed to create shared port endpoint for reversed connection from %s.",
+			errmsg.formatstr("Failed to create shared port endpoint for reversed connection from %s.",
 						   m_target_peer_description.Value());
 		}
 		else if( !(listener_addr = shared_listener->GetMyRemoteAddress()) ) {
-			errmsg.sprintf("Failed to get remote address for shared port endpoint for reversed connection from %s.",
+			errmsg.formatstr("Failed to get remote address for shared port endpoint for reversed connection from %s.",
 						   m_target_peer_description.Value());
 		}
 		if( !listener_addr ) {
@@ -147,7 +147,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		listen_sock->bind(false,0);
 		if( !listen_sock->listen() ) {
 			MyString errmsg;
-			errmsg.sprintf("Failed to listen for reversed connection from %s.",
+			errmsg.formatstr("Failed to listen for reversed connection from %s.",
 						   m_target_peer_description.Value());
 			if( error ) {
 				error->push("CCBClient", CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
@@ -252,7 +252,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 
 			if( timed_out ) {
 				MyString errmsg;
-				errmsg.sprintf(
+				errmsg.formatstr(
 					"Timed out waiting for response after requesting reversed "
 					"connection from %s ccbid %s via CCB server %s.",
 					m_target_peer_description.Value(),
@@ -320,7 +320,7 @@ bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address,
 	char const *ptr = strchr(ccb_contact,'#');
 	if( !ptr ) {
 		MyString errmsg;
-		errmsg.sprintf("Bad CCB contact '%s' when connecting to %s.",
+		errmsg.formatstr("Bad CCB contact '%s' when connecting to %s.",
 					   ccb_contact, m_target_peer_description.Value());
 
 		if( error ) {
@@ -418,7 +418,7 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 
 	m_ccb_sock->decode();
 	if( !msg.initFromStream(*m_ccb_sock) || !m_ccb_sock->end_of_message() ) {
-		errmsg.sprintf("Failed to read response from CCB server "
+		errmsg.formatstr("Failed to read response from CCB server "
 					   "%s when requesting reversed connection to %s",
 					   m_ccb_sock->peer_description(),
 					   m_target_peer_description.Value());
@@ -436,7 +436,7 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 		MyString remote_errmsg;
 		msg.LookupString(ATTR_ERROR_STRING,remote_errmsg);
 
-		errmsg.sprintf(
+		errmsg.formatstr(
 			"received failure message from CCB server %s in response to "
 			"request for reversed connection to %s: %s",
 			m_ccb_sock->peer_description(),

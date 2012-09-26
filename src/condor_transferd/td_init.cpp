@@ -287,7 +287,7 @@ TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 				"Failure to register transferd - Authentication failed" );
 			dprintf( D_ALWAYS, "setup_transfer_request_handler() "
 				"aborting: %s\n",
-				errstack.getFullText() );
+				errstack.getFullText().c_str() );
 			refuse(rsock);
 			return CLOSE_STREAM;
 		} 
@@ -550,7 +550,7 @@ TransferD::register_to_schedd(ReliSock **regsock_ptr)
 	if (rval == false) {
 		// emit why 
 		dprintf(D_ALWAYS, "TransferRequest::register_to_schedd(): Failed to "
-			"register. Schedd gave reason '%s'\n", errstack.getFullText());
+			"register. Schedd gave reason '%s'\n", errstack.getFullText().c_str());
 		return REG_RESULT_FAILED;
 	}
 

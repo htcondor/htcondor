@@ -109,7 +109,7 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 	char* path = hook_paths[(int)hook_type];
 	if (!path) {
 		MyString _param;
-		_param.sprintf("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
+		_param.formatstr("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
 		bool hperr = !validateHookPath(_param.Value(), path);
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed
@@ -159,7 +159,6 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 	ClassAd* job_ad = NULL;
 	Resource* rip = fetch_client->m_rip;
 	float rank = 0;
-	bool willing = true;
 		// Are we currently in Claimed/Idle with a fetched claim?
 	bool idle_fetch_claim = (rip->r_cur->type() == CLAIM_FETCH
 							 && rip->state() == claimed_state
@@ -178,9 +177,16 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 		return false;
 	}
 	
+	bool willing = true;
+	if(rip->state() == preempting_state) {
+		// There are race bugs if we try to start a new job while waiting
+		// for the old starter to exit.  So don't do that. #3076 
+		willing = false;
+		rip->dprintf(D_FULLDEBUG, "Rejecting new fetchwork; still preempting the previous job.\n");
+	}
+	else if (!rip->willingToRun(job_ad)) {
 		// If we got here, we've got a ClassAd describing the job, so
 		// see if this slot is willing to run it.
-	if (!rip->willingToRun(job_ad)) {
 		willing = false;
 	}
 	else {
@@ -200,17 +206,24 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 
 		// Make sure that the job classad defines ATTR_HOOK_KEYWORD,
 		// and if not, insert this slot's keyword.
-	char buf[1];	// We don't care what it is, just if it's there.
-	if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, buf, 1)) {
+	if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, NULL, 0)) {
 		char* keyword = rip->getHookKeyword();
 		ASSERT(keyword && keyword != UNDEFINED);
 		MyString keyword_attr;
-		keyword_attr.sprintf("%s = \"%s\"", ATTR_HOOK_KEYWORD, keyword);
+		keyword_attr.formatstr("%s = \"%s\"", ATTR_HOOK_KEYWORD, keyword);
 		job_ad->Insert(keyword_attr.Value());
 	}
 
 		// No matter what, if the reply fetch hook is configured, invoke it.
 	hookReplyFetch(willing, job_ad, rip);
+
+	if (willing) {
+		Claim* leftover_claim = NULL; 
+		Resource * new_rip = initialize_resource(rip, job_ad, leftover_claim);
+		if (new_rip) { rip = new_rip; }
+		else { willing = false; }
+	}
+
 
 	if (!willing) {
 			// TODO-fetch: matchmaking on other slots?

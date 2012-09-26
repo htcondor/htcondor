@@ -275,7 +275,7 @@ _FindDaemon( char *host_name, daemon_t real_dt, Daemon *pool)
 	q_result = query.fetchAds(ads, pool_addr, &errstack);
 
 	if( q_result != Q_OK ) {
-		dprintf( D_FULLDEBUG, "%s\n", errstack.getFullText(TRUE) );
+		dprintf( D_FULLDEBUG, "%s\n", errstack.getFullText(true).c_str() );
 		dprintf( D_FULLDEBUG, "ERROR: can't connect to %s\n", pool->idStr());
 		had_error = TRUE;
 	} else if( ads.Length() <= 0 ) { 

@@ -267,9 +267,6 @@ main_init( int, char* argv[] )
 								  "GIVE_TOTALS_CLASSAD",
 								  (CommandHandler)command_give_totals_classad,
 								  "command_give_totals_classad", 0, READ );
-	daemonCore->Register_Command( GIVE_REQUEST_AD, "GIVE_REQUEST_AD",
-								  (CommandHandler)command_give_request_ad,
-								  "command_give_request_ad", 0, READ );
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
 								  (CommandHandler)command_query_ads,
 								  "command_query_ads", 0, READ );
@@ -753,7 +750,9 @@ reaper(Service *, int pid, int status)
 	foo = resmgr->getClaimByPid(pid);
 	if( foo ) {
 		foo->starterExited(status);
-	}		
+	} else {
+		dprintf(D_FAILURE|D_ALWAYS, "Warning: Starter pid %d is not associated with an claim. A slot may fail to transition to Idle.\n", pid);
+	}
 	return TRUE;
 }
 

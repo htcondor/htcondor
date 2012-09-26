@@ -791,7 +791,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 	else {
 		dprintf(D_FULLDEBUG,"Sent job ClassAd update to startd.\n");
 	}
-	if( DebugFlags & D_FULLDEBUG ) {
+	if( IsDebugVerbose(D_JOB) ) {
 		ad->dPrint(D_JOB);
 	}
 
@@ -1152,7 +1152,7 @@ JICShadow::initUserPriv( void )
 			}
 		}
 		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "SLOT%s_USER", slotName.Value() );
+			snprintf( nobody_param, 20, "%s_USER", slotName.Value() );
 			nobody_user = param(nobody_param);
 			if (!nobody_user && param_boolean("ALLOW_VM_CRUFT", false)) {
 				snprintf( nobody_param, 20, "VM%s_USER", slotName.Value() );
@@ -1471,7 +1471,7 @@ JICShadow::getJobStdFile( const char* attr_name )
 			base = tmp;
 		}
 		if( ! fullpath(base) ) {	// prepend full path
-			filename.sprintf( "%s%c", job_iwd, DIR_DELIM_CHAR );
+			filename.formatstr( "%s%c", job_iwd, DIR_DELIM_CHAR );
 		}
 		filename += base;
 	}
@@ -1969,7 +1969,7 @@ JICShadow::beginFileTransfer( void )
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->RegisterCallback(
-				  (FileTransferHandler)&JICShadow::transferCompleted,this );
+				  (FileTransferHandlerCpp)&JICShadow::transferCompleted,this );
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
@@ -2109,7 +2109,7 @@ JICShadow::initIOProxy( void )
 	}
 
 	if( want_io_proxy || job_universe==CONDOR_UNIVERSE_JAVA ) {
-		io_proxy_config_file.sprintf( "%s%cchirp.config",
+		io_proxy_config_file.formatstr( "%s%cchirp.config",
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR );
 		if( !io_proxy.init(io_proxy_config_file.Value()) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 

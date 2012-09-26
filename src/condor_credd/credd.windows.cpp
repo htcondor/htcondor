@@ -118,10 +118,10 @@ CredDaemon::initialize_classad()
 
 	MyString line;
 
-	line.sprintf("%s = \"%s\"", ATTR_NAME, m_name );
+	line.formatstr("%s = \"%s\"", ATTR_NAME, m_name );
 	m_classad.Insert(line.Value());
 
-	line.sprintf ("%s = \"%s\"", ATTR_CREDD_IP_ADDR,
+	line.formatstr ("%s = \"%s\"", ATTR_CREDD_IP_ADDR,
 			daemonCore->InfoCommandSinfulString() );
 	m_classad.Insert(line.Value());
 
@@ -144,7 +144,7 @@ CredDaemon::invalidate_ad()
 	query_ad.SetTargetTypeName(CREDD_ADTYPE);
 
 	MyString line;
-	line.sprintf("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
+	line.formatstr("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);
     query_ad.Insert(line.Value());
 	query_ad.Assign(ATTR_NAME,m_name);
 

@@ -119,7 +119,7 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 		        args.GetArg(0),
 		        ret,
 		        str.Value());
-		error_desc.sprintf_cat("%s exited with status %d and the following output: %s",
+		error_desc.formatstr_cat("%s exited with status %d and the following output: %s",
 				       condor_basename(args.GetArg(0)),
 				       ret,
 				       str.Value());
@@ -156,11 +156,11 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 	if (libexec == NULL) {
 		EXCEPT("GLExec: LIBEXEC not defined");
 	}
-	m_setup_script.sprintf("%s/condor_glexec_setup", libexec);
-	m_run_script.sprintf("%s/condor_glexec_run", libexec);
-	m_wrapper_script.sprintf("%s/condor_glexec_job_wrapper", libexec);
-	m_proxy_update_script.sprintf("%s/condor_glexec_update_proxy", libexec);
-	m_cleanup_script.sprintf("%s/condor_glexec_cleanup", libexec);
+	m_setup_script.formatstr("%s/condor_glexec_setup", libexec);
+	m_run_script.formatstr("%s/condor_glexec_run", libexec);
+	m_wrapper_script.formatstr("%s/condor_glexec_job_wrapper", libexec);
+	m_proxy_update_script.formatstr("%s/condor_glexec_update_proxy", libexec);
+	m_cleanup_script.formatstr("%s/condor_glexec_cleanup", libexec);
 	free(libexec);
 
 	m_sandbox_owned_by_user = false;
@@ -324,43 +324,23 @@ GLExecPrivSepHelper::create_process(const char* path,
 	FamilyInfo fi;
 	FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
 	MyString proxy_path;
-	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
+	proxy_path.formatstr("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
-	Env glexec_env;
-	MyString user_proxy;
-	char const *condor_proxy;
-
-		// Set up the environment to be used when invoking glexec.  I
-		// do not know why we use the job's environment for this
-		// purpose, because we also pass the job's environment to
-		// condor's glexec job wrapper, which sets up the job
-		// environment as desired without relying on environment
-		// inherited from glexec.  (In fact, glexec clears the
-		// environment.)  
-
-	glexec_env.MergeFrom(env);
-
-	if( glexec_env.GetEnv("X509_USER_PROXY",user_proxy))
-	{
-		if ((condor_proxy = getenv("X509_USER_PROXY"))) {
-			// glexec versions >= 0.7.0 may use X509_USER_PROXY to
-			// authenticate to the mapping service.  We are expected to
-			// set this to the glidein (aka pilot) proxy rather than the
-			// end-user proxy when invoking glexec.  Since we are invoking
-			// glexec with the job environment (see comment above), we
-			// must treat X509_USER_PROXY specially.
-
-			glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
-		}
-	}
+		// At the very least, we need to pass the condor daemon's
+		// X509_USER_PROXY to condor_glexec_run.  Currently, we just
+		// pass all daemon environment.  We do _not_ run
+		// condor_glexec_run in the job environment, because that
+		// would be a security risk and would serve no purpose, since
+		// glexec cleanses the environment anyway.
+	dc_job_opts &= ~(DCJOBOPT_NO_ENV_INHERIT);
 
 	int pid = daemonCore->Create_Process(m_run_script.Value(),
 	                                     modified_args,
 	                                     PRIV_USER_FINAL,
 	                                     reaper_id,
 	                                     FALSE,
-	                                     &glexec_env,
+	                                     NULL,
 	                                     iwd,
 	                                     fi_ptr,
 	                                     NULL,
@@ -461,7 +441,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 							"GLEXEC: glexec call exited with status %d\n",
 							status);
 					if( error_msg ) {
-						error_msg->sprintf_cat(
+						error_msg->formatstr_cat(
 							" glexec call exited with status %d",
 							status);
 					}
@@ -472,7 +452,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 							"GLEXEC: glexec call exited via signal %d\n",
 							sig);
 					if( error_msg ) {
-						error_msg->sprintf_cat(
+						error_msg->formatstr_cat(
 							" glexec call exited via signal %d",
 							sig);
 					}
@@ -623,7 +603,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		err[bytes] = '\0';
 		dprintf(D_ALWAYS, "GLEXEC: error from wrapper: %s\n", err);
 		if( error_msg ) {
-			error_msg->sprintf_cat("glexec_job_wrapper error: %s", err);
+			error_msg->formatstr_cat("glexec_job_wrapper error: %s", err);
 		}
 			// prevent higher-level code from thinking this was a syscall error
 		errno = 0;

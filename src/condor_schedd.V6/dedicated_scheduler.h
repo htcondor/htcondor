@@ -240,6 +240,10 @@ class DedicatedScheduler : public Service {
 		*/
 	void clearResourceRequests( void );
 
+	int getResourceRequestSize() const { return resource_requests.size(); }
+	void incrementSplitMatchCount() { split_match_count++;}
+	int getSplitMatchCount() const { return split_match_count;}
+
 		// Set the correct value of ATTR_SCHEDULER in the queue for
 		// the given job ad.
 	bool setScheduler( ClassAd* job_ad );
@@ -359,7 +363,7 @@ class DedicatedScheduler : public Service {
 			@param buf An optional buffer to store ATTR_NAME
 			@return pointer to the mrec if found, NULL if not
 		*/
-	match_rec* getMrec( ClassAd* ad, char* buf = NULL );
+	match_rec* getMrec( ClassAd* ad, std::string & buf );
 
 		/** Figure out if it's possible to ever schedule this job,
 			given all of the dedicated resources we know about. 
@@ -438,6 +442,7 @@ class DedicatedScheduler : public Service {
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;
 
+	int split_match_count;
         // stores job classads, indexed by each job's pending claim-id
     std::map<std::string, ClassAd*> pending_requests;
 

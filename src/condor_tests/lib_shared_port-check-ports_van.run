@@ -129,7 +129,7 @@ my $append_condor_config = '
   USE_SHARED_PORT = True
   DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
-  SHARED_PORT_DEBUG = D_COMMAND | D_FULLDEBUG
+  SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
 
   # named sockets cannot have very long paths (~100 chars), so put them
   # in /tmp to avoid problems

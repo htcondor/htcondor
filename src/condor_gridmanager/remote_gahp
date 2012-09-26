@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ################################################################################
 # blahp-over-ssh shim script
@@ -19,8 +19,12 @@
 ################################################################################
 
 #Defaults
+REMOTE_CMD=""
 REMOTE_HOSTNAME=""
 REMOTE_USER=`whoami`
+# Fix the home directory when spawned from a root process
+unset HOME
+export HOME=`echo ~`
 # Needs '~' because resolved on remote site
 REMOTE_GLITE="~/bosco/glite"
 # We do this in case $HOME isn't set properly
@@ -54,7 +58,7 @@ REMOTE_HOSTS=(
 
 # Parse command line arguments 
 PROG_NAME=$0
-USAGE="Usage: $PROG_NAME [options] remote_hostname [remote options and arguments]\n \
+USAGE="Usage: $PROG_NAME [options] remote_hostname remote_cmd [remote options and arguments]\n \
  --rgahp-user REMOTE_USER \tuser name on the remote host\n \
  --rgahp-key PRIVATE-KEY-PATH \tlocation of ssh private key (~/.ssh/id_rsa)\n \
  --rgahp-nokey  \t\tno ssh private key or key already enabled (same as empty rgahp-key)\n \
@@ -74,12 +78,16 @@ eval set -- "$TEMP"
 tmp_found=1
 for i; do
 	if [ $tmp_found -eq 0 ] ; then 
-		REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
-		echo "$i" | grep -q '@'
-		if [ $? -eq 0 ] ; then
-		    REMOTE_USER=`echo "$i" | sed 's/@.*//'`
+		if [ "x${REMOTE_HOSTNAME}" = "x" ] ; then
+		    REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
+		    echo "$i" | grep -q '@'
+		    if [ $? -eq 0 ] ; then
+		        REMOTE_USER=`echo "$i" | sed 's/@.*//'`
+		    fi
+		else
+		    REMOTE_CMD="$i"
+		    break
 		fi
-		break
 	fi
 	if [ "$i" = "--" ]; then tmp_found=0; fi
 done
@@ -134,78 +142,12 @@ if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# start the ssh-agent
 	eval `ssh-agent -s` 1>&2
 
-	# get the passphrase
-        PASSPHRASE=""
-        if [ -f $PASSPHRASE_LOCATION ]; then
-		PASSPHRASE=`cat $PASSPHRASE_LOCATION`
-        fi
-
-	# create a temp file for the expect script
-	SSH_ADD_SCRIPT=`mktemp`
-	chmod 700 $SSH_ADD_SCRIPT
-
-	# Create the expect script
-	echo "#!/usr/bin/expect -f
-		# get arguments
-		set num_args [llength \$argv]
-		set private_key_loc [lindex \$argv 0]
-
-		# spawn ssh-add process
-		spawn ssh-add $PRIVATE_KEY_LOCATION
-
-		set spawn_pid [exp_pid]
-
-		# set timeout for expected input
-		set timeout 5
-
-		expect {
-			# no passphrase required
-			\"*Identity added*\" {
-				exit 0
-			}
-			# sends passphrase
-			\"*passphrase*\" {
-				send -- \"$PASSPHRASE\r\"
-			}
-			# no ssh-agent running
-			\"*authentication agent*\" {
-				exit -1
-			}
-			# incorrect private key location
-			timeout {
-				exit -2
-			}
-		}
-
-		expect {
-			# all done
-			eof	{
-				exit 0
-			}
-			# incorrect passphrase
-			\"*passphrase*\" {
-				exit -3
-			}
-			# timeout
-			timeout {
-				exit -4
-			}
-		}" > $SSH_ADD_SCRIPT
-	
-
-	# call the expect script to ssh-add identity
-	$SSH_ADD_SCRIPT 1>&2
+	# Call the external program to do ssh-add
+	bosco_ssh_start
 	ADD_STATUS=$?
-
-	# remove temporary script
-	rm $SSH_ADD_SCRIPT
 
 	# check if ssh-add failed
 	if [ $ADD_STATUS != 0 ] ; then
-		# ssh-add script not found
-		if [ $ADD_STATUS == 1 ] ; then
-			ADD_STATUS=-1
-		fi
 		eval `ssh-agent -sk` 1>&2
 		exit $ADD_STATUS
 	fi
@@ -219,7 +161,13 @@ shift
 
 # use BatchMode so we fail if a password is requested
 #echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
-ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -i -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+if [ "${REMOTE_CMD}" = "batch_gahp" ] ; then
+    ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
+    ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+else
+    echo "Unknown remote command" 1>&2
+fi
 
 SSH_STATUS=$?
 

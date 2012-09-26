@@ -23,7 +23,6 @@
 #include "subsystem_info.h"
 #include "baseshadow.h"
 #include "shadow.h"
-#include "mpishadow.h"
 #include "parallelshadow.h"
 #include "exit.h"
 #include "condor_debug.h"
@@ -202,7 +201,7 @@ readJobAd( void )
 		EXCEPT( "reading ClassAd from (%s): file is empty",
 				is_stdin ? "STDIN" : job_ad_file );
 	}
-	if( (DebugFlags & D_JOB) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose(D_JOB) ) {
 		ad->dPrint( D_JOB );
 	} 
 
@@ -251,9 +250,6 @@ initShadow( ClassAd* ad )
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_VM:
 		Shadow = new UniShadow();
-		break;
-	case CONDOR_UNIVERSE_MPI:
-		Shadow = new MPIShadow();
 		break;
 	default:
 		dprintf( D_ALWAYS, "This version of the shadow cannot support "
@@ -430,7 +426,7 @@ dumpClassad( const char* header, ClassAd* ad, int debug_flag )
 				 header );   
 		return;
 	}
-	if( DebugFlags & debug_flag ) {
+	if( IsDebugCatAndVerbosity(debug_flag) ) {
 		dprintf( debug_flag, "*** ClassAd Dump: %s ***\n", header );  
 		ad->dPrint( debug_flag );
 		dprintf( debug_flag, "--- End of ClassAd ---\n" );

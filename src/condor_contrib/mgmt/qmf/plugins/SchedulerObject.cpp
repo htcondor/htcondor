@@ -130,7 +130,7 @@ SchedulerObject::update(const ClassAd &ad)
 	mgmtObject->set_System(mgmtObject->get_Machine());
 
 	// debug
-	if (DebugFlags & D_FULLDEBUG) {
+	if (IsFulldebug(D_FULLDEBUG)) {
 		const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
 	}
 }
@@ -191,6 +191,11 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 	ClassAd ad;
 	int universe;
 
+    // ShouldTransferFiles - unset by default, must be set
+    // shadow will try to setup local transfer sandbox otherwise
+    // without good priv
+    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
+
 	if (!PopulateAdFromVariantMap(jobAdMap, ad, text)) {
 		AbortTransaction();
 		return STATUS_USER + 3;
@@ -202,9 +207,6 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 		text = "Job ad is missing required attributes: " + missing;
 		return STATUS_USER + 4;
 	}
-
-    // ShouldTransferFiles - unset by default, must be set
-    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
 
 		// EARLY SET: These attribute are set early so the incoming ad
 		// has a change to override them.
@@ -281,7 +283,7 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 		// 7. Return identifier
 		// TODO: dag ids?
 	MyString tmp;
-	tmp.sprintf("%s#%d.%d", Name, cluster, proc);
+	tmp.formatstr("%s#%d.%d", Name, cluster, proc);
 	id = tmp.Value();
 
 	return STATUS_OK;
@@ -455,8 +457,10 @@ SchedulerObject::ManagementMethod(uint32_t methodId,
 
 	switch (methodId) {
 	case qmf::com::redhat::grid::Scheduler::METHOD_ECHO:
-		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
-
+		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) {
+			qmgmt_all_users_trusted = orig_qaut;
+			return STATUS_NOT_IMPLEMENTED;
+		}
 		break;
 	case qmf::com::redhat::grid::Scheduler::METHOD_SUBMITJOB:
 		result = Submit(((ArgsSchedulerSubmitJob &) args).i_Ad,

@@ -65,7 +65,8 @@ typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
 typedef HashTable <MyString, MyString> PluginHashTable;
 
-typedef int		(Service::*FileTransferHandler)(FileTransfer *);
+typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
+typedef int		(*FileTransferHandler)(FileTransfer *);
 
 
 class FileTransfer {
@@ -135,9 +136,13 @@ class FileTransfer {
 			last transfer.  It is safe for the handler to deallocate the
 			FileTransfer object.
 		*/
-	void RegisterCallback(FileTransferHandler handler, Service* handlerclass)
+	void RegisterCallback(FileTransferHandler handler)
 		{ 
 			ClientCallback = handler; 
+		}
+	void RegisterCallback(FileTransferHandlerCpp handler, Service* handlerclass)
+		{ 
+			ClientCallbackCpp = handler; 
 			ClientCallbackClass = handlerclass;
 		}
 
@@ -173,6 +178,8 @@ class FileTransfer {
 	static int HandleCommands(Service *,int command,Stream *s);
 
 	static int Reaper(Service *, int pid, int exit_status);
+
+	static bool SetServerShouldBlock( bool block );
 
 	int Suspend();
 
@@ -237,6 +244,7 @@ class FileTransfer {
 	MyString DeterminePluginMethods( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
 	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, const char* proxy_filename = NULL);
+	MyString GetSupportedMethods();
 
 		// Convert directories with a trailing slash to a list of the contents
 		// of the directory.  This is used so that ATTR_TRANSFER_INPUT_FILES
@@ -271,6 +279,8 @@ class FileTransfer {
 		if (pStart) *pStart = downloadStartTime;
 		return true;
 	}
+
+	ClassAd *GetJobAd();
 
   protected:
 
@@ -332,6 +342,7 @@ class FileTransfer {
 	time_t TransferStart;
 	int TransferPipe[2];
 	FileTransferHandler ClientCallback;
+	FileTransferHandlerCpp ClientCallbackCpp;
 	Service* ClientCallbackClass;
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table;
@@ -346,6 +357,7 @@ class FileTransfer {
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
+	static bool ServerShouldBlock;
 	int clientSockTimeout;
 	bool did_init;
 	bool simple_init;

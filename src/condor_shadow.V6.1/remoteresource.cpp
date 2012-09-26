@@ -718,7 +718,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 			MyString filetrans_claimid;
 				// prepend something to the claim id so that the session id
 				// is different for file transfer than for the claim session
-			filetrans_claimid.sprintf("filetrans.%s",claim_id);
+			filetrans_claimid.formatstr("filetrans.%s",claim_id);
 			m_filetrans_session = ClaimIdParser(filetrans_claimid.Value());
 
 				// Get rid of session parameters set by startd.
@@ -1051,7 +1051,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 	hadContact();
 
-	if( DebugFlags & D_MACHINE ) {
+	if( IsDebugLevel(D_MACHINE) ) {
 		dprintf( D_MACHINE, "Update ad:\n" );
 		update_ad->dPrint( D_MACHINE );
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
@@ -1076,9 +1076,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
 	if( tree ) {
-		jobAd->Insert(ATTR_MEMORY_USAGE, tree->Copy());
+		tree = tree->Copy();
+		jobAd->Insert(ATTR_MEMORY_USAGE, tree, false);
 	}
 
+	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
+		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, float_value);
+	}
+	
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {
 		int rss = remote_rusage.ru_maxrss;
 		if( !jobAd->LookupInteger(ATTR_RESIDENT_SET_SIZE,rss) || rss < int_value ) {
@@ -1207,12 +1212,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	classad::Value val;
-	if (jobAd->EvaluateAttr(ATTR_MEMORY_USAGE, val)) {
-		classad_int64 cint64_value;
-		if (val.IsIntegerValue(cint64_value)) { // TJ: fix for int64 classad
-			memory_usage_mb = cint64_value;
-		}
+	if (jobAd->EvalInteger(ATTR_MEMORY_USAGE, NULL, int64_value)) {
+		memory_usage_mb = int64_value;
 	}
 
 	MyString starter_addr;
@@ -1900,12 +1901,19 @@ RemoteResource::requestReconnect( void )
 		// FileTransfer server object right here.  No worries if
 		// one already exists, the FileTransfer object will just
 		// quickly and quietly return success in that case.
+		//
+		// Tell the FileTransfer object to create a file catalog if
+		// the job's files are spooled. This prevents FileTransfer
+		// from listing unmodified input files as intermediate files
+		// that need to be transferred back from the starter.
 	ASSERT(jobAd);
-	filetrans.Init( jobAd, true, PRIV_USER, false );
+	int spool_time = 0;
+	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
+	filetrans.Init( jobAd, true, PRIV_USER, spool_time != 0 );
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {
-		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
+		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
 		req.Insert(msg.Value());
 		free(value);
 		value = NULL;
@@ -1915,7 +1923,7 @@ RemoteResource::requestReconnect( void )
 	}
 	jobAd->LookupString(ATTR_TRANSFER_SOCKET,&value);
 	if (value) {
-		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
+		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
 		req.Insert(msg.Value());
 		free(value);
 		value = NULL;
@@ -2174,7 +2182,7 @@ RemoteResource::checkX509Proxy( void )
 			&quoted_DN_and_FQAN);
 	if (vomserr == 0) {
 		// VOMS attributes were found
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "VOMS attributes were found\n");
 		}
 		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
@@ -2184,7 +2192,7 @@ RemoteResource::checkX509Proxy( void )
 		free(firstfqan);
 		free(quoted_DN_and_FQAN);
 	} else {
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "VOMS attributes were not found\n");
 		}
 	}

@@ -128,7 +128,7 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 			m_max_rotation = -1;
 		}
 
-		if ( DebugFlags & D_FULLDEBUG ) {
+		if (IsFulldebug(D_FULLDEBUG)) {
 			dprint( D_FULLDEBUG, "UserLogHeader::ExtractEvent(): parsed ->" );
 		}
 		return ULOG_OK;
@@ -146,7 +146,7 @@ void
 UserLogHeader::sprint_cat( MyString &buf ) const
 {
 	if ( m_valid ) {
-		buf.sprintf_cat( "id=%s"
+		buf.formatstr_cat( "id=%s"
 						 " seq=%d"
 						 " ctime=%lu"
 						 " size="FILESIZE_T_FORMAT
@@ -175,7 +175,7 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 void
 UserLogHeader::dprint( int level, MyString &buf ) const
 {
-	if ( 0 == ( level & DebugFlags ) ) {
+	if ( ! IsDebugCatAndVerbosity(level) ) {
 		return;
 	}
 
@@ -187,7 +187,7 @@ UserLogHeader::dprint( int level, MyString &buf ) const
 void
 UserLogHeader::dprint( int level, const char *label ) const
 {
-	if ( 0 == ( level & DebugFlags ) ) {
+	if ( ! IsDebugCatAndVerbosity(level) ) {
 		return;
 	}
 
@@ -196,7 +196,7 @@ UserLogHeader::dprint( int level, const char *label ) const
 	}
 
 	MyString	buf;
-	buf.sprintf( "%s header:", label );
+	buf.formatstr( "%s header:", label );
 	this->dprint( level, buf );
 }
 

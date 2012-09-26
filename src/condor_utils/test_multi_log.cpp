@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 		// Set up the dprintf stuff...
 	Termlog = true;
 	dprintf_config("test_multi_log", get_param_functions());
-	DebugFlags = D_ALWAYS;
+	set_debug_flags(NULL, D_ALWAYS);
 
 	int		result = 0;
 
@@ -102,7 +102,7 @@ CheckArgs(int argc, char **argv)
 				printf("%s", usage);
 				status = STATUS_ERROR;
 			} else {
-				set_debug_flags( argv[index] );
+				set_debug_flags( argv[index], 0 );
 			}
 
 		} else if ( !strcmp(argv[index], "-usage") ) {
@@ -692,7 +692,7 @@ monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 	CondorError errstack;
 	if ( !reader.monitorLogFile( logfile, truncateIfFirst, errstack ) ) {
 		printf( "Error monitoring log file %s: %s\n", logfile,
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		return false;
 	}
 
@@ -706,7 +706,7 @@ unmonitorLogFile( ReadMultipleUserLogs &reader, const char *logfile )
 	CondorError errstack;
 	if ( !reader.unmonitorLogFile( logfile, errstack ) ) {
 		printf( "Error unmonitoring log file %s: %s\n", logfile,
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		return false;
 	}
 

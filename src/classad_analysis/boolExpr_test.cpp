@@ -119,6 +119,7 @@ GetTypeName( Value::ValueType type, string &result )
 	case Value::ABSOLUTE_TIME_VALUE: { result = "Absolute Time"; return true; }
 	case Value::STRING_VALUE: { result = "String"; return true; }
 	case Value::CLASSAD_VALUE: { result = "ClassAd"; return true; }
+	case Value::SLIST_VALUE:
 	case Value::LIST_VALUE: { result = "List"; return true; }
 	default:  { result = "Unknown"; return true; }
 	}

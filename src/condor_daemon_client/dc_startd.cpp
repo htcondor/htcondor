@@ -51,7 +51,7 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	}
 }
 
-DCStartd::DCStartd( ClassAd *ad, const char *tPool )
+DCStartd::DCStartd( const ClassAd *ad, const char *tPool )
 	: Daemon(ad,DT_STARTD,tPool),
 	  claim_id(NULL)
 {
@@ -112,9 +112,9 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_job_ad.Assign("_condor_SEND_LEFTOVERS",
 		param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true));
 
-	if( !sock->put_secret( m_claim_id.Value() ) ||
+	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !m_job_ad.put( *sock ) ||
-	    !sock->put( m_scheduler_addr.Value() ) ||
+	    !sock->put( m_scheduler_addr.c_str() ) ||
 	    !sock->put( m_alive_interval ) )
 	{
 		dprintf(failureDebugLevel(),
@@ -239,11 +239,11 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::deactivateClaim: ";
+		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 	int cmd;
@@ -254,7 +254,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 	}
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
-		MyString err = "DCStartd::deactivateClaim: ";
+		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send command ";
 		if( graceful ) {
 			err += "DEACTIVATE_CLAIM";
@@ -262,20 +262,18 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 			err += "DEACTIVATE_CLAIM_FORCIBLY";
 		}
 		err += " to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		return false;
 	}
 		// Now, send the ClaimId
 	if( ! reli_sock.put_secret(claim_id) ) {
-		MyString err = "DCStartd::deactivateClaim: ";
-		err += "Failed to send ClaimId to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::deactivateClaim: Failed to send ClaimId to the startd" );
 		return false;
 	}
 	if( ! reli_sock.end_of_message() ) {
-		MyString err = "DCStartd::deactivateClaim: ";
-		err += "Failed to send EOM to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::deactivateClaim: Failed to send EOM to the startd" );
 		return false;
 	}
 
@@ -319,9 +317,8 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	}
 
 	if( ! claim_id ) {
-		MyString err = "DCStartd::activateClaim: ";
-		err += "called with NULL claim_id, failing";
-		newError( CA_INVALID_REQUEST, err.Value() );
+		newError( CA_INVALID_REQUEST,
+				  "DCStartd::activateClaim: called with NULL claim_id, failing" );
 		return CONDOR_ERROR;
 	}
 
@@ -332,38 +329,31 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	Sock* tmp;
 	tmp = startCommand( ACTIVATE_CLAIM, Stream::reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! tmp ) {
-		MyString err = "DCStartd::activateClaim: ";
-		err += "Failed to send command ";
-		err += "ACTIVATE_CLAIM";
-		err += " to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::activateClaim: Failed to send command ACTIVATE_CLAIM to the startd" );
 		return CONDOR_ERROR;
 	}
 	if( ! tmp->put_secret(claim_id) ) {
-		MyString err = "DCStartd::activateClaim: ";
-		err += "Failed to send ClaimId to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::activateClaim: Failed to send ClaimId to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if( ! tmp->code(starter_version) ) {
-		MyString err = "DCStartd::activateClaim: ";
-		err += "Failed to send starter_version to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::activateClaim: Failed to send starter_version to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if( ! job_ad->put(*tmp) ) {
-		MyString err = "DCStartd::activateClaim: ";
-		err += "Failed to send job ClassAd to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::activateClaim: Failed to send job ClassAd to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if( ! tmp->end_of_message() ) {
-		MyString err = "DCStartd::activateClaim: ";
-		err += "Failed to send EOM to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::activateClaim: Failed to send EOM to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
@@ -371,10 +361,10 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		// Now, try to get the reply
 	tmp->decode();
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
-		MyString err = "DCStartd::activateClaim: ";
+		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
 		err += _addr;
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
@@ -399,7 +389,7 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 {
 	setCmdStr( "requestClaim" );
 
-	MyString err_msg;
+	std::string err_msg;
 	switch( cType ) {
 	case CLAIM_COD:
 	case CLAIM_OPPORTUNISTIC:
@@ -408,7 +398,7 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 		err_msg = "Invalid ClaimType (";
 		err_msg += (int)cType;
 		err_msg += ')';
-		newError( CA_INVALID_REQUEST, err_msg.Value() );
+		newError( CA_INVALID_REQUEST, err_msg.c_str() );
 		return false;
 	}
 
@@ -608,9 +598,8 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 	setCmdStr( "delegateX509Proxy" );
 
 	if( ! claim_id ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		                "Called with NULL claim_id";
-		newError( CA_INVALID_REQUEST, err.Value() );
+		newError( CA_INVALID_REQUEST,
+				  "DCStartd::delegateX509Proxy: Called with NULL claim_id" );
 		return CONDOR_ERROR;
 	}
 
@@ -625,11 +614,8 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 	                                         20, NULL, NULL, false,
 											 cidp.secSessionId() ); 
 	if( ! tmp ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "Failed to send command "
-		               "DELEGATE_GSI_CRED_STARTD "
-		               "to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: Failed to send command DELEGATE_GSI_CRED_STARTD to the startd" );
 		return CONDOR_ERROR;
 	}
 
@@ -641,16 +627,14 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 	tmp->decode();
 	int reply;
 	if( !tmp->code(reply) ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "failed to receive reply from startd (1)";
-		newError( CA_COMMUNICATION_ERROR , err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: failed to receive reply from startd (1)" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if ( !tmp->end_of_message() ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "end of message error from startd (1)";
-		newError( CA_COMMUNICATION_ERROR , err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: end of message error from startd (1)" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
@@ -666,16 +650,14 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 	int use_delegation =
 		param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ? 1 : 0;
 	if( !tmp->code( claim_id ) ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "Failed to send claim id to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: Failed to send claim id to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if ( !tmp->code( use_delegation ) ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "Failed to send use_delegation flag to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: Failed to send use_delegation flag to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
@@ -688,25 +670,22 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 		dprintf( D_FULLDEBUG,
 		         "DELEGATE_JOB_GSI_CREDENTIALS is False; using direct copy\n");
 		if( ! tmp->get_encryption() ) {
-			MyString err = "DCStartd::delegateX509Proxy: "
-		               "Cannot copy: channel does not have encryption enabled";
-			newError( CA_COMMUNICATION_ERROR, err.Value() );
+			newError( CA_COMMUNICATION_ERROR,
+					  "DCStartd::delegateX509Proxy: Cannot copy: channel does not have encryption enabled" );
 			delete tmp;
 			return CONDOR_ERROR;
 		}
 		rv = tmp->put_file( &dont_care, proxy );
 	}
 	if( rv == -1 ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "Failed to delegate proxy";
-		newError( CA_FAILURE, err.Value() );
+		newError( CA_FAILURE,
+				  "DCStartd::delegateX509Proxy: Failed to delegate proxy" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if ( !tmp->end_of_message() ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "end of message error to startd";
-		newError( CA_FAILURE, err.Value() );
+		newError( CA_FAILURE,
+				  "DCStartd::delegateX509Proxy: end of message error to startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
@@ -714,24 +693,21 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 	// command successfully sent; now get the reply
 	tmp->decode();
 	if( !tmp->code(reply) ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "failed to receive reply from startd (2)";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: failed to receive reply from startd (2)" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	if ( !tmp->end_of_message() ) {
-		MyString err = "DCStartd::delegateX509Proxy: "
-		               "end of message error from startd (2)";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::delegateX509Proxy: end of message error from startd (2)" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
 	delete tmp;
 
 	dprintf( D_FULLDEBUG,
-	         "DCStartd::delegateX509Proxy: successfully sent command, "
-	         "reply is: %d\n",
+	         "DCStartd::delegateX509Proxy: successfully sent command, reply is: %d\n",
 	         reply );
 
 	return reply;
@@ -746,11 +722,11 @@ DCStartd::vacateClaim( const char* name_vacate )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::vacateClaim: ";
+		std::string err = "DCStartd::vacateClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -758,24 +734,19 @@ DCStartd::vacateClaim( const char* name_vacate )
 
 	result = startCommand( cmd, (Sock*)&reli_sock ); 
 	if( ! result ) {
-		MyString err = "DCStartd::vacateClaim: ";
-		err += "Failed to send command ";
-		err += "PCKPT_JOB";
-		err += " to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::vacateClaim: Failed to send command PCKPT_JOB to the startd" );
 		return false;
 	}
 
 	if( ! reli_sock.code((unsigned char *)name_vacate) ) {
-		MyString err = "DCStartd::vacateClaim: ";
-		err += "Failed to send Name to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::vacateClaim: Failed to send Name to the startd" );
 		return false;
 	}
 	if( ! reli_sock.end_of_message() ) {
-		MyString err = "DCStartd::vacateClaim: ";
-		err += "Failed to send EOM to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::vacateClaim: Failed to send EOM to the startd" );
 		return false;
 	}
 		
@@ -802,11 +773,11 @@ DCStartd::_suspendClaim( )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::_suspendClaim: ";
+		std::string err = "DCStartd::_suspendClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -814,24 +785,21 @@ DCStartd::_suspendClaim( )
 
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
-		MyString err = "DCStartd::_suspendClaim: ";
-		err += "Failed to send command ";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::_suspendClaim: Failed to send command " );
 		return false;
 	}
 	
 	// Now, send the ClaimId
 	if( ! reli_sock.put_secret(claim_id) ) {
-		MyString err = "DCStartd::_suspendClaim: ";
-		err += "Failed to send ClaimId to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::_suspendClaim: Failed to send ClaimId to the startd" );
 		return false;
 	}
 
 	if( ! reli_sock.end_of_message() ) {
-		MyString err = "DCStartd::_suspendClaim: ";
-		err += "Failed to send EOM to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::_suspendClaim: Failed to send EOM to the startd" );
 		return false;
 	}
 	
@@ -858,11 +826,11 @@ DCStartd::_continueClaim( )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::_continueClaim: ";
+		std::string err = "DCStartd::_continueClaim: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -870,24 +838,21 @@ DCStartd::_continueClaim( )
 
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
-		MyString err = "DCStartd::_continueClaim: ";
-		err += "Failed to send command ";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::_continueClaim: Failed to send command " );
 		return false;
 	}
 	
 	// Now, send the ClaimId
 	if( ! reli_sock.put_secret(claim_id) ) {
-		MyString err = "DCStartd::_suspendClaim: ";
-		err += "Failed to send ClaimId to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::_suspendClaim: Failed to send ClaimId to the startd" );
 		return false;
 	}
 
 	if( ! reli_sock.end_of_message() ) {
-		MyString err = "DCStartd::_continueClaim: ";
-		err += "Failed to send EOM to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::_continueClaim: Failed to send EOM to the startd" );
 		return false;
 	}
 		
@@ -907,11 +872,11 @@ DCStartd::checkpointJob( const char* name_ckpt )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		MyString err = "DCStartd::checkpointJob: ";
+		std::string err = "DCStartd::checkpointJob: ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
-		newError( CA_CONNECT_FAILED, err.Value() );
+		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
 
@@ -919,25 +884,20 @@ DCStartd::checkpointJob( const char* name_ckpt )
 
 	result = startCommand( cmd, (Sock*)&reli_sock ); 
 	if( ! result ) {
-		MyString err = "DCStartd::checkpointJob: ";
-		err += "Failed to send command ";
-		err += "PCKPT_JOB";
-		err += " to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::checkpointJob: Failed to send command PCKPT_JOB to the startd" );
 		return false;
 	}
 
 		// Now, send the name
 	if( ! reli_sock.code((unsigned char *)name_ckpt) ) {
-		MyString err = "DCStartd::checkpointJob: ";
-		err += "Failed to send Name to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::checkpointJob: Failed to send Name to the startd" );
 		return false;
 	}
 	if( ! reli_sock.end_of_message() ) {
-		MyString err = "DCStartd::checkpointJob: ";
-		err += "Failed to send EOM to the startd";
-		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		newError( CA_COMMUNICATION_ERROR,
+				  "DCStartd::checkpointJob: Failed to send EOM to the startd" );
 		return false;
 	}
 		// we're done
@@ -967,7 +927,7 @@ DCStartd::getAds( ClassAdList &adsList )
 		q = query->fetchAds(adsList, ad_addr, &errstack);
 		if (q != Q_OK) {
         	if (q == Q_COMMUNICATION_ERROR) {
-            	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true) );
+            	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true).c_str() );
         	}
         	else {
             	dprintf (D_ALWAYS, "Error:  Could not fetch ads --- %s\n",
@@ -991,13 +951,13 @@ DCStartd::checkClaimId( void )
 	if( claim_id ) {
 		return true;
 	}
-	MyString err_msg;
+	std::string err_msg;
 	if( _cmd_str ) {
 		err_msg += _cmd_str;
 		err_msg += ": ";
 	}
 	err_msg += "called with no ClaimId";
-	newError( CA_INVALID_REQUEST, err_msg.Value() );
+	newError( CA_INVALID_REQUEST, err_msg.c_str() );
 	return false;
 }
 
@@ -1005,16 +965,14 @@ DCStartd::checkClaimId( void )
 bool
 DCStartd::checkVacateType( VacateType t )
 {
-	MyString err_msg;
+	std::string err_msg;
 	switch( t ) {
 	case VACATE_GRACEFUL:
 	case VACATE_FAST:
 		break;
 	default:
-		err_msg = "Invalid VacateType (";
-		err_msg += (int)t;
-		err_msg += ')';
-		newError( CA_INVALID_REQUEST, err_msg.Value() );
+		formatstr(err_msg, "Invalid VacateType (%d)", (int)t);
+		newError( CA_INVALID_REQUEST, err_msg.c_str() );
 		return false;
 	}
 	return true;
@@ -1028,7 +986,7 @@ DCClaimIdMsg::DCClaimIdMsg( int cmd, char const *claim_id ):
 
 bool DCClaimIdMsg::writeMsg( DCMessenger *, Sock *sock )
 {
-	if( !sock->put_secret( m_claim_id.Value() ) ) {
+	if( !sock->put_secret( m_claim_id.c_str() ) ) {
 		sockFailed( sock );
 		return false;
 	}
@@ -1055,7 +1013,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	ClassAd request_ad;
 	Sock *sock = startCommand( DRAIN_JOBS, Sock::reli_sock, 20 );
 	if( !sock ) {
-		sprintf(error_msg,"Failed to start DRAIN_JOBS command to %s",name());
+		formatstr(error_msg,"Failed to start DRAIN_JOBS command to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;
 	}
@@ -1067,7 +1025,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	}
 
 	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to compose DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to compose DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
 		return false;
@@ -1076,7 +1034,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 	sock->decode();
 	ClassAd response_ad;
 	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to get response to DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to get response to DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
 		return false;
@@ -1091,7 +1049,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 		std::string remote_error_msg;
 		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
 		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
-		sprintf(error_msg,
+		formatstr(error_msg,
 				"Received failure from %s in response to DRAIN_JOBS request: error code %d: %s",
 				name(),error_code,remote_error_msg.c_str());
 		newError(CA_FAILURE,error_msg.c_str());
@@ -1110,7 +1068,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 	ClassAd request_ad;
 	Sock *sock = startCommand( CANCEL_DRAIN_JOBS, Sock::reli_sock, 20 );
 	if( !sock ) {
-		sprintf(error_msg,"Failed to start CANCEL_DRAIN_JOBS command to %s",name());
+		formatstr(error_msg,"Failed to start CANCEL_DRAIN_JOBS command to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;
 	}
@@ -1120,7 +1078,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 	}
 
 	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to compose CANCEL_DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to compose CANCEL_DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;
 	}
@@ -1128,7 +1086,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 	sock->decode();
 	ClassAd response_ad;
 	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
-		sprintf(error_msg,"Failed to get response to CANCEL_DRAIN_JOBS request to %s",name());
+		formatstr(error_msg,"Failed to get response to CANCEL_DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
 		return false;
@@ -1141,7 +1099,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 		std::string remote_error_msg;
 		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
 		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
-		sprintf(error_msg,
+		formatstr(error_msg,
 				"Received failure from %s in response to CANCEL_DRAIN_JOBS request: error code %d: %s",
 				name(),error_code,remote_error_msg.c_str());
 		newError(CA_FAILURE,error_msg.c_str());

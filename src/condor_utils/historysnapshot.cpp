@@ -196,7 +196,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
                                  owner = "NULL";
                          if (!ad->LookupInteger(ATTR_COMPLETION_DATE, compl_date))
                                  compl_date = 0;
-                         temp.sprintf("*** Offset = %ld ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
+                         temp.formatstr("*** Offset = %ld ClusterId = %d ProcId = %d Owner = \"%s\" CompletionDate = %d\n",
                                         offset - last_line, curClusterId_hor, curProcId_hor, owner.Value(), compl_date);
 
                          offset += ad_str.Length() + temp.Length();

@@ -25,7 +25,7 @@ JobCollectionType g_jobs;
 SubmissionCollectionType g_submissions;
 OwnerlessClusterType g_ownerless_clusters;
 SubmissionIndexType g_ownerless_submissions;
-SubmissionIndexType g_qdate_submissions;
+SubmissionMultiIndexType g_qdate_submissions;
 
 // when it absolutely, positively has to be right...
 void global_reset() {

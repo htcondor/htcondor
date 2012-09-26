@@ -50,7 +50,7 @@ int StdUnivSock::setsockopt(int level, int optname, const char* optval, int optl
 
 int StdUnivSock::close()
 {
-	if (type() == Stream::reli_sock && (DebugFlags & D_NETWORK)) {
+	if (type() == Stream::reli_sock && IsDebugLevel(D_NETWORK)) {
 		dprintf( D_NETWORK, "CLOSE %s fd=%d\n", 
 						sock_to_string(_sock), _sock );
 	}

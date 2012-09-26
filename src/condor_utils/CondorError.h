@@ -21,7 +21,6 @@
 #define CONDORERROR_H_INCLUDE
 
 #include "condor_common.h"
-#include "MyString.h"
 
 #include "condor_error_codes.h"
 
@@ -34,7 +33,7 @@ class CondorError {
 		CondorError& operator=(CondorError&);
 		void push( const char* subsys, int code, const char* message );
 		void pushf( const char* subsys, int code, const char* format, ... ) CHECK_PRINTF_FORMAT(4,5); 
-		const char* getFullText( bool want_newline = false );
+		std::string getFullText( bool want_newline = false );
 		const char* subsys(int level = 0);
 		int   code(int level = 0);
 		const char* message(int level = 0);
@@ -51,7 +50,6 @@ class CondorError {
 		int   _code;
 		char* _message;
 		CondorError *_next;
-
 };
 
 

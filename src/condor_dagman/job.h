@@ -32,8 +32,6 @@
 #include "CondorError.h"
 #include <set>
 
-using namespace std;
-
 class ThrottleByCategory;
 class Dag;
 
@@ -63,7 +61,9 @@ typedef int JobID_t;
      in the Condor system.  If it completes successfully and the job
      has a POST script defined it changes to POSTRUN while that script
      executes, otherwise if it completes successfully it is DONE, or
-     is in the ERROR state if it completes abnormally.<p>
+     is in the ERROR state if it completes abnormally.  Note that final
+     nodes are a special case -- they are created with a state of
+     NOT_READY<p>
 
      The DAG class will control the job by modifying and viewing its
      three queues.  Once the WAITING queue becomes empty, the job
@@ -191,7 +191,7 @@ class Job {
 	Script * _scriptPost;
 
     ///
-    inline set<JobID_t> & GetQueueRef (const queue_t queue) {
+    inline std::set<JobID_t> & GetQueueRef (const queue_t queue) {
         return _queues[queue];
     }
 
@@ -220,9 +220,11 @@ class Job {
 
 	/** Check whether the submit file for this job has a log file
 	    defined.
+		@param usingDefault is true if DAGman is watching the
+			default node log
 		@return true iff the submit file defines a log file
 	*/
-	bool CheckForLogFile() const;
+	bool CheckForLogFile(bool usingDefault) const;
 
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
@@ -355,7 +357,7 @@ class Job {
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-				bool recovery, const char *defaultNodeLog );
+				bool recovery, const char *defaultNodeLog, bool usingDefault );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -367,7 +369,7 @@ class Job {
 				ReadMultipleUserLogs &storkLogReader );
 
 		// Whether this node is using the default node log file.
-	bool UsingDefaultLog() { return _useDefaultLog; }
+	bool UsingDefaultLog() const { return _useDefaultLog; }
 
 	/** Get the log file for this node.
 		@return the name of this node's log file.
@@ -491,6 +493,7 @@ class Job {
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
+	bool UseDefaultLog() const { return append_default_log; }
 
 private:
 		// Mark this node as failed because of an error in monitoring
@@ -537,7 +540,7 @@ private:
 		waiting -> Jobs on which the current Job is waiting for output
     */ 
 	
-	set<JobID_t> _queues[3];
+	std::set<JobID_t> _queues[3];
 
     /*	The ID of this job.  This serves as a primary key for Jobs, where each
 		Job's ID is unique from all the rest 
@@ -604,6 +607,7 @@ private:
 
 	// whether this is a final job
 	bool _final;
+	bool append_default_log;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

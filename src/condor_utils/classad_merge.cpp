@@ -42,7 +42,7 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 			ExprTree  *copy_expression;
 
 			copy_expression = expression->Copy();
-			merge_into->Insert(name, copy_expression);
+			merge_into->Insert(name, copy_expression,false);
 			if ( !mark_dirty ) {
 				merge_into->SetDirtyFlag(name, false);
 			}

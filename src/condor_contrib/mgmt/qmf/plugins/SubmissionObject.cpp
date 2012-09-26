@@ -162,7 +162,7 @@ SubmissionObject::updateQdate(const PROC_ID &id) {
 	int q_date, old;
 	if (GetAttributeInt(id.cluster, id.proc, ATTR_Q_DATE, &q_date) >= 0) {
 		old = mgmtObject->get_QDate();
-		if ((q_date < old) || (old <= 0)) {
+		if ((q_date < old)) {
 			mgmtObject->set_QDate((uint64_t) q_date*1000000000);
 		}
 	}
@@ -189,7 +189,7 @@ SubmissionObject::GetJobSummaries ( Variant::List &jobs,
 			NULL
 			};
 
-	constraint.sprintf("%s == \"%s\"",
+	constraint.formatstr("%s == \"%s\"",
 					   ATTR_JOB_SUBMISSION, this->m_name.c_str());
 
 	dprintf(D_FULLDEBUG,"GetJobSummaries for submission: %s\n",constraint.Value());
@@ -199,7 +199,7 @@ SubmissionObject::GetJobSummaries ( Variant::List &jobs,
 	while (NULL != (ad = GetNextJobByConstraint(constraint.Value(), init_scan))) {
 
 		// debug
-//		if (DebugFlags & D_FULLDEBUG) {
+//		if (IsFulldebug(D_FULLDEBUG)) {
 //			ad->dPrint(D_FULLDEBUG|D_NOHEADER);
 //		}
 
@@ -213,7 +213,7 @@ SubmissionObject::GetJobSummaries ( Variant::List &jobs,
 		init_scan = 0;
 
 		// debug
-//		if (DebugFlags & D_FULLDEBUG) {
+//		if (IsFulldebug(D_FULLDEBUG)) {
 //			std::ostringstream oss;
 //			oss << jobs;
 //			dprintf(D_FULLDEBUG|D_NOHEADER, "%s\n",oss.str().c_str());

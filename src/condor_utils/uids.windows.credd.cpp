@@ -72,7 +72,7 @@ cache_credd_locally (
 {
 	bool fAdded = false;
 	MyString my_full_name;
-	my_full_name.sprintf("%s@%s",username,domain);
+	my_full_name.formatstr("%s@%s",username,domain);
 	if ( addCredential(my_full_name.Value(),pw) == SUCCESS ) {
 		dprintf(D_FULLDEBUG,
 			"init_user_ids: "

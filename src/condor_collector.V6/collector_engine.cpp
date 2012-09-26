@@ -466,7 +466,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 	}
 	if( !collector_req_result ) {
 		static int details_shown=0;
-		bool show_details = (details_shown<10) || (DebugFlags & D_FULLDEBUG);
+		bool show_details = (details_shown<10) || IsFulldebug(D_FULLDEBUG);
 		dprintf(D_ALWAYS,"%s VIOLATION: requirements do not match ad from %s.%s\n",
 				COLLECTOR_REQUIREMENTS,
 				sock ? sock->get_sinful_peer() : "(null)",
@@ -962,7 +962,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		{
 			EXCEPT ("Error reading system time!");
 		}	
-		buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
+		buf.formatstr( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
 		ad->Insert ( buf.Value() );
 	}
 

@@ -58,6 +58,6 @@ joinDomainAndName( char const *domain, char const *name, class MyString &result 
 		result = name;
 	}
 	else {
-		result.sprintf("%s\\%s",domain,name);
+		result.formatstr("%s\\%s",domain,name);
 	}
 }

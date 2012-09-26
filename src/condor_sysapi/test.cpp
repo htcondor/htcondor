@@ -253,7 +253,7 @@ sysapi_test_dump_all(int argc, char** argv)
 		else if (strcmp(argv[i], "--virt_mem") == 0)
 			tests |= VIRT_MEM;
 		else if ( (strcmp(argv[i], "--debug") == 0) && (i+1 < argc)  ) {
-			set_debug_flags( argv[i+1] );
+			set_debug_flags( argv[i+1], 0 );
 			skip = 1;
 		}
 #	  if defined(LINUX)
@@ -460,7 +460,7 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & NCPUS) == NCPUS && linux_cpuinfo_file ) {
 		bool is_proc_cpuinfo = false;
 
-		/* set_debug_flags("D_FULLDEBUG"); */
+		/* set_debug_flags(NULL, D_FULLDEBUG); */
 		if ( strcmp( linux_cpuinfo_file, "/proc/cpuinfo" ) == 0 ) {
 			is_proc_cpuinfo = true;
 			dprintf( D_ALWAYS, "Using the real /proc/cpuinfo\n" );

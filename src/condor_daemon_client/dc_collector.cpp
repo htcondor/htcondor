@@ -43,6 +43,8 @@ DCCollector::DCCollector( const char* dcName, UpdateType uType )
 void
 DCCollector::init( bool needs_reconfig )
 {
+	static long bootTime = 0;
+
 	pending_update_list = NULL;
 	update_rsock = NULL;
 	tcp_collector_host = NULL;
@@ -52,7 +54,12 @@ DCCollector::init( bool needs_reconfig )
 	use_nonblocking_update = true;
 	udp_update_destination = NULL;
 	tcp_update_destination = NULL;
-	startTime = time( NULL );
+
+	if (bootTime == 0) {
+		bootTime = time( NULL );
+	} 
+	startTime = bootTime;
+
 	adSeqMan = NULL;
 
 	if( needs_reconfig ) {
@@ -338,10 +345,10 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 
 	if( _port <= 0 ) {
 			// If it's still 0, we've got to give up and fail.
-		MyString err_msg;
-		err_msg.sprintf( "Can't send update: invalid collector port (%d)", 
+		std::string err_msg;
+		formatstr(err_msg, "Can't send update: invalid collector port (%d)",
 						 _port );
-		newError( CA_COMMUNICATION_ERROR, err_msg.Value() );
+		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
 	}
 
@@ -625,19 +632,21 @@ DCCollector::initDestinationStrings( void )
 		tcp_update_destination = NULL;
 	}
 
-	MyString dest;
+	std::string dest;
 
 		// UDP updates will always be sent to whatever info we've got
 		// in the Daemon object.  So, there's nothing hard to do for
 		// this... just see what useful info we have and use it. 
 	if( _full_hostname ) {
 		dest = _full_hostname;
-		dest += ' ';
-		dest += _addr;
+		if ( _addr) {
+			dest += ' ';
+			dest += _addr;
+		}
 	} else {
-		dest = _addr;
+		if (_addr) dest = _addr;
 	}
-	udp_update_destination = strnewp( dest.Value() );
+	udp_update_destination = strnewp( dest.c_str() );
 
 		// TCP updates, if they happen at all, might go to a different
 		// place.  So, we've got to do a little more work to figure
@@ -660,13 +669,8 @@ DCCollector::initDestinationStrings( void )
 			// we're using (which either came from them, or is the
 			// default COLLECTOR_PORT if unspecified).
 
-		dest = tcp_collector_addr;
-		char buf[64];
-		sprintf( buf, "%d", tcp_collector_port );
-		dest += " (port: ";
-		dest += buf;
-		dest += ')';
-		tcp_update_destination = strnewp( dest.Value() );
+		formatstr(dest, "%s (port: %d)", tcp_collector_addr ? tcp_collector_addr : "", tcp_collector_port);
+		tcp_update_destination = strnewp( dest.c_str() );
 	}
 }
 

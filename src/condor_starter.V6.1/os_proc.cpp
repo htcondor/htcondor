@@ -41,6 +41,7 @@
 #include "profile.WINDOWS.h"
 #include "access_desktop.WINDOWS.h"
 #endif
+#include "classad_oldnew.h"
 
 extern CStarter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
@@ -121,14 +122,14 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
         dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.Value());
     }
 	else if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
-		JobName.sprintf( "%s%c%s",
+		JobName.formatstr( "%s%c%s",
 		                 Starter->GetWorkingDir(),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
     }
 	else if (relative_exe && job_iwd && *job_iwd) {
 		MyString full_name;
-		full_name.sprintf("%s%c%s",
+		full_name.formatstr("%s%c%s",
 		                  job_iwd,
 		                  DIR_DELIM_CHAR,
 		                  JobName.Value());
@@ -377,7 +378,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				 args_string.Value() );
 
 		MyString wrapper_err;
-		wrapper_err.sprintf("%s%c%s", Starter->GetWorkingDir(),
+		wrapper_err.formatstr("%s%c%s", Starter->GetWorkingDir(),
 				 	DIR_DELIM_CHAR,
 					JOB_WRAPPER_FAILURE_FILE);
 		if( ! job_env.SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err.Value()) ) {
@@ -389,14 +390,14 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	}
 
 	MyString path;
-	path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+	path.formatstr("%s%c%s", Starter->GetWorkingDir(),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! job_env.SetEnv("_CONDOR_MACHINE_AD", path.Value()) ) {
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
 	}
 
-	path.sprintf("%s%c%s", Starter->GetWorkingDir(),
+	path.formatstr("%s%c%s", Starter->GetWorkingDir(),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! job_env.SetEnv("_CONDOR_JOB_AD", path.Value()) ) {
@@ -404,7 +405,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	}
 
 		// Grab the full environment back out of the Env object 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_string;
 		job_env.getDelimitedStringForDisplay(&env_string);
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.Value());
@@ -412,9 +413,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	// Check to see if we need to start this process paused, and if
 	// so, pass the right flag to DC::Create_Process().
-	int job_opt_mask = 0;
+	int job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
 	if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
-		job_opt_mask = 	DCJOBOPT_NO_ENV_INHERIT;
+		job_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
 	}
 	int suspend_job_at_exec = 0;
 	JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
@@ -436,6 +437,28 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_truncated ) ) {
 		core_size = (size_t)core_size_truncated;
 		core_size_ptr = &core_size;
+	}
+
+	long rlimit_as_hard_limit = 0;
+	char *rlimit_expr = param("STARTER_RLIMIT_AS");
+	if (rlimit_expr) {
+		classad::ClassAdParser parser;
+
+		classad::ExprTree *tree = parser.ParseExpression(rlimit_expr);
+		if (tree) {
+			classad::Value val;
+			int result;
+
+			if (EvalExprTree(tree, Starter->jic->machClassAd(), JobAd, val) && 
+				val.IsIntegerValue(result)) {
+					rlimit_as_hard_limit = ((long)result) * 1024 * 1024;
+					dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
+			} else {
+				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
+			}
+		} else {
+			dprintf(D_ALWAYS, "Can't parse STARTER_RLIMIT_AS expression: %s\n", rlimit_expr);
+		}
 	}
 
 	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
@@ -540,7 +563,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
                                              affinity_mask,
 											 NULL,
                                              &create_process_err_msg,
-                                             fs_remap);
+                                             fs_remap,
+											 rlimit_as_hard_limit);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
@@ -550,7 +574,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     if ((FALSE == JobPid) && (0 != create_process_errno)) {
         if (create_process_err_msg != "") create_process_err_msg += " ";
         MyString errbuf;
-        errbuf.sprintf("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
+        errbuf.formatstr("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
         create_process_err_msg += errbuf;
     }
 
@@ -698,7 +722,7 @@ OsProc::checkCoreFile( void )
 	// Since Linux now writes out "core.pid" by default, we should
 	// search for that.  Try the JobPid of our first child:
 	MyString name_with_pid;
-	name_with_pid.sprintf( "core.%d", JobPid );
+	name_with_pid.formatstr( "core.%d", JobPid );
 
 	if (Starter->privSepHelper() != NULL) {
 
@@ -716,7 +740,7 @@ OsProc::checkCoreFile( void )
 	}
 	else {
 		MyString new_name;
-		new_name.sprintf( "core.%d.%d",
+		new_name.formatstr( "core.%d.%d",
 		                  Starter->jic->jobCluster(), 
 		                  Starter->jic->jobProc() );
 
@@ -756,8 +780,8 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 	MyString old_full;
 	MyString new_full;
 	const char* job_iwd = Starter->jic->jobIWD();
-	old_full.sprintf( "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
-	new_full.sprintf( "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
+	old_full.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
+	new_full.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
 
 	priv_state old_priv;
 
@@ -867,22 +891,22 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 	MyString buf;
 
 	if (m_proc_exited) {
-		buf.sprintf( "%s=\"Exited\"", ATTR_JOB_STATE );
+		buf.formatstr( "%s=\"Exited\"", ATTR_JOB_STATE );
 	} else if( is_checkpointed ) {
-		buf.sprintf( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
+		buf.formatstr( "%s=\"Checkpointed\"", ATTR_JOB_STATE );
 	} else if( is_suspended ) {
-		buf.sprintf( "%s=\"Suspended\"", ATTR_JOB_STATE );
+		buf.formatstr( "%s=\"Suspended\"", ATTR_JOB_STATE );
 	} else {
-		buf.sprintf( "%s=\"Running\"", ATTR_JOB_STATE );
+		buf.formatstr( "%s=\"Running\"", ATTR_JOB_STATE );
 	}
 	ad->Insert( buf.Value() );
 
-	buf.sprintf( "%s=%d", ATTR_NUM_PIDS, num_pids );
+	buf.formatstr( "%s=%d", ATTR_NUM_PIDS, num_pids );
 	ad->Insert( buf.Value() );
 
 	if (m_proc_exited) {
 		if( dumped_core ) {
-			buf.sprintf( "%s = True", ATTR_JOB_CORE_DUMPED );
+			buf.formatstr( "%s = True", ATTR_JOB_CORE_DUMPED );
 			ad->Insert( buf.Value() );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
@@ -906,7 +930,7 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 	MyString affinityParam;
 
-	affinityParam.sprintf("SLOT%d_CPU_AFFINITY", slotId);
+	affinityParam.formatstr("SLOT%d_CPU_AFFINITY", slotId);
 	char *affinityParamResult = param(affinityParam.Value());
 
 	if (affinityParamResult == NULL) {

@@ -121,6 +121,12 @@ page~\pageref{sec:cod-application-attributes}.
   ClassAd of a job that can be run.
   If there is no work, the hook should return no output.
 
+\item[User id that the hook runs as]
+  The \Macro{<Keyword>\_HOOK\_FETCH\_WORK} hook runs with the same
+privileges as the \Condor{startd}.  When Condor was started as \Login{root},
+this is usually the \Login{condor} user, or the user specified in
+the \Macro{CONDOR\_IDS} configuration variable.
+
 \item[Exit status of the hook]
   Ignored.
 \end{description}
@@ -150,6 +156,12 @@ The hook is simply advisory, and it has no impact on the behavior of the
 \item[Expected standard output from the hook]
   None.
 
+\item[User id that the hook runs as]
+  The \Macro{<Keyword>\_HOOK\_REPLY\_FETCH} hook runs with the same
+privileges as the \Condor{startd}.  When Condor was started as \Login{root},
+this is usually the \Login{condor} user, or the user specified in
+the \Macro{CONDOR\_IDS} configuration variable.
+
 \item[Exit status of the hook]
   Ignored.
 \end{description}
@@ -177,6 +189,12 @@ The hook is simply advisory, and has no impact on the behavior of the
 
 \item[Expected standard output from the hook]
   None.
+
+\item[User id that the hook runs as]
+  The \Macro{<Keyword>\_HOOK\_EVICT\_CLAIM} hook runs with the same
+privileges as the \Condor{startd}.  When Condor was started as \Login{root},
+this is usually the \Login{condor} user, or the user specified in
+the \Macro{CONDOR\_IDS} configuration variable.
 
 \item[Exit status of the hook]
   Ignored.
@@ -209,6 +227,11 @@ environment and abort the job.
   A set of attributes to insert or update into the job ad.  For example,
   changing the \Attr{Cmd} attribute to a quoted string changes the executable 
   to be run.
+
+\item[User id that the hook runs as]
+  The \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} hook runs with the same
+privileges as the job itself.  If slot users are defined, the
+hook runs as the slot user, just as the job does.
 
 \item[Exit status of the hook]
   0 for success preparing the job, any non-zero value on failure.
@@ -273,6 +296,10 @@ The additional attributes included inside the job ClassAd are:
 \item[Expected standard output from the hook]
   None.
 
+\item[User id that the hook runs as]
+  The \Macro{<Keyword>\_HOOK\_UPDATE\_JOB\_INFO} hook runs with the same
+privileges as the job itself.
+
 \item[Exit status of the hook]
   Ignored.
 \end{description}
@@ -336,6 +363,10 @@ exits:
 
 \item[Expected standard output from the hook]
   None.
+
+\item[User id that the hook runs as]
+  The \Macro{<Keyword>\_HOOK\_JOB\_EXIT} hook runs with the same
+privileges as the job itself.
 
 \item[Exit status of the hook]
   Ignored.

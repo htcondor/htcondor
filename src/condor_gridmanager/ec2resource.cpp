@@ -34,7 +34,7 @@ const char * EC2Resource::HashName( const char * resource_name,
 		const char * public_key_file, const char * private_key_file )
 {								 
 	static std::string hash_name;
-	sprintf( hash_name, "ec2 %s#%s#%s", resource_name, public_key_file, private_key_file );
+	formatstr( hash_name, "ec2 %s#%s#%s", resource_name, public_key_file, private_key_file );
 	return hash_name.c_str();
 }
 

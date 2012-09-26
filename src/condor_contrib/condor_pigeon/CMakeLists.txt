@@ -17,8 +17,8 @@
  # 
  ############################################################### 
 
-dprint("ENABLE WHEN BUILDS")
-option(WITH_PIGEON "Support for condor_pigeon" ON)
+dprint("PIGEON does not build when enabled!!")
+option(WITH_PIGEON "Support for condor_pigeon" OFF)
 
 if ( WITH_PIGEON AND HAVE_EXT_QPID )
  

@@ -39,7 +39,6 @@ public:
 	HashKey(const char *k) { key = strdup(k); }
 	HashKey(const HashKey &hk) { key = strdup(hk.key); }
 	~HashKey() { if (key) free(key); }
-	void sprint(char *s);
 	void sprint(MyString &s);
 	HashKey& operator= (const HashKey& from);
 	const char* value() { if (key) return key; else return "\0"; };

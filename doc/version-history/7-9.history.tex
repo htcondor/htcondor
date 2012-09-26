@@ -1,0 +1,469 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-7-9}Development Release Series 7.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of Condor.
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-1}Version 7.9.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.9.1 not yet released.
+%\item Condor version 7.9.1 released on Month Date, 2012.
+
+\item Condor no longer looks for its main configuration file in the
+location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
+\Ticket{2830}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item \Condor{job\_router} can now submit the routed copy of jobs to a
+different \Condor{schedd} than the one that serves as the source of
+jobs to be routed.  The spool directories of the two
+\Condor{schedds} must still be directly accessible to
+\Condor{job\_router}.  This feature is enabled by using the new
+optional configuration settings:
+
+\begin{itemize}
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}
+See definition at section~\ref{param:JobRouterSchedd1Spool}.
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}
+See definition at section~\ref{param:JobRouterSchedd2Spool}.
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_NAME}
+See definition at section~\ref{param:JobRouterSchedd1Name}.
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_NAME}
+See definition at section~\ref{param:JobRouterSchedd2Name}.
+\item \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+See definition at section~\ref{param:JobRouterSchedd1Pool}.
+\item \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+See definition at section~\ref{param:JobRouterSchedd2Pool}.
+\end{itemize}
+\Ticket{3030}
+
+\item The \Condor{job\_router} can now optionally transform jobs in place,
+rather than creating a second transformed version (copy) of the job.
+\Ticket{3185}
+
+\item The \Condor{defrag} daemon now has a policy option implemented
+by configuration to cancel the draining
+of a machine that is in the Draining mode.  This can be used to effect
+partial draining of machines.
+\Ticket{2993}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item Dynamic slots now fill the values for attributes of the form TotalSlotXxx, 
+for configured local resources, in a way consistent with standard resources
+such as TotalSlotCpus.  Previously those values were all filled with zero on
+dynamic slots.
+\Ticket{3229}
+
+\item The \Condor{schedd} now advertises the value of configuration variable
+\MacroNI{COLLECTOR\_HOST} as attribute \Attr{CollectorHost} in 
+its daemon ClassAd.  This allows one to determine if a given
+\Condor{schedd} reporting to a \Condor{collector} is flocking to that 
+\Condor{collector} or not.
+\Ticket{3202}
+
+\item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
+the log referred to by \Attr{DAGManNodesLog}.
+\Ticket{2807}
+
+\item The new configuration variable
+\Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
+expression that matches the user names that
+the queue super user may impersonate when managing jobs.  When not
+set, the default behavior is to allow impersonation of any user who
+has had a job in the queue during the life of the \Condor{schedd}.  For
+proper functioning of the \Condor{shadow}, the \Condor{gridmanager}, and
+the \Condor{job\_router}, this expression, if set, must match the owner
+names of all jobs that these daemons will manage.
+\Ticket{3030}
+
+
+\item The new configuration variable \Macro{DEFRAG\_CANCEL\_REQUIREMENTS}
+is an expression that specifies which draining machines should have 
+draining be canceled.  
+This defaults to \MacroUNI{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  
+This could be used to drain partial rather than whole machines.
+\Ticket{2993}
+
+\item The new submit command \SubmitCmd{use\_x509userproxy} can be set
+to \Expr{True} to indicate that an X.509 user proxy is required for the job. 
+If \SubmitCmd{x509userproxy} is not set, 
+then the proxy file will be looked for in the standard locations.
+\Ticket{3025}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute in
+the ad for all daemons would be reset to the current time when they are
+reconfigured.
+\Ticket{3235}
+
+\item \Security Although not user-visible, there were multiple updates to remove places
+in the code where potential buffer overruns could occur, thus removing
+potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to improve
+error checking of system calls, removing some potential security threats.  None
+were known to be exploitable.
+
+\item \Security Although not user-visible, some code that was no longer used was removed.
+The presence of this code could have lead to a Denial-of-Service attack which
+would allow an attacker to stop another user's jobs from running.
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
+of the directory used for authentication.  Without this, an attacker may have
+been able to impersonate another submitter on the same submit machine.
+
+\item The \Condor{negotiator} now checks the accountant log file for sanity
+once only on start up,  
+thereby increasing efficiency of iteration through 
+the accountant ClassAd log structure.
+\Ticket{3011}
+
+\item The ClassAd functions \Procedure{splitUserName} and 
+\Procedure{splitSlotName}
+no longer leak a small amount of memory each time they are evaluated.  
+This bug was introduced when these functions were added in Condor version 7.7.6.
+\Ticket{3082}
+
+\item There are several bug fixes for grid-type batch jobs:
+  \begin{itemize}
+  \item Monitoring the status of jobs submitted to PBS and SGE has been
+    improved. \Ticket{3067} \Ticket{3157} \Ticket{3181}
+  \item Job command-line arguments containing 
+    left parenthesis, \verb@(@, right parenthesis, \verb@)@, 
+    and ampersand, \verb@&@, characters are now handled properly. 
+    \Ticket{3057}
+  \item Removing PBS jobs that have just completed no longer causes the jobs
+    to become held. \Ticket{3016}
+  \item Added a work-around for a bug when submitting jobs to
+    a Condor pool running Condor versions 7.7.6 through 7.8.2.
+    A bug in \Condor{history} \Opt{-f} caused an error in determining
+    a job's status.
+    \Ticket{3133}
+  \item Improved the handling of job files when the batch system has a shared
+    file system. \Ticket{3195}
+  \end{itemize}
+
+\item Changes introduced in Condor version 7.9.0 caused jobs submitted by
+\Condor{dagman} in the local universe to not write to the default node log file,
+when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was \Expr{True} (the default),
+and a user log was also defined. This is fixed. 
+\Ticket{3111}
+
+\item Fixed a bug introduced in Condor version 7.9.0 that caused grid type
+cream jobs to be held with a hold reason of 
+\footnotesize
+\begin{verbatim}
+  CREAM_Delegate Error: Cannot set credentials in the gsoap-plugin context.
+\end{verbatim}
+\normalsize
+\Ticket{3234}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-0}Version 7.9.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.9.0 released on August 16, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Machine slots can now be configured to identify and
+divide customized local resources.
+Jobs may then request these resources.
+See section~\ref{sec:Configuring-SMP} for details.
+\Ticket{2905}
+
+\item Condor now supports and implements the caching of ClassAds 
+to reduce memory footprints. 
+This feature is experimental and is currently disabled by default.
+It can be enabled by setting
+the new configuration variable \Macro{ENABLE\_CLASSAD\_CACHING}
+to \Expr{True}.
+\Ticket{2541}
+\Ticket{3127}
+
+\item \Condor{status} now returns the \Condor{schedd} ClassAd directly 
+from the \Condor{schedd} daemon,
+if both options \Opt{-direct} and \Opt{-schedd} are given on the command line.
+\Ticket{2492}
+
+\item The new \Opt{-status} and \Opt{-echo} command line options to 
+\Condor{wait} command cause it to show job start and terminate information,
+and to print events to \Code{stdout}.
+\Ticket{2926}
+
+\item Added a \Expr{DEBUG} logging level output flag \Dflag{CATEGORY},
+which causes Condor to include the logging level
+flags in effect for each line of logged output.
+\Ticket{2712}
+
+\item \Condor{status} and \Condor{q} each have a new \Opt{-autoformat} option
+to make some output format specifications easier than the existing
+\Opt{-format} option.
+See the \Condor{status} manual page located on page~\pageref{man-condor-status}
+and the \Condor{q} manual page located on page~\pageref{man-condor-q} 
+for details.
+\Ticket{2941}
+
+\item Enhanced the ClassAd log system to report the log line number 
+on parse failures, 
+and improved the ability to detect parse failures closer to 
+the point of corruption.
+\Ticket{2934}
+
+\item Added an \Opt{-evaluate} option to \Condor{config\_val}, which causes the configured value queried from
+a given daemon to be evaluated with respect to that daemon's ClassAd.
+\Ticket{856}
+
+\item Added code to \Condor{dagman},
+such that a \Expr{VARS} assignment in a top-level DAG is applied to splices.
+\Ticket{1780}
+
+\item Condor now uses libraries from Globus 5.2.1.
+\Ticket{2838}
+
+\item When authenticating Condor daemons with GSI and
+configuration variable \MacroNI{GSI\_DAEMON\_NAME} is undefined, 
+Condor checks that the server name in the certificate matches the 
+host name that the client is connecting to. 
+When \MacroNI{GSI\_DAEMON\_NAME} is defined,
+the old behavior is preserved: only certificates matching
+\MacroNI{GSI\_DAEMON\_NAME} pass the authentication step, 
+and no host name check is performed.  
+The behavior of the host name check
+may be further controlled with the new configuration variables
+\MacroNI{GSI\_SKIP\_HOST\_CHECK} and
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+\Ticket{1605}
+
+\item Added new capability to \Condor{submit} to allow recursive macros in
+submit description files. 
+This facility allows one to update variables recursively. 
+Before this new capability was added,
+recursive definition would send \Condor{submit} into an
+infinite loop of expanding the macro,
+such that the expansion would fill up memory.
+See section~\ref{macro-in-submit-description-file} for details.
+\Ticket{406}
+
+\item A DAGMan limitation and restriction has been removed.  
+It is now permitted to define a \SubmitCmd{log} command using a macro,
+within a node job's submit description file.
+\Ticket{2428}
+
+\item To enforce the dependencies of a DAG,
+DAGMan now uses and watches only the default node
+user log of the \Condor{dagman} job for events.  
+DAGMan requests the \Condor{schedd} and \Condor{shadow} daemons to write each
+event to this default log, 
+in addition to writing to a log specified by the node job.
+\Condor{dagman} writes POST script terminate events only to its default log;
+these terminate events are not written to the user log.
+This behavior can be turned off by setting the configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}.
+For correct behavior,
+\MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} should be set to \Expr{False}
+if \Condor{dagman} version 7.9.0 or later is submitting jobs 
+to an older version of
+a \Condor{schedd} daemon or of a \Condor{submit} executable.
+\Ticket{2807}
+
+\item \Condor{submit} has a new \Opt{-interactive} option for
+platforms other than Windows,
+which schedules and runs a job that provides a shell prompt
+on the execute machine.
+Documentation of this feature is not yet available.
+\Ticket{3088}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variables \Macro{MACHINE\_RESOURCE\_NAMES}
+(see section~\ref{param:MachineResourceNames})
+and \Macro{MACHINE\_RESOURCE\_<name>}
+(see section~\ref{param:MachineResourceResourcename})
+identify and specify the use of customized local machine resources.
+\Ticket{2905}
+
+\item The new configuration variable \MacroNI{ENABLE\_CLASSAD\_CACHING}
+controls whether the new caching feature of ClassAds is used.
+The default value is \Expr{False}.
+\Ticket{3127}
+
+\item The new configuration variable \Macro{CLASSAD\_LOG\_STRICT\_PARSING}
+controls whether ClassAd log files such as the job queue
+log are read with strict parse checking on ClassAd expressions.
+\Ticket{3069}
+
+\item The default value for configuration variable \Macro{USE\_PROCD}
+is now \Expr{True} for the \Condor{master} daemon.  
+This means that by
+default the \Condor{master} will start a \Condor{procd} daemon to be used 
+by it and all other daemons on that machine.
+\Ticket{2911}
+
+\item There is a new configuration variable used by the \Condor{starter}.
+If \Macro{STARTER\_RLIMIT\_AS} is set to an integer value, 
+the \Condor{starter}
+will use the \Procedure{setrlimit} system call with the 
+\Code{RLIMIT\_AS} parameter to
+limit the virtual memory size of each process in the user job.  
+The value of this configuration variable is a ClassAd expression, 
+evaluated in the context of both the machine and job ClassAds, 
+where the machine ClassAd is the \Expr{my} ClassAd, 
+and the job ClassAd is the \Expr{target} ClassAd.
+\Ticket{1663}
+
+\item New configuration variables were added to to the \Condor{schedd} to
+define statistics that count subsets of jobs. 
+These variables have the form \Macro{SCHEDD\_COLLECT\_STATS\_BY\_<Name>},
+and should be defined by a ClassAd expression that evaluates to a string.
+See section~\ref{param:ScheddCollectStatsByName}
+for the complete definition.
+The optional configuration variable of the form
+\Macro{SCHEDD\_EXPIRE\_STATS\_BY\_<Name>} can be used to set an expiration time,
+in seconds, for each set of statistics.
+\Ticket{2862}
+
+\item The new \SubmitCmd{batch\_queue} submit description file command
+and new job ClassAd attribute \Attr{BatchQueue} specify which job
+queue to use for grid universe jobs of type
+\SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge}.
+\Ticket{2996}
+
+\item The new configuration variable \Macro{GSI\_SKIP\_HOST\_CHECK} is
+a boolean that controls whether a check is performed during
+GSI authentication of a Condor daemon.  
+When the default value \Expr{False},
+the check is not skipped, so the daemon host name must match the
+host name in the daemon's certificate, unless otherwise exempted
+by values of \MacroNI{GSI\_DAEMON\_NAME} or
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX}.
+When \Expr{True}, this check is skipped, and hosts will not be rejected
+due to a mismatch of certificate and host name.
+\Ticket{1605}
+
+\item The new configuration variable
+\MacroNI{GSI\_SKIP\_HOST\_CHECK\_CERT\_REGEX} may be set to a
+regular expression.  GSI certificates of Condor daemons with a
+subject name that are matched in full by this regular expression
+are not required to have a matching daemon host name and certificate
+host name.  The default is an empty regular expression, which will
+not match any certificates, even if they have an empty subject name.
+\Ticket{1605}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in which usage of cgroups incorrectly included the page cache 
+in the maximum memory usage.
+This bug fix is also included in Condor version 7.8.2.
+\Ticket{3003}
+
+\item The EC2 GAHP will now respect the value of the environment variable
+\Env{X509\_CERT\_DIR} and the configuration variable
+\Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR} for \emph{all} secure connections.
+\Ticket{2823}
+
+\item Condor will avoid selecting down (disabled) network interfaces.  Previously Condor could select a down interface over an up (active) interface.
+\Ticket{2893}
+
+\item Made logic in the \Condor{negotiator} that computes submitter limits 
+properly aware of the configuration variable
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}.
+\Ticket{2952}
+
+
+\item Condor no longer back-dates file modification times by 3 minutes
+when transferring job input files into the job spool directory or the job
+execute directory.
+\Ticket{2423}
+
+\item Fixed a bug in which the use of a pipe in the configuration file 
+on Windows platforms would cause a visible console window 
+to show up whenever the configuration was read.
+\Ticket{1534}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item Machine ClassAd attribute string values relating to \Attr{OpSys} have
+been documented for Scientific Linux platforms.
+\Ticket{2366}
+
+\end{itemize}
+
+

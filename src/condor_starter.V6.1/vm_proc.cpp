@@ -68,6 +68,7 @@ VMProc::VMProc(ClassAd *jobAd) : OsProc(jobAd)
 	m_status_req = NULL;
 	m_status_error_count = 0;
 	m_vm_cputime = 0;
+	m_vm_utilization = -1.0;
 
 	//Find the interval of sending vm status command to vmgahp server
 	m_vmstatus_interval = param_integer( "VM_STATUS_INTERVAL", 
@@ -272,7 +273,7 @@ VMProc::StartJob()
 	// Get job name
 	MyString vm_job_name;
 	if( JobAd->LookupString( ATTR_JOB_CMD, vm_job_name) != 1 ) {
-		err_msg.sprintf("%s cannot be found in job classAd.", ATTR_JOB_CMD);
+		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
 		Starter->jic->notifyStarterError( err_msg.Value(), true, 
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
@@ -283,7 +284,7 @@ VMProc::StartJob()
 	// vm_type should be from ClassAd
 	MyString vm_type_name;
 	if( JobAd->LookupString( ATTR_JOB_VM_TYPE, vm_type_name) != 1 ) {
-		err_msg.sprintf("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
+		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
 		Starter->jic->notifyStarterError( err_msg.Value(), true, 
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
@@ -478,8 +479,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 	}
 
 	int tmp_argv = (int)strtol(result_args->argv[1], (char **)NULL, 10);
-	if( tmp_argv != 0 || 
-			!strcasecmp(result_args->argv[2], NULLSTRING)) {
+	if( tmp_argv != 0 || !strcasecmp(result_args->argv[2], NULLSTRING)) {
 		dprintf(D_ALWAYS, "Received VM status, result(%s,%s)\n", 
 				result_args->argv[1], result_args->argv[2]);
 		vm_status_error();
@@ -497,6 +497,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 	MyString tmp_value;
 	MyString one_arg;
 	int i = 2;
+	m_vm_utilization = 0.0;
 	for( ; i < result_args->argc; i++ ) {
 		one_arg = result_args->argv[i];
 		one_arg.trim();
@@ -526,6 +527,9 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 			vm_mac = tmp_value;
 		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
 			vm_ip = tmp_value;
+		}else if ( !strcasecmp(tmp_name.Value(),VMGAHP_STATUS_COMMAND_CPUUTILIZATION) ) {
+		      /* This is here for vm's which are spun via libvirt*/
+		      m_vm_utilization = (float)strtod(tmp_value.Value(), (char **)NULL);
 		}
 	}
 
@@ -561,8 +565,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 		cleanup();
 		return false;
 	}else {
-		dprintf(D_FULLDEBUG, "Virtual machine status is %s\n", 
-				vm_status.Value());
+		dprintf(D_FULLDEBUG, "Virtual machine status is %s, utilization is %f\n", vm_status.Value(), m_vm_utilization );
 		if( !strcasecmp(vm_status.Value(), "Running") ) {
 			is_suspended = false;
 			m_is_soft_suspended = false;
@@ -1206,6 +1209,7 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, user_time );
 		ad->Assign(ATTR_IMAGE_SIZE, (int)0);
 		ad->Assign(ATTR_RESIDENT_SET_SIZE, (int)0);
+		ad->Assign(ATTR_JOB_VM_CPU_UTILIZATION, m_vm_utilization);
 	}else {
 		// Update usage of process for VM
 		long sys_time = 0;
@@ -1226,9 +1230,9 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, float(sys_time));
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, float(user_time));
 
-		buf.sprintf("%s=%lu", ATTR_IMAGE_SIZE, max_image );
+		buf.formatstr("%s=%lu", ATTR_IMAGE_SIZE, max_image );
 		ad->InsertOrUpdate( buf.Value());
-		buf.sprintf("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
+		buf.formatstr("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
 		ad->InsertOrUpdate( buf.Value());
 		if( pss_available ) {
 			ad->Assign(ATTR_PROPORTIONAL_SET_SIZE,pss);

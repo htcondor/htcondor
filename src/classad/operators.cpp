@@ -186,7 +186,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		return SIG_CHLD1;
 	} else if (op == UNARY_PLUS_OP) {
 		if (vt1 == Value::BOOLEAN_VALUE || vt1 == Value::STRING_VALUE || 
-			vt1 == Value::LIST_VALUE || vt1 == Value::CLASSAD_VALUE || 
+			val1.IsListValue() || vt1 == Value::CLASSAD_VALUE || 
 			vt1 == Value::ABSOLUTE_TIME_VALUE) {
 			result.SetErrorValue();
 		} else {
@@ -289,7 +289,11 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			}
 
 			return( SIG_CHLD1 | SIG_CHLD2 );
-		} else if (vt1 == Value::LIST_VALUE && vt2 == Value::INTEGER_VALUE) {
+		} else if ( val1.IsListValue() && vt2 == Value::INTEGER_VALUE) {
+				// TODO index should to changed to a long long
+				//   (and ExprListIterator::ToNth() converted)
+				//    or the value from val2 needs to be capped
+				//    at INT_MAX (rather than truncated).
 			int            index;
 			const ExprList *elist = NULL;
 
@@ -846,6 +850,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 		case Value::CLASSAD_VALUE:
 			result.SetErrorValue();
 			return( SIG_CHLD1 | SIG_CHLD2 );
@@ -877,7 +882,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	int		i1, i2;
+	long long	i1, i2;
 	double	t1;
 	double 	r1;
     bool    b1;
@@ -1053,9 +1058,9 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	int	i1, i2;
-	int signMask = ~INT_MAX;	// now at the position of the sign bit
-	int val;
+	long long i1, i2;
+	long long signMask = ~LLONG_MAX;	// now at the position of the sign bit
+	long long val;
 
 	// bitwise operations are defined only on integers
 	if (op == BITWISE_NOT_OP) {
@@ -1098,8 +1103,9 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 				break;
 			} else {
 				// sign bit is on; >> *may* not set the sign
+				// TODO Cap i2 to 0..64
 				val = i1;
-				for (int i = 0; i < i2; i++)
+				for (long long i = 0; i < i2; i++)
 					val = (val >> 1) | signMask;	// make sure that it does
 				result.SetIntegerValue (val);
 				break;
@@ -1255,7 +1261,7 @@ asecs2.secs = 0;
 
 	if( op == MULTIPLICATION_OP || op == DIVISION_OP ) {
 		if( vt1==Value::RELATIVE_TIME_VALUE && vt2==Value::INTEGER_VALUE ) {
-			int     num;
+			long long     num;
             double  msecs;
 			v1.IsRelativeTimeValue( rsecs1 );
 			v2.IsIntegerValue( num );
@@ -1284,7 +1290,7 @@ asecs2.secs = 0;
 
 		if( vt1==Value::INTEGER_VALUE && vt2==Value::RELATIVE_TIME_VALUE && 
 				op==MULTIPLICATION_OP ) {
-			int num;
+			long long num;
 			v1.IsIntegerValue( num );
 			v2.IsRelativeTimeValue( rsecs1 );
 			result.SetRelativeTimeValue( num * rsecs1 );
@@ -1444,7 +1450,7 @@ compareBools( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	int 	i1, i2; 
+	long long 	i1, i2; 
 	bool	compResult;
 
 	v1.IsIntegerValue (i1); 
@@ -1501,7 +1507,7 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 Value::ValueType Operation::
 coerceToNumber (Value &v1, Value &v2)
 {
-	int	 	i;
+	long long i;
 	double 	r;
     bool    b;
 

@@ -100,7 +100,7 @@ bool operator<(const ViewMember &vm1, const ViewMember &vm2)
 
 	// if the values are of the same scalar type, or if they are both
 	// numbers, use the builtin < comparison operator
-	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && vt2!=Value::LIST_VALUE ) ||
+	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && !val2.IsListValue() ) ||
 			( vt1==Value::INTEGER_VALUE && vt2==Value::REAL_VALUE )			||
 			( vt1 == Value::REAL_VALUE && vt2 == Value::INTEGER_VALUE ) ) {
 		Value	lessThanResult, equalResult;
@@ -140,9 +140,10 @@ View( View *parentView )
 
 	ClassAd	*ad = evalEnviron.GetLeftAd( );
 	parent = parentView;
+	ExprTree* pExp;
 	ad->InsertAttr( ATTR_REQUIREMENTS, true );
-	ad->Insert( ATTR_RANK, Literal::MakeLiteral( val ) );
-	ad->Insert( ATTR_PARTITION_EXPRS, ExprList::MakeExprList( vec ) );
+	ad->Insert( ATTR_RANK, (pExp=Literal::MakeLiteral( val )) );
+	ad->Insert( ATTR_PARTITION_EXPRS, (pExp=ExprList::MakeExprList( vec )) );
 	if( parentView ) {
 		ad->InsertAttr( "ParentViewName", parentView->GetViewName( ) );
 	}
@@ -257,6 +258,7 @@ GetViewInfo( )
 	ClassAd				*newAd, *ad = evalEnviron.GetLeftAd( );
 	vector<ExprTree*> 	viewNames;
 	Literal				*lit;
+	ExprTree* pExpr=0;
 
 	if( !ad ) {
 		CLASSAD_EXCEPT( "internal error: view has no view info!" );
@@ -284,7 +286,7 @@ GetViewInfo( )
 		}
 		viewNames.push_back( lit );
 	}
-	newAd->Insert(ATTR_SUBORDINATE_VIEWS,ExprList::MakeExprList(viewNames));
+	newAd->Insert(ATTR_SUBORDINATE_VIEWS,(pExpr=ExprList::MakeExprList(viewNames)));
 	
 
 		// insert names of partitioned views
@@ -299,7 +301,7 @@ GetViewInfo( )
 		}
 		viewNames.push_back( lit );
 	}
-	newAd->Insert(ATTR_PARTITIONED_VIEWS,ExprList::MakeExprList(viewNames));
+	newAd->Insert(ATTR_PARTITIONED_VIEWS,(pExpr=ExprList::MakeExprList(viewNames)));
 
 
 	return( newAd );
@@ -445,7 +447,7 @@ SetPartitionExprs( ClassAdCollection *coll, ExprList *el )
 		CondorErrMsg = "invalid 'PartitionExprs'; failed to partition";
 		return( false );
 	}
-	if( !( ad->Insert( ATTR_PARTITION_EXPRS, el ) ) ) {
+	if( !( ad->Insert( ATTR_PARTITION_EXPRS, (ExprTree* &)el ) ) ) {
 		CondorErrMsg += "failed to set partition expressions on view";
 		return( false );
 	}
@@ -749,6 +751,7 @@ DeletePartitionedView( ClassAdCollection *coll, const ViewName &vName )
 
 					// reset other view info
 				vector<ExprTree*> vec;
+				ExprTree * pExpr=0;
 				ClassAd *ad = new ClassAd( );
 				if( !ad ) {
 					CondorErrno = ERR_MEM_ALLOC_FAILED;
@@ -758,7 +761,7 @@ DeletePartitionedView( ClassAdCollection *coll, const ViewName &vName )
 				if( !ad->InsertAttr( ATTR_REQUIREMENTS, true )	||
 						!ad->InsertAttr( ATTR_RANK, 0 )				||
 						!ad->Insert(ATTR_PARTITION_EXPRS,
-							ExprList::MakeExprList( vec ) )	||
+							(pExpr=ExprList::MakeExprList( vec )) )	||
 						!view->SetViewInfo( coll, ad ) ) {
 					CondorErrMsg += "; failed to delete partition view " +
 						vName;

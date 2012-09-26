@@ -1897,6 +1897,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 		case Value::ABSOLUTE_TIME_VALUE:
 			result.SetErrorValue( );
 			return( true );
@@ -1907,7 +1908,7 @@ convBool( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::INTEGER_VALUE:
 			{
-				int ival;
+				long long ival;
 				arg.IsIntegerValue( ival );
 				result.SetBooleanValue( ival != 0 );
 				return( true );
@@ -2011,6 +2012,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 		case Value::ERROR_VALUE:
 		case Value::CLASSAD_VALUE:
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 		case Value::BOOLEAN_VALUE:
 			result.SetErrorValue( );
 			return( true );
@@ -2140,9 +2142,9 @@ doRound( const char* name,const ArgumentList &argList,EvalState &state,
                 result.SetIntegerValue((int) floor(rvalue));
             } else if (   strcasecmp("ceil", name)    == 0 
                        || strcasecmp("ceiling", name) == 0) {
-                result.SetIntegerValue((int) ceil(rvalue));
+                result.SetIntegerValue((long long) ceil(rvalue));
             } else if( strcasecmp("round", name) == 0) {
-                result.SetIntegerValue((int) rint(rvalue));
+                result.SetIntegerValue((long long) rint(rvalue));
             } else {
                 result.SetErrorValue( );
             }
@@ -2171,9 +2173,9 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 
 	if (strcasecmp("pow", name) == 0) {
 		// take arg2 to the power of arg2
-		int ival, ibase;
+		long long ival, ibase;
 		if (arg.IsIntegerValue(ival) && arg2.IsIntegerValue(ibase) && ibase >= 0) {
-			ival = (int) (pow((double)ival, ibase) + 0.5);
+			ival = (long long) (pow((double)ival, (double)ibase) + 0.5);
 			result.SetIntegerValue(ival);
 		} else {
 			Value	realValue, realBase;
@@ -2241,7 +2243,7 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 			// at this point rbase should contain the real value of either arg2 or the
 			// last entry in the list. and rval should contain the value to be quantized.
 
-			int ival, ibase;
+			long long ival, ibase;
 			if (arg2.IsIntegerValue(ibase)) {
 				// quantize to an integer base,
 				if ( ! ibase)
@@ -2280,6 +2282,9 @@ random( const char*,const ArgumentList &argList,EvalState &state,
     double  double_max;
     int     random_int;
     double  random_double;
+
+	// TODO Make this work properly for ranges beyond 2^31
+	//   (2^15 on windows)
 
     // takes exactly one argument
 	if( argList.size() > 1 ) {
@@ -2330,7 +2335,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		}
 		break;
 	case Value::INTEGER_VALUE: {
-		int intval;
+		long long intval;
 		if( !arg1.IsIntegerValue(intval) ) {
 			result.SetErrorValue();
 			return( false );
@@ -2355,6 +2360,7 @@ ifThenElse( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	case Value::ERROR_VALUE:
 	case Value::CLASSAD_VALUE:
 	case Value::LIST_VALUE:
+	case Value::SLIST_VALUE:
 	case Value::STRING_VALUE:
 	case Value::ABSOLUTE_TIME_VALUE:
 	case Value::RELATIVE_TIME_VALUE:

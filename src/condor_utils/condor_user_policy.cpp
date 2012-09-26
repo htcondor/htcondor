@@ -184,7 +184,7 @@ BaseUserPolicy::updateJobTime( float *old_run_time )
 	}
 	
 	MyString buf;
-	buf.sprintf( "%s = %f", ATTR_JOB_REMOTE_WALL_CLOCK, total_run_time );
+	buf.formatstr( "%s = %f", ATTR_JOB_REMOTE_WALL_CLOCK, total_run_time );
 	this->job_ad->InsertOrUpdate( buf.Value() );
 }
 
@@ -202,6 +202,6 @@ BaseUserPolicy::restoreJobTime( float old_run_time )
 	}
 
 	MyString buf;
-	buf.sprintf( "%s = %f", ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
+	buf.formatstr( "%s = %f", ATTR_JOB_REMOTE_WALL_CLOCK, old_run_time );
 	this->job_ad->InsertOrUpdate( buf.Value() );
 }

@@ -6,8 +6,28 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_ResourceType.h"
+          
 
-        #include "AviaryCommon_ResourceType.h"
+       #ifdef __GNUC__
+       # if __GNUC__ >= 4
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #  if __GNUC_MINOR__ >= 6
+       #pragma GCC diagnostic ignored "-Wenum-compare"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #  endif
+       #  if __GNUC_MINOR__ >= 7
+       #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+       #  endif
+       # endif
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -56,7 +76,22 @@
         }
         AviaryCommon::ResourceType::~ResourceType()
         {
-            axutil_qname_free(qname,Environment::getEnv());
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::ResourceType::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+          if(qname != NULL)
+          {
+            axutil_qname_free( qname, Environment::getEnv());
+            qname = NULL;
+          }
+        
+            return true;
+
         }
 
         
@@ -306,31 +341,45 @@
                    {
                      
                        case ResourceType_ANY :
-                            property_ResourceType = ("ANY");
+                            
+                            
+                            property_ResourceType = "ANY";
                           break;
                      
                        case ResourceType_COLLECTOR :
-                            property_ResourceType = ("COLLECTOR");
+                            
+                            
+                            property_ResourceType = "COLLECTOR";
                           break;
                      
                        case ResourceType_CUSTOM :
-                            property_ResourceType = ("CUSTOM");
+                            
+                            
+                            property_ResourceType = "CUSTOM";
                           break;
                      
                        case ResourceType_MASTER :
-                            property_ResourceType = ("MASTER");
+                            
+                            
+                            property_ResourceType = "MASTER";
                           break;
                      
                        case ResourceType_NEGOTIATOR :
-                            property_ResourceType = ("NEGOTIATOR");
+                            
+                            
+                            property_ResourceType = "NEGOTIATOR";
                           break;
                      
                        case ResourceType_SCHEDULER :
-                            property_ResourceType = ("SCHEDULER");
+                            
+                            
+                            property_ResourceType = "SCHEDULER";
                           break;
                      
                        case ResourceType_SLOT :
-                            property_ResourceType = ("SLOT");
+                            
+                            
+                            property_ResourceType = "SLOT";
                           break;
                      
                      
@@ -350,6 +399,24 @@
                 
                 return true;
              }
+
+
+             /**
+             * specialized enum constructor for ResourceType.
+             */
+            AviaryCommon::ResourceType::ResourceType(const ADBResourceTypeEnum  arg_ResourceType)
+             {             
+                   qname = NULL;
+             
+                 qname =  axutil_qname_create (Environment::getEnv(),
+                       "ResourceType",
+                       "http://common.aviary.grid.redhat.com",
+                       NULL);
+               
+
+            isValidResourceType  = setResourceTypeEnum( arg_ResourceType );
+            }
+
              
 
            /**

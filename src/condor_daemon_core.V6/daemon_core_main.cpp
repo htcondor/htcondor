@@ -45,6 +45,7 @@
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
+#include "classad/classadCache.h"
 
 #ifdef WIN32
 #include "exception_handling.WINDOWS.h"
@@ -196,7 +197,7 @@ void clean_files()
 					 "DaemonCore: ERROR: Can't delete pid file %s\n",
 					 pidFile );
 		} else {
-			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+			if( IsDebugVerbose( D_DAEMONCORE ) ) {
 				dprintf( D_DAEMONCORE, "Removed pid file %s\n", pidFile );
 			}
 		}
@@ -208,7 +209,7 @@ void clean_files()
 					 "DaemonCore: ERROR: Can't delete address file %s\n",
 					 addrFile );
 		} else {
-			if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+			if( IsDebugVerbose( D_DAEMONCORE ) ) {
 				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
 						 addrFile );
 			}
@@ -224,7 +225,7 @@ void clean_files()
 						 "DaemonCore: ERROR: Can't delete classad file %s\n",
 						 daemonCore->localAdFile );
 			} else {
-				if( DebugFlags & (D_FULLDEBUG | D_DAEMONCORE) ) {
+				if( IsDebugVerbose( D_DAEMONCORE ) ) {
 					dprintf( D_DAEMONCORE, "Removed local classad file %s\n", 
 							 daemonCore->localAdFile );
 				}
@@ -357,7 +358,7 @@ static void
 kill_daemon_ad_file()
 {
 	MyString param_name;
-	param_name.sprintf( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
+	param_name.formatstr( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 	char *ad_file = param(param_name.Value());
 	if( !ad_file ) {
 		return;
@@ -384,7 +385,7 @@ drop_addr_file()
 
 	if( addrFile ) {
 		MyString newAddrFile;
-		newAddrFile.sprintf("%s.new",addrFile);
+		newAddrFile.formatstr("%s.new",addrFile);
 		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
@@ -607,7 +608,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	}
 
 		// First, create the new name.
-	newdir.sprintf( "%s.%s", val, append_str );
+	newdir.formatstr( "%s.%s", val, append_str );
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
@@ -902,7 +903,12 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
 		return FALSE;
 	}
-	dc_reconfig();
+	if (!daemonCore->GetDelayReconfig()) {
+		dc_reconfig();
+	} else {
+        dprintf(D_FULLDEBUG, "Delaying reconfig.\n");
+ 		daemonCore->SetNeedReconfig(true);
+	}
 	return TRUE;
 }
 
@@ -1346,11 +1352,27 @@ unix_sigusr1(int)
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
 	}
+	
 }
 
 void
 unix_sigusr2(int)
 {
+	// This is a debug only param not to be advertised.
+	if (param_boolean( "DEBUG_CLASSAD_CACHE", false))
+	{
+	  std::string szFile = param("LOG");
+	  szFile +="/";
+	  szFile += get_mySubSystem()->getName();
+	  szFile += "_classad_cache";
+	  
+	  if (!classad::CachedExprEnvelope::_debug_dump_keys(szFile))
+	  {
+	    dprintf( D_FULLDEBUG, "FAILED to write file %s\n",szFile.c_str() );
+	  }
+	}
+	
+  
 	if (daemonCore) {
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
 	}
@@ -2029,9 +2051,9 @@ int dc_main( int argc, char** argv )
 
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
-	debug_wait_param.sprintf("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
+	debug_wait_param.formatstr("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
 	if (param_boolean(debug_wait_param.Value(), false, false)) {
-		int debug_wait = 1;
+		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
 				debug_wait_param.Value(), (int)::getpid());
@@ -2041,7 +2063,7 @@ int dc_main( int argc, char** argv )
 	}
 
 #ifdef WIN32
-	debug_wait_param.sprintf("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	debug_wait_param.formatstr("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
 	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
 	if (wait_for_win32_debugger) {
 		UINT ms = GetTickCount() - 10;

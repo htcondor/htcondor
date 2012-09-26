@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "classad_newold.h"
+#include "compat_classad_util.h"
 
 #include "NewClassAdJobLogConsumer.h"
 
@@ -81,7 +81,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 				dprintf(D_ALWAYS,
 						"error processing %s: failed to add '%s' to "
 						"ClassAd collection.\n",
-						m_reader->GetClassAdLogFileName(), cluster_key);
+						m_reader ? m_reader->GetClassAdLogFileName() : "(null)", cluster_key);
 				delete ad;
 				return true; // XXX: why is this ok?
 			}
@@ -95,7 +95,7 @@ NewClassAdJobLogConsumer::NewClassAd(const char *key,
 			dprintf(D_ALWAYS,
 					"error processing %s: failed to add '%s' to "
 					"ClassAd collection.\n",
-					m_reader->GetClassAdLogFileName(),
+					m_reader ? m_reader->GetClassAdLogFileName() : "(null)",
 					key);
 				// XXX: why is this ok?
 		}
@@ -121,28 +121,15 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 	if (!ad) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
-				m_reader->GetClassAdLogFileName(), key);
+				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", key);
 		return false;
 	}
-	MyString new_classad_value, err_msg;
-	if (!old_classad_value_to_new_classad_value(value,
-												new_classad_value,
-												&err_msg)) {
-		dprintf(D_ALWAYS,
-				"error reading %s: failed to convert expression from "
-				"old to new ClassAd format: %s\n",
-				m_reader->GetClassAdLogFileName(), err_msg.Value());
-		return false;
-	}
-
-	classad::ClassAdParser ad_parser;
-
-	classad::ExprTree *expr =
-		ad_parser.ParseExpression(new_classad_value.Value());
+	classad::ExprTree *expr;
+	ParseClassAdRvalExpr(value, expr, NULL);
 	if (!expr) {
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to parse expression: %s\n",
-				m_reader->GetClassAdLogFileName(), value);
+				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", value);
 		ASSERT(expr);
 		return false;
 	}
@@ -159,7 +146,7 @@ NewClassAdJobLogConsumer::DeleteAttribute(const char *key,
 	if (!ad) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such ad in collection: %s\n",
-				m_reader->GetClassAdLogFileName(), key);
+				m_reader ? m_reader->GetClassAdLogFileName() : "(null)", key);
 		return false;
 	}
 	ad->Delete(name);

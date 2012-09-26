@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	Termlog = true;
 	p_funcs = get_param_functions();
 	dprintf_config("condor_check_userlogs", p_funcs);
-	DebugFlags = D_ALWAYS;
+	set_debug_flags(NULL, D_ALWAYS);
 
 	StringList	logFiles;
 	for ( int argnum = 1; argnum < argc; ++argnum ) {
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 		CondorError errstack;
 		if ( !ru.monitorLogFile( filestring, false, errstack ) ) {
 			fprintf( stderr, "Error monitoring log file %s: %s\n", filename,
-						errstack.getFullText() );
+						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 		CondorError errstack;
 		if ( !ru.unmonitorLogFile( filestring, errstack ) ) {
 			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename,
-						errstack.getFullText() );
+						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}

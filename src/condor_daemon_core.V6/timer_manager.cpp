@@ -410,7 +410,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 
 		// Log a message before calling handler, but only if
 		// D_FULLDEBUG is also enabled.
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_COMMAND)) {
 			dprintf(D_COMMAND, "Calling Timer handler %d (%s)\n",
 					in_timeout->id, in_timeout->event_descrip);
 		}
@@ -435,7 +435,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			in_timeout->timeslice->setFinishTimeNow();
 		}
 
-		if (DebugFlags & D_FULLDEBUG) {
+		if (IsDebugVerbose(D_COMMAND)) {
 			if( in_timeout->timeslice ) {
 				dprintf(D_COMMAND, "Return from Timer handler %d (%s) - took %.3fs\n",
 						in_timeout->id, in_timeout->event_descrip,
@@ -525,7 +525,7 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just 
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL) 
@@ -543,25 +543,25 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 
 		MyString slice_desc;
 		if( !timer_ptr->timeslice ) {
-			slice_desc.sprintf("period = %d, ", timer_ptr->period);
+			slice_desc.formatstr("period = %d, ", timer_ptr->period);
 		}
 		else {
-			slice_desc.sprintf_cat("timeslice = %.3g, ",
+			slice_desc.formatstr_cat("timeslice = %.3g, ",
 								   timer_ptr->timeslice->getTimeslice());
 			if( !IS_ZERO(timer_ptr->timeslice->getDefaultInterval()) ) {
-				slice_desc.sprintf_cat("period = %.1f, ",
+				slice_desc.formatstr_cat("period = %.1f, ",
 								   timer_ptr->timeslice->getDefaultInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getInitialInterval()) ) {
-				slice_desc.sprintf_cat("initial period = %.1f, ",
+				slice_desc.formatstr_cat("initial period = %.1f, ",
 								   timer_ptr->timeslice->getInitialInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getMinInterval()) ) {
-				slice_desc.sprintf_cat("min period = %.1f, ",
+				slice_desc.formatstr_cat("min period = %.1f, ",
 								   timer_ptr->timeslice->getMinInterval());
 			}
 			if( !IS_ZERO(timer_ptr->timeslice->getMaxInterval()) ) {
-				slice_desc.sprintf_cat("max period = %.1f, ",
+				slice_desc.formatstr_cat("max period = %.1f, ",
 								   timer_ptr->timeslice->getMaxInterval());
 			}
 		}

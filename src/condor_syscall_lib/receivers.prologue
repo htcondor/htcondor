@@ -126,7 +126,7 @@ do_REMOTE_syscall()
 
 	rval = syscall_sock->code(condor_sysnum);
 	if(!rval) {
-		char *error;
+		const char *error;
 		if(errno==0) {
 			error = "disconnected";
 		} else {

@@ -16,15 +16,17 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-7}Version 7.6.7}
+\subsection*{\label{sec:New-7-6-10}Version 7.6.10}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.6.7 not yet released.
-%\item Condor version 7.6.7 released on Month Date, 2012.
+\item Condor version 7.6.10 released on September 19, 2012.
+
+\item This release contains several important security fixes and all users
+should upgrade as soon as possible.
 
 \end{itemize}
 
@@ -49,9 +51,170 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added logic to the \Condor{negotiator} that enables job \Term{preemption} 
-to properly respect \Term{group quotas}.
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could expose information which would allow an attacker to control
+another user's job.  (CVE-2012-3493)
+
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could have lead to a Denial-of-Service attack which would allow
+an attacker to remove another user's idle job.  (CVE-2012-3491)
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX
+permissions of the directory used for authentication.  Without this, an
+attacker may have been able to impersonate another submitter on the same submit
+machine.  (CVE-2012-3492)
+
+\item \Security Although not user-visible, there were multiple updates to
+remove places in the code where potential buffer overruns could occur, thus
+removing potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to
+improve error checking of system calls, removing some potential security
+threats.  None were known to be exploitable.
+
+
+% https://access.redhat.com/security/cve/CVE-2012-349X
+
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-9}Version 7.6.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.9 released on August 15, 2012.
+
+\item \Security Fixed a critical problem with DNS handling.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Security Fixed a critical problem with DNS handling.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-8}Version 7.6.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.8 released on August 14, 2012.  It was pulled from the web on August 15 due to a problem in how it was built, and should not be used.  If you installed 7.6.8, please upgrade to 7.6.9 or later instead.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-7}Version 7.6.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.7 released on May 12, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Added the ability to delay reconfig in daemon core, and applied to the
+\Condor{negotiator} to defer reconfiguration requests during the negotiation
+cycle until after the cycle completes.
+\Ticket{2931}
+
+\item Fixed a potential infinite loop in the \Condor{gridmanager} for gt2
+grid universe jobs. If the GRAM jobmanager was listening on a different
+port than the \Condor{gridmanager} expected, the \Condor{gridmanager}
+would alternate between states GM\_REGISTER and GM\_RESTART,
+as visible in the \Condor{gridmanager} daemon log.
+\Ticket{2916}
+
+\item Added logic to the \Condor{negotiator} that enables job preemption 
+to properly respect hierarchical group quotas.
 \Ticket{2570}
+
+\item Added logic to the \Condor{negotiator} to negotiate with full group 
+quota instead of allocated-slots when no surplus sharing is in effect, to
+address a bug where groups could fail to claim weighted slots.
+\Ticket{2958}
 
 \item Fixed a bug introduced in Condor version 7.6.2 that affects jobs run via
 \Prog{glexec}.  
@@ -87,9 +250,19 @@ on Windows platforms for drives with 1TB or more of free space.
 to be optional.
 \Ticket{2845}
 
-\item Fixed a bug where if \Macro{EVENT\_LOG} was configured but not writable,
-the Userlog would not be written to. This, in particular, broke DAGman.
+\item Fixed a bug in which if the configuration variable \Macro{EVENT\_LOG} was 
+set but the defined file was not writable,
+the user's job log would not be written to. 
+This bug would have been observable with DAGMan.
 \Ticket{2858}
+
+\item NorduGrid ARC LDAP servers that return attributes in an unexpected
+order no longer cause the \Condor{gridmanager} to exit.
+\Ticket{2888}
+
+\item Condor failed to execute jobs when using \Prog{glexec} 
+versions 0.9.0 through 0.9.5.
+\Ticket{2907}
 
 \end{itemize}
 

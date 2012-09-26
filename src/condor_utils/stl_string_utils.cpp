@@ -44,7 +44,7 @@ bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value()
 bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
 
 
-int vsprintf(std::string& s, const char* format, va_list pargs) {
+int vformatstr(std::string& s, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
 	int n;
@@ -102,40 +102,40 @@ int vsprintf(std::string& s, const char* format, va_list pargs) {
     return nn;
 }
 
-int sprintf(std::string& s, const char* format, ...) {
+int formatstr(std::string& s, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int r = vsprintf(s, format, args);
+    int r = vformatstr(s, format, args);
     va_end(args);
     return r;
 }
 
-int sprintf(MyString& s, const char* format, ...) {
+int formatstr(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
     // this gets me the sprintf-standard return value (# chars printed)
-    int r = vsprintf(t, format, args);
+    int r = vformatstr(t, format, args);
     va_end(args);
     assign(s, t);
     return r;
 }
 
-int sprintf_cat(std::string& s, const char* format, ...) {
+int formatstr_cat(std::string& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = vsprintf(t, format, args);
+    int r = vformatstr(t, format, args);
     va_end(args);
     s += t;
     return r;
 }
 
-int sprintf_cat(MyString& s, const char* format, ...) {
+int formatstr_cat(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = vsprintf(t, format, args);
+    int r = vformatstr(t, format, args);
     va_end(args);
     s += t.c_str();
     return r;
@@ -187,7 +187,7 @@ void trim( std::string &str )
 
 void upper_case( std::string &str )
 {
-	for ( int i = 0; str[i]; i++ ) {
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
 		if ( str[i] >= 'a' && str[i] <= 'z' ) {
 			str[i] = _toupper( str[i] );
 		}
@@ -196,7 +196,7 @@ void upper_case( std::string &str )
 
 void lower_case( std::string &str )
 {
-	for ( int i = 0; str[i]; i++ ) {
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
 		if ( str[i] >= 'A' && str[i] <= 'Z' ) {
 			str[i] = _tolower( str[i] );
 		}

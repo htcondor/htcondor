@@ -301,14 +301,12 @@ class Scheduler : public Service
 		// requires a new round of negotiation
 	void            needReschedule();
 
-	// job managing
-	int				abort_job(int, Stream *);
-
 	// [IPV6] These two functions are never called by others.
 	// It is non-IPv6 compatible, though.
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 
+	friend	int		NewProc(int cluster_id);
 	friend	int		count(ClassAd *);
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
@@ -614,7 +612,8 @@ private:
 
 	// Information to pass to shadows for contacting file transfer queue
 	// manager.
-	MyString m_xfer_queue_contact;
+	bool m_have_xfer_queue_contact;
+	std::string m_xfer_queue_contact;
 
 	// useful names
 	char*			CondorAdministrator;

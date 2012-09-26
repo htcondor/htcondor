@@ -87,8 +87,10 @@ public:
   void ReportLimits(AttrList *attrList);
 
   ClassAd* ReportState(bool rollup = false);
-  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL, float * NumResourcesRW = NULL);
-                                                
+  AttrList* ReportState(const MyString& CustomerName);
+
+  void CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW);
+
   void DisplayLog();
   void DisplayMatches();
 

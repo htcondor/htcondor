@@ -89,7 +89,7 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 		ok = qmgmt_sock != NULL;
 		if( !ok && !errstack) {
 			dprintf(D_ALWAYS, "Can't connect to queue manager: %s\n",
-					errstack_select->getFullText() );
+					errstack_select->getFullText().c_str() );
 		}
 	}
 
@@ -110,7 +110,7 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 			qmgmt_sock = NULL;
 			if (!errstack) {
 				dprintf( D_ALWAYS, "Authentication Error: %s\n",
-						 errstack_select->getFullText() );
+						 errstack_select->getFullText().c_str() );
 			}
 			return 0;
 		}
@@ -160,7 +160,7 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
                 qmgmt_sock = NULL;
 				if (!errstack) {
 					dprintf( D_ALWAYS, "Authentication Error: %s\n",
-							 errstack_select->getFullText() );
+							 errstack_select->getFullText().c_str() );
 				}
                 return 0;
             }

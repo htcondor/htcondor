@@ -618,7 +618,7 @@ CollectorDaemonStatsList::enable( bool nable )
 void
 StatsHashKey::getstr( MyString &buf )
 {
-	buf.sprintf( "'%s':'%s':'%s'",
+	buf.formatstr( "'%s':'%s':'%s'",
 				 type.Value(), name.Value(), ip_addr.Value()  );
 }
 
@@ -649,11 +649,11 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 		// If there is a slot ID, append it to Machine
 		int	slot;
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
-			slot_buf.sprintf(":%d", slot);
+			slot_buf.formatstr(":%d", slot);
 		}
 		else if (param_boolean("ALLOW_VM_CRUFT", false) &&
 				 ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, slot)) {
-			slot_buf.sprintf(":%d", slot);
+			slot_buf.formatstr(":%d", slot);
 		}
 	}
 	key.name = buf;

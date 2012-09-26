@@ -131,6 +131,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
+	common_job_queue_attrs->insert( ATTR_JOB_VM_CPU_UTILIZATION );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -276,7 +277,7 @@ bool
 QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
 	MyString buf;
-    buf.sprintf("%d", value);
+    buf.formatstr("%d", value);
 	return updateAttr(name, buf.Value(), updateMaster, log);
 }
 
@@ -406,7 +407,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 
 	DCSchedd schedd( schedd_addr );
 	if ( schedd.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
-		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText( ) );
+		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}
 	return true;

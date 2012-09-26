@@ -93,8 +93,9 @@ DCMsg::name()
 	}
 	m_cmd_str = getCommandString( m_cmd );
 	if( !m_cmd_str ) {
-		m_cmd_str_buf.sprintf("command %d",m_cmd);
-		m_cmd_str = m_cmd_str_buf.Value();
+		std::string buf;
+		formatstr(buf,"command %d",m_cmd);
+		m_cmd_str = buf.c_str();
 	}
 	return m_cmd_str;
 }
@@ -121,7 +122,7 @@ DCMsg::cancelMessage(char const *reason)
 	if( !reason ) {
 		reason = "operation was canceled";
 	}
-	addError( CEDAR_ERR_CANCELED, reason );
+	addError( CEDAR_ERR_CANCELED, "%s", reason );
 
 	if( m_messenger.get() ) {
 		m_messenger->cancelMessage( this );
@@ -216,7 +217,7 @@ DCMsg::reportFailure( DCMessenger *messenger )
 	dprintf( debug_level, "Failed to send %s to %s: %s\n",
 			 name(),
 			 messenger->peerDescription(),
-			 m_errstack.getFullText() );
+			 m_errstack.getFullText().c_str() );
 }
 
 void
@@ -225,14 +226,12 @@ DCMsg::addError( int code, char const *format, ... )
 	va_list args;
 	va_start(args, format);
 
-	MyString msg;
-	msg.vsprintf( format,args );
-	m_errstack.push( "CEDAR", code, msg.Value() );
+	m_errstack.pushf( "CEDAR", code, format, args );
 
 	va_end(args);
 }
 
-char const *
+std::string
 DCMsg::getErrorStackText()
 {
 	return m_errstack.getFullText();
@@ -464,15 +463,15 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 
 	msg->setMessenger( this );
 
-	MyString name;
-	name.sprintf("DCMessenger::receiveMsgCallback %s", msg->name());
+	std::string name;
+	formatstr(name, "DCMessenger::receiveMsgCallback %s", msg->name());
 
 	incRefCount();
 
 	int reg_rc = daemonCoreSockAdapter.
 		Register_Socket( sock, peerDescription(),
 						 (SocketHandlercpp)&DCMessenger::receiveMsgCallback,
-						 name.Value(), this, ALLOW );
+						 name.c_str(), this, ALLOW );
 	if(reg_rc < 0) {
 		msg->addError(
 			CEDAR_ERR_REGISTER_SOCK_FAILED,
@@ -632,7 +631,7 @@ DCStringMsg::DCStringMsg( int cmd, char const *str ):
 
 bool DCStringMsg::writeMsg( DCMessenger *, Sock *sock )
 {
-	if( !sock->put( m_str.Value() ) ) {
+	if( !sock->put( m_str.c_str() ) ) {
 		sockFailed( sock );
 		return false;
 	}
@@ -757,7 +756,7 @@ ChildAliveMsg::messageSendFailed( DCMessenger *messenger )
 			messenger->peerDescription(),
 			m_tries,
 			m_max_tries,
-			getErrorStackText());
+			getErrorStackText().c_str());
 
 	if( m_tries < m_max_tries ) {
 		if( getDeadlineExpired() ) {

@@ -4,6 +4,7 @@ Configuring The \Condor{startd} for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{SMP machines!configuration|(}
+\index{partitioning SMP machines}
 This section describes how to configure the \Condor{startd} for SMP
 (Symmetric Multi-Processor) machines.
 Machines with more than one CPU may
@@ -19,157 +20,158 @@ How Shared Resources are Represented to Condor}
 The way SMP machines are represented to the Condor system is that
 the shared resources are broken up into individual \Term{slots}.
 Each slot can be matched and claimed by users.
-Each slot is represented by an individual ClassAd
-(see the ClassAd reference, section~\ref{sec:classad-reference}, for
-details). 
+Each slot is represented by an individual ClassAd.
+See the ClassAd reference in section~\ref{sec:classad-reference} for details. 
 In this way, each SMP machine will appear to the Condor system as
-a collection of separate slots.  
+a collection of separate slots.
 As an example, an SMP machine named
 vulture.cs.wisc.edu would appear to Condor as the
-multiple machines, named slot1@vulture.cs.wisc.edu,
-slot2@vulture.cs.wisc.edu,
-slot3@vulture.cs.wisc.edu, and so on.
+multiple machines, named \Expr{slot1@example.com},
+\Expr{slot2@example.com},
+\Expr{slot3@example.com}, and so on.
 
-\index{partitioning SMP machines}
 The way that the \Condor{startd} breaks up the
 shared system resources into the different slots
 is configurable.
-All shared system resources (like RAM, disk space, swap space, etc.)
-can either be divided evenly among all the slots, with each
-CPU getting its own slot, or you can define your own
-\Term{slot types}, so that resources can be unevenly
-partitioned.  Regardless of the partitioning scheme used, it is important
+All shared system resources,
+such as RAM, disk space, swap space, or specialized custom resources,
+can either be divided evenly among all the slots, 
+with each CPU getting its own slot.
+It is also possible to define \Term{slot types},
+so that resources can be unevenly partitioned.  
+Regardless of the partitioning scheme used, it is important
 to remember the goal is to create a representative slot
 ClassAd, to be used for matchmaking with jobs.  Condor does not
 directly enforce slot shared resource allocations, and jobs
 are free to oversubscribe to shared resources.
 
-Consider an example where two slots are each defined with 50\Percent of
-available RAM.  The resultant ClassAd for each slot will advertise one
-half the available RAM.  Users may submit jobs with RAM requirements
-that match these slots.  However, jobs run on either slot are free to
-consume more than 50\Percent of available RAM.  Condor will not
-directly enforce a RAM utilization limit on either slot.  If a shared
-resource enforcement capability is needed, it is possible to write a
-Startd policy that will evict a job that oversubscribes to shared
-resources, see section \ref{sec:Config-SMP-Policy}.
+Consider an example where two slots are each defined with 50\Percent\ 
+of available RAM.  
+The resultant ClassAd for each slot will advertise one half the available RAM.
+Users may submit jobs with RAM requirements that match these slots.
+However, jobs run on either of these two slots are free to
+consume more than 50\Percent\ of available RAM.  
+Condor will not directly enforce a RAM utilization limit on either slot.
+If a shared resource enforcement capability is needed, 
+it is possible to write a \Condor{startd} policy that will evict 
+a job that oversubscribes to shared resources, 
+as described in section~\ref{sec:Config-SMP-Policy}.
 
-The following section gives details on how to configure Condor to
-divide the resources on an SMP machine into separate slots.
+The following sections detail on how to configure Condor to
+divide the slot resources on an SMP machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Divide}
-Dividing System Resources in SMP Machines}
+Dividing System Resources for Slots within Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{partitioning SMP machines}
 
-This section describes the settings that allow you to define your own
-slot types and to control how many slots of each
-type are reported to Condor.
+The number of each slot type
+reported can be changed at run time by issuing a reconfiguration
+command to
+the \Condor{startd} daemon by sending a SIGHUP or using \Condor{reconfig}.
+However, the definitions for the types themselves cannot be changed
+with reconfiguration.
+To change any slot type definition, use \Condor{restart}
+for that change to take effect.
 
-There are two main ways to go about partitioning an SMP machine:
+There are two main ways to go about partitioning a machine:
 
 \begin{description}
 
-\item[Define your own slot types.]
-  By defining your own types, you can specify what fraction of shared
-  system resources (CPU, RAM, swap space and disk space) go to each
-  slot.
-  Once you define your own types, you can control how many of each
-  type are reported at any given time.
-
 \item[Evenly divide all resources.]  
-  If you do not define your own types, the \Condor{startd} will
-  automatically	partition your machine into slots for you.
-  It will do so by placing a single CPU in each slot, and evenly dividing
-  all shared resources among the slots.
-  With this default partitioning, you only specify how many
+  Without individualized slot types, the \Condor{startd} will
+  automatically	partition the machine into slots.
+  It will do so by placing a single CPU in each slot, 
+  evenly dividing all shared resources among the slots.
+  With this default partitioning, the only specification becomes how many
   slots are reported at a time.
   By default, all slots are reported to Condor.
 
+  The number of slots within the SMP machine is the only attribute
+  that needs to be defined.
+  Its definition is accomplished by setting the configuration
+  variable \Macro{NUM\_SLOTS} to the integer number of slots desired.
+  If variable \MacroNI{NUM\_SLOTS} is not defined,
+  it defaults to the number of CPUs within the SMP machine.
+  \MacroNI{NUM\_SLOTS} \emph{cannot} be used to make Condor advertise more
+  slots than there are CPUs on the machine.
+  To do that, use \Macro{NUM\_CPUS}.
+
+\item[Define individualized slot types.]
+  Individualized slot types may specify what fraction of shared
+  system resources (CPU, RAM, swap space, disk space, and custom resources)
+  go to each slot.
+  Given these types, configuration may control how many of each
+  type are reported at any given time.
+
 \end{description}
 
-The number of each type being
-reported can be changed at run-time, by issuing a reconfiguration
-command to
-the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).
-However, the definitions for the types themselves cannot be changed
-with reconfiguration.
-If you change any slot type definitions, you must use \Condor{restart}
-\begin{verbatim}
-condor_restart -startd
-\end{verbatim}
-for that change to take effect.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Slot-Type-Define}
-Defining Slot Types}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-To define your own slot types, add configuration file
-parameters that list how much of each system resource you want in the
-given slot type.  Do this by defining configuration
-variables of the form
+To define individualized slot types, add configuration variables
+that list how much of each system resource is for the given slot type.
+Do this by defining configuration variables named with the form
 \Macro{SLOT\_TYPE\_<N>}.
-The \verb@<N>@ represents an integer (for example, 
-\MacroNI{SLOT\_TYPE\_1}), which specifies the slot type defined.
+The \verb@<N>@ represents an integer,
+so for example, there may be the variable named \MacroNI{SLOT\_TYPE\_1}.
 Note that there may be multiple slots of each type.  The number created
 is configured with \MacroNI{NUM\_SLOTS\_TYPE\_<N>} as described later in
 this section.
 
-A type describes what share of the total system resources a given
+The definition of variable \MacroNI{SLOT\_TYPE\_<N>}
+is a comma and/or space separated list that
+describes what share of the total system resources a given
 slot has available to it.
-
-The type can be defined by:
+These types can be defined by:
 \begin{itemize}
   % \frac{1}{4} doesn't work
   %\item A simple fraction, such as \frac{1}{4}
   \item A simple fraction, such as 1/4
   \item A simple percentage, such as 25\Percent
   \item A comma-separated list of attributes, with a percentage,
-	fraction, numerical value, or \Expr{auto} for each one.
-  \item A comma-separated list including a blanket value that serves
-        as a default for any resources not explicitly specified in the list.
+	fraction, numerical value, or the key word \Expr{auto} for each one
+  \item A comma-separated list, including a blanket value that serves
+        as a default for any resources not explicitly specified in the list
 \end{itemize}
-A simple fraction or percentage causes an allocation
+A simple fraction or percentage causes a fractional allocation
 of the total system resources.
 This includes the number of CPUs.
-A comma-separated list allows a fine-tuning of
-the amounts for specific attributes.
-
 The attributes that specify the number of CPUs
 and the total amount of RAM in
 the SMP machine do not change.
-For these attributes, specify either absolute values or
-percentages of the total available amount (or \Expr{auto}).  
+For these attributes, specify absolute values,
+percentages of the total available amount, or \Expr{auto}.  
 For example, in a machine with 128 Mbytes of RAM,
 all the following definitions result in the same allocation amount.
 \begin{verbatim}
-mem=64
-mem=1/2
-mem=50%
-mem=auto
+  SLOT_TYPE_1 = mem=64
+
+  SLOT_TYPE_1 = mem=1/2
+
+  SLOT_TYPE_1 = mem=50%
+
+  SLOT_TYPE_1 = mem=auto
 \end{verbatim}
 
 Other attributes are dynamic, such as disk space and swap space.
-For these, specify a percentage or fraction of the total
+For these, specify a percentage or a fraction of the total
 value that is allocated to each slot, instead of specifying absolute values.
-As the total values of these resources change on your machine, each
-slot will take its fraction of the total and report that as its
+As the total values of these resources change on the machine,
+each slot will take its fraction of the total and report that as its
 available amount.
 
 The disk space allocated to each slot is taken from the disk partition
-containing the slots execute directory (configured with
-\Macro{EXECUTE} or \Macro{SLOT<N>\_EXECUTE}).  If every slot is in a
-different partition, then each one may be defined with up to
-100\Percent for its disk share.  If some slots are in the same
-partition, then their total is not allowed to exceed 100\Percent.
+containing the slot's \MacroUNI{EXECUTE} directory. 
+If every slot is in a different partition, 
+then each one may be defined with up to
+100\Percent\ for its disk share.
+If some slots are in the same partition, 
+then their total is not allowed to exceed 100\Percent.
 
-The four attribute names are case insensitive when defining slot types.
+The four predefined attribute names are case insensitive when defining 
+slot types.
 The first letter of the attribute name distinguishes between
-the attributes.
-The four attributes, with several examples of acceptable names for
-each are
+these attributes.
+The four attributes, with several examples of acceptable names for each:
 \begin{itemize}
   \item Cpus, C, c, cpu 
   \item ram, RAM, MEMORY, memory, Mem, R, r, M, m
@@ -178,40 +180,38 @@ each are
 \end{itemize}
 
 As an example, consider a
-host of 4 CPUs and 256 megs of RAM.
+host of 4 CPUs and 256 Mbytes of RAM.
 Here are valid example slot type definitions. 
-Types 1-3 are all equivalent to each other, as are types 4-6.  Note that
-in a real configuration, you would not use all of these slot types together
-because they add up to more than 100\Percent of the various system resources.
-Also note that in a real configuration, you would need to also define
-\MacroNI{NUM\_SLOTS\_TYPE\_<N>} for each slot type.
+Types 1-3 are all equivalent to each other, as are types 4-6.
+Note that this is not a real configuration, as all of these slot types together
+add up to more than 100\Percent\ of the various system resources.
 
 \begin{verbatim}
-SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
+  SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
 
-SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
+  SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
 
-SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
+  SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
 
-SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
+  SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
 
-SLOT_TYPE_5 = 25%
+  SLOT_TYPE_5 = 25%
 
-SLOT_TYPE_6 = 1/4
+  SLOT_TYPE_6 = 1/4
 \end{verbatim}
-
 
 The default value for each resource share is \Expr{auto}.  The share
 may also be explicitly set to \Expr{auto}.  All slots with the value
 \Expr{auto} for a given type of resource will evenly divide
 whatever remains after subtracting out whatever was explicitly
 allocated in other slot definitions.  For example, if one slot is
-defined to use 10\Percent of the memory and the rest define it as
+defined to use 10\Percent\ of the memory and the rest define it as
 \Expr{auto} (or leave it undefined), then the rest of the slots will
-evenly divide 90\Percent of the memory between themselves.
+evenly divide 90\Percent\ of the memory between themselves.
 
-In both of the following examples, the disk share is set to \Expr{auto},
-cpus is 1, and everything else is 50\Percent:
+These two examples are equivalent to each other.
+The disk share is set to \Expr{auto},
+CPUs is 1, and everything else is 50\Percent:
 
 \begin{verbatim}
 SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
@@ -219,12 +219,11 @@ SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
 SLOT_TYPE_1 = cpus=1, disk=auto, 50%
 \end{verbatim}
 
-
 The number of slots of each type is set with the
 configuration variable
 \Macro{NUM\_SLOTS\_TYPE\_<N>},
-where N is the type as given in the
-\MacroNI{SLOT\_TYPE\_<N>}variable.
+where \verb@<N>@ is the type as given in the
+\MacroNI{SLOT\_TYPE\_<N>} variable.
 
 Note that it is possible to set the configuration variables such
 that they specify an impossible configuration.
@@ -232,23 +231,85 @@ If this occurs, the \Condor{startd} daemon fails after writing
 a message to its log attempting to indicate the configuration
 requirements that it could not implement.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-Slot-Number}
-Evenly Divided Resources}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If you are not defining your own slot types, then all resources
-are divided equally among the slots.
-The number of slots within the SMP machine is the only attribute
-that needs to be defined.
-Its definition is accomplished by setting the configuration
-variable \Macro{NUM\_SLOTS} to the
-integer number of slots desired.
-If variable \MacroNI{NUM\_SLOTS} is not defined,
-it defaults to the number of CPUs within the SMP machine.
-You cannot use \MacroNI{NUM\_SLOTS} to make Condor advertise more
-slots than there are CPUs on the machine.
-To do that, use \Macro{NUM\_CPUS}.
+In addition to the standard resources of CPUs, memory, disk, and swap,
+the administrator may also define custom resources on 
+a localized per-machine basis.
+To implement this, 
+a list of names of the local machine resources are defined using configuration 
+variable \Macro{MACHINE\_RESOURCE\_NAMES}.
+This example defines two resources,
+a GPU and an actuator:
+\begin{verbatim}
+MACHINE_RESOURCE_NAMES = gpu, actuator
+\end{verbatim}
+
+The quantities of available resources are defined using configuration
+variables of the form \Macro{MACHINE\_RESOURCE\_<name>},
+where \Expr{<name>} is as defined by variable 
+\MacroNI{MACHINE\_RESOURCE\_NAMES}, as shown in this example:
+\begin{verbatim}
+MACHINE_RESOURCE_gpu = 16
+MACHINE_RESOURCE_actuator = 8
+\end{verbatim}
+
+Local machine resource names defined in this way may now be used in conjunction 
+with \Macro{SLOT\_TYPE\_<N>}, using all the same syntax described
+earlier in this section.
+The following example demonstrates
+the definition of static and partitionable slot types with local machine 
+resources:
+\begin{verbatim}
+# declare one partitionable slot with half of the GPUs, 6 actuators, and
+# 50% of all other resources:
+SLOT_TYPE_1 = gpu=50%,actuator=6,50%
+SLOT_TYPE_1_PARTITIONABLE = TRUE
+NUM_SLOTS_TYPE_1 = 1
+
+# declare two static slots, each with 25% of the GPUs, 1 actuator, and
+# 25% of all other resources: 
+SLOT_TYPE_2 = gpu=25%,actuator=1,25%
+SLOT_TYPE_2_PARTITIONABLE = FALSE
+NUM_SLOTS_TYPE_2 = 2
+\end{verbatim}
+
+A job may request these local machine resources using the 
+syntax \SubmitCmd{request\_<name>}, 
+as described in section~\ref{sec:SMP-dynamicprovisioning}.  
+This example shows a portion of a submit description file 
+that requests GPUs and an actuator:
+\begin{verbatim}
+universe = vanilla
+
+# request two GPUs and one actuator:
+request_gpu = 2
+request_actuator = 1
+
+queue
+\end{verbatim}
+
+The slot ClassAd will represent each local machine resource
+with the following attributes:
+\begin{description}
+\item{\Attr{Total<name>}: the total quantity of the resource 
+  identified by \Expr{<name>}}
+\item{\Attr{Detected<name>}: the quantity detected of the resource
+  identified by \Expr{<name>}; this attribute is
+  currently equivalent to \Attr{Total<name>}}
+\item{\Attr{TotalSlot<name>}: the quantity of the resource
+  identified by \Expr{<name>} allocated to this slot}
+\item{\Attr{<name>}: the amount of the resource
+  identified by \Expr{<name>} available to be used on this slot}
+\end{description}
+
+From the example given, the \Expr{gpu} resource would be represented by
+the ClassAd attributes
+\Attr{TotalGpu}, \Attr{DetectedGpu}, \Attr{TotalSlotGpu}, and \Attr{Gpu}.
+In the job ClassAd, 
+the amount of the requested machine resource appears 
+in a job ClassAd attribute named \Attr{Request<name>}.
+For this example,
+the two attributes will be \Attr{RequestGpu} and \Attr{RequestActuator}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}
@@ -566,7 +627,7 @@ JobA includes the following requirements:
   \item{memory=1024}
   \item{disk=10240} 
 \end{description}
-The portion of the slot that is utilized is referred to as Slot1.1,
+The portion of the slot that is utilized is referred to as Slot1\_1,
 and after allocation, the slot advertises that it has
 the following resources still available:
 \begin{description}
@@ -575,14 +636,22 @@ the following resources still available:
   \item{disk=BIG-10240}
 \end{description}
 As each new job is allocated to Slot1,
-it breaks into Slot1.1, Slot1.2, etc., until the entire set of
+it breaks into Slot1\_1, Slot1\_2, etc., until the entire set of
 available resources have been consumed by jobs.
 
 To enable dynamic provisioning, 
 set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
 to \Expr{True}.
 The string \MacroNI{N} within the configuration variable name
-is the slot number.
+is the slot number.  For the most common cases the machine should
+be configured for one slot, managing all the resources on the machine.
+To do so, set the following configuration variables:
+
+\begin{verbatim}
+NUM_SLOTS=1
+NUM_SLOTS_TYPE_1=1
+SLOT_TYPE_1_PARTITIONABLE=true
+\end{verbatim}
 
 In a pool using dynamic provisioning, 
 jobs can have extra, and desired, resources specified in the submit
@@ -629,6 +698,60 @@ Because it has been effectively broken up into smaller slots,
 these will show as running jobs directly.
 These dynamic slots can also be preempted in the same way as 
 nonpartitioned slots.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-resource-defaults}
+Defaults for Partitionable Slot Sizes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If a job does not specify the required number of CPUs, amount of memory,
+or disk space, there are ways for the administrator to set default
+values for all of these parameters.
+
+First, if any of these attributes are not set in the submit description file,
+there are three variables in the configuration file that \condor{submit}
+will use to fill in default values.  These are
+
+\begin{description}
+  \item{\Macro{JOB\_DEFAULT\_REQUESTMEMORY}}
+  \item{\Macro{JOB\_DEFAULT\_REQUESTDISK}}
+  \item{\Macro{JOB\_DEFAULT\_REQUESTCPUS}}
+\end{description}
+
+The value of these variables can be ClassAd expressions.  
+The default values for these variables, should they not be set are
+
+\begin{description}
+  \item{\Macro{JOB\_DEFAULT\_REQUEST\_MEMORY} = \Expr{ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)}}
+  \item{\Macro{JOB\_DEFAULT\_REQUEST\_CPUS} = \Expr{1}}
+  \item{\Macro{JOB\_DEFAULT\_REQUEST\_DISK} = \Expr{DiskUsage}}
+\end{description}
+
+Note that these default values are chosen such that 
+jobs matched to partitionable slots function similar to static slots.
+
+Once the job has been matched, 
+and has made it to the execute machine, 
+the \Condor{startd} has the ability to modify these 
+resource requests before using them to size the
+actual dynamic slots carved out of the partitionable slot.  
+Clearly, for the job to work,
+the \Condor{startd} daemon must create slots with at least 
+as many resources as the job needs.  
+However,
+it may be valuable to create dynamic slots somewhat bigger 
+than the job's request, 
+as subsequent jobs may be more likely to reuse the newly created slot 
+when the initial job is done using it.
+
+The \Condor{startd} configuration variables which control this 
+and their defaults are
+
+\begin{description}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS} = \Expr{quantize(RequestCpus, \{1\})}}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY} = \Expr{quantize(RequestMemory, \{TotalSlotMem / TotalSlotCpus / 4\}) }}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK} = \Expr{quantize(RequestDisk, \{1024\}) }}
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-defrag}

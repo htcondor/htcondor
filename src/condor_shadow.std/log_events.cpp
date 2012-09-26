@@ -37,7 +37,7 @@
 #include "classad_helpers.h"
 #include "condor_getcwd.h"
 #include "structproc.h"
-
+#include <vector>
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
@@ -96,26 +96,32 @@ check_execute_event( void )
 extern "C" void 
 initializeUserLog ()
 {
-	MyString logfilename;
+	MyString logfilename,dagmanLogName;
 	MyString gjid;
 	int use_xml;
+	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(JobAd, logfilename) ) {
-		if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
-            gjid = "Unknown";
-        }
-		if (!ULog.initialize (Proc->owner, NULL, logfilename.Value(),
-							  Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
-			EXCEPT("Failed to initialize user log!\n");
-		}
-		if (JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
-			&& use_xml) {
-			ULog.setUseXML(true);
-		} else {
-			ULog.setUseXML(false);
-		}
+		logfiles.push_back(logfilename.Value());	
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
+	}
+	if ( getPathToUserLog(JobAd, dagmanLogName, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		logfiles.push_back(dagmanLogName.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG,
+			dagmanLogName.Value());
+	}
+	if(JobAd->LookupString(ATTR_GLOBAL_JOB_ID, gjid) != 1) {
+		gjid = "Unknown";
+	}
+	if(!logfiles.empty()) {
+		if ( !ULog.initialize (Proc->owner, NULL, logfiles,
+				Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
+			EXCEPT("Failed to initialize user log!\n");
+		} else {
+			ULog.setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+		}
 	} else {
-		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		dprintf(D_FULLDEBUG, "no %s found and no %s found\n", ATTR_ULOG_FILE,
+			ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 
@@ -247,12 +253,12 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 
 					if (strcmp (Proc->rootdir, "/") == 0)
 					{
-						coreFile.sprintf( "%s/core.%d.%d", coredir.Value(),
+						coreFile.formatstr( "%s/core.%d.%d", coredir.Value(),
 							 	Proc->id.cluster, Proc->id.proc );
 					}
 					else
 					{
-						coreFile.sprintf( "%s%s/core.%d.%d", Proc->rootdir,
+						coreFile.formatstr( "%s%s/core.%d.%d", Proc->rootdir,
 							 	coredir.Value(), Proc->id.cluster, Proc->id.proc );
 					}
 				} 
@@ -318,7 +324,10 @@ log_except (const char *msg)
 
 	// log shadow exception event
 	ShadowExceptionEvent event;
-	sprintf(event.message, msg);
+	if(!msg) msg = "";
+	snprintf(event.message, sizeof(event.message), "%s", msg);
+	event.message[sizeof(event.message)-1] = '\0';
+
 	// we want to log the events from the perspective of the
 	// user job, so if the shadow *sent* the bytes, then that
 	// means the user job *received* the bytes
@@ -339,8 +348,8 @@ log_except (const char *msg)
 extern "C" void
 log_old_starter_shadow_suspend_event_hack (char *s1, char *s2)
 {
-	char *magic_suspend = "TISABH Starter: Suspended user job: ";
-	char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
+	const char *magic_suspend = "TISABH Starter: Suspended user job: ";
+	const char *magic_unsuspend = "TISABH Starter: Unsuspended user job.";
 
 	/* This should be bug enough to hold the two string params */
 	char buffer[BUFSIZ * 2 + 2];

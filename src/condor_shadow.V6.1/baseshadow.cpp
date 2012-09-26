@@ -33,7 +33,6 @@
 #include "classad_helpers.h"
 #include "classad_merge.h"
 #include "dc_startd.h"
-
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -328,7 +327,7 @@ int BaseShadow::cdToIwd() {
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
 		MyString hold_reason;
-		hold_reason.sprintf("Cannot access initial working directory %s: %s",
+		hold_reason.formatstr("Cannot access initial working directory %s: %s",
 		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
@@ -573,7 +572,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* The first thing we do is record that we are in a termination pending
 		state. */
 	if (kind == US_NORMAL) {
-		str.sprintf("%s = TRUE", ATTR_TERMINATION_PENDING);
+		str.formatstr("%s = TRUE", ATTR_TERMINATION_PENDING);
 		jobAd->Insert(str.Value());
 	}
 
@@ -606,7 +605,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 		if (exited_by_signal == TRUE) {
 			reason = JOB_COREDUMPED;
-			str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
+			str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, core_file_name);
 			jobAd->Insert(str.Value());
 		} else {
 			reason = JOB_EXITED;
@@ -637,7 +636,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	/* also store the corefilename into the jobad so we can recover this 
 		during a termination pending scenario. */
 	if( reason == JOB_COREDUMPED ) {
-		str.sprintf("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
+		str.formatstr("%s = \"%s\"", ATTR_JOB_CORE_FILENAME, getCoreName());
 		jobAd->Insert(str.Value());
 	}
 
@@ -727,7 +726,7 @@ BaseShadow::evictJob( int reason )
 	MyString from_where;
 	MyString machine;
 	if( getMachineName(machine) ) {
-		from_where.sprintf(" from %s",machine.Value());
+		from_where.formatstr(" from %s",machine.Value());
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
 			 getCluster(), getProc(), from_where.Value() );
@@ -829,43 +828,39 @@ BaseShadow::emailUser( const char *subjectline )
 
 void BaseShadow::initUserLog()
 {
-	MyString logfilename;
+	MyString logfilename,dagmanLogFile;
 	int  use_xml;
-	bool result;
 
 		// we expect job_updater to already be initialized, in case we
 		// need to put the job on hold as a result of failure to open
 		// the log
 	ASSERT( job_updater );
 
+	std::vector<const char*> logfiles;
 	if ( getPathToUserLog(jobAd, logfilename) ) {
-		result = uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
-		// It is important to NOT ignore a failure to initialize the user log,
-		// since if we fail to initialize here, then all event logging 
-		// in the shadow from this point forward are effectively ignored.
-		// So if we fail to initialize the user log, put this job on hold.
-		// Future work: it would be good to pass use the error stack to 
-		// figure out -why- the initialization failed, allowing the shadow
-		// to retry automatically -vs- go on hold depending upon the details
-		// of the failure.
-		if ( result == false ) {
+		logfiles.push_back(logfilename.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());	
+	}
+	if ( getPathToUserLog(jobAd, dagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG) ) {
+		logfiles.push_back(dagmanLogFile.Value());
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.Value());	
+	}
+	if( !logfiles.empty()) {
+		if( !uLog.initialize (owner.Value(), domain.Value(), logfiles,
+				cluster, proc, 0, gjid)) {
 			MyString hold_reason;
-			hold_reason.sprintf(
-				"Failed to initialize user log to %s", logfilename.Value());
+			hold_reason.formatstr(
+					"Failed to initialize user log to %s or %s", logfilename.Value(),
+						dagmanLogFile.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does EXCEPT
-			EXCEPT("Failed to initialize user log to %s",logfilename.Value());
+			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
 		}
-		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
-			&& use_xml) {
-			uLog.setUseXML(true);
-		} else {
-			uLog.setUseXML(false);
-		}
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename.Value());
+		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
+		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
 	}
 }
 
@@ -898,6 +893,44 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 	}
 
 	return TRUE;
+}
+
+static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd) 
+{
+	std::string resslist;
+	if ( ! jobAd->LookupString("PartitionableResources", resslist))
+		resslist = "Cpus, Disk, Memory";
+
+	StringList reslist(resslist.c_str());
+	if (reslist.number() > 0) {
+		int64_t int64_value = 0;
+		ClassAd * puAd = new ClassAd();
+		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
+
+		reslist.rewind();
+		char * resname = NULL;
+		while ((resname = reslist.next()) != NULL) {
+			MyString attr;
+			int64_value = -1;
+			attr.formatstr("%s", resname); // provisioned value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(resname, int64_value);
+			} 
+			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			int64_value = -2;
+			attr.formatstr("Request%s", resname);	// requested value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			int64_value = -3;
+			attr.formatstr("%sUsage", resname); // usage value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+		}
+		*ppusageAd = puAd;
+	}
 }
 
 // kind defaults to US_NORMAL.
@@ -1008,6 +1041,45 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	if( exitReason == JOB_COREDUMPED ) {
 		event.setCoreFile( core_file_name );
 	}
+
+#if 1
+	set_usageAd(jobAd, &event.pusageAd);
+#else
+	std::string resslist;
+	if ( ! jobAd->LookupString("PartitionableResources", resslist))
+		resslist = "Cpus, Disk, Memory";
+
+	StringList reslist(resslist.c_str());
+	if (reslist.number() > 0) {
+		int64_t int64_value = 0;
+		ClassAd * puAd = new ClassAd();
+		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
+
+		reslist.rewind();
+		char * resname = NULL;
+		while ((resname = reslist.next()) != NULL) {
+			MyString attr;
+			int64_value = -1;
+			attr.formatstr("%s", resname); // provisioned value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(resname, int64_value);
+			} 
+			// /*for debugging*/ else { puAd->Assign(resname, 42); }
+			int64_value = -2;
+			attr.formatstr("Request%s", resname);	// requested value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
+			int64_value = -3;
+			attr.formatstr("%sUsage", resname); // usage value
+			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
+				puAd->Assign(attr.Value(), int64_value);
+			}
+		}
+		event.pusageAd = puAd;
+	}
+#endif
 	
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
@@ -1046,6 +1118,8 @@ BaseShadow::logEvictEvent( int exitReason )
 		// remote rusage
 	event.run_remote_rusage = run_remote_rusage;
 	
+	set_usageAd(jobAd, &event.pusageAd);
+
 		/*
 		  we want to log the events from the perspective of the user
 		  job, so if the shadow *sent* the bytes, then that means the
@@ -1143,7 +1217,8 @@ BaseShadow::log_except(const char *msg)
 	bool exception_already_logged = false;
 
 	if(!msg) msg = "";
-	sprintf(event.message, "%s", msg);
+	snprintf(event.message, sizeof(event.message), "%s", msg);
+	event.message[sizeof(event.message)-1] = '\0';
 
 	if ( BaseShadow::myshadow_ptr ) {
 		BaseShadow *shadow = BaseShadow::myshadow_ptr;
@@ -1195,10 +1270,10 @@ BaseShadow::updateJobInQueue( update_t type )
 		// won't actually connect to the job queue for it.  we do this
 		// here since we want it for all kinds of updates...
 	MyString buf;
-	buf.sprintf( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
+	buf.formatstr( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
 											  bytesReceived()) );
 	jobAd->Insert( buf.Value() );
-	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
+	buf.formatstr( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
 	jobAd->Insert( buf.Value() );
 

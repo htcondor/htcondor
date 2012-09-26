@@ -830,7 +830,7 @@ Triggerd::PerformQueries()
             // Problem with the query
             if (Q_COMMUNICATION_ERROR == status)
             {
-               dprintf(D_ALWAYS, "Triggerd Error: Error contacting the collecter - %s\n", errstack.getFullText(true));
+               dprintf(D_ALWAYS, "Triggerd Error: Error contacting the collecter - %s\n", errstack.getFullText(true).c_str());
                if (CEDAR_ERR_CONNECT_FAILED == errstack.code(0))
                {
                   dprintf(D_ALWAYS, "Triggerd Error: Couldn't contact the collector on the central manager\n");
@@ -1038,7 +1038,7 @@ Triggerd::InvalidatePublicAd()
    invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
    invalidate_ad.SetTargetTypeName(GENERIC_ADTYPE);
 
-   line.sprintf("%s == \"%s\"", ATTR_NAME, daemonName.c_str()); 
+   line.formatstr("%s == \"%s\"", ATTR_NAME, daemonName.c_str()); 
    invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
 
    daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);

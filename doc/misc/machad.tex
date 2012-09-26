@@ -33,6 +33,17 @@ Sparc~20, IPC, IPX, etc.
 	\item[\AdStr{PPC64}:] 64-bit PowerPC
 	\end{description}
 %
+\index{ClassAd machine attribute!CanHibernate}
+\item[\AdAttr{CanHibernate}:] The \Condor{startd} has the capability to 
+shut down or hibernate a machine when certain configurable criteria are met.
+However, before the \Condor{startd} can shut down a machine, 
+the hardware itself must support hibernation, as must the operating system. 
+When the \Condor{startd} initializes, 
+it checks for this support.
+If the machine has the ability to hibernate, 
+then this boolean ClassAd attribute will be \Expr{True}.
+By default, it is \Expr{False}.
+%
 \index{ClassAd machine attribute!CheckpointPlatform}
 \item[\AdAttr{CheckpointPlatform}:] A string which opaquely encodes various
 aspects about a machine's operating system, hardware, and kernel
@@ -155,6 +166,27 @@ remote file access.
 when the configuration triggers the detection of virtual machine
 software.
 %
+\index{ClassAd machine attribute!IsWakeAble}
+\item[\AdAttr{IsWakeAble}:] A boolean value that when \Expr{True} identifies
+that the machine has the capability to be woken into a 
+fully powered and running state by receiving a Wake On LAN (WOL) packet.
+This ability is a function of the operating system, 
+the network adapter in the machine 
+(notably, wireless network adapters usually do not have this function),
+and BIOS settings. 
+When the \Condor{startd} initializes, 
+it tries to detect if the operating system and network adapter both support 
+waking from hibernation by receipt of a WOL packet.
+The default value is \Expr{False}.
+%
+\index{ClassAd machine attribute!IsWakeEnabled}
+\item[\AdAttr{IsWakeEnabled}:] If the hardware and software have the capacity 
+to be woken into a fully powered and running state by receiving 
+a Wake On LAN (WOL) packet,
+this feature can still be disabled via the BIOS or software.
+If BIOS or the operating system have disabled this feature, 
+the \Condor{startd} sets this boolean attribute to \Expr{False}.
+%
 \index{ClassAd machine attribute!JobVM\_VCPUS}
 \item[\AdAttr{JobVM\_VCPUS}:] An attribute defined if a vm universe job
 is running on this slot.  Defined by the number of virtualized CPUs
@@ -264,9 +296,13 @@ Currently supported operating systems have the following string
 definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
-	LINUX 2.4.x, or LINUX 2.6.x kernel systems
+	LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux 
 	\item[\AdStr{OSX}:] for Darwin
+	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
+	\item[\AdStr{FREEBSD8}:] for FreeBSD 8
 	\item[\AdStr{WINDOWS}:] for all versions of Windows
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
 	\end{description}
 These strings show definitions for operating systems no longer supported:
 	\begin{description}
@@ -275,23 +311,151 @@ These strings show definitions for operating systems no longer supported:
 	\end{description}
 %
 \index{ClassAd machine attribute!OpSysAndVer}
-\item[\AdAttr{OpSysAndVer}:] A string with previously implemented values
-for the \Attr{OpSys} attribute.
-String definitions for operating systems have the following values:
+\item[\AdAttr{OpSysAndVer}:] A string indicating an operating system and
+a version number.
+
+For Linux operating systems, it is the value of the \Attr{OpSysName} attribute 
+concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 	\begin{description}
-	\item[\AdStr{WINNT50}:] for Windows 2000
-	\item[\AdStr{WINNT51}:] for Windows XP
-	\item[\AdStr{WINNT52}:] for Windows Server 2003
-	\item[\AdStr{WINNT60}:] for Windows Vista
-	\item[\AdStr{WINNT61}:] for Windows 7
+	\item[\AdStr{RedHat5}:] for RedHat Linux version 5
+	\item[\AdStr{RedHat6}:] for RedHat Linux version 6
+	\item[\AdStr{Fedora16}:] for Fedora Linux version 16
+	\item[\AdStr{Debian5}:] for Debian Linux version 5
+	\item[\AdStr{Debian6}:] for Debian Linux version 6
+	\item[\AdStr{SL5}:] for Scientific Linux version 5
+	\item[\AdStr{SL6}:] for Scientific Linux version 6
+	\item[\AdStr{SLFermi5}:] for Fermi's Scientific Linux version 5
+	\item[\AdStr{SLFermi6}:] for Fermi's Scientific Linux version 6
+	\item[\AdStr{SLCern5}:] for CERN's Scientific Linux version 5
+	\item[\AdStr{SLCern6}:] for CERN's Scientific Linux version 6
+	\end{description}
+For MacOS operating systems, it is the value of the \Attr{OpSysShortName} 
+attribute concatenated with the string version of the \Attr{OpSysVer} attribute: 
+	\begin{description}
+	\item[\AdStr{MacOSX605}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{MacOSX703}:] for MacOS version 10.7.3 (Lion)
+	\end{description}
+For BSD operating systems, it is the value of the \Attr{OpSysName} attribute 
+concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
+	\begin{description}
+	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
+	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
+	\end{description}
+For Solaris Unix operating systems, 
+it is the same value as the \Attr{OpSys} attribute: 
+	\begin{description}
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\end{description}
+For Windows operating systems, it is the value of the \Attr{OpSys} attribute 
+concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
+	\begin{description}
+	\item[\AdStr{WINDOWS500}:] for Windows 2000
+	\item[\AdStr{WINDOWS501}:] for Windows XP
+	\item[\AdStr{WINDOWS502}:] for Windows Server 2003
+	\item[\AdStr{WINDOWS600}:] for Windows Vista
+	\item[\AdStr{WINDOWS601}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysLegacy}
+\item[\AdAttr{OpSysLegacy}:] A string that holds the long-standing values for the \Attr{OpSys} attribute.
+Currently supported operating systems have the following string
+definitions:
+	\begin{description}
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux versions
+	\item[\AdStr{OSX}:] for Darwin
+	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
+	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{WINDOWS}:] for all versions of Windows
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysLongName}
+\item[\AdAttr{OpSysLongName}:] A string giving a full description of 
+the operating system.
+For Linux platforms, this is generally the string taken from \File{/etc/hosts},
+with extra characters stripped off Debian versions.
+	\begin{description}
+	\item[\AdStr{Red Hat Enterprise Linux Server release 5.7 (Tikanga)}:] for RedHat Linux version 5
+	\item[\AdStr{Red Hat Enterprise Linux Server release 6.2 (Santiago)}:] for RedHat Linux version 6
+	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
+	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{MacOSX 7.3}:] for MacOS version 10.7.3 (Lion)
+	\item[\AdStr{FreeBSD8.2-RELEASE-p3}:] for FreeBSD version 8
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{Windows XP SP3}:] for Windows XP
+	\item[\AdStr{Windows 7 SP2}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysMajorVersion}
+\item[\AdAttr{OpSysMajorVersion}:] An integer value representing the major version of the operating system.
+	\begin{description}
+	\item[\Expr{5}:] for RedHat Linux version 5 
+and derived platforms such as Scientific Linux
+	\item[\Expr{6}:] for RedHat Linux version 6
+and derived platforms such as Scientific Linux
+	\item[\Expr{16}:] for Fedora Linux version 16
+	\item[\Expr{6}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\Expr{7}:] for MacOS version 10.7.3 (Lion)
+	\item[\Expr{7}:] for FreeBSD version 7
+	\item[\Expr{8}:] for FreeBSD version 8
+	\item[\Expr{5}:] for Solaris 2.10, 5.10, 2.11, or 5.11
+	\item[\Expr{501}:] for Windows XP
+	\item[\Expr{600}:] for Windows Vista
+	\item[\Expr{601}:] for Windows 7
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysName}
+\item[\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
+	\begin{description}
+	\item[\AdStr{RedHat}:] for RedHat Linux version 6
+	\item[\AdStr{Fedora}:] for Fedora Linux version 16
+	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\AdStr{Lion}:] for MacOS version 10.7.3 (Lion)
+	\item[\AdStr{FREEBSD}:] for FreeBSD version 7 or 8
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{WindowsXP}:] for Windows XP
+	\item[\AdStr{WindowsVista}:] for Windows Vista
+	\item[\AdStr{Windows7}:] for Windows 7
+	\item[\AdStr{SL}:] for Scientific Linux
+	\item[\AdStr{SLFermi}:] for Fermi's Scientific Linux
+	\item[\AdStr{SLCern}:] for CERN's Scientific Linux
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysShortName}
+\item[\AdAttr{OpSysShortName}:] A string containing a short name for
+the operating system.
+	\begin{description}
+	\item[\AdStr{RedHat}:] for RedHat Linux version 5 or 6
+	\item[\AdStr{Fedora}:] for Fedora Linux version 16
+	\item[\AdStr{Debian}:] for Debian Linux version 5 or 6
+	\item[\AdStr{MacOSX}:] for MacOS version 10.6.5 (Snow Leopard) or 
+for MacOS version 10.7.3 (Lion)
+	\item[\AdStr{FreeBSD}:] for FreeBSD version 7 or 8
+	\item[\AdStr{SOLARIS5.10}:] for Solaris 2.10 or 5.10
+	\item[\AdStr{SOLARIS5.11}:] for Solaris 2.11 or 5.11
+	\item[\AdStr{XP}:] for Windows XP
+	\item[\AdStr{Vista}:] for Windows Vista
+	\item[\AdStr{7}:] for Windows 7
+	\item[\AdStr{SL}:] for Scientific Linux
+	\item[\AdStr{SLFermi}:] for Fermi's Scientific Linux
+	\item[\AdStr{SLCern}:] for CERN's Scientific Linux
 	\end{description}
 %
 \index{ClassAd machine attribute!OpSysVer}
 \item[\AdAttr{OpSysVer}:] An integer value representing the operating system
 version number.
-Currently supported operating systems have the following values:
 	\begin{description}
-	\item[\Expr{500}:] for Windows 2000 
+	\item[\Expr{602}:] for RedHat Linux version 6.2
+	\item[\Expr{1600}:] for Fedora Linux version 16.0
+	\item[\Expr{704}:] for FreeBSD version 7.4
+	\item[\Expr{802}:] for FreeBSD version 8.2
+	\item[\Expr{605}:] for MacOS version 10.6.5 (Snow Leopard)
+	\item[\Expr{703}:] for MacOS version 10.7.3 (Lion)
+	\item[\Expr{500}:] for Windows 2000
 	\item[\Expr{501}:] for Windows XP
 	\item[\Expr{502}:] for Windows Server 2003
 	\item[\Expr{600}:] for Windows Vista or Windows Server 2008
@@ -547,6 +711,25 @@ Claimed state:
 \index{ClassAd machine attribute (in Claimed State)!ClientMachine}
 \item[\AdAttr{ClientMachine}:] The host name of the machine that has
 claimed this resource
+
+\index{ClassAd machine attribute (in Claimed State)!RemoteAutoregroup}
+\item[\AdAttr{RemoteAutoregroup}:]  A boolean attribute which is \Expr{True}
+if this resource was claimed via negotiation 
+when the configuration variable \Macro{GROUP\_AUTOREGROUP} is \Expr{True}.
+It is \Expr{False} otherwise.
+
+\index{ClassAd machine attribute (in Claimed State)!RemoteGroup}
+\item[\AdAttr{RemoteGroup}:]  The accounting group name corresponding to
+the submitter that claimed this resource.
+
+\index{ClassAd machine attribute (in Claimed State)!RemoteNegotiatingGroup}
+\item[\AdAttr{RemoteNegotiatingGroup}:]  The accounting group name under
+which this resource negotiated when it was claimed.  This attribute will
+frequently be the same as attribute \Attr{RemoteGroup},
+but it may differ in cases such
+as when configuration variable \Macro{GROUP\_AUTOREGROUP} is \Expr{True},
+in which case it will have the name of the root group, 
+identified as \Expr{<none>}.
 
 \index{ClassAd machine attribute (in Claimed State)!RemoteOwner}
 \item[\AdAttr{RemoteOwner}:] The name of the user who originally

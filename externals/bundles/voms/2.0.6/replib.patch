@@ -1,0 +1,55 @@
+diff -u -r voms-2.0.6/src/replib/Makefile.in voms-2.0.6-patched/src/replib/Makefile.in
+--- voms-2.0.6/src/replib/Makefile.in	2011-07-22 05:17:52.000000000 -0500
++++ voms-2.0.6-patched/src/replib/Makefile.in	2012-08-16 16:44:15.000000000 -0500
+@@ -35,7 +35,7 @@
+ subdir = src/replib
+ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in daemon.c \
+ 	getopt_long.c getopt_long_only.c memcmp.c memset.c setenv.c \
+-	strndup.c
++	strndup.c dummy.c
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/project/acinclude.m4 \
+ 	$(top_srcdir)/project/expat.m4 $(top_srcdir)/project/glite.m4 \
+@@ -46,7 +46,7 @@
+ CONFIG_HEADER = $(top_builddir)/src/autogen/config.h
+ CONFIG_CLEAN_FILES =
+ LTLIBRARIES = $(noinst_LTLIBRARIES)
+-librep_la_DEPENDENCIES = @LTLIBOBJS@
++librep_la_DEPENDENCIES = @LTLIBOBJS@ ${LIBOBJDIR}dummy$U.lo
+ am_librep_la_OBJECTS =
+ librep_la_OBJECTS = $(am_librep_la_OBJECTS)
+ librep_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+@@ -115,14 +115,14 @@
+ JHOME = @JHOME@
+ LD = @LD@
+ LDFLAGS = @LDFLAGS@
+-LIBOBJS = @LIBOBJS@
++LIBOBJS = @LIBOBJS@ ${LIBOBJDIR}dummy$U.o
+ LIBS = @LIBS@
+ LIBTOOL = @LIBTOOL@
+ LIPO = @LIPO@
+ LN_S = @LN_S@
+ LOCATION_DIR = @LOCATION_DIR@
+ LOCATION_ENV = @LOCATION_ENV@
+-LTLIBOBJS = @LTLIBOBJS@
++LTLIBOBJS = @LTLIBOBJS@ ${LIBOBJDIR}dummy$U.lo
+ MAINT = @MAINT@
+ MAKEINFO = @MAKEINFO@
+ MKDIR_P = @MKDIR_P@
+@@ -216,7 +216,7 @@
+ with_valgrind = @with_valgrind@
+ noinst_LTLIBRARIES = librep.la
+ librep_la_SOURCES = 
+-librep_la_LIBADD = @LTLIBOBJS@
++librep_la_LIBADD = @LTLIBOBJS@ ${LIBOBJDIR}dummy$U.lo
+ librep_la_CFLAGS = \
+ 	-I$(top_srcdir)/include \
+ 	-I$(srcdir) \
+@@ -283,6 +283,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/memset.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/setenv.Plo@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/strndup.Plo@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@$(DEPDIR)/dummy.Plo@am__quote@
+ 
+ .c.o:
+ @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

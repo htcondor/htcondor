@@ -16,13 +16,21 @@
  # 
  ############################################################### 
 
-if ( HAVE_EXT_CREAM AND NOT PROPER )
+if ( HAVE_EXT_CREAM )
 
 	# cream is such an odd beast and it collides with other versions of
 	# externals
-	include_directories ( ${CREAM_STAGE}/include )
-	link_directories ( ${CREAM_STAGE}/lib )
+        if (NOT PROPER)
+            include_directories ( ${CREAM_STAGE}/include )
+            link_directories ( ${CREAM_STAGE}/lib )
+        endif()
+        
 	add_definitions(-D_REENTRANT)
+	# LTO fails with CREAM because they have references to the typeinfo of exceptions,
+	# but the typeinfo for these are not generated as the exceptions are solely defined
+	# in header files.
+	# Hence, CREAM exception handling does not work; we just didn't notice until LTO was attempted.
+	STRING (REGEX REPLACE "-flto" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	
 	set_source_files_properties(cream_gahp_server.cpp PROPERTIES COMPILE_FLAGS -Wno-shadow)
 
@@ -31,8 +39,10 @@ if ( HAVE_EXT_CREAM AND NOT PROPER )
 		${C_SBIN}
 		"${CREAM_FOUND};${OPENSSL_FOUND};${EXPAT_FOUND};${GLOBUS_THR_FOUND};${VOMS_FOUND};${CLASSADS_FOUND};${PCRE_FOUND}"
 		OFF )
-else()
+        
+else ( HAVE_EXT_CREAM )
 
 	message(STATUS "NOTE: *cream* targets will not be built HAVE_EXT_CREAM=${HAVE_EXT_CREAM}")
 
-endif()
+endif ( HAVE_EXT_CREAM )
+

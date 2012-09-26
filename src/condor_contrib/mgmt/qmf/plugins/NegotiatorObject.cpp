@@ -198,7 +198,7 @@ NegotiatorObject::SetLimit(std::string &name, double max, std::string &text)
 
 	name += "_LIMIT";
 
-	config.sprintf("%s=%f", name.c_str(), max);
+	config.formatstr("%s=%f", name.c_str(), max);
 
 	if (-1 == set_runtime_config(strdup(name.c_str()),
 								 config.StrDup())) {
@@ -241,7 +241,7 @@ NegotiatorObject::SetRawConfig(std::string &name, std::string &value, std::strin
 
 	MyString config;
 
-	config.sprintf("%s=%s", name.c_str(), value.c_str());
+	config.formatstr("%s=%s", name.c_str(), value.c_str());
 
 	if (-1 == set_runtime_config(strdup(name.c_str()),
 								 strdup(config.Value()))) {

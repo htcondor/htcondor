@@ -77,7 +77,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	int no_fd = FALSE;
 
 		/* See if this is one of the messages we are logging */
-	if( !(flags&DebugFlags) ) {
+	if( ! IsDebugLevel(flags) ) {
 		return;
 	}
 

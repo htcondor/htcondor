@@ -32,24 +32,24 @@ AC_DEFUN(AC_GLOBUS,
 
     ac_cv_globus_nothr_valid=no
 
-    GLOBUS_NOTHR_CFLAGS="$with_openssl_prefix/include -I$with_globus_prefix/include/$with_globus_nothr_flavor"
+    GLOBUS_NOTHR_CFLAGS="$with_openssl_prefix/include -I$with_globus_prefix/include/globus"
 
     ac_globus_ldlib="-L$with_globus_prefix/lib"
 
-    GLOBUS_COMMON_NOTHR_LIBS="$ac_globus_ldlib -lglobus_common_$with_globus_nothr_flavor"
+    GLOBUS_COMMON_NOTHR_LIBS="$ac_globus_ldlib -lglobus_common"
 
     GLOBUS_STATIC_COMMON_NOTHR_LIBS="$with_globus_prefix/lib/libglobus_common_$with_globus_nothr_flavor.a"
 
-    GLOBUS_FTP_CLIENT_NOTHR_LIBS="$ac_globus_ldlib -lglobus_ftp_client_$with_globus_nothr_flavor"
+    GLOBUS_FTP_CLIENT_NOTHR_LIBS="$ac_globus_ldlib -lglobus_ftp_client"
 
-    GLOBUS_GSS_NOTHR_LIBS="$ac_globus_ldlib -lglobus_gss_assist_$with_globus_nothr_flavor -lglobus_gssapi_gsi_$with_globus_nothr_flavor -lglobus_gsi_callback_$with_globus_nothr_flavor -lglobus_oldgaa_$with_globus_nothr_flavor -lglobus_gsi_proxy_core_$with_globus_nothr_flavor -lglobus_gsi_credential_$with_globus_nothr_flavor -lglobus_gsi_cert_utils_$with_globus_nothr_flavor -lglobus_gsi_sysconfig_$with_globus_nothr_flavor -lglobus_openssl_$with_globus_nothr_flavor -lglobus_proxy_ssl_$with_globus_nothr_flavor -lglobus_openssl_error_$with_globus_nothr_flavor -lglobus_callout_$with_globus_nothr_flavor -lglobus_common_$with_globus_nothr_flavor -lltdl_$with_globus_nothr_flavor -lssl"
+    GLOBUS_GSS_NOTHR_LIBS="$ac_globus_ldlib -lglobus_gss_assist -lglobus_gssapi_gsi -lglobus_gsi_callback -lglobus_oldgaa -lglobus_gsi_proxy_core -lglobus_gsi_credential -lglobus_gsi_cert_utils -lglobus_gsi_sysconfig -lglobus_openssl -lglobus_proxy_ssl -lglobus_openssl_error -lglobus_callout -lglobus_common -lltdl -lssl"
 
     GLOBUS_SSL_NOTHR_LIBS="-lssl -lcrypto"
 
     GLOBUS_STATIC_SSL_NOTHR_LIBS="$with_openssl_prefix/lib/libssl.a $with_openssl_prefix/lib/libcrypto.a"
 
     dnl Needed by LCAS/LCMAPS voms plugins
-    GLOBUS_GSI_NOTHR_LIBS="$ac_globus_ldlib -lglobus_gsi_credential_$with_globus_nothr_flavor"
+    GLOBUS_GSI_NOTHR_LIBS="$ac_globus_ldlib -lglobus_gsi_credential"
 
     dnl
     dnl check nothr openssl header

@@ -407,7 +407,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	result = getQueryAd (queryAd);
 	if (result != Q_OK) return result;
 
-	if( DebugFlags & D_HOSTNAME ) {
+	if( IsDebugLevel( D_HOSTNAME ) ) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
 				 my_collector.addr(), my_collector.fullHostname() );
 		queryAd.dPrint( D_HOSTNAME );
@@ -416,6 +416,10 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
+		// If we are going to give up waiting for a response at some
+		// point, give the other end a hint as to when we'll give up.
+	UtcTime now(true);
+	queryAd.Assign(ATTR_QUERY_EXPIRES, now.seconds() + mytimeout);
 	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
 	    !queryAd.put (*sock) || !sock->end_of_message()) {
 

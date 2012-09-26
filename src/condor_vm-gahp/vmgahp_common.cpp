@@ -353,7 +353,7 @@ write_to_daemoncore_pipe(const char* fmt, ... )
 	MyString output;
 	va_list args;
 	va_start(args, fmt);
-	output.vsprintf(fmt, args);
+	output.vformatstr(fmt, args);
 	write_to_daemoncore_pipe(vmgahp_stdout_pipe, 
 			output.Value(), output.Length());
 	va_end(args);
@@ -377,6 +377,7 @@ write_stderr_to_pipe()
 	}
 }
 
+#ifndef vmprintf
 void vmprintf( int flags, const char *fmt, ... ) 
 {
 	int saved_flags = 0;
@@ -425,7 +426,7 @@ void vmprintf( int flags, const char *fmt, ... )
 	}
 	oriDebugFlags = saved_flags;
 }
-
+#endif
 
 void 
 initialize_uids(void)

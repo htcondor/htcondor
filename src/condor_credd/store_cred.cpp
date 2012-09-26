@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 		printf ("Credential submitted successfully\n");
 	} else {
 		fprintf (stderr, "Unable to submit credential\n%s\n",
-				 errstack.getFullText(true));
+				 errstack.getFullText(true).c_str());
 		return 1;
 	}
 

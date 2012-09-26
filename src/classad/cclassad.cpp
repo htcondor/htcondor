@@ -146,6 +146,18 @@ int cclassad_insert_int( struct cclassad *c, const char *attr, int value )
 	return c->ad->InsertAttr(strattr,value);
 }
 
+int cclassad_insert_long( struct cclassad *c, const char *attr, long value )
+{
+	string strattr(attr);
+	return c->ad->InsertAttr(strattr,value);
+}
+
+int cclassad_insert_long_long( struct cclassad *c, const char *attr, long long value )
+{
+	string strattr(attr);
+	return c->ad->InsertAttr(strattr,value);
+}
+
 int cclassad_insert_double( struct cclassad *c, const char *attr, double value )
 {
 	string strattr(attr);
@@ -197,6 +209,32 @@ int cclassad_evaluate_to_string( struct cclassad *c, const char *expr, char **re
 }
 
 int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result )
+{
+	string exprstring(expr);
+	Value value;
+
+	if(c->ad->EvaluateExpr(exprstring,value)) {
+		if(value.IsIntegerValue(*result)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int cclassad_evaluate_to_long( struct cclassad *c, const char *expr, long *result )
+{
+	string exprstring(expr);
+	Value value;
+
+	if(c->ad->EvaluateExpr(exprstring,value)) {
+		if(value.IsIntegerValue(*result)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int cclassad_evaluate_to_long_long( struct cclassad *c, const char *expr, long long *result )
 {
 	string exprstring(expr);
 	Value value;

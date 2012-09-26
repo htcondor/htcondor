@@ -567,7 +567,7 @@ INVALID_LOG_FILES	= core
 
 GRIDMANAGER			= $(SBIN)/condor_gridmanager
 GT2_GAHP			= $(SBIN)/gahp_server
-GRID_MONITOR			= $(SBIN)/grid_monitor.sh
+GRID_MONITOR			= $(SBIN)/grid_monitor
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:

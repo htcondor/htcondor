@@ -28,10 +28,6 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
-#ifndef max
-#define max(x,y) (((x) < (y)) ? (y) : (x))
-#endif
-
 extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
@@ -624,50 +620,6 @@ command_match_info( Service*, int cmd, Stream* stream )
 
 
 int
-command_give_request_ad( Service*, int, Stream* stream) 
-{
-	int pid = -1;  // Starter sends it's pid so we know what
-				   // resource's request ad to send 
-	Claim*		claim;
-	ClassAd*	cp;
-
-	if( ! stream->code(pid) ) {
-		dprintf( D_ALWAYS, "give_request_ad: Can't read pid\n" );
-		stream->encode();
-		stream->end_of_message();
-		return FALSE;
-	}
-	if( ! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "give_request_ad: Can't read eom\n" );
-		stream->encode();
-		stream->end_of_message();
-		return FALSE;
-	}
-	claim = resmgr->getClaimByPid( pid );
-	if( !claim ) {
-		dprintf( D_ALWAYS, 
-				 "give_request_ad: Can't find starter with pid %d\n",
-				 pid ); 
-		stream->encode();
-		stream->end_of_message();
-		return FALSE;
-	}
-	cp = claim->ad();
-	if( !cp ) {
-		claim->dprintf( D_ALWAYS, 
-						"give_request_ad: current claim has NULL classad.\n" );
-		stream->encode();
-		stream->end_of_message();
-		return FALSE;
-	}
-	stream->encode();
-	cp->put( *stream );
-	stream->end_of_message();
-	return TRUE;
-}
-
-
-int
 command_query_ads( Service*, int, Stream* stream) 
 {
 	ClassAd queryAd;
@@ -1089,20 +1041,18 @@ abort_claim( Resource* rip )
 	return FALSE;
 }
 
-
 int
 request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
 		// Formerly known as "reqservice"
 
-	ClassAd	*req_classad = new ClassAd, *mach_classad = rip->r_classad;
-	int cmd, mach_requirements = 1;
+	ClassAd	*req_classad = new ClassAd;
+	int cmd;
 	float rank = 0;
 	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
 	ClaimIdParser idp(id);
-	Claim* leftover_claim = NULL; 
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -1175,130 +1125,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
-	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
-		Resource *new_rip;
-		CpuAttributes *cpu_attrs;
-		MyString type;
-		StringList type_list;
-		int cpus, memory, disk;
-
-			// Make sure the partitionable slot itself is satisfied by
-			// the job. If not there is no point in trying to
-			// partition it. This check also prevents
-			// over-partitioning. The acceptability of the dynamic
-			// slot and job will be checked later, in the normal
-			// course of accepting the claim.
-		rip->r_reqexp->restore();
-		if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
-			mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
-		}
-		if (mach_requirements == 0) {
-			rip->dprintf(D_ALWAYS, 
-				  "Partitionable slot can't be split to allocate a dynamic slot large enough for the claim\n" );
-			refuse( stream );
-			ABORT;
-		}
-
-		if( !req_classad->EvalInteger( ATTR_REQUEST_CPUS, mach_classad, cpus ) ) {
-			cpus = 1; // reasonable default, for sure
-		}
-		type.sprintf_cat( "cpus=%d ", cpus );
-
-		if( req_classad->EvalInteger( ATTR_REQUEST_MEMORY, mach_classad, memory ) ) {
-			type.sprintf_cat( "memory=%d ", memory );
-		} else {
-				// some memory size must be available else we cannot
-				// match, plus a job ad without ATTR_MEMORY is sketchy
-			rip->dprintf( D_ALWAYS,
-						  "No memory request in incoming ad, aborting...\n" );
-			ABORT;
-		}
-
-		if( req_classad->EvalInteger( ATTR_REQUEST_DISK, mach_classad, disk ) ) {
-				// XXX: HPUX does not appear to have ceilf, and
-				// Solaris doesn't make it readily available
-			type.sprintf_cat( "disk=%d%%",
-							  max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
-		} else {
-				// some disk size must be available else we cannot
-				// match, plus a job ad without ATTR_DISK is sketchy
-			rip->dprintf( D_FULLDEBUG,
-						  "No disk request in incoming ad, aborting...\n" );
-			ABORT;
-		}
-
-		rip->dprintf( D_FULLDEBUG,
-					  "Match requesting resources: %s\n", type.Value() );
-
-		type_list.initializeFromString( type.Value() );
-		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -1, false );
-		if( ! cpu_attrs ) {
-			rip->dprintf( D_ALWAYS,
-						  "Failed to parse attributes for request, aborting\n" );
-			ABORT;
-		}
-
-		new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
-		if( ! new_rip ) {
-			rip->dprintf( D_ALWAYS,
-						  "Failed to build new resource for request, aborting\n" );
-			ABORT;
-		}
-
-			// Initialize the rest of the Resource
-		new_rip->compute( A_ALL );
-		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
-		new_rip->init_classad();
-		new_rip->refresh_classad( A_EVALUATED ); 
-		new_rip->refresh_classad( A_SHARED_SLOT ); 
-
-			// The new resource needs the claim from its
-			// parititionable parent
-		delete new_rip->r_cur;
-		new_rip->r_cur = rip->r_cur;
-		new_rip->r_cur->setResource( new_rip );
-
-			// And the partitionable parent needs a new claim
-		rip->r_cur = new Claim( rip );
-			// Stash this claim as the "leftover_claim", which 
-			// we will send back directly to the schedd iff it supports
-			// receiving partitionable slot leftover info as part of the
-			// new-style extended claiming protocol. 
-		bool scheddWantsLeftovers = false;
-			// presence of this attr in request ad tells us in a 
-			// backwards/forwards compatible way if the schedd understands
-			// the claim protocol enhancement to accept leftovers
-		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
-		if ( scheddWantsLeftovers && 
-			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
-		{
-			leftover_claim = rip->r_cur;
-			ASSERT(leftover_claim);
-		}
-
-			// Recompute the partitionable slot's resources
-		rip->change_state( unclaimed_state );
-		rip->update(); // in case we were never matched, i.e. no state change
-
-		resmgr->addResource( new_rip );
-
-			// XXX: This is overkill, but the best way, right now, to
-			// get many of the new_rip's attributes calculated.
-		resmgr->compute( A_ALL );
-		resmgr->compute( A_TIMEOUT | A_UPDATE );
-
-			// Now we continue on with the newly spawned Resource
-			// getting claimed
-		rip = new_rip;
-
-			// This is, unfortunately, part of the ABORT macro. The
-			// idea is that if we are aborting a claim at the same
-			// time that we are creating a dynamic slot for that
-			// claim, we should already remove the dynamic slot. We
-			// don't want to do this everytime an ABORT happens on a
-			// dynamic slot because it may be useful to other jobs.
-		new_dynamic_slot = true;
+	Claim* leftover_claim = NULL; 
+	Resource * new_rip = initialize_resource(rip, req_classad, leftover_claim);
+	if( !new_rip ) {
+		refuse(stream);
+		ABORT;
 	}
+	if( new_rip != rip) { new_dynamic_slot = true; }
+	rip = new_rip;
 
 		// Make sure we're willing to run this job at all.
 	if (!rip->willingToRun(req_classad)) {
@@ -1702,12 +1536,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
-	if( DebugFlags & D_JOB ) {
+	if( IsDebugLevel( D_JOB ) ) {
 		req_classad->dPrint( D_JOB );
 	}
 	  
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
-	if( DebugFlags & D_MACHINE ) {
+	if( IsDebugLevel( D_MACHINE ) ) {
 		mach_classad->dPrint( D_MACHINE );
 	}
 
@@ -2183,7 +2017,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		 strcasecmp( startd_sends_alives.c_str(), "false" ) )
 	{
 		MyString err_msg;
-		err_msg.sprintf("Required %s, not found in request",
+		err_msg.formatstr("Required %s, not found in request",
 						ATTR_SCHEDD_IP_ADDR);
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
 		rval = FALSE;

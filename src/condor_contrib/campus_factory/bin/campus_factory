@@ -1,0 +1,137 @@
+#!/bin/sh
+#
+# Really simple script to start/stop/restart the factory
+#
+
+
+script_location=`dirname $0`
+original_path=$PATH
+python_path=$script_location/../python-lib
+. /etc/rc.d/init.d/functions
+
+if [ -e $script_location/runfactory ]; then
+    exec=$script_location/runfactory
+elif [ -e `condor_config_val SBIN`/runfactory ]; then
+	exec=`condor_config_val SBIN`/runfactory
+fi
+
+prog="Campus Factory"
+
+if [ -e $script_location/../etc/campus_factory.conf ]; then
+    config=$script_location/../etc/campus_factory.conf
+elif [ -e `condor_config_val ETC`/campus_factory.conf 
+	config=`condor_config_val ETC`/campus_factory.conf
+fi
+
+
+start() {
+
+    [ -x $exec ] || exit 5
+    [ -f $config ] || exit 6
+    echo -n $"Starting $prog: "
+
+    # Restore the original path
+    export PATH=$PATH:$original_path
+    export PYTHONPATH=$PYTHONPATH:$python_path
+
+    # Move to the proper directory.  This is mostly
+    # for the factory.job submit file.
+    pushd "$script_location/../" >> /dev/null
+    submit_out=`condor_submit $script_location/../share/factory.job 2>&1`
+    popd >> /dev/null
+
+    retval=$?
+    if [ "$retval" -ne "0" ]; then
+        echo $submit_out
+        echo_failure
+        return $retval
+    fi
+    sleep 1
+    rh_status_q
+    retval=$?
+    if [ "$retval" -eq "0" ]; then
+        echo_success
+    else
+        echo_failure
+    fi
+    echo
+    return $retval
+
+}
+
+stop() {
+    export PATH=$PATH:$original_path
+    echo -n $"Stopping $prog: "
+    rm_out=`condor_rm -const 'IsFactory =?= true'  2>&1`
+    retval=$?
+    if [ "$retval" -ne "0" ]; then
+        echo $submit_out
+        echo_failure
+        return $retval
+    fi
+    sleep 1
+    rh_status_q
+    retval=$?
+    if [ "$retval" -eq "0" ]; then
+        echo_failure
+    else
+        echo_success
+    fi
+    echo
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+reload() {
+    restart
+}
+
+
+
+rh_status() {
+    # run checks to determine if the service is running or use generic status
+    export PATH=$PATH:$original_path
+    condoroutput=`condor_q -const 'IsFactory =?= true' -format '%s' 'MyType'`
+    if [ -z "$condoroutput" ]; then
+        echo  $"$prog is stopped"
+        return 3
+    else
+        echo  $"$prog is running"
+        return 0
+    fi
+    #status $prog
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    status)
+        rh_status
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart|reload}"
+        exit 2
+esac
+exit $?
+

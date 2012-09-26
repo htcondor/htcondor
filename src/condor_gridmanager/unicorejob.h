@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "globus_utils.h"
 #include "classad_hashtable.h"
 
@@ -79,7 +78,7 @@ class UnicoreJob : public BaseJob
 
 	void UpdateUnicoreState( const char *update_ad_string );
 	void UpdateUnicoreState( ClassAd *update_ad );
-	MyString *buildSubmitAd();
+	std::string *buildSubmitAd();
 	void SetRemoteJobId( const char *job_id );
 
 	void DeleteOutput();
@@ -90,7 +89,7 @@ class UnicoreJob : public BaseJob
 		// string is stored here (so that we don't have to reconstruct
 		// it every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
-	MyString *submitAd;
+	std::string *submitAd;
 	std::string errorString;
 
 };

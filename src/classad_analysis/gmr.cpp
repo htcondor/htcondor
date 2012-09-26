@@ -71,12 +71,11 @@ GMR::MakeGMR( int key, classad::ClassAd *ad )
 
         // insert basic port info 
     for( eli.Initialize( el ) ; !eli.IsAfterLast( ); eli.NextExpr( ) ) {
-        if(!(expr=eli.CurrentExpr())||expr->GetKind()!=classad::ExprTree::CLASSAD_NODE){
+        if(!(expr=eli.CurrentExpr())||!expr->isClassad(&portAd)){
             printf( "Port is not a classad\n" );
             delete gmr;
             return( NULL );
         }
-        portAd = (classad::ClassAd*)expr;
 
         port.portAd = portAd;
         if( !portAd->EvaluateAttrString( "label", port.label ) ) {

@@ -51,6 +51,7 @@ stat(), we will only kill the static function definition.
 	#define __stat(a,b) __condor_hack___stat(a,b)
 	#define __lstat(a,b) __condor_hack___lstat(a,b)
 	#define __fstat(a,b) __condor_hack___fstat(a,b)
+	#define __fxstatat64(a,b,c,d,e) __condor_hack___fxstatat64(a,b,c,d,e)
 #endif
 
 #include <sys/stat.h>
@@ -64,6 +65,7 @@ stat(), we will only kill the static function definition.
 	#undef __lstat
 	#undef __stat
 	#undef __mknod
+	#undef __fxstatat64
 
 	/* Now, we must provide the protoypes that we lost. */
 

@@ -18,7 +18,7 @@
 
 
 #postgres is now a contrib only module
-if (WANT_CONTRIB AND (LINUX OR WINDOWS))
+if (WANT_CONTRIB AND WANT_FULL_DEPLOYMENT AND (LINUX OR WINDOWS))
   option(WITH_POSTGRESQL "Compiling with support for POSTGRESQL" ON)
 endif()
 

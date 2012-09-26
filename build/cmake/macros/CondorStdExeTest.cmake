@@ -18,7 +18,7 @@
 
 MACRO (CONDOR_STD_EXE_TEST _CNDR_TARGET _COMPILER _SRCS _LINK_FLAGS )
 
-	if (STD_UNIVERSE AND BUILD_TESTS)
+	if (STD_UNIVERSE AND BUILD_TESTING)
 
 		# so normally you should be able to pass the archive directly to 
 		foreach(_file ${_SRCS})

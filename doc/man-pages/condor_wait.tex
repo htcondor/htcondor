@@ -7,6 +7,8 @@
 
 \SynProg{\Condor{wait}}
 \oOpt{-debug}
+\oOpt{-status}
+\oOpt{-echo}
 \oOptArg{-wait}{seconds}
 \oOptArg{-num}{number-of-jobs}
 \Arg{log-file}
@@ -33,6 +35,8 @@ a shorter wait time is specified.
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\Opt{-debug}}{Show extra debugging information.}
+    \OptItem{\Opt{-status}}{Show job start and terminate information.}
+    \OptItem{\Opt{-echo}}{Print the events out to \Code{stdout}.}
     \OptItem{\OptArgnm{-wait}{seconds}}{Wait no more than the
     integer number of \Arg{seconds}.
     The default is unlimited time.} 

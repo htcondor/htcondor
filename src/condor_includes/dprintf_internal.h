@@ -22,16 +22,63 @@
 // to have any effect.
 #include <string>
 #include <map>
+enum DebugOutput
+{
+	FILE_OUT,
+	STD_OUT,
+	STD_ERR,
+	OUTPUT_DEBUG_STR
+};
+
+/* future
+class DebugOutputChoice
+{
+public:
+	unsigned int flags; // one or more of D_xxx flags (but NOT category) values
+	unsigned char level[D_CATEGORY_COUNT]; // indexed by D_CATEGORY enum
+	DebugOutputChoice(unsigned int val);
+	DebugOutputChoice::DebugOutputChoice(unsigned int val)
+	{
+		flags = val & ~D_CATEGORY_RESERVED_MASK;
+		memset(level, 0, sizeof(level));
+		unsigned int catflags = val & D_CATEGORY_MASK;
+		for (int ix = 0; catflags && ix < sizeof(level); ++ix, catflags/=2)
+			level[ix] += (catflags&1);
+	}
+};
+*/
+struct dprintf_output_settings;
+
 struct DebugFileInfo
 {
+	DebugOutput outputTarget;
 	FILE *debugFP;
-	int debugFlags;
+	DebugOutputChoice choice;
 	std::string logPath;
 	int64_t maxLog;
 	int maxLogNum;
-
-	DebugFileInfo() : debugFP(0), debugFlags(0), maxLog(0), maxLogNum(0) {}
-	DebugFileInfo(const DebugFileInfo &debugFileInfo);
+	bool want_truncate;
+	bool accepts_all;
+	DebugFileInfo() : outputTarget(FILE_OUT), debugFP(0), choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
+	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
+		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum),
+		want_truncate(dfi.want_truncate), accepts_all(dfi.accepts_all) {}
+	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
-    bool MatchesFlags(int flags) const;
+	bool MatchesCatAndFlags(int cat_and_flags) const;
 };
+
+struct dprintf_output_settings
+{
+	DebugOutputChoice choice;
+	std::string logPath;
+	off_t maxLog;
+	int maxLogNum;
+	bool want_truncate;
+	bool accepts_all;
+	unsigned int HeaderOpts;  // temporary, should get folded into choice
+	unsigned int VerboseCats; // temporary, should get folded into choice
+
+	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
+};
+

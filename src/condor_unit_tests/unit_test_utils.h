@@ -72,8 +72,8 @@ const char* tfnze(int);
 /* For MyString, calls vsprintf on the given str */
 bool vsprintfHelper(MyString* str, const char* format, ...);
 
-/* For MyString, calls vsprintf_cat on the given str */
-bool vsprintf_catHelper(MyString* str, const char* format, ...);
+/* For MyString, calls vformatstr_cat on the given str */
+bool vformatstr_catHelper(MyString* str, const char* format, ...);
 
 /* Returns the empty string when the passed string is null */
 const char* nicePrint(const char* str);

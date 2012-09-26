@@ -34,6 +34,7 @@
 #include "HashTable.h"
 #include "ConcurrencyLimitUtils.h"
 #include "matchmaker.h"
+#include "hashkey.h"
 #include <string>
 #include <deque>
 
@@ -112,7 +113,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   hgq_root_group = root_group;
   hgq_submitter_group_map.clear();
   // Pre-set mapping from all defined group names to themselves.
-  deque<GroupEntry*> grpq;
+  std::deque<GroupEntry*> grpq;
   grpq.push_back(hgq_root_group);
   while (!grpq.empty()) {
       GroupEntry* group = grpq.front();
@@ -201,10 +202,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   if ( first_time ) {
 	  HashKey HK;
 	  ClassAd* ad;
-	  AttrList *unused;
 	  StringList users;
-	  char *next_user;
-	  MyString user;
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
 	  int total_overestimated_users = 0;
@@ -212,14 +210,14 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  float total_overestimated_resourcesRW = 0;
 	  int total_overestimated_usersRW = 0;
 
+      first_time = false;
+
 	  dprintf(D_ACCOUNTANT,"Sanity check on number of resources per user\n");
 
 		// first find all the users
 	  AcctLog->table.startIterations();
 	  while (AcctLog->table.iterate(HK,ad)) {
-		MyString keybuf;
-		HK.sprint(keybuf);
-		char const *key = keybuf.Value();
+		char const *key = HK.value();
 			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 		char const *thisUser = &(key[CustomerRecord.Length()]);
@@ -230,17 +228,12 @@ void Accountant::Initialize(GroupEntry* root_group)
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
 	  users.rewind();
-	  while( (next_user=users.next()) ) 
-	  {
-		  user = next_user;
+	  while (char* next_user=users.next()) {
+		  string user = next_user;
 		  resources_used = GetResourcesUsed(user);
 		  resourcesRW_used = GetWeightedResourcesUsed(user);
 
-		  /* It appears here that only the second variable is of interest to
-		  	this part of the code, however, this function returns new'ed memory
-			so keep track of it and delete it so we don't leak memory. */
-		  unused = ReportState(user,&resources_used_really,&resourcesRW_used_really);
-		  delete unused;
+		  CheckResources(user, resources_used_really, resourcesRW_used_really);
 
 		  if ( resources_used == resources_used_really ) {
 			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
@@ -436,7 +429,7 @@ float Accountant::getGroupPriorityFactor(const MyString& CustomerName)
     string GroupName = GetAssignedGroup(CustomerName)->name;
 
     MyString groupPrioFactorConfig;
-	groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s", GroupName.c_str());
+	groupPrioFactorConfig.formatstr("GROUP_PRIO_FACTOR_%s", GroupName.c_str());
 	double priorityFactor = param_double(groupPrioFactorConfig.Value(), 0.0);
 
 	return priorityFactor;
@@ -486,9 +479,7 @@ void Accountant::ResetAllUsage()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-	char const *key = keybuf.Value();
+	char const *key = HK.value();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 	AcctLog->BeginTransaction();
     SetAttributeFloat(key,AccumulatedUsageAttr,0);
@@ -773,9 +764,7 @@ void Accountant::DisplayLog()
   ClassAd* ad;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString key;
-    HK.sprint(key);
-    printf("------------------------------------------------\nkey = %s\n",key.Value());
+    printf("------------------------------------------------\nkey = %s\n",HK.value());
     ad->fPrint(stdout);
   }
 }
@@ -791,9 +780,7 @@ void Accountant::DisplayMatches()
   MyString ResourceName;
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-	char const *key = keybuf.Value();
+	char const *key = HK.value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     MyString RemoteUser;
@@ -846,9 +833,7 @@ void Accountant::UpdatePriorities()
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-    char const *key = keybuf.Value();
+    char const *key = HK.value();
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
     // lookup values in the ad
@@ -943,16 +928,18 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
     ResourceName = GetResourceName(ResourceAd);
-    ASSERT( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    if (!success) {
+      dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.Value());
+      ResourceAd->dPrint(D_FULLDEBUG);
+    }
   }
   ResourceList.Close();
 
   // Remove matches that were broken
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
-    MyString keybuf;
-    HK.sprint(keybuf);
-    char const *key = keybuf.Value();
+    char const *key = HK.value();
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
@@ -986,22 +973,14 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResources, float* NumResourcesRW) {
+AttrList* Accountant::ReportState(const MyString& CustomerName) {
     dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
     HashKey HK;
     ClassAd* ResourceAd;
-    MyString ResourceName;
     int StartTime;
 
     AttrList* ad = new AttrList();
-
-    if (NumResources) {
-        *NumResources = 0;
-    }
-    if (NumResourcesRW) {
-        *NumResourcesRW = 0;
-    }
 
     bool isGroup=false;
     string cgrp = GetAssignedGroup(CustomerName.Value(), isGroup)->name;
@@ -1011,10 +990,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResource
     int ResourceNum=1;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK,ResourceAd)) {
-        MyString key;
-        HK.sprint(key);
-
-        if (strncmp(ResourceRecord.Value(), key.Value(), ResourceRecord.Length())) continue;
+        if (strncmp(ResourceRecord.Value(), HK.value(), ResourceRecord.Length())) continue;
 
         MyString rname;
         if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
@@ -1025,30 +1001,54 @@ AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResource
         } else {
             // customername is a traditional submitter: group.username@host
             if (CustomerName != rname) continue;
-     
+
             MyString tmp;
-            ResourceName=key+ResourceRecord.Length();
-            tmp.sprintf("Name%d = \"%s\"", ResourceNum, ResourceName.Value());
+            tmp.formatstr("Name%d = \"%s\"", ResourceNum, HK.value()+ResourceRecord.Length());
             ad->Insert(tmp.Value());
 
             if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
-            tmp.sprintf("StartTime%d = %d", ResourceNum, StartTime);
+            tmp.formatstr("StartTime%d = %d", ResourceNum, StartTime);
             ad->Insert(tmp.Value());
         }
 
         ResourceNum++;
-        if (NumResourcesRW) {
-            float SlotWeight = 1.0;
-            ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
-            *NumResourcesRW += SlotWeight;
-        }
-    }
-
-    if (NumResources) {
-        *NumResources = ResourceNum - 1;
     }
 
     return ad;
+}
+
+
+void Accountant::CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW) {
+    dprintf(D_ACCOUNTANT, "Checking Resources for customer %s\n", CustomerName.c_str());
+
+    NumResources = 0;
+    NumResourcesRW = 0;
+
+    bool isGroup=false;
+    string cgrp = GetAssignedGroup(CustomerName.c_str(), isGroup)->name;
+    // This is a defunct group:
+    if (isGroup && (cgrp != CustomerName)) return;
+
+    HashKey HK;
+    ClassAd* ResourceAd;
+    AcctLog->table.startIterations();
+    while (AcctLog->table.iterate(HK, ResourceAd)) {
+        if (strncmp(ResourceRecord.Value(), HK.value(), ResourceRecord.Length())) continue;
+
+        string rname;
+        if (ResourceAd->LookupString(RemoteUserAttr, rname) == 0) continue;
+
+        if (isGroup) {
+            if (cgrp != GetAssignedGroup(rname)->name) continue;
+        } else {
+            if (CustomerName != rname) continue;
+        }
+
+        NumResources += 1;
+        float SlotWeight = 1.0;
+        ResourceAd->LookupFloat(SlotWeightAttr, SlotWeight);
+        NumResourcesRW += SlotWeight;
+    }
 }
 
 
@@ -1065,7 +1065,7 @@ ClassAd* Accountant::ReportState(bool rollup) {
     // assign acct group index numbers first, breadth first ordering
     int EntryNum=1;
     map<string, int> gnmap;
-    deque<GroupEntry*> grpq;
+    std::deque<GroupEntry*> grpq;
     grpq.push_back(hgq_root_group);
     while (!grpq.empty()) {
         GroupEntry* group = grpq.front();
@@ -1084,10 +1084,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
     ClassAd* CustomerAd = NULL;
     AcctLog->table.startIterations();
     while (AcctLog->table.iterate(HK,CustomerAd)) {
-        MyString key;
-        HK.sprint(key);
-        if (strncmp(CustomerRecord.Value(), key.Value(), CustomerRecord.Length())) continue;
-        MyString CustomerName = key.Value()+CustomerRecord.Length();
+        if (strncmp(CustomerRecord.Value(), HK.value(), CustomerRecord.Length())) continue;
+        MyString CustomerName = HK.value()+CustomerRecord.Length();
 
         bool isGroup=false;
         GroupEntry* cgrp = GetAssignedGroup(CustomerName, isGroup);
@@ -1099,52 +1097,52 @@ ClassAd* Accountant::ReportState(bool rollup) {
         int snum = EntryNum++;
 
         string tmp;
-        sprintf(tmp, "Name%d", snum);
+        formatstr(tmp, "Name%d", snum);
         ad->Assign(tmp.c_str(), CustomerName);
 
-        sprintf(tmp, "IsAccountingGroup%d", snum);
+        formatstr(tmp, "IsAccountingGroup%d", snum);
         ad->Assign(tmp.c_str(), isGroup);
 
-        sprintf(tmp, "AccountingGroup%d", snum);
+        formatstr(tmp, "AccountingGroup%d", snum);
         ad->Assign(tmp.c_str(), cgname);
 
         float Priority = GetPriority(CustomerName);
-        sprintf(tmp, "Priority%d", snum);
+        formatstr(tmp, "Priority%d", snum);
         ad->Assign(tmp.c_str(), Priority);
 
         float PriorityFactor = 0;
         if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
-        sprintf(tmp, "PriorityFactor%d", snum);
+        formatstr(tmp, "PriorityFactor%d", snum);
         ad->Assign(tmp.c_str(), PriorityFactor);
 
         int ResourcesUsed = 0;
         if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
-        sprintf(tmp, "ResourcesUsed%d", snum);
+        formatstr(tmp, "ResourcesUsed%d", snum);
         ad->Assign(tmp.c_str(), ResourcesUsed);
         
         float WeightedResourcesUsed = 0;
         if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
-        sprintf(tmp, "WeightedResourcesUsed%d", snum);
+        formatstr(tmp, "WeightedResourcesUsed%d", snum);
         ad->Assign(tmp.c_str(), WeightedResourcesUsed);
         
         float AccumulatedUsage = 0;
         if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
-        sprintf(tmp, "AccumulatedUsage%d", snum);
+        formatstr(tmp, "AccumulatedUsage%d", snum);
         ad->Assign(tmp.c_str(), AccumulatedUsage);
         
         float WeightedAccumulatedUsage = 0;
         if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
-        sprintf(tmp, "WeightedAccumulatedUsage%d", snum);
+        formatstr(tmp, "WeightedAccumulatedUsage%d", snum);
         ad->Assign(tmp.c_str(), WeightedAccumulatedUsage);
         
         int BeginUsageTime = 0;
         if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
-        sprintf(tmp, "BeginUsageTime%d", snum);
+        formatstr(tmp, "BeginUsageTime%d", snum);
         ad->Assign(tmp.c_str(), BeginUsageTime);
         
         int LastUsageTime = 0;
         if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
-        sprintf(tmp, "LastUsageTime%d", snum);
+        formatstr(tmp, "LastUsageTime%d", snum);
         ad->Assign(tmp.c_str(), LastUsageTime);
     }
 
@@ -1183,34 +1181,34 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     }
 
     string tmp;
-    sprintf(tmp, "Name%d", gnum);
+    formatstr(tmp, "Name%d", gnum);
     ad->Assign(tmp.c_str(), CustomerName);
 
-    sprintf(tmp, "IsAccountingGroup%d", gnum);
+    formatstr(tmp, "IsAccountingGroup%d", gnum);
     ad->Assign(tmp.c_str(), isGroup);
     
-    sprintf(tmp, "AccountingGroup%d", gnum);
+    formatstr(tmp, "AccountingGroup%d", gnum);
     ad->Assign(tmp.c_str(), cgname);
     
     float Priority = (!rollup) ? GetPriority(CustomerName) : 0;
-    sprintf(tmp, "Priority%d", gnum);
+    formatstr(tmp, "Priority%d", gnum);
     ad->Assign(tmp.c_str(), Priority);
     
     float PriorityFactor = 0;
     if (!rollup && CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
-    sprintf(tmp, "PriorityFactor%d", gnum);
+    formatstr(tmp, "PriorityFactor%d", gnum);
     ad->Assign(tmp.c_str(), PriorityFactor);
     
     if (cgrp) {
-        sprintf(tmp, "EffectiveQuota%d", gnum);
+        formatstr(tmp, "EffectiveQuota%d", gnum);
         ad->Assign(tmp.c_str(), cgrp->quota);
-        sprintf(tmp, "ConfigQuota%d", gnum);
+        formatstr(tmp, "ConfigQuota%d", gnum);
         ad->Assign(tmp.c_str(), cgrp->config_quota);
-        sprintf(tmp, "SubtreeQuota%d", gnum);
+        formatstr(tmp, "SubtreeQuota%d", gnum);
         ad->Assign(tmp.c_str(), cgrp->subtree_quota);
-        sprintf(tmp, "GroupSortKey%d", gnum);
+        formatstr(tmp, "GroupSortKey%d", gnum);
         ad->Assign(tmp.c_str(), cgrp->sort_key);
-        sprintf(tmp, "SurplusPolicy%d", gnum);
+        formatstr(tmp, "SurplusPolicy%d", gnum);
         const char * policy = "no";
         if (cgrp->autoregroup) policy = "regroup";
         else if (cgrp->accept_surplus) policy = "byquota";
@@ -1219,32 +1217,32 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
     int ResourcesUsed = 0;
     if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
-    sprintf(tmp, "ResourcesUsed%d", gnum);
+    formatstr(tmp, "ResourcesUsed%d", gnum);
     ad->Assign(tmp.c_str(), ResourcesUsed);
     
     float WeightedResourcesUsed = 0;
     if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
-    sprintf(tmp, "WeightedResourcesUsed%d", gnum);
+    formatstr(tmp, "WeightedResourcesUsed%d", gnum);
     ad->Assign(tmp.c_str(), WeightedResourcesUsed);
     
     float AccumulatedUsage = 0;
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
-    sprintf(tmp, "AccumulatedUsage%d", gnum);
+    formatstr(tmp, "AccumulatedUsage%d", gnum);
     ad->Assign(tmp.c_str(), AccumulatedUsage);
     
     float WeightedAccumulatedUsage = 0;
     if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
-    sprintf(tmp, "WeightedAccumulatedUsage%d", gnum);
+    formatstr(tmp, "WeightedAccumulatedUsage%d", gnum);
     ad->Assign(tmp.c_str(), WeightedAccumulatedUsage);
     
     int BeginUsageTime = 0;
     if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
-    sprintf(tmp, "BeginUsageTime%d", gnum);
+    formatstr(tmp, "BeginUsageTime%d", gnum);
     ad->Assign(tmp.c_str(), BeginUsageTime);
     
     int LastUsageTime = 0;
     if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
-    sprintf(tmp, "LastUsageTime%d", gnum);
+    formatstr(tmp, "LastUsageTime%d", gnum);
     ad->Assign(tmp.c_str(), LastUsageTime);
     
     // Populate group's children recursively, if it has any
@@ -1263,41 +1261,41 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     float fval = 0;
 
     // roll up values to parent
-    sprintf(tmp, "ResourcesUsed%d", gnum);
+    formatstr(tmp, "ResourcesUsed%d", gnum);
     ad->LookupInteger(tmp.c_str(), ResourcesUsed);
-    sprintf(tmp, "ResourcesUsed%d", pnum);
+    formatstr(tmp, "ResourcesUsed%d", pnum);
     ad->LookupInteger(tmp.c_str(), ival);
     ad->Assign(tmp.c_str(), ival + ResourcesUsed);
 
-    sprintf(tmp, "WeightedResourcesUsed%d", gnum);
+    formatstr(tmp, "WeightedResourcesUsed%d", gnum);
     ad->LookupFloat(tmp.c_str(), WeightedResourcesUsed);
-    sprintf(tmp, "WeightedResourcesUsed%d", pnum);
+    formatstr(tmp, "WeightedResourcesUsed%d", pnum);
     ad->LookupFloat(tmp.c_str(), fval);    
     ad->Assign(tmp.c_str(), fval + WeightedResourcesUsed);
 
-    sprintf(tmp, "AccumulatedUsage%d", gnum);
+    formatstr(tmp, "AccumulatedUsage%d", gnum);
     ad->LookupFloat(tmp.c_str(), AccumulatedUsage);
-    sprintf(tmp, "AccumulatedUsage%d", pnum);
+    formatstr(tmp, "AccumulatedUsage%d", pnum);
     ad->LookupFloat(tmp.c_str(), fval);
     ad->Assign(tmp.c_str(), fval + AccumulatedUsage);
 
-    sprintf(tmp, "WeightedAccumulatedUsage%d", gnum);
+    formatstr(tmp, "WeightedAccumulatedUsage%d", gnum);
     ad->LookupFloat(tmp.c_str(), WeightedAccumulatedUsage);
-    sprintf(tmp, "WeightedAccumulatedUsage%d", pnum);
+    formatstr(tmp, "WeightedAccumulatedUsage%d", pnum);
     ad->LookupFloat(tmp.c_str(), fval);
     ad->Assign(tmp.c_str(), fval + WeightedAccumulatedUsage);
 
-    sprintf(tmp, "BeginUsageTime%d", gnum);
+    formatstr(tmp, "BeginUsageTime%d", gnum);
     ad->LookupInteger(tmp.c_str(), BeginUsageTime);
-    sprintf(tmp, "BeginUsageTime%d", pnum);
+    formatstr(tmp, "BeginUsageTime%d", pnum);
     ad->LookupInteger(tmp.c_str(), ival);
-    ad->Assign(tmp.c_str(), min(ival, BeginUsageTime));
+    ad->Assign(tmp.c_str(), std::min(ival, BeginUsageTime));
 
-    sprintf(tmp, "LastUsageTime%d", gnum);
+    formatstr(tmp, "LastUsageTime%d", gnum);
     ad->LookupInteger(tmp.c_str(), LastUsageTime);
-    sprintf(tmp, "LastUsageTime%d", pnum);
+    formatstr(tmp, "LastUsageTime%d", pnum);
     ad->LookupInteger(tmp.c_str(), ival);
-    ad->Assign(tmp.c_str(), max(ival, LastUsageTime));
+    ad->Assign(tmp.c_str(), std::max(ival, LastUsageTime));
 }
 
 
@@ -1307,24 +1305,10 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  MyString startdName;
-  MyString startdAddr;
-  
-  if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
-    //This should never happen, because unnamed startd ads are rejected.
-    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
-  }
-  MyString Name=startdName;
-  Name+="@";
-
-  if (!ResourceAd->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)) {
-    //This may happen for grid site ClassAds.
-    //Actually, the collector now inserts an IP address if none is provided,
-    //but it is more robust to not assume that behavior here.
-	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.Value());
-  }
-  Name+=startdAddr;
-  
+  AdNameHashKey hk;
+  MyString Name;
+  makeStartdAdHashKey(hk, ResourceAd);
+  hk.sprint(Name);
   return Name;
 }
 
@@ -1361,15 +1345,15 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
   if (state!=claimed_state && state!=preempting_state) return 0;
   
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser, sizeof(RemoteUser))) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser, sizeof(RemoteUser))) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
 		return 0;
 	  }
   }
   if(DiscountSuspendedResources) {
     char RemoteActivity[512];
-    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity, sizeof(RemoteActivity))) {
        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
        return 0;
     }
@@ -1404,15 +1388,15 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   char RemoteUser[512];
-  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser)) {
-	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {	// TODDCORE
+  if (!ResourceAd->LookupString(ATTR_ACCOUNTING_GROUP, RemoteUser, sizeof(RemoteUser))) {
+	  if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser, sizeof(RemoteUser))) {	// TODDCORE
 		dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
 		return 0;
 	  }
   }
 
   if (CustomerName!=MyString(RemoteUser)) {
-    if(DebugFlags & D_ACCOUNTANT) {
+    if(IsDebugLevel(D_ACCOUNTANT)) {
       char *PreemptingUser = NULL;
       if(ResourceAd->LookupString(ATTR_PREEMPTING_ACCOUNTING_GROUP, &PreemptingUser) ||
          ResourceAd->LookupString(ATTR_PREEMPTING_USER, &PreemptingUser))
@@ -1431,7 +1415,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
 
   if(DiscountSuspendedResources) {
     char RemoteActivity[512];
-    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity, sizeof(RemoteActivity))) {
         dprintf(D_ALWAYS, "Could not lookup remote activity\n");
         return 0;
     }
@@ -1516,7 +1500,7 @@ void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrNam
   }
   
   MyString value;
-  value.sprintf("\"%s\"",AttrValue.Value());
+  value.formatstr("\"%s\"",AttrValue.Value());
   LogSetAttribute* log=new LogSetAttribute(Key.Value(),AttrName.Value(),value.Value());
   AcctLog->AppendLog(log);
 }
@@ -1673,13 +1657,18 @@ void Accountant::DumpLimits()
 
 void Accountant::ReportLimits(AttrList *attrList)
 {
-	MyString attr;
 	MyString limit;
  	double count;
 	concurrencyLimits.startIterations();
 	while (concurrencyLimits.iterate(limit, count)) {
-		attr.sprintf("ConcurrencyLimit_%s = %f\n", limit.Value(), count);
-		attrList->Insert(attr.Value());
+        string attr;
+        formatstr(attr, "ConcurrencyLimit_%s", limit.Value());
+        // classad wire protocol doesn't currently support attribute names that include
+        // punctuation or symbols outside of '_'.  If we want to include '.' or any other
+        // punct, we need to either model these as string values, or add support for quoted
+        // attribute names in wire protocol:
+        std::replace(attr.begin(), attr.end(), '.', '_');
+        attrList->Assign(attr.c_str(), count);
 	}
 }
 

@@ -1,0 +1,12 @@
+diff -u -r org.glite.security.gss/src/glite_gss.c org.glite.security.gss.patched/src/glite_gss.c
+--- org.glite.security.gss/src/glite_gss.c	2009-11-04 11:27:57.000000000 -0600
++++ org.glite.security.gss.patched/src/glite_gss.c	2012-09-19 11:48:58.000000000 -0500
+@@ -535,7 +535,7 @@
+ 	 ret = EDG_WLL_GSS_ERROR_ERRNO;
+ 	 goto end;
+       }
+-      buffer.length = strlen(proxy_file);
++      buffer.length = strlen((char*)buffer.value);
+ 
+       major_status = gss_import_cred(&minor_status, &gss_cred, GSS_C_NO_OID, 1,
+ 				     &buffer, 0, NULL);

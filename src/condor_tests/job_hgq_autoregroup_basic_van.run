@@ -67,8 +67,7 @@ sub timed_callback {
 
     if (!$negotiate_test_passed) {
         my $neglog = trimws(`condor_config_val NEGOTIATOR_LOG`);
-        my $stat = `cat $neglog | grep -e 'Group.* - BEGIN' -e 'Negotiating with .* at'`;
-        my @slines = split /\n/, $stat;
+	my @slines = grep(/(Group.* - BEGIN|Negotiating with .* at)/, CondorTest::slurp($neglog));
 
         # This always checks the first negotiation cycle (where somebody negotiated)
         my $succ = 1;

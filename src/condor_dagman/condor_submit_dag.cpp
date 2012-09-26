@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 	Termlog = true;
 	p_funcs = get_param_functions();
 	dprintf_config("condor_submit_dag", p_funcs); 
-	DebugFlags = D_ALWAYS | D_NOHEADER;
+	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 	config();
 
 		// Initialize our Distribution object -- condor vs. hawkeye, etc.
@@ -721,6 +721,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg(deepOpts.autoRescue);
 	args.AppendArg("-DoRescueFrom");
 	args.AppendArg(deepOpts.doRescueFrom);
+	if(!deepOpts.always_use_node_log) {
+		args.AppendArg("-dont_use_default_node_log");
+	}
 
 	shallowOpts.dagFiles.rewind();
 	while ( (dagFile = shallowOpts.dagFiles.next()) != NULL ) {
@@ -1103,6 +1106,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				shallowOpts.bPostRun = false;
 			}
+			else if ( (strArg.find("-dont_use_default_node_log") != -1) )
+			{
+				deepOpts.always_use_node_log = false;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{
@@ -1242,5 +1249,6 @@ int printUsage(int iExitCode)
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
 	printf("    -priority <priority> (jobs will run with this priority by default)\n");
+	printf("    -dont_use_default_node_log (Restore pre-7.9.0 behavior of using UserLog only)\n");
 	exit(iExitCode);
 }

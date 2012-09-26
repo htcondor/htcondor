@@ -631,14 +631,14 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
 					 WTERMSIG(status) ,
 						coredir, proc->id.cluster, proc->id.proc);
-				corepath.sprintf("%s/core.%d.%d",
+				corepath.formatstr("%s/core.%d.%d",
 							coredir, proc->id.cluster, proc->id.proc);
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
 					 WTERMSIG(status) ,proc->rootdir, coredir, 
 					 proc->id.cluster, proc->id.proc);
-				corepath.sprintf("%s%s/core.%d.%d",
+				corepath.formatstr("%s%s/core.%d.%d",
 							proc->rootdir, coredir, proc->id.cluster, 
 							proc->id.proc);
 			}
@@ -983,7 +983,7 @@ MakeProc(ClassAd *ad, PROC *p)
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, p->universe);
 	ad->LookupInteger(ATTR_WANT_CHECKPOINT, p->checkpoint);
 	ad->LookupInteger(ATTR_WANT_REMOTE_SYSCALLS, p->remote_syscalls);
-	ad->LookupString(ATTR_OWNER, buf);
+	ad->LookupString(ATTR_OWNER, buf, sizeof(buf));
 	p->owner = strdup(buf);
 	ad->LookupInteger(ATTR_Q_DATE, p->q_date);
 	ad->LookupInteger(ATTR_COMPLETION_DATE, p->completion_date);
@@ -1031,22 +1031,22 @@ MakeProc(ClassAd *ad, PROC *p)
 	}
 	p->args_v1or2[0] = strdup(args_v1or2.Value());
 
-	ad->LookupString(ATTR_JOB_CMD, buf);
+	ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf));
 	p->cmd[0] = strdup(buf);
-	ad->LookupString(ATTR_JOB_INPUT, buf);
+	ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf));
 	p->in[0] = strdup(buf);
-	ad->LookupString(ATTR_JOB_OUTPUT, buf);
+	ad->LookupString(ATTR_JOB_OUTPUT, buf, sizeof(buf));
 	p->out[0] = strdup(buf);
-	ad->LookupString(ATTR_JOB_ERROR, buf);
+	ad->LookupString(ATTR_JOB_ERROR, buf, sizeof(buf));
 	p->err[0] = strdup(buf);
 	ad->LookupInteger(ATTR_JOB_EXIT_STATUS, p->exit_status[0]);
 
 	ad->LookupInteger(ATTR_MIN_HOSTS, p->min_needed);
 	ad->LookupInteger(ATTR_MAX_HOSTS, p->max_needed);
 
-	ad->LookupString(ATTR_JOB_ROOT_DIR, buf);
+	ad->LookupString(ATTR_JOB_ROOT_DIR, buf, sizeof(buf));
 	p->rootdir = strdup(buf);
-	ad->LookupString(ATTR_JOB_IWD, buf);
+	ad->LookupString(ATTR_JOB_IWD, buf, sizeof(buf));
 	p->iwd = strdup(buf);
 
 	e = ad->LookupExpr(ATTR_REQUIREMENTS);

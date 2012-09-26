@@ -409,7 +409,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
-
+	m_need_reconfig = false;
+	m_delay_reconfig = false;
 		// Initialize our array of StringLists used to authorize
 		// condor_config_val -set and friends.
 	int i;
@@ -772,7 +773,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 			return false;
 		}
 		if(msg) {
-			msg->sprintf( "file descriptor safety level exceeded: "
+			msg->formatstr( "file descriptor safety level exceeded: "
 			              " limit %d, "
 			              " registered socket count %d, "
 			              " fd %d",
@@ -1712,7 +1713,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 #ifdef WIN32
 	static unsigned pipe_counter = 0;
 	MyString pipe_name;
-	pipe_name.sprintf("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
+	pipe_name.formatstr("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
 	return Create_Named_Pipe(pipe_ends,
 		can_register_read,
 		can_register_write,
@@ -1797,9 +1798,9 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
-	can_register_read = can_register_read;
-	can_register_write = can_register_write;
-	psize = psize;
+	(void)can_register_read;
+	(void)can_register_write;
+	(void)psize;
 
 	bool failed = false;
 	int filedes[2];
@@ -1867,10 +1868,10 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 #else
 		// Shut the compiler up
 		// These parameters are needed on Windows
-	is_write = is_write;
-	can_register = can_register;
-	nonblocking = nonblocking;
-	psize = psize;
+	(void)is_write;
+	(void)can_register;
+	(void)nonblocking;
+	(void)psize;
 
 	pipe_handle = fd;
 #endif
@@ -2426,7 +2427,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2465,7 +2466,7 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.Length() ? "," : "";
-				res.sprintf_cat( "%s%i", comma, comTable[i].num );
+				res.formatstr_cat( "%s%i", comma, comTable[i].num );
 			}
 		}
 	}
@@ -2484,7 +2485,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2519,7 +2520,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2555,7 +2556,7 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 	// in the condor_config.  this is a little different than
 	// what dprintf does by itself ( which is just
 	// flag & DebugFlags > 0 ), so our own check here:
-	if ( (flag & DebugFlags) != flag )
+	if ( ! IsDebugCatAndVerbosity(flag) )
 		return;
 
 	if ( indent == NULL)
@@ -2803,7 +2804,7 @@ DaemonCore::reconfig(void) {
 	// a daemon core parent.
 	if ( ppid && m_want_send_child_alive ) {
 		MyString buf;
-		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
+		buf.formatstr("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
 		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
@@ -2910,7 +2911,7 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 			InitDCCommandSocket(1);
 		}
 	}
-	else if( DebugFlags & D_FULLDEBUG ) {
+	else if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
 	}
 }
@@ -2929,7 +2930,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
 	MyString allow_reason_buf;
-	if( (DebugFlags & D_SECURITY) ) {
+	if( IsDebugLevel( D_SECURITY ) ) {
 			// only get 'allow' reason if doing verbose debugging
 		allow_reason = &allow_reason_buf;
 	}
@@ -3279,7 +3280,7 @@ void DaemonCore::Driver()
 			// Performance around select is of high importance for all
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
-		if (DebugFlags & D_PERF_TRACE) {
+		if (IsDebugLevel(D_PERF_TRACE)) {
 			dprintf(D_ALWAYS, "PERF: entering select\n");
 		}
 
@@ -3328,18 +3329,18 @@ void DaemonCore::Driver()
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
             dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
-				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
+				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.\n");
 			}
 			async_pipe_signal = false;
 			while (int cb = async_pipe[0].bytes_available_to_read()) {
 				if (cb < 0) {
-					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d", 
+					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d\n", 
 							WSAGetLastError());
 					break;
 				}
 				char buf[16];
 				if (recv(async_pipe[0].get_socket(), buf, MIN(cb, COUNTOF(buf)), 0) == SOCKET_ERROR) {
-					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d", 
+					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d\n", 
 							WSAGetLastError());
 					break;
 				}
@@ -3350,7 +3351,7 @@ void DaemonCore::Driver()
 			// Performance around select is of high importance for all
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
-		if (DebugFlags & D_PERF_TRACE) {
+		if (IsDebugLevel(D_PERF_TRACE)) {
 			dprintf(D_ALWAYS, "PERF: leaving select\n");
 			selector.display();
 		}
@@ -4631,7 +4632,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 		pidHandle = pidinfo->hProcess;
 	}
 
-	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose(D_PROCFAMILY) ) {
 			char check_name[MAX_PATH];
 			CSysinfo sysinfo;
 			sysinfo.GetProcessName(pid,check_name, sizeof(check_name));
@@ -5219,6 +5220,7 @@ public:
 		int the_want_command_port,
 		const sigset_t *the_sigmask,
 		size_t *core_hard_limit,
+		long    as_hard_limit,
 		int		*affinity_mask,
 		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
@@ -5235,6 +5237,7 @@ public:
 	   m_priv(the_priv), m_want_command_port(the_want_command_port),
 	   m_sigmask(the_sigmask), m_unix_args(0), m_unix_env(0),
 	   m_core_hard_limit(core_hard_limit),
+	   m_as_hard_limit(as_hard_limit),
 	   m_affinity_mask(affinity_mask),
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
@@ -5293,6 +5296,7 @@ private:
 	char **m_unix_args;
 	char **m_unix_env;
 	size_t *m_core_hard_limit;
+	long m_as_hard_limit;
 	const int    *m_affinity_mask;
 	Env m_envobject;
     FilesystemRemap *m_fs_remap;
@@ -5305,6 +5309,8 @@ enum {
         STACK_GROWS_UP,
         STACK_GROWS_DOWN
 };
+
+#if HAVE_CLONE
 static int stack_direction(volatile int *ptr=NULL) {
     volatile int location;
     if(!ptr) return stack_direction(&location);
@@ -5314,6 +5320,7 @@ static int stack_direction(volatile int *ptr=NULL) {
 
     return STACK_GROWS_DOWN;
 }
+#endif
 
 pid_t CreateProcessForkit::clone_safe_getpid() {
 #if HAVE_CLONE
@@ -5549,7 +5556,7 @@ void CreateProcessForkit::exec() {
 
 		// if I have brought in the parent's environment, then ensure that
 		// after the caller's changes have been enacted, this overrides them.
-	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
+	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(m_job_opt_mask) ) {
 
 			// add/override the inherit variable with the correct value
 			// for this process.
@@ -5674,7 +5681,7 @@ void CreateProcessForkit::exec() {
 		m_unix_args = tmpargs.GetStringArray();
 	}
 	else {
-		if(DebugFlags & D_DAEMONCORE) {
+		if(IsDebugLevel(D_DAEMONCORE)) {
 			MyString arg_string;
 			m_args.GetArgsStringForDisplay(&arg_string);
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.Value());
@@ -5935,7 +5942,7 @@ void CreateProcessForkit::exec() {
 	}
 #endif
 
-	if( DebugFlags & D_DAEMONCORE ) {
+	if( IsDebugLevel( D_DAEMONCORE ) ) {
 			// This MyString is scoped to free itself before the call to
 			// exec().  Otherwise, it would be a leak.
 		MyString msg = "Printing fds to inherit: ";
@@ -5954,6 +5961,11 @@ void CreateProcessForkit::exec() {
 	if (m_core_hard_limit != NULL) {
 		limit(RLIMIT_CORE, *m_core_hard_limit, CONDOR_HARD_LIMIT, "max core size");
 	}
+
+	if (m_as_hard_limit != 0L) {
+		limit(RLIMIT_AS, m_as_hard_limit, CONDOR_HARD_LIMIT, "max virtual adddress space");
+	}
+
 
 	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );
 
@@ -6096,7 +6108,8 @@ int DaemonCore::Create_Process(
 			int			  *affinity_mask,
 			char const    *daemon_sock,
 			MyString      *err_return_msg,
-			FilesystemRemap *remap
+			FilesystemRemap *remap,
+			long		  as_hard_limit
             )
 {
 	int i, j;
@@ -6187,7 +6200,7 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
-	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
+	inheritbuf.formatstr("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
 		//  CCB's trickery if present.  As this address is
@@ -6633,7 +6646,7 @@ int DaemonCore::Create_Process(
 		/** surround the executable name with quotes or you'll 
 			have problems when the execute directory contains 
 			spaces! */
-		strArgs.sprintf ( 
+		strArgs.formatstr ( 
 			"\"%s\"",
 			executable );
 		
@@ -6666,7 +6679,7 @@ int DaemonCore::Create_Process(
 		
 		/** next, stuff the extra cmd.exe args in with 
 			the arguments */
-		strArgs.sprintf ( 
+		strArgs.formatstr ( 
 			"\"%s\" /Q /C \"%s\"",
 			systemshell,
 			executable );
@@ -6740,7 +6753,7 @@ int DaemonCore::Create_Process(
 
 				/** add the script to the command-line. The 
 					executable is actually the script. */
-				strArgs.sprintf (
+				strArgs.formatstr (
 					"\"%s\" \"%s\"",
 					interpreter, 
 					executable );
@@ -7028,7 +7041,7 @@ int DaemonCore::Create_Process(
 		if( stat(cwd, &stat_struct) == -1 ) {
 			return_errno = errno;
             if (NULL != err_return_msg) {
-                err_return_msg->sprintf("Cannot access specified iwd \"%s\"", cwd);
+                err_return_msg->formatstr("Cannot access specified iwd \"%s\"", cwd);
             }
 			dprintf( D_ALWAYS, "Create_Process: "
 					 "Cannot access specified iwd \"%s\": "
@@ -7058,7 +7071,7 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.sprintf("%s/%s", currwd.Value(), executable);
+			executable_fullpath_buf.formatstr("%s/%s", currwd.Value(), executable);
 			executable_fullpath = executable_fullpath_buf.Value();
 
 				// Finally, log it
@@ -7148,6 +7161,7 @@ int DaemonCore::Create_Process(
 			want_command_port,
 			sigmask,
 			core_hard_limit,
+			as_hard_limit,
 			affinity_mask,
 			remap);
 
@@ -8067,7 +8081,7 @@ DaemonCore::Inherit( void )
 			}
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			MyString id;
-			id.sprintf("%s", CONDOR_PARENT_FQU);
+			id.formatstr("%s", CONDOR_PARENT_FQU);
 			ipv->PunchHole(DAEMON, id);
 		}
 	}
@@ -8887,7 +8901,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 		 */
 
 	if( dprintf_lock_delay > 0.01 ) {
-		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its debug file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
+		dprintf(D_ALWAYS,"WARNING: child process %d reports that it has spent %.1f%% of its time waiting for a lock to its log file.  This could indicate a scalability limit that could cause system stability problems.\n",child_pid,dprintf_lock_delay*100);
 	}
 	if( dprintf_lock_delay > 0.1 ) {
 			// things are looking serious, so let's send mail
@@ -8896,13 +8910,13 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 			last_email = time(NULL);
 
 			std::string subject;
-			sprintf(subject,"Condor process reports long locking delays!");
+			formatstr(subject,"Condor process reports long locking delays!");
 
 			FILE *mailer = email_admin_open(subject.c_str());
 			if( mailer ) {
 				fprintf(mailer,
 						"\n\nThe %s's child process with pid %d has spent %.1f%% of its time waiting\n"
-						"for a lock to its debug file.  This could indicate a scalability limit\n"
+						"for a lock to its log file.  This could indicate a scalability limit\n"
 						"that could cause system stability problems.\n",
 						get_mySubSystem()->getName(),
 						child_pid,
@@ -9505,7 +9519,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 			// level.
 
 		MyString command_desc;
-		command_desc.sprintf("remote config %s",name);
+		command_desc.formatstr("remote config %s",name);
 
 		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
@@ -9834,7 +9848,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 
     if( fname ) {
 		MyString newLocalAdFile;
-		newLocalAdFile.sprintf("%s.new",fname);
+		newLocalAdFile.formatstr("%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
@@ -10062,7 +10076,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	bytes = daemonCore->Read_Pipe(pipe_fd, buf, max_read_bytes);
 	if (bytes > 0) {
 		// Actually read some data, so append it to our MyString.
-		// First, null-terminate the buffer so that sprintf_cat()
+		// First, null-terminate the buffer so that formatstr_cat()
 		// doesn't go berserk. This is always safe since buf was
 		// created on the stack with 1 extra byte, just in case.
 		buf[bytes] = '\0';

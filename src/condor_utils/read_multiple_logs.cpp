@@ -370,10 +370,9 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Note: this method should get speeded up (see Gnats PR 846).
-
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
-		const MyString &directory, bool &isXml)
+		const MyString &directory, bool &isXml, bool usingDefaultNode)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
@@ -408,64 +407,66 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			logFileName = tmpLogName;
 		}
 
-		MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
-				"initialdir");
-		if ( tmpInitialDir != "" ) {
-			initialDir = tmpInitialDir;
-		}
+			// If we are using the default node log, we don't care
+			// about these
+		if( !usingDefaultNode ) {
+			MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
+					"initialdir");
+			if ( tmpInitialDir != "" ) {
+				initialDir = tmpInitialDir;
+			}
 
-		MyString tmpLogXml = getParamFromSubmitLine(submitLine, "log_xml");
-		if ( tmpLogXml != "" ) {
-			isXmlLogStr = tmpLogXml;
+			MyString tmpLogXml = getParamFromSubmitLine(submitLine, "log_xml");
+			if ( tmpLogXml != "" ) {
+				isXmlLogStr = tmpLogXml;
+			}
 		}
 	}
 
-		//
-		// Check for macros in the log file name -- we currently don't
-		// handle those.
-		//
-	if ( logFileName != "" ) {
-		if ( strstr(logFileName.Value(), "$(") ) {
-			dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
+	if ( !usingDefaultNode ) {
+			//
+			// Check for macros in the log file name -- we currently don't
+			// handle those.
+			//
+			// If we are using the default node, we don't need to check this
+		if ( logFileName != "" ) {
+			if ( strstr(logFileName.Value(), "$(") ) {
+				dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
 						"in log file name (%s) in DAG node submit files\n",
 						logFileName.Value());
-			logFileName = "";
-		}
-	}
-
-	if ( logFileName != "" ) {
-			// Prepend initialdir to log file name if log file name is not
-			// an absolute path.
-		if ( initialDir != "" && !fullpath(logFileName.Value()) ) {
-			logFileName = initialDir + DIR_DELIM_STRING + logFileName;
+				logFileName = "";
+			}
 		}
 
-			// We do this in case the same log file is specified with a
-			// relative and an absolute path.  
-			// Note: we now do further checking that doesn't rely on
-			// comparing paths to the log files.  wenger 2004-05-27.
-		CondorError errstack;
-		if ( !makePathAbsolute( logFileName, errstack ) ) {
-			dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
-			return "";
+			// Do not need to prepend initialdir if we are using the 
+			// default node log
+		if ( logFileName != "" ) {
+				// Prepend initialdir to log file name if log file name is not
+				// an absolute path.
+			if ( initialDir != "" && !fullpath(logFileName.Value()) ) {
+				logFileName = initialDir + DIR_DELIM_STRING + logFileName;
+			}
+
+				// We do this in case the same log file is specified with a
+				// relative and an absolute path.  
+				// Note: we now do further checking that doesn't rely on
+				// comparing paths to the log files.  wenger 2004-05-27.
+			CondorError errstack;
+			if ( !makePathAbsolute( logFileName, errstack ) ) {
+				dprintf(D_ALWAYS, "%s\n", errstack.getFullText().c_str());
+				return "";
+			}
+		}
+		isXmlLogStr.lower_case();
+		isXml = (isXmlLogStr == "true");
+		if ( directory != "" ) {
+			MyString	errMsg;
+			if ( !td.Cd2MainDir(errMsg) ) {
+				dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
+				return "";
+			}
 		}
 	}
-
-	isXmlLogStr.lower_case();
-	if ( isXmlLogStr == "true" ) {
-		isXml = true;
-	} else {
-		isXml = false;
-	}
-
-	if ( directory != "" ) {
-		MyString	errMsg;
-		if ( !td.Cd2MainDir(errMsg) ) {
-			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
-			return "";
-		}
-	}
-
 	return logFileName;
 }
 
@@ -568,7 +569,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
 
 	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
 	if (fd < 0) {
-		rtnVal.sprintf("error opening submit file %s: %s",
+		rtnVal.formatstr("error opening submit file %s: %s",
 				filename, strerror(errno) );
 		dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
 		return rtnVal;
@@ -584,7 +585,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
             break;
         }
         else {
-            rtnVal.sprintf("failed to read submit file %s: %s",
+            rtnVal.formatstr("failed to read submit file %s: %s",
 					filename, strerror(errno) );
 			dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
 			close(fd);
@@ -647,7 +648,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		// reject empty log file names
 		if ( logfile.empty() ) {
 			unparser.Unparse( unparsed, &ad);
-			rtnVal.sprintf("Stork job specifies null log file:%s",
+			rtnVal.formatstr("Stork job specifies null log file:%s",
 					unparsed.c_str() );
 			return rtnVal;
 		}
@@ -655,7 +656,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		// reject log file names with embedded macros
 		if ( logfile.find('$') != std::string::npos) {
 			unparser.Unparse( unparsed, &ad);
-			rtnVal.sprintf("macros not allowed in Stork log file names:%s",
+			rtnVal.formatstr("macros not allowed in Stork log file names:%s",
 					unparsed.c_str() );
 			return rtnVal;
 		}
@@ -665,7 +666,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		if ( ! fullpath(logfile.c_str() ) ) {
 			MyString	currentDir;
 			if ( ! condor_getcwd(currentDir) ) {
-				rtnVal.sprintf("condor_getcwd() failed with errno %d (%s)",
+				rtnVal.formatstr("condor_getcwd() failed with errno %d (%s)",
 						errno, strerror(errno));
 				dprintf(D_ALWAYS, "ERROR: %s at %s:%d\n", rtnVal.Value(),
 						__FILE__, __LINE__);
@@ -978,7 +979,7 @@ GetFileID( const MyString &filename, MyString &fileID,
 					filename.Value() );
 		return false;
 	}
-	fileID.sprintf( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
+	fileID.formatstr( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
 				(unsigned long long)swrap.GetBuf()->st_ino );
 #endif
 

@@ -1,0 +1,234 @@
+diff -u -r gt5.2.1-all-source-installer/source-trees/gass/cache/source/configure gt5.2.1-all-source-installer-patched/source-trees/gass/cache/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gass/cache/source/configure	2012-04-25 20:31:21.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gass/cache/source/configure	2012-05-11 16:45:45.000000000 -0500
+@@ -10215,6 +10215,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gass/copy/source/configure gt5.2.1-all-source-installer-patched/source-trees/gass/copy/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gass/copy/source/configure	2012-04-25 20:37:03.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gass/copy/source/configure	2012-05-11 16:45:59.000000000 -0500
+@@ -10892,6 +10892,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gatekeeper/source/configure gt5.2.1-all-source-installer-patched/source-trees/gatekeeper/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gatekeeper/source/configure	2012-04-25 20:34:09.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gatekeeper/source/configure	2012-05-11 16:46:23.000000000 -0500
+@@ -10995,6 +10995,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gram/jobmanager/source/configure gt5.2.1-all-source-installer-patched/source-trees/gram/jobmanager/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gram/jobmanager/source/configure	2012-04-25 20:37:21.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gram/jobmanager/source/configure	2012-05-11 16:45:28.000000000 -0500
+@@ -11152,6 +11152,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/callback/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/callback/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/callback/source/configure	2012-04-25 20:33:26.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/callback/source/configure	2012-05-11 16:41:41.000000000 -0500
+@@ -10986,6 +10986,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/cert_utils/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/cert_utils/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/cert_utils/source/configure	2012-04-25 20:33:13.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/cert_utils/source/configure	2012-05-11 16:41:24.000000000 -0500
+@@ -11133,6 +11133,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/credential/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/credential/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/credential/source/configure	2012-04-25 20:33:33.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/credential/source/configure	2012-05-11 16:42:58.000000000 -0500
+@@ -10882,6 +10882,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/gssapi/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/gssapi/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/gssapi/source/configure	2012-04-25 20:33:44.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/gssapi/source/configure	2012-05-11 16:42:21.000000000 -0500
+@@ -10885,6 +10885,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/gssapi/test/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/gssapi/test/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/gssapi/test/configure	2012-04-25 20:35:27.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/gssapi/test/configure	2012-05-11 16:42:05.000000000 -0500
+@@ -10195,6 +10195,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/openssl_error/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/openssl_error/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/openssl_error/source/configure	2012-04-25 20:31:33.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/openssl_error/source/configure	2012-05-11 16:44:58.000000000 -0500
+@@ -11123,6 +11123,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/openssl_error/test/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/openssl_error/test/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/openssl_error/test/configure	2012-04-25 20:32:03.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/openssl_error/test/configure	2012-05-11 16:44:45.000000000 -0500
+@@ -10863,6 +10863,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/openssl_module/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/openssl_module/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/openssl_module/source/configure	2012-04-25 20:32:09.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/openssl_module/source/configure	2012-05-11 16:42:42.000000000 -0500
+@@ -11130,6 +11130,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_core/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_core/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_core/source/configure	2012-04-25 20:33:38.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_core/source/configure	2012-05-11 16:44:08.000000000 -0500
+@@ -10882,6 +10882,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_ssl/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_ssl/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_ssl/source/configure	2012-04-25 20:30:29.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_ssl/source/configure	2012-05-11 16:43:39.000000000 -0500
+@@ -11122,6 +11122,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_ssl/test/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_ssl/test/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_ssl/test/configure	2012-04-25 20:31:38.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_ssl/test/configure	2012-05-11 16:43:50.000000000 -0500
+@@ -10194,6 +10194,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_utils/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_utils/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/proxy/proxy_utils/source/configure	2012-04-25 20:34:26.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/proxy/proxy_utils/source/configure	2012-05-11 16:43:20.000000000 -0500
+@@ -11222,6 +11222,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gsi/sysconfig/source/configure gt5.2.1-all-source-installer-patched/source-trees/gsi/sysconfig/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gsi/sysconfig/source/configure	2012-04-25 20:33:19.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gsi/sysconfig/source/configure	2012-05-11 16:44:24.000000000 -0500
+@@ -10882,6 +10882,9 @@
+             esac
+ 
+ fi
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ 
+ if test "${openssl}" != ""; then
+diff -u -r gt5.2.1-all-source-installer/source-trees/gridftp/client/source/configure gt5.2.1-all-source-installer-patched/source-trees/gridftp/client/source/configure
+--- gt5.2.1-all-source-installer/source-trees/gridftp/client/source/configure	2012-04-25 20:36:20.000000000 -0500
++++ gt5.2.1-all-source-installer-patched/source-trees/gridftp/client/source/configure	2012-05-23 17:07:05.000000000 -0500
+@@ -10886,6 +10886,9 @@
+ 
+ fi
+ 
++if test `uname` = "Darwin" ; then
++    openssl="/usr"
++fi
+ 
+ if test "${openssl}" != ""; then
+     PKG_CONFIG_PATH=${openssl}/lib/pkgconfig

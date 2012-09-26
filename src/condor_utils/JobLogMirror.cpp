@@ -21,11 +21,16 @@
 #include "JobLogMirror.h"
 #include "condor_config.h"
 
-JobLogMirror::JobLogMirror(ClassAdLogConsumer *consumer):
-	job_log_reader(consumer)
+JobLogMirror::JobLogMirror(ClassAdLogConsumer *consumer,char const *_alt_spool_param):
+	job_log_reader(consumer),
+	alt_spool_param(_alt_spool_param ? _alt_spool_param : "")
 {
 	log_reader_polling_timer = -1;
 	log_reader_polling_period = 10;
+}
+
+JobLogMirror::~JobLogMirror() {
+	stop();
 }
 
 void
@@ -35,12 +40,21 @@ JobLogMirror::init() {
 
 void
 JobLogMirror::stop() {
-//	Nothing to do
+	if( log_reader_polling_timer != -1 ) {
+		daemonCore->Cancel_Timer(log_reader_polling_timer);
+		log_reader_polling_timer = -1;
+	}
 }
 
 void
 JobLogMirror::config() {
-	char *spool = param("SPOOL");
+	char *spool = NULL;
+	if( !alt_spool_param.empty() ) {
+		spool = param(alt_spool_param.c_str());
+	}
+	if( !spool ) {
+		spool = param("SPOOL");
+	}
 	if(!spool) {
 		EXCEPT("No SPOOL defined in config file.\n");
 	}

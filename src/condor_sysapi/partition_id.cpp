@@ -19,6 +19,8 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
+#include "stl_string_utils.h"
 
 #include "sysapi.h"
 #include "sysapi_externs.h"
@@ -87,15 +89,15 @@ int sysapi_partition_id_raw(char const *path,char **result)
 	int rc = stat( path, &statbuf );
 
 	if( rc < 0 ) {
+		dprintf(D_ALWAYS,"Failed to stat %s: (errno %d) %s\n",
+				path, errno, strerror(errno));
 		return 0;
 	}
 
-	*result = (char *)malloc( 50 );
-	if( *result == NULL ) {
-		return 0;
-	}
-
-	snprintf( *result, 50, "%ld", (long)statbuf.st_dev);
+	std::string buf;
+	formatstr(buf,"%ld",(long)statbuf.st_dev);
+	*result = strdup(buf.c_str());
+	ASSERT( *result );
 
 	return 1;
 }

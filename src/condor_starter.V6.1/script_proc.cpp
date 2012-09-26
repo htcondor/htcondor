@@ -204,7 +204,7 @@ ScriptProc::StartJob()
 		// TODO: Deal with port regulation stuff?
 
 		// Grab the full environment back out of the Env object 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_str;
 		job_env.getDelimitedStringForDisplay(&env_str);
 		dprintf(D_FULLDEBUG, "%sEnv = %s\n", name, env_str.Value() );

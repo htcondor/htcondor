@@ -23,9 +23,9 @@
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
+#include "classad/classadCache.h"
 
 using namespace std;
 
@@ -46,159 +46,6 @@ IsStringEnd(const char *str, unsigned off)
 
 namespace compat_classad {
 
-// EvalResult ctor
-EvalResult::EvalResult()
-{
-	type = LX_UNDEFINED;
-	debug = false;
-}
-
-// EvalResult dtor
-EvalResult::~EvalResult()
-{
-	if ((type == LX_STRING || type == LX_TIME) && (s)) {
-		delete [] s;
-	}
-}
-
-void EvalResult::clear()
-{
-	this->~EvalResult();
-	type = LX_UNDEFINED;
-}
-
-void
-EvalResult::deepcopy(const EvalResult & rhs)
-{
-	type = rhs.type;
-	debug = rhs.debug;
-	switch ( type ) {
-		case LX_INTEGER:
-		case LX_BOOL:
-			i = rhs.i;
-			break;
-		case LX_FLOAT:
-			f = rhs.f;
-			break;
-		case LX_STRING:
-				// need to make a deep copy of the string
-			s = strnewp( rhs.s );
-			break;
-		default:
-			break;
-	}
-}
-
-// EvalResult copy ctor
-EvalResult::EvalResult(const EvalResult & rhs)
-{
-	deepcopy(rhs);
-}
-
-// EvalResult assignment op
-EvalResult & EvalResult::operator=(const EvalResult & rhs)
-{
-	if ( this == &rhs )	{	// object assigned to itself
-		return *this;		// all done.
-	}
-
-		// deallocate any state in this object by invoking dtor
-	this->~EvalResult();
-
-		// call copy ctor to make a deep copy of data
-	deepcopy(rhs);
-
-		// return reference to invoking object
-	return *this;
-}
-
-
-void EvalResult::fPrintResult(FILE *fi)
-{
-    switch(type)
-    {
-	case LX_INTEGER :
-
-	     fprintf(fi, "%d", this->i);
-	     break;
-
-	case LX_FLOAT :
-
-	     fprintf(fi, "%f", this->f);
-	     break;
-
-	case LX_STRING :
-
-	     fprintf(fi, "%s", this->s);
-	     break;
-
-	case LX_NULL :
-
-	     fprintf(fi, "NULL");
-	     break;
-
-	case LX_UNDEFINED :
-
-	     fprintf(fi, "UNDEFINED");
-	     break;
-
-	case LX_ERROR :
-
-	     fprintf(fi, "ERROR");
-	     break;
-
-	default :
-
-	     fprintf(fi, "type unknown");
-	     break;
-    }
-    fprintf(fi, "\n");
-}
-
-void EvalResult::toString(bool force)
-{
-	switch(type) {
-		case LX_STRING:
-			break;
-		case LX_FLOAT: {
-			MyString buf;
-			buf.sprintf("%lf",f);
-			s = strnewp(buf.Value());
-			type = LX_STRING;
-			break;
-		}
-		case LX_BOOL:	
-			type = LX_STRING;
-			if (i) {
-				s = strnewp("TRUE");
-			} else {
-				s = strnewp("FALSE");
-			}	
-			break;
-		case LX_INTEGER: {
-			MyString buf;
-			buf.sprintf("%d",i);
-			s = strnewp(buf.Value());
-			type = LX_STRING;
-			break;
-		}
-		case LX_UNDEFINED:
-			if( force ) {
-				s = strnewp("UNDEFINED");
-				type = LX_STRING;
-			}
-			break;
-		case LX_ERROR:
-			if( force ) {
-				s = strnewp("ERROR");
-				type = LX_STRING;
-			}
-			break;
-		default:
-			ASSERT("Unknown classad result type");
-	}
-}
-
 static StringList ClassAdUserLibs;
 
 bool ClassAd::m_initConfig = false;
@@ -209,6 +56,8 @@ Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+
+	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
@@ -229,19 +78,21 @@ Reconfig()
 	}
 }
 
-static classad::AttributeReference *the_my_ref = NULL;
+// TSTCLAIR: this really needs to be killed off now.
+// static classad::AttributeReference *the_my_ref = NULL;
 static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
 {
 	ASSERT( !the_my_ref_in_use );
 	the_my_ref_in_use = true;
 
-	if( !the_my_ref ) {
-		the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-	}
+	//if( !the_my_ref ) {
+	//	the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+	//}
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Insert( "my", the_my_ref );
+		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+		ad->Insert( "my", pExpr );
 	}
 }
 
@@ -250,7 +101,7 @@ void releaseTheMyRef( classad::ClassAd *ad )
 	ASSERT( the_my_ref_in_use );
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Remove( "my" );
+		ad->Delete("my"); //Remove( "my" ); 
 		ad->MarkAttributeClean( "my" );
 	}
 
@@ -474,10 +325,7 @@ bool stringListMember_func( const char *name,
 
 	StringList sl( list_str.c_str(), delim_str.c_str() );
 	int rc;
-	if ( sl.number() == 0 ) {
-		result.SetUndefinedValue();
-		return true;
-	} else if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
+	if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
 		rc = sl.contains( item_str.c_str() );
 	} else {
 		rc = sl.contains_anycase( item_str.c_str() );
@@ -634,10 +482,91 @@ bool splitAt_func( const char * name,
 		second.SetStringValue(str.substr(ix+1));
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 	lst->push_back(classad::Literal::MakeLiteral(first));
 	lst->push_back(classad::Literal::MakeLiteral(second));
+
+	result.SetListValue(lst);
+
+	return true;
+}
+
+// split using arbitrary separator characters
+static
+bool splitArb_func( const char * /*name*/,
+	const classad::ArgumentList &arg_list,
+	classad::EvalState &state, 
+	classad::Value &result )
+{
+	classad::Value arg0;
+
+	// Must have one or 2 arguments
+	if ( arg_list.size() != 1 && arg_list.size() != 2) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	// Evaluate the first argument
+	if( !arg_list[0]->Evaluate( state, arg0 )) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// if we have 2 arguments, the second argument is a set of
+	// separator characters, the default set of separators is , and whitespace
+	std::string seps = ", \t";
+	classad::Value arg1;
+	if (arg_list.size() >= 2 && ! arg_list[1]->Evaluate( state, arg1 )) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If either argument isn't a string, then the result is
+	// an error.
+	std::string str;
+	if( !arg0.IsStringValue(str) ) {
+		result.SetErrorValue();
+		return true;
+	}
+	if (arg_list.size() >= 2 && ! arg1.IsStringValue(seps)) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::ExprList *lst = new classad::ExprList();
+	ASSERT(lst);
+
+	// walk the input string, splitting at each instance of a separator
+	// character and discarding empty strings.  Thus leading and trailing
+	// separator characters are ignored, and runs of multiple separator
+	// characters have special treatment, multiple whitespace seps are
+	// treated as a single sep, as are single separators mixed with whitespace.
+	// but runs of a single separator are handled individually, thus
+	// "foo, bar" is the same as "foo ,bar" and "foo,bar".  But not the same as
+	// "foo,,bar", which produces a list of 3 items rather than 2.
+	unsigned int ixLast = 0;
+	classad::Value val;
+	if (seps.length() > 0) {
+		unsigned int ix = str.find_first_of(seps, ixLast);
+		int      ch = -1;
+		while (ix < str.length()) {
+			if (ix - ixLast > 0) {
+				val.SetStringValue(str.substr(ixLast, ix - ixLast));
+				lst->push_back(classad::Literal::MakeLiteral(val));
+			} else if (!isspace(ch) && ch == str[ix]) {
+				val.SetStringValue("");
+				lst->push_back(classad::Literal::MakeLiteral(val));
+			}
+			if (!isspace(str[ix])) ch = str[ix];
+			ixLast = ix+1;
+			ix = str.find_first_of(seps, ixLast);
+		}
+	}
+	if (str.length() > ixLast) {
+		val.SetStringValue(str.substr(ixLast));
+		lst->push_back(classad::Literal::MakeLiteral(val));
+	}
 
 	result.SetListValue(lst);
 
@@ -678,6 +607,8 @@ void registerStrlistFunctions()
 	classad::FunctionCall::RegisterFunction( name, splitAt_func );
 	name = "splitslotname";
 	classad::FunctionCall::RegisterFunction( name, splitAt_func );
+	name = "split";
+	classad::FunctionCall::RegisterFunction( name, splitArb_func );
 	//name = "splitsinful";
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
 }
@@ -872,65 +803,34 @@ ClassAdAttributeIsPrivate( char const *name )
 	return false;
 }
 
-bool ClassAd::
-Insert( const std::string &attrName, classad::ExprTree *expr )
+bool ClassAd::Insert( const std::string &attrName, classad::ExprTree *& expr, bool bCache )
 {
-	return classad::ClassAd::Insert( attrName, expr );
+	return classad::ClassAd::Insert( attrName, expr, bCache );
 }
 
-int ClassAd::
-Insert( const char *name, classad::ExprTree *expr )
+int ClassAd::Insert( const char *name, classad::ExprTree *& expr, bool bCache )
 {
 	string str = name;
-	return Insert( str, expr ) ? TRUE : FALSE;
+	return Insert( str, expr, bCache ) ? TRUE : FALSE;
 }
 
 int
 ClassAd::Insert( const char *str )
 {
 	classad::ClassAdParser parser;
-	classad::ClassAd *newAd;
 
 		// String escaping is different between new and old ClassAds.
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
-	string newAdStr = "[";
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-        if (str[i] == '\\') {
-			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
-			{
-				newAdStr.append( 1, '\\' );
-			}
-		}
-		newAdStr.append( 1, str[i] );
-	}
-	newAdStr += "]";
-	newAd = parser.ParseClassAd( newAdStr );
-	if ( newAd == NULL ) {
-		return FALSE;
-	}
-	if ( newAd->size() != 1 ) {
-		delete newAd;
-		return FALSE;
+	string newAdStr;
+	ConvertEscapingOldToNew( str, newAdStr );
+	
+	if (!classad::ClassAd::Insert(newAdStr))
+	{
+	  return FALSE;
 	}
 	
-	iterator itr = newAd->begin();
-	if ( !classad::ClassAd::Insert( itr->first, itr->second->Copy() ) ) {
-		delete newAd;
-		return FALSE;
-	}
-	delete newAd;
 	return TRUE;
-}
-
-int ClassAd::
-Insert(char const *expr,bool /*unused*/)
-{
-	dprintf(D_ALWAYS,"ERROR: Insert(expr,bool) called!\n");
-	dprintf_dump_stack();
-
-	return Insert( expr );
 }
 
 int ClassAd::
@@ -945,7 +845,7 @@ AssignExpr(char const *name,char const *value)
 	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
 		return FALSE;
 	}
-	if ( !Insert( name, expr ) ) {
+	if ( !Insert( name, expr, false ) ) {
 		delete expr;
 		return FALSE;
 	}
@@ -981,16 +881,16 @@ Assign(char const *name,char const *value)
 //  ExprTree* ClassAd::
 //  Lookup(const char*) const{}
 
-int ClassAd::
-LookupString( const char *name, char *value ) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	strcpy( value, strVal.c_str( ) );
-	return 1;
-} 
+//int ClassAd::
+//LookupString( const char *name, char *value ) const 
+//{
+//	string strVal;
+//	if( !EvaluateAttrString( string( name ), strVal ) ) {
+//		return 0;
+//	}
+//	strcpy( value, strVal.c_str( ) );
+//	return 1;
+//} 
 
 int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
@@ -1000,6 +900,7 @@ LookupString(const char *name, char *value, int max_len) const
 		return 0;
 	}
 	strncpy( value, strVal.c_str( ), max_len );
+	if ( value && max_len && value[max_len - 1] ) value[max_len - 1] = '\0';
 	return 1;
 }
 
@@ -1256,36 +1157,60 @@ int ClassAd::
 EvalInteger (const char *name, classad::ClassAd *target, int &value)
 {
 	int rc = 0;
-	int tmp_val;
+	classad::Value val;
 
 	if( target == this || target == NULL ) {
 		getTheMyRef( this );
-		if( EvaluateAttrInt( name, tmp_val ) ) { 
-			value = tmp_val;
+		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
 		releaseTheMyRef( this );
-		return rc;
 	}
+	else 
+	{
+	  getTheMatchAd( this, target );
+	  if( this->Lookup( name ) ) {
+		  if( this->EvaluateAttr( name, val ) ) {
+			  rc = 1;
+		  }
+	  } else if( target->Lookup( name ) ) {
+		  if( target->EvaluateAttr( name, val ) ) {
+			  rc = 1;
+		  }
+	  }
+	  releaseTheMatchAd();
+	}
+	
+	
+	// we have a "val" now cast if needed.
+	if ( 1 == rc ) 
+	{
+	  double doubleVal;
+	  int intVal;
+	  bool boolVal;
 
-	getTheMatchAd( this, target );
-	if( this->Lookup( name ) ) {
-		if( this->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrInt( name, tmp_val ) ) {
-			value = tmp_val;
-			rc = 1;
-		}
+	  if( val.IsRealValue( doubleVal ) ) {
+	    value = ( int )doubleVal;
+	  }
+	  else if( val.IsIntegerValue( intVal ) ) {
+	    value = intVal;
+	  }
+	  else if( val.IsBooleanValue( boolVal ) ) {
+	    value = ( int )boolVal;
+	  }
+	  else 
+	  { 
+	    // if we got here there is an issue with evaluation.
+	    rc = 0;
+	  }
+			
 	}
-	releaseTheMatchAd();
+	
 	return rc;
 }
 
 int ClassAd::
-EvalFloat (const char *name, classad::ClassAd *target, float &value)
+EvalFloat (const char *name, classad::ClassAd *target, double &value)
 {
 	int rc = 0;
 	classad::Value val;
@@ -1297,15 +1222,15 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
-				value = ( float )doubleVal;
+				value = doubleVal;
 				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
-				value = ( float )intVal;
+				value = intVal;
 				rc = 1;
 			}
 			if( val.IsBooleanValue( boolVal ) ) {
-				value = ( float )boolVal;
+				value = boolVal;
 				rc = 1;
 			}
 		}
@@ -1317,30 +1242,30 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	if( this->Lookup( name ) ) {
 		if( this->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
-				value = ( float )doubleVal;
+				value = doubleVal;
 				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
-				value = ( float )intVal;
+				value = intVal;
 				rc = 1;
 			}
 			if( val.IsBooleanValue( boolVal ) ) {
-				value = ( float )boolVal;
+				value = boolVal;
 				rc = 1;
 			}
 		}
 	} else if( target->Lookup( name ) ) {
 		if( target->EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
-				value = ( float )doubleVal;
+				value = doubleVal;
 				rc = 1;
 			}
 			if( val.IsIntegerValue( intVal ) ) {
-				value = ( float )intVal;
+				value = intVal;
 				rc = 1;
 			}
 			if( val.IsBooleanValue( boolVal ) ) {
-				value = ( float )boolVal;
+				value = boolVal;
 				rc = 1;
 			}
 		}
@@ -1371,7 +1296,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 0 : 1;
 				rc = 1;
 			}
 		}
@@ -1449,7 +1374,7 @@ initFromString( char const *str,MyString *err_msg )
 
 		if (!Insert(exprbuf)) {
 			if( err_msg ) {
-				err_msg->sprintf("Failed to parse ClassAd expression: '%s'",
+				err_msg->formatstr("Failed to parse ClassAd expression: '%s'",
 					exprbuf);
 			} else {
 				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
@@ -1568,7 +1493,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
-				output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 									value.c_str() );
 			}
 		}
@@ -1582,7 +1507,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
-			output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 								value.c_str() );
 		}
 	}
@@ -1742,9 +1667,10 @@ void ClassAd::AddExplicitTargetRefs(  )
 	}
 	
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
-			this->Insert( a->first,
-						  compat_classad::AddExplicitTargetRefs( a->second, definedAttrs )) ;
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
+		{
+		  classad::ExprTree * pTree = compat_classad::AddExplicitTargetRefs( a->second, definedAttrs );
+			this->Insert( a->first, pTree ) ;
 		}
 	}
 }
@@ -1752,9 +1678,10 @@ void ClassAd::AddExplicitTargetRefs(  )
 void ClassAd::RemoveExplicitTargetRefs( )
 {
 	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
-		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) {
-			this->Insert( a->first, 
-						  compat_classad::RemoveExplicitTargetRefs( a->second ) );
+		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
+		{
+		  classad::ExprTree * pTree = compat_classad::RemoveExplicitTargetRefs( a->second );
+			this->Insert( a->first, pTree );
 		}
 	}
 }  
@@ -1820,6 +1747,8 @@ AddExplicitConditionals( classad::ExprTree *expr )
 										 condExpr2, NULL, NULL );
 		return parenExpr2;
 	}
+	case classad::ExprTree::EXPR_ENVELOPE:
+		return ( AddExplicitConditionals( ( (classad::CachedExprEnvelope*)expr )->get() ) );
 	case classad::ExprTree::FN_CALL_NODE:
 	case classad::ExprTree::CLASSAD_NODE:
 	case classad::ExprTree::EXPR_LIST_NODE: {
@@ -2110,7 +2039,8 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 
 	classad::ExprTree *e = source_ad->Lookup( source_attr );
 	if ( e ) {
-		Insert( target_attr, e->Copy() );
+		e = e->Copy();
+		Insert( target_attr, e, false );
 	} else {
 		Delete( target_attr );
 	}
@@ -2126,31 +2056,47 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
         return FALSE;
     }
 
-    MyString out;
+    std::string out;
     sPrintAsXML(out,attr_white_list);
-    fprintf(fp, "%s", out.Value());
+    fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int ClassAd::
 sPrintAsXML(MyString &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml;
-	return TRUE;
+	std::string std_output;
+	int rc = sPrintAsXML(std_output, attr_white_list);
+	output += std_output;
+	return rc;
 }
 
 int ClassAd::
 sPrintAsXML(std::string &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml.Value();
+	classad::ClassAdXMLUnParser unparser;
+	std::string xml;
+
+	unparser.SetCompactSpacing(false);
+	if ( attr_white_list ) {
+		ClassAd tmp_ad;
+		classad::ExprTree *expr;
+		const char *attr;
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			if ( (expr = this->Lookup( attr )) ) {
+				tmp_ad.Insert( attr, expr, false );
+			}
+		}
+		unparser.Unparse( xml, &tmp_ad );
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			tmp_ad.Remove( attr );
+		}
+	} else {
+		unparser.Unparse( xml, this );
+	}
+	output += xml;
 	return TRUE;
 }
 ///////////// end XML functions /////////
@@ -2206,8 +2152,8 @@ void ClassAd::ChainCollapse()
             tmpExprTree = tmpExprTree->Copy(); 
             ASSERT(tmpExprTree); 
 
-            //K, it's clear. Insert it!
-            Insert((*itr).first, tmpExprTree);
+            //K, it's clear. Insert it, but don't try to 
+            Insert((*itr).first, tmpExprTree, false);
         }
     }
 }
@@ -2577,6 +2523,7 @@ static const char *machine_attrs_list[] = {
 	ATTR_VM_NETWORKING_TYPES,
 	ATTR_HAS_RECONNECT,
 	ATTR_HAS_FILE_TRANSFER,
+	ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS,
 	ATTR_HAS_PER_FILE_ENCRYPTION,
 	ATTR_HAS_MPI,
 	ATTR_HAS_TDP,
@@ -2875,7 +2822,7 @@ static void InitTargetAttrLists()
 
 	tmp = param( "STARTD_RESOURCE_PREFIX" );
 	if ( tmp ) {
-		buff.sprintf( "%s*", tmp );
+		buff.formatstr( "%s*", tmp );
 		machine_attrs_strlist.append( buff.Value() );
 		free( tmp );
 	} else {
@@ -2908,10 +2855,10 @@ static void InitTargetAttrLists()
 		tmp_strlist.clearAll();
 	}
 
-	buff.sprintf( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
+	buff.formatstr( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
 	job_attrs_strlist.append( buff.Value() );
 
-	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
+	buff.formatstr( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
 	job_attrs_strlist.append( buff.Value() );
 
 	tmp = param( "TARGET_JOB_ATTRS" );
@@ -2933,8 +2880,7 @@ static void InitTargetAttrLists()
 }
 #endif
 
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
-								  TargetAdType /*target_type*/ )
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType /*target_type*/ )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();

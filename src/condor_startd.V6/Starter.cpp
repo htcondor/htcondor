@@ -147,6 +147,14 @@ Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 	}
 	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
 		requirements = 0;
+		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
+		classad::PrettyPrint pp;
+		std::string szbuff;
+		pp.Unparse(szbuff,job_ad);
+		dprintf( D_ALWAYS, "job_ad\n%s\n",szbuff.c_str());
+		pp.Unparse(szbuff,merged_ad);
+		dprintf( D_ALWAYS, "merged_ad\n%s\n",szbuff.c_str());
+		
 	}
 	delete( merged_ad );
 	return (bool)requirements;
@@ -231,15 +239,17 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		ignored_attr_list->append(ATTR_STARTER_IGNORED_ATTRS);
 	}
 
-	ExprTree *tree;
+	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
 	s_ad->ResetExpr();
 	while( s_ad->NextExpr(lhstr, tree) ) {
-
+		pCopy=0;
+	
 		if (ignored_attr_list) {
 				// insert every attr that's not in the ignored_attr_list
 			if (!ignored_attr_list->contains(lhstr)) {
-				ad->Insert(lhstr, tree->Copy());
+				pCopy = tree->Copy();
+				ad->Insert(lhstr, pCopy, false);
 				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
 					list->append(lhstr);
 				}
@@ -248,12 +258,14 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 		else {
 				// no list of attrs to ignore - fallback on old behavior
 			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
-				ad->Insert( lhstr, tree->Copy() );
+				pCopy = tree->Copy();
+				ad->Insert( lhstr, pCopy, false );
 				if( list ) {
 					list->append( lhstr );
 				}
 			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
-				ad->Insert( lhstr, tree->Copy() );
+				pCopy = tree->Copy();
+				ad->Insert( lhstr, pCopy, false);
 			}
 		}
 	}
@@ -414,6 +426,7 @@ Starter::reallykill( int signo, int type )
 				// stale NFS mount.  So, we can at least EXCEPT with a
 				// more specific error message.
 		case ESTALE:
+			(void)first_time; // Shut the compiler up
 			EXCEPT( "Condor binaries are on a stale NFS mount.  Aborting." );
 			break;
 #else
@@ -623,7 +636,7 @@ Starter::exited(int status)
 		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
 		jobAd->Assign(ATTR_JOB_CMD, "boinc");
 		MyString gjid;
-		gjid.sprintf("%s#%d#%d#%d", get_local_hostname().Value(), 
+		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), 
 					 now, 1, now);
 		jobAd->Assign(ATTR_GLOBAL_JOB_ID, gjid);
 	}
@@ -915,7 +928,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		reaper_id = main_reaper;
 	}
 
-	if(DebugFlags & D_FULLDEBUG) {
+	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString args_string;
 		final_args->GetArgsStringForDisplay(&args_string);
 		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
@@ -1135,10 +1148,28 @@ Starter::percentCpuUsage( void )
 	// Otherwise, s_usage will not change.
 	if ( resmgr ) {
 		resmgr->m_vmuniverse_mgr.getUsageForVM(s_pid, s_usage);
+		
+		// Now try to tack on details posted in the job ad because 
+		// hypervisors such as libvirt will spawn processes outside 
+		// of condor's perview. 
+		float fPercentCPU=0.0;
+		int iNumCPUs=0;
+		ClassAd * jobAd = s_claim->ad();
+		
+		jobAd->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
+		jobAd->LookupInteger(ATTR_JOB_VM_VCPUS, iNumCPUs);
+		
+		// computations outside take cores into account.
+		fPercentCPU = fPercentCPU * iNumCPUs;
+		
+		dprintf( D_LOAD, "Starter::percentCpuUsage() adding VM Utilization %f\n",fPercentCPU);
+		
+		s_usage.percent_cpu += fPercentCPU;
+		
 	}
 
-	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		dprintf( D_FULLDEBUG,
+	if( IsDebugVerbose(D_LOAD) ) {
+		dprintf(D_LOAD,
 		        "Starter::percentCpuUsage(): Percent CPU usage "
 		        "for the family of starter with pid %u is: %f\n",
 		        s_pid,
@@ -1290,7 +1321,7 @@ Starter::startKillTimer( void )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( tmp_killing_timeout,
-									max(1,tmp_killing_timeout),
+									std::max(1,tmp_killing_timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {

@@ -160,7 +160,8 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 		si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 	}
-	si.dwFlags = STARTF_USESTDHANDLES;
+	si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_HIDE;
 
 	// make call to CreateProcess
 	cmd = strdup(const_cmd);
@@ -397,7 +398,7 @@ my_popenv_impl( const char *const args[],
 		seteuid( 0 );
 		setgroups( 1, &egid );
 		setgid( egid );
-		setuid( euid );
+		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE
 			   to SIG_DFL
@@ -677,7 +678,7 @@ my_spawnv( const char* cmd, const char *const argv[] )
 		seteuid( 0 );
 		setgroups( 1, &egid );
 		setgid( egid );
-		setuid( euid );
+		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
 			/* Now it's safe to exec whatever we were given */
 		execv( cmd, const_cast<char *const*>(argv) );

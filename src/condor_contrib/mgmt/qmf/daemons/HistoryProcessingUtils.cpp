@@ -56,7 +56,7 @@ using namespace std;
 typedef set<long unsigned int> HistoryFileListType;
 static HistoryFileListType m_historyFiles;
 MyString m_path;
-bool force_reset;
+bool force_reset=false;
 
 // force a reset of history processing
 void process_history_files() {
@@ -66,7 +66,7 @@ void process_history_files() {
     }
     ProcessHistoryDirectory();
     ProcessOrphanedIndices();
-    ProcessCurrentHistory(force_reset);
+    ProcessCurrentHistory();
 }
 
 // Processing jobs from history file must allow for
@@ -76,7 +76,7 @@ process ( const HistoryEntry &entry )
 {
     MyString key;
 
-    key.sprintf ( "%d.%d", entry.cluster, entry.proc );
+    key.formatstr ( "%d.%d", entry.cluster, entry.proc );
 
     const char* key_cstr = key.StrDup();
 
@@ -140,7 +140,7 @@ ProcessHistoryDirectory()
         CondorError errstack;
         if ( !h_file.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         errstack.clear();
@@ -218,24 +218,25 @@ ProcessOrphanedIndices()
  * 4) detect rotations
  */
 void
-ProcessCurrentHistory(bool do_reset)
+ProcessCurrentHistory()
 {
     static MyString currentHistoryFilename = m_path + DIR_DELIM_STRING + "history";
     static HistoryFile currentHistory ( currentHistoryFilename.Value() );
 
     CondorError errstack;
 
-    if (do_reset) {
+    if (force_reset) {
        currentHistory.cleanup();
     }
 
 	// (1)
     long unsigned int id;
-    if ( !currentHistory.getId ( id ) || do_reset)
+    if ( !currentHistory.getId ( id ) || force_reset)
     {
+        force_reset = false;
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );
@@ -272,7 +273,7 @@ ProcessCurrentHistory(bool do_reset)
         currentHistory = HistoryFile ( currentHistoryFilename.Value() );
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );
@@ -280,5 +281,4 @@ ProcessCurrentHistory(bool do_reset)
         force_reset = true;
         return;
     }
-    force_reset = false;
 }

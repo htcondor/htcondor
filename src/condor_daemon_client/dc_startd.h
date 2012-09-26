@@ -49,7 +49,7 @@ public:
 	DCStartd( const char* const name, const char* const pool,
 			  const char* const addr, const char* const id );
 
-	DCStartd( ClassAd *ad, const char *pool = NULL );
+	DCStartd( const ClassAd *ad, const char *pool = NULL );
 
 		/// Destructor.
 	~DCStartd();
@@ -201,24 +201,24 @@ public:
 	MessageClosureEnum messageSent(DCMessenger *messenger, Sock *sock );
 	void cancelMessage(char const *reason=NULL);
 
-	char const *description() {return m_description.Value();}
-	char const *claim_id() {return m_claim_id.Value();}
+	char const *description() {return m_description.c_str();}
+	char const *claim_id() {return m_claim_id.c_str();}
 
 		// Message results:
 	bool claimed_startd_success() { return m_reply == OK; }
-	char const *startd_ip_addr() {return m_startd_ip_addr.Value();}
-	char const *startd_fqu() {return m_startd_fqu.Value();}
+	char const *startd_ip_addr() {return m_startd_ip_addr.c_str();}
+	char const *startd_fqu() {return m_startd_fqu.c_str();}
 	bool have_leftovers() { return m_have_leftovers; }
-	char const *leftover_claim_id() { return m_leftover_claim_id.Value(); }
+	char const *leftover_claim_id() { return m_leftover_claim_id.c_str(); }
 	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 
 	const ClassAd *getJobAd() { return &m_job_ad;}
 private:
-	MyString m_claim_id;
+	std::string m_claim_id;
 	ClassAd m_job_ad;
-	MyString m_description;
-	MyString m_scheduler_addr;
+	std::string m_description;
+	std::string m_scheduler_addr;
 	int m_alive_interval;
 
 		// the startd's reply:
@@ -228,11 +228,11 @@ private:
 		// may send over the newly created repatitionable slot with
 		// the leftover unclaimed resources.
 	bool m_have_leftovers;
-	MyString m_leftover_claim_id;
+	std::string m_leftover_claim_id;
 	ClassAd m_leftover_startd_ad;
 
-	MyString m_startd_ip_addr;
-	MyString m_startd_fqu;
+	std::string m_startd_ip_addr;
+	std::string m_startd_fqu;
 };
 
 
@@ -247,7 +247,7 @@ public:
 	bool readMsg( DCMessenger *messenger, Sock *sock );
 
 private:
-	MyString m_claim_id;
+	std::string m_claim_id;
 };
 
 

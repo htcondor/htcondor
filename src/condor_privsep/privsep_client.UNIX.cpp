@@ -233,7 +233,7 @@ privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
 	// went wrong before exiting
 	//
 	MyString err;
-	err.sprintf("exec error on %s: %s (%d)\n",
+	err.formatstr("exec error on %s: %s (%d)\n",
 	            cmd.Value(),
 	            strerror(errno),
 	            errno);

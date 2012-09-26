@@ -61,7 +61,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	int direction;
 	MyString desc;
 
-	mode = mode; // quiet the compiler
+	(void)mode; // quiet the compiler
 
 	dprintf(D_ALWAYS, "Entering requestSandboxLocation()\n");
 
@@ -85,7 +85,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
 			dprintf( D_ALWAYS, "requestSandBoxLocation() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Authentication failed.");
@@ -871,10 +871,10 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			MyString new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
-				if ((AttrsToModify[index] == ATTR_TRANSFER_INPUT_FILES) && IsUrl(old_path_buf)) {
+				if ((strcmp(AttrsToModify[index], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf)) {
 					base = old_path_buf;
 				} else if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.sprintf(
+					new_path_buf.formatstr(
 						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
 					base = new_path_buf.Value();
 					changed = true;
@@ -1530,7 +1530,7 @@ Scheduler::downloadJobFiles(int mode, Stream* s)
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
 			dprintf( D_ALWAYS, "spoolJobFiles() aborting: %s\n",
-					 errstack.getFullText() );
+					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
 		}

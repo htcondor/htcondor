@@ -26,6 +26,7 @@
 #include "directory.h"
 #include "filename_tools.h"
 #include "proc.h"
+#include "condor_uid.h"
 
 char *
 gen_ckpt_name( char const *directory, int cluster, int proc, int subproc )
@@ -274,22 +275,57 @@ SpooledJobFiles::createParentSpoolDirectories(ClassAd const *job_ad)
 	return true;
 }
 
-void
-SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
+/*
+Removes a single directory passed in.
+Returns true on success, false on failure.
+On a failure, errno will be set (but may be of dubious quality)
+and an error logged.
+If the path does not exist, return immediately as success.
+if the path exists, but is not a directory, the behavior is currently
+to return immediately as success, but in the future might fail with
+errno==ENOTDIR.
+
+This assumes that the top level directory requires an euid of condor to
+remove.
+*/
+static bool
+remove_spool_directory(const char * dir)
 {
+	if ( ! IsDirectory(dir) ) { return true; }
+
+	Directory spool_dir(dir);
+	if( ! spool_dir.Remove_Entire_Directory() )
+	{
+		dprintf(D_ALWAYS,"Failed to remove %s\n", dir);
+		errno = EPERM; // Wild guess.
+		return false;
+	}
+
+	TemporaryPrivSentry tps(PRIV_CONDOR);
+	if( rmdir(dir) == 0 ) { return true; }
+	// Save errno in case dprintf mangles.
+	int tmp_errno = errno;
+	if( errno != ENOENT ) {
+		dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+			dir, strerror(errno), errno );
+	}
+	errno = tmp_errno;
+	return false;
+}
+
+void
+SpooledJobFiles::removeJobSpoolDirectory(ClassAd * ad)
+{
+	ASSERT(ad);
+	int cluster = -1;
+	int proc = -1;
+	ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	ad->LookupInteger(ATTR_PROC_ID, proc);
+
 	std::string spool_path;
 	getJobSpoolPath(cluster,proc,spool_path);
 
-	if ( IsDirectory(spool_path.c_str()) ) {
-		Directory spool_dir(spool_path.c_str());
-		spool_dir.Remove_Entire_Directory();
-		if( rmdir(spool_path.c_str()) == -1 ) {
-			if( errno != ENOENT ) {
-				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-				spool_path.c_str(), strerror(errno), errno );
-		  	}
-		}
-	} else {
+	if ( ! IsDirectory(spool_path.c_str()) ) {
 		// In this case, we can be fairly sure that these other spool directories
 		// that are removed later in this function do not exist.  If they do, they
 		// should be removed by preen.  By returning now, we avoid many potentially-
@@ -297,20 +333,13 @@ SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
 		return;
 	}
 
+	chownSpoolDirectoryToCondor(ad);
+	remove_spool_directory(spool_path.c_str());
+
 	std::string tmp_spool_path = spool_path;
 	tmp_spool_path += ".tmp";
-	if ( IsDirectory(tmp_spool_path.c_str()) ) {
-		Directory spool_dir(tmp_spool_path.c_str());
-		spool_dir.Remove_Entire_Directory();
-		if( rmdir(tmp_spool_path.c_str()) == -1 ) {
-			if( errno != ENOENT ) {
-				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-						tmp_spool_path.c_str(), strerror(errno), errno );
-			}
-		}
-	}
-
-	removeJobSwapSpoolDirectory(cluster,proc);
+	remove_spool_directory(tmp_spool_path.c_str());
+	removeJobSwapSpoolDirectory(ad);
 
 		// Now attempt to remove the directory from the spool
 		// directory hierarchy that is for jobs belonging to this
@@ -330,23 +359,19 @@ SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
 }
 
 void
-SpooledJobFiles::removeJobSwapSpoolDirectory(int cluster, int proc)
+SpooledJobFiles::removeJobSwapSpoolDirectory(ClassAd * ad)
 {
+	ASSERT(ad);
+	int cluster = -1;
+	int proc = -1;
+	ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	ad->LookupInteger(ATTR_PROC_ID, proc);
 	std::string spool_path;
 	getJobSpoolPath(cluster,proc,spool_path);
 
 	std::string swap_spool_path = spool_path;
 	swap_spool_path += ".swap";
-	if ( IsDirectory(swap_spool_path.c_str()) ) {
-		Directory spool_dir(swap_spool_path.c_str());
-		spool_dir.Remove_Entire_Directory();
-		if( rmdir(swap_spool_path.c_str()) == -1 ) {
-			if( errno != ENOENT ) {
-				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-						swap_spool_path.c_str(), strerror(errno), errno );
-			}
-		}
-	}
+	remove_spool_directory(swap_spool_path.c_str());
 }
 
 void
@@ -384,4 +409,81 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster)
 			}
 		}
 	}
+}
+
+bool
+SpooledJobFiles::chownSpoolDirectoryToCondor(ClassAd const *job_ad)
+{
+	bool result = true;
+
+#ifndef WIN32
+	std::string sandbox;
+	int cluster=-1,proc=-1;
+
+	job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID,proc);
+
+	getJobSpoolPath(cluster, proc, sandbox);
+
+	uid_t src_uid = 0;
+	uid_t dst_uid = get_condor_uid();
+	gid_t dst_gid = get_condor_gid();
+
+	MyString jobOwner;
+	job_ad->LookupString( ATTR_OWNER, jobOwner );
+
+	passwd_cache* p_cache = pcache();
+	if( p_cache->get_user_uid( jobOwner.Value(), src_uid ) ) {
+		if( ! recursive_chown(sandbox.c_str(), src_uid,
+							  dst_uid, dst_gid, true) )
+		{
+			dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
+					 "%d to %d.%d.  User may run into permissions "
+					 "problems when fetching sandbox.\n", 
+					 cluster, proc, sandbox.c_str(),
+					 src_uid, dst_uid, dst_gid );
+			result = false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
+				 "for user %s.  Cannot chown \"%s\".  User may "
+				 "run into permissions problems when fetching "
+				 "job sandbox.\n", cluster, proc, jobOwner.Value(),
+				 sandbox.c_str() );
+		result = false;
+	}
+
+#endif
+
+	return result;
+}
+
+bool
+SpooledJobFiles::jobRequiresSpoolDirectory(ClassAd const *job_ad)
+{
+	ASSERT(job_ad);
+	int stage_in_start = 0;
+
+	job_ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
+	if( stage_in_start > 0 ) {
+		return true;
+	}
+
+	int univ = CONDOR_UNIVERSE_VANILLA;
+	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, univ );
+
+		// As of 7.5.5, parallel jobs specify JobRequiresSandbox=true,
+		// because they use the spool directory for chirp stuff to make
+		// sshd work.  For backward compatibility with prior releases,
+		// we assume all parallel jobs require this unless they explicitly
+		// specify otherwise.
+	int job_requires_sandbox_expr = 0;
+	bool requires_sandbox = univ == CONDOR_UNIVERSE_PARALLEL ? true : false;
+
+	if( (const_cast<ClassAd *>(job_ad))->EvalBool(ATTR_JOB_REQUIRES_SANDBOX, NULL, job_requires_sandbox_expr) )
+	{
+		requires_sandbox = job_requires_sandbox_expr ? true : false;
+	}
+
+	return requires_sandbox;
 }

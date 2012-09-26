@@ -474,7 +474,7 @@ KillFamily::takesnapshot()
 		delete pinfo;
 	}
 
-	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+	if( IsDebugVerbose(D_PROCFAMILY) ) {
 		display();
 	}
 
