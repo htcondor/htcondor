@@ -75,7 +75,7 @@ int main(int argc, char ** argv)
 	outfilename.append(".fixnew");
 	// Jumping through hoops so we can verify we created the
 	// file, avoid race conditions
-	int outfilefd = open(outfilename.c_str(), O_WRONLY|O_CREAT|O_EXCL,0644);
+	int outfilefd = open(outfilename.c_str(), O_WRONLY|O_CREAT|O_EXCL|O_BINARY,0644);
 	if(outfilefd == -1) {
 		fatal("Unable to write to %s. Does it already exist? %s\n", outfilename.c_str(), strerror(errno));
 	}
@@ -91,6 +91,9 @@ int main(int argc, char ** argv)
 		line = search_and_replace(line, " >",">");
 		fprintf(outfile, "%s", line.c_str());
 	}
+
+	fclose(outfile);
+	fclose(infile);
 
 	std::string newinfilename = infilename;
 	newinfilename.append(".fixold");
