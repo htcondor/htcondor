@@ -201,8 +201,8 @@ class Lexer
 		TokenType ConsumeToken( TokenValue* = 0 );
 
 		// internal buffer for token accumulation
-        static const size_t lexBufferSize = 1000;
-		char lexBuffer[lexBufferSize];
+        static const size_t lexBufferInitialSize = 10;
+		char* lexBuffer;
         char* lexBufferEnd;
         char* lexBufferCur;
             //int lexBufferCount;
@@ -232,7 +232,7 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		unsigned int			lexBufferCount;				// current offset in lexBuffer
+            //unsigned int			lexBufferCount;				// current offset in lexBuffer
 		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		int 		debug; 						// debug flag
@@ -264,9 +264,13 @@ class Lexer
             ch = lexSource->ReadCharacter();
                 //++lexBufferCount;
             if (++lexBufferCur >= lexBufferEnd) {
-                // in real life, we'll re-alloc lexBuffer to make more room,
-                // in the usual logarithmic way
-                CLASSAD_EXCEPT("Mega fail\n");
+                size_t s = lexBufferEnd - lexBuffer;
+                char* newbuf = new char[2*s];
+                memcpy(newbuf, lexBuffer, s);
+                delete [] lexBuffer;
+                lexBuffer = newbuf;
+                lexBufferCur = lexBuffer + s;
+                lexBufferEnd = lexBuffer + 2*s;
             }
             if (ch == -1) return;
             if (accumulating) {

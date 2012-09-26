@@ -35,7 +35,8 @@ Lexer ()
 	// initialize lexer state (token, etc.) variables
 	tokenType = LEX_END_OF_INPUT;
         //lexBufferCount = 0;
-    lexBufferEnd = lexBuffer + lexBufferSize;
+    lexBuffer = new char[lexBufferInitialSize];
+    lexBufferEnd = lexBuffer + lexBufferInitialSize;
 	savedChar = 0;
 	ch = 0;
 	inString = false;
@@ -53,6 +54,7 @@ Lexer ()
 Lexer::
 ~Lexer ()
 {
+    if (NULL != lexBuffer) delete [] lexBuffer;
 }
 
 
