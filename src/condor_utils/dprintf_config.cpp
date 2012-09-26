@@ -31,10 +31,6 @@
 #include "condor_config.h"
 #include "dprintf_internal.h"
 
-#if HAVE_BACKTRACE
-#include "sig_install.h"
-#endif
-
 #include <string>
 using std::string;
 
@@ -62,36 +58,6 @@ extern char*	DebugLogDir;
 extern void		_condor_set_debug_flags( const char *strflags, int cat_and_flags );
 
 //param_functions *dprintf_param_funcs = NULL;
-
-#if HAVE_BACKTRACE
-static void
-sig_backtrace_handler(int signum)
-{
-	dprintf_dump_stack();
-
-		// terminate for the same reason.
-	struct sigaction sa;
-	sa.sa_handler = SIG_DFL;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	sigaction(signum, &sa, NULL);
-	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
-
-	raise(signum);
-}
-
-static void
-install_backtrace_handler(void)
-{
-	sigset_t fullset;
-	sigfillset( &fullset );
-	install_sig_handler_with_mask(SIGSEGV, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGABRT, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGILL, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGFPE, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGBUS, &fullset, sig_backtrace_handler);
-}
-#endif
 
 int
 dprintf_config_ContinueOnFailure ( int fContinue )
@@ -240,7 +206,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	DebugShouldLockToAppend = 1;
 	DebugLockIsMutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);//dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
-	DebugShouldLockToAppend = dprintf_param_funcs->param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugShouldLockToAppend = param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
 	DebugLockIsMutex = FALSE;
 #endif
 
