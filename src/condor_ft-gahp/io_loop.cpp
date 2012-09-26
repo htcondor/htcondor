@@ -115,7 +115,7 @@ main_init( int, char ** const)
 	dprintf(D_SECURITY | D_FULLDEBUG, "FT-GAHP IO thread\n");
 
 	int stdin_pipe = -1;
-#if defined(WIN32)
+#if defined(WIN32) && 0
 	// if our parent is not DaemonCore, then our assumption that
 	// the pipe we were passed in via stdin is overlapped-mode
 	// is probably wrong. we therefore create a new pipe with the
