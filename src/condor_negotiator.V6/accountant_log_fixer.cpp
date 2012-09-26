@@ -79,7 +79,7 @@ int main(int argc, char ** argv)
 	if(outfilefd == -1) {
 		fatal("Unable to write to %s. Does it already exist? %s\n", outfilename.c_str(), strerror(errno));
 	}
-	FILE * outfile = fdopen(outfilefd, "w");
+	FILE * outfile = fdopen(outfilefd, "wb");
 	if(!outfile) {
 		fatal("Internal error: Unable to convert output file's FD to a FILE*. %s, %s\n", outfilename.c_str(), strerror(errno));
 	}
