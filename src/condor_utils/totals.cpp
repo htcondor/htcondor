@@ -285,7 +285,7 @@ displayHeader(FILE *file)
 void StartdServerTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d %5d %11"PRIu64" %11"PRIu64" %11"PRIu64" %11"PRIu64"\n",
+	fprintf (file, "%9d %5d %11" PRIu64" %11" PRIu64" %11" PRIu64" %11" PRIu64"\n",
 		 machines, avail, (PRIu64_t)memory,
 			 (PRIu64_t)disk, (PRIu64_t)condor_mips, (PRIu64_t)kflops);
 }
@@ -335,7 +335,7 @@ displayHeader(FILE *file)
 void StartdRunTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d  %11"PRIu64"  %11"PRIu64"   %-.3f\n",
+	fprintf (file, "%9d  %11" PRIu64"  %11" PRIu64"   %-.3f\n",
 		 machines, (PRIu64_t)condor_mips, (PRIu64_t)kflops, 
 			 (machines > 0) ? float(loadavg/machines) : 0);
 }
@@ -648,7 +648,7 @@ displayHeader(FILE *file)
 void CkptSrvrNormalTotal::
 displayInfo (FILE *file, int tl)
 {
-	if (tl) fprintf (file, "%8d %11"PRIu64"\n",
+	if (tl) fprintf (file, "%8d %11" PRIu64"\n",
 					 numServers, (PRIu64_t) disk);
 }
 

@@ -250,18 +250,17 @@ if( NOT WINDOWS)
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	if (cxx_11)
 
-		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
-		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-		#check_cxx_source_compiles("
-		##include <unordered_map>
-		##include <memory>
-		#int main() {
-		#	std::unordered_map<int, int> ci;
-		#	std::shared_ptr<int> foo;
-		#	return 0;
-		#}
-		#" PREFER_CPP11 )
+		check_cxx_source_compiles("
+		#include <unordered_map>
+		#include <memory>
+		int main() {
+			std::unordered_map<int, int> ci;
+			std::shared_ptr<int> foo;
+			return 0;
+		}
+		" PREFER_CPP11 )
 
 	endif (cxx_11)
 
@@ -830,8 +829,8 @@ else(MSVC)
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
-	# b/c we don't do anything c++ specific copy flags for c-compilation
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
+	# copy in C only flags into CMAKE_C_FLAGS
+	string(REPLACE "-std=c++11" "" CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
 
 endif(MSVC)
 

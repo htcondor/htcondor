@@ -1038,8 +1038,8 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-						 "Skipping file %s, t: %"PRIi64"==%"PRIi64
-						 ", s: %"PRIi64"==%"PRIi64"\n",
+						 "Skipping file %s, t: %" PRIi64"==%" PRIi64
+						 ", s: %" PRIi64"==%" PRIi64"\n",
 						 f,
 						 (PRIi64_t)dir.GetModifyTime(),
 						 (PRIi64_t)modification_time,
