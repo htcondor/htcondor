@@ -34,7 +34,7 @@ const char * INFNBatchResource::HashName( const char * batch_type,
 		const char * resource_name )
 {
 	static std::string hash_name;
-	formatstr( hash_name, "batch %s", batch_type;
+	formatstr( hash_name, "batch %s", batch_type );
 	if ( resource_name && resource_name[0] ) {
 		formatstr_cat( hash_name, " %s", resource_name );
 	}

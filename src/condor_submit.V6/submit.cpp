@@ -2372,10 +2372,10 @@ SetImageSize()
 	// the requirements line, but that caused many problems.
 	// Jeff Ballard 11/4/98
 
-	buffer.formatstr( "%s = %"PRId64, ATTR_IMAGE_SIZE, image_size_kb);
+	buffer.formatstr( "%s = %" PRId64, ATTR_IMAGE_SIZE, image_size_kb);
 	InsertJobExpr (buffer);
 
-	buffer.formatstr( "%s = %"PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
+	buffer.formatstr( "%s = %" PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
 	InsertJobExpr (buffer);
 
 	// set an initial value for memory usage
@@ -2390,7 +2390,7 @@ SetImageSize()
 			exit( 1 );
 		}
 		free(tmp);
-		buffer.formatstr( "%s = %"PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
+		buffer.formatstr( "%s = %" PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
 		InsertJobExpr (buffer);
 	}
 
@@ -2412,7 +2412,7 @@ SetImageSize()
 		// For non-vm jobs, VMMemoryMb is 0.
 		disk_usage_kb = executable_size_kb + TransferInputSizeKb + (int64_t)VMMemoryMb*1024;
 	}
-	buffer.formatstr( "%s = %"PRId64, ATTR_DISK_USAGE, disk_usage_kb );
+	buffer.formatstr( "%s = %" PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
 	// set an intial value for RequestMemory
@@ -2423,7 +2423,7 @@ SetImageSize()
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
 		if (parse_int64_bytes(tmp, req_memory_mb, 1024*1024)) {
-			buffer.formatstr("%s = %"PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
+			buffer.formatstr("%s = %" PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
 			RequestMemoryIsZero = (req_memory_mb == 0);
 		} else if (MATCH == strcasecmp(tmp,"undefined")) {
 			RequestMemoryIsZero = true;
@@ -2455,7 +2455,7 @@ SetImageSize()
 		// and insert it as text into the jobAd.
 		int64_t req_disk_kb = 0;
 		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
-			buffer.formatstr("%s = %"PRId64, ATTR_REQUEST_DISK, req_disk_kb);
+			buffer.formatstr("%s = %" PRId64, ATTR_REQUEST_DISK, req_disk_kb);
 			RequestDiskIsZero = (req_disk_kb == 0);
 		} else if (MATCH == strcasecmp(tmp,"undefined")) {
 			RequestDiskIsZero = true;
