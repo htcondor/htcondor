@@ -35,6 +35,7 @@ the new copy into place.
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 // Headers needed for unlink/_unlink
 #ifdef WIN32
