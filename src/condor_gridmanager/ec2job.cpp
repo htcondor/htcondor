@@ -182,6 +182,15 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
     jobAd->LookupString( ATTR_EC2_SPOT_PRICE, m_spot_price );
     dprintf( D_FULLDEBUG, "Found EC2 spot price: %s\n", m_spot_price.c_str() );
 
+    // look for a spot ID
+    jobAd->LookupString( ATTR_EC2_SPOT_REQUEST_ID, m_spot_request_id );
+    dprintf( D_FULLDEBUG, "Found EC2 spot request ID: %s\n", m_spot_request_id.c_str() );
+
+    // Check for failure injections.
+    m_failure_injection = getenv( "GM_FAILURE_INJECTION" );
+    if( m_failure_injection == NULL ) { m_failure_injection = ""; }
+    dprintf( D_FULLDEBUG, "GM_FAILURE_INJECTION = %s\n", m_failure_injection );
+
     // lookup the elastic IP
     jobAd->LookupString( ATTR_EC2_ELASTIC_IP, m_elastic_ip );
 	
@@ -1095,8 +1104,8 @@ void EC2Job::doEvaluateState()
                                             spot_request_id,
                                             gahp_error_code );
 
-                dprintf( D_ALWAYS, "GM_FAILURE_INJECTION = '%s'\n", getenv( "GM_FAILURE_INJECTION" ) );
-                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "1" ) == 0 ) {
+                dprintf( D_ALWAYS, "GM_FAILURE_INJECTION = '%s'\n", m_failure_injection );
+                if( strcmp( m_failure_injection, "1" ) == 0 ) {
                     rc = 1;
                     // gahp_error_code is free()d below.
                     gahp_error_code = strdup( "E_TESTING" );
@@ -1150,7 +1159,7 @@ void EC2Job::doEvaluateState()
                                                 m_spot_request_id,
                                                 gahp_error_code );
 
-                    if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "2" ) == 0 ) {
+                    if( strcmp( m_failure_injection, "2" ) == 0 ) {
                         rc = 1;
                         // gahp_error_code is free()d below.
                         gahp_error_code = strdup( "E_TESTING" );
@@ -1224,7 +1233,7 @@ void EC2Job::doEvaluateState()
                                             returnStatus,
                                             gahp_error_code );
 
-                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "3" ) == 0 ) {
+                if( strcmp( m_failure_injection, "3" ) == 0 ) {
                     rc = 1;
                     // gahp_error_code is free()d below.
                     gahp_error_code = strdup( "E_TESTING" );
@@ -1249,7 +1258,7 @@ void EC2Job::doEvaluateState()
                     break;
                 }
                 
-                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "4" ) == 0 ) { returnStatus.clearAll(); }
+                if( strcmp( m_failure_injection, "4" ) == 0 ) { returnStatus.clearAll(); }
 
                 // Update the job state.
                 if( returnStatus.number() == 0 ) {
@@ -1306,7 +1315,7 @@ void EC2Job::doEvaluateState()
                     break;
                 }
 
-                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "5" ) == 0 ) { status = "not-open"; }
+                if( strcmp( m_failure_injection, "5" ) == 0 ) { status = "not-open"; }
 
                 // Is the SIR still valid?  The status must be one of 'active',
                 // 'cancelled', 'open', 'closed', or 'failed', and all 'active'
@@ -1334,7 +1343,7 @@ void EC2Job::doEvaluateState()
                                                 returnStatus,
                                                 gahp_error_code );
 
-                if( strcmp( getenv( "GM_FAILURE_INJECTION" ), "6" ) == 0 ) {
+                if( strcmp( m_failure_injection, "6" ) == 0 ) {
                     rc = 1;
                     // gahp_error_code is free()d below.
                     gahp_error_code = strdup( "E_TESTING" );
@@ -1360,6 +1369,7 @@ void EC2Job::doEvaluateState()
                 }
 
                 // Look for the stray SIR.
+                int originalState = gmState;
                 returnStatus.rewind();
                 for( int i = 0; i < returnStatus.number(); i += 4 ) {
                     std::string requestID = returnStatus.next();
@@ -1376,13 +1386,16 @@ void EC2Job::doEvaluateState()
                         if( ! instanceID.empty() ) {
                             SetInstanceId( instanceID.c_str() );
                             gmState = GM_SAVE_INSTANCE_ID;
+                            // dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SAVE_INSTANCE_ID\n" );
                             break;
                         }
                         
                         gmState = GM_SPOT_SUBMITTED;
+                        // dprintf( D_FULLDEBUG, "Recovery transition: GM_SPOT_CHECK -> GM_SUBMITTED\n" );
                         break;
-                    }                    
+                    }
                 }
+                if( originalState != gmState ) { break; }
                 
                 // If we didn't find the SIR, it's gone.  Don't check if the
                 // job is being removed; make sure to report the error; let

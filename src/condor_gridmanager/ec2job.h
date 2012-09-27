@@ -112,6 +112,8 @@ private:
 	
 	std::string m_spot_price;
 	std::string m_spot_request_id;
+	// This is actually a global.
+	const char * m_failure_injection;
 	
 	// remove created temporary keypair file
 	bool remove_keypair_file(const char* filename);
