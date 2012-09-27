@@ -101,6 +101,47 @@ read_from_pipe( int fd, char **msg )
 	}
 }
 
+#if defined(WIN32)
+int forwarding_pipe = -1;
+unsigned __stdcall pipe_forward_thread(void *)
+{
+	const int FORWARD_BUFFER_SIZE = 4096;
+	char buf[FORWARD_BUFFER_SIZE];
+	
+	// just copy everything from stdin to the forwarding pipe
+	while (true) {
+
+		// read from stdin
+		int bytes = read(0, buf, FORWARD_BUFFER_SIZE);
+		if (bytes == -1) {
+			dprintf(D_ALWAYS, "pipe_forward_thread: error reading from stdin\n");
+			daemonCore->Close_Pipe(forwarding_pipe);
+			return 1;
+		}
+
+		// close forwarding pipe and exit on EOF
+		if (bytes == 0) {
+			daemonCore->Close_Pipe(forwarding_pipe);
+			return 0;
+		}
+
+		// write to the forwarding pipe
+		char* ptr = buf;
+		while (bytes) {
+			int bytes_written = daemonCore->Write_Pipe(forwarding_pipe, ptr, bytes);
+			if (bytes_written == -1) {
+				dprintf(D_ALWAYS, "pipe_forward_thread: error writing to forwarding pipe\n");
+				daemonCore->Close_Pipe(forwarding_pipe);
+				return 1;
+			}
+			ptr += bytes_written;
+			bytes -= bytes_written;
+		}
+	}
+
+}
+#endif
+
 int
 default_reaper(Service *, int pid, int exit_status)
 {
