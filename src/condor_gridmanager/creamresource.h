@@ -43,8 +43,8 @@ class CreamResource : public BaseResource
 	bool Init();
 	const char *ResourceType();
 	void Reconfig();
-	void RegisterJob( CreamJob *job );
-	void UnregisterJob( CreamJob *job );
+	void RegisterJob( BaseJob *job );
+	void UnregisterJob( BaseJob *job );
 
 	const char *GetHashName();
 

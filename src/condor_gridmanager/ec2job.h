@@ -51,7 +51,7 @@ public:
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );
 	void SetClientToken( const char *client_token );
-	void SetRemoteJobId( const char *client_token, const char *instance_id );
+	void EC2SetRemoteJobId( const char *client_token, const char *instance_id );
 	void SetRemoteVMName(const char * name);
 	
 	static int submitInterval;

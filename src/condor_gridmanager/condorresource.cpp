@@ -219,7 +219,7 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 	}
 }
 
-void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
+void CondorResource::CondorRegisterJob( CondorJob *job, const char *submitter_id )
 {
 	BaseResource::RegisterJob( job );
 
@@ -237,8 +237,10 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 	}
 }
 
-void CondorResource::UnregisterJob( CondorJob *job )
+void CondorResource::UnregisterJob( BaseJob *base_job )
 {
+	CondorJob *job = dynamic_cast<CondorJob*>( base_job );
+
 	ScheddPollInfo *poll_info = NULL;
 	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
 						   poll_info );

@@ -44,7 +44,7 @@ class GlobusResource : public BaseResource
 	bool Init();
 	const char *ResourceType();
 	void Reconfig();
-	void UnregisterJob( GlobusJob *job );
+	void UnregisterJob( BaseJob *job );
 
 	bool IsGt5() { return m_isGt5; }
 
