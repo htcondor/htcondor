@@ -7391,6 +7391,16 @@ The following configuration macros affect negotiation for group users.
   quota, as scaling is currently based on the number of machines available,
   not assigned quotas (for static quotas).
 
+\label{param:GroupSeparator}
+\item[\Macro{GROUP\_SEPARATOR}]
+  A string value that contains the separator character used between
+accounting groups and the user name.  Defaults to \Expr{``.''} for
+backward compatability.  In this example, the separator character is set
+to \Expr{``:''}, to allow the use of \Expr{``.''} in user names:
+\begin{verbatim}
+GROUP_SEPARATOR = ":"
+\end{verbatim}
+
 \end{description}
 
 % entire section commented out Nov 2005

@@ -516,6 +516,22 @@ of the the submit description file command \SubmitCmd{grid\_resource}.
 It specifies the target grid type, plus additional parameters
 specific to the grid type.
 
+%%% ClassAd attribute: Group
+\index{ClassAd job attribute!Group}
+\index{Group!job ClassAd attribute}
+\item[\AdAttr{Group}:] The accounting group name, as set in the
+\Condor{submit} file via the group command.  This attribute
+is only present if an accounting group was requested by the
+submission. See section~\ref{sec:group-accounting} for more 
+information about accounting groups.
+
+%%% ClassAd attribute: GroupUser
+\index{ClassAd job attribute!GroupUser}
+\index{GroupUser!job ClassAd attribute}
+\item[\AdAttr{GroupUser}:] The user name associated with the
+accounting group.  This attribute is only present if an
+accounting group was requested by the submission.
+
 %%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
 \index{HoldKillSig!job ClassAd attribute}

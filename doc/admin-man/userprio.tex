@@ -436,21 +436,26 @@ However, accounting can also be done on a per-group basis.
 Multiple users can all submit jobs into the same accounting group,
 and all of the jobs will be treated with the same priority.
 
-\index{ClassAd job attribute!AccountingGroup}
-To use an accounting group,
-each job inserts an attribute into the job ClassAd which
-defines the accounting group name for the job.
-A common name is decided upon and used for the group.
-The following line is an example that defines the attribute
-within the job's submit description file:
+To use an accounting group, a job submit file may include a
+command that specifies the group:
 \begin{verbatim}
-+AccountingGroup = "group_physics"
+# instruct job to negotiate under accounting group "group_physics"
+group = group_physics
+# group_user is optional, and defaults to job owner:
+group_user = albert
+\end{verbatim}
+
+\index{ClassAd job attribute!AccountingGroup}
+The legacy method for invoking accounting groups (now deprecated)
+is to insert a value for \AdAttr{AccountingGroup} directly
+into the job ad at submission time, as in this example:
+\begin{verbatim}
++AccountingGroup = "group_physics.albert"
 \end{verbatim}
 
 The \AdAttr{AccountingGroup} attribute is a string,
 and it therefore must be enclosed in double quote marks.
-The string may have a maximum length of 40 characters.
-The name should \emph{not} be qualified with a domain.
+
 Certain parts of the Condor system 
 do append the value \MacroUNI{UID\_DOMAIN}
 (as specified in the configuration file on the submit machine)
@@ -546,17 +551,19 @@ set up in advance.
 
 A quota for a set of users requires an identification of
 the set; members are called group users.
-Jobs under the group quota
-specify the group user with the 
-\AdAttr{AccountingGroup} job ClassAd attribute.
-This is the same attribute as is used with group accounting.
 
 The submit description file syntax for specifying a job is to be
 part of a group includes 
 a series of names separated by the period character ('\Expr{.}').
-Example syntax that shows only 2 levels of a (limited) hierarchy is
+Example syntax that shows only 2 levels of a (limited) hierarchy is:
 \begin{verbatim}
-  +AccountingGroup = "<group>.<subgroup>.<user>"
+group = physics.gravity
+\end{verbatim}
+
+The deprecated legacy method uses the following syntax:
+\begin{verbatim}
+# note that a user name must be included in this method
++AccountingGroup = "physics.gravity.albert"
 \end{verbatim}
 Both \verb@<group>@ and \verb@<subgroup>@ are names chosen for the group.
 Group names are case-insensitive for negotiation.
@@ -566,13 +573,6 @@ as in the examples
 \AdStr{group\_physics.newton} and \AdStr{group\_chemistry.curie},
 but it is a useful convention,
 because group names must not conflict with subgroup or user names.
-Note that a job specifying a value for the \Attr{AccountingGroup}
-ClassAd attribute that lacks at least one period in the specification
-will cause the job to not be considered part of a
-group when negotiating, even if the group name 
-(highest within the hierarchy) has a quota.
-Furthermore, there will be no warnings that the group quota is not
-in effect for the job, as this syntax defines group accounting.
 
 Configuration controls the order of negotiation for
 groups, subgroups within the hierarchy defined, and individual users,
