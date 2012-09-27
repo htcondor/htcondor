@@ -58,7 +58,7 @@ the new copy into place.
 bool readline(FILE * f, std::string & out);
 std::string search_and_replace(std::string data, std::string search, std::string replace);
 void rename_or_die(const char * src, const char * dst);
-void fatal(char * fmt, ...);
+void fatal(const char * fmt, ...);
 
 int main(int argc, char ** argv)
 {
@@ -109,7 +109,7 @@ int main(int argc, char ** argv)
 	return 0;
 }
 
-void fatal(char * fmt, ...)
+void fatal(const char * fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
