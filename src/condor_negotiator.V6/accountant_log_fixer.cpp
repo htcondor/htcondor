@@ -50,6 +50,8 @@ the new copy into place.
 #	define O_CREAT _O_CREAT
 #	define O_EXCL _O_EXCL
 #	define unlink _unlink
+#else
+#	define O_BINARY 0
 #endif
 
 bool readline(FILE * f, std::string & out);
