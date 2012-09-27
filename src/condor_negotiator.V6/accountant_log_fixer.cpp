@@ -35,6 +35,7 @@ the new copy into place.
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 // Headers needed for unlink/_unlink
 #ifdef WIN32
@@ -50,6 +51,8 @@ the new copy into place.
 #	define O_CREAT _O_CREAT
 #	define O_EXCL _O_EXCL
 #	define unlink _unlink
+#else
+#	define O_BINARY 0
 #endif
 
 bool readline(FILE * f, std::string & out);
