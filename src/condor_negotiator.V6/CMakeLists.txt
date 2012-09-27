@@ -18,7 +18,7 @@
 
 if (NOT WIN_EXEC_NODE_ONLY)
 
-	file( GLOB negotiatorRmvElements Example* )
+	file( GLOB negotiatorRmvElements Example* accountant_log_fixer.cpp )
 	if (UNIX)
 	set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 	endif(UNIX)
@@ -27,3 +27,5 @@ if (NOT WIN_EXEC_NODE_ONLY)
 	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF )
 
 endif(NOT WIN_EXEC_NODE_ONLY)
+
+condor_exe(accountant_log_fixer "accountant_log_fixer.cpp" ${C_LIBEXEC} "" OFF)
