@@ -174,6 +174,8 @@ describe_fd(int fd) {
   link_buf[end] = '\0';
   return strdup(link_buf);
  cleanup:
+#else
+  if (fd) {}
 #endif
   return strdup("");
 }

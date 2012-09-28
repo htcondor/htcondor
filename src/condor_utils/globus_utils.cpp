@@ -246,9 +246,9 @@ quote_x509_string( char* instr) {
 	// phase 1, scan the string to compute the new length
 	result_string_len = 0;
 	for (tmp_scan_ptr = instr; *tmp_scan_ptr; tmp_scan_ptr++) {
-		if( ((*tmp_scan_ptr)==x509_fqan_escape[0]) ) {
+		if( (*tmp_scan_ptr)==x509_fqan_escape[0] ) {
 			result_string_len += x509_fqan_escape_sub_len;
-		} else if( ((*tmp_scan_ptr)==x509_fqan_delimiter[0]) ) {
+		} else if( (*tmp_scan_ptr)==x509_fqan_delimiter[0] ) {
 			result_string_len += x509_fqan_delimiter_sub_len;
 		} else {
 			result_string_len++;
@@ -264,10 +264,10 @@ quote_x509_string( char* instr) {
 	result_string_len = 0;
 
 	for (tmp_scan_ptr = instr; *tmp_scan_ptr; tmp_scan_ptr++) {
-		if( ((*tmp_scan_ptr)==x509_fqan_escape[0]) ) {
+		if( (*tmp_scan_ptr)==x509_fqan_escape[0] ) {
 			strcat(&(result_string[result_string_len]), x509_fqan_escape_sub);
 			result_string_len += x509_fqan_escape_sub_len;
-		} else if( ((*tmp_scan_ptr)==x509_fqan_delimiter[0]) ) {
+		} else if( (*tmp_scan_ptr)==x509_fqan_delimiter[0] ) {
 			strcat(&(result_string[result_string_len]), x509_fqan_delimiter_sub);
 			result_string_len += x509_fqan_delimiter_sub_len;
 		} else {

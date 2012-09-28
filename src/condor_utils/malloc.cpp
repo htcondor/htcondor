@@ -120,9 +120,9 @@ myfree(fname, line, ptr)
 	}
 #ifdef lint
 	p = (struct chunk *)0;
-#else lint
+#else
 	p = (struct chunk *)(ptr - OFFSET);
-#endif lint
+#endif
 	if (p->magic != MAGIC) {
 		if (allocout) {
 			fprintf(allocout, ">>>bad free(%s,%d,0x%x)\n",fname,line,ptr);
@@ -211,9 +211,9 @@ myrealloc(fname, line, ptr, size)
 	char *new;
 #ifdef lint
 	p = (struct chunk *)0;
-#else lint
+#else
 	p = (struct chunk *)(ptr - OFFSET);
-#endif lint
+#endif
 	assert(p->buf == ptr);
 	new = mymalloc(fname, line, size);
 	(void) memcpy(new, ptr, p->size);

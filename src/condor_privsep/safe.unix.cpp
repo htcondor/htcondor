@@ -1146,6 +1146,8 @@ safe_exec_as_user(uid_t uid,
             fatal_error_exit(1, "error setting personality: %s");
         }
     }
+#else
+    if (is_std_univ) {}
 #endif
 
     /* finally do the exec */
