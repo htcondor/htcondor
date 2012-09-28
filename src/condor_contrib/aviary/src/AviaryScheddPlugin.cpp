@@ -268,7 +268,7 @@ AviaryScheddPlugin::processJob(const char *key,
 //	dprintf(D_FULLDEBUG, "Processing: %s\n", key);
 
 	id = getProcByString(key);
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Failed to parse key: %s - skipping\n", key);
 		return false;
 	}
