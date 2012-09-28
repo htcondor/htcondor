@@ -116,6 +116,13 @@ public:
 		*/
 	bool RequestedExit( void ) { return requested_exit; };
 
+		/** This is the login id used for execute login is dedicated pid tracking.
+		 *  If there is no dedicated login for job execution, this is NULL.
+		 *  (public so it can be seen by derived grandchildren classes; protected
+		 *   only allow derived child classes access, not grandchildren).
+		 */
+	char const *m_dedicated_account;
+
 protected:
 
 	void initialize( void );

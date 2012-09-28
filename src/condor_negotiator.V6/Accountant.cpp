@@ -34,7 +34,6 @@
 #include "HashTable.h"
 #include "ConcurrencyLimitUtils.h"
 #include "matchmaker.h"
-#include "hashkey.h"
 #include <string>
 #include <deque>
 
@@ -1312,10 +1311,24 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  AdNameHashKey hk;
-  MyString Name;
-  makeStartdAdHashKey(hk, ResourceAd);
-  hk.sprint(Name);
+  MyString startdName;
+  MyString startdAddr;
+  
+  if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
+    //This should never happen, because unnamed startd ads are rejected.
+    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
+  }
+  MyString Name=startdName;
+  Name+="@";
+
+  if (!ResourceAd->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)) {
+    //This may happen for grid site ClassAds.
+    //Actually, the collector now inserts an IP address if none is provided,
+    //but it is more robust to not assume that behavior here.
+	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.Value());
+  }
+  Name+=startdAddr;
+  
   return Name;
 }
 
