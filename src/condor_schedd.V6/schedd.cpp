@@ -10335,7 +10335,7 @@ Scheduler::Init()
 					}
 
 					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' life=%" PRId64 " trigger is %s\n", 
-					        byorfor.Value(), other.Value(), lifetime, filter);
+					        byorfor.Value(), other.Value(), (int64_t)lifetime, filter);
 					OtherPoolStats.Enable(other.Value(), filter, by, lifetime);
 				}
 				free(filter);
