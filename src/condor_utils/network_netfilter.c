@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 // Names are taken from libiptc.c
 // TODO: this is going to be a maintenance nightmare!  I'm assuming this is
@@ -51,7 +52,21 @@ static int parse_rule(struct ipt_entry * entry, int (*match_fcn)(const unsigned 
 	return 0;
 }
 
-int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char *, long long, void *), void * callback_data) {
+/**
+ * Retrieve the firewall data from the kernel.
+ *
+ * Fills in the provided struct ipt_getinfo and allocates a ipt_get_entries.
+ *
+ * The struct ipt_getinfo pointer must be a valid pointer prior to calling.
+ * The caller is responsible for calling free() on *result_entries once they are
+ * done with the data.
+ *
+ * Returns 0 on success and non-zero on failure.
+ * On failure, the contents of info and result_entries are undefined.
+ *
+ */
+int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_entries) {
+
 	int sockfd;
 
 	// Create a raw socket.  We won't actually be communicating with this socket, but
@@ -61,7 +76,6 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 		return errno;
 	}
 
-	struct ipt_getinfo info;
 	socklen_t info_size = sizeof(struct ipt_getinfo);
 
 	// Set the name of the table to query.  Right now, we hardcode the "filter" table, which
@@ -73,11 +87,11 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 		fprintf(stderr, "Table name %s is too long.\n", TABLE_NAME);
 		return 1;
 	}
-	strncpy(info.name, "filter", XT_TABLE_MAXNAMELEN);
+	strncpy(info->name, TABLE_NAME, XT_TABLE_MAXNAMELEN);
 
 	// Using the fixed-size ipt_getinfo structure, query to see how large the
 	// table is.
-	if (getsockopt(sockfd, IPPROTO_IP, IPT_SO_GET_INFO, &info, &info_size) < 0) {
+	if (getsockopt(sockfd, IPPROTO_IP, IPT_SO_GET_INFO, info, &info_size) < 0) {
 		fprintf(stderr, "Unable to get socket info. (errno=%d) %s\n", errno, strerror(errno));
 		return errno;
 	}
@@ -85,7 +99,7 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 	// Now that we know the size of the table, we will do the actual query with an
 	// appropriately-sized data structure.  Note that the size is the query object
 	// itself, followed by a binary blob we will later parse.
-	info_size = sizeof(struct ipt_get_entries) + info.size;
+	info_size = sizeof(struct ipt_get_entries) + info->size;
 	struct ipt_get_entries *entries = (struct ipt_get_entries *)malloc(info_size);
 	if (!entries) {
 		fprintf(stderr, "Unable to malloc memory for routing table.\n");
@@ -93,12 +107,69 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 	}
 	// We are less careful about string sizes here as we already checked above.
 	strcpy(entries->name, TABLE_NAME);
-	entries->size = info.size;
+	entries->size = info->size;
 
 	// Read out the firewall from the kernel
 	if (getsockopt(sockfd, IPPROTO_IP, IPT_SO_GET_ENTRIES, entries, &info_size) < 0) {
 		fprintf(stderr, "Unable to get table entries. (errno=%d) %s\n", errno, strerror(errno));
+		free(entries);
 		return errno;
+	}
+
+	close(sockfd);
+
+	*result_entries = entries;
+	return 0;
+}
+
+/**
+ * Upload a new set of firewall entries to the kernel.
+ */
+static int write_firewall_entries(const struct ipt_getinfo *info, const struct ipt_get_entries *result_entries, unsigned int num_counters, struct xt_counters *counters) {
+
+	// Put together the ipt_replace object from the provided information.
+	struct ipt_replace replace_entries;
+        const char TABLE_NAME[] = "filter";
+	if (strlen(TABLE_NAME) > XT_TABLE_MAXNAMELEN-1) {
+		fprintf(stderr, "Table name %s is too long.\n", TABLE_NAME);
+		return 1;
+	}
+/*	TODO: build replace_entries.
+	strncpy(replace_entries.name, TABLE_NAME, XT_TABLE_MAXNAMELEN);
+        replace_entries.valid_hooks = info->valid_hooks;
+        replace_entries.num_entries = info->num_entries;
+        replace_entries.size = result_entries->size;
+        replace_entries.hook_entry = info->hook_entry;
+        replace_entries.underflow = info->underflow;
+        replace_entries.num_counters = num_counters;
+        replace_entries.counters = counters;
+        replace_entries.entries = result_entries.entries;
+
+	if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+		fprintf(stderr, "Unable to open raw socket. (errno=%d) %s\n", errno, strerror(errno));
+		return errno;
+	}
+
+	if (setsockopt(sockfd, IPPROTO_IP, IPT_SO_REPLACE_ENTRIES, replace_entries, replace_entries.size + sizeof(replace_entries) < 0)) {
+		fprintf(stderr, "Unable to get firewall entries. (errno=%d) %s\n", errno, strerror(errno));
+		return errno;
+	}
+
+	close(sockfd);
+*/
+	return 1;
+}
+
+int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char *, long long, void *), void * callback_data) {
+
+	struct ipt_get_entries *entries;
+	struct ipt_getinfo info;
+
+	int error;
+
+	// Read out the firewall.
+	if ((error = get_firewall_data(&info, &entries))) {
+		return error;
 	}
 
 	// Iterate through the table binary blob, searching for the desired chain
@@ -157,5 +228,46 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 	}
 
 	return 0;
+}
+
+
+static int rule_jumps_to_chain(const char *chain, struct ipt_entry * entry) {
+	fprintf(stderr, "Rule jumps to chain not implemented!\n");
+	return 0;
+}
+
+/**
+ * Remove a chain from the firewall, along with any rules in other chains
+ * which reference it.
+ *
+ * Returns 0 on success, non-zero on failure.
+ */
+int cleanup_chain(const char *chain)
+{
+	struct ipt_get_entries *entries;
+	struct ipt_getinfo info;
+
+	int error;
+
+        // Read out the firewall.
+	if ((error = get_firewall_data(&info, &entries))) {
+		return error;
+	}
+
+	struct ipt_get_entries *new_entries = (struct ipt_get_entries*)malloc(entries->size+sizeof(struct ipt_get_entries));
+	if (!new_entries) {
+		fprintf(stderr, "Memory allocation failed for new entries structure.\n");
+		return 1;
+	}
+	*new_entries = *entries;
+	new_entries = (struct ipt_entry*)malloc(entries->size);
+	struct ipt_entry * entry = entries->entrytable;
+
+	// Write out firewall.
+/*
+	if ((error = write_firewall_entries(info, entries))) {
+		return error;
+	}
+*/
 }
 

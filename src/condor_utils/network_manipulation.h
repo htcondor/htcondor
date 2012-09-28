@@ -9,6 +9,9 @@
 extern "C" {
 #endif
 
+#ifndef __NETWORK_MANIPULATION_H_
+#define __NETWORK_MANIPULATION_H_
+
 /*
  * Create a socket to talk to the kernel via netlink
  * Returns the socket fd upon success, or -errno upon failure
@@ -95,6 +98,37 @@ int set_netns(int sock, const char * eth, pid_t pid);
  * - callback_data: Opaque data provided to the callback
  */
 int perform_accounting(const char * rule_name, int (*match_fcn)(const unsigned char *, long long, void *), void * callback_data);
+
+/*
+ * Remove a chain from the filter iptable from the kernel.  Removes the contents
+ * of the chain, along with any references to that chain in other chains.
+ *
+ * - chain: Name of chain to remove
+ *
+ * Returns 0 on success and non-zero on failure.
+ * On failure, the state of the firewall is undefined.
+ */
+int cleanup_chain(const char *chain);
+
+/*
+ * Retrieve the firewall data from the kernel; gets the "filter" table from iptables.
+ * 
+ * - info: On input, must be a valid pointer.  On successful finish, the contents
+ *   are overwritten with the basic information about the firewall rules.
+ * - result_entries: On input, should be an uninitialized pointer to a
+ *   (struct ipt_get_entries *).  On successful finish, the function will have
+ *   allocated memory and copied in the firewall content.
+ *   The caller is responsible for calling free() on *result_entries once they are
+ *   done with the data.
+ * 
+ * Returns 0 on success and non-zero on failure.
+ * On failure, the contents of info and result_entries are undefined.  The caller does
+ * not need to call free() on *result_entries on failure.
+ * 
+ */
+int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_entries);
+
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */
