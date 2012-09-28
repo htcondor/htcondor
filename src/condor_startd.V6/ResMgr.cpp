@@ -259,6 +259,8 @@ ResMgr::init_config_classad( void )
 			config_classad->Assign( ATTR_CPU_BUSY, false );
 		}
 	}
+	
+	configInsert(config_classad, "IS_LOCAL_STARTD", false);
 
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.

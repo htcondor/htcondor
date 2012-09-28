@@ -1722,7 +1722,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					BoolValue oldValue = ( *tempBools )[attrNum];
 					And( oldValue, conditionValue, newValue );
 					( *tempBools )[attrNum] = newValue;
-					if( ( ( *tempIntervals )[attrNum] == NULL ) ) {
+					if( ( *tempIntervals )[attrNum] == NULL ) {
 						( *tempIntervals )[attrNum] = new ValueRange( );
 					}
 					AddConstraint( ( *tempIntervals )[attrNum],
@@ -1748,7 +1748,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					}
 					( *tempBools )[numRefdAttrs - 1] = conditionValue;
 
-					if( ( ( *tempIntervals )[attrNum] == NULL ) ) {
+					if( ( *tempIntervals )[attrNum] == NULL ) {
 						( *tempIntervals )[attrNum] = new ValueRange( );
 					}
 					AddConstraint( ( *tempIntervals )[attrNum], 

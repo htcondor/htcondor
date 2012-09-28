@@ -27,6 +27,19 @@
 // interface is provided (i.e. you call execute() and it only returns
 // after all of the sockets have finished and closed).
 
+#define SOCKET_PROXY_BUFSIZE 1024
+class SocketProxyPair {
+public:
+	SocketProxyPair(int from,int to);
+
+	int from_socket;
+	int to_socket;
+	bool shutdown;
+	size_t buf_begin;
+	size_t buf_end;
+	char buf[SOCKET_PROXY_BUFSIZE];
+};
+
 class SocketProxy {
 public:
 	SocketProxy();
@@ -41,26 +54,13 @@ public:
 
 	char const *getErrorMsg();
 private:
-	std::list<class SocketProxyPair> m_socket_pairs;
+	std::list<SocketProxyPair> m_socket_pairs;
 	bool m_error;
 	MyString m_error_msg;
 
 	bool setNonBlocking(int s);
 	bool fdInUse(int fd);
 	void setErrorMsg(char const *msg);
-};
-
-#define SOCKET_PROXY_BUFSIZE 1024
-class SocketProxyPair {
-public:
-	SocketProxyPair(int from,int to);
-
-	int from_socket;
-	int to_socket;
-	bool shutdown;
-	size_t buf_begin;
-	size_t buf_end;
-	char buf[SOCKET_PROXY_BUFSIZE];
 };
 
 #endif

@@ -60,8 +60,6 @@
 #include "schedd_stats.h"
 #include "condor_holdcodes.h"
 
-using std::map;
-
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 const	int			SCHEDD_INTERVAL_DEFAULT = 300;
@@ -499,6 +497,8 @@ class Scheduler : public Service
 		// jobs which desire matchmaking.
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
   
+	bool usesLocalStartd() const { return m_use_startd_for_local;}
+	
 private:
 	
 	// information about this scheduler
@@ -735,6 +735,13 @@ private:
 		// Mark a job as clean
 	int clear_dirty_job_attrs_handler(int, Stream *stream);
 
+		// Command handlers for direct startd
+   int receive_startd_update(int, Stream *s);
+   int receive_startd_invalidate(int, Stream *s);
+
+   int local_startd_reaper(int pid, int status);
+   int launch_local_startd();
+
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
 	int sent_shadow_failure_email;
@@ -756,6 +763,11 @@ private:
 
 	StringList m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
+
+	bool m_use_startd_for_local;
+	int m_local_startd_pid;
+	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
+	std::map<std::string, ClassAd *> m_claimedLocalStartds;
 };
 
 

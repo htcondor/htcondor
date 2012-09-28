@@ -38,6 +38,8 @@
 // all compilers!), but the bloat is in the text segment - shared on all processes!
 
 #define ATTR_ABSENT                    "Absent"
+#define ATTR_GROUP  "Group"
+#define ATTR_GROUP_USER  "GroupUser"
 #define ATTR_ACCOUNTING_GROUP          "AccountingGroup"
 #define ATTR_ACTION_CONSTRAINT  "ActionConstraint"
 #define ATTR_ACTION_IDS  "ActionIds"

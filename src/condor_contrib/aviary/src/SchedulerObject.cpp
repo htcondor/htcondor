@@ -263,7 +263,7 @@ SchedulerObject::setAttribute(std::string key,
 							  std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "SetAttribute: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -303,7 +303,7 @@ bool
 SchedulerObject::hold(std::string key, std::string &reason, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Hold: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -329,7 +329,7 @@ bool
 SchedulerObject::release(std::string key, std::string &reason, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Release: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -353,7 +353,7 @@ bool
 SchedulerObject::remove(std::string key, std::string &reason, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -375,7 +375,7 @@ bool
 SchedulerObject::suspend(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -390,7 +390,7 @@ bool
 SchedulerObject::_continue(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;

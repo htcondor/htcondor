@@ -407,7 +407,8 @@ Scheduler::Scheduler() :
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
-	job_is_finished_queue( "job_is_finished_queue", 1 )
+	job_is_finished_queue( "job_is_finished_queue", 1 ),
+	m_local_startd_pid(-1)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -518,6 +519,7 @@ Scheduler::Scheduler() :
 #ifdef HAVE_EXT_POSTGRESQL
 	prevLHF = 0;
 #endif
+
 }
 
 
@@ -1702,8 +1704,9 @@ service_this_universe(int universe, ClassAd* job)
 		case CONDOR_UNIVERSE_MPI:
 		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_SCHEDULER:
-		case CONDOR_UNIVERSE_LOCAL:
 			return false;
+		case CONDOR_UNIVERSE_LOCAL:
+			return scheduler.usesLocalStartd();
 		default:
 
 			int sendToDS = 0;
@@ -2391,8 +2394,10 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		break;
 
 	case CONDOR_UNIVERSE_LOCAL:
-		scheduler.spawnLocalStarter( srec );
-		return true;
+		if (!scheduler.m_use_startd_for_local) {
+			scheduler.spawnLocalStarter( srec );
+			return true;
+		} 
 		break;
 
 	case CONDOR_UNIVERSE_GRID:
@@ -2908,6 +2913,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		return true;
 	}
 	JobEvictedEvent event;
+	event.terminate_and_requeued = true;
 	struct rusage r;
 	memset( &r, 0, sizeof(struct rusage) );
 
@@ -5827,6 +5833,10 @@ find_idle_local_jobs( ClassAd *job )
 		return 0;
 	}
 
+	if (univ == CONDOR_UNIVERSE_LOCAL && scheduler.m_use_startd_for_local) {
+		return 0;
+	}
+
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
 	job->LookupInteger(ATTR_JOB_STATUS, status);
@@ -6517,6 +6527,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			}
 			break;
 		case CONDOR_UNIVERSE_VANILLA:
+		case CONDOR_UNIVERSE_LOCAL: // but only when m_use_start_for_local is true
 			shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE ); 
 			if( ! shadow_obj ) {
 				dprintf( D_ALWAYS, "Trying to run a VANILLA job, but you "
@@ -8431,6 +8442,7 @@ mark_job_running(PROC_ID* job_id)
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_ORIG_MAX_HOSTS,
 					orig_max);
 
+
 	if( status == RUNNING ) {
 		EXCEPT( "Trying to run job %d.%d, but already marked RUNNING!",
 			job_id->cluster, job_id->proc );
@@ -9053,11 +9065,6 @@ Scheduler::child_exit(int pid, int status)
 			// count_jobs(), try to keep it accurate here, too.  
 		if( SchedUniverseJobsRunning > 0 ) {
 			SchedUniverseJobsRunning--;
-		}
-		if( WIFEXITED( status ) ) {
-			this->jobExitCode(job_id,JOB_EXITED);
-		} else if( WIFSIGNALED( status ) ) {
-			this->jobExitCode(job_id,JOB_KILLED);
 		}
 	} else if (srec) {
 		const char* name = NULL;
@@ -10219,6 +10226,12 @@ Scheduler::Init()
 		// been left due to starter crashes, etc.
 	initLocalStarterDir();
 
+	m_use_startd_for_local = param_boolean("SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE", false);
+
+	if (m_use_startd_for_local) {
+		launch_local_startd();
+	}
+
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
 		// Someday, we might want to actually resize these hashtables
 		// on reconfig if MaxJobsRunning changes size, but we don't
@@ -10321,8 +10334,8 @@ Scheduler::Init()
 						lifetime = (time_t)param_integer(expires_name.Value(), one_week);
 					}
 
-					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' life=%"PRId64 " trigger is %s\n", 
-					        byorfor.Value(), other.Value(), lifetime, filter);
+					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' life=%" PRId64 " trigger is %s\n", 
+					        byorfor.Value(), other.Value(), (int64_t)lifetime, filter);
 					OtherPoolStats.Enable(other.Value(), filter, by, lifetime);
 				}
 				free(filter);
@@ -10777,6 +10790,17 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
 								  "clear_dirty_job_attrs_handler", this, WRITE );
+
+
+	 // These commands are for a startd reporting directly to the schedd sans negotiation
+	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
+        						  (CommandHandlercpp)&Scheduler::receive_startd_update,
+								  "receive_startd_update",this,ADVERTISE_STARTD_PERM);
+
+	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
+        						  (CommandHandlercpp)&Scheduler::receive_startd_invalidate,
+								  "receive_startd_invalidate",this,ADVERTISE_STARTD_PERM);
+
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
@@ -11528,6 +11552,10 @@ int
 Scheduler::AlreadyMatched(PROC_ID* id)
 {
 	int universe;
+
+	if ((id->cluster == -1) && (id->proc == -1)) {
+		return FALSE;
+	}
 
 	if (GetAttributeInt(id->cluster, id->proc,
 						ATTR_JOB_UNIVERSE, &universe) < 0) {
@@ -13743,3 +13771,160 @@ Scheduler::clear_dirty_job_attrs_handler(int /*cmd*/, Stream *stream)
 	MarkJobClean( cluster_id, proc_id );
 	return TRUE;
 }
+
+int
+Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
+	dprintf(D_COMMAND, "Schedd got update ad from local startd\n");
+
+	ClassAd *machineAd = new ClassAd;
+	if (!machineAd->initFromStream(*stream)) {
+		dprintf(D_ALWAYS, "Error receiving update ad from local startd\n");
+		return TRUE;
+	}
+
+	ClassAd *privateAd = new ClassAd;
+	if (!privateAd->initFromStream(*stream)) {
+		dprintf(D_ALWAYS, "Error receiving update private ad from local startd\n");
+		return TRUE;
+	}
+
+	char *claim_id = 0;
+	privateAd->LookupString(ATTR_CAPABILITY, &claim_id);
+	machineAd->Assign(ATTR_CAPABILITY, claim_id);
+
+	char *name = 0;
+	machineAd->LookupString(ATTR_NAME, &name);
+
+	char *state = 0;
+	machineAd->LookupString(ATTR_STATE, &state);
+
+	if (strcmp(state, "Claimed") == 0) {
+			// It is claimed by someone, we don't care about it anymore
+		if (m_unclaimedLocalStartds.count(name) > 0) {
+			delete m_unclaimedLocalStartds[name];
+			m_unclaimedLocalStartds.erase(name);
+		} 
+		free(name);
+		free(claim_id);
+		return TRUE;
+	} else {
+		if (m_unclaimedLocalStartds.count(name) > 0) {
+			dprintf(D_FULLDEBUG, "Local slot %s was already unclaimed, removing it\n", name);
+			delete m_unclaimedLocalStartds[name];
+			m_unclaimedLocalStartds.erase(name);
+		} 
+			// Pass this machine into our match list
+		ScheddNegotiate *sn;
+		PROC_ID jobid;
+		jobid.cluster = jobid.proc = -1;
+
+		sn = new MainScheddNegotiate(0, NULL, NULL, NULL);
+		sn->scheduler_handleMatch(jobid,claim_id, *machineAd, name);
+		delete sn;
+
+		m_unclaimedLocalStartds[name] = machineAd;
+		free(name);
+		free(claim_id);
+		return TRUE;
+	}
+	free(claim_id);
+	return TRUE;
+}
+
+int
+Scheduler::receive_startd_invalidate(int /*cmd*/, Stream * /*stream*/) {
+	// Will this ever come in, other than shutdown?
+	return TRUE;
+}
+
+int
+Scheduler::local_startd_reaper(int pid, int status) {
+	dprintf(D_ALWAYS, "Local Startd (pid %d) exited with status (%d)\n", pid, status);
+	m_local_startd_pid = -1;
+
+	// should schedule timer to restart after some backoff
+	return TRUE;
+}
+
+int
+Scheduler::launch_local_startd() {
+	if (m_local_startd_pid != -1) {
+		// There's one already runnning, we got here because of a reconfig.
+		return TRUE;
+	}
+
+	int rid = daemonCore->Register_Reaper(
+						"localStartdReaper",
+						(ReaperHandlercpp) &Scheduler::local_startd_reaper,
+						"localStartdReaper",
+						this);
+
+	if (rid < 0) {
+		EXCEPT("Can't register reaper for local startd" );
+	}
+
+	int create_process_opts = 0; // Nothing odd
+
+	  // The arguments for our startd
+	ArgList args;
+	args.AppendArg("condor_startd");
+	args.AppendArg("-f"); // The startd is daemon-core, so run in the "foreground"
+	args.AppendArg("-local-name"); // This is the local startd, not the vanilla one
+	args.AppendArg("LOCALSTARTD");
+
+	Env env;
+	env.Import(); // copy schedd's environment
+	env.SetEnv("_condor_STARTD_LOG", "$(LOG)/LocalStartLog");
+	env.SetEnv("_condor_EXECUTE", "$(SPOOL)/local_univ_execute");
+
+	// Force start expression to be START_LOCAL_UNIVERSE
+	char *localStartExpr = 0;
+	localStartExpr = param("START_LOCAL_UNIVERSE");
+	std::string localConstraint = "(JobUniverse == 12) && ";
+	localConstraint += localStartExpr;
+	env.SetEnv("_condor_START", localConstraint);
+	free(localStartExpr);
+
+
+	std::string mysinful(daemonCore->publicNetworkIpAddr());
+	mysinful.erase(0,1);
+	mysinful.erase(mysinful.length()-1);
+
+		// Force this local startd to report not to the collector
+		// but to this schedd
+	env.SetEnv("_condor_CONDOR_HOST", mysinful.c_str());
+	env.SetEnv("_condor_COLLECTOR_HOST", mysinful.c_str());
+
+		// Force the requirements to only run local jobs from this schedd
+	//env.SetEnv("_condor_START", "JobUniverse == 11");
+	env.SetEnv("_condor_IS_LOCAL_STARTD", "true");
+
+		// Figure out the path to the startd binary
+	std::string path;
+	param( path, "STARTD", "" );
+
+	if (path.length() == 0) {
+		// Very unusual that STARTD isn't defined, something is wrong...
+		dprintf(D_ALWAYS, "Can't find path to STARTD daemon in config file: unable to run local universe jobs\n");
+		return false;
+	}
+
+	m_local_startd_pid = daemonCore->Create_Process(	path.c_str(),
+										args,
+										PRIV_ROOT,
+										rid, 
+	                                  	1, /* is_dc */
+										&env, 
+										NULL, 
+										NULL,
+										NULL, 
+	                                  	NULL,  /* stdin/stdout/stderr */
+										NULL, 
+										0,    /* niceness */
+									  	NULL,
+										create_process_opts);
+
+	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
+	return TRUE;
+}
+

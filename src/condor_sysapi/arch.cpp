@@ -485,12 +485,12 @@ const char *
 sysapi_get_darwin_info(void)
 {
     char ver_str[255];
-    char *args[] = {"/usr/bin/sw_vers", "-productVersion", NULL};
+    const char *args[] = {"/usr/bin/sw_vers", "-productVersion", NULL};
     FILE *output_fp;
 
     char tmp_info[262];
     char *info_str;
-    char *os_name = "MacOSX ";
+    const char *os_name = "MacOSX ";
  
     if ((output_fp = my_popenv(args, "r", FALSE)) != NULL) {
 	fgets(ver_str, 255, output_fp);

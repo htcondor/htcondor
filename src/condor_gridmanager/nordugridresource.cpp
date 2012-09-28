@@ -175,7 +175,7 @@ void NordugridResource::DoJobStatus()
 		 m_jobStatusActive == false ) {
 			// No jobs or we can't talk to the resource, so no point
 			// in polling
-		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 		return;
 	}
 
@@ -270,6 +270,6 @@ void NordugridResource::DoJobStatus()
 
 		dprintf( D_FULLDEBUG, "ldap poll complete: %s\n", resourceName );
 
-		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 	}
 }

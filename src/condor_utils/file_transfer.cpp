@@ -66,6 +66,7 @@ TransThreadHashTable *FileTransfer::TransThreadTable = NULL;
 int FileTransfer::CommandsRegistered = FALSE;
 int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
+bool FileTransfer::ServerShouldBlock = true;
 
 class FileTransferItem {
 public:
@@ -157,6 +158,7 @@ FileTransfer::FileTransfer()
 	TransferStart = 0;
 	uploadStartTime = uploadEndTime = downloadStartTime = downloadEndTime = (time_t)-1;
 	ClientCallback = 0;
+	ClientCallbackCpp = 0;
 	ClientCallbackClass = NULL;
 	TransferPipe[0] = TransferPipe[1] = -1;
 	bytesSent = 0.0;
@@ -852,15 +854,30 @@ FileTransfer::DownloadFiles(bool blocking)
 		if ( !d.connectSock(&sock,0) ) {
 			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
 					 "%s\n", TransSock );
+			Info.success = 0;
+			Info.in_progress = false;
+			formatstr( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
+					 TransSock );
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_UPLOAD, &sock, 0, NULL, NULL, false, m_sec_session_id);
+		CondorError err_stack;
+		if ( !d.startCommand(FILETRANS_UPLOAD, &sock, 0, &err_stack, NULL, false, m_sec_session_id) ) {
+			Info.success = 0;
+			Info.in_progress = 0;
+			formatstr( Info.error_desc, "FileTransfer: Unable to start "
+					   "transfer with server %s: %s", TransSock,
+					   err_stack.getFullText().c_str() );
+		}
 
 		sock.encode();
 
 		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
+			Info.success = 0;
+			Info.in_progress = false;
+			formatstr( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
+					 TransSock );
 			return 0;
 		}
 
@@ -1021,8 +1038,8 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-						 "Skipping file %s, t: %"PRIi64"==%"PRIi64
-						 ", s: %"PRIi64"==%"PRIi64"\n",
+						 "Skipping file %s, t: %" PRIi64"==%" PRIi64
+						 ", s: %" PRIi64"==%" PRIi64"\n",
 						 f,
 						 (PRIi64_t)dir.GetModifyTime(),
 						 (PRIi64_t)modification_time,
@@ -1199,15 +1216,30 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		if ( !d.connectSock(&sock,0) ) {
 			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
 					 "%s\n", TransSock );
+			Info.success = 0;
+			Info.in_progress = false;
+			formatstr( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
+					 TransSock );
 			return FALSE;
 		}
 
-		d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, NULL, NULL, false, m_sec_session_id);
+		CondorError err_stack;
+		if ( !d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, &err_stack, NULL, false, m_sec_session_id) ) {
+			Info.success = 0;
+			Info.in_progress = 0;
+			formatstr( Info.error_desc, "FileTransfer: Unable to start "
+					   "transfer with server %s: %s", TransSock,
+					   err_stack.getFullText().c_str() );
+		}
 
 		sock.encode();
 
 		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
+			Info.success = 0;
+			Info.in_progress = false;
+			formatstr( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
+					 TransSock );
 			return 0;
 		}
 
@@ -1295,11 +1327,11 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
-			transobject->Upload(sock,true);		// blocking = true for now...
+			transobject->Upload(sock,ServerShouldBlock);
 			}
 			break;
 		case FILETRANS_DOWNLOAD:
-			transobject->Download(sock,true);	// blocking = true for now...
+			transobject->Download(sock,ServerShouldBlock);
 			break;
 		default:
 			dprintf(D_ALWAYS,
@@ -1314,12 +1346,20 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 }
 
 
+bool
+FileTransfer::SetServerShouldBlock( bool block )
+{
+	bool old_value = ServerShouldBlock;
+	ServerShouldBlock = block;
+	return old_value;
+}
+
 int
 FileTransfer::Reaper(Service *, int pid, int exit_status)
 {
 	FileTransfer *transobject;
 	bool read_failed = false;
-	if ( TransThreadTable->lookup(pid,transobject) < 0) {
+	if (!TransThreadTable || TransThreadTable->lookup(pid,transobject) < 0) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
 	}
@@ -1462,7 +1502,12 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	if (transobject->ClientCallback) {
 		dprintf(D_FULLDEBUG,
 				"Calling client FileTransfer handler function.\n");
-		((transobject->ClientCallbackClass)->*(transobject->ClientCallback))(transobject);
+		(*(transobject->ClientCallback))(transobject);
+	}
+	if (transobject->ClientCallbackCpp) {
+		dprintf(D_FULLDEBUG,
+				"Calling client FileTransfer handler function.\n");
+		((transobject->ClientCallbackClass)->*(transobject->ClientCallbackCpp))(transobject);
 	}
 
 	return TRUE;
@@ -4220,3 +4265,9 @@ FileTransfer::outputFileIsSpooled(char const *fname) {
 	}
 	return false;
 }
+
+ClassAd*
+FileTransfer::GetJobAd() {
+	return &jobAd;
+}
+

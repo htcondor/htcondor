@@ -445,6 +445,16 @@ class GahpClient : public Service {
 		blah_job_refresh_proxy(const char *job_id, const char *proxy_file);
 
 		int
+		blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
+							  std::string &sandbox_path);
+
+		int
+		blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad);
+
+		int
+		blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad);
+
+		int
 		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);
 
 		int

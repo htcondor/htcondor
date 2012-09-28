@@ -245,6 +245,11 @@ public:
 	int getMySlotNumber( void );
 	MyString getMySlotName( void );
 
+		/** Returns the number of jobs currently running under
+		 * this multi-starter.
+		 */
+	int numberOfJobs( void ) { return m_job_list.Number(); };
+
 	bool isGridshell( void ) {return is_gridshell;};
 	const char* origCwd( void ) {return (const char*) orig_cwd;};
 	int starterStdinFd( void ) { return starter_stdin_fd; };

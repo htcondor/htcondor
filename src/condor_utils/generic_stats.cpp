@@ -112,7 +112,15 @@ void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pa
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.formatstr_cat(!ix ? "[(" : (ix == this->buf.cMax ? ")|(" : ") ("));
+         // Note: this is tediously broken up into multiple lines because clang produces a format string
+         // warning otherwise.
+         if (!ix) {
+            str.formatstr_cat("[(");
+         } else if (ix == this->buf.cMax) {
+            str.formatstr_cat(")|(");
+         } else {
+            str.formatstr_cat(") (");
+            }
          this->buf.pbuf[ix].AppendToString(str);
          }
       str += ")]";

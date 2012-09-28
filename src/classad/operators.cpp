@@ -591,8 +591,8 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 					
 	// any op that got past the above is binary, commutative and associative
 	// Flatten sub expressions
-	if( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ||
-		child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) {
+	if( ( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ) ||
+		( child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) ) {
 		delete fChild1;
 		delete fChild2;
 		tree = NULL;

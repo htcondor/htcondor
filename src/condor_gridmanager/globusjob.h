@@ -84,15 +84,12 @@ class GlobusJob : public BaseJob
 
 	int ProxyCallback();
 
-	static int probeInterval;
 	static int submitInterval;
 	static int restartInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 	static int outputWaitGrowthTimeout;
 
-	static void setProbeInterval( int new_interval )
-		{ probeInterval = new_interval; }
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
 	static void setRestartInterval( int new_interval )

@@ -4,6 +4,12 @@
 #include "condor_netaddr.h"
 #include "ipv6_hostname.h"
 
+typedef union sockaddr_storage_ptr_u {
+        const struct sockaddr     *raw;
+        struct sockaddr_in  *in;
+        struct sockaddr_in6 *in6;
+} sockaddr_storage_ptr;
+
 condor_sockaddr condor_sockaddr::null;
 
 void condor_sockaddr::clear()
@@ -46,11 +52,13 @@ condor_sockaddr::condor_sockaddr(const in6_addr& in6, unsigned short port)
 
 condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 {
+	sockaddr_storage_ptr sock_address;
+	sock_address.raw = sa;
 	if (sa->sa_family == AF_INET) {
-		sockaddr_in* sin = (sockaddr_in*)sa;
+		sockaddr_in* sin = sock_address.in;
 		init(sin->sin_addr.s_addr, sin->sin_port);
 	} else if (sa->sa_family == AF_INET6) {
-		sockaddr_in6* sin6 = (sockaddr_in6*)sa;
+		sockaddr_in6* sin6 = sock_address.in6;
 		v6 = *sin6;
 	} else {
 		clear();

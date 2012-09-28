@@ -141,9 +141,6 @@ void CreamJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	CreamJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	CreamResource::setProbeInterval( tmp_int );
 
@@ -182,7 +179,6 @@ BaseJob *CreamJobCreate( ClassAd *jobad )
 	return (BaseJob *)new CreamJob( jobad );
 }
 
-int CreamJob::probeInterval = 300;			// default value
 int CreamJob::submitInterval = 300;			// default value
 int CreamJob::gahpCallTimeout = 300;		// default value
 int CreamJob::maxConnectFailures = 3;		// default value
