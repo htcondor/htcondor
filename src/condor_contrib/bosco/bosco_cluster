@@ -447,9 +447,14 @@ get_status () {
 
 
 # The getopt command line.  Using -a for alternate (allow options with only 1 '-')
-TEMP=`getopt -a -o a:ls:t:r:h --longoptions add:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
+if [ `uname` = "Darwin" ] ; then
+    # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
+    TEMP="$@"
+else
+    TEMP=`getopt -a -o a:ls:t:r:h --longoptions add:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
 
-if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
+    if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
+fi
 
 eval set -- "$TEMP"
 
@@ -463,7 +468,7 @@ while true; do
         -r|--remove) remove_cluster $2; shift 2; exit 0;;
         
         --) echo "No command found" >&2; usage; exit 1;;
-        *) echo "Unknown option"; exit 1;;
+        *) echo "Unknown option" >&2; usage; exit 1;;
     esac
 done
 

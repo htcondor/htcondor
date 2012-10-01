@@ -67,11 +67,18 @@ USAGE="Usage: $PROG_NAME [options] remote_hostname remote_cmd [remote options an
  --rgahp-script SCRIPT \tpath to script to start up blahp (~/.bosco/batch_gahp)\n \
  --help, -h \t\t\tprint this\n \
 "
-TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
+if [ `uname` = "Darwin" ] ; then
+    # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
+    # TODO This means that the --rgahp-* options aren't supported on
+    #   Mac OS X. We should fix that sometime.
+    eval set -- -- "$@"
+else
+    TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
 
-if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+    if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
 
-eval set -- "$TEMP"
+    eval set -- "$TEMP"
+fi
 
 # Remote hostname is mandatory
 # It is the first argument after the rgahp options
