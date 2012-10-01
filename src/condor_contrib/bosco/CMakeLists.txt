@@ -16,13 +16,13 @@
  # 
  ############################################################### 
 
-if ( LINUX )
+if ( LINUX OR DARWIN )
 	if ( WANT_FULL_DEPLOYMENT )
 		option(WITH_BOSCO "Compiling with support for BOSCO" ON)
 	else( WANT_FULL_DEPLOYMENT )
 		option(WITH_BOSCO "Compiling with support for BOSCO" OFF)
 	endif( WANT_FULL_DEPLOYMENT )
-endif ( LINUX )
+endif ( LINUX OR DARWIN )
 
 if ( WITH_BOSCO )
 

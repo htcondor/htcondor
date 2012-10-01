@@ -16,13 +16,13 @@
  # 
  ############################################################### 
 
-if ( LINUX )
+if ( LINUX OR DARWIN )
 	if ( WANT_FULL_DEPLOYMENT )
 		option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" ON)
 	else ( WANT_FULL_DEPLOYMENT )
 		option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" OFF)
 	endif ( WANT_FULL_DEPLOYMENT )
-endif ( LINUX )
+endif ( LINUX OR DARWIN )
 
 if ( WITH_CAMPUSFACTORY )
 
