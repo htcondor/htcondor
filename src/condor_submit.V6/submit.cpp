@@ -1390,6 +1390,7 @@ main( int argc, char *argv[] )
 		i=0;
 		sshargs[i++] = "condor_ssh_to_job"; // note: this must be in the PATH
 		sshargs[i++] = "-auto-retry";
+		sshargs[i++] = "-remove-on-interrupt";
 		sshargs[i++] = "-X";
 		if (PoolName) {
 			sshargs[i++] = "-pool";
