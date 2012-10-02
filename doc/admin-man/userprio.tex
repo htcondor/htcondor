@@ -22,7 +22,7 @@
 
 \index{priority!in machine allocation}
 \index{user priority}
-Condor uses priorities to determine machine allocation for jobs.
+HTCondor uses priorities to determine machine allocation for jobs.
 This section details the priorities and the allocation of
 machines (negotiation).
 
@@ -36,7 +36,7 @@ The numerical priority value assigned to a user is inversely related to the
 A user with a numerical priority of 5 gets 
 more resources than a user with a numerical priority of 50.
 There are two 
-priority values assigned to Condor users:
+priority values assigned to HTCondor users:
 \begin{itemize}
 	\item Real User Priority (RUP), which measures resource usage of the 
 		user.
@@ -44,7 +44,7 @@ priority values assigned to Condor users:
 		resources the user can get.
 \end{itemize}
 This section describes these two priorities and how they affect resource
-allocations in Condor.
+allocations in HTCondor.
 Documentation on configuring and controlling 
 priorities may be found in section~\ref{sec:Negotiator-Config-File-Entries}.
 
@@ -95,7 +95,7 @@ of resources that $A$ may be given,
 the available resources are repartitioned and distributed among
 remaining users according to the inverse ratio rule.
 
-Condor supplies mechanisms to directly support two policies in which EUP may
+HTCondor supplies mechanisms to directly support two policies in which EUP may
 be useful:
 \begin{description}
 	\item[Nice users]  A job may be submitted with the submit command 
@@ -104,18 +104,18 @@ be useful:
 	\Macro{NICE\_USER\_PRIO\_FACTOR} priority factor specified in the 
 	configuration, leading to a very large EUP.
 	This corresponds to a low priority for resources,
-	therefore using resources not used by other Condor users.
+	therefore using resources not used by other HTCondor users.
 
-	\item[Remote Users] Condor's flocking feature (see
+	\item[Remote Users] HTCondor's flocking feature (see
 	section~\ref{sec:Flocking}) allows jobs to run in a pool
         other than the local one.
 	In addition, the submit-only feature allows a user 
 	to submit jobs to another pool.
 	In such situations, submitters from other domains
 	can submit to the local pool.
-	It may be desirable to have Condor treat local users
+	It may be desirable to have HTCondor treat local users
 	preferentially over these remote users.
-	If configured, Condor will boost the RUPs of remote users by
+	If configured, HTCondor will boost the RUPs of remote users by
 	\Macro{REMOTE\_PRIO\_FACTOR}
 	specified in the configuration,
 	thereby lowering their priority for resources.
@@ -138,7 +138,7 @@ The priority values are used at allocation time, meaning during
 negotiation and matchmaking.
 Therefore, there are ClassAd attributes that take on defined values
 only during negotiation, making them ephemeral.
-In addition to allocation, Condor may preempt a machine claim 
+In addition to allocation, HTCondor may preempt a machine claim 
 and reallocate it when conditions change.
 
 Too many preemptions lead to thrashing,
@@ -244,7 +244,7 @@ definitions of these configuration variables.
 \subsection{Priority Calculation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This section may be skipped if the reader so feels, but for the curious,
-here is Condor's priority calculation algorithm.
+here is HTCondor's priority calculation algorithm.
 
 The RUP of a user $u$ at time $t$, $\pi_r(u,t)$, is calculated 
 every time interval $\delta t$ using the formula 
@@ -263,7 +263,7 @@ state, each user's RUP stabilizes at the number of resources used by that user.
 The definition of $\beta$ ensures that the calculation of $\pi_r(u,t)$ can be 
 calculated over non-uniform time intervals $\delta t$ without affecting the 
 calculation.  The time interval $\delta t$ varies due to events internal to 
-the system, but Condor guarantees that unless the central manager machine is 
+the system, but HTCondor guarantees that unless the central manager machine is 
 down, no matches will be unaccounted for due to this variance.
 
 % Derek's explanation:
@@ -291,7 +291,7 @@ down, no matches will be unaccounted for due to this variance.
 \index{negotiation}
 \index{matchmaking!negotiation algorithm}
 
-Negotiation is the method Condor undergoes periodically to
+Negotiation is the method HTCondor undergoes periodically to
 match queued jobs with resources capable of running jobs.
 The \Condor{negotiator} daemon is responsible for
 negotiation.
@@ -385,14 +385,14 @@ default definition of all jobs that share the same \Attr{ClusterId}.
 \index{scheduling!pie slice}
 \index{scheduling!pie spin}
 
-Condor schedules in a variety of ways.
+HTCondor schedules in a variety of ways.
 First, it takes all users who have submitted jobs and calculates their priority.
 Then, it totals the number of resources available at the moment,
 and using the ratios of the user priorities,
 it calculates the number of machines each user could get.
 This is their \Term{pie slice}.
 
-The Condor matchmaker goes in user priority order, 
+The HTCondor matchmaker goes in user priority order, 
 contacts each user, and asks for job information. 
 The \Condor{schedd} daemon (on behalf of a user)
 tells the matchmaker about a job,
@@ -429,8 +429,8 @@ say they have no more jobs.
 \index{accounting!by group}
 \index{priority!by group}
 
-By default, Condor does all accounting on a per-user basis, and this
-accounting is primarily used to compute priorities for Condor's
+By default, HTCondor does all accounting on a per-user basis, and this
+accounting is primarily used to compute priorities for HTCondor's
 fair-share scheduling algorithms. 
 However, accounting can also be done on a per-group basis.
 Multiple users can all submit jobs into the same accounting group,
@@ -451,7 +451,7 @@ The \AdAttr{AccountingGroup} attribute is a string,
 and it therefore must be enclosed in double quote marks.
 The string may have a maximum length of 40 characters.
 The name should \emph{not} be qualified with a domain.
-Certain parts of the Condor system 
+Certain parts of the HTCondor system 
 do append the value \MacroUNI{UID\_DOMAIN}
 (as specified in the configuration file on the submit machine)
 to this string for internal use.
@@ -473,7 +473,7 @@ heavyuser@example.com                  111.13
 \normalsize
 
 Additionally, the \Condor{userprio} command allows administrators to
-remove an entity from the accounting system in Condor.
+remove an entity from the accounting system in HTCondor.
 The \Opt{-delete} option to \Condor{userprio}
 accomplishes this
 if all the jobs from a given accounting group are completed,
@@ -488,7 +488,7 @@ condor_userprio -delete group_physics@example.com
 \end{verbatim}
 \normalsize
 
-Condor removes entities itself as they are no longer
+HTCondor removes entities itself as they are no longer
 relevant.
 Intervention by an administrator to delete entities can
 be beneficial when the use of thousands
@@ -509,14 +509,14 @@ as described in the next section on group quotas.
 \index{groups!quotas}
 \index{quotas!hierarchical quotas for a group}
 The use of group quotas modifies the negotiation for 
-available resources (machines) within a Condor pool.
+available resources (machines) within an HTCondor pool.
 This solves the difficulties inherent when
 priorities assigned based on each single user are insufficient.
 This may be the case when
 different groups (of varying size) own computers,
 and the groups choose to combine their computers to
-form a Condor pool.
-Consider an imaginary Condor pool example with thirty computers;
+form an HTCondor pool.
+Consider an imaginary HTCondor pool example with thirty computers;
 twenty computers are owned by the physics group and ten
 computers are owned by the chemistry group.
 One notion of fair allocation could be implemented 
