@@ -33,7 +33,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor now contains a tool, accountant_log_fixer, that can fix the
+damage to the Accountantnew.log caused by the version 7.8.4 \Condor{negotiator}.
+\Ticket{3221}
 
 \end{itemize}
 
@@ -49,10 +51,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \Condor{schedd} daemon would mark scheduler universe jobs 
-as completed and remove them from the job queue, 
-even when they should have been requeued, according to policy.
+\item The \Condor{schedd} daemon would mark scheduler universe jobs
+as completed and remove them from the job queue,
+even when they should have been requeued, according to policy
 \Ticket{3207}
+
+\item The \Condor{negotiator} version 7.8.4 would write corrupt resource entries
+to the Accountantnew.log that it would not be able to read back.
+The \Condor{negotiator} version 7.9.0 will abort when trying to read
+corrupted resource entries. The \Condor{negotiator} will now correct corrupt.
+resource entries created by 7.8.4 over time.
+\Ticket{3221}
 
 \item The \Condor{schedd} statistics \Attr{JobsAccumExecuteTime}
 and \Attr{JobsAccumPostExecuteTime} were sometimes much too large for jobs
