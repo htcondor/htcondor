@@ -487,7 +487,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			how = "via privsep switchboard ";
 		}
 		else {
-			username = get_real_username();
+			username = get_user_loginname();
 		}
 		if( !username ) {
 			username = "(null)";
