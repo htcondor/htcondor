@@ -54,6 +54,11 @@ as completed and remove them from the job queue,
 even when they should have been requeued, according to policy.
 \Ticket{3207}
 
+\item The \Condor{schedd} statistics \Attr{JobsAccumExecuteTime}
+and \Attr{JobsAccumPostExecuteTime} were sometimes much too large for jobs
+that had been vacated and then restarted.
+\Ticket{3227}
+
 \end{itemize}
 
 \noindent Known Bugs:
