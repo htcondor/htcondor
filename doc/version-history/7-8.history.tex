@@ -51,6 +51,10 @@ The details of each version are described below.
 
 	\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  \Ticket{3232}
 
+\item ClassAd functions int() and real() now ignore trailing characters
+when a string argument containing a valid number is given.
+\Ticket{3102}
+
 \end{itemize}
 
 \noindent Known Bugs:
