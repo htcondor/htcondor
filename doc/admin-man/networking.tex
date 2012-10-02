@@ -4,9 +4,9 @@
 \index{network}
 
 This section on
-network communication in Condor
+network communication in HTCondor
 discusses which network ports are used,
-how Condor behaves on machines with multiple network interfaces
+how HTCondor behaves on machines with multiple network interfaces
 and IP addresses,
 and how to facilitate functionality in a pool that spans
 firewalls and private networks.
@@ -17,17 +17,17 @@ communication which will not be duplicated here, so please
 see section~\ref{sec:Security} as well.
 
 Firewalls, private networks, and network address translation (NAT)
-pose special problems for Condor.
+pose special problems for HTCondor.
 There are currently two main mechanisms for dealing with firewalls
-within Condor:
+within HTCondor:
 
 \begin{enumerate}
 
-\item Restrict Condor to use a specific range of port numbers, and
+\item Restrict HTCondor to use a specific range of port numbers, and
   allow connections through the firewall that use any port within the
   range.
 
-\item Use \Term{Condor Connection Brokering} (CCB).
+\item Use \Term{HTCondor Connection Brokering} (CCB).
 
 \end{enumerate}
 
