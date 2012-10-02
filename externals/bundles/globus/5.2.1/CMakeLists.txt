@@ -32,7 +32,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.2.1 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.2.1-p1 "lib;include" "done")
 
 		# GNU libtool isn't included in Mac OS 10.8, but Globus
 		# needs libltdl. Build it and install it in the Globus
@@ -78,7 +78,10 @@ if (WITH_GLOBUS)
 						sed -e 's/tcp/popen/g' tcp/Makefile.in >popen/Makefile.in )
 
 		if(DARWIN)
-			set ( GLOBUS_PATCH ${GLOBUS_PATCH} && cd ../../../../../ && patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 )
+			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
+				cd ../../../../../ &&
+				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
+				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
