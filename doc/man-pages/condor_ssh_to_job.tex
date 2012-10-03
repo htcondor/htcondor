@@ -12,6 +12,7 @@
 \oOptArg{-keygen-options}{ssh-keygen-options}
 \oOptArg{-shells}{shell1,shell2,...}
 \oOpt{-auto-retry}
+\oOpt{-remove-on-interrupt}
 \Arg{cluster \Bar cluster.process \Bar cluster.process.node }
 \oArg{remote-command}
 
@@ -142,6 +143,9 @@ used by the \Condor{starter} to set up \Prog{sshd}.
   \OptItem{\Opt{-auto-retry}}{Specifies that if the job is not yet running,
     \Condor{ssh\_to\_job} should keep trying periodically until it succeeds 
     or encounters some other error.}
+  \OptItem{\Opt{-remove-on-interrupt}}{If specified, attempt to remove the job
+    from the queue if \Condor{ssh\_to\_job} is interrupted via a ctrl-c or
+    otherwise terminated abnormally.}
   \OptItem{\Opt{-X}}{Enable X11 forwarding.}
 \end{Options}
 
