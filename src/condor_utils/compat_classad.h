@@ -26,20 +26,6 @@
 class StringList;
 class Stream;
 
-// hopefully this can go away when classads has native support for 64bit int
-// in the mean time, we want to do the conversion as close to the classad api
-// as possible.
-#ifndef classad_int64
-# ifdef WIN32
-# define classad_int64 __int64
-# elif defined(__x86_64__) && ! defined(Darwin)
-# define classad_int64_is_long
-# define classad_int64 long
-# else
-# define classad_int64 long long
-# endif
-#endif
-
 #ifndef TRUE
 #define TRUE  1
 #endif
@@ -113,18 +99,16 @@ class ClassAd : public classad::ClassAd
 	{ return InsertAttr( name, value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned int value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
 
-#if ! defined classad_int64_is_long
-	int Assign(char const *name,long value) // TJ: fix for int64 classad
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
-#endif
+	int Assign(char const *name,long value)
+	{ return InsertAttr( name, value) ? TRUE : FALSE; }
 
-	int Assign(char const *name,classad_int64 value) // TJ: fix for int64 classad
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	int Assign(char const *name,long long value)
+	{ return InsertAttr( name, value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,unsigned long value)
-	{ return InsertAttr( name, (int)value) ? TRUE : FALSE; }
+	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
 
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }
@@ -184,22 +168,17 @@ class ClassAd : public classad::ClassAd
 		 *  @param value The integer
 		 *  @return true if the attribute exists and is an integer, false otherwise
 		 */
-
 	int LookupInteger(const char *name, int &value) const;
+	int LookupInteger(const char *name, long &value) const;
+	int LookupInteger(const char *name, long long &value) const;
+
 		/** Lookup (don't evaluate) an attribute that is a float.
 		 *  @param name The attribute
 		 *  @param value The integer
 		 *  @return true if the attribute exists and is a float, false otherwise
 		 */
-
-	int LookupInteger(const char *name, int64_t &value) const;
-		/** Lookup (don't evaluate) an attribute that is a float.
-		 *  @param name The attribute
-		 *  @param value The integer
-		 *  @return true if the attribute exists and is a float, false otherwise
-		 */
-
 	int LookupFloat(const char *name, float &value) const;
+	int LookupFloat(const char *name, double &value) const;
 
 		/** Lookup (don't evaluate) an attribute that can be considered a boolean
 		 *  @param name The attribute
@@ -259,21 +238,19 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not an integer
 		 */
-	int EvalInteger (const char *name, classad::ClassAd *target, int &value);
-	int EvalInteger (const char *name, classad::ClassAd *target, classad_int64 & value) {
-		int ival;
-		int result = EvalInteger(name, target, ival);  // TJ: fix for int64 classad
-		value = ival;
+	int EvalInteger (const char *name, classad::ClassAd *target, long long &value);
+	int EvalInteger (const char *name, classad::ClassAd *target, int& value) {
+		long long ival;
+		int result = EvalInteger(name, target, ival);
+		value = (int)ival;
 		return result;
 	}
-#if ! defined classad_int64_is_long
 	int EvalInteger (const char *name, classad::ClassAd *target, long & value) {
-		int ival;
-		int result = EvalInteger(name, target, ival);  // TJ: fix for int64 classad
-		value = ival;
+		long long ival;
+		int result = EvalInteger(name, target, ival);
+		value = (long)ival;
 		return result;
 	}
-#endif
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a float
 		 *  @param name The name of the attribute
