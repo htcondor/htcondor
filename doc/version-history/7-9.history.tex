@@ -182,6 +182,12 @@ If \SubmitCmd{x509userproxy} is not set,
 then the proxy file will be looked for in the standard locations.
 \Ticket{3025}
 
+\item If \Condor{submit} with the \Opt{-interactive} option
+is interrupted (via ctrl-c for example) before the interactive job starts,
+an attempt is made to immediately remove the interactive job from the queue.
+Similarly, \Condor{ssh\_to\_job} has a new option \Opt{-remove-on-interrupt}.
+\Ticket{3242}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -396,7 +402,6 @@ a \Condor{schedd} daemon or of a \Condor{submit} executable.
 platforms other than Windows,
 which schedules and runs a job that provides a shell prompt
 on the execute machine.
-Documentation of this feature is not yet available.
 \Ticket{3088}
 
 \end{itemize}

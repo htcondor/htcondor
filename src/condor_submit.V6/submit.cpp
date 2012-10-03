@@ -1154,10 +1154,14 @@ main( int argc, char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// This effectively means executable, transfer_executable,
+		// arguments, universe, and queue X are ignored from the submit
+		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
 			extraLines.Append( "executable=/bin/sleep" );
 			extraLines.Append( "transfer_executable=false" );
 			extraLines.Append( "args=180" );
+			extraLines.Append( "universe=vanilla" );
 		}
 	}
 
@@ -1395,6 +1399,7 @@ main( int argc, char *argv[] )
 		i=0;
 		sshargs[i++] = "condor_ssh_to_job"; // note: this must be in the PATH
 		sshargs[i++] = "-auto-retry";
+		sshargs[i++] = "-remove-on-interrupt";
 		sshargs[i++] = "-X";
 		if (PoolName) {
 			sshargs[i++] = "-pool";
@@ -1884,18 +1889,15 @@ void
 SetDescription()
 {
 
-	char* description;
-	description = condor_param( Description, ATTR_JOB_DESCRIPTION );
+	char* description = condor_param( Description, ATTR_JOB_DESCRIPTION );
 
 	if ( description ){
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
+		free(description);
 	}
 	else if ( InteractiveJob ){
-		std::string default_description = "Interactive from ";
-		default_description += my_full_hostname();
-		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, "interactive job");
 	}
-	free(description);
 }
 
 #ifdef WIN32

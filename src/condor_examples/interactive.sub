@@ -27,5 +27,4 @@ transfer_executable = false
 copy_to_spool = false
 notification = never
 priority = 1000
-should_transfer_files = NO
 queue
