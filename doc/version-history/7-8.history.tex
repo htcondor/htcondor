@@ -51,6 +51,10 @@ The details of each version are described below.
 
 	\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  \Ticket{3232}
 
+\item ClassAd functions int() and real() now ignore trailing characters
+when a string argument containing a valid number is given.
+\Ticket{3102}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -87,8 +91,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor now contains a tool, accountant_log_fixer, that can fix the
-damage to the Accountantnew.log caused by the version 7.8.4 \Condor{negotiator}.
+\item Condor now contains a tool called \Prog{accountant\_log\_fixer}, 
+that can fix the damage to the file \File{Accountantnew.log} 
+caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \Ticket{3221}
 
 \end{itemize}
@@ -107,19 +112,40 @@ damage to the Accountantnew.log caused by the version 7.8.4 \Condor{negotiator}.
 
 \item The \Condor{schedd} daemon would mark scheduler universe jobs
 as completed and remove them from the job queue,
-even when they should have been requeued, according to policy
+even when they should have been requeued, according to policy.
+This caused \Condor{dagman} jobs to fail to restart. This bug exists
+in all Condor versions 7.8.0 through 7.8.4.
+Upon upgrading from these Condor versions, users will need to intervene
+in order to restart their \Condor{dagman} jobs. \Condor{dagman} should not
+need such intervention when upgrading from Condor version 7.8.5.  
+To restart a \Condor{dagman} job, 
+the simplest solution is to issue the command
+\begin{verbatim}
+  condor_submit <DAGFile>.condor.sub
+\end{verbatim}
+where the original DAG was submitted with 
+\begin{verbatim}
+  condor_submit <DAGFile>
+\end{verbatim}
 \Ticket{3207}
 
-\item The \Condor{negotiator} version 7.8.4 would write corrupt resource entries
-to the Accountantnew.log that it would not be able to read back.
-The \Condor{negotiator} version 7.9.0 will abort when trying to read
-corrupted resource entries. The \Condor{negotiator} will now correct corrupt.
-resource entries created by 7.8.4 over time.
+\item The Condor version 7.8.4 \Condor{negotiator} daemon wrote 
+corrupt resource entries to the file \File{Accountantnew.log},
+which it would then not be able to read.
+The Condor version 7.9.0 \Condor{negotiator} daemon will abort 
+when trying to read these corrupted resource entries. 
+The \Condor{negotiator} will now correct these corrupt
+resource entries over time.
 \Ticket{3221}
 
-\item The \Condor{schedd} statistics \Attr{JobsAccumExecuteTime}
+\item Fixed a bug in which the \Condor{schedd} statistics ClassAd attributes
+\Attr{JobsAccumExecuteTime}
 and \Attr{JobsAccumPostExecuteTime} were sometimes much too large for jobs
 that had been vacated and then restarted.
+Note that these currently undocumented attributes would only appear
+in the ClassAd if the verbosity level for \Condor{schedd} statistics
+was set at the high value of 2 by the configuration variable
+\MacroNI{STATISTICS\_TO\_PUBLISH}.
 \Ticket{3227}
 
 \end{itemize}
