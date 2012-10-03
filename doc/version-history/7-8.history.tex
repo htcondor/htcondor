@@ -55,14 +55,20 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \item The \Condor{schedd} daemon would mark scheduler universe jobs
 as completed and remove them from the job queue,
 even when they should have been requeued, according to policy.
-This causes \Condor{dagman} jobs to fail to restart. This bug exists
-in all condor versions 7.8.0 through 7.8.4.
-Upon upgrading from these condor versions, users will need to intervene
+This caused \Condor{dagman} jobs to fail to restart. This bug exists
+in all Condor versions 7.8.0 through 7.8.4.
+Upon upgrading from these Condor versions, users will need to intervene
 in order to restart their \Condor{dagman} jobs. \Condor{dagman} should not
-need such intervention when upgrading from condor version 7.8.5.  To restart
-a \Condor{dagman} job, the simplest solution is to do ``\Condor{submit}
-$\langle$DAGFile$\rangle$.condor.sub'', where the original \Condor{dagman} was
-submitted with ``\Condor{submit\_dagman} $\langle$DAGFile$\rangle$''.
+need such intervention when upgrading from Condor version 7.8.5.  
+To restart a \Condor{dagman} job, 
+the simplest solution is to issue the command
+\begin{verbatim}
+  condor_submit <DAGFile>.condor.sub
+\end{verbatim}
+where the original DAG was submitted with 
+\begin{verbatim}
+  condor_submit <DAGFile>
+\end{verbatim}
 \Ticket{3207}
 
 \item The Condor version 7.8.4 \Condor{negotiator} daemon wrote 
