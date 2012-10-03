@@ -1885,8 +1885,7 @@ SetDescription()
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
 	}
 	else if ( InteractiveJob ){
-		std::string default_description = "Interactive from ";
-		default_description += my_full_hostname();
+		std::string default_description = "Interactive job";
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
 	}
 	free(description);
