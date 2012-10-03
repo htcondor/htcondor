@@ -1880,18 +1880,15 @@ void
 SetDescription()
 {
 
-	char* description;
-	description = condor_param( Description, ATTR_JOB_DESCRIPTION );
+	char* description = condor_param( Description, ATTR_JOB_DESCRIPTION );
 
 	if ( description ){
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
+		free(description);
 	}
 	else if ( InteractiveJob ){
-		std::string default_description = "Interactive from ";
-		default_description += my_full_hostname();
-		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, "interactive job");
 	}
-	free(description);
 }
 
 #ifdef WIN32
