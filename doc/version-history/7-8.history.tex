@@ -33,8 +33,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor now contains a tool, accountant_log_fixer, that can fix the
-damage to the Accountantnew.log caused by the version 7.8.4 \Condor{negotiator}.
+\item Condor now contains a tool called \Prog{accountant\_log\_fixer}, 
+that can fix the damage to the file \File{Accountantnew.log} 
+caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \Ticket{3221}
 
 \end{itemize}
@@ -56,16 +57,23 @@ as completed and remove them from the job queue,
 even when they should have been requeued, according to policy
 \Ticket{3207}
 
-\item The \Condor{negotiator} version 7.8.4 would write corrupt resource entries
-to the Accountantnew.log that it would not be able to read back.
-The \Condor{negotiator} version 7.9.0 will abort when trying to read
-corrupted resource entries. The \Condor{negotiator} will now correct corrupt.
-resource entries created by 7.8.4 over time.
+\item The Condor version 7.8.4 \Condor{negotiator} daemon wrote 
+corrupt resource entries to the file \File{Accountantnew.log},
+which it would then not be able to read.
+The Condor version 7.9.0 \Condor{negotiator} daemon will abort 
+when trying to read these corrupted resource entries. 
+The \Condor{negotiator} will now correct these corrupt
+resource entries over time.
 \Ticket{3221}
 
-\item The \Condor{schedd} statistics \Attr{JobsAccumExecuteTime}
+\item Fixed a bug in which the \Condor{schedd} statistics ClassAd attributes
+\Attr{JobsAccumExecuteTime}
 and \Attr{JobsAccumPostExecuteTime} were sometimes much too large for jobs
 that had been vacated and then restarted.
+Note that these currently undocumented attributes would only appear
+in the ClassAd if the verbosity level for \Condor{schedd} statistics
+was set at the high value of 2 by the configuration variable
+\MacroNI{STATISTICS\_TO\_PUBLISH}.
 \Ticket{3227}
 
 \end{itemize}
