@@ -72,14 +72,8 @@ void main_init(int /* argc */, char * /* argv */ [])
 	init_classad();
 
     string log_name;
-<<<<<<< HEAD
     formatstr(log_name,"aviary_query.log");
-	string myname = "query@" + getScheddName();
-    provider = AviaryProviderFactory::create(log_name,myname,
-=======
-    sprintf(log_name,"aviary_query.log");
     provider = AviaryProviderFactory::create(log_name,getScheddName(),
->>>>>>> V7_8-branch
 											 "CUSTOM",QUERY_SERVER, "services/query/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");

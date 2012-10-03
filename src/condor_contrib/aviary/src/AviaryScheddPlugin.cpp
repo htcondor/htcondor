@@ -54,14 +54,8 @@ AviaryScheddPlugin::earlyInitialize()
 	if (skip) return; skip = true;
 
     string log_name;
-<<<<<<< HEAD
     formatstr(log_name,"aviary_job.log");
-	string myname = "job@" + getScheddName();
-    provider = AviaryProviderFactory::create(log_name,myname,
-=======
-    sprintf(log_name,"aviary_job.log");
     provider = AviaryProviderFactory::create(log_name,getScheddName(),
->>>>>>> V7_8-branch
 											 "SCHEDULER","JOB","services/job/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
