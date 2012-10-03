@@ -33,7 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor now contains a tool, accountant_log_fixer, that can fix the
+\item Condor now contains a tool, accountant\_log\_fixer, that can fix the
 damage to the Accountantnew.log caused by the version 7.8.4 \Condor{negotiator}.
 \Ticket{3221}
 
@@ -53,7 +53,15 @@ damage to the Accountantnew.log caused by the version 7.8.4 \Condor{negotiator}.
 
 \item The \Condor{schedd} daemon would mark scheduler universe jobs
 as completed and remove them from the job queue,
-even when they should have been requeued, according to policy
+even when they should have been requeued, according to policy.
+This causes \Condor{dagman} jobs to fail to restart. This bug exists
+in all condor versions 7.8.0 through 7.8.4.
+Upon upgrading from these condor versions, users will need to intervene
+in order to restart their \Condor{dagman} jobs. \Condor{dagman} should not
+need such intervention when upgrading from condor version 7.8.5.  To restart
+a \Condor{dagman} job, the simplest solution is to do ``\Condor{submit}
+$\langle$DAGFile$\rangle$.condor.sub'', where the original \Condor{dagman} was
+submitted with ``\Condor{submit\_dagman} $\langle$DAGFile$\rangle$''.
 \Ticket{3207}
 
 \item The \Condor{negotiator} version 7.8.4 would write corrupt resource entries
