@@ -1149,10 +1149,14 @@ main( int argc, char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// This effectively means executable, transfer_executable,
+		// arguments, universe, and queue X are ignored from the submit
+		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
 			extraLines.Append( "executable=/bin/sleep" );
 			extraLines.Append( "transfer_executable=false" );
 			extraLines.Append( "args=180" );
+			extraLines.Append( "universe=vanilla" );
 		}
 	}
 
