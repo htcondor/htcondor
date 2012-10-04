@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:ipv6}Running Condor on an IPv6 Network Stack}
+\subsection{\label{sec:ipv6}Running HTCondor on an IPv6 Network Stack}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{IPv6|(}
 
-Condor has limited support for running on IPv6 networks.
+HTCondor has limited support for running on IPv6 networks.
 
 Current Limitations
 
@@ -48,7 +48,7 @@ CONDOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f]:6462
 COLLECTOR_HOST =[2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
 \end{verbatim}
 
-Because IPv6 addresses are not currently supported in Condor's 
+Because IPv6 addresses are not currently supported in HTCondor's 
 security settings, 
 \MacroUNI{CONDOR\_HOST} or \MacroUNI{COLLECTOR\_HOST} will not
 be permitted in the security configuration, 
