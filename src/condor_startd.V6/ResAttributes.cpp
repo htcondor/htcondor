@@ -1151,8 +1151,14 @@ CpuAttributes::show_totals( int dflag )
 	::dprintf( dflag | D_NOHEADER, 
 			 "slot type %d: " , c_type);
 
-	::dprintf( dflag | D_NOHEADER, 
+	
+	if( c_num_cpus == AUTO_CPU ) {
+		::dprintf( dflag | D_NOHEADER, 
+			 "Cpus: auto");
+	} else {
+		::dprintf( dflag | D_NOHEADER, 
 			 "Cpus: %d", c_num_cpus);
+	}
 
 	if( c_phys_mem == AUTO_MEM ) {
 		::dprintf( dflag | D_NOHEADER, 
@@ -1258,6 +1264,7 @@ AvailAttributes::AvailAttributes( MachAttributes* map ):
 	m_execute_partitions(500,MyStringHash,updateDuplicateKeys)
 {
 	a_num_cpus = map->num_cpus();
+	a_num_cpus_auto_count = 0;
 	a_phys_mem = map->phys_mem();
 	a_phys_mem_auto_count = 0;
 	a_virt_mem_fraction = 1.0;
