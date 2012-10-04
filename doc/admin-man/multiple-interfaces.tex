@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Multiple-Interfaces}Configuring Condor for
+\subsection{\label{sec:Multiple-Interfaces}Configuring HTCondor for
 Machines With Multiple Network Interfaces } 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -7,10 +7,10 @@ Machines With Multiple Network Interfaces }
 \index{network interfaces!multiple}
 \index{NICs}
 
-Condor can run on machines with
+HTCondor can run on machines with
 multiple network interfaces.
-Starting with Condor version 6.7.13
-(and therefore all Condor 6.8 and more recent versions),
+Starting with HTCondor version 6.7.13
+(and therefore all HTCondor 6.8 and more recent versions),
 new functionality is
 available that allows even better support for multi-homed
 machines, using the configuration variable \Macro{BIND\_ALL\_INTERFACES}.
@@ -29,7 +29,7 @@ BIND\_ALL\_INTERFACES}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Machines can be configured such that
-whenever Condor daemons or tools
+whenever HTCondor daemons or tools
 call \Syscall{bind}, the daemons or tools use all network interfaces on
 the machine.
 This means that outbound connections will always use the appropriate
@@ -39,7 +39,7 @@ an interface that might not have a route to the given destination.
 Furthermore, sockets upon which a daemon listens for incoming connections 
 will be bound to all network interfaces on the machine.
 This means that so long as remote clients know the right port, they can
-use any IP address on the machine and still contact a given Condor daemon.
+use any IP address on the machine and still contact a given HTCondor daemon.
 
 This functionality is on by default.  To disable this functionality, 
 the boolean configuration
@@ -68,7 +68,7 @@ Here are descriptions of the limitations.
   causing the authentication to fail.
   Sites using Kerberos authentication on multi-homed machines are
   strongly encouraged not to enable \MacroNI{BIND\_ALL\_INTERFACES},
-  at least until Condor's Kerberos functionality
+  at least until HTCondor's Kerberos functionality
   supports using multiple Kerberos tickets together with finding the right one
   to match the IP address a given socket is bound to. 
 
@@ -78,46 +78,46 @@ Here are descriptions of the limitations.
   One interface is on the public Internet, while the other connects to
   a private network.
   Both the multi-homed machine and the private network machines
-  comprise a Condor pool.
+  comprise an HTCondor pool.
   If the multi-homed machine enables \MacroNI{BIND\_ALL\_INTERFACES},
   then it is at risk from hackers trying to compromise the security of the pool.
   Should this multi-homed machine be compromised,
   the entire pool is vulnerable.
   Most sites in this situation would run an \Prog{sshd} on the
   multi-homed machine so that remote users who wanted to access the
-  pool could log in securely and use the Condor tools directly.
-  In this case, remote clients do not need to use Condor tools running
-  on machines in the public network to access the Condor daemons on
+  pool could log in securely and use the HTCondor tools directly.
+  In this case, remote clients do not need to use HTCondor tools running
+  on machines in the public network to access the HTCondor daemons on
   the multi-homed machine.
-  Therefore, there is no reason to have Condor daemons listening on
+  Therefore, there is no reason to have HTCondor daemons listening on
   ports on the public Internet, causing a potential security threat.
 
 \item[Up to two IP addresses will be advertised.]
-  At present, even though a given Condor daemon will be listening to
+  At present, even though a given HTCondor daemon will be listening to
   ports on multiple interfaces, each with their own IP address,
   there is currently no mechanism for that daemon to advertise all of
   the possible IP addresses where it can be contacted.
-  Therefore, Condor clients (other Condor daemons or tools) will not
+  Therefore, HTCondor clients (other HTCondor daemons or tools) will not
   necessarily able to locate and communicate with a given daemon
   running on a multi-homed machine where
   \MacroNI{BIND\_ALL\_INTERFACES} has been enabled.
 
-  Currently, Condor daemons can only advertise two IP addresses in
+  Currently, HTCondor daemons can only advertise two IP addresses in
   the ClassAd they send to their \Condor{collector}.  One is the
   public IP address and the other is the private IP address.
-  Condor tools and other daemons that wish to connect to the daemon will
+  HTCondor tools and other daemons that wish to connect to the daemon will
   use the private IP address if they are configured with the same private
   network name, and they will use the public IP address otherwise.
   So, even if the daemon is listening on 3 or more different interfaces,
   each with a separate IP, the daemon must choose which two IP addresses to
   advertise so that other daemons and tools can connect to it.
 
-  By default, Condor advertises the IP address of the network interface
+  By default, HTCondor advertises the IP address of the network interface
   used to contact the \Condor{collector} as its public address,
   since this is the most likely to be
   accessible to other processes that query the same \Condor{collector}.
   The \Macro{NETWORK\_INTERFACE} configuration variable can be used 
-  to specify the public IP address Condor should advertise, and
+  to specify the public IP address HTCondor should advertise, and
   \Macro{PRIVATE\_NETWORK\_INTERFACE}, along with
   \Macro{PRIVATE\_NETWORK\_NAME} can be used to specify the
   private IP address to advertise.
@@ -125,9 +125,9 @@ Here are descriptions of the limitations.
 \end{description}
 
 Sites that make heavy use of private networks and multi-homed machines
-should consider if using the Condor Connection Broker, CCB,
+should consider if using the HTCondor Connection Broker, CCB,
 is right for them.
-More information about CCB and Condor can be found in
+More information about CCB and HTCondor can be found in
 section~\ref{sec:CCB} on page~\pageref{sec:CCB}.
 
 
@@ -135,7 +135,7 @@ section~\ref{sec:CCB} on page~\pageref{sec:CCB}.
 \subsubsection{Central Manager with Two or More NICs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Often users of Condor wish to set up compute farms where there is one
+Often users of HTCondor wish to set up compute farms where there is one
 machine with two network interface cards (one for the public Internet,
 and one for the private net). It is convenient to set up the head
 node as a central manager in most cases and so here are the instructions
@@ -149,7 +149,7 @@ not active, or the host/domain names associated with the interfaces are
 incorrectly configured. 
 
 Given that the interfaces are up and functioning, and they have good
-host/domain names associated with them here is how to configure Condor:
+host/domain names associated with them here is how to configure HTCondor:
 
 In this example, \Expr{farm-server.farm.org} maps to the private interface.
 In the central manager's global (to the cluster) configuration file:
@@ -175,15 +175,15 @@ jobs will run as \Login{nobody} on the farm machines.
 
 In order to get vanilla jobs and file server load balancing for standard
 universe jobs working (under Unix), do some more work both in
-the cluster you have put together and in Condor to make everything work.
+the cluster you have put together and in HTCondor to make everything work.
 First, you need a file server (which could also be the central manager) to
 serve files to all of the farm machines. This could be NFS or AFS, 
-and it does not really matter to Condor. 
+and it does not really matter to HTCondor. 
 The mount point of the directories you wish
 your users to use must be the same across all of the farm machines. Now,
 configure \Macro{UID\_DOMAIN} and \Macro{FILESYSTEM\_DOMAIN} to be
 homogeneous across the farm machines and the central manager. 
-Inform Condor that an NFS or AFS file system exists and that
+Inform HTCondor that an NFS or AFS file system exists and that
 is done in this manner. In the global (to the farm) configuration file:
 
 \begin{verbatim}
@@ -209,7 +209,7 @@ to be added on to the end of the host name.
 
 If client machine has two or more NICs, then there might be
 a specific network interface on which the client machine desires to
-communicate with the rest of the Condor pool. 
+communicate with the rest of the HTCondor pool. 
 In this case, the local configuration file for the client should have
 \begin{verbatim}
   NETWORK_INTERFACE = <IP address of desired interface>
