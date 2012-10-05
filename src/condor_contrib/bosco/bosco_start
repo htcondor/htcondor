@@ -6,6 +6,23 @@ if [ $? != 0 ] ; then
     echo "Please source the bosco.[sh|csh] script first."
 fi
 
+# Generate the password file, if it doesn't already exist 
+bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE`
+if [ ! -e $bosco_passwd_file ]; then
+    random_string=`echo $RANDOM | md5sum | awk '{print $1}'`
+    condor_store_cred -p $random_string -f $bosco_passwd_file
+fi
+
+if [ ! -e $bosco_passwd_file.daemon ]; then
+    cp $bosco_passwd_file $bosco_passwd_file.daemon
+fi
+
+# Check file ownership of the passwd file, and change if possible
+daemon_owner=`stat -c %U $bosco_passwd_file.daemon`
+if [ "$daemon_owner" != `whoami` ]; then
+    chown `whoami`: $bosco_passwd_file.daemon
+fi
+
 condor_master
 if [ $? == 0 ] ; then
     echo "BOSCO Started"
