@@ -1869,7 +1869,7 @@ param_double( const char *name, double default_value,
 		// simple literal.  Since that didn't work, now try parsing it
 		// as an expression.
 		ClassAd rhs;
-		float float_result;
+		float float_result = 0.0;
 		if( me ) {
 			rhs = *me;
 		}

@@ -209,6 +209,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
 		 *  @param value Where we the copy the string. We ensure there is enough space. 
+		 *    This parameter is only modified on success.
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
          */
@@ -217,6 +218,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
 		 *  @param value A MyString where we the copy the string. We ensure there is enough space. 
+		 *    This parameter is only modified on success.
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
          */
@@ -226,6 +228,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
 		 *  @param value A std::string where we the copy the string.
+		 *    This parameter is only modified on success.
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
          */
@@ -235,20 +238,25 @@ class ClassAd : public classad::ClassAd
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
 		 *  @param value Where we the copy the value.
+		 *    This parameter is only modified on success.
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not an integer
 		 */
 	int EvalInteger (const char *name, classad::ClassAd *target, long long &value);
 	int EvalInteger (const char *name, classad::ClassAd *target, int& value) {
-		long long ival;
+		long long ival = 0;
 		int result = EvalInteger(name, target, ival);
-		value = (int)ival;
+		if ( result ) {
+			value = (int)ival;
+		}
 		return result;
 	}
 	int EvalInteger (const char *name, classad::ClassAd *target, long & value) {
-		long long ival;
+		long long ival = 0;
 		int result = EvalInteger(name, target, ival);
-		value = (long)ival;
+		if ( result ) {
+			value = (long)ival;
+		}
 		return result;
 	}
 
@@ -256,15 +264,18 @@ class ClassAd : public classad::ClassAd
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
 		 *  @param value Where we the copy the value. Danger: we just use strcpy.
+		 *    This parameter is only modified on success.
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a float.
 		 */
 
 	int EvalFloat (const char *name, classad::ClassAd *target, double &value);
 	int EvalFloat (const char *name, classad::ClassAd *target, float &value) {
-		double dval;
+		double dval = 0.0;
 		int result = EvalFloat(name, target, dval);
-		value = dval;
+		if ( result ) {
+			value = dval;
+		}
 		return result;
 	}
 
@@ -272,6 +283,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
 		 *  @param value Where we a 1 (if the value is non-zero) or a 1. 
+		 *    This parameter is only modified on success.
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a number.
 		 */
