@@ -12,16 +12,21 @@ source "$confscript"
 
 cmd=`basename "$0"`
 
-if ! pwd | grep -q "^${local}"; then
-  echo "rcondor: working directory outside of mount point: $local" >&2
-  exit 1
-fi
-
-wdir=`pwd | sed "s|${local}|${remote}|g"`
-
 # wrap each argument in quotes to preserve whitespaces
 for arg in "$@"; do
   args=$args"'$arg' "
 done
 
-$ssh "$usr_host" "cd '$wdir' && $cmd $args"
+mydir=`readlink -e $PWD`
+if ! echo "$mydir" | grep -q "^${local}"; then
+  if [[ "$cmd" = "condor_submit" || "$cmd" = "condor_submit_dag" || "$cmd" = "condor_userlog" ]]; then 
+    echo "$cmd can only be run from inside the mountpoint: $localraw" >&2
+    exit 1
+  fi
+
+  $ssh "$usr_host" "$cmd $args"
+else
+  wdir=`echo "$mydir" | sed "s|${local}|${remote}|g"`
+
+  $ssh "$usr_host" "cd '$wdir' && $cmd $args"
+fi

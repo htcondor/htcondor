@@ -11,5 +11,5 @@ fi
 
 source "$confscript"
 
-echo "Creating mountpoint $local"
+echo "Creating mountpoint $localraw"
 $sshfs "$usr_host:$remote" "$local"

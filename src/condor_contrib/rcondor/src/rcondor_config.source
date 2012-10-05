@@ -15,6 +15,9 @@
 #  sshfs    - which sshfs command to use
 #  sshfsu   - which sshfs unmount command to use
 #
+# It also defines the raw version:
+#  localraw - local, as provided by the config
+#
 
 #
 # Config files it looks for:
@@ -77,20 +80,19 @@ fi
 # local
 #
 
-local=`get_val LOCAL "$conf"`
-local=`eval echo $local`
+localraw=`get_val LOCAL "$conf"`
+localraw=`eval echo $localraw`
 
-if [ -z "$local" ]; then
+if [ -z "$localraw" ]; then
   echo "rcondor: config missing LOCAL" >&2
   exit 1
 fi
 
-t=`readlink -e $local`
+local=`readlink -e $localraw`
 if [ $? -ne 0 ]; then
-  echo -e "rcondor: path of local does not exist\n$local" >&2
+  echo -e "rcondor: path of local does not exist\n$localraw" >&2
   exit 1
 fi
-local="$t"
 
 if [ ! -d "$local" ]; then
   echo -e "rcondor: path of local not a dir\n$local" >&2

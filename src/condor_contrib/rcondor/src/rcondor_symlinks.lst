@@ -1,11 +1,10 @@
-#abc
+#list of commands we support
 condor_checkpoint
 condor_check_userlogs
 condor_compile
 condor_config_val
 condor_findhost
 condor_gather_info
-condor_glidein
 condor_history
 condor_hold
 condor_prio
