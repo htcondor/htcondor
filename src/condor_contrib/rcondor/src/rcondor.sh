@@ -12,6 +12,10 @@ source "$confscript"
 
 cmd=`basename "$0"`
 
+if [[ "$cmd" == "rcondor_id" ]]; then 
+  cmd="id"
+fi
+
 # wrap each argument in quotes to preserve whitespaces
 for arg in "$@"; do
   args=$args"'$arg' "

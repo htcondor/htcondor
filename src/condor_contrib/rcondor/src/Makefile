@@ -26,6 +26,7 @@ install:
 # create condor command links to rcondor.sh and others
 	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_mnt $(DESTDIR)$(bindir)/rcondor_mnt
 	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_unmnt $(DESTDIR)$(bindir)/rcondor_unmnt
+	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/rcondor_id
 	./create_symlinks.sh $(DESTDIR)$(bindir) $(DESTDIR)$(libexecdir)/rcondor ./rcondor_symlinks.lst >/dev/null
 	./create_setup_scripts.sh $(DESTDIR)$(prefix)
 
@@ -35,6 +36,7 @@ uninstall:
 	rm -rf $(DESTDIR)$(docdir)
 	rm -f $(DESTDIR)$(bindir)/rcondor_mnt
 	rm -f $(DESTDIR)$(bindir)/rcondor_unmnt
+	rm -f $(DESTDIR)$(bindir)/rcondor_id
 	rm -f $(DESTDIR)$(bindir)/rcondor_configure
 	./remove_symlinks.sh $(DESTDIR)$(bindir) ./rcondor_symlinks.lst >/dev/null
 	rm -f $(DESTDIR)$(prefix)/rcondor_setup.sh $(DESTDIR)$(prefix)/rcondor_setup.csh
