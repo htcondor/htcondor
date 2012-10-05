@@ -16,13 +16,14 @@ install:
 	install -m 644 ../license.txt $(DESTDIR)$(docdir)
 	install -m 644 ../README $(DESTDIR)$(docdir)
 
-# install scripts
+# install scripts in libexec
 	install -m 755 rcondor.sh $(DESTDIR)$(libexecdir)/rcondor
 	install -m 644 rcondor_config.source $(DESTDIR)$(libexecdir)/rcondor
-	install -m 755 rcondor_mnt $(DESTDIR)$(bindir)
+	install -m 755 rcondor_mnt $(DESTDIR)$(libexecdir)/rcondor
 	install -m 755 rcondor_configure $(DESTDIR)$(bindir)
 
-# create condor command links to rcondor.sh
+# create condor command links to rcondor.sh and others
+	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_mnt $(DESTDIR)$(bindir)/rcondor_mnt
 	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_q
 	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_rm
 	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_status
