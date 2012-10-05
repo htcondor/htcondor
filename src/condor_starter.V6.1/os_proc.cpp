@@ -511,7 +511,7 @@ OsProc::StartJob(FamilyInfo* family_info, NetworkNamespaceManager * network_mana
 			how = "via privsep switchboard ";
 		}
 		else {
-			username = get_real_username();
+			username = get_user_loginname();
 		}
 		if( !username ) {
 			username = "(null)";

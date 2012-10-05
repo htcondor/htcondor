@@ -87,6 +87,7 @@ const float AUTO_SHARE = 123;
 // evenly between slots using AUTO_MEM.
 const int AUTO_MEM = -123;
 const int AUTO_RES = -9999;
+const int AUTO_CPU = -9999;
 
 // This is used with the AttribValue structure to identify the datatype
 // for the value (selects an entry in the union)
@@ -407,6 +408,7 @@ public:
 
 private:
 	int				a_num_cpus;
+	int             a_num_cpus_auto_count; // number of slots specifying "auto"
 	int				a_phys_mem;
 	int             a_phys_mem_auto_count; // number of slots specifying "auto"
 	float			a_virt_mem_fraction;

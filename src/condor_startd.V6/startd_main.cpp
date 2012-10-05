@@ -30,6 +30,8 @@
 #include "VMManager.h"
 #include "VMRegister.h"
 #include "classadHistory.h"
+#include "misc_utils.h"
+#include "slot_builder.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)

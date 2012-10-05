@@ -211,10 +211,6 @@ public:
 
 	int nextId( void ) { return id_disp->next(); };
 
-		// Builds a CpuAttributes object to represent the slot
-		// described by the given machine type.
-	CpuAttributes*	buildSlot( int slot_id, StringList* list, int type, bool except = false );
-
 		// returns true if specified slot is draining
 	bool isSlotDraining(Resource *rip);
 
@@ -244,6 +240,8 @@ public:
 		// badput is in seconds
 	void addToDrainingBadput( int badput );
 
+	bool typeNumCmp( int* a, int* b );
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -270,55 +268,6 @@ private:
 
 	// List of Supplemental ClassAds to publish
 	StartdNamedClassAdList			extra_ads;
-
-		// Look up the configured value for the execute directory
-		// for a given slot.  Also get a unique identifier for the
-		// disk partition containing the execute directory.
-	void GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *partition_id );
-
-	    // Returns the fraction represented by the given fraction or
-		// percent string.
-	float		parse_value( const char*, int type, bool except = false );
-
-		// All the logic of computing an integer number of cpus or
-		// physical memory out of a fractional share.   
-	int			compute_cpus( float share );
-	int			compute_phys_mem( float share );
-    int         compute_local_resource(const float share, const string& rname, const CpuAttributes::slotres_map_t& machres);
-		/* 
-		  Return a pointer to a newly-allocated array of CpuAttributes
-		  objects of the number and types specified in the config
-		  file.  You actually pass in an int for the total number of
-		  CpuAttributes objects you expect to create and an array of
-		  ints that holds the types you care about (which should be
-		  created with countTypes()).  The array will be in
-		  type-order.  Returns NULL on error.  The last argument
-		  specifies if the function should EXCEPT() on error, or just
-		  dprintf() and return.
-		*/
-	CpuAttributes** buildCpuAttrs( int total, int* type_num_array, 
-								   bool except = false );
-
-		// Initialize our type_strings array (a ResMgr data member)
-		// for all slot types.   
-	void initTypes( bool except = false );
-
-		/*
-		  Count the number of each slot type specified in the config
-		  file.  If no type-specific entires are found, check for
-		  NUM_VIRTUAL_MACHINES, and return that for type 0.  If
-		  that's not defined, just use num_cpus() for type 0.  We
-		  return the total number of slots to be used, and set the given
-		  array pointer to point to a newly allocated array of ints,
-		  indexed by type number.  
-		*/
-	int countTypes( int** array_ptr, bool except = false );
-
- 		/* 
-		  Compare the two arrays of ints and see if they hold the
-		  same values.  Returns true if they're the same.
-		*/
-	bool typeNumCmp( int* a, int* b );
 
 		/* 
 		  See if the destroy_list is empty.  If so, allocate whatever

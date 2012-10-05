@@ -22,6 +22,9 @@ if(${OS_NAME} STREQUAL "DARWIN")
   if(${TEST_VER} MATCHES "10.[678]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
+
+  # Support Mac OS X 10.6 and above
+  set( ENV{MACOSX_DEPLOYMENT_TARGET} 10.6 )
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)

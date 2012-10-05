@@ -1135,7 +1135,7 @@ void nordugrid_status_read_callback( void *arg,
 		user_arg->buff = globus_libc_realloc( user_arg->buff,
 											  user_arg->buff_len );
 	}
-	bcopy( buffer, (void *)((long)user_arg->buff + offset), length );
+	bcopy( buffer, (void *)((char *)user_arg->buff + offset), length );
 	if ( user_arg->buff_filled < offset + length ) {
 		user_arg->buff_filled = offset + length;
 	}
@@ -1817,9 +1817,9 @@ void nordugrid_exit_info_read_callback( void *arg,
 		}
 		user_arg->buff = globus_libc_realloc( user_arg->buff,
 											  user_arg->buff_len );
-		memset( (void *)((long)user_arg->buff + old_len), '*', (long) user_arg->buff_len - old_len );
+		memset( (void *)((char *)user_arg->buff + old_len), '*', (long) user_arg->buff_len - old_len );
 	}
-	bcopy( buffer, (void*)((long)user_arg->buff + offset), length );
+	bcopy( buffer, (void*)((char *)user_arg->buff + offset), length );
 	if ( user_arg->buff_filled < offset + length ) {
 		user_arg->buff_filled = offset + length;
 	}
@@ -1921,7 +1921,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 		while ( strncmp( file, "WallTime", 8 ) ) {
 			file = strchr( file, '\n' );
 			if ( file == NULL ) {
-				file = (char *) ( (long)user_arg->buff + user_arg->buff_filled );
+				file = ( (char *)user_arg->buff + user_arg->buff_filled );
 				break;
 			} else {
 				file += 1;
