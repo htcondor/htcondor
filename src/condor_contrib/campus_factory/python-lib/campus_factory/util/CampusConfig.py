@@ -9,6 +9,7 @@ import logging
 from campus_factory.ClusterStatus import CondorConfig
 
 parsed_config_file = None
+local_set_options = {}
 
 def get_option(option, default=None):
     """
@@ -18,17 +19,23 @@ def get_option(option, default=None):
     @param default: The default if the option isn't found
     @return: The option with key = param option, or default if the option is not found.
     """
-    # First get from environment
+    
+    global local_set_options
+    # First, check locally set options
+    if option in local_set_options:
+        return local_set_options[option]
+    
+    # Second get from environment
     env_option = _get_option_env(option)
     if env_option:
         return env_option
     
-    # Second get from the campus factory configuration
+    # Third get from the campus factory configuration
     config_option = _get_config_option(option)
     if config_option:
         return config_option
     
-    # Third, get from the condor configuration
+    # Forth, get from the condor configuration
     condor_option = _get_condor_option(option)
     if condor_option:
         return condor_option
@@ -53,6 +60,18 @@ def get_option_section(section, option, default=None):
         return config_response
     else:
         return default
+    
+
+def set_option(option, value):
+    """
+    Set a function for this instance of the factory.  Useful when one setting
+    is detected that can affect another.
+    
+    @param option: Option to be set
+    @param value: Value to set option to.
+    """
+    global local_set_options
+    local_set_options[option] = value
     
 
 def set_config_file(filename):
