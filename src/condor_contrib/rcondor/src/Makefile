@@ -20,22 +20,19 @@ install:
 	install -m 755 rcondor.sh $(DESTDIR)$(libexecdir)/rcondor
 	install -m 644 rcondor_config.source $(DESTDIR)$(libexecdir)/rcondor
 	install -m 755 rcondor_mnt $(DESTDIR)$(libexecdir)/rcondor
+	install -m 755 rcondor_unmnt $(DESTDIR)$(libexecdir)/rcondor
 	install -m 755 rcondor_configure $(DESTDIR)$(bindir)
 
 # create condor command links to rcondor.sh and others
 	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_mnt $(DESTDIR)$(bindir)/rcondor_mnt
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_q
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_rm
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_status
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_submit
+	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_unmnt $(DESTDIR)$(bindir)/rcondor_unmnt
+	./create_symlinks.sh $(DESTDIR)$(bindir) $(DESTDIR)$(libexecdir)/rcondor ./rcondor_symlinks.lst >/dev/null
 
 .PHONY: uninstall
 uninstall:
 	rm -rf $(DESTDIR)$(libexecdir)/rcondor
 	rm -rf $(DESTDIR)$(docdir)
 	rm -f $(DESTDIR)$(bindir)/rcondor_mnt
+	rm -f $(DESTDIR)$(bindir)/rcondor_unmnt
 	rm -f $(DESTDIR)$(bindir)/rcondor_configure
-	rm -f $(DESTDIR)$(bindir)/condor_q
-	rm -f $(DESTDIR)$(bindir)/condor_rm
-	rm -f $(DESTDIR)$(bindir)/condor_status
-	rm -f $(DESTDIR)$(bindir)/condor_submit
+	./remove_symlinks.sh $(DESTDIR)$(bindir) ./rcondor_symlinks.lst >/dev/null

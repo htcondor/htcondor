@@ -24,4 +24,4 @@ for arg in "$@"; do
   args=$args"'$arg' "
 done
 
-ssh $usr_host "cd '$wdir' && $cmd $args"
+$ssh "$usr_host" "cd '$wdir' && $cmd $args"

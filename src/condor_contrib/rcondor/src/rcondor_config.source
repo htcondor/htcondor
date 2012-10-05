@@ -11,6 +11,9 @@
 #  usr_host - the remote location of the ssh server (e.g. user@node)
 #  local    - local mountpoint (abspath)
 #  remote   - remote directory, can be relative to remote home
+#  ssh      - which ssh command to use
+#  sshfs    - which sshfs command to use
+#  sshfsu   - which sshfs unmount command to use
 #
 
 #
@@ -31,9 +34,21 @@
 #              this one is not locally evaluated, but may reference remote variables
 #               which will be expanded after calling ssh
 #              defaults to "."
+#   SSH      - will be loaded into ssh
+#              defaults to "ssh"
+#   SSHFS    - will be loaded into sshfs
+#              defaults to "sshfs -o idmap=user"
+#   SSHFSU   - will be loaded into sshfsu
+#              defaults to "fusermount -u"
 #
 # If an attributed is defined multiple times, the last value is taken.
 #
+
+function get_val {
+ # split on first = only
+ ae='{i=index($0,"=");print substr($0,i+1);}'
+ echo "$2" | awk "/^ *$1 *=/${ae}"
+}
 
 #
 # Load conf into memory
@@ -47,10 +62,10 @@ if [ -z "$conf" ]; then
 fi
 
 #
-# ust_host
+# usr_host
 #
 
-usr_host=`echo "$conf" | awk -F = '/^ *USR_HOST *=/ {print $2}' |tail -1`
+usr_host=`get_val USR_HOST "$conf"`
 usr_host=`eval echo $usr_host` # strip whitespaces
 
 if [ -z "$usr_host" ]; then
@@ -62,7 +77,7 @@ fi
 # local
 #
 
-local=`echo "$conf" | awk -F = '/^ *LOCAL *=/ {print $2}'|tail -1`
+local=`get_val LOCAL "$conf"`
 local=`eval echo $local`
 
 if [ -z "$local" ]; then
@@ -86,10 +101,42 @@ fi
 # remote
 #
 
-remote=`echo "$conf" | awk -F = '/^ *REMOTE *=/ {print $2}'|tail -1`
+remote=`get_val REMOTE "$conf"`
 remote=`echo $remote`
 
 if [ -z "$remote" ]; then
   remote="."
 fi
 
+#
+# ssh
+#
+
+ssh=`get_val SSH "$conf"`
+ssh=`echo $ssh`
+
+if [ -z "$ssh" ]; then
+  ssh="ssh"
+fi
+
+#
+# sshfs
+#
+
+sshfs=`get_val SSHFS "$conf"`
+sshfs=`echo $sshfs`
+
+if [ -z "$sshfs" ]; then
+  sshfs="sshfs -o idmap=user"
+fi
+
+#
+# sshfsu
+#
+
+sshfsu=`get_val SSHFSU "$conf"`
+sshfsu=`echo $sshfsu`
+
+if [ -z "$sshfsu" ]; then
+  sshfsu="fusermount -u"
+fi
