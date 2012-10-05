@@ -1,0 +1,95 @@
+#
+# This helper script will source the rcondor config file
+# Will exit hard on error
+#
+# Author: Igor Sfiligoi (isfiligoi@ucsd.edu)
+# License: BSD
+#
+
+#
+# Attributes it puts in the environment
+#  usr_host - the remote location of the ssh server (e.g. user@node)
+#  local    - local mountpoint (abspath)
+#  remote   - remote directory, can be relative to remote home
+#
+
+#
+# Config files it looks for:
+#   /etc/rcondor_config
+#   $HOME/.rcondor/rcondor.conf
+#
+
+#
+# Attributes it looks for in the config files:
+#   USR_HOST - will be loaded into usr_host
+#              will be evaluated, so it can contain references to env variables (e.g. $USER)
+#              no default, a value must be provided
+#   LOCAL    - will be loaded into local
+#              will be evaluated, so it can contain references to env variables (e.g. $USER)
+#              no defualt, a value must be provided
+#   REMOTE   - will be loaded into remote
+#              this one is not locally evaluated, but may reference remote variables
+#               which will be expanded after calling ssh
+#              defaults to "."
+#
+# If an attributed is defined multiple times, the last value is taken.
+#
+
+#
+# Load conf into memory
+# use cat and ignore any errors (e.g. file not found)
+#
+
+conf=`cat /etc/rcondor_config $HOME/.rcondor/rcondor.conf 2>/dev/null`
+if [ -z "$conf" ]; then
+  echo -e "rcondor: config file does not exist in either\n/etc/rcondor_config\nor\n$HOME/.rcondor/rcondor.conf" >&2  
+  exit 1
+fi
+
+#
+# ust_host
+#
+
+usr_host=`echo "$conf" | awk -F = '/^ *USR_HOST *=/ {print $2}' |tail -1`
+usr_host=`eval echo $usr_host` # strip whitespaces
+
+if [ -z "$usr_host" ]; then
+  echo "rcondor: config missing USR_HOST" >&2
+  exit 1
+fi
+
+#
+# local
+#
+
+local=`echo "$conf" | awk -F = '/^ *LOCAL *=/ {print $2}'|tail -1`
+local=`eval echo $local`
+
+if [ -z "$local" ]; then
+  echo "rcondor: config missing LOCAL" >&2
+  exit 1
+fi
+
+t=`readlink -e $local`
+if [ $? -ne 0 ]; then
+  echo -e "rcondor: path of local does not exist\n$local" >&2
+  exit 1
+fi
+local="$t"
+
+if [ ! -d "$local" ]; then
+  echo -e "rcondor: path of local not a dir\n$local" >&2
+  exit 1
+fi
+
+#
+# remote
+#
+
+remote=`echo "$conf" | awk -F = '/^ *REMOTE *=/ {print $2}'|tail -1`
+remote=`echo $remote`
+
+if [ -z "$remote" ]; then
+  remote="."
+fi
+

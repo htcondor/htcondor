@@ -18,6 +18,7 @@ install:
 
 # install scripts
 	install -m 755 rcondor.sh $(DESTDIR)$(libexecdir)/rcondor
+	install -m 644 rcondor_config.source $(DESTDIR)$(libexecdir)/rcondor
 	install -m 755 rcondor_mnt $(DESTDIR)$(bindir)
 	install -m 755 rcondor_configure $(DESTDIR)$(bindir)
 
