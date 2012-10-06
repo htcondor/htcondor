@@ -41,7 +41,6 @@
 #include "profile.WINDOWS.h"
 #include "access_desktop.WINDOWS.h"
 #endif
-#include "NetworkPluginManager.h"
 #include "classad_oldnew.h"
 
 extern CStarter *Starter;
@@ -564,8 +563,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
                                              affinity_mask,
 											 NULL,
                                              &create_process_err_msg,
-					     fs_remap,
-					     rlimit_as_hard_limit);
+                                             fs_remap,
+											 rlimit_as_hard_limit);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.

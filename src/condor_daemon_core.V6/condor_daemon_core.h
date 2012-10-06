@@ -60,7 +60,6 @@
 #include "condor_sinful.h"
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
-#include "NetworkPluginManager.h"
 #include "filesystem_remap.h"
 
 #include "../condor_procd/proc_family_io.h"
@@ -1144,7 +1143,7 @@ class DaemonCore : public Service
         sigset_t        *sigmask             = NULL,
         int             job_opt_mask         = 0,
         size_t          *core_hard_limit     = NULL,
-        int             *affinity_mask       = NULL,
+        int              *affinity_mask	     = NULL,
         char const      *daemon_sock         = NULL,
         MyString        *err_return_msg      = NULL,
         FilesystemRemap *remap               = NULL,

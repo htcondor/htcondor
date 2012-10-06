@@ -5639,7 +5639,7 @@ void CreateProcessForkit::exec() {
 		// environment
 	if ( HAS_DCJOBOPT_NO_ENV_INHERIT(m_job_opt_mask) ) {
 		int i;
-			// The parent process could not have been exec'ed if there were
+			// The parent process could not have been exec'ed if there were 
 			// too many ancestor markers in its environment, so this check
 			// is more of an assertion.
 		if (pidenvid_filter_and_insert(&penvid, GetEnviron()) ==
@@ -5679,8 +5679,8 @@ void CreateProcessForkit::exec() {
 			_exit(errno);
 		}
 
-		// if the new entry fits into the penvid, then add it to the
-		// environment, else EXCEPT cause it is programmer's error
+		// if the new entry fits into the penvid, then add it to the 
+		// environment, else EXCEPT cause it is programmer's error 
 	if (pidenvid_append(&penvid, envid) == PIDENVID_OK) {
 		m_envobject.SetEnv( envid );
 	} else {
@@ -6134,7 +6134,7 @@ int DaemonCore::Create_Process(
 			int			  *affinity_mask,
 			char const    *daemon_sock,
 			MyString      *err_return_msg,
-			FilesystemRemap * remap,
+			FilesystemRemap *remap,
 			long		  as_hard_limit
             )
 {

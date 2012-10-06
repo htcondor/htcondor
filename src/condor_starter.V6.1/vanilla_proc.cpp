@@ -38,7 +38,6 @@
 #include "cgroup_limits.h"
 #include "NetworkPluginManager.h"
 
-#include <memory>
 #include <sstream>
 
 #ifdef WIN32
@@ -48,7 +47,7 @@ extern dynuser* myDynuser;
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd), m_cleanup_manager(false)
+VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd)
 {
 #if !defined(WIN32)
 	m_escalation_tid = -1;
@@ -380,18 +379,12 @@ VanillaProc::StartJob()
 					}
 				} else {
 					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir.c_str(), next_dir, next_dir);
- 				}
-				// Create mount.
- 			}
+				}
+			}
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir.c_str());
 			return FALSE;
  		}
-		// Long term, we'd like to squash $(EXECUTE) to prevent a job from poking
-		// around inside other job's sandboxes.  However, to do this, we'd need to
-		// rewrite the environment, the job ad, and the machine ad.  Don't know where
-		// this hooks in yet.
-		//
 	}
 
 	std::string network_name = "";
