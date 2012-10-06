@@ -9,19 +9,23 @@
 #include "network_namespaces.h"
 #include "network_manipulation.h"
 
-NetworkNamespaceManager::NetworkNamespaceManager(std::string &uniq_namespace) :
-	m_state(UNCREATED), m_network_namespace(uniq_namespace),
+static NetworkNamespaceManager instance;
+
+NetworkNamespaceManager::NetworkNamespaceManager() :
+	m_state(UNCREATED), m_network_namespace(""),
 	m_internal_pipe("i_" + m_network_namespace), m_external_pipe("e_" + m_network_namespace),
 	m_sock(-1), m_created_pipe(false)
 	{
+		PluginManager<NetworkManager>::registerPlugin(this);
 	}
 
-int NetworkNamespaceManager::CreateNamespace() {
+int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 	if (m_state != UNCREATED) {
 		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::CreateNamespace has already been invoked.\n");
 		m_state = FAILED;
 		return 1;
 	}
+	m_network_namespace = uniq_namespace;
 
 	if ((m_sock = create_socket()) < 0) {
 		dprintf(D_ALWAYS, "Unable to create a socket to talk to the kernel for network namespaces.\n");
@@ -90,7 +94,7 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 	return 0;
 }
 
-int NetworkNamespaceManager::PreClone() {
+int NetworkNamespaceManager::PreFork() {
 	if ((pipe(m_p2c) < 0) || (pipe(m_c2p) < 0)) {
 		dprintf(D_ALWAYS, "NetworkNamespaceManager: pipe() failed with %s (errno=%d).\n", strerror(errno), errno);
 		return -1;
@@ -102,7 +106,7 @@ int NetworkNamespaceManager::PreClone() {
 	return 0;
 }
 
-int NetworkNamespaceManager::PostCloneChild() {
+int NetworkNamespaceManager::PostForkChild() {
 
 	// Close the end of the pipes that aren't ours
 	close(m_p2c[1]);
@@ -187,7 +191,7 @@ failed_socket:
 
 }
 
-int NetworkNamespaceManager::PostCloneParent(pid_t pid) {
+int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 
         // Close the end of the pipes that aren't ours
 	close(m_p2c[0]);
@@ -271,7 +275,7 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
 	return 0;
 }
 
-int NetworkNamespaceManager::Cleanup() {
+int NetworkNamespaceManager::Cleanup(const std::string &) {
 
 	// Always try to 
 	if (m_state == CLEANED) {

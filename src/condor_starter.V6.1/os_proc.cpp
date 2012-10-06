@@ -41,7 +41,7 @@
 #include "profile.WINDOWS.h"
 #include "access_desktop.WINDOWS.h"
 #endif
-#include "network_namespaces.h"
+#include "NetworkPluginManager.h"
 #include "classad_oldnew.h"
 
 extern CStarter *Starter;
@@ -72,7 +72,7 @@ OsProc::~OsProc()
 
 
 int
-OsProc::StartJob(FamilyInfo* family_info, NetworkNamespaceManager * network_manager = NULL, FilesystemRemap* fs_remap=NULL)
+OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 {
 	int nice_inc = 0;
 	bool has_wrapper = false;
@@ -565,8 +565,7 @@ OsProc::StartJob(FamilyInfo* family_info, NetworkNamespaceManager * network_mana
 											 NULL,
                                              &create_process_err_msg,
 					     fs_remap,
-					     rlimit_as_hard_limit,
-                                             network_manager);
+					     rlimit_as_hard_limit);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.

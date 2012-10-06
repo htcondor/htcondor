@@ -17,7 +17,7 @@
  ############################################################### 
 
 
-file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* network_netlink_main.c ns_exec.c )
+file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* network_netlink_main.c )
 
 condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
@@ -28,8 +28,6 @@ endif()
 if(LINUX)
 	install(FILES nat_delete_script.sh DESTINATION "${C_LIBEXEC}" PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install(FILES nat_script.sh DESTINATION "${C_LIBEXEC}" PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	condor_exe(network_namespace_tester "network_netlink_main.c" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
-	condor_exe(ns_exec_tester "ns_exec.c" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
 
 # need to add all the other install targets for libexec.

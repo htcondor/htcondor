@@ -104,6 +104,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "authentication.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
+#include "NetworkPluginManager.h"
 
 #include "valgrind.h"
 #include "ipv6_hostname.h"
@@ -5222,8 +5223,7 @@ public:
 		size_t *core_hard_limit,
 		long    as_hard_limit,
 		int		*affinity_mask,
-		FilesystemRemap *fs_remap,
-		NetworkNamespaceManager * network_manager
+		FilesystemRemap *fs_remap
 	): m_errorpipe(the_errorpipe), m_args(the_args),
 	   m_job_opt_mask(the_job_opt_mask), m_env(the_env),
 	   m_inheritbuf(the_inheritbuf),
@@ -5242,8 +5242,7 @@ public:
 	   m_affinity_mask(affinity_mask),
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
-	   m_no_dprintf_allowed(false),
-	   m_network_manager(network_manager)
+	   m_no_dprintf_allowed(false)
 	{
 	}
 
@@ -5304,7 +5303,6 @@ private:
     FilesystemRemap *m_fs_remap;
 	bool m_wrote_tracking_gid;
 	bool m_no_dprintf_allowed;
-	NetworkNamespaceManager * m_network_manager;
 	priv_state m_priv_state;
 };
 
@@ -5349,10 +5347,9 @@ pid_t CreateProcessForkit::clone_safe_getppid() {
 
 pid_t CreateProcessForkit::fork_exec() {
 	pid_t newpid;
-	priv_state tmp_priv_state;
 
 	// The network manager has special synchronization, regardless of clone or fork.
-	if (m_network_manager && m_network_manager->PreClone()) {
+	if (NetworkPluginManager::PreFork()) {
 		dprintf(D_ALWAYS, "Preparation for clone failed in the network manager.\n");
 		return -1;
 	}
@@ -5412,19 +5409,17 @@ pid_t CreateProcessForkit::fork_exec() {
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
 			child_stack_ptr,
-			(CLONE_VM|(m_network_manager ? CLONE_VFORK : 0 )|SIGCHLD),
+			(CLONE_VM|(NetworkPluginManager::HasPlugins() ? CLONE_VFORK : 0 )|SIGCHLD),
 			this );
 
-		if (m_network_manager) {
+		if (NetworkPluginManager::HasPlugins()) {
 			// Always call PostClone*, even if priv state can't change.
-			tmp_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
-			if ((m_network_manager->PostCloneParent(newpid))) {
+			if (NetworkPluginManager::PostForkParent(newpid)) {
 				kill(newpid, SIGKILL);
 				dprintf(D_ALWAYS, "Failed to alter the child (%d) network namespace in post-clone of parent.\n", newpid);
 			} else {
 				dprintf(D_FULLDEBUG, "Post-clone network namespace operation in parent successful.\n");
 			}
-			set_priv_no_memory_changes(tmp_priv_state);
 		}
 
 		exitCreateProcessChild();
@@ -5447,15 +5442,13 @@ pid_t CreateProcessForkit::fork_exec() {
 		exec(); // never returns
 	}
 
-	if (m_network_manager) {
-		tmp_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
-		if ((m_network_manager->PostCloneParent(newpid))) {
+	if (NetworkPluginManager::HasPlugins()) {
+		if ((NetworkPluginManager::PostForkParent(newpid))) {
 			kill(newpid, SIGKILL);
 			dprintf(D_ALWAYS, "Failed to alter the child (%d) network namespace in post-clone of parent.\n", newpid);
 		} else {
 			dprintf(D_FULLDEBUG, "Post-clone network namespace operation in parent successful.\n");
 		}
-		set_priv_no_memory_changes(tmp_priv_state);
 	}
 
 	return newpid;
@@ -5797,19 +5790,17 @@ void CreateProcessForkit::exec() {
 		}
 	}
 
-	if (m_network_manager) {
+	if (NetworkPluginManager::HasPlugins()) {
 		int net_rc;
 		// Note we call PostCloneChild *regardless* of whether we can actually set the root privs.
-		// This is because PostCloneChild contains necessary synchronization primitives.
-		m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
-		if ((net_rc = m_network_manager->PostCloneChild())) {
+		// This is because PostForkChild contains necessary synchronization primitives.
+		if ((net_rc = NetworkPluginManager::PostForkChild())) {
 			dprintf(D_ALWAYS, "Failed to finish creating network namespace in child (rc=%d)\n", net_rc);
 			writeExecError(net_rc);
 			_exit(4);
 		} else {
 			dprintf(D_FULLDEBUG, "Child believes network namespace is completely configured.\n");
 		}
-		set_priv_no_memory_changes( m_priv_state );
 	}
 
 
@@ -6144,8 +6135,7 @@ int DaemonCore::Create_Process(
 			char const    *daemon_sock,
 			MyString      *err_return_msg,
 			FilesystemRemap * remap,
-			long		  as_hard_limit,
-			NetworkNamespaceManager * network_manager
+			long		  as_hard_limit
             )
 {
 	int i, j;
@@ -7199,8 +7189,7 @@ int DaemonCore::Create_Process(
 			core_hard_limit,
 			as_hard_limit,
 			affinity_mask,
-			remap,
-			network_manager);
+			remap);
 
 		newpid = forkit.fork_exec();
 	}

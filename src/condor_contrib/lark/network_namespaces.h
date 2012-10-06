@@ -27,13 +27,15 @@
 
 #include "classad/classad.h"
 #include "condor_sockaddr.h"
+#include "NetworkPluginManager.h"
 
-class NetworkNamespaceManager {
+class NetworkNamespaceManager : public NetworkManager {
 
 public:
 
-	NetworkNamespaceManager(std::string &uniq_namespace);
-	int CreateNamespace();
+	NetworkNamespaceManager();
+
+	int PrepareNetwork(const std::string &uniq_namespace);
 
 	/*
 	 * Functions to invoke for creating the child namespace
@@ -41,9 +43,9 @@ public:
 	 * must be overlapping.
 	 * - pid: the PID of the child process.
 	 */
-	int PreClone();
-	int PostCloneParent(pid_t pid);
-	int PostCloneChild();
+	int PreFork();
+	int PostForkParent(pid_t pid);
+	int PostForkChild();
 
 	/*
 	 * Perform any network accounting for this namespace.
@@ -54,7 +56,7 @@ public:
 	/*
 	 * Cleanup any persistent OS structures created by the manager.
 	 */
-	int Cleanup();
+	int Cleanup(const std::string &);
 
 private:
 

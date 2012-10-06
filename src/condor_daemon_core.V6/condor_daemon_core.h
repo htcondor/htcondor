@@ -60,7 +60,7 @@
 #include "condor_sinful.h"
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
-#include "network_namespaces.h"
+#include "NetworkPluginManager.h"
 #include "filesystem_remap.h"
 
 #include "../condor_procd/proc_family_io.h"
@@ -1148,8 +1148,7 @@ class DaemonCore : public Service
         char const      *daemon_sock         = NULL,
         MyString        *err_return_msg      = NULL,
         FilesystemRemap *remap               = NULL,
-        long		 	as_hard_limit        = 0l,
-        NetworkNamespaceManager * network_mgr = NULL
+        long		 	as_hard_limit        = 0l
         );
 
     //@}
