@@ -12,6 +12,12 @@ extern "C" {
 #ifndef __NETWORK_MANIPULATION_H_
 #define __NETWORK_MANIPULATION_H_
 
+#include <sys/types.h>
+
+// Forward decls
+struct ipt_getinfo;
+struct ipt_get_entries;
+
 /*
  * Create a socket to talk to the kernel via netlink
  * Returns the socket fd upon success, or -errno upon failure
