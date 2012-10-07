@@ -35,14 +35,19 @@ static int print_ip(struct ipt_ip * ip)
     if (*ip->iniface == '\0') strcpy(ip->iniface, "(any)");
     if (*ip->outiface == '\0') strcpy(ip->outiface, "(any)");
     printf("\t\tIn interface: %s, Out interface: %s\n", ip->iniface, ip->outiface);
+
+    if (ip->flags & IPT_F_GOTO)
+    {
+    printf("\t\t[goto]\n");
+    }
     return 0;
 }
 
-static int print_rule(struct ipt_entry * entry)
+static int print_rule(struct ipt_entry * entry, size_t rule_offset)
 {
     struct xt_entry_match * match = NULL;
     size_t offset = sizeof(struct ipt_entry);
-    printf("\tRule:\n");
+    printf("\tRule: (offset %lu)\n", rule_offset);
     print_ip(&entry->ip);
     printf("\t\tByte Count:%lld; Packet Count:%lld\n", entry->counters.bcnt, entry->counters.pcnt);
     while (offset < entry->target_offset)
@@ -64,8 +69,25 @@ static int print_rule(struct ipt_entry * entry)
             break;
     }
     struct xt_entry_target * target = (struct xt_entry_target *)((char *)entry + entry->target_offset);
-    if (!*target->u.user.name) printf("\t\ttarget = ACCEPT\n");
-    else printf("\t\ttarget = %s\n", target->u.user.name);
+    typedef union target_type { unsigned char *c; int *i; } target_type_u;
+    target_type_u target_data;
+    target_data.c = target->data;
+    if (*target->u.user.name)
+    {
+        printf("\t\ttarget = %s\n", target->u.user.name);
+    }
+    else if (*target_data.i > 0)
+    {
+        printf("\t\ttarget = rule at offset %d\n", *target_data.i);
+    }
+    else if (*target_data.i == -NF_ACCEPT-1)
+    {
+        printf("\t\ttarget = ACCEPT\n");
+    }
+    else
+    {
+        printf("\t\ttarget = (unknown) %d\n", *target_data.i);
+    }
     return 0;
 }
 
@@ -82,8 +104,7 @@ int main()
 
     size_t offset = 0;
     struct ipt_entry * entry = entries->entrytable;
-    int hook_idx;
-    const unsigned char * chain_name = NULL, *old_chain_name = NULL;
+    const char * chain_name = NULL, *old_chain_name = NULL;
 
     while (1)
     {
@@ -91,27 +112,28 @@ int main()
         struct xt_entry_target *my_target = ipt_get_target(entry);
         if (strcmp(my_target->u.user.name, XT_ERROR_TARGET) == 0)
         {
-            chain_name = my_target->data;
+            chain_name = (char *)my_target->data;
         }
         else
         {
+            int hook_idx;
             for (hook_idx=0; hook_idx < NF_IP_NUMHOOKS; hook_idx++)
             {
                 if ((info.valid_hooks & (1 << hook_idx)) && (info.hook_entry[hook_idx] == offset))
                 {
-                    chain_name = (const unsigned char *)hooknames[hook_idx];
+                    chain_name = hooknames[hook_idx];
                 }
             }
         }
         if (chain_name != old_chain_name)
         {
-            printf("Chain: %s\n", chain_name);
+            printf("Chain: %s (offset %lu)\n", chain_name, offset);
             old_chain_name = chain_name;
-            print_rule(entry);
+            if (!strcmp(my_target->u.user.name, XT_ERROR_TARGET)) print_rule(entry, offset);
         }
         else
         {
-            print_rule(entry);
+            print_rule(entry, offset);
         }
 
         if (entry->next_offset)

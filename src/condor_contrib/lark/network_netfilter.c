@@ -125,7 +125,7 @@ int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_
 /**
  * Upload a new set of firewall entries to the kernel.
  */
-static int write_firewall_entries(const struct ipt_getinfo *info, const struct ipt_get_entries *result_entries, unsigned int num_counters, struct xt_counters *counters) {
+static int write_firewall_entries(const struct ipt_get_entries *result_entries) {
 
 	// Put together the ipt_replace object from the provided information.
 	struct ipt_replace replace_entries;
@@ -230,10 +230,167 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 	return 0;
 }
 
+static int rule_has_jump_target(struct ipt_entry * entry)
+{
+	struct xt_entry_target *my_target = ipt_get_target(entry);
+	if (!*(my_target->u.user.name))
+	{
+		typedef union target_type { unsigned char *c; int *i; } target_type_u;
+		target_type_u target_data;
+		target_data.c = my_target->data;
+		if (*target_data.i > 0)
+		{
+			return *target_data.i;
+		}
+	}
+	return -1;
+}
 
-static int rule_jumps_to_chain(const char *chain, struct ipt_entry * entry) {
-	fprintf(stderr, "Rule jumps to chain not implemented!\n");
+static void set_rule_jump_target(struct ipt_entry *entry, size_t target)
+{
+	struct xt_entry_target *my_target = ipt_get_target(entry);
+	typedef union target_type { unsigned char *c; int *i; } target_type_u;
+	target_type_u target_data;
+	target_data.c = my_target->data;
+	*target_data.i = target;
+}
+
+static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete, size_t rules_to_delete_count, struct ipt_get_entries **output_entries)
+{
+	// Iterate twice through the rules - once to compute the new offsets, a second to correct jumps in the chain.
+
+	size_t rules_count = 0, rules_size = 5, offset = 0, offset_adjust = 0;
+	size_t *new_offsets = malloc(sizeof(size_t)*2*rules_size);
+	if (!new_offsets)
+	{
+		fprintf(stderr, "Failed to allocate new_offsets array.\n");
+		return 1;
+	}
+	struct ipt_entry *entry = entries->entrytable;
+	while (1)
+	{
+		if (rules_count > rules_size)
+		{
+			rules_size += 5;
+			if (!(new_offsets = malloc(sizeof(size_t)*2*rules_size)))
+			{
+				fprintf(stderr, "Failed to reallocate new offsets array.\n");
+				return 1;
+			}
+		}
+		new_offsets[2*rules_count] = offset;
+		new_offsets[2*rules_count+1] = offset - offset_adjust;
+		rules_count++;
+		int to_delete = 0;
+		size_t idx;
+		for(idx=0; idx<rules_to_delete_count; idx++) if (rules_to_delete[idx] == offset) to_delete = 1;
+		if (to_delete)
+		{
+			offset_adjust += entry->next_offset;
+		}
+		if (entry->next_offset) offset += entry->next_offset;
+		else break;
+		if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+		else break;
+	}
+
+	struct ipt_get_entries *oentries = malloc(entries->size);
+	if (!oentries)
+	{
+		fprintf(stderr, "Unable to allocate output entries.\n");
+		return 1;
+	}
+	size_t ooffset = 0, oprevoffset = 0;
+	offset = 0;
+	entry = entries->entrytable;
+	struct ipt_entry *oentry = oentries->entrytable;
+	size_t idx;
+	while (1)
+	{
+		int keep_rule = 1;
+		for (idx=0; idx<rules_to_delete_count; idx++) if (rules_to_delete[idx] == offset)
+		{
+			keep_rule = 0;
+			break;
+		}
+		if (keep_rule)
+		{
+			memcpy(oentry, entry, entry->next_offset);
+			oentry->comefrom = oprevoffset;
+			oprevoffset = ooffset;
+			ooffset += entry->next_offset;
+			oentry = (struct ipt_entry *)((char *)oentries->entrytable + ooffset);
+			int target = rule_has_jump_target(entry);
+			if (target >= 0)
+			{
+				for (idx=0; idx<rules_count; idx++) if (new_offsets[2*idx] == offset)
+				{
+					target = new_offsets[2*idx+1];
+					break;
+				}
+				set_rule_jump_target(oentry, target);
+			}
+		}
+		if (entry->next_offset) offset += entry->next_offset;
+		else break;
+		if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+		else break;
+	}
+	oentries->size = sizeof(struct ipt_get_entries) + ooffset;
+	*output_entries = oentries;
 	return 0;
+}
+
+static int delete_rules_chain(struct ipt_get_entries *entries, size_t *input_rules_to_delete, size_t input_rules_to_delete_count, struct ipt_get_entries **output_entries)
+{
+	// Iterate through the rules.  Delete the referenced rules and any rules which reference those.
+	int deleted_rule = 1, rules_to_delete_count = input_rules_to_delete_count, rules_to_delete_size = input_rules_to_delete_count+5;
+	size_t *rules_to_delete = malloc(sizeof(size_t)*rules_to_delete_size);
+	if (!rules_to_delete)
+	{
+		fprintf(stderr, "Failed to allocate rules_to_delete.\n");
+		return 1;
+	}
+	memcpy(rules_to_delete, input_rules_to_delete, sizeof(size_t)*rules_to_delete_count);
+	while (deleted_rule)
+	{
+		deleted_rule = 0;
+		size_t offset = 0;
+		struct ipt_entry *entry = entries->entrytable;
+		while (1)
+		{
+			int target = rule_has_jump_target(entry);
+			if (target >= 0)
+			{
+				int idx;
+				for (idx=0; idx<rules_to_delete_count; idx++)
+				{
+					if ((size_t)target == rules_to_delete[idx])
+					{
+						rules_to_delete_count++;
+						if (rules_to_delete_count > rules_to_delete_size)
+						{
+							rules_to_delete_size += 5;
+							if (!(rules_to_delete = realloc(rules_to_delete, rules_to_delete_size)))
+							{
+								free(rules_to_delete);
+								return 1;
+							}
+						}
+						rules_to_delete[rules_to_delete_count-1] = offset;
+						deleted_rule = 1;
+					}
+				}
+			}
+			if (entry->next_offset) offset += entry->next_offset;
+			else break;
+			if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+			else break;
+		}
+	}
+	int result = delete_rules(entries, rules_to_delete, rules_to_delete_count, output_entries);
+	free(rules_to_delete);
+	return result;
 }
 
 /**
@@ -254,20 +411,79 @@ int cleanup_chain(const char *chain)
 		return error;
 	}
 
-	struct ipt_get_entries *new_entries = (struct ipt_get_entries*)malloc(entries->size+sizeof(struct ipt_get_entries));
-	if (!new_entries) {
-		fprintf(stderr, "Memory allocation failed for new entries structure.\n");
+	// Locate the chain we want to remove.
+	size_t offset = 0, rule_count=0;
+	struct ipt_entry * entry = entries->entrytable;
+	size_t chain_first_offset = 0, chain_last_offset=0, in_chain = 0;
+	size_t rules_to_delete_count = 0, rules_to_delete_size=5;
+	size_t *rules_to_delete = malloc(sizeof(size_t)*rules_to_delete_count);
+	const char * chain_name = 0, * old_chain_name = 0;
+	if (!rules_to_delete)
+	{
+		fprintf(stderr, "Unable to allocate rules_to_delete.\n");
 		return 1;
 	}
-	*new_entries = *entries;
-	new_entries = (struct ipt_entry*)malloc(entries->size);
-	struct ipt_entry * entry = entries->entrytable;
+	while (1)
+	{
+		rule_count++;
+		// Detect chain transitions.  Don't detect builtin chains - can't delete those.
+		struct xt_entry_target *my_target = ipt_get_target(entry);
+		if (strcmp(my_target->u.user.name, XT_ERROR_TARGET) == 0)
+		{
+			chain_name = (const char *)my_target->data;
+		}
+		if (chain_name != old_chain_name)
+		{
+			if (strcmp(chain, chain_name) == 0)
+			{
+				in_chain = 1;
+				chain_first_offset = offset;
+			}
+			else if ((in_chain) && (strcmp(chain, old_chain_name) == 0))
+			{
+				chain_last_offset = offset;
+				break;
+			}
+			old_chain_name = chain_name;
+		}
+		if (in_chain)
+		{
+			if (rules_to_delete_count+1 < rules_to_delete_size)
+			{
+				rules_to_delete_size += 5;
+				if (!(rules_to_delete = realloc(rules_to_delete, rules_to_delete_size)))
+				{
+					fprintf(stderr, "Unable to reallocate rules_to_delete.\n");
+					return 1;
+				}
+			}
+			rules_to_delete[rules_to_delete_count] = offset;
+			rules_to_delete_count++;
+		}
+		if (entry->next_offset) offset += entry->next_offset;
+		else break;
+		if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+		else break;
+	} // NOTE: there's guaranteed to be the ERROR entry as the last rule, so we are guaranteed to find the last offset.
+	if (chain_last_offset <= chain_first_offset)
+	{
+		fprintf(stderr, "Invalid iptables chain %s.\n", chain);
+		free(rules_to_delete);
+		return 1;
+	}
+
+	struct ipt_get_entries * output_entries;
+	int result = delete_rules_chain(entries, rules_to_delete, rules_to_delete_count, &output_entries);
+	free(rules_to_delete);
+
+	if (result) return result;
+	if (!output_entries)
+	{
+		fprintf(stderr, "Unable to create firewall entries.\n");
+		return 1;
+	}
 
 	// Write out firewall.
-/*
-	if ((error = write_firewall_entries(info, entries))) {
-		return error;
-	}
-*/
+	return write_firewall_entries(output_entries);
 }
 
