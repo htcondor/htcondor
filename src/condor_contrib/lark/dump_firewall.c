@@ -130,7 +130,8 @@ int main()
         {
             printf("Chain: %s (offset %lu)\n", chain_name, offset);
             old_chain_name = chain_name;
-            if (!strcmp(my_target->u.user.name, XT_ERROR_TARGET)) print_rule(entry, offset);
+            //if (!strcmp(my_target->u.user.name, XT_ERROR_TARGET)) print_rule(entry, offset);
+            print_rule(entry, offset);
         }
         else
         {

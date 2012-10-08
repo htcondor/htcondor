@@ -265,7 +265,7 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 		// We will parse each rule if we are in the correct chain *and* we have skipped past the header
 		// entry which denotes the start of the chain.
 		if ((chain_name == old_chain_name) && (strcmp((const char *)chain, (const char *)chain_name) == 0)) {
-			fprintf(stderr, "Entry %ld, offset %ld, chain %s\n", idx, offset, chain_name);
+			//fprintf(stderr, "Entry %ld, offset %ld, chain %s\n", idx, offset, chain_name);
 			parse_rule(entry, match_fcn, callback_data);
 
 		} else {

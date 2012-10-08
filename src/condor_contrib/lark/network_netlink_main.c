@@ -371,9 +371,10 @@ int main(int argc, char * argv[]) {
 
 finalize:
 	if (created) {
-		//fprintf(stderr, "Trying to delete the created veth device.\n");
-		if (delete_veth(sock, veth0)) {
-			fprintf(stderr, "Unable to cleanup created device %s.\n", veth0);
+
+		int result;
+		if ((result = delete_veth(sock, veth0)) && (result != ENODEV) && (result != EINVAL)) {
+			fprintf(stderr, "Unable to cleanup created device %s (errno=%d) %s.\n", veth0, result, strerror(result));
 			rc = 2;
 		}
 	}

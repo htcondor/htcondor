@@ -8,17 +8,19 @@ fi
 ON_CAMPUS="129.93.0.0/16"
 PUBLIC_DEV=em1
 
-JOB_OUTER_PREFIX="192.168.0.1/24"
+JOB_OUTER_IP="192.168.0.1"
+JOB_OUTER_PREFIX="$JOB_OUTER_IP/24"
 JOB_INNER_IP="192.168.0.2"
 
 JOBID=$1
 DEV=$2
 
 # Minimal configuration of iptables rules in the system chains
-iptables -t nat -A POSTROUTING -o $PUBLIC_DEV -j MASQUERADE || exit 2
+#iptables -t nat -A POSTROUTING -o $PUBLIC_DEV -j MASQUERADE || exit 2
+iptables -t nat -A POSTROUTING --src $JOB_INNER_IP ! --dst $JOB_INNER_IP -j MASQUERADE || exit 2
 iptables -N $JOBID || exit 2
-iptables -A FORWARD -i $DEV -o $PUBLIC_DEV -g $JOBID || exit 2
-iptables -A FORWARD -i $PUBLIC_DEV -o $DEV -m state --state RELATED,ESTABLISHED -g $JOBID || exit 2
+iptables -I FORWARD -i $DEV -o $PUBLIC_DEV -g $JOBID || exit 2
+iptables -I FORWARD -i $PUBLIC_DEV -o $DEV -m state --state RELATED,ESTABLISHED -g $JOBID || exit 2
 
 # Outgoing packets
 iptables -A $JOBID -i $DEV -o $PUBLIC_DEV --dst $ON_CAMPUS -j ACCEPT -m comment --comment "OutgoingInternal" || exit 3
