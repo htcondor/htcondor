@@ -1219,11 +1219,16 @@ Scheduler::count_jobs()
 	}
 
 
-	 // send info about deleted owners
-	 // put 0 for idle & running jobs
+	 // send info about deleted owners.
+	 // we do this to update the submitter ad currently in the collector
+	 // that has JobIdle > 0, and thus the negotiator will waste time contacting us.
+	 // put 0 for idle, running, and held jobs. idle=0 so the negotiator stops
+	 // trying to contact us, and 0 for running, held so condor_status -submit
+	 // is not riddled with question marks.
 
 	pAd.Assign(ATTR_RUNNING_JOBS, 0);
 	pAd.Assign(ATTR_IDLE_JOBS, 0);
+	pAd.Assign(ATTR_HELD_JOBS, 0);
 
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the old owners list and searching for owners
