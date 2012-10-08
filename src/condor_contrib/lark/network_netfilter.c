@@ -130,7 +130,8 @@ int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_
  * - input_rule_count:
  * - replacement_rule_count:
  */
-static int write_firewall_entries(const struct ipt_getinfo *info, const struct ipt_get_entries *result_entries, const size_t *rule_mappings, size_t input_rule_count, size_t replacement_rule_count) {
+static int write_firewall_entries(const struct ipt_getinfo *info, struct ipt_replace *result_entries, const size_t *rule_mappings)
+{
 
 	// Ok, I found the counter business completely confusing and undocumented.  Below
 	// explains as much as I could figure out.
@@ -164,64 +165,42 @@ static int write_firewall_entries(const struct ipt_getinfo *info, const struct i
 	// packets were left uncounted!
 
 	// Put together the ipt_replace object from the provided information.
-	struct ipt_replace *replace_entries = malloc(sizeof(struct ipt_replace) + result_entries->size);
-	if (!replace_entries)
-	{
-		fprintf(stderr, "Unable to allocate replacement entries.\n");
-		return 1;
-	}
-        const char TABLE_NAME[] = "filter";
-	if (strlen(TABLE_NAME) > XT_TABLE_MAXNAMELEN-1) {
-		fprintf(stderr, "Table name %s is too long.\n", TABLE_NAME);
-		return 1;
-	}
-	strncpy(replace_entries->name, TABLE_NAME, XT_TABLE_MAXNAMELEN);
-        replace_entries->valid_hooks = info->valid_hooks;
-        replace_entries->num_entries = input_rule_count;
-        replace_entries->size = result_entries->size;
-        memcpy(replace_entries->hook_entry, info->hook_entry, sizeof(info->hook_entry[0])*NF_INET_NUMHOOKS);
-        memcpy(replace_entries->underflow, info->underflow, sizeof(info->underflow[0])*NF_INET_NUMHOOKS);
-        replace_entries->num_counters = input_rule_count;
-	struct xt_counters *new_counters = malloc(sizeof(struct xt_counters)*input_rule_count);
+        result_entries->num_counters = info->num_entries;
+	struct xt_counters *new_counters = malloc(sizeof(struct xt_counters)*info->num_entries);
 	if (!new_counters)
 	{
 		fprintf(stderr, "Unable to allocate new counters");
-		free(replace_entries);
 		return 1;
 	}
-        replace_entries->counters = new_counters;
-        memcpy(replace_entries->entries, result_entries->entrytable, result_entries->size);
+        result_entries->counters = new_counters;
 
 	int sockfd;
 	if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
 		fprintf(stderr, "Unable to open raw socket. (errno=%d) %s\n", errno, strerror(errno));
-		free(replace_entries);
 		free(new_counters);
 		return errno;
 	}
 
-	if (setsockopt(sockfd, IPPROTO_IP, IPT_SO_SET_REPLACE, replace_entries, replace_entries->size + sizeof(replace_entries)) < 0) {
+	if (setsockopt(sockfd, IPPROTO_IP, IPT_SO_SET_REPLACE, result_entries, result_entries->size + sizeof(result_entries)) < 0) {
 		fprintf(stderr, "Unable to set firewall entries. (errno=%d) %s\n", errno, strerror(errno));
-		free(replace_entries);
 		free(new_counters);
 		close(sockfd);
 		return errno;
 	}
 
-	size_t add_counters_size = sizeof(struct xt_counters_info)+sizeof(struct xt_counters)*replacement_rule_count;
+	size_t add_counters_size = sizeof(struct xt_counters_info)+sizeof(struct xt_counters)*result_entries->num_entries;
 	struct xt_counters_info *add_counters = malloc(add_counters_size);
 	if (!add_counters)
 	{
 		fprintf(stderr, "Unable to allocate replacement counters.\n");
-		free(replace_entries);
 		free(new_counters);
 		close(sockfd);
 		return 1;
 	}
-	strncpy(add_counters->name, TABLE_NAME, XT_TABLE_MAXNAMELEN);
-	add_counters->num_counters = replacement_rule_count;
+	strncpy(add_counters->name, info->name, XT_TABLE_MAXNAMELEN);
+	add_counters->num_counters = result_entries->num_entries;
 	size_t idx;
-	for (idx=0; idx<input_rule_count; idx++)
+	for (idx=0; idx<info->num_entries; idx++)
 	{
 		add_counters->counters[rule_mappings[idx]] = new_counters[idx];
 	}
@@ -229,13 +208,11 @@ static int write_firewall_entries(const struct ipt_getinfo *info, const struct i
 	if (setsockopt(sockfd, IPPROTO_IP, IPT_SO_SET_ADD_COUNTERS, add_counters, add_counters_size) < 0)
 	{
 		fprintf(stderr, "Unable to set firewall counters. (errno=%d) %s\n", errno, strerror(errno));
-		free(replace_entries);
 		free(new_counters);
 		free(add_counters);
 		close(sockfd);
 	}
 	close(sockfd);
-	free(replace_entries);
 	free(new_counters);
 	free(add_counters);
 	return 0;
@@ -311,12 +288,15 @@ int perform_accounting(const char * chain, int (*match_fcn)(const unsigned char 
 	return 0;
 }
 
-static int rule_has_jump_target(struct ipt_entry * entry)
+static int rule_has_jump_target(const struct ipt_entry * entry)
 {
-	struct xt_entry_target *my_target = ipt_get_target(entry);
+	typedef union const_target { const struct ipt_entry * centry; struct ipt_entry * entry; } const_target_u;
+	const_target_u const_target_data;
+	const_target_data.centry = entry;
+	struct xt_entry_target *my_target = ipt_get_target(const_target_data.entry);
 	if (!*(my_target->u.user.name))
 	{
-		typedef union target_type { unsigned char *c; int *i; } target_type_u;
+		typedef union target_type { const unsigned char *c; int *i; } target_type_u;
 		target_type_u target_data;
 		target_data.c = my_target->data;
 		if (*target_data.i > 0)
@@ -343,18 +323,15 @@ static void set_rule_jump_target(struct ipt_entry *entry, size_t target)
  * - rules_to_delete: An array of offsets; each entry in the array is the offset (in bytes in the entries blob)
  *   of a rule to delete.
  * - rules_to_delete_count: Length of the rules_to_delete array.
- * - output_entries: a struct ipt_get_entries for this function to populate.
- * - output_mappings: An array of size *output_mappings_size that specifies the mapping from old rules to
+ * - output_entries: a struct ipt_replace for this function to populate.
+ * - output_mappings: An array of size (info->num_entries) that specifies the mapping from old rules to
  *   new rules.  Input rule i corresponds to output rule (*output_mappings)[i].
- * - output_mappings_size: Size of the output_mappings array.
- * - output_entries_size: Number of rules in the output_entries object.
  *
  * Returns 0 on success, non-zero on failure.
  *
  * On success, caller is responsible for calling free() on *output_entries and output_mappings.
- * output_mappings_size is assumed to be valid on call.
  */
-static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete, size_t rules_to_delete_count, struct ipt_get_entries **output_entries, size_t **output_mappings, size_t *output_mappings_size, size_t *output_entries_size)
+static int delete_rules(const struct ipt_getinfo *info, const struct ipt_get_entries *entries, const size_t *rules_to_delete, size_t rules_to_delete_count, struct ipt_replace **output_entries, size_t **output_mappings)
 {
 	// Iterate twice through the rules - once to compute the new offsets, a second to correct jumps in the chain.
 
@@ -365,11 +342,9 @@ static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete
 		fprintf(stderr, "Failed to allocate new_offsets array.\n");
 		return 1;
 	}
-	*output_mappings_size = 0;
-	struct ipt_entry *entry = entries->entrytable;
+	const struct ipt_entry *entry = entries->entrytable;
 	while (1)
 	{
-		(*output_mappings_size)++;
 		if (rules_count > rules_size)
 		{
 			rules_size += 5;
@@ -391,18 +366,19 @@ static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete
 		}
 		if (entry->next_offset) offset += entry->next_offset;
 		else break;
-		if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+		if (offset < entries->size) entry = (const struct ipt_entry *)((const char *)entries->entrytable + offset);
 		else break;
 	}
 
-	struct ipt_get_entries *oentries = malloc(sizeof(struct ipt_get_entries) + entries->size);
+	struct ipt_replace *oentries = malloc(sizeof(struct ipt_replace) + entries->size);
 	if (!oentries)
 	{
 		fprintf(stderr, "Unable to allocate output entries.\n");
 		free(new_offsets);
 		return 1;
 	}
-	*output_mappings = malloc(sizeof(size_t)*(*output_mappings_size));
+
+	*output_mappings = malloc(sizeof(size_t)*info->num_entries);
 	if (!(*output_mappings))
 	{
 		fprintf(stderr, "Unable to allocate output mappings array.\n");
@@ -413,8 +389,10 @@ static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete
 	size_t ooffset = 0, oprevoffset = 0;
 	offset = 0;
 	entry = entries->entrytable;
-	struct ipt_entry *oentry = oentries->entrytable;
+	struct ipt_entry *oentry = oentries->entries;
 	size_t idx, input_idx=0, output_idx=0;
+	unsigned int tmp_hook_entry[NF_INET_NUMHOOKS];
+	memcpy(tmp_hook_entry, info->hook_entry, sizeof(tmp_hook_entry[0])*NF_INET_NUMHOOKS);
 	while (1)
 	{
 		(*output_mappings)[input_idx] = output_idx;
@@ -427,13 +405,24 @@ static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete
 		}
 		if (keep_rule)
 		{
+			for (idx=0; idx < NF_IP_NUMHOOKS; idx++) if (info->valid_hooks & (1 << idx))
+			{
+				if (tmp_hook_entry[idx] == offset)
+				{
+					oentries->hook_entry[idx] = ooffset;
+				}
+				if (info->underflow[idx] == offset)
+				{
+					oentries->underflow[idx] = ooffset;
+				}
+			}
 			output_idx++;
 			memcpy(oentry, entry, entry->next_offset);
 			oentry->comefrom = oprevoffset;
-			printf("Writing rule at entry %ld (size %d; comefrom %lu).\n", ooffset, entry->next_offset, oprevoffset);
+			//printf("Writing rule at entry %ld (size %d; comefrom %lu).\n", ooffset, entry->next_offset, oprevoffset);
 			oprevoffset = ooffset;
 			ooffset += entry->next_offset;
-			oentry = (struct ipt_entry *)((char *)oentries->entrytable + ooffset);
+			oentry = (struct ipt_entry *)((char *)oentries->entries + ooffset);
 			int target = rule_has_jump_target(entry);
 			if (target >= 0)
 			{
@@ -447,20 +436,37 @@ static int delete_rules(struct ipt_get_entries *entries, size_t *rules_to_delete
 		}
 		else
 		{
-			printf("Will delete rule at offset %lu.\n", offset);
+			for (idx=0; idx < NF_IP_NUMHOOKS; idx++) if (info->valid_hooks & (1 << idx)) {
+				// We will be deleting this rule.  The next one if the beginning of the chain.
+				if (tmp_hook_entry[idx] == offset)
+				{
+					tmp_hook_entry[idx] += entry->next_offset;
+				}
+				// The last valid output entry is now the end of the chain.
+				if (info->underflow[idx] == offset)
+				{
+					oentries->underflow[idx] = ooffset;
+				}
+			}
+			//printf("Will delete rule at offset %lu.\n", offset);
 		}
 		if (entry->next_offset) offset += entry->next_offset;
 		else break;
-		if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+		if (offset < entries->size) entry = (const struct ipt_entry *)((const char *)entries->entrytable + offset);
 		else break;
 	}
 	oentries->size = ooffset;
+	oentries->num_entries = output_idx;
+
+	// Fill in the boundaries of the builtin tables.
+	strncpy(oentries->name, info->name, XT_TABLE_MAXNAMELEN);
+	oentries->valid_hooks = info->valid_hooks;
+
 	*output_entries = oentries;
-	*output_entries_size = output_idx;
 	return 0;
 }
 
-static int delete_rules_chain(struct ipt_get_entries *entries, size_t *input_rules_to_delete, size_t input_rules_to_delete_count, struct ipt_get_entries **output_entries, size_t **output_mappings, size_t *output_mappings_size, size_t *output_entries_size)
+static int delete_rules_chain(const struct ipt_getinfo *info, const struct ipt_get_entries *entries, const size_t *input_rules_to_delete, size_t input_rules_to_delete_count, struct ipt_replace **output_entries, size_t **output_mappings)
 {
 	// Iterate through the rules.  Delete the referenced rules and any rules which reference those.
 	int deleted_rule = 1, rules_to_delete_count = input_rules_to_delete_count, rules_to_delete_size = input_rules_to_delete_count+5;
@@ -475,7 +481,7 @@ static int delete_rules_chain(struct ipt_get_entries *entries, size_t *input_rul
 	{
 		deleted_rule = 0;
 		size_t offset = 0;
-		struct ipt_entry *entry = entries->entrytable;
+		const struct ipt_entry *entry = entries->entrytable;
 		while (1)
 		{
 			int keep_rule = 1, idx;
@@ -505,19 +511,19 @@ static int delete_rules_chain(struct ipt_get_entries *entries, size_t *input_rul
 							}
 							rules_to_delete[rules_to_delete_count-1] = offset;
 							deleted_rule = 1;
-							printf("Deleting rule at offset %ld.\n", offset);
+							//printf("Deleting chained rule at offset %ld.\n", offset);
 						}
 					}
 				}
 			}
 			if (entry->next_offset) offset += entry->next_offset;
 			else break;
-			if (offset < entries->size) entry = (struct ipt_entry *)((char *)entries->entrytable + offset);
+			if (offset < entries->size) entry = (const struct ipt_entry *)((const char *)entries->entrytable + offset);
 			else break;
 		}
 	}
-	printf("Deleting rules - all found.\n");
-	int result = delete_rules(entries, rules_to_delete, rules_to_delete_count, output_entries, output_mappings, output_mappings_size, output_entries_size);
+	//printf("Deleting rules - all dependent rules found.\n");
+	int result = delete_rules(info, entries, rules_to_delete, rules_to_delete_count, output_entries, output_mappings);
 	free(rules_to_delete);
 	return result;
 }
@@ -550,6 +556,7 @@ int cleanup_chain(const char *chain)
 	if (!rules_to_delete)
 	{
 		fprintf(stderr, "Unable to allocate rules_to_delete.\n");
+		free(entries);
 		return 1;
 	}
 	while (1)
@@ -583,10 +590,11 @@ int cleanup_chain(const char *chain)
 				if (!(rules_to_delete = realloc(rules_to_delete, rules_to_delete_size)))
 				{
 					fprintf(stderr, "Unable to reallocate rules_to_delete.\n");
+					free(entries);
 					return 1;
 				}
 			}
-			printf("Delete rule %ld.\n", offset);
+			//printf("Delete rule %ld.\n", offset);
 			rules_to_delete[rules_to_delete_count] = offset;
 			rules_to_delete_count++;
 		}
@@ -599,23 +607,29 @@ int cleanup_chain(const char *chain)
 	{
 		fprintf(stderr, "Invalid iptables chain %s.\n", chain);
 		free(rules_to_delete);
+		free(entries);
 		return 1;
 	}
-	printf("Cleaning rules %ld through %ld.\n", chain_first_offset, chain_last_offset);
+	//printf("Cleaning rules %ld through %ld.\n", chain_first_offset, chain_last_offset);
 
-	struct ipt_get_entries * output_entries;
-	size_t *output_mappings, output_mappings_size, output_entries_size;
-	int result = delete_rules_chain(entries, rules_to_delete, rules_to_delete_count, &output_entries, &output_mappings, &output_mappings_size, &output_entries_size);
+	struct ipt_replace * output_entries;
+	size_t *output_mappings;
+	int result = delete_rules_chain(&info, entries, rules_to_delete, rules_to_delete_count, &output_entries, &output_mappings);
 	free(rules_to_delete);
 
 	if (result) return result;
 	if (!output_entries)
 	{
 		fprintf(stderr, "Unable to create firewall entries.\n");
+		free(entries);
 		return 1;
 	}
 
 	// Write out firewall.
-	return write_firewall_entries(&info, output_entries, output_mappings, output_mappings_size, output_entries_size);
+	result = write_firewall_entries(&info, output_entries, output_mappings);
+	free(output_entries);
+	free(output_mappings);
+	free(entries);
+	return result;
 }
 

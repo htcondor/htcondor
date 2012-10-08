@@ -122,6 +122,7 @@ int main()
                 if ((info.valid_hooks & (1 << hook_idx)) && (info.hook_entry[hook_idx] == offset))
                 {
                     chain_name = hooknames[hook_idx];
+                    printf("(Hook entry: %d; hook underflow %d)\n", info.hook_entry[hook_idx], info.underflow[hook_idx]);
                 }
             }
         }
