@@ -5050,6 +5050,8 @@ Scheduler::negotiate(int command, Stream* s)
 	//-----------------------------------------------
 	char owner[200], *ownerptr = owner;
 	char *sig_attrs_from_cm = NULL;	
+	int consider_jobprio_min = INT_MIN;
+	int consider_jobprio_max = INT_MAX;
 	ClassAd negotiate_ad;
 	MyString submitter_tag;
 	s->decode();
@@ -5074,6 +5076,9 @@ Scheduler::negotiate(int command, Stream* s)
 			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
+			// jobprio_min and jobprio_max are optional
+		negotiate_ad.LookupInteger("JOBPRIO_MIN",consider_jobprio_min);
+		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
 	}
 	else {
 			// old NEGOTIATE_WITH_SIGATTRS protocol
@@ -5192,6 +5197,12 @@ Scheduler::negotiate(int command, Stream* s)
 	} else {
 		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	}
+
+	if ( consider_jobprio_min > INT_MIN || consider_jobprio_max < INT_MAX ) {
+		dprintf(D_ALWAYS,"Negotiating owner=%s jobprio restricted, min=%d max=%d\n",
+			 owner, consider_jobprio_min, consider_jobprio_max);
+	}
+
 	//-----------------------------------------------
 
 		// See if the negotiator wants to talk to the dedicated
@@ -5248,7 +5259,17 @@ Scheduler::negotiate(int command, Stream* s)
 
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
+
+		// make sure owner matches what negotiator wants
 		if(strcmp(owner,prec->owner)!=0)
+		{
+			jobs--;
+			continue;
+		}
+
+		// make sure jobprio is in the range the negotiator wants
+		if ( consider_jobprio_min > prec->job_prio ||
+			 prec->job_prio > consider_jobprio_max )
 		{
 			jobs--;
 			continue;
