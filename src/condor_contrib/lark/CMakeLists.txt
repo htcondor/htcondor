@@ -21,10 +21,11 @@ option(WITH_LARK "Support for Lark network tools" ON)
 
 if ( WITH_LARK )
 
-  condor_glob( LARKHDRS LARKSRCS "ns_exec.c;network_netlink_main.c;dump_firewall.c" )
+  condor_glob( LARKHDRS LARKSRCS "ns_exec.c;network_netlink_main.c;dump_firewall.c;cleanup_firewall.c" )
 
-  condor_exe( lark_dump_firewall "dump_firewall.c;${LARKHDFS};${LARKSRCS}" OFF "${CONDOR_LIBS}" OFF )
-  condor_exe( lark_ns_exec_tester "ns_exec.c" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
+  condor_exe( lark_dump_firewall "dump_firewall.c;${LARKHDRS};${LARKSRCS}" OFF "${CONDOR_LIBS}" OFF )
+  condor_exe( lark_ns_exec_tester "ns_exec.c" OFF "${CONDOR_TOOL_LIBS}" OFF)
   condor_exe( lark_network_namespace_tester "network_netlink_main.c;${LARKHDRS};${LARKSRCS}" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
+  condor_exe( lark_cleanup_firewall "cleanup_firewall.c;${LARKHDRS};${LARKSRCS}" OFF "${CONDOR_LIBS}" OFF )
 
 endif()

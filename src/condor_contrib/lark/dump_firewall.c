@@ -47,7 +47,7 @@ static int print_rule(struct ipt_entry * entry, size_t rule_offset)
 {
     struct xt_entry_match * match = NULL;
     size_t offset = sizeof(struct ipt_entry);
-    printf("\tRule: (offset %lu)\n", rule_offset);
+    printf("\tRule: (offset %lu; come from %u)\n", rule_offset, entry->comefrom);
     print_ip(&entry->ip);
     printf("\t\tByte Count:%lld; Packet Count:%lld\n", entry->counters.bcnt, entry->counters.pcnt);
     while (offset < entry->target_offset)
