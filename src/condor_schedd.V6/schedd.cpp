@@ -5830,6 +5830,12 @@ find_idle_local_jobs( ClassAd *job )
 	int	univ;
 	PROC_ID id;
 
+	int noop = 0;
+	job->LookupBool(ATTR_JOB_NOOP, noop);
+	if (noop) {
+		return 0;
+	}
+
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, univ) != 1) {
 		univ = CONDOR_UNIVERSE_STANDARD;
 	}
@@ -6464,16 +6470,11 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 
 	case REMOVED:
 	case HELD:
+	case COMPLETED:
 		dprintf( D_FULLDEBUG,
 				 "Job %d.%d was %s while waiting to start\n",
 				 cluster, proc, getJobStatusString(status) );
 		return false;
-		break;
-
-	case COMPLETED:
-		EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
-				"but we're trying to start a shadow for it!", 
-				cluster, proc, getJobStatusString(status) );
 		break;
 
 	default:
