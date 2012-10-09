@@ -1895,6 +1895,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			case JA_VACATE_FAST_JOBS:
 				handler_sig = DC_SIGHARDKILL;
 				break;
+			case JA_SUSPEND_JOBS:
+			case JA_CONTINUE_JOBS:
+				dprintf( D_ALWAYS,
+						 "Local universe: Ignoring unsupported action (%d %s)\n",
+						 action, getJobActionString(action) );
+				return;
+				break;
 			default:
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
 						action, getJobActionString(action) );
