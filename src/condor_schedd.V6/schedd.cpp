@@ -4026,6 +4026,14 @@ Scheduler::actOnJobs(int, Stream* s)
 					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
 		case JA_SUSPEND_JOBS:
+				// Only suspend running/staging jobs outside local & sched unis
+			snprintf( buf, 256,
+					  "((%s==%d || %s==%d) && (%s=!=%d && %s=!=%d)) && (",
+					  ATTR_JOB_STATUS, RUNNING,
+					  ATTR_JOB_STATUS, TRANSFERRING_OUTPUT,
+					  ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_LOCAL,
+					  ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER );
+			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
 				// Only vacate running/staging jobs
