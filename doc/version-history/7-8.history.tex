@@ -44,15 +44,18 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 
 \begin{itemize}
 
-\item \Condor{startd} crashed if a job failed to match a partitionable
-slot after application of \MacroNI{MODIFY\_REQUEST\_EXPR} settings.
-\Ticket{3260}
+\item None.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The \Condor{startd} daemon crashed if a job failed to match 
+a partitionable slot after the application 
+of configuration variables of the \MacroNI{MODIFY\_REQUEST\_EXPR\_} category.
+\Ticket{3260}
 
 \item The \Condor{schedd} daemon would mark scheduler universe jobs
 as completed and remove them from the job queue,
