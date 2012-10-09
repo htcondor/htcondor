@@ -112,6 +112,13 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 
 \begin{itemize}
 
+\item Fixed a problem with jobs that are submitted with
+\begin{verbatim}
+  noop_job = true
+\end{verbatim}
+These jobs would, in rare cases, cause the \Condor{schedd} daemon to crash.  
+\Ticket{3156}
+
 \item The \Condor{startd} daemon crashed if a job failed to match 
 a partitionable slot after the application 
 of configuration variables of the \MacroNI{MODIFY\_REQUEST\_EXPR\_} category.
