@@ -345,10 +345,10 @@ static int delete_rules(const struct ipt_getinfo *info, const struct ipt_get_ent
 	const struct ipt_entry *entry = entries->entrytable;
 	while (1)
 	{
-		if (rules_count > rules_size)
+		if (rules_count >= rules_size)
 		{
 			rules_size += 5;
-			if (!(new_offsets = malloc(sizeof(size_t)*2*rules_size)))
+			if (!(new_offsets = realloc(new_offsets, sizeof(size_t)*2*rules_size)))
 			{
 				fprintf(stderr, "Failed to reallocate new offsets array.\n");
 				return 1;
@@ -419,7 +419,7 @@ static int delete_rules(const struct ipt_getinfo *info, const struct ipt_get_ent
 			output_idx++;
 			memcpy(oentry, entry, entry->next_offset);
 			oentry->comefrom = oprevoffset;
-			//printf("Writing rule at entry %ld (size %d; comefrom %lu).\n", ooffset, entry->next_offset, oprevoffset);
+			//printf("Writing rule at entry %ld (size %d; comefrom %lu; original offset %lu).\n", ooffset, entry->next_offset, oprevoffset, offset);
 			oprevoffset = ooffset;
 			ooffset += entry->next_offset;
 			oentry = (struct ipt_entry *)((char *)oentries->entries + ooffset);
@@ -499,8 +499,7 @@ static int delete_rules_chain(const struct ipt_getinfo *info, const struct ipt_g
 					{
 						if ((size_t)target == rules_to_delete[idx])
 						{
-							rules_to_delete_count++;
-							if (rules_to_delete_count > rules_to_delete_size)
+							if (rules_to_delete_count >= rules_to_delete_size)
 							{
 								rules_to_delete_size += 5;
 								if (!(rules_to_delete = realloc(rules_to_delete, rules_to_delete_size)))
@@ -509,9 +508,10 @@ static int delete_rules_chain(const struct ipt_getinfo *info, const struct ipt_g
 									return 1;
 								}
 							}
-							rules_to_delete[rules_to_delete_count-1] = offset;
+							rules_to_delete[rules_to_delete_count] = offset;
+							rules_to_delete_count++;
 							deleted_rule = 1;
-							//printf("Deleting chained rule at offset %ld.\n", offset);
+							//printf("Deleting chained rule at offset %ld (array %u).\n", offset, rules_to_delete_count-1);
 						}
 					}
 				}
@@ -551,7 +551,7 @@ int cleanup_chain(const char *chain)
 	struct ipt_entry * entry = entries->entrytable;
 	size_t chain_first_offset = 0, chain_last_offset=0, in_chain = 0;
 	size_t rules_to_delete_count = 0, rules_to_delete_size=5;
-	size_t *rules_to_delete = malloc(sizeof(size_t)*rules_to_delete_count);
+	size_t *rules_to_delete = malloc(sizeof(size_t)*rules_to_delete_size);
 	const char * chain_name = 0, * old_chain_name = 0;
 	if (!rules_to_delete)
 	{
@@ -584,17 +584,18 @@ int cleanup_chain(const char *chain)
 		}
 		if (in_chain)
 		{
-			if (rules_to_delete_count+1 < rules_to_delete_size)
+			if (rules_to_delete_count >= rules_to_delete_size)
 			{
+				//printf("Reallocate rules_to_delete.\n");
 				rules_to_delete_size += 5;
-				if (!(rules_to_delete = realloc(rules_to_delete, rules_to_delete_size)))
+				if (!(rules_to_delete = realloc(rules_to_delete, sizeof(rules_to_delete[0])*rules_to_delete_size)))
 				{
 					fprintf(stderr, "Unable to reallocate rules_to_delete.\n");
 					free(entries);
 					return 1;
 				}
 			}
-			//printf("Delete rule %ld.\n", offset);
+			//printf("Delete rule %ld (offset %lu).\n", offset, rules_to_delete_count);
 			rules_to_delete[rules_to_delete_count] = offset;
 			rules_to_delete_count++;
 		}
