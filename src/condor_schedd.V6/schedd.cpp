@@ -1903,6 +1903,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			case JA_VACATE_FAST_JOBS:
 				handler_sig = DC_SIGHARDKILL;
 				break;
+			case JA_SUSPEND_JOBS:
+			case JA_CONTINUE_JOBS:
+				dprintf( D_ALWAYS,
+						 "Local universe: Ignoring unsupported action (%d %s)\n",
+						 action, getJobActionString(action) );
+				return;
+				break;
 			default:
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
 						action, getJobActionString(action) );
@@ -2001,6 +2008,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 			case JA_VACATE_FAST_JOBS:
 				kill_sig = SIGKILL;
+				break;
+
+			case JA_SUSPEND_JOBS:
+			case JA_CONTINUE_JOBS:
+				dprintf( D_ALWAYS,
+						 "Scheduler universe: Ignoring unsupported action (%d %s)\n",
+						 action, getJobActionString(action) );
+				return;
 				break;
 
 			default:
@@ -3930,6 +3945,14 @@ Scheduler::actOnJobs(int, Stream* s)
 					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
 		case JA_SUSPEND_JOBS:
+				// Only suspend running/staging jobs outside local & sched unis
+			snprintf( buf, 256,
+					  "((%s==%d || %s==%d) && (%s=!=%d && %s=!=%d)) && (",
+					  ATTR_JOB_STATUS, RUNNING,
+					  ATTR_JOB_STATUS, TRANSFERRING_OUTPUT,
+					  ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_LOCAL,
+					  ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER );
+			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
 				// Only vacate running/staging jobs
@@ -5825,6 +5848,12 @@ find_idle_local_jobs( ClassAd *job )
 	int	univ;
 	PROC_ID id;
 
+	int noop = 0;
+	job->LookupBool(ATTR_JOB_NOOP, noop);
+	if (noop) {
+		return 0;
+	}
+
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, univ) != 1) {
 		univ = CONDOR_UNIVERSE_STANDARD;
 	}
@@ -6463,16 +6492,11 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 
 	case REMOVED:
 	case HELD:
+	case COMPLETED:
 		dprintf( D_FULLDEBUG,
 				 "Job %d.%d was %s while waiting to start\n",
 				 cluster, proc, getJobStatusString(status) );
 		return false;
-		break;
-
-	case COMPLETED:
-		EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
-				"but we're trying to start a shadow for it!", 
-				cluster, proc, getJobStatusString(status) );
 		break;
 
 	default:
