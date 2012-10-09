@@ -2002,6 +2002,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				kill_sig = SIGKILL;
 				break;
 
+			case JA_SUSPEND_JOBS:
+			case JA_CONTINUE_JOBS:
+				dprintf( D_ALWAYS,
+						 "Scheduler universe: Ignoring unsupported action (%d %s)\n",
+						 action, getJobActionString(action) );
+				return;
+				break;
+
 			default:
 				EXCEPT( "bad action (%d %s) in abort_job_myself()",
 						(int)action, getJobActionString(action) );
