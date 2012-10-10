@@ -1750,7 +1750,25 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		else if( final_transfer || IsClient() ) {
 			MyString remap_filename;
-			if(filename_remap_find(download_filename_remaps.Value(),filename.Value(),remap_filename)) {
+			int res = filename_remap_find(download_filename_remaps.Value(),filename.Value(),remap_filename,0);
+			dprintf(D_FULLDEBUG, "REMAP: res is %i -> %s !\n", res, remap_filename.Value());
+			if (res == -1) {
+				// there was loop in the file transfer remaps, so set a good
+				// hold reason
+				error_buf.formatstr("remaps resulted in a cycle: %s", remap_filename.Value());
+				dprintf(D_ALWAYS,"REMAP: DoDownload: %s\n",error_buf.Value());
+				download_success = false;
+				try_again = false;
+				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_subcode = EPERM;
+
+					// In order for the wire protocol to remain in a well
+					// defined state, we must consume the rest of the
+					// file transmission without writing.
+				fullname = NULL_FILE;
+			}
+			else if(res) {
+				// legit remap was found
 				if(!is_relative_to_cwd(remap_filename.Value())) {
 					fullname = remap_filename;
 				}
@@ -1760,6 +1778,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.Value(),remap_filename.Value());
 			}
 			else {
+				// no remap found
 				fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.Value());
 			}
 #ifdef WIN32
