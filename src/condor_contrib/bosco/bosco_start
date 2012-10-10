@@ -11,6 +11,9 @@ bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE`
 if [ ! -e $bosco_passwd_file ]; then
     random_string=`echo $RANDOM | md5sum | awk '{print $1}'`
     condor_store_cred -p $random_string -f $bosco_passwd_file
+
+    # Change the ownership of the normal passwdfile to the user in CONDOR_IDS
+    chown `condor_config_val CONDOR_IDS` $bosco_passwd_file
 fi
 
 if [ ! -e $bosco_passwd_file.daemon ]; then
