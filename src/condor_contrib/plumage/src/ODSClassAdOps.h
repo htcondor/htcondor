@@ -38,7 +38,7 @@ class ODSAttributeOps {
 public:
     virtual bool createAttr(const T&) { return true; }    
     virtual bool readAttr(const T&, std::string&, std::string&, classad::Value&) { return true; }    
-    virtual bool updateAttr(const T&, const char*, const char* , const classad::Value* type=NULL ) { return true; }
+    virtual bool updateAttr(const T&, const char*, const char* , const classad::Value*) { return true; }
     virtual bool deleteAttr(const T&, const char* ) { return true; }
 };
 

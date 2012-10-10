@@ -22,6 +22,7 @@
 // local includes
 #include "ODSJobLogConsumer.h"
 #include "ODSHistoryUtils.h"
+#include "ODSUtils.h"
 
 #include "assert.h"
 #include "condor_daemon_core.h"
@@ -35,10 +36,13 @@
 
 using namespace std;
 using namespace plumage::etl;
+using namespace plumage::util;
+using namespace mongo;
 
 ClassAd	*ad = NULL;
 JobLogMirror *mirror = NULL;
 ODSJobLogConsumer *consumer = NULL;
+ODSMongodbOps* writer = NULL;
 
 extern MyString m_path;
 
@@ -52,8 +56,10 @@ void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
+    HostAndPort hap = getDbHostPort("PLUMAGE_JOBS_DB_HOST","PLUMAGE_JOBS_DB_PORT");
+
 	// setup the job log consumer
-	consumer = new ODSJobLogConsumer("localhost");
+	consumer = new ODSJobLogConsumer(hap.toString());
 	mirror = new JobLogMirror(consumer);
 	mirror->init();
 
@@ -66,7 +72,7 @@ void main_init(int /* argc */, char * /* argv */ [])
     tmp2 = si.DirPath ();
     if ( !tmp2 )
     {
-        dprintf ( D_ALWAYS, "warning: No HISTORY defined - ODS will not process history jobs\n" );
+        dprintf ( D_ALWAYS, "warning: No HISTORY defined - Plumage ODS will not process history jobs\n" );
     }
     else
     {

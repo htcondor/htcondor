@@ -19,15 +19,24 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "stl_string_utils.h"
+#include "CondorError.h"
+
+// platform includes
+#include <libgen.h> // dirname
+#include "directory.h"
+#include "stat_wrapper.h"
 
 // local includes
 #include "ODSProcessors.h"
+#include "ODSDBNames.h"
+#include "ODSUtils.h"
+#include "ODSHistoryFile.h"
 
 using namespace std;
 using namespace compat_classad;
 using namespace mongo;
 using namespace plumage::etl;
+using namespace plumage::util;
 
 // helpers, note expected bob & p vars
 #define STRING(X,Y) \
@@ -37,23 +46,6 @@ if (strcmp(X,"")) bob.append(#X,X);
 #define INTEGER(X,Y) bob.append(#X,p.getIntField(Y));
 #define DOUBLE(X,Y) bob.appendAsNumber(#X,formatReal(p.getField(Y).Double()));
 #define DATE(X,Y) bob.appendDate(#X,Y);
-
-// TODO: for now, insert accountant quota, etc. with 
-// the precision we appear to see from userprio
-// TODO: needs a common home
-// utility to manage float precision to
-// ClassAd serialization standard
-string formatter;
-template<typename T>
-const char* formatReal(T real) {
-    if (real == 0.0 || real == 1.0) {
-        sprintf(formatter, "%.1G", real);
-    }
-    else {
-        sprintf(formatter, "%.6G", real);
-    }
-    return formatter.c_str();
-}
 
 void
 plumage::etl::processSubmitterStats(ODSMongodbOps* ops, Date_t& ts) {
@@ -145,10 +137,10 @@ plumage::etl::processSchedulerStats(ODSMongodbOps* ops, Date_t& ts) {
 void 
 plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts)
 {
-    // attr%d holders
-    string  attrName, attrPrio, attrResUsed, attrWtResUsed, attrFactor, attrBeginUsage, attrAccUsage;
-    string  attrLastUsage, attrAcctGroup, attrIsAcctGroup;
-    string  attrConfigQuota, attrEffectiveQuota, attrSubtreeQuota, attrSurplusPolicy;
+    // attr%d holders...sadly reverting back to MyString for convenience of sprintf
+    MyString  attrName, attrPrio, attrResUsed, attrWtResUsed, attrFactor, attrBeginUsage, attrAccUsage;
+    MyString  attrLastUsage, attrAcctGroup, attrIsAcctGroup;
+    MyString  attrConfigQuota, attrEffectiveQuota, attrSubtreeQuota, attrSurplusPolicy;
     
     // values
     string  name, acctGroup, surplusPolicy;
@@ -175,42 +167,42 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         isAcctGroup = false;
 
         // skip stale records unless we have none
-        sprintf( attrLastUsage , "LastUsageTime%d", i );
-        ad->LookupInteger  ( attrLastUsage.c_str(), lastUsage );
+        attrLastUsage.sprintf("LastUsageTime%d", i );
+        ad->LookupInteger  ( attrLastUsage.Value(), lastUsage );
         if (lastUsage < minLastUsageTime && acct_count > 0)
             continue;
 
         // parse the horrid classad
-        sprintf( attrName , "Name%d", i );
-        sprintf( attrPrio , "Priority%d", i );
-        sprintf( attrResUsed , "ResourcesUsed%d", i );
-        sprintf( attrWtResUsed , "WeightedResourcesUsed%d", i );
-        sprintf( attrFactor , "PriorityFactor%d", i );
-        sprintf( attrBeginUsage , "BeginUsageTime%d", i );
-        sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
-        sprintf( attrAcctGroup, "AccountingGroup%d", i);
-        sprintf( attrIsAcctGroup, "IsAccountingGroup%d", i);
-        sprintf( attrConfigQuota, "ConfigQuota%d", i);
-        sprintf( attrEffectiveQuota, "EffectiveQuota%d", i);
-        sprintf( attrSubtreeQuota, "SubtreeQuota%d", i);
-        sprintf( attrSurplusPolicy, "SurplusPolicy%d", i);
+        attrName.sprintf("Name%d", i );
+        attrPrio.sprintf("Priority%d", i );
+        attrResUsed.sprintf("ResourcesUsed%d", i );
+        attrWtResUsed.sprintf("WeightedResourcesUsed%d", i );
+        attrFactor.sprintf("PriorityFactor%d", i );
+        attrBeginUsage.sprintf("BeginUsageTime%d", i );
+        attrAccUsage.sprintf("WeightedAccumulatedUsage%d", i );
+        attrAcctGroup.sprintf("AccountingGroup%d", i);
+        attrIsAcctGroup.sprintf("IsAccountingGroup%d", i);
+        attrConfigQuota.sprintf("ConfigQuota%d", i);
+        attrEffectiveQuota.sprintf("EffectiveQuota%d", i);
+        attrSubtreeQuota.sprintf("SubtreeQuota%d", i);
+        attrSurplusPolicy.sprintf("SurplusPolicy%d", i);
 
-        ad->LookupString   ( attrName.c_str(), name );
-        ad->LookupFloat    ( attrPrio.c_str(), priority );
-        ad->LookupFloat    ( attrFactor.c_str(), factor );
-        ad->LookupFloat    ( attrAccUsage.c_str(), accUsage );
-        ad->LookupInteger  ( attrBeginUsage.c_str(), beginUsage );
-        ad->LookupInteger  ( attrResUsed.c_str(), resUsed );
-        ad->LookupBool     ( attrIsAcctGroup.c_str(), isAcctGroup);
-        ad->LookupFloat    ( attrConfigQuota.c_str(), configQuota );
-        ad->LookupFloat    ( attrEffectiveQuota.c_str(), effectiveQuota );
-        ad->LookupFloat    ( attrSubtreeQuota.c_str(), subtreeQuota );
-        ad->LookupString   ( attrSurplusPolicy.c_str(), surplusPolicy );
+        ad->LookupString   ( attrName.Value(), name );
+        ad->LookupFloat    ( attrPrio.Value(), priority );
+        ad->LookupFloat    ( attrFactor.Value(), factor );
+        ad->LookupFloat    ( attrAccUsage.Value(), accUsage );
+        ad->LookupInteger  ( attrBeginUsage.Value(), beginUsage );
+        ad->LookupInteger  ( attrResUsed.Value(), resUsed );
+        ad->LookupBool     ( attrIsAcctGroup.Value(), isAcctGroup);
+        ad->LookupFloat    ( attrConfigQuota.Value(), configQuota );
+        ad->LookupFloat    ( attrEffectiveQuota.Value(), effectiveQuota );
+        ad->LookupFloat    ( attrSubtreeQuota.Value(), subtreeQuota );
+        ad->LookupString   ( attrSurplusPolicy.Value(), surplusPolicy );
         
-        if( !ad->LookupFloat( attrWtResUsed.c_str(), wtResUsed ) ) {
+        if( !ad->LookupFloat( attrWtResUsed.Value(), wtResUsed ) ) {
             wtResUsed = resUsed;
         }
-        if (!ad->LookupString(attrAcctGroup.c_str(), acctGroup)) {
+        if (!ad->LookupString(attrAcctGroup.Value(), acctGroup)) {
             acctGroup = "<none>";
         }
 
@@ -234,4 +226,122 @@ plumage::etl::processAccountantStats(ClassAd* ad, ODSMongodbOps* ops, Date_t& ts
         conn->insert(DB_STATS_SAMPLES_ACCOUNTANT,bob.obj());
     }
     
+}
+
+typedef set<long unsigned int> HistoryFileListType;
+static HistoryFileListType m_historyFiles;
+MyString m_path;
+
+// force a reset of history processing
+void plumage::etl::initHistoryFiles() {
+    m_historyFiles.clear();
+    processHistoryDirectory();
+    processCurrentHistory(true);
+}
+
+/**
+ * Process the history directory and maintain the history file map
+ *
+ * Only handle rotated history files. 
+ * For each one that is not in the history file map, create a
+ * new HistoryFile, poll it for entries to process, and add it to the
+ * map.
+ */
+void
+plumage::etl::processHistoryDirectory()
+{
+    const char *file = NULL;
+
+    Directory dir ( m_path.Value() );
+    dir.Rewind();
+    while ( ( file = dir.Next() ) )
+    {
+        // Skip all non-history files, e.g. not history.<datestamp>
+        if ( strncmp ( file, "history.", 8 ) ) {
+            continue;
+        }
+
+        ODSHistoryFile h_file ( ( m_path + DIR_DELIM_STRING + file ).Value() );
+        CondorError errstack;
+        if ( !h_file.init ( errstack ) )
+        {
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            return;
+        }
+        errstack.clear();
+
+        long unsigned int id;
+        ASSERT ( h_file.getId ( id ) );
+        HistoryFileListType::iterator entry = m_historyFiles.find ( id );
+        if ( m_historyFiles.end() == entry )
+        {
+            h_file.poll ( errstack );
+            m_historyFiles.insert ( id );
+        }
+    }
+}
+
+/**
+ * Process the current history file.
+ *
+ * 1) check to see if it is properly initialized, recording id (inode)
+ * 2) stat the current history file
+ * 3) poll for new entries and process them
+ * 4) detect rotations
+ */
+void
+plumage::etl::processCurrentHistory(bool force_reset)
+{
+    static MyString currentHistoryFilename = m_path + DIR_DELIM_STRING + "history";
+    static ODSHistoryFile currentHistory ( currentHistoryFilename.Value() );
+
+    CondorError errstack;
+
+    if (force_reset) {
+       currentHistory.cleanup();
+    }
+
+    // (1)
+    long unsigned int id;
+    if ( !currentHistory.getId ( id ) || force_reset)
+    {
+        if ( !currentHistory.init ( errstack ) )
+        {
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            return;
+        }
+        ASSERT ( currentHistory.getId ( id ) );
+        m_historyFiles.insert ( id );
+    }
+
+    // (2)
+    // Stat before poll to handle race of: poll + write + rotate + stat
+    StatWrapper stat_wrapper;
+    if ( stat_wrapper.Stat ( currentHistoryFilename ) )
+    {
+        dprintf ( D_ALWAYS, "Failed to stat %s: %d (%s)\n",
+                  currentHistoryFilename.Value(),
+                  stat_wrapper.GetErrno(), strerror ( stat_wrapper.GetErrno() ) );
+        return;
+    }
+    const StatStructType *stat = stat_wrapper.GetBuf();
+    ASSERT ( currentHistory.getId ( id ) );
+
+    // (3)
+    errstack.clear();
+    currentHistory.poll ( errstack );
+
+    // (4)
+    // If different the file has rotated
+    if ( id != stat->st_ino )
+    {
+        currentHistory = ODSHistoryFile ( currentHistoryFilename.Value() );
+        if ( !currentHistory.init ( errstack ) )
+        {
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            return;
+        }
+        ASSERT ( currentHistory.getId ( id ) );
+        m_historyFiles.insert ( id );
+    }
 }
