@@ -1,0 +1,103 @@
+#!/usr/bin/python
+#Marco Mambelli - 10/8/2012 
+
+import sys
+import os
+import platform
+
+UNKNOWN="UNKNOWN"
+UNSUPPORTED="UNSUPPORTED"
+RH5="RH5"
+RH6="RH6"
+OSX="MAC"
+DEB6="DEB6"
+
+def findversion_mac():
+  # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
+  #      System Version: Mac OS X 10.6.8 (10K549)
+  #
+  import commands 
+  ec, out = commands.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
+  retv = out.strip()[len("System Version:"):].strip()
+  if retv.startswith('Mac'):
+    # should I check for specific Version numbers?
+    return OSX
+  return UNKNOWN
+
+def findvertion_redhat():
+  # content of /etc/redhat-release
+  #Scientific Linux release 6.2 (Carbon)
+  #Red Hat Enterprise Linux Server release 5.8 (Tikanga)
+  #Scientific Linux SL release 5.5 (Boron)
+  #CentOS release 4.2 (Final)
+  #
+  #Do we support FC:Fedora Core release 11 ... ?
+  #
+  # should I check that it is SL/RHEL/CentOS ? 
+  # no 
+  lines = open('/etc/redhat-release').readlines()
+  for line in lines:
+    if 'release 5.' in line:
+      return RH5
+    if 'release 6.' in line:
+      return RH6
+    return UNSUPPORTED
+  return UNKNOWN
+
+def findvertion_debian():
+  """cat /etc/*release                                                                                                      
+DISTRIB_ID=Ubuntu                                                                                                                           
+DISTRIB_RELEASE=11.10                                                                                                                       
+DISTRIB_CODENAME=oneiric                                                                                                                    
+DISTRIB_DESCRIPTION="Ubuntu 11.10"                                                                                                          
+                                                                                                                                            
+adrewmm@bellatrix:~$ lsb_release                                                                                                            
+No LSB modules are available.                                                                                                               
+                                                                                                                                            
+adrewmm@bellatrix:~$ lsb_release -a                                                                                                         
+No LSB modules are available.                                                                                                               
+Distributor ID:    Ubuntu                                                                                                                   
+Description:    Ubuntu 11.10                                                                                                                
+Release:    11.10                                                                                                                           
+Codename:    oneiric       
+"""
+  retv=UNSUPPORTED
+  lines = open('/etc/lsb-release').readlines()
+  for line in lines:
+    if 'DISTRIB_ID' in line:
+      if not 'Debian' in line:
+        return UNSUPPORTED
+    if 'DISTRIB_RELEASE' in line:
+        if line[len('DISTRIB_RELEASE='):].startswith('6.'):
+          retv=DEB6
+  return retv
+
+def findversion():
+  if not os.name=='posix':
+    return UNSUPPORTED
+  if sys.platform=='darwin':
+    # skip if there is no need to check versions: return findversion_mac()
+    return OSX
+  elif sys.platform.startswith('linux'):
+    # only 64 bit supported
+    if not platform.architecture()[0]=='64bit':
+      return UNSUPPORTED
+    # try first platform.dist, use it only for positive recognition
+    mydist = platform.dist()
+    if mydist[0]:
+      if mydist[0].lower()=='redhat':
+        if mydist[1].startswith('5.'):
+          return RH5
+        if mydist[1].startswith('6.'):
+          return RH6
+      if mydist[0].lower()=='debian':
+        if mydist[1].startswith('6.'):
+          return DEB6
+    if os.path.isfile('/etc/redhat-release'):
+      return findvertion_redhat()
+    elif os.path.isfile('/etc/lsb-release'):
+      return findvertion_debian()
+  return UNKNOWN
+
+if __name__ == "__main__":
+    print findversion()
