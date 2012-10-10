@@ -92,7 +92,7 @@ a ClassAd.  A much better implementation would be to store it
 as a ClassAd within a ClassAd.  However, this will have to wait until
 new ClassAds are deployed.
 */
-int filename_remap_find( const char *input, const char *filename, MyString &output );
+int filename_remap_find( const char *input, const char *filename, MyString &output, int cur_nesting_level = 0);
 
 void canonicalize_dir_delimiters( MyString &path );
 void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path );
