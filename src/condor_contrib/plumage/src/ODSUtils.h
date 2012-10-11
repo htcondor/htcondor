@@ -14,11 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef _ODS_POOL_UTILS_H
-#define _ODS_POOL_UTILS_H
+#ifndef _ODS_UTILS_H
+#define _ODS_UTILS_H
 
+// c++ include
 #include <string>
 
-std::string getPoolName();
+// local include
+#include "ODSMongodbOps.h"
 
-#endif /* _ODS_POOL_UTILS_H */
+namespace plumage {
+namespace util {
+
+std::string getPoolName();
+const char* formatReal(double x);
+std::string trimQuotes(const char* str);
+void addJobIndices(plumage::etl::ODSMongodbOps* ops);
+mongo::HostAndPort getDbHostPort(const char* host_param, const char* port_param);
+
+}}
+
+#endif /* _ODS_UTILS_H */
