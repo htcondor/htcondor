@@ -19,9 +19,10 @@
 
 // local includes
 #include "ODSMongodbOps.h"
-#include "ODSPoolUtils.h"
+#include "ODSUtils.h"
 #include "ODSAccountant.h"
 #include "ODSProcessors.h"
+#include "ODSDBNames.h"
 
 // seems boost meddles with assert defs
 #include "assert.h"
@@ -34,6 +35,7 @@
 using namespace std;
 using namespace mongo;
 using namespace plumage::etl;
+using namespace plumage::util;
 
 int historyInterval;
 int initialDelay;
@@ -41,7 +43,7 @@ int statsTimer;
 int acctTimer;
 int acctInterval;
 
-class ODSCollectorPlugin : public Service, CollectorPlugin
+class PlumageCollectorPlugin : public Service, CollectorPlugin
 {
 	string m_name;
 	string m_ip;
@@ -53,8 +55,8 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
     // Accountant ad is a special case: we don't get it from the Collector
     // it needs its own processing and sample interval
     void
-    recordAccountantAd(Date_t& ts) {
-        dprintf(D_FULLDEBUG, "ODSCollectorPlugin::recordAccountantAd() called...\n");
+    recordAccountantAd() {
+        dprintf(D_FULLDEBUG, "PlumageCollectorPlugin::recordAccountantAd() called...\n");
         ODSAccountant acct;
         acct.connect();
         if (m_acct_ad) {
@@ -62,7 +64,7 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
             m_acct_ad = NULL;
         }
         if (!(m_acct_ad = acct.fetchAd())) {
-            dprintf(D_ALWAYS, "ODSCollectorPlugin: unable to retrieve accountant ad from negotiator\n");
+            dprintf(D_ALWAYS, "PlumageCollectorPlugin: unable to retrieve accountant ad from negotiator\n");
         }
         Date_t ts_now = jsTime();
         processAccountantStats(m_acct_ad, m_stats_conn, ts_now);
@@ -71,7 +73,7 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
     void
     processStatsTimer() {
         m_settled = true;
-        dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processStatsTimer() called\n");
+        dprintf(D_FULLDEBUG, "PlumageCollectorPlugin::processStatsTimer() called\n");
         // sync all stat records to the same timestamp
         Date_t ts_sync = jsTime();
         processSubmitterStats(m_stats_conn, ts_sync);
@@ -82,7 +84,7 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
     
 
 public:
-    ODSCollectorPlugin(): m_ads_conn(NULL), m_stats_conn(NULL),m_acct_ad(NULL),m_settled(FALSE)
+    PlumageCollectorPlugin(): m_ads_conn(NULL), m_stats_conn(NULL),m_acct_ad(NULL),m_settled(FALSE)
     {
         //
     }
@@ -90,34 +92,21 @@ public:
 	void
 	initialize()
 	{
-		stringstream dbhost;
-		int dbport;
 
-		dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Initializing...\n");
+		dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Initializing...\n");
 
 		m_name = getPoolName();
 		m_ip = my_ip_string();
-		
-		char* tmp = NULL;
-		if (NULL != (tmp = param("ODS_DB_HOST"))) {
-			dbhost << tmp;
-			free (tmp);
-		}
-		else {
-			dbhost << "localhost";
-		}
 
-		if (param_integer("ODS_DB_PORT",dbport,false,0)) {
-			dbhost << ":" << dbport;
-		}
+        HostAndPort hap = getDbHostPort("PLUMAGE_JOBS_DB_HOST","PLUMAGE_JOBS_DB_PORT");
 
         m_ads_conn = new ODSMongodbOps(DB_RAW_ADS);
-        if (!m_ads_conn->init(dbhost.str())) {
+        if (!m_ads_conn->init(hap.toString())) {
 			EXCEPT("Failed to initialize DB connection for raw ads");
 		}
 
         m_stats_conn = new ODSMongodbOps(DB_STATS_SAMPLES);
-        if (!m_stats_conn->init(dbhost.str())) {
+        if (!m_stats_conn->init(hap.toString())) {
 			EXCEPT("Failed to initialize DB connection for stats");
 		}
 
@@ -129,7 +118,7 @@ public:
             daemonCore->Register_Timer(
                 initialDelay,
                 historyInterval,
-                (TimerHandlercpp)(&ODSCollectorPlugin::processStatsTimer),
+                (TimerHandlercpp)(&PlumageCollectorPlugin::processStatsTimer),
                 "Timer for collecting ODS stats",
                 this
             ))) {
@@ -142,7 +131,7 @@ public:
             daemonCore->Register_Timer(
                 initialDelay,
                 acctInterval,
-                (TimerHandlercpp)(&ODSCollectorPlugin::recordAccountantAd),
+                (TimerHandlercpp)(&PlumageCollectorPlugin::recordAccountantAd),
                 "Timer for collecting Accountant ad",
                 this
             ))) {
@@ -154,7 +143,7 @@ public:
 	shutdown()
 	{
 
-		dprintf(D_FULLDEBUG, "ODSCollectorPlugin: shutting down...\n");
+		dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: shutting down...\n");
 		delete m_ads_conn;
         delete m_stats_conn;
 
@@ -182,9 +171,9 @@ public:
 
 		switch (command) {
 		case UPDATE_STARTD_AD:
-			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_STARTD_AD\n");
+			dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received UPDATE_STARTD_AD\n");
 			if (param_boolean("ODS_IGNORE_UPDATE_STARTD_AD", FALSE)) {
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_STARTD_AD\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Configured to ignore UPDATE_STARTD_AD\n");
 				break;
 			}
 
@@ -196,9 +185,9 @@ public:
 
 			break;
         case UPDATE_SUBMITTOR_AD:
-            dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_SUBMITTOR_AD\n");
+            dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received UPDATE_SUBMITTOR_AD\n");
             if (param_boolean("ODS_IGNORE_UPDATE_SUBMITTOR_AD", FALSE)) {
-                dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_SUBMITTOR_AD\n");
+                dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Configured to ignore UPDATE_SUBMITTOR_AD\n");
                 break;
             }
 
@@ -214,9 +203,9 @@ public:
 
             break;
 		case UPDATE_NEGOTIATOR_AD:
-			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_NEGOTIATOR_AD\n");
+			dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received UPDATE_NEGOTIATOR_AD\n");
 			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", TRUE)) {
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_NEGOTIATOR_AD\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Configured to ignore UPDATE_NEGOTIATOR_AD\n");
 				break;
 			}
 
@@ -228,9 +217,9 @@ public:
 
 			break;
 		case UPDATE_SCHEDD_AD:
-			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_SCHEDD_AD\n");
+			dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received UPDATE_SCHEDD_AD\n");
 			if (param_boolean("ODS_IGNORE_UPDATE_SCHEDD_AD", FALSE)) {
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_SCHEDD_AD\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Configured to ignore UPDATE_SCHEDD_AD\n");
 				break;
 			}
 
@@ -242,9 +231,9 @@ public:
 
 			break;
 		case UPDATE_GRID_AD:
-			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_GRID_AD\n");
+			dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received UPDATE_GRID_AD\n");
             if (param_boolean("ODS_IGNORE_UPDATE_GRID_AD", TRUE)) {
-                dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_GRID_AD\n");
+                dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Configured to ignore UPDATE_GRID_AD\n");
                 break;
             }
 
@@ -256,9 +245,9 @@ public:
 
 			break;
 		case UPDATE_COLLECTOR_AD:
-            dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_COLLECTOR_AD\n");
+            dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received UPDATE_COLLECTOR_AD\n");
             if (param_boolean("ODS_IGNORE_UPDATE_COLLECTOR_AD", TRUE)) {
-                dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_COLLECTOR_AD\n");
+                dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Configured to ignore UPDATE_COLLECTOR_AD\n");
                 break;
             }
 				// We could receive collector ads from many
@@ -275,7 +264,7 @@ public:
 			}
 			break;
 		default:
-			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Unsupported command: %s\n",
+			dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Unsupported command: %s\n",
 					getCollectorCommandString(command));
 		}
 	}
@@ -303,7 +292,7 @@ public:
 
 		switch (command) {
 			case INVALIDATE_STARTD_ADS:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_STARTD_ADS\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received INVALIDATE_STARTD_ADS\n");
 				if (!makeStartdAdHashKey(hashKey, _ad)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
@@ -314,7 +303,7 @@ public:
 				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_SUBMITTOR_ADS:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_SUBMITTOR_ADS\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received INVALIDATE_SUBMITTOR_ADS\n");
 				if (!makeGenericAdHashKey(hashKey, _ad)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
@@ -330,7 +319,7 @@ public:
 				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_NEGOTIATOR_ADS:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_NEGOTIATOR_ADS\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received INVALIDATE_NEGOTIATOR_ADS\n");
 				if (!makeNegotiatorAdHashKey(hashKey, _ad)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
@@ -341,7 +330,7 @@ public:
 				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_SCHEDD_ADS:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
 				if (!makeScheddAdHashKey(hashKey, _ad)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
@@ -352,7 +341,7 @@ public:
 				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_GRID_ADS:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_GRID_ADS\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received INVALIDATE_GRID_ADS\n");
 				if (!makeGridAdHashKey(hashKey, _ad)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
@@ -363,15 +352,15 @@ public:
 				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_COLLECTOR_ADS:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_COLLECTOR_ADS\n");
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Received INVALIDATE_COLLECTOR_ADS\n");
 				m_ads_conn->deleteAd(key);
 			break;
 			default:
-				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Unsupported command: %s\n",
+				dprintf(D_FULLDEBUG, "PlumageCollectorPlugin: Unsupported command: %s\n",
 					getCollectorCommandString(command));
 		}
 	}
 
 };
 
-static ODSCollectorPlugin instance;
+static PlumageCollectorPlugin instance;

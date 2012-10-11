@@ -52,7 +52,7 @@ public:
 
 private:
     ClassAdLogReader *m_reader;
-    ODSMongodbOps* m_writer;
+    ODSMongodbOps *m_history_db, *m_queue_db;
 };
 
 }}

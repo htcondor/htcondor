@@ -23,17 +23,17 @@
 namespace plumage {
 namespace etl {
 
-const char DB_RAW_ADS[] = "condor_raw.ads";
-const char DB_STATS_SAMPLES[] = "condor_stats.samples";
-const char DB_STATS_SAMPLES_SUB[] = "condor_stats.samples.submitter";
-const char DB_STATS_SAMPLES_MACH[] = "condor_stats.samples.machine";
-const char DB_STATS_SAMPLES_SCHED[] = "condor_stats.samples.scheduler";
-const char DB_STATS_SAMPLES_ACCOUNTANT[] = "condor_stats.samples.accountant";
-
+// stat processors
 void processSubmitterStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
 void processMachineStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
 void processSchedulerStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
 void processAccountantStats(compat_classad::ClassAd* ad, plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
+
+// history file processors
+void initHistoryFiles();
+void processHistoryDirectory();
+void processCurrentHistory(bool force_reset = false);
+
 
 }}
 
