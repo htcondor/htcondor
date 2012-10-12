@@ -49,7 +49,7 @@ ODSMongodbOps*
 getWriter()
 {
     if (!writer) {
-        HostAndPort hap = getDbHostPort("PLUMAGE_JOBS_DB_HOST","PLUMAGE_JOBS_DB_PORT");
+        HostAndPort hap = getDbHostPort("PLUMAGE_DB_HOST","PLUMAGE_DB_PORT");
         writer = new ODSMongodbOps(DB_JOBS_HISTORY);
         if (!writer->init(hap.toString())) {
             dprintf(D_ALWAYS,"ODSHistoryFile: unable to configure new database connection!\n");

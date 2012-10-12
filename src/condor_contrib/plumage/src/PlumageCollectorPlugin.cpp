@@ -98,7 +98,7 @@ public:
 		m_name = getPoolName();
 		m_ip = my_ip_string();
 
-        HostAndPort hap = getDbHostPort("PLUMAGE_DEFAULT_DB_HOST","PLUMAGE_DEFAULT_DB_PORT");
+        HostAndPort hap = getDbHostPort("PLUMAGE_DB_HOST","PLUMAGE_DB_PORT");
 
         m_ads_conn = new ODSMongodbOps(DB_RAW_ADS);
         if (!m_ads_conn->init(hap.toString())) {

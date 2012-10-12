@@ -71,18 +71,14 @@ VIEW_SERVER.PLUGINS = $(LIB)/plugins/PlumageCollectorPlugin-plugin.so
 POOL_HISTORY_SAMPLING_INTERVAL = 60
 UPDATE_INTERVAL = 300
 # the following are defaults in code also
-PLUMAGE_DEFAULT_DB_HOST = localhost
-PLUMAGE_DEFAULT_DB_PORT =
+PLUMAGE_DB_HOST = localhost
+PLUMAGE_DB_PORT =
 DAEMON_LIST = $(DAEMON_LIST), VIEW_SERVER
 
 ##############
 History daemon
 ##############
 HISTORY = $(SPOOL)/history
-
-# in case we want to make use of a separate mongod for jobs
-PLUMAGE_JOBS_DB_HOST = $(PLUMAGE_DEFAULT_DB_HOST)
-PLUMAGE_JOBS_DB_PORT = $(PLUMAGE_DEFAULT_DB_PORT)
 
 # Job ETL server, provides continuous loading of job history into mongodb
 JOB_ETL_SERVER = $(SBIN)/plumage_job_etl_server
@@ -266,7 +262,7 @@ Usage: ./plumage_history_load [-db <mongodb URL>] [-f <full path to condor histo
         -db : the mongod connection URL (host[:port])
         -f : full path to a specific Condor history file to load
         -h | -help : this help message
-No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_JOBS_DB_HOST/_PORT.
+No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_DB_HOST/_PORT.
 Duplicate jobs (same GlobalJobID) will be upserted (updated or added if missing).
 
 $ ./plumage_history_load 

@@ -59,7 +59,7 @@ static void print_usage(char* name)
   printf("\t-db : the mongod connection URL (host[:port])\n");
   printf("\t-f : full path to a specific Condor history file to load\n");
   printf("\t-h | -help : this help message\n");
-  printf("No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_JOBS_DB_HOST/_PORT.\n");
+  printf("No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_DB_HOST/_PORT.\n");
   printf("Duplicate jobs (same GlobalJobID) will be upserted (updated or added if missing).\n");
   exit(1);
 }
@@ -123,7 +123,7 @@ main(int argc, char* argv[])
     printf("SCHEDD_NAME = %s\n",schedd_name);
 
     if (!db_arg) {
-        HostAndPort hap = getDbHostPort("PLUMAGE_JOBS_DB_HOST","PLUMAGE_JOBS_DB_PORT");
+        HostAndPort hap = getDbHostPort("PLUMAGE_DB_HOST","PLUMAGE_DB_PORT");
         db_host_port = hap.toString();
     }
     else {
