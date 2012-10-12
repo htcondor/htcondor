@@ -134,6 +134,30 @@ my @default_build_configure_args =
 	 #'-DSCRATCH_EXTERNALS:BOOL' => 'ON',
 	);
 
+############################################################
+# Batlab new plaform names
+#
+# x86_64_Debian5
+# x86_64_Debian6
+# x86_64_Fedora15
+# x86_64_Fedora16
+# x86_64_Fedora17
+# x86_64_MacOSX7
+# x86_64_RedHat5
+# x86_64_RedHat6
+# x86_64_SL6
+# x86_64_Solaris11
+# x86_64_Ubuntu10
+# x86_64_Ubuntu12
+# x86_64_Windows7
+# x86_Debian6
+# x86_FreeBSD7
+# x86_RedHat5
+# x86_RedHat6
+# x86_SL5
+# x86_WindowsXP
+##########################################################
+
 ###############################################################################
 # Hash Table of Doom
 #
@@ -176,7 +200,7 @@ our %submit_info = (
 	# Microsoft Windows 6.1/2000/xp/whatever on x86_64
 	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
-	'x86_64_winnt_6.1'		=> {
+	'x86_64_Windows7'		=> {
 		'build' => {
 			'configure_args' => { 
 			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
@@ -192,12 +216,14 @@ our %submit_info = (
 		},
 	},
 	
-	'x86_winnt_5.1'		=> 'x86_64_winnt_6.1',
+	'x86_WindowsXP'		=> 'x86_64_Windows7',
+	'x86_64_winnt_6.1'	=> 'x86_64_Windows7',
+	'x86_winnt_5.1'		=> 'x86_64_Windows7',
 	
 	##########################################################################
 	# Platform Debian 5.0 on x86_64
 	##########################################################################
-	'x86_64_deb_5.0'	=> {
+	'x86_64_Debian5'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
@@ -212,12 +238,13 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_deb_5.0'	=> 'x86_64_Debian5',
 
 
 	##########################################################################
 	# Platform DEB 6 on x86_64 
 	##########################################################################
-	'x86_64_deb_6.0' => {
+	'x86_64_Debian6'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
@@ -232,8 +259,12 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_deb_6.0'	=> 'x86_64_Debian6',
 
-	'x86_64_rhap_6.2'	=> {
+	##########################################################################
+	# Platform RedHat and SL
+	##########################################################################
+	'x86_64_RedHat6'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DCLIPPED:BOOL' => 'OFF',
@@ -248,20 +279,24 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_rhap_6.3'	=> 'x86_64_rhap_6.2',
-	'x86_64_rhap_6.4'	=> 'x86_64_rhap_6.2',
-	'x86_64_rhap_6.5'	=> 'x86_64_rhap_6.2',
-	'x86_64_rhap_6.6'	=> 'x86_64_rhap_6.2',
-	'x86_64_rhap_6.7'	=> 'x86_64_rhap_6.2',
-	'x86_64_rhap_6.8'	=> 'x86_64_rhap_6.2',
-	'x86_64_rhap_6.9'	=> 'x86_64_rhap_6.2',
+	'x86_64_rhap_6.2'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.3'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.4'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.5'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.6'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.7'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.8'	=> 'x86_64_RedHat6',
+	'x86_64_rhap_6.9'	=> 'x86_64_RedHat6',
 
-    'x86_64_sl_6.0' => 'x86_64_rhap_6.2',
-    'x86_64_sl_6.1' => 'x86_64_rhap_6.2',
-    'x86_64_sl_6.2' => 'x86_64_rhap_6.2',
-    'x86_64_sl_6.3' => 'x86_64_rhap_6.2',
+	# for now SL6 is the same as RedHat6
+	'x86_64_SL6'	=> 'x86_64_RedHat6',
+	'x86_64_sl_6.0' => 'x86_64_SL6',
+	'x86_64_sl_6.1' => 'x86_64_SL6',
+	'x86_64_sl_6.2' => 'x86_64_SL6',
+	'x86_64_sl_6.3' => 'x86_64_SL6',
 
-	'x86_64_rhap_5.7'		=> {
+	# RedHat5
+	'x86_64_RedHat5'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
@@ -276,11 +311,13 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	'x86_64_rhap_5.8'   => 'x86_64_rhap_5.7',
-	'x86_64_rhap_5.9'   => 'x86_64_rhap_5.7',
-	'x86_64_rhap_5.10'   => 'x86_64_rhap_5.7', # dunno if 5.10 will actually be a release
+	'x86_64_rhap_5.7'	=> 'x86_64_RedHat5',
+	'x86_64_rhap_5.8'	=> 'x86_64_RedHat5',
+	'x86_64_rhap_5.9'	=> 'x86_64_RedHat5',
+	'x86_64_rhap_5.10'	=> 'x86_64_RedHat5', # dunno if 5.10 will actually be a release
 
-	'x86_rhap_6.2'		=> {
+	# 32 bit RedHat 6
+	'x86_RedHat6'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args	},
 			'prereqs'	=> [ @default_prereqs ],
@@ -293,15 +330,17 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	'x86_rhap_6.3'		=> 'x86_rhap_6.2',
-	'x86_rhap_6.4'		=> 'x86_rhap_6.2',
-	'x86_rhap_6.5'		=> 'x86_rhap_6.2',
-	'x86_rhap_6.6'		=> 'x86_rhap_6.2',
-	'x86_rhap_6.7'		=> 'x86_rhap_6.2',
-	'x86_rhap_6.8'		=> 'x86_rhap_6.2',
-	'x86_rhap_6.9'		=> 'x86_rhap_6.2',
+	'x86_rhap_6.2'		=> 'x86_RedHat6',
+	'x86_rhap_6.3'		=> 'x86_RedHat6',
+	'x86_rhap_6.4'		=> 'x86_RedHat6',
+	'x86_rhap_6.5'		=> 'x86_RedHat6',
+	'x86_rhap_6.6'		=> 'x86_RedHat6',
+	'x86_rhap_6.7'		=> 'x86_RedHat6',
+	'x86_rhap_6.8'		=> 'x86_RedHat6',
+	'x86_rhap_6.9'		=> 'x86_RedHat6',
 
-	'x86_rhap_5.8'		=> {
+	# 32 bit RedHat 5
+	'x86_RedHat5'		=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
@@ -316,11 +355,36 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	'x86_rhap_5.9'		=> 'x86_rhap_5.8',
-	'x86_rhap_5.10'		=> 'x86_rhap_5.8',
+	'x86_rhap_5.8'		=> 'x86_RedHat5',
+	'x86_rhap_5.9'		=> 'x86_RedHat5',
+	'x86_rhap_5.10'		=> 'x86_RedHat5',
 
-	# This is new batlab macos 10.7 machine
-	'x86_64_macos_10.7' => {
+	# 32 bit SL 5
+	'x86_SL5' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+	'x86_sl_5.7'	=> 'x86_SL5',
+	'x86_sl_5.8'	=> 'x86_SL5',
+	'x86_sl_5.9'	=> 'x86_SL5',
+	'x86_sl_5.10'	=> 'x86_SL5',
+
+	##########################################################################
+	# Platform MacOSX
+	##########################################################################
+	
+	'x86_64_MacOSX7' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
@@ -333,6 +397,7 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_macos_10.7'	=> 'x86_64_MacOSX7',
 
 
 	# These describe what a human, sadly, had to figure out about certain
@@ -346,7 +411,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform Fedora 15 on x86_64
 	##########################################################################
-	'x86_64_fedora_15'	=> {
+	'x86_64_Fedora'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 			},
@@ -360,14 +425,23 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-
-	'x86_64_fedora_16'				=> 'x86_64_fedora_15',
-	'x86_64_fedora_17'				=> 'x86_64_fedora_15',
-	'x86_64_fedora_18'				=> 'x86_64_fedora_15',
-	'x86_64_fedora_19'				=> 'x86_64_fedora_15',
-	'x86_64_fedora_20'				=> 'x86_64_fedora_15',
-	'x86_64_fedora_21'				=> 'x86_64_fedora_15',
-	'x86_64_fedora_22'				=> 'x86_64_fedora_15',
+	'x86_64_Fedora15'				=> 'x86_64_Fedora',
+	'x86_64_Fedora16'				=> 'x86_64_Fedora',
+	'x86_64_Fedora17'				=> 'x86_64_Fedora',
+	'x86_64_Fedora18'				=> 'x86_64_Fedora',
+	'x86_64_Fedora19'				=> 'x86_64_Fedora',
+	'x86_64_Fedora20'				=> 'x86_64_Fedora',
+	'x86_64_Fedora21'				=> 'x86_64_Fedora',
+	'x86_64_Fedora22'				=> 'x86_64_Fedora',
+	
+	'x86_64_fedora_15'				=> 'x86_64_Fedora',
+	'x86_64_fedora_16'				=> 'x86_64_Fedora',
+	'x86_64_fedora_17'				=> 'x86_64_Fedora',
+	'x86_64_fedora_18'				=> 'x86_64_Fedora',
+	'x86_64_fedora_19'				=> 'x86_64_Fedora',
+	'x86_64_fedora_20'				=> 'x86_64_Fedora',
+	'x86_64_fedora_21'				=> 'x86_64_Fedora',
+	'x86_64_fedora_22'				=> 'x86_64_Fedora',
 
 	##########################################################################
 	# Platform Solaris 11 on x86_64
@@ -376,7 +450,7 @@ our %submit_info = (
 	# problems.	 Since ssh_to_job depends on openssl's base64 functions,
 	# that is also disabled.
 	##########################################################################
-	'x86_64_sol_5.11'	=> {
+	'x86_64_Solaris11'	=> {
 		'build' => {
 			# we can use ssh_to_job on solaris if we use the proper kerberose
 			# this is OK since we build kerberose only for batlab.
@@ -397,31 +471,13 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-
-	'x86_sl_5.7' => {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-			},
-			'prereqs'	=> [ ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ ],
-			'testclass' => [ @default_testclass ],
-		},
-	},
-	'x86_sl_5.8'   => 'x86_sl_5.7',
-	'x86_sl_5.9'   => 'x86_sl_5.7',
-	'x86_sl_5.10'   => 'x86_sl_5.7',
+	'x86_64_sol_5.11'	=> 'x86_64_Solaris11',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64
 	# This might work.
 	##########################################################################
-	'x86_64_ubuntu_10.04.4'		=> {
+	'x86_64_Ubuntu10'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
@@ -434,11 +490,12 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_ubuntu_10.04.4'		=> 'x86_64_Ubuntu10',
 
 	##########################################################################
 	# Platform Ubuntu 10.04 on x86
 	##########################################################################
-	'x86_ubuntu_10.04' => {
+	'x86_64_Ubuntu10' => {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
@@ -451,11 +508,26 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+	'x86_64_ubuntu_10.04.4' => 'x86_64_Ubuntu10',
+	
+	'x86_64_Ubuntu12' => {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
 
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+	
 	##########################################################################
-	# Platform openSUSE 11.3 on x86_64 (& updated)
+	# Platform openSUSE
 	##########################################################################
-	'x86_64_opensuse_11.3'				=> {
+	'x86_64_OpenSUSE11'				=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
@@ -476,12 +548,13 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.3'		=> 'x86_64_OpenSUSE11',
+	'x86_64_opensuse_11.4'		=> 'x86_64_OpenSUSE11',
 
 	##########################################################################
-	# Platform FreeBSD 7.4 on x86
+	# Platform FreeBSD
 	##########################################################################
-	'x86_freebsd_7.4'		=> {
+	'x86_FreeBSD7'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
@@ -503,7 +576,9 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_freebsd_8.2'				=> {
+	'x86_freebsd_7.4'		=> 'x86_FreeBSD7',
+	
+	'x86_FreeBSD8'			=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
@@ -525,6 +600,7 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_64_freebsd_8.2'		=> 'x86_FreeBSD8',
 );
 
 while( 1 ) {

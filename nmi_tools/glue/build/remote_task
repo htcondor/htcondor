@@ -117,23 +117,23 @@ elsif ($taskname eq $CHECK_TAR_TASK) {
 elsif ($taskname eq $NATIVE_TASK) {
     # Create native packages on Red Hat and Debian
     print "Create native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
-    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /ubuntu/) {
+    elsif ($ENV{NMI_PLATFORM} =~ /ubuntu/i) {
         print "Detected OS is Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/) {
+    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
         print "Detected OS is OpenSuSE.  Creating RPM package.\n";
         $execstr = create_rpm();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /winnt/) {
+    elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE 7.7.3-pre-";
     }
     else {
@@ -144,15 +144,15 @@ elsif ($taskname eq $NATIVE_TASK) {
 elsif ($taskname eq $CHECK_NATIVE_TASK) {
     # Validate the native packages
     print "Validating native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
-    if ($ENV{NMI_PLATFORM} =~ /deb/) {
+    if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/) {
+    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
         print "Detected OS is OpenSuSE.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
@@ -164,7 +164,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 
 
 
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     # change exestr for Windows tasks.
     # build.win.bat uses BASE_DIR to setup some things.
     $ENV{BASE_DIR} = "$BaseDir";

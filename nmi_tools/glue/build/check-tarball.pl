@@ -5,7 +5,7 @@ use warnings;
 my $tar = "tar";
 
 # On BSD and Mac the tar we want is gtar
-if($ENV{NMI_PLATFORM} =~ /(macos|freebsd|_sol_)/i) {
+if($ENV{NMI_PLATFORM} =~ /(macos|freebsd|_sol_|solaris)/i) {
     print "Detected we are on Mac or FreeBSD or Solaris.  Trying to use gtar...\n";
     if(system("which gtar") == 0) {
         print "gtar was detected in PATH\n";
