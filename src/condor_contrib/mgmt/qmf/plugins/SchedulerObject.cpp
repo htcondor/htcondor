@@ -113,17 +113,17 @@ SchedulerObject::update(const ClassAd &ad)
     DOUBLE(JobCompletionRate);
     INTEGER(JobsExited);
     INTEGER(ShadowExceptions);
-    INTEGER(JobsSubmittedCum);
-    INTEGER(JobsCompletedCum);
-    INTEGER(JobsExitedCum);
-    INTEGER(ShadowExceptionsCum);
-    INTEGER(JobsStartedCum);
+    INTEGER(JobsSubmittedCumulative);
+    INTEGER(JobsCompletedCumulative);
+    INTEGER(JobsExitedCumulative);
+    INTEGER(ShadowExceptionsCumulative);
+    INTEGER(JobsStartedCumulative);
     INTEGER(JobsStarted);
     DOUBLE(JobStartRate);
-    DOUBLE(MeanTimeToStartCum);
-    DOUBLE(MeanRunningTimeCum);
-    INTEGER64(SumTimeToStartCum);
-    INTEGER64(SumRunningTimeCum);
+    DOUBLE(MeanTimeToStartCumulative);
+    DOUBLE(MeanRunningTimeCumulative);
+    INTEGER64(SumTimeToStartCumulative);
+    INTEGER64(SumRunningTimeCumulative);
     DOUBLE(MeanTimeToStart);
     DOUBLE(MeanRunningTime);
 
