@@ -10,11 +10,13 @@ emitted from the various Condor daemons and convert them from the ClassAd form
 into a document instance in a mongodb collection. Once converted, these ClassAd
 records can be queried simply and directly based on any attribute.
 
-The initial focus of this contrib is to embed a Plumage ODS plugin inside a 
-view collector to capture the raw ClassAds for the Machine and Submitter types.
-The plugin operates on a timer to take snapshots of essential attributes at
-a configurable interval, and then write those values also to a different 
-mongodb collection.
+This contrib features two capabilities:
+- a Plumage ODS plugin inside a view collector to capture the raw ClassAds for 
+the Machine and Submitter types. The plugin operates on a timer to take snapshots 
+of essential attributes at a configurable interval, and then write those values 
+also to a different mongodb collection.
+- a job collection daemon that monitors the Condor job queue log and history files.
+Finalized and complete job ads (i.e., Completed, Removed) are recorded to mongodb.  
 
 Installation
 ============
@@ -34,6 +36,13 @@ As part of a standard view collector setup, you may need to manually create a
 directory where the view collector can write its standard stats files:
 
      sudo mkdir -p /var/lib/condor/ViewHist
+
+Note that the job history recording feature currently relies on the existing Condor 
+file-based job history mechanisms. The Plumage daemon is essentially performing ETL
+of those Condor history file pointed to by the $HISTORY config parameter. As such,
+the schedd must be generating that history file for the Plumage ETL to work
+correctly. However, once the jobs are recorded to to mongodb, the Condor history file
+can be rolled over or removed.
 
 Configuration
 =============
@@ -56,15 +65,33 @@ VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
 VIEW_SERVER.CONDOR_VIEW_HOST =
 VIEW_SERVER.KEEP_POOL_HISTORY = True
 VIEW_SERVER.SAMPLING_INTERVAL=20
-VIEW_SERVER.PLUGINS = $(LIB)/plugins/ODSCollectorPlugin.so
+VIEW_SERVER.PLUGINS = $(LIB)/plugins/PlumageCollectorPlugin-plugin.so
 # or if not from an rpm...
-#VIEW_SERVER.PLUGINS = $(VIEW_SERVER.PLUGINS) $(LIBEXEC)/ODSCollectorPlugin-plugin.so
+#VIEW_SERVER.PLUGINS = $(VIEW_SERVER.PLUGINS) $(LIBEXEC)/PlumageCollectorPlugin-plugin.so
 POOL_HISTORY_SAMPLING_INTERVAL = 60
 UPDATE_INTERVAL = 300
 # the following are defaults in code also
-ODS_DB_HOST = localhost
-ODS_DB_PORT =
+PLUMAGE_DB_HOST = localhost
+PLUMAGE_DB_PORT =
 DAEMON_LIST = $(DAEMON_LIST), VIEW_SERVER
+
+##############
+History daemon
+##############
+HISTORY = $(SPOOL)/history
+
+# Job ETL server, provides continuous loading of job history into mongodb
+JOB_ETL_SERVER = $(SBIN)/plumage_job_etl_server
+JOB_ETL_SERVER_ARGS = -f
+JOB_ETL_SERVER.JOB_ETL_SERVER_LOG = $(LOG)/JobEtlLog
+JOB_ETL_SERVER.JOB_ETL_SERVER_DEBUG = D_ALWAYS
+JOB_ETL_SERVER.JOB_ETL_SERVER_ADDRESS_FILE = $(LOG)/.job_etl_server_address
+
+# add the job etl server to daemon list
+DAEMON_LIST = $(DAEMON_LIST), JOB_ETL_SERVER
+DC_DAEMON_LIST = + JOB_ETL_SERVER
+
+
 
 plumage_stats
 =============
@@ -177,3 +204,68 @@ Sampled data schema
 -------------------
 An additional file called SCHEMA shows the name mapping between terse key 
 fields in the samples collections and their ClassAd counterparts.
+
+plumage_history
+===============
+Plumage provides a tool that is analagous to the condor_history client. It provides
+summary and full job ad information from the job history stored in mongodb.
+
+The mongodb database.collection for job history is 'condor_jobs.history'. 
+
+Usage: plumage_history [options]
+
+Query Condor ODS for job history
+
+Options:
+  -h, --help            show this help message and exit
+  -s SERVER, --server=SERVER
+                        mongodb database server location: e.g., somehost,
+                        localhost:2012
+  -f, --forward         list jobs oldest-to-newest
+  -m MATCH, --match=MATCH
+                        limit the number of jobs displayed
+  -l, --long            verbose output (entire classads)
+  -c CPROC, --cproc=CPROC
+                        get information about specific cluster[.proc], e.g., 5
+                        or 4.2
+  -o OWNER, --owner=OWNER
+                        information about jobs owned by <owner>
+  -S SUB, --sub=SUB     information about jobs grouped by <submission>
+
+Example
+-------
+
+$ ./plumage_history
+ID      OWNER            SUBMITTED                   RUN_TIME   ST  COMPLETED                   CMD
+6.1     pmackinn         Wed Oct 10 18:38:57 2012    00:01:00   C   Wed Oct 10 18:40:00 2012    /bin/sleep 60
+6.2     pmackinn         Wed Oct 10 18:38:57 2012    00:01:00   C   Wed Oct 10 18:40:00 2012    /bin/sleep 60
+6.0     pmackinn         Wed Oct 10 18:38:57 2012    00:01:01   C   Wed Oct 10 18:40:00 2012    /bin/sleep 60
+5.0     pmackinn         Wed Oct 10 18:35:21 2012    00:01:01   C   Wed Oct 10 18:36:28 2012    /bin/sleep 60
+4.0     pmackinn         Wed Oct 10 17:48:38 2012    00:01:01   C   Wed Oct 10 17:49:41 2012    /bin/sleep 60
+3.0     pmackinn         Wed Oct 10 17:41:39 2012    00:01:01   C   Wed Oct 10 17:42:41 2012    /bin/sleep 60
+2.0     pmackinn         Wed Oct 10 17:36:09 2012    00:01:01   C   Wed Oct 10 17:37:15 2012    /bin/sleep 60
+1.0     pmackinn         Wed Oct 10 10:10:07 2012    00:01:01   C   Wed Oct 10 10:11:27 2012    /bin/sleep 60
+
+
+plumage_history_load
+====================
+Plumage provides a tool to load existing history files and their backups into mongodb in the absence of the
+continuous loading provided by the job history daemon. It can be used to "catch up" or prime a mongodb instance 
+with job history data prior to activating the job history deamon. Jobs are uniquely identified by the value of 
+their GlobalJobId attribute.
+
+Example
+-------
+
+$ ./plumage_history_load -h
+Usage: ./plumage_history_load [-db <mongodb URL>] [-f <full path to condor history file>] [-h | -help]
+        -db : the mongod connection URL (host[:port])
+        -f : full path to a specific Condor history file to load
+        -h | -help : this help message
+No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_DB_HOST/_PORT.
+Duplicate jobs (same GlobalJobID) will be upserted (updated or added if missing).
+
+$ ./plumage_history_load 
+SCHEDD_NAME = hamish
+mongod server = localhost:27017
+processed 8 records from '/home/pmackinn/personal-condor/spool/history' in 0.020 sec

@@ -1918,6 +1918,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	free(ptr);
 
+	    // Is this the local universe startd?
+    cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
+
 		// Put in max vacate time expression
 	ptr = param(ATTR_MACHINE_MAX_VACATE_TIME);
 	if( ptr && !*ptr ) {

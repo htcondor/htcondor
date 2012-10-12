@@ -60,8 +60,6 @@ private:
     ODSHistoryEntryType m_entries;
 	StatStructType *m_stat;
 	FILE *m_file;
-    
-    ODSMongodbOps* m_writer;
 
 };
 

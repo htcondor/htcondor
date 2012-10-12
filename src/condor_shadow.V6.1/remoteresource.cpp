@@ -2161,7 +2161,7 @@ RemoteResource::checkX509Proxy( void )
 	// this allows us to use the attributes in job policy (periodic_hold, etc.)
 
 	// first, do the DN and expiration time, which all proxies have
-	char* proxy_subject = x509_proxy_subject_name(proxy_path.Value());
+	char* proxy_subject = x509_proxy_identity_name(proxy_path.Value());
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
 	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);

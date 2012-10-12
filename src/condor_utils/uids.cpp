@@ -49,6 +49,12 @@ THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static priv_state CurrentPrivState = PRIV_UNKNOWN;
 #endif
 
+priv_state
+get_priv_state(void)
+{
+	return CurrentPrivState;
+}
+
 #if !defined(WIN32)
 /*
    supplementary group used to track process families. if nonzero,
@@ -1291,12 +1297,6 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	return TRUE;
 }
 
-
-priv_state
-get_priv_state(void)
-{
-	return CurrentPrivState;
-}
 
 priv_state
 _set_priv(priv_state s, const char *file, int line, int dologging)

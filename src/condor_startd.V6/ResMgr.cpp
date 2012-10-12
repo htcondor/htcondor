@@ -261,8 +261,6 @@ ResMgr::init_config_classad( void )
 		}
 	}
 	
-	configInsert(config_classad, "IS_LOCAL_STARTD", false);
-
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
