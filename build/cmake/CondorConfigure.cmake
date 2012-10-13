@@ -22,9 +22,6 @@ if(${OS_NAME} STREQUAL "DARWIN")
   if(${TEST_VER} MATCHES "10.[678]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
-
-  # Support Mac OS X 10.6 and above
-  set( ENV{MACOSX_DEPLOYMENT_TARGET} 10.6 )
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
@@ -253,6 +250,15 @@ if( NOT WINDOWS)
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	if (cxx_11)
 
+		# Clang requires some additional C++11 flags, as the default stdlib
+		# is from an old GCC version.
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -lc++")
+			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
+			set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -lc++")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++")
+		endif()
+
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 		check_cxx_source_compiles("
@@ -264,6 +270,13 @@ if( NOT WINDOWS)
 			return 0;
 		}
 		" PREFER_CPP11 )
+
+		# Note - without adding -lc++ to the CXX flags, the linking of the test
+		# above will fail for clang.  It doesn't seem strictly necessary though,
+		# so we remove this afterward.
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			string(REPLACE "-lc++" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+		endif()
 
 	endif (cxx_11)
 
@@ -838,6 +851,8 @@ else(MSVC)
 
 	# copy in C only flags into CMAKE_C_FLAGS
 	string(REPLACE "-std=c++11" "" CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
+	# Only relevant for clang / Mac OS X
+	string(REPLACE "-stdlib=libc++" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
 
 endif(MSVC)
 

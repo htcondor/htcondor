@@ -756,6 +756,90 @@ Scheduler::check_claim_request_timeouts()
 }
 
 /*
+  Helper method to create a submitter ad, called by Scheduler::count_jobs().
+  Given an index owner_num in the Owners array and a flock_level, insert a common
+  set of submitter ad attributes into pAd.
+  Return true if attributes filled in, false if not (because this submitter should
+  no longer flock and/or be advertised).
+*/
+bool
+Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
+{
+	const int i = owner_num;
+	const int dprint_level = D_FULLDEBUG;
+	const bool want_dprintf = flock_level < 1; // dprintf if not flocking
+
+	if (Owners[i].FlockLevel >= flock_level) {
+		pAd.Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+		if (want_dprintf)
+			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	} else if (Owners[i].OldFlockLevel >= flock_level ||
+				Owners[i].JobsRunning > 0) {
+		pAd.Assign(ATTR_IDLE_JOBS, (int)0);
+	} else {
+		// if we're no longer flocking with this pool and
+		// we're not running jobs in the pool, then don't send
+		// an update
+		return false;
+	}
+
+	pAd.Assign(ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+
+	pAd.Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+
+	pAd.Assign(ATTR_HELD_JOBS, Owners[i].JobsHeld);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Owners[i].JobsHeld);
+
+	pAd.Assign(ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+
+	MyString str;
+	if ( param_boolean("USE_GLOBAL_JOB_PRIOS",false) ) {
+		int max_entries = param_integer("MAX_GLOBAL_JOB_PRIOS",500);
+		int num_prios = Owners[i].PrioSet.size();
+		if (num_prios > max_entries) {
+			pAd.Assign(ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
+			if (want_dprintf)
+				dprintf (dprint_level, "Changed attribute: %s = %d\n",
+						 ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
+		} else {
+			// if no overflow, do not advertise ATTR_JOB_PRIO_ARRAY_OVERFLOW
+			pAd.Delete(ATTR_JOB_PRIO_ARRAY_OVERFLOW);
+		}
+		// reverse iterator to go high to low prio
+		std::set<int>::reverse_iterator rit;
+		int num_entries = 0;
+		for (rit=Owners[i].PrioSet.rbegin();
+			 rit!=Owners[i].PrioSet.rend() && num_entries < max_entries;
+			 ++rit)
+		{
+			if ( !str.IsEmpty() ) {
+				str += ",";
+			}
+			str += *rit;
+			num_entries++;
+		}
+		// NOTE: we rely on that fact that str.Value() will return "", not NULL, if empty
+		pAd.Assign(ATTR_JOB_PRIO_ARRAY, str.Value());
+		if (want_dprintf)
+			dprintf (dprint_level, "Changed attribute: %s = %s\n", ATTR_JOB_PRIO_ARRAY,str.Value());
+	}
+
+	str.formatstr("%s@%s", Owners[i].Name, UidDomain);
+	pAd.Assign(ATTR_NAME, str.Value());
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owners[i].Name, UidDomain);
+
+	return true;
+}
+
+/*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
 */
@@ -795,6 +879,7 @@ Scheduler::count_jobs()
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].NegotiationTimestamp = current_time;
+		Owners[i].PrioSet.clear();
 	}
 
 	GridJobOwners.clear();
@@ -1035,21 +1120,8 @@ Scheduler::count_jobs()
 
 	MyString submitter_name;
 	for ( i=0; i<N_Owners; i++) {
-	  pAd.Assign(ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
 
-	  pAd.Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
-
-	  pAd.Assign(ATTR_HELD_JOBS, Owners[i].JobsHeld);
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Owners[i].JobsHeld);
-
-	  pAd.Assign(ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
-
-      submitter_name.formatstr("%s@%s", Owners[i].Name, UidDomain);
-	  pAd.Assign(ATTR_NAME, submitter_name.Value());
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owners[i].Name, UidDomain);
+	  if ( !fill_submitter_ad(pAd,i) ) continue;
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
@@ -1107,22 +1179,13 @@ Scheduler::count_jobs()
 			}
 			// update submitter ad in this pool for each owner
 			for (i=0; i < N_Owners; i++) {
-				if (Owners[i].FlockLevel >= flock_level) {
-					pAd.Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
-				} else if (Owners[i].OldFlockLevel >= flock_level ||
-						   Owners[i].JobsRunning > 0) {
-					pAd.Assign(ATTR_IDLE_JOBS, (int)0);
-				} else {
+
+				if ( !fill_submitter_ad(pAd,i,flock_level) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
 					// an update
 					continue;
 				}
-				pAd.Assign(ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
-				pAd.Assign(ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
-
-				submitter_name.formatstr("%s@%s", Owners[i].Name, UidDomain);
-				pAd.Assign(ATTR_NAME, submitter_name.Value());
 
 					// we will use this "tag" later to identify which
 					// CM we are negotiating with when we negotiate
@@ -1156,11 +1219,16 @@ Scheduler::count_jobs()
 	}
 
 
-	 // send info about deleted owners
-	 // put 0 for idle & running jobs
+	 // send info about deleted owners.
+	 // we do this to update the submitter ad currently in the collector
+	 // that has JobIdle > 0, and thus the negotiator will waste time contacting us.
+	 // put 0 for idle, running, and held jobs. idle=0 so the negotiator stops
+	 // trying to contact us, and 0 for running, held so condor_status -submit
+	 // is not riddled with question marks.
 
 	pAd.Assign(ATTR_RUNNING_JOBS, 0);
 	pAd.Assign(ATTR_IDLE_JOBS, 0);
+	pAd.Assign(ATTR_HELD_JOBS, 0);
 
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the old owners list and searching for owners
@@ -1629,9 +1697,22 @@ count( ClassAd *job )
 	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 		scheduler.JobsRunning += cur_hosts;
 		scheduler.JobsIdle += (max_hosts - cur_hosts);
+
+			// Update Owner array PrioSet iff knob USE_GLOBAL_JOB_PRIOS is true
+			// and iff job is looking for more matches (max-hosts - cur_hosts)
+		if ( param_boolean("USE_GLOBAL_JOB_PRIOS",false) &&
+			 ((max_hosts - cur_hosts) > 0) )
+		{
+			int job_prio;
+			if ( job->LookupInteger(ATTR_JOB_PRIO,job_prio) ) {
+				scheduler.Owners[OwnerNum].PrioSet.insert( job_prio );
+			}
+		}
+			// Update Owners array JobsIdle
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
+
 		int job_image_size = 0;
 		job->LookupInteger("ImageSize_RAW", job_image_size);
 		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
@@ -1903,6 +1984,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			case JA_VACATE_FAST_JOBS:
 				handler_sig = DC_SIGHARDKILL;
 				break;
+			case JA_SUSPEND_JOBS:
+			case JA_CONTINUE_JOBS:
+				dprintf( D_ALWAYS,
+						 "Local universe: Ignoring unsupported action (%d %s)\n",
+						 action, getJobActionString(action) );
+				return;
+				break;
 			default:
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
 						action, getJobActionString(action) );
@@ -2001,6 +2089,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 			case JA_VACATE_FAST_JOBS:
 				kill_sig = SIGKILL;
+				break;
+
+			case JA_SUSPEND_JOBS:
+			case JA_CONTINUE_JOBS:
+				dprintf( D_ALWAYS,
+						 "Scheduler universe: Ignoring unsupported action (%d %s)\n",
+						 action, getJobActionString(action) );
+				return;
 				break;
 
 			default:
@@ -3930,6 +4026,14 @@ Scheduler::actOnJobs(int, Stream* s)
 					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
 		case JA_SUSPEND_JOBS:
+				// Only suspend running/staging jobs outside local & sched unis
+			snprintf( buf, 256,
+					  "((%s==%d || %s==%d) && (%s=!=%d && %s=!=%d)) && (",
+					  ATTR_JOB_STATUS, RUNNING,
+					  ATTR_JOB_STATUS, TRANSFERRING_OUTPUT,
+					  ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_LOCAL,
+					  ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER );
+			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
 				// Only vacate running/staging jobs
@@ -4974,6 +5078,8 @@ Scheduler::negotiate(int command, Stream* s)
 	//-----------------------------------------------
 	char owner[200], *ownerptr = owner;
 	char *sig_attrs_from_cm = NULL;	
+	int consider_jobprio_min = INT_MIN;
+	int consider_jobprio_max = INT_MAX;
 	ClassAd negotiate_ad;
 	MyString submitter_tag;
 	s->decode();
@@ -4998,6 +5104,9 @@ Scheduler::negotiate(int command, Stream* s)
 			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
+			// jobprio_min and jobprio_max are optional
+		negotiate_ad.LookupInteger("JOBPRIO_MIN",consider_jobprio_min);
+		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
 	}
 	else {
 			// old NEGOTIATE_WITH_SIGATTRS protocol
@@ -5116,6 +5225,12 @@ Scheduler::negotiate(int command, Stream* s)
 	} else {
 		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	}
+
+	if ( consider_jobprio_min > INT_MIN || consider_jobprio_max < INT_MAX ) {
+		dprintf(D_ALWAYS,"Negotiating owner=%s jobprio restricted, min=%d max=%d\n",
+			 owner, consider_jobprio_min, consider_jobprio_max);
+	}
+
 	//-----------------------------------------------
 
 		// See if the negotiator wants to talk to the dedicated
@@ -5172,7 +5287,17 @@ Scheduler::negotiate(int command, Stream* s)
 
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
+
+		// make sure owner matches what negotiator wants
 		if(strcmp(owner,prec->owner)!=0)
+		{
+			jobs--;
+			continue;
+		}
+
+		// make sure jobprio is in the range the negotiator wants
+		if ( consider_jobprio_min > prec->job_prio ||
+			 prec->job_prio > consider_jobprio_max )
 		{
 			jobs--;
 			continue;
@@ -5825,6 +5950,12 @@ find_idle_local_jobs( ClassAd *job )
 	int	univ;
 	PROC_ID id;
 
+	int noop = 0;
+	job->LookupBool(ATTR_JOB_NOOP, noop);
+	if (noop) {
+		return 0;
+	}
+
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, univ) != 1) {
 		univ = CONDOR_UNIVERSE_STANDARD;
 	}
@@ -6463,16 +6594,11 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 
 	case REMOVED:
 	case HELD:
+	case COMPLETED:
 		dprintf( D_FULLDEBUG,
 				 "Job %d.%d was %s while waiting to start\n",
 				 cluster, proc, getJobStatusString(status) );
 		return false;
-		break;
-
-	case COMPLETED:
-		EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
-				"but we're trying to start a shadow for it!", 
-				cluster, proc, getJobStatusString(status) );
 		break;
 
 	default:

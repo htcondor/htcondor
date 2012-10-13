@@ -284,7 +284,7 @@ bool stringListSummarize_func( const char *name,
 	if ( is_real ) {
 		result.SetRealValue( accumulator );
 	} else {
-		result.SetIntegerValue( (int)accumulator );
+		result.SetIntegerValue( (long long)accumulator );
 	}
 
 	return true;
@@ -962,12 +962,32 @@ LookupInteger( const char *name, int &value ) const
 }
 
 int ClassAd::
-LookupInteger( const char *name, int64_t &value ) const
+LookupInteger( const char *name, long &value ) const 
 {
 	bool    boolVal;
 	int     haveInteger;
 	string  sName(name);
-	int		tmp_val;
+	long	tmp_val;
+
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
+		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
+	}
+	return haveInteger;
+}
+
+int ClassAd::
+LookupInteger( const char *name, long long &value ) const 
+{
+	bool    boolVal;
+	int     haveInteger;
+	string  sName(name);
+	long long	tmp_val;
 
 	if( EvaluateAttrInt(sName, tmp_val ) ) {
 		value = tmp_val;
@@ -985,7 +1005,7 @@ int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
-	int     intVal;
+	long long intVal;
 	int     haveFloat;
 
 	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
@@ -1001,9 +1021,28 @@ LookupFloat( const char *name, float &value ) const
 }
 
 int ClassAd::
+LookupFloat( const char *name, double &value ) const
+{
+	double  doubleVal;
+	long long intVal;
+	int     haveFloat;
+
+	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
+		haveFloat = TRUE;
+		value = doubleVal;
+	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
+		haveFloat = TRUE;
+		value = (double)intVal;
+	} else {
+		haveFloat = FALSE;
+	}
+	return haveFloat;
+}
+
+int ClassAd::
 LookupBool( const char *name, int &value ) const
 {
-	int   intVal;
+	long long intVal;
 	bool  boolVal;
 	int haveBool;
 	string sName;
@@ -1025,7 +1064,7 @@ LookupBool( const char *name, int &value ) const
 int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
-	int   intVal;
+	long long intVal;
 	bool  boolVal;
 	int haveBool;
 	string sName;
@@ -1154,7 +1193,7 @@ EvalString(const char *name, classad::ClassAd *target, std::string & value)
 }
 
 int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, int &value)
+EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 {
 	int rc = 0;
 	classad::Value val;
@@ -1186,17 +1225,17 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	if ( 1 == rc ) 
 	{
 	  double doubleVal;
-	  int intVal;
+	  long long intVal;
 	  bool boolVal;
 
 	  if( val.IsRealValue( doubleVal ) ) {
-	    value = ( int )doubleVal;
+	    value = ( long long )doubleVal;
 	  }
 	  else if( val.IsIntegerValue( intVal ) ) {
 	    value = intVal;
 	  }
 	  else if( val.IsBooleanValue( boolVal ) ) {
-	    value = ( int )boolVal;
+	    value = ( long long )boolVal;
 	  }
 	  else 
 	  { 
@@ -1215,7 +1254,7 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1283,7 +1322,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {

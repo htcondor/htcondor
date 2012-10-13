@@ -1,3 +1,3 @@
-author: Jeff Dost
+author: Igor Sfiligoi, Jeff Dost
 organization: UCSD Physics Department
-e-mail: jdost@ucsd.edu
+e-mail: isfiligoi@ucsd.edu, jdost@ucsd.edu

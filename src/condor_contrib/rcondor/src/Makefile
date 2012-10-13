@@ -16,24 +16,27 @@ install:
 	install -m 644 ../license.txt $(DESTDIR)$(docdir)
 	install -m 644 ../README $(DESTDIR)$(docdir)
 
-# install scripts
+# install scripts in libexec
 	install -m 755 rcondor.sh $(DESTDIR)$(libexecdir)/rcondor
-	install -m 755 rcondor_mnt $(DESTDIR)$(bindir)
+	install -m 644 rcondor_config.source $(DESTDIR)$(libexecdir)/rcondor
+	install -m 755 rcondor_mnt $(DESTDIR)$(libexecdir)/rcondor
+	install -m 755 rcondor_unmnt $(DESTDIR)$(libexecdir)/rcondor
 	install -m 755 rcondor_configure $(DESTDIR)$(bindir)
 
-# create condor command links to rcondor.sh
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_q
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_rm
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_status
-	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/condor_submit
+# create condor command links to rcondor.sh and others
+	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_mnt $(DESTDIR)$(bindir)/rcondor_mnt
+	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor_unmnt $(DESTDIR)$(bindir)/rcondor_unmnt
+	-ln -s $(DESTDIR)$(libexecdir)/rcondor/rcondor.sh $(DESTDIR)$(bindir)/rcondor_id
+	./create_symlinks.sh $(DESTDIR)$(bindir) $(DESTDIR)$(libexecdir)/rcondor ./rcondor_symlinks.lst >/dev/null
+	./create_setup_scripts.sh $(DESTDIR)$(prefix)
 
 .PHONY: uninstall
 uninstall:
 	rm -rf $(DESTDIR)$(libexecdir)/rcondor
 	rm -rf $(DESTDIR)$(docdir)
 	rm -f $(DESTDIR)$(bindir)/rcondor_mnt
+	rm -f $(DESTDIR)$(bindir)/rcondor_unmnt
+	rm -f $(DESTDIR)$(bindir)/rcondor_id
 	rm -f $(DESTDIR)$(bindir)/rcondor_configure
-	rm -f $(DESTDIR)$(bindir)/condor_q
-	rm -f $(DESTDIR)$(bindir)/condor_rm
-	rm -f $(DESTDIR)$(bindir)/condor_status
-	rm -f $(DESTDIR)$(bindir)/condor_submit
+	./remove_symlinks.sh $(DESTDIR)$(bindir) ./rcondor_symlinks.lst >/dev/null
+	rm -f $(DESTDIR)$(prefix)/rcondor_setup.sh $(DESTDIR)$(prefix)/rcondor_setup.csh

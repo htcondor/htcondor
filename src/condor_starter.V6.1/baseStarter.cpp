@@ -1215,7 +1215,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
 		return FALSE;
 	}
-	if( !proc->StartJob(std,std_fname) ) {
+	if( !proc->SshStartJob(std,std_fname) ) {
 		dprintf(D_ALWAYS,"Failed to start sshd.\n");
 		return FALSE;
 	}

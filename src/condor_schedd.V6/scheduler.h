@@ -30,6 +30,7 @@
 #define _CONDOR_SCHED_H_
 
 #include <map>
+#include <set>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -122,6 +123,7 @@ struct OwnerData {
 		// successful negotiation at highest current flocking
 		// level.
   time_t NegotiationTimestamp;
+  std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
   OwnerData() { Name=NULL; Domain=NULL;
   NegotiationTimestamp=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
@@ -627,6 +629,7 @@ private:
 
 	// utility functions
 	int				count_jobs();
+	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
     int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
     int             command_query_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );

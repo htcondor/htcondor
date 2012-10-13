@@ -79,6 +79,11 @@ else {
 chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
+if ($ENV{NMI_PLATFORM} =~ /macos/i) {
+    # Build binaries that will work on Mac OS X 10.6 and later.
+    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
+}
+
 # Checking task type
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have

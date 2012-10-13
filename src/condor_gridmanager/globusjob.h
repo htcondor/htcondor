@@ -66,7 +66,7 @@ class GlobusJob : public BaseJob
 	bool GetCallbacks();
 	void ClearCallbacks();
 	BaseResource *GetResource();
-	void SetRemoteJobId( const char *job_id, bool is_gt5 = false );
+	void GlobusSetRemoteJobId( const char *job_id, bool is_gt5 );
 
 	/* If true, then ATTR_ON_EXIT_BY_SIGNAL, ATTR_ON_EXIT_SIGNAL, and
 	   ATTR_ON_EXIT_CODE are valid.  If false, no exit status is available.

@@ -1054,7 +1054,7 @@ void EC2Job::SetClientToken(const char *client_token)
 	if ( client_token ) {
 		m_client_token = client_token;
 	}
-	SetRemoteJobId(m_client_token.empty() ? NULL : m_client_token.c_str(),
+	EC2SetRemoteJobId(m_client_token.empty() ? NULL : m_client_token.c_str(),
 				   m_remoteJobId.c_str());
 }
 
@@ -1065,12 +1065,12 @@ void EC2Job::SetInstanceId( const char *instance_id )
 		m_remoteJobId = instance_id;
         jobAd->Assign( ATTR_EC2_INSTANCE_NAME, m_remoteJobId );
 	}
-	SetRemoteJobId( m_client_token.c_str(),
+	EC2SetRemoteJobId( m_client_token.c_str(),
 					m_remoteJobId.empty() ? NULL : m_remoteJobId.c_str() );
 }
 
-// SetRemoteJobId() is used to set the value of global variable "remoteJobID"
-void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
+// EC2SetRemoteJobId() is used to set the value of global variable "remoteJobID"
+void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_id )
 {
 	string full_job_id;
 	if ( client_token && client_token[0] ) {

@@ -300,8 +300,11 @@ const char *CreamResource::HashName( const char *resource_name,
 	return hash_name.c_str();
 }
 
-void CreamResource::RegisterJob( CreamJob *job )
+void CreamResource::RegisterJob( BaseJob *base_job )
 {
+	CreamJob* job = dynamic_cast<CreamJob*>( base_job );
+	ASSERT( job );
+
 	int job_lease;
 	if ( m_sharedLeaseExpiration == 0 ) {
 		if ( job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, job_lease ) ) {
@@ -322,8 +325,11 @@ void CreamResource::RegisterJob( CreamJob *job )
 	BaseResource::RegisterJob( job );
 }
 
-void CreamResource::UnregisterJob( CreamJob *job )
+void CreamResource::UnregisterJob( BaseJob *base_job )
 {
+	CreamJob *job = dynamic_cast<CreamJob*>( base_job );
+	ASSERT( job );
+
 	if ( job->delegatedCredentialURI != NULL ) {
 		bool delete_deleg = true;
 		CreamJob *next_job;
