@@ -289,11 +289,11 @@ AviaryScheddPlugin::processJob(const char *key,
 
 		// XXX: Use the jobAd instead of GetAttribute below, gets us $$() expansion
 
-	MyString submissionName;
-	if (GetAttributeString(id.cluster, id.proc,
-						   ATTR_JOB_SUBMISSION,
-						   submissionName) < 0) {
-			// Provide a default name for the Submission
+    MyString submissionName;
+    char* value = NULL;
+    if ( (GetAttributeString(id.cluster, id.proc,ATTR_JOB_SUBMISSION,submissionName) < 0) 
+        && (GetAttributeExprNew(id.cluster, id.proc, ATTR_JOB_SUBMISSION,&value) < 0) ) {
+        // Provide a default name for the Submission
 
 			// If we are a DAG node, we default to our DAG group
 		PROC_ID dagman;
@@ -326,6 +326,7 @@ AviaryScheddPlugin::processJob(const char *key,
 					 ATTR_JOB_SUBMISSION,
 					 tmp.Value());
 	}
+    if (value) free (value);
 
 	return true;
 }
