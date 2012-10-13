@@ -56,6 +56,9 @@ namespace etl {
         bool createRecord(mongo::BSONObjBuilder& bob);
         bool readRecord(mongo::BSONObjBuilder& bob);
 
+        // specify what fields to index
+        bool addIndex(mongo::BSONObj bo);
+
         // TODO: expose this for now as we work through encapsulation design
         mongo::DBClientConnection* m_db_conn;
 

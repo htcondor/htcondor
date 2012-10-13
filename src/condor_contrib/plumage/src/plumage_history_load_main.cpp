@@ -42,13 +42,25 @@
 #include "history_utils.h"
 #include "subsystem_info.h"
 
+// local includes
+#include "ODSDBNames.h"
+#include "ODSUtils.h"
+
 #define NUM_PARAMETERS 3
 
+using namespace std;
 using namespace mongo;
+using namespace plumage::etl;
+using namespace plumage::util;
 
 static void print_usage(char* name) 
 {
-  printf("Usage: %s [-db <mongodb URL>] [-f <full path to history file>] [-h]\n",name);
+  printf("Usage: %s [-db <mongodb URL>] [-f <full path to condor history file>] [-h | -help]\n",name);
+  printf("\t-db : the mongod connection URL (host[:port])\n");
+  printf("\t-f : full path to a specific Condor history file to load\n");
+  printf("\t-h | -help : this help message\n");
+  printf("No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_DB_HOST/_PORT.\n");
+  printf("Duplicate jobs (same GlobalJobID) will be upserted (updated or added if missing).\n");
   exit(1);
 }
 
@@ -66,16 +78,16 @@ static  char *BaseJobHistoryFileName = NULL;
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
 
-char* schedd_name = NULL;
-
-DBClientConnection c;
-std::string db_name("condor_jobs.history");
+ODSMongodbOps* etl_client = NULL;
 
 int
 main(int argc, char* argv[])
 {
     int i;
-    char* file_name = NULL;
+    char* file_arg = NULL;
+    char* db_arg = NULL;
+    char* schedd_name = NULL;
+    string db_host_port;
     
     // get our condor vars
     config();
@@ -86,8 +98,14 @@ main(int argc, char* argv[])
         if (strcmp(argv[i],"-h")==0) {
             print_usage(argv[0]);
         }
+        if (strcmp(argv[i],"-help")==0) {
+            print_usage(argv[0]);
+        }
         if (strcmp(argv[i],"-f")==0) {
-            file_name = argv[i+1];
+            file_arg = argv[i+1];
+        }
+        if (strcmp(argv[i],"-db")==0) {
+            db_arg = argv[i+1];
         }
     }
     if (i<argc) {
@@ -102,14 +120,31 @@ main(int argc, char* argv[])
         schedd_name = strdup(tmp);
         free(tmp);
     }
+    printf("SCHEDD_NAME = %s\n",schedd_name);
 
-    printf("SCHEDD_NAME=%s\n",schedd_name);
+    if (!db_arg) {
+        HostAndPort hap = getDbHostPort("PLUMAGE_DB_HOST","PLUMAGE_DB_PORT");
+        db_host_port = hap.toString();
+    }
+    else {
+        db_host_port = db_arg;
+    }
 
-    c.connect("localhost");
-    
-    readHistoryFromFiles(file_name);
-    
+    printf("mongod server = %s\n",db_host_port.c_str());
+
+    try {
+        etl_client = new ODSMongodbOps(DB_JOBS_HISTORY);
+        etl_client->init(db_host_port);
+        readHistoryFromFiles(file_arg);
+    }
+    catch(UserException& e) {
+        cout << "Error: UserException - " << e.toString() << endl;
+        return 1;
+    }
+
     free (schedd_name);
+    if (etl_client) delete etl_client;
+
     return 0;
 }
 
@@ -367,35 +402,24 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
     }
  
     free(owner);
-		 
+
     return prevOffset;
-} 
+}
 
 void writeJobAd(ClassAd* ad) {
-    clock_t start, end;
-    double elapsed;
-    ExprTree *expr;
-    const char *name;
-    ad->ResetExpr();
-    
-    BSONObjBuilder b;
-    start = clock();
-    while (ad->NextExpr(name,expr)) {        
-        b.append(name,ExprTreeToString(expr));
+    string gjid;
+
+    BSONObjBuilder key;
+    if (ad->LookupString(ATTR_GLOBAL_JOB_ID,gjid)) {
+        key.append(ATTR_GLOBAL_JOB_ID, gjid);
     }
-    try {
-        c.insert(db_name, b.obj());
+    else {
+        printf("WARNING: unable to parse %s from ClassAd\n",ATTR_GLOBAL_JOB_ID);
+        return;
     }
-    catch(DBException& e) {
-        cout << "caught DBException " << e.toString() << endl;
-    }
-    end = clock();
-    elapsed = ((float) (end - start)) / CLOCKS_PER_SEC;
-    std:string last_err = c.getLastError();
-    if (!last_err.empty()) {
-        printf("getLastError: %s\n",last_err.c_str());
-    }
-    printf("Time elapsed: %1.9f sec\n",elapsed);
+
+    etl_client->updateAd(key,ad);
+
 }
 
 // Read the history from a single file and print it out. 
@@ -405,6 +429,9 @@ static void readHistoryFromFile(char *JobHistoryFileName)
     int ErrorFlag = 0;
     int EmptyFlag = 0;
     ClassAd *ad = NULL;
+    clock_t start, end;
+    double elapsed;
+    int i = 0;
 
     long offset = 0;
     bool BOF = false; // Beginning Of File
@@ -430,6 +457,7 @@ static void readHistoryFromFile(char *JobHistoryFileName)
         offset = findLastDelimiter(LogFile, JobHistoryFileName);	
     }
 
+    start = clock();
     while(!EndFlag) {
 
         if (backwards) { // Read history file backwards
@@ -473,6 +501,7 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 
         // emit the ad here
         writeJobAd(ad);
+        i++;
 		
         if(ad) {
             delete ad;
@@ -480,5 +509,10 @@ static void readHistoryFromFile(char *JobHistoryFileName)
         }
     }
     fclose(LogFile);
+
+    end = clock();
+    elapsed = ((float) (end - start)) / CLOCKS_PER_SEC;
+    printf("processed %d records from '%s' in %1.3f sec\n",i,JobHistoryFileName,elapsed);
+
     return;
 }
