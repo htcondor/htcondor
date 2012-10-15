@@ -3036,7 +3036,6 @@ obtainAdsFromCollector (
 			// we insert a submitter ad for each job priority in the submitter
 			// ad's job_prio_array attribute.  See gittrac #3218.
 			if ( want_globaljobprio ) {
-				ClassAd *tmp_ad;
 				MyString jobprioarray;
 				StringList jobprios;
 
@@ -3068,7 +3067,6 @@ obtainAdsFromCollector (
         remoteHost = NULL;
 	}
 	allAds.Close();
-
 
 	// In the processing of allAds above, if want_globaljobprio is true,
 	// we may have created additional submitter ads and inserted them
