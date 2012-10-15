@@ -44,8 +44,8 @@ class CondorResource : public BaseResource
 
 	const char *ResourceType();
 	void Reconfig();
-	void RegisterJob( CondorJob *job, const char *submitter_id );
-	void UnregisterJob( CondorJob *job );
+	void CondorRegisterJob( CondorJob *job, const char *submitter_id );
+	void UnregisterJob( BaseJob *job );
 
 	void DoScheddPoll();
 

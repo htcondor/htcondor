@@ -781,7 +781,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
-		SetRemoteJobId( token, is_gt5 );
+		GlobusSetRemoteJobId( token, is_gt5 );
 		job_already_submitted = true;
 	}
 
@@ -972,7 +972,7 @@ void GlobusJob::doEvaluateState()
 			dprintf( D_ALWAYS, "(%d.%d) Immediately removing light-weight "
 					 "job whose resource is down.\n", procID.cluster,
 					 procID.proc );
-			SetRemoteJobId( NULL );
+			GlobusSetRemoteJobId( NULL, false );
 			gmState = GM_CLEAR_REQUEST;
 		}
 	}
@@ -1285,7 +1285,7 @@ void GlobusJob::doEvaluateState()
 					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					callbackRegistered = true;
-					SetRemoteJobId( job_contact.c_str() );
+					GlobusSetRemoteJobId( job_contact.c_str(), false );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -1678,7 +1678,7 @@ void GlobusJob::doEvaluateState()
 			if ( jobContact != NULL ) {
 				myResource->JMComplete( this );
 				myResource->CancelSubmit( this );
-				SetRemoteJobId( NULL );
+				GlobusSetRemoteJobId( NULL, false );
 				jmDown = false;
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
@@ -1848,7 +1848,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					myResource->JMComplete( this );
 					jmDown = false;
 					if ( !job_contact.empty() ) {
-						SetRemoteJobId( job_contact.c_str() );
+						GlobusSetRemoteJobId( job_contact.c_str(), false );
 						requestScheddUpdate( this, false );
 					}
 					gmState = GM_START;
@@ -1864,7 +1864,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
 								   (int)jmProxyExpireTime );
 					jmDown = false;
-					SetRemoteJobId( job_contact.c_str() );
+					GlobusSetRemoteJobId( job_contact.c_str(), false );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
 					}
@@ -2105,7 +2105,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				myResource->CancelSubmit( this );
 				myResource->JMComplete( this );
 				jmDown = false;
-				SetRemoteJobId( NULL );
+				GlobusSetRemoteJobId( NULL, false );
 				requestScheddUpdate( this, false );
 
 				if ( condorState == REMOVED ) {
@@ -2181,7 +2181,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 			myResource->CancelSubmit( this );
 			myResource->JMComplete( this );
 			if ( jobContact != NULL ) {
-				SetRemoteJobId( NULL );
+				GlobusSetRemoteJobId( NULL, false );
 				jmDown = false;
 			}
 			JobIdle();
@@ -2441,14 +2441,14 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
 								   (int)jmProxyExpireTime );
 					jmDown = false;
-					SetRemoteJobId( job_contact.c_str() );
+					GlobusSetRemoteJobId( job_contact.c_str(), false );
 					gmState = GM_CLEANUP_COMMIT;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					// Clear out the job id so that the job won't be held
 					// in GM_CLEAR_REQUEST
-					SetRemoteJobId( NULL );
+					GlobusSetRemoteJobId( NULL, false );
 					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 					jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 					SetRemoteJobStatus( NULL );
@@ -2514,7 +2514,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
 						// Clear out the job id so that the job won't be held
 						// in GM_CLEAR_REQUEST
-						SetRemoteJobId( NULL );
+						GlobusSetRemoteJobId( NULL, false );
 						globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 						jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 						SetRemoteJobStatus( NULL );
@@ -2537,7 +2537,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 									NULL, &status, &error );
 				// Clear out the job id so that the job won't be held
 				// in GM_CLEAR_REQUEST
-				SetRemoteJobId( NULL );
+				GlobusSetRemoteJobId( NULL, false );
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 				jobAd->Assign( ATTR_GLOBUS_STATUS, globusState );
 				SetRemoteJobStatus( NULL );
@@ -2834,7 +2834,7 @@ BaseResource *GlobusJob::GetResource()
 	return (BaseResource *)myResource;
 }
 
-void GlobusJob::SetRemoteJobId( const char *job_id, bool is_gt5 )
+void GlobusJob::GlobusSetRemoteJobId( const char *job_id, bool is_gt5 )
 {
 		// We need to maintain a hashtable based on job contact strings with
 		// the port number stripped. This is because the port number in the

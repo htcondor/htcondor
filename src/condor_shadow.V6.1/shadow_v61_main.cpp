@@ -246,6 +246,7 @@ initShadow( ClassAd* ad )
 	case CONDOR_UNIVERSE_PARALLEL:
 		Shadow = new ParallelShadow();
 		break;
+	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 	case CONDOR_UNIVERSE_VM:

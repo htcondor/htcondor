@@ -30,6 +30,7 @@
 #define _CONDOR_SCHED_H_
 
 #include <map>
+#include <set>
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -59,8 +60,6 @@
 #include "timed_queue.h"
 #include "schedd_stats.h"
 #include "condor_holdcodes.h"
-
-using std::map;
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -124,6 +123,7 @@ struct OwnerData {
 		// successful negotiation at highest current flocking
 		// level.
   time_t NegotiationTimestamp;
+  std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
   OwnerData() { Name=NULL; Domain=NULL;
   NegotiationTimestamp=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
@@ -499,6 +499,8 @@ class Scheduler : public Service
 		// jobs which desire matchmaking.
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
   
+	bool usesLocalStartd() const { return m_use_startd_for_local;}
+	
 private:
 	
 	// information about this scheduler
@@ -627,6 +629,7 @@ private:
 
 	// utility functions
 	int				count_jobs();
+	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
     int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
     int             command_query_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
@@ -735,6 +738,13 @@ private:
 		// Mark a job as clean
 	int clear_dirty_job_attrs_handler(int, Stream *stream);
 
+		// Command handlers for direct startd
+   int receive_startd_update(int, Stream *s);
+   int receive_startd_invalidate(int, Stream *s);
+
+   int local_startd_reaper(int pid, int status);
+   int launch_local_startd();
+
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
 	int sent_shadow_failure_email;
@@ -756,6 +766,11 @@ private:
 
 	StringList m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
+
+	bool m_use_startd_for_local;
+	int m_local_startd_pid;
+	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
+	std::map<std::string, ClassAd *> m_claimedLocalStartds;
 };
 
 

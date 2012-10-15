@@ -372,6 +372,10 @@ const char	*LoadProfile = "load_profile";
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
 
+// Accounting Group parameters
+const char* Group = "group";
+const char* GroupUser = "group_user";
+
 //
 // VM universe Parameters
 //
@@ -524,6 +528,7 @@ void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
 void SetConcurrencyLimits();
+void SetAccountingGroup();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -1149,10 +1154,14 @@ main( int argc, char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// This effectively means executable, transfer_executable,
+		// arguments, universe, and queue X are ignored from the submit
+		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
 			extraLines.Append( "executable=/bin/sleep" );
 			extraLines.Append( "transfer_executable=false" );
 			extraLines.Append( "args=180" );
+			extraLines.Append( "universe=vanilla" );
 		}
 	}
 
@@ -1390,6 +1399,7 @@ main( int argc, char *argv[] )
 		i=0;
 		sshargs[i++] = "condor_ssh_to_job"; // note: this must be in the PATH
 		sshargs[i++] = "-auto-retry";
+		sshargs[i++] = "-remove-on-interrupt";
 		sshargs[i++] = "-X";
 		if (PoolName) {
 			sshargs[i++] = "-pool";
@@ -1879,18 +1889,15 @@ void
 SetDescription()
 {
 
-	char* description;
-	description = condor_param( Description, ATTR_JOB_DESCRIPTION );
+	char* description = condor_param( Description, ATTR_JOB_DESCRIPTION );
 
 	if ( description ){
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
+		free(description);
 	}
 	else if ( InteractiveJob ){
-		std::string default_description = "Interactive from ";
-		default_description += my_full_hostname();
-		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, "interactive job");
 	}
-	free(description);
 }
 
 #ifdef WIN32
@@ -2372,10 +2379,10 @@ SetImageSize()
 	// the requirements line, but that caused many problems.
 	// Jeff Ballard 11/4/98
 
-	buffer.formatstr( "%s = %"PRId64, ATTR_IMAGE_SIZE, image_size_kb);
+	buffer.formatstr( "%s = %" PRId64, ATTR_IMAGE_SIZE, image_size_kb);
 	InsertJobExpr (buffer);
 
-	buffer.formatstr( "%s = %"PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
+	buffer.formatstr( "%s = %" PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
 	InsertJobExpr (buffer);
 
 	// set an initial value for memory usage
@@ -2390,7 +2397,7 @@ SetImageSize()
 			exit( 1 );
 		}
 		free(tmp);
-		buffer.formatstr( "%s = %"PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
+		buffer.formatstr( "%s = %" PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
 		InsertJobExpr (buffer);
 	}
 
@@ -2412,7 +2419,7 @@ SetImageSize()
 		// For non-vm jobs, VMMemoryMb is 0.
 		disk_usage_kb = executable_size_kb + TransferInputSizeKb + (int64_t)VMMemoryMb*1024;
 	}
-	buffer.formatstr( "%s = %"PRId64, ATTR_DISK_USAGE, disk_usage_kb );
+	buffer.formatstr( "%s = %" PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
 	// set an intial value for RequestMemory
@@ -2423,7 +2430,7 @@ SetImageSize()
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
 		if (parse_int64_bytes(tmp, req_memory_mb, 1024*1024)) {
-			buffer.formatstr("%s = %"PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
+			buffer.formatstr("%s = %" PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
 			RequestMemoryIsZero = (req_memory_mb == 0);
 		} else if (MATCH == strcasecmp(tmp,"undefined")) {
 			RequestMemoryIsZero = true;
@@ -2455,7 +2462,7 @@ SetImageSize()
 		// and insert it as text into the jobAd.
 		int64_t req_disk_kb = 0;
 		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
-			buffer.formatstr("%s = %"PRId64, ATTR_REQUEST_DISK, req_disk_kb);
+			buffer.formatstr("%s = %" PRId64, ATTR_REQUEST_DISK, req_disk_kb);
 			RequestDiskIsZero = (req_disk_kb == 0);
 		} else if (MATCH == strcasecmp(tmp,"undefined")) {
 			RequestDiskIsZero = true;
@@ -6481,6 +6488,7 @@ queue(int num)
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
+        SetAccountingGroup();
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
@@ -8036,6 +8044,44 @@ SetConcurrencyLimits()
 		}
 	}
 }
+
+
+void SetAccountingGroup() {
+    // is a group setting in effect?
+    char* group = condor_param(Group);
+    if (NULL == group) return;
+
+    // identify the configured separator character between group and user
+    char* s = param("GROUP_SEPARATOR");
+    std::string sep = (s) ? s : "";
+    if (sep.size() != 1) {
+        fprintf(stderr, "Configuration variable GROUP_SEPARATOR expects a single character\n");
+        DoCleanup(0, 0, NULL);
+        exit(1);
+    }
+
+    // look for the group_user setting, or default to owner
+    std::string group_user;
+    char* gu = condor_param(GroupUser);
+    if (NULL == gu) {
+        ASSERT(owner);
+        group_user = owner;
+    } else {
+        group_user = gu;
+        free(gu);
+    }
+
+    // set attributes Group, GroupUser and AccountingGroup on the job ad:
+    std::string assign;
+    formatstr(assign, "%s = \"%s%c%s\"", ATTR_ACCOUNTING_GROUP, group, sep[0], group_user.c_str()); 
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_GROUP, group);
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_GROUP_USER, group_user.c_str());
+    InsertJobExpr(assign.c_str());
+    free(group);
+}
+
 
 // this function must be called after SetUniverse
 void

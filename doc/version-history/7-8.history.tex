@@ -16,15 +16,15 @@ New features will be added in the 7.9.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-8-5}Version 7.8.5}
+\subsection*{\label{sec:New-7-8-6}Version 7.8.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.8.5 not yet released.
-%\item Condor version 7.8.5 released on Month Date, 2012.
+\item Condor version 7.8.6 not yet released.
+%\item Condor version 7.8.6 released on Month Date, 2012.
 
 \end{itemize}
 
@@ -49,7 +49,116 @@ The details of each version are described below.
 
 \begin{itemize}
 
+	\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  \Ticket{3232}
+
+\item ClassAd functions int() and real() now ignore trailing characters
+when a string argument containing a valid number is given.
+\Ticket{3102}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
 \item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-5}Version 7.8.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.5 not yet released.
+%\item Condor version 7.8.5 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Condor now contains a tool called \Prog{accountant\_log\_fixer}, 
+that can fix the damage to the file \File{Accountantnew.log} 
+caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
+\Ticket{3221}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a problem with jobs that are submitted with
+\begin{verbatim}
+  noop_job = true
+\end{verbatim}
+These jobs would, in rare cases, cause the \Condor{schedd} daemon to crash.  
+\Ticket{3156}
+
+\item The \Condor{startd} daemon crashed if a job failed to match 
+a partitionable slot after the application 
+of configuration variables of the \MacroNI{MODIFY\_REQUEST\_EXPR\_} category.
+\Ticket{3260}
+
+\item The \Condor{schedd} daemon would mark scheduler universe jobs
+as completed and remove them from the job queue,
+even when they should have been requeued, according to policy.
+This caused \Condor{dagman} jobs to fail to restart. This bug exists
+in all Condor versions 7.8.0 through 7.8.4.
+Upon upgrading from these Condor versions, users will need to intervene
+in order to restart their \Condor{dagman} jobs. \Condor{dagman} should not
+need such intervention when upgrading from Condor version 7.8.5.  
+To restart a \Condor{dagman} job, 
+the simplest solution is to issue the command
+\begin{verbatim}
+  condor_submit <DAGFile>.condor.sub
+\end{verbatim}
+where the original DAG was submitted with 
+\begin{verbatim}
+  condor_submit <DAGFile>
+\end{verbatim}
+\Ticket{3207}
+
+\item The Condor version 7.8.4 \Condor{negotiator} daemon wrote 
+corrupt resource entries to the file \File{Accountantnew.log},
+which it would then not be able to read.
+The Condor version 7.9.0 \Condor{negotiator} daemon will abort 
+when trying to read these corrupted resource entries. 
+The \Condor{negotiator} will now correct these corrupt
+resource entries over time.
+\Ticket{3221}
+
+\item Fixed a bug in which the \Condor{schedd} statistics ClassAd attributes
+\Attr{JobsAccumExecuteTime}
+and \Attr{JobsAccumPostExecuteTime} were sometimes much too large for jobs
+that had been vacated and then restarted.
+Note that these currently undocumented attributes would only appear
+in the ClassAd if the verbosity level for \Condor{schedd} statistics
+was set at the high value of 2 by the configuration variable
+\MacroNI{STATISTICS\_TO\_PUBLISH}.
+\Ticket{3227}
 
 \end{itemize}
 
@@ -113,21 +222,30 @@ See the complete definition at
 
 \begin{itemize}
 
-\item \Security Although not user-visible, there were multiple updates to remove places
-in the code where potential buffer overruns could occur, thus removing
-potential attacks.  None were known to be exploitable.
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could expose information which would allow an attacker to control
+another user's job.  (CVE-2012-3493)
 
-\item \Security Although not user-visible, there were updates to the code to improve
-error checking of system calls, removing some potential security threats.  None
-were known to be exploitable.
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could have lead to a Denial-of-Service attack which would allow
+an attacker to remove another user's idle job.  (CVE-2012-3491)
 
-\item \Security Although not user-visible, some code that was no longer used was removed.
-The presence of this code could have lead to a Denial-of-Service attack which
-would allow an attacker to stop another user's jobs from running.
+\item \Security Filesystem (FS) authentication was improved to check the UNIX
+permissions of the directory used for authentication.  Without this, an
+attacker may have been able to impersonate another submitter on the same submit
+machine.  (CVE-2012-3492)
 
-\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
-of the directory used for authentication.  Without this, an attacker may have
-been able to impersonate another submitter on the same submit machine.
+\item \Security Although not user-visible, there were multiple updates to
+remove places in the code where potential buffer overruns could occur, thus
+removing potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to
+improve error checking of system calls, removing some potential security
+threats.  None were known to be exploitable.
+
+
+% https://access.redhat.com/security/cve/CVE-2012-349X
+
 
 \item Fixed the \Condor{schedd} daemon; 
 it would crash when a submit description file

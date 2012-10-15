@@ -2051,6 +2051,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=95
 
+[GROUP_SEPARATOR]
+aliases=
+default=.
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Name Separator Character
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=accountant,Accountant,condor_submit
+id=777
+
 [PRIORITY_HALFLIFE]
 aliases=
 default=86400
@@ -10728,3 +10744,35 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit
 id=612
+
+[MAX_GLOBAL_JOB_PRIOS]
+aliases=
+default=500
+version=7.9.1
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Maximum size of JobPrioArray in submitter ad
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=613
+
+[USE_GLOBAL_JOB_PRIOS]
+aliases=
+default=false
+version=7.9.1
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Consider job priorities across multiple schedds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=614

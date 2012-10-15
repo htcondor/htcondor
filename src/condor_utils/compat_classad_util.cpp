@@ -100,7 +100,7 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 	classad::Value result;
 	bool constraint_changed = true;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if ( saved_constraint ) {
@@ -152,7 +152,7 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 {
 	classad::Value result;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	// Evaluate constraint with ad in the target scope so that constraints

@@ -28,6 +28,8 @@
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 
+#include "slot_builder.h"
+
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
@@ -1916,6 +1918,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	free(ptr);
 
+	    // Is this the local universe startd?
+    cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
+
 		// Put in max vacate time expression
 	ptr = param(ATTR_MACHINE_MAX_VACATE_TIME);
 	if( ptr && !*ptr ) {
@@ -2792,8 +2797,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					// so we can try again.
 					dprintf(D_ALWAYS, 
 						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
-					if ( req_classad ) delete req_classad;	// delete modified ad
-					req_classad = unmodified_req_classad;	// put back original					
+					req_classad->CopyFrom(*unmodified_req_classad);	// put back original					
+					delete unmodified_req_classad;
 					unmodified_req_classad = NULL;
 				} else {
 					rip->dprintf(D_ALWAYS, 
@@ -2873,7 +2878,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					  "Match requesting resources: %s\n", type.Value() );
 
 		type_list.initializeFromString( type.Value() );
-		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
+		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );

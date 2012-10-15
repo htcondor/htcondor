@@ -12,6 +12,65 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-2}Version 7.9.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.9.2 not yet released.
+%\item Condor version 7.9.2 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that caused the \Condor{shadow} to set job attribute
+\Attr{X509UserProxySubject} to the wrong value when the job's X509
+proxy file was updated. It set the value to be the proxy's subject name
+rather than its identity.
+\Ticket{3265}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-1}Version 7.9.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -32,6 +91,13 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 \noindent New Features:
 
 \begin{itemize}
+
+\item \Condor{submit} now supports first-class syntax for specifying
+accounting groups, via the 'group' and 'group\_user' commands.  The
+separator character between group name and user name on internal
+representations is now configurable with \Macro{GROUP\_SEPARATOR}.
+Refer to section~\ref{sec:group-accounting} for more information.
+\Ticket{2728}
 
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
 different \Condor{schedd} than the one that serves as the source of
@@ -65,6 +131,12 @@ by configuration to cancel the draining
 of a machine that is in the Draining mode.  This can be used to effect
 partial draining of machines.
 \Ticket{2993}
+
+\item Communication between the \Condor{c-gahp} and \Condor{schedd} has
+been improved. A large number of Condor-C jobs should no longer cause
+other clients of the remote \Condor{schedd} to time out trying to get the
+\Condor{schedd}'s attention.
+\Ticket{2575}
 
 \end{itemize}
 
@@ -113,6 +185,12 @@ to \Expr{True} to indicate that an X.509 user proxy is required for the job.
 If \SubmitCmd{x509userproxy} is not set, 
 then the proxy file will be looked for in the standard locations.
 \Ticket{3025}
+
+\item If \Condor{submit} with the \Opt{-interactive} option
+is interrupted (via ctrl-c for example) before the interactive job starts,
+an attempt is made to immediately remove the interactive job from the queue.
+Similarly, \Condor{ssh\_to\_job} has a new option \Opt{-remove-on-interrupt}.
+\Ticket{3242}
 
 \end{itemize}
 
@@ -328,7 +406,6 @@ a \Condor{schedd} daemon or of a \Condor{submit} executable.
 platforms other than Windows,
 which schedules and runs a job that provides a shell prompt
 on the execute machine.
-Documentation of this feature is not yet available.
 \Ticket{3088}
 
 \end{itemize}

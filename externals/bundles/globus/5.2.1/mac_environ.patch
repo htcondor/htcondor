@@ -1,0 +1,101 @@
+--- gt5.2.1-all-source-installer/source-trees/common/source/library/globus_libc_setenv.c	2010-05-17 09:58:45.000000000 -0500
++++ gt5.2.1-all-source-installer/source-trees/common/source/library/globus_libc_setenv.c-patched	2012-10-02 10:13:59.000000000 -0500
+@@ -36,6 +36,7 @@
+ 
+ #include "globus_common_include.h"
+ #include "globus_libc.h"
++#include <crt_externs.h>
+ 
+ #ifndef	__P
+ #define __P(x)	()
+@@ -53,7 +54,7 @@
+ 	register const char *value;
+ 	int  rewrite;
+ {
+-	extern char **environ;
++	char ***environ_p = _NSGetEnviron();
+ 	static int alloced;			/* if allocated space before */
+ 	register char *c;
+ 	globus_size_t l_value, offset = 0;
+@@ -82,11 +83,11 @@
+ 		register int cnt;
+ 		register char **p;
+ 
+-		for (p = environ, cnt = 0; *p; ++p, ++cnt);
++		for (p = *environ_p, cnt = 0; *p; ++p, ++cnt);
+ 		if (alloced) {			/* just increase size */
+-		    environ = (char **)realloc((char *)environ,
++		    *environ_p = (char **)realloc((char *)*environ_p,
+ 					       (size_t)(sizeof(char *) * (cnt + 2)));
+-		    if (!environ)
++		    if (!*environ_p)
+ 		    {
+ 			globus_libc_unlock();
+ 			return (-1);
+@@ -100,20 +101,20 @@
+ 			    globus_libc_unlock();
+ 			    return (-1);
+ 			}
+-			memcpy(p, environ, cnt * sizeof(char *));
+-			environ = p;
++			memcpy(p, *environ_p, cnt * sizeof(char *));
++			*environ_p = p;
+ 		}
+-		environ[cnt + 1] = NULL;
++		(*environ_p)[cnt + 1] = NULL;
+ 		offset = (globus_size_t) cnt;
+ 	}
+ 	for (c = (char *)name; *c && *c != '='; ++c);	/* no `=' in name */
+-	if (!(environ[offset] =			/* name + `=' + value */
++	if (!((*environ_p)[offset] =			/* name + `=' + value */
+ 	    malloc((size_t)((int)(c - name) + l_value + 2))))
+ 	{
+ 	    globus_libc_unlock();
+ 	    return (-1);
+ 	}
+-	for (c = environ[offset]; (*c = *name++) && *c != '='; ++c);
++	for (c = (*environ_p)[offset]; (*c = *name++) && *c != '='; ++c);
+ 	for (*c++ = '='; (*c++ = *value++););
+ 
+ 	globus_libc_unlock();
+@@ -128,14 +129,14 @@
+ globus_libc_unsetenv(name)
+ 	const char *name;
+ {
+-	extern char **environ;
++	char ***environ_p = _NSGetEnviron();
+ 	register char **p;
+ 	globus_size_t offset;
+ 
+ 	globus_libc_lock();
+ 	
+ 	while (globus_l_libc_findenv(name, &offset))	/* if set multiple times */
+-		for (p = &environ[offset];; ++p)
++		for (p = &(*environ_p)[offset];; ++p)
+ 			if (!(*p = *(p + 1)))
+ 				break;
+ 	globus_libc_unlock();
+@@ -171,19 +172,19 @@
+     register const char *  name;
+     globus_size_t *        offset;
+ {
+-    extern char **environ;
++    char ***environ_p = _NSGetEnviron();
+     register int len;
+     register const char *np;
+     register char **p, *c;
+     
+-    if (name == NULL || environ == NULL)
++    if (name == NULL || *environ_p == NULL)
+ 	return (NULL);
+     for (np = name; *np && *np != '='; ++np)
+ 	continue;
+     len = np - name;
+-    for (p = environ; (c = *p) != NULL; ++p)
++    for (p = *environ_p; (c = *p) != NULL; ++p)
+ 	if (strncmp(c, name, len) == 0 && c[len] == '=') {
+-	    *offset = (globus_size_t)(p - environ);
++	    *offset = (globus_size_t)(p - *environ_p);
+ 	    return (c + len + 1);
+ 	}
+     return (NULL);

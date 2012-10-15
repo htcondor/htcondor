@@ -42,11 +42,6 @@ static char* find_ckpt_probe(void)
 const char *
 sysapi_vsyscall_gate_addr_raw(void)
 {
-	char *tmp;
-	FILE *fin;
-	char buf[BUFFER_SIZE];
-	char addr[BUFFER_SIZE];
-
 	/* immediately set this up if it isn't already */
 	if (_sysapi_vsyscall_gate_addr == NULL) {
 		/* Set this up immediately for the rest of the algorithm */
@@ -54,6 +49,11 @@ sysapi_vsyscall_gate_addr_raw(void)
 	}
 
 #if defined(LINUX)
+	char *tmp;
+	FILE *fin;
+	char buf[BUFFER_SIZE];
+	char addr[BUFFER_SIZE];
+
 	if (strcmp(_sysapi_vsyscall_gate_addr, "N/A") == MATCH) {
 
 		/* get the probe process executable */

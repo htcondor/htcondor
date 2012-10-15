@@ -34,7 +34,6 @@
 #include "HashTable.h"
 #include "ConcurrencyLimitUtils.h"
 #include "matchmaker.h"
-#include "hashkey.h"
 #include <string>
 #include <deque>
 
@@ -176,6 +175,11 @@ void Accountant::Initialize(GroupEntry* root_group)
                              "NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES",false);
   UseSlotWeights = param_boolean("NEGOTIATOR_USE_SLOT_WEIGHTS",true);
 
+  tmp = param("GROUP_SEPARATOR");
+  group_separator = (tmp) ? tmp : "";
+  if (group_separator.size() != 1) {
+      EXCEPT("Configuration variable GROUP_SEPARATOR expects a single character");
+  }
 
   dprintf(D_ACCOUNTANT,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
   dprintf(D_ACCOUNTANT,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
@@ -339,7 +343,7 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
     string gname=subname.substr(0, pos);
 
     // is there a group/user separator?
-    pos = gname.find_last_of('.');
+    pos = gname.find_last_of(group_separator[0]);
     if (pos != string::npos) {
         // everything prior to separator is group name
         gname = gname.substr(0, pos);
@@ -1305,10 +1309,24 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
 
 MyString Accountant::GetResourceName(ClassAd* ResourceAd) 
 {
-  AdNameHashKey hk;
-  MyString Name;
-  makeStartdAdHashKey(hk, ResourceAd);
-  hk.sprint(Name);
+  MyString startdName;
+  MyString startdAddr;
+  
+  if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
+    //This should never happen, because unnamed startd ads are rejected.
+    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
+  }
+  MyString Name=startdName;
+  Name+="@";
+
+  if (!ResourceAd->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)) {
+    //This may happen for grid site ClassAds.
+    //Actually, the collector now inserts an IP address if none is provided,
+    //but it is more robust to not assume that behavior here.
+	dprintf(D_FULLDEBUG, "in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n", startdName.Value());
+  }
+  Name+=startdAddr;
+  
   return Name;
 }
 

@@ -85,7 +85,7 @@ open( TASKFILE, ">$TaskFile" ) || die "Can't open $TaskFile: $!\n";
 # generate compiler_list and each Makefile we'll need
 ######################################################################
 
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
+if( !($ENV{NMI_PLATFORM} =~ /_win/i) )
 {
 	print "****************************************************\n";
 	print "**** Creating \n"; 
@@ -123,7 +123,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) )
 my %tasklist;
 my $total_tests;
 
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+if( !($ENV{NMI_PLATFORM} =~ /_win/i) ) {
 	foreach $class (@classlist) {
     	print "****************************************************\n";
     	print "**** Finding tests for class: \"$class\"\n";

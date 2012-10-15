@@ -804,9 +804,9 @@ ReadUserLogState::GetStateString(
 		"  base path = '%s'\n"
 		"  cur path = '%s'\n"
 		"  UniqId = %s, seq = %d\n"
-		"  rotation = %d; max = %d; offset = "FILESIZE_T_FORMAT";"
-		" event num = "FILESIZE_T_FORMAT"; type = %d\n"
-		"  inode = %u; ctime = %ld; size = "FILESIZE_T_FORMAT"\n",
+		"  rotation = %d; max = %d; offset = " FILESIZE_T_FORMAT";"
+		" event num = " FILESIZE_T_FORMAT"; type = %d\n"
+		"  inode = %u; ctime = %ld; size = " FILESIZE_T_FORMAT"\n",
 		istate->m_signature, istate->m_version, istate->m_update_time,
 		istate->m_base_path,
 		CurPath(state),

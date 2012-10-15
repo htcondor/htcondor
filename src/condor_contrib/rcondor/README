@@ -12,6 +12,7 @@ Description
 Remote Condor allows a user to submit and monitor batch jobs through a remote
 instance of Condor from his or her computer without having to install
 Condor locally.
+Remote Condor will execute the commands through ssh on the remote node.
 
 Installation
 ------------
@@ -30,38 +31,42 @@ make uninstall
 
 Configuration
 -------------
-after installing, run:
-rcondor_configure user@host:dir mountpoint
+You must create a configuration file.
+It can either reside in
+$HOME/.rcondor/rcondor.conf
+or
+/etc/rcondor_config
 
+You can use the helper script:
+rcondor_configure user@host:dir mountpoint
 These argument fields should correspond to your standard sshfs mount command.
 
-It will create a file:
-$HOME/.rcondor/rcondor.conf
-
-with the lines:
+It will create these lines:
 USR_HOST = user@host
 LOCAL = mountpoint
 REMOTE = dir
  
 Usage
 -----
-Once rcondor.conf is properly configured, run:
-
+Once properly configured, run:
 rcondor_mnt
+to create the sshfs mountpoint.
+
+You should unmount it with
+rcondor_unmnt
+when you don't need it anymore.
 
 Make sure that any paths corresponding to job executables, submit files, and job
 output files are located somewhere within the LOCAL path specified in
-rcondor.conf.  Also make sure your current working directory is within the
-LOCAL path.
+the configuration file.  
+Some commands (e.g. condor_submit) also require that the current working directory 
+is within the LOCAL path.
 
-Then run a command such as 
-
+Assuming the installation directory is in the path,
+you can now run commands such as 
 condor_submit 
 
 followed by the usual arguments.
 
-The following commands are currently available:
-condor_submit
-condor_rm
-condor_q
-condor_status
+Most standard Condor commands are supported. 
+See $LOCAL/bin for the complete list.

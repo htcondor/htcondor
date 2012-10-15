@@ -273,7 +273,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	myResource = CondorResource::FindOrCreateResource( remoteScheddName,
 													   remotePoolName,
 													   jobProxy );
-	myResource->RegisterJob( this, submitterId );
+	myResource->CondorRegisterJob( this, submitterId );
 	if ( job_already_submitted ) {
 		myResource->AlreadySubmitted( this );
 	}

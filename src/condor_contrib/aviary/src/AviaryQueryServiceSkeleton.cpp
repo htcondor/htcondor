@@ -255,6 +255,7 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 	}
 
 	for (SubmissionCollectionType::iterator i = sub_map.begin(); sub_map.end() != i; i++) {
+		JobServerObject* jso = JobServerObject::getInstance();
 		SubmissionSummary* summary = new SubmissionSummary;
 		SubmissionObject *submission = (*i).second;
 
@@ -263,6 +264,8 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			sid->setName(submission->getName());
 			sid->setOwner(submission->getOwner());
 			sid->setQdate(submission->getOldest());
+			sid->setPool(jso->getPool());
+			sid->setScheduler(jso->getName());
 			summary->setId(sid);
 			summary->setCompleted(submission->getCompleted().size());
 			summary->setHeld(submission->getHeld().size());
@@ -504,10 +507,13 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 }
 
 SubmissionID* makeSubmissionID(SubmissionObject* obj) {
+  JobServerObject* jso = JobServerObject::getInstance();
   SubmissionID* sub_id = new SubmissionID;
   sub_id->setName(obj->getName());
   sub_id->setOwner(obj->getOwner());
   sub_id->setQdate(obj->getOldest());
+  sub_id->setPool(jso->getPool());
+  sub_id->setScheduler(jso->getName());
   return sub_id;
 }
 

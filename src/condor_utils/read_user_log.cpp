@@ -1012,7 +1012,7 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 	} else {
 		outcome = ULOG_NO_EVENT;
 		if ( try_again ) {
-			try_again = false;
+			*try_again = false;
 		}
 	}
 	return outcome;

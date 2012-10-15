@@ -1,0 +1,14 @@
+#!/bin/bash
+
+real0=`readlink -e "$0"`
+swdir=`dirname "$real0"`
+
+confscript="$swdir/rcondor_config.source"
+if [ ! -f "$confscript" ]; then
+  echo -e "rcondor: improper installation, missing $confscript" >&2
+  exit 2
+fi
+
+source "$confscript"
+
+$sshfsu "$local"

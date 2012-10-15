@@ -1,0 +1,144 @@
+#
+# This helper script will source the rcondor config file
+# Will exit hard on error
+#
+# Author: Igor Sfiligoi (isfiligoi@ucsd.edu)
+# License: BSD
+#
+
+#
+# Attributes it puts in the environment
+#  usr_host - the remote location of the ssh server (e.g. user@node)
+#  local    - local mountpoint (abspath)
+#  remote   - remote directory, can be relative to remote home
+#  ssh      - which ssh command to use
+#  sshfs    - which sshfs command to use
+#  sshfsu   - which sshfs unmount command to use
+#
+# It also defines the raw version:
+#  localraw - local, as provided by the config
+#
+
+#
+# Config files it looks for:
+#   /etc/rcondor_config
+#   $HOME/.rcondor/rcondor.conf
+#
+
+#
+# Attributes it looks for in the config files:
+#   USR_HOST - will be loaded into usr_host
+#              will be evaluated, so it can contain references to env variables (e.g. $USER)
+#              no default, a value must be provided
+#   LOCAL    - will be loaded into local
+#              will be evaluated, so it can contain references to env variables (e.g. $USER)
+#              no defualt, a value must be provided
+#   REMOTE   - will be loaded into remote
+#              this one is not locally evaluated, but may reference remote variables
+#               which will be expanded after calling ssh
+#              defaults to "."
+#   SSH      - will be loaded into ssh
+#              defaults to "ssh"
+#   SSHFS    - will be loaded into sshfs
+#              defaults to "sshfs -o idmap=user"
+#   SSHFSU   - will be loaded into sshfsu
+#              defaults to "fusermount -u"
+#
+# If an attributed is defined multiple times, the last value is taken.
+#
+
+function get_val {
+ # split on first = only
+ ae='{i=index($0,"=");print substr($0,i+1);}'
+ echo "$2" | awk "/^ *$1 *=/${ae}"
+}
+
+#
+# Load conf into memory
+# use cat and ignore any errors (e.g. file not found)
+#
+
+conf=`cat /etc/rcondor_config $HOME/.rcondor/rcondor.conf 2>/dev/null`
+if [ -z "$conf" ]; then
+  echo -e "rcondor: config file does not exist in either\n/etc/rcondor_config\nor\n$HOME/.rcondor/rcondor.conf" >&2  
+  exit 1
+fi
+
+#
+# usr_host
+#
+
+usr_host=`get_val USR_HOST "$conf"`
+usr_host=`eval echo $usr_host` # strip whitespaces
+
+if [ -z "$usr_host" ]; then
+  echo "rcondor: config missing USR_HOST" >&2
+  exit 1
+fi
+
+#
+# local
+#
+
+localraw=`get_val LOCAL "$conf"`
+localraw=`eval echo $localraw`
+
+if [ -z "$localraw" ]; then
+  echo "rcondor: config missing LOCAL" >&2
+  exit 1
+fi
+
+local=`readlink -e $localraw`
+if [ $? -ne 0 ]; then
+  echo -e "rcondor: path of local does not exist\n$localraw" >&2
+  exit 1
+fi
+
+if [ ! -d "$local" ]; then
+  echo -e "rcondor: path of local not a dir\n$local" >&2
+  exit 1
+fi
+
+#
+# remote
+#
+
+remote=`get_val REMOTE "$conf"`
+remote=`echo $remote`
+
+if [ -z "$remote" ]; then
+  remote="."
+fi
+
+#
+# ssh
+#
+
+ssh=`get_val SSH "$conf"`
+ssh=`echo $ssh`
+
+if [ -z "$ssh" ]; then
+  ssh="ssh"
+fi
+
+#
+# sshfs
+#
+
+sshfs=`get_val SSHFS "$conf"`
+sshfs=`echo $sshfs`
+
+if [ -z "$sshfs" ]; then
+  sshfs="sshfs -o idmap=user"
+fi
+
+#
+# sshfsu
+#
+
+sshfsu=`get_val SSHFSU "$conf"`
+sshfsu=`echo $sshfsu`
+
+if [ -z "$sshfsu" ]; then
+  sshfsu="fusermount -u"
+fi

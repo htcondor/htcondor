@@ -106,6 +106,9 @@
 			<xs:element name="name" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
 			<xs:element name="qdate" type="xs:int" minOccurs="0"/>
+			<!-- where this submission was created in the condor space -->
+			<xs:element name="pool" type="xs:string" minOccurs="0"/>
+			<xs:element name="scheduler" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="JobID">
@@ -206,7 +209,7 @@
 	<xs:complexType name="ResourceLocation">
 		<xs:sequence>
 			<xs:element name="id" type="tns:ResourceID"/>
-			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>			
+			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="ScanMode">

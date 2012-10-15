@@ -256,8 +256,10 @@ void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "RestartJobmanagersWanted", restartJMsWanted.Number() );
 }
 
-void GlobusResource::UnregisterJob( GlobusJob *job )
+void GlobusResource::UnregisterJob( BaseJob *base_job )
 {
+	GlobusJob* job = dynamic_cast<GlobusJob*>( base_job );
+
 	JMComplete( job );
 
 	BaseResource::UnregisterJob( job );

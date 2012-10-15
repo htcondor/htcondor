@@ -250,18 +250,33 @@ if( NOT WINDOWS)
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	if (cxx_11)
 
-		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
-		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+		# Clang requires some additional C++11 flags, as the default stdlib
+		# is from an old GCC version.
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -lc++")
+			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
+			set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -lc++")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++")
+		endif()
 
-		#check_cxx_source_compiles("
-		##include <unordered_map>
-		##include <memory>
-		#int main() {
-		#	std::unordered_map<int, int> ci;
-		#	std::shared_ptr<int> foo;
-		#	return 0;
-		#}
-		#" PREFER_CPP11 )
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+		check_cxx_source_compiles("
+		#include <unordered_map>
+		#include <memory>
+		int main() {
+			std::unordered_map<int, int> ci;
+			std::shared_ptr<int> foo;
+			return 0;
+		}
+		" PREFER_CPP11 )
+
+		# Note - without adding -lc++ to the CXX flags, the linking of the test
+		# above will fail for clang.  It doesn't seem strictly necessary though,
+		# so we remove this afterward.
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			string(REPLACE "-lc++" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+		endif()
 
 	endif (cxx_11)
 
@@ -611,6 +626,13 @@ configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_C
 exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
+# We could run the safefile configure script each time with cmake - or we could just fix the one usage of configure.
+if (NOT WINDOWS)
+    execute_process( COMMAND sed "s|#undef id_t|#cmakedefine ID_T\\n#if !defined(ID_T)\\n#define id_t uid_t\\n#endif|" ${CONDOR_SOURCE_DIR}/src/safefile/safe_id_range_list.h.in OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.in.tmp  )
+    configure_file( ${CONDOR_BINARY_DIR}/src/safefile/safe_id_range_list.h.in.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out)
+    exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h )
+endif()
+
 ###########################################
 # include and link locations
 include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
@@ -830,8 +852,10 @@ else(MSVC)
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
-	# b/c we don't do anything c++ specific copy flags for c-compilation
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
+	# copy in C only flags into CMAKE_C_FLAGS
+	string(REPLACE "-std=c++11" "" CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
+	# Only relevant for clang / Mac OS X
+	string(REPLACE "-stdlib=libc++" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
 
 endif(MSVC)
 
