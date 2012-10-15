@@ -5908,7 +5908,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 	Gahp_Args* result = get_pending_result(command, buf);
 	
 	// we expect the following return:
-	//		seq_id 0 <instance_id> <status> <ami_id> <public_dns> <private_dns> <keypairname> <group> <group> <group> ... 
+	//		seq_id 0 <instance_id> <status> <ami_id> <state_reason_code> <public_dns> <private_dns> <keypairname> <group> <group> <group> ... 
 	//		seq_id 0
 	//		seq_id 1 error_code error_string
 	//		seq_id 1
@@ -5929,7 +5929,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 			error_code = strdup(result->argv[2]);
 			error_string = result->argv[3];
 		}
-		else if (result->argc == 5)
+		else if (result->argc == 6)
 		{
 			rc = atoi(result->argv[1]);
 			if (rc == 1) {
@@ -5949,7 +5949,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				returnStatus.rewind();
 			}				
 		} 
-		else if (result->argc < 9) {
+		else if (result->argc < 10) {
 			EXCEPT( "Bad %s result", command );
 		} else {
 			rc = atoi(result->argv[1]);

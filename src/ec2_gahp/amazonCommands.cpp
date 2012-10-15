@@ -299,7 +299,6 @@ bool AmazonRequest::SendRequest() {
                              + valueOfHostHeaderInLowercase + "\n"
                              + httpRequestURI + "\n"
                              + canonicalizedQueryString;
-    // dprintf( D_ALWAYS, "DEBUG: stringToSign is '%s'\n", stringToSign.c_str() );
 
     // Step 3: "Calculate an RFC 2104-compliant HMAC with the string
     // you just created, your Secret Access Key as the key, and SHA256
@@ -319,9 +318,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
             return false;
         }
-        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
         if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
-        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
     }
     
     unsigned int mdLength = 0;
@@ -334,7 +331,6 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_ALWAYS, "Unable to calculate SHA256 HMAC to sign query, failing.\n" );
         return false;
     }
-    // dprintf( D_ALWAYS, "DEBUG: %d -> '%c'\n", mdLength, messageDigest[0] );
     
     // Step 4: "Convert the resulting value to base64."
     char * base64Encoded = condor_base64_encode( messageDigest, mdLength );
@@ -509,6 +505,7 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
     
+    dprintf( D_FULLDEBUG, "Response was '%s'\n", resultString.c_str() );
     return true;
 }
 
@@ -1022,6 +1019,9 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
                 resultList.append( asr.ami_id.c_str() );
+                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
+                
+                // if( ! asr.stateReasonCode.empty() ) { dprintf( D_ALWAYS, "DEBUG: Instance %s has status %s because %s\n", asr.instance_id.c_str(), asr.status.c_str(), asr.stateReasonCode.c_str() ); }
                 
                 if( strcasecmp( asr.status.c_str(), AMAZON_STATUS_RUNNING ) == 0 ) {
                     resultList.append( nullStringIfEmpty( asr.public_dns ) );
@@ -1080,7 +1080,6 @@ typedef struct vmStatusSpotUD_t vmStatusSpotUD;
 void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
-    // dprintf( D_FULLDEBUG, "vmStatusSpotESH(): inItem = %u, name = %s\n", vsud->inItem, (const char *)name );
     if( strcasecmp( (const char *)name, "item" ) == 0 ) {
         if( vsud->inItem == 0 ) {
             vsud->currentResult = new AmazonStatusSpotResult();
@@ -1090,7 +1089,6 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
         return;
     }
     
-    // dprintf( D_FULLDEBUG, "vmStatusSpotESH(), switching on name; inItem = %u, name = %s\n", vsud->inItem, (const char *)name );
     if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
     } else if( strcasecmp( (const char *)name, "state" ) == 0 ) {
@@ -1106,7 +1104,6 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
 
 void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
-    // dprintf( D_FULLDEBUG, "vmStatusSpotCDH(): inItem = %u, inWhichTag = %d\n", vsud->inItem, vsud->inWhichTag );
     if( vsud->inItem != 1 ) { return; }
     
     std::string * targetString = NULL;
@@ -1135,14 +1132,12 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             break;
     }
     
-    // dprintf( D_FULLDEBUG, "vmStatusSpotCDH(): appending '%*s'\n", len, (const char *)cdata );
     appendToString( (void *)cdata, len, 1, (void *)targetString );
 }
 
 void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
-    // dprintf( D_FULLDEBUG, "vmStatusSpotEEH(): inItem = %u, name = %s\n", vsud->inItem, (const char *)name );
     if( strcasecmp( (const char *)name, "item" ) == 0 ) {
         if( vsud->inItem == 1 ) {
             vsud->results.push_back( * vsud->currentResult );
@@ -1164,7 +1159,6 @@ bool AmazonVMStatusSpot::SendRequest() {
         XML_SetElementHandler( xp, & vmStatusSpotESH, & vmStatusSpotEEH );
         XML_SetCharacterDataHandler( xp, & vmStatusSpotCDH );
         XML_SetUserData( xp, & vssud );
-        dprintf( D_FULLDEBUG, "VM_STATUS_SPOT: %s\n", this->resultString.c_str() );
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
     }
@@ -1285,13 +1279,15 @@ struct vmStatusUD_t {
         PRIVATE_DNS,
         KEY_NAME,
         INSTANCE_TYPE,
-        GROUP_ID
+        GROUP_ID,
+        STATE_REASON_CODE
     };
     typedef enum vmStatusTags_t vmStatusTags;
 
     bool inInstancesSet;
     bool inInstance;
     bool inInstanceState;
+    bool inStateReason;
     vmStatusTags inWhichTag;
     AmazonStatusResult * currentResult;
     std::vector< AmazonStatusResult > & results;
@@ -1305,6 +1301,7 @@ struct vmStatusUD_t {
         inInstancesSet( false ), 
         inInstance( false ),
         inInstanceState( false ),
+        inStateReason( false ),
         inWhichTag( vmStatusUD_t::NONE ), 
         currentResult( NULL ), 
         results( asrList ),
@@ -1342,7 +1339,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         }
         return;
     }
-    
+
     if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::INSTANCE_ID;
     } else if( strcasecmp( (const char *)name, "imageId" ) == 0 ) {
@@ -1358,8 +1355,13 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     } else if( strcasecmp( (const char *)name, "instanceState" ) == 0 ) {
         vsud->inInstanceState = true;
         vsud->inWhichTag = vmStatusUD::NONE;
+    } else if( strcasecmp( (const char *)name, "stateReason" ) == 0 ) {
+        vsud->inStateReason = true;
+        vsud->inWhichTag = vmStatusUD::NONE;
     } else if( vsud->inInstanceState && strcasecmp( (const char *)name, "name" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::STATUS;
+    } else if( vsud->inStateReason && strcasecmp( (const char *)name, "code" ) == 0 )  {
+        vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
     }
 }
 
@@ -1408,6 +1410,10 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
             targetString = & vsud->currentResult->instancetype;
             break;
 
+        case vmStatusUD::STATE_REASON_CODE:
+            targetString = & vsud->currentResult->stateReasonCode;
+            break;
+
         default:
             /* This should never happen. */
             return;
@@ -1421,7 +1427,6 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
 
     if( vsud->inGroupSet ) {
         if( strcasecmp( (const char *)name, "groupId" ) == 0 ) {
-            // dprintf( D_ALWAYS, "DEBUG: adding '%s' to current security group list...\n", vsud->currentSecurityGroup.c_str() );
             vsud->currentSecurityGroups.push_back( vsud->currentSecurityGroup );
             vsud->currentSecurityGroup.erase();
             vsud->inGroup = false;
@@ -1451,6 +1456,11 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
 
     if( strcasecmp( (const char *)name, "instanceState" ) == 0 ) {
         vsud->inInstanceState = false;
+        return;
+    }
+
+    if( strcasecmp( (const char *)name, "stateReason" ) == 0 )  {
+        vsud->inStateReason = false;
         return;
     }
     
@@ -1509,22 +1519,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 AmazonStatusResult & asr = saRequest.results[i];
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
-                resultList.append( asr.ami_id.c_str() );
-                
-//                dprintf( D_ALWAYS, "DEBUG: '%s' '%s' '%s' '%s' '%s' '%s' '%s'\n",
-//                    asr.instance_id.c_str(),
-//                    asr.status.c_str(),
-//                    asr.ami_id.c_str(),
-//                    asr.private_dns.c_str(),
-//                    asr.public_dns.c_str(),
-//                    asr.keyname.c_str(),
-//                    asr.instancetype.c_str() );
-
-//                std::string sgList;
-//                for( unsigned j = 0; j < asr.securityGroups.size(); ++j ) {
-//                    sgList += "'" + asr.securityGroups[j] + "' ";
-//                }
-//                dprintf( D_ALWAYS, "DEBUG: with security group(s): %s\n", sgList.c_str() );
+                resultList.append( asr.ami_id.c_str() );                
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -1776,7 +1771,6 @@ void keypairNamesEEH( void * vUserData, const XML_Char * name ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
     if( strcasecmp( (const char *)name, "KeyName" ) == 0 ) {
         knud->inKeyName = false;
-        // dprintf( D_ALWAYS, "DEBUG: found end of name '%s'\n", knud->keyName.c_str() );
         knud->keyNameList.append( knud->keyName.c_str() );
         knud->keyName.clear();
     }
@@ -1785,7 +1779,6 @@ void keypairNamesEEH( void * vUserData, const XML_Char * name ) {
 bool AmazonVMKeypairNames::SendRequest() {
     bool result = AmazonRequest::SendRequest();
     if( result ) {
-        // dprintf( D_ALWAYS, "DEBUG: '%s'\n", this->resultString.c_str() );
         keyNamesUD knud( this->keyNames );
         XML_Parser xp = XML_ParserCreate( NULL );
         XML_SetElementHandler( xp, & keypairNamesESH, & keypairNamesEEH );

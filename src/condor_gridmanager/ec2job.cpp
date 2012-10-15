@@ -450,7 +450,7 @@ void EC2Job::doEvaluateState()
 	    			if( ! m_spot_price.empty() ) {
 	    			    // If we have only a client token, check to see if
 	    			    // a corresponding request exists.  We can't just
-	    			    // ignore the possibility and got to GM_SPOT_START
+	    			    // ignore the possibility and go to GM_SPOT_START
 	    			    // (like a normal instance) because indempotence
 	    			    // isn't baked into the EC2 API for spot instances.
 	    			    // (Although, see the question below; we might have
@@ -926,8 +926,8 @@ void EC2Job::doEvaluateState()
 						int size = returnStatus.number();
 						// only when status changed to running, can we have the public dns name
 						// at this situation, the number of return value is larger than 4
-						if (size >=4 ) {
-							for (int i=0; i<3; i++) {
+						if (size >= 5 ) {
+							for (int i=0; i<4; i++) {
 								returnStatus.next();							
 							}
 							public_dns = returnStatus.next();
@@ -1397,13 +1397,16 @@ void EC2Job::doEvaluateState()
                 }
                 if( originalState != gmState ) { break; }
                 
-                // If we didn't find the SIR, it's gone.  Don't check if the
-                // job is being removed; make sure to report the error; let
-                // people run condor_rm -f if they really want the job gone.
-                errorString = "Spot request purged; an instance may still be running.";
-                dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-                dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CHECK + <spot purged> = GM_HOLD\n" );
-                gmState = GM_HOLD;
+                //
+                // We didn't find the SIR.  Since we never submit requests
+                // with leases, if the SIR doesn't exist, either it never
+                // did or the instance it spawned terminated long enough
+                // ago for the request to have been purged.  The usual
+                // Condor semantics of "it didn't succeed if we didn't see
+                // it succeed" apply here, so it makes sense to submit
+                // in both cases.
+                // 
+                gmState = GM_SPOT_START;
                 } break;
                 
 			default:

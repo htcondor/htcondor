@@ -153,6 +153,7 @@ class AmazonStatusResult {
 		std::string private_dns;
 		std::string keyname;
 		std::string instancetype;
+        std::string stateReasonCode;
 
         std::vector< std::string > securityGroups;
 };
