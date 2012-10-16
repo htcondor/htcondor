@@ -13,10 +13,11 @@ static NetworkNamespaceManager instance;
 
 NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
-	m_internal_pipe("i_" + m_network_namespace), m_external_pipe("e_" + m_network_namespace),
+	m_internal_pipe(""), m_external_pipe(""),
 	m_sock(-1), m_created_pipe(false)
 	{
-		PluginManager<NetworkManager>::registerPlugin(this);
+		//PluginManager<NetworkManager>::registerPlugin(this);
+		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
 	}
 
 int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
@@ -26,6 +27,8 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 		return 1;
 	}
 	m_network_namespace = uniq_namespace;
+	m_internal_pipe = "i_" + m_network_namespace;
+	m_external_pipe = "e_" + m_network_namespace;
 
 	if ((m_sock = create_socket()) < 0) {
 		dprintf(D_ALWAYS, "Unable to create a socket to talk to the kernel for network namespaces.\n");
@@ -66,12 +69,16 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 			 args.GetArg(0), ret, m_internal_address_str.Value());
 		m_state = FAILED;
 		return ret;
+	} else {
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace script succeeded.\n");
 	}
 
 	if (!m_internal_address.from_ip_string(m_internal_address_str)) {
 		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: Invalid IP %s for internal namespace.\n", m_internal_address_str.Value());
 		m_state = FAILED;
 		return 1;
+	} else {
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace: Internal address string %s.\n", m_internal_address_str.Value());
 	}
 
 	m_state = CREATED;
@@ -95,6 +102,9 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 }
 
 int NetworkNamespaceManager::PreFork() {
+	if (m_state == UNCREATED)
+		return 0;
+
 	if ((pipe(m_p2c) < 0) || (pipe(m_c2p) < 0)) {
 		dprintf(D_ALWAYS, "NetworkNamespaceManager: pipe() failed with %s (errno=%d).\n", strerror(errno), errno);
 		return -1;
@@ -107,6 +117,8 @@ int NetworkNamespaceManager::PreFork() {
 }
 
 int NetworkNamespaceManager::PostForkChild() {
+	if (m_state == UNCREATED)
+		return 0;
 
 	// Close the end of the pipes that aren't ours
 	close(m_p2c[1]);
@@ -192,6 +204,8 @@ failed_socket:
 }
 
 int NetworkNamespaceManager::PostForkParent(pid_t pid) {
+	if (m_state == UNCREATED)
+		return 0;
 
         // Close the end of the pipes that aren't ours
 	close(m_p2c[0]);
@@ -254,6 +268,9 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 }
 
 int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
+	if (m_state == UNCREATED)
+		return 0;
+
 	int rc = 0;
 	if (m_state == INTERNAL_CONFIGURED) {
 		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics\n");
@@ -277,7 +294,7 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
 
 int NetworkNamespaceManager::Cleanup(const std::string &) {
 
-	// Always try to 
+	// Try to only clean once.
 	if (m_state == CLEANED) {
 		dprintf(D_ALWAYS, "Called Cleanup on an already-cleaned NetworkNamespaceManager!\n");
 		return 1;
@@ -302,7 +319,11 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 	}
 
 	int rc;
-	if ((rc = delete_veth(m_sock, m_external_pipe.c_str()))) {
+	// If the job launched successfully, the pipe may get deleted by the OS
+	// automatically.  In such a case, the delete_veth will return with
+	// either "no such device" or "invalid value".  Not sure why the kernel
+	// gives both - maybe some sort of race?
+	if ((rc = delete_veth(m_sock, m_external_pipe.c_str()))  && (rc != ENODEV) && (rc != EINVAL)) {
 		dprintf(D_ALWAYS, "Failed to delete the veth interface; rc=%d\n", rc);
 	}
 
