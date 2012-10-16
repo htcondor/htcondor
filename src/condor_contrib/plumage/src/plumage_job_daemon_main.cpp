@@ -21,7 +21,7 @@
 
 // local includes
 #include "ODSJobLogConsumer.h"
-#include "ODSHistoryUtils.h"
+#include "ODSHistoryProcessors.h"
 #include "ODSUtils.h"
 
 #include "assert.h"
@@ -36,6 +36,7 @@
 
 using namespace std;
 using namespace plumage::etl;
+using namespace plumage::history;
 using namespace plumage::util;
 using namespace mongo;
 
@@ -58,10 +59,11 @@ void main_init(int /* argc */, char * /* argv */ [])
 
     HostAndPort hap = getDbHostPort("PLUMAGE_DB_HOST","PLUMAGE_DB_PORT");
 
+    // TODO: live q processing
 	// setup the job log consumer
-	consumer = new ODSJobLogConsumer(hap.toString());
-	mirror = new JobLogMirror(consumer);
-	mirror->init();
+	// consumer = new ODSJobLogConsumer(hap.toString());
+	// mirror = new JobLogMirror(consumer);
+	// mirror->init();
 
 	init_classad();
 

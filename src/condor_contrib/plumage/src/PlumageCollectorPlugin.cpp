@@ -21,7 +21,7 @@
 #include "ODSMongodbOps.h"
 #include "ODSUtils.h"
 #include "ODSAccountant.h"
-#include "ODSProcessors.h"
+#include "ODSStatsProcessors.h"
 #include "ODSDBNames.h"
 
 // seems boost meddles with assert defs
@@ -35,6 +35,7 @@
 using namespace std;
 using namespace mongo;
 using namespace plumage::etl;
+using namespace plumage::stats;
 using namespace plumage::util;
 
 int historyInterval;
@@ -179,6 +180,7 @@ public:
 
 			if (!makeStartdAdHashKey(hashKey, _ad)) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+                return;
 			}
 
 			m_ads_conn->updateAd(key,_ad);
@@ -193,6 +195,7 @@ public:
 
             if (!makeGenericAdHashKey(hashKey, _ad)) {
                 dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+                return;
             }
 
             // TODO: ret check this...
@@ -211,6 +214,7 @@ public:
 
 			if (!makeNegotiatorAdHashKey(hashKey, _ad)) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+                return;
 			}
 
             m_ads_conn->updateAd(key,_ad);
@@ -225,6 +229,7 @@ public:
 
 			if (!makeScheddAdHashKey(hashKey, _ad)) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+                return;
 			}
 
             m_ads_conn->updateAd(key,_ad);
@@ -239,6 +244,7 @@ public:
 
 			if (!makeGridAdHashKey(hashKey, _ad)) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+                return;
 			}
 
             m_ads_conn->updateAd(key,_ad);
