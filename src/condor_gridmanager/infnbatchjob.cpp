@@ -159,6 +159,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp = NULL;
 	jobProxy = NULL;
 	remoteProxyExpireTime = 0;
+	batchType = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -173,16 +174,19 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		Tokenize( buff );
 
 		token = GetNextToken( " ", false );
-		if ( !strcmp( "batch", token ) ) {
+		if ( token && !strcmp( "batch", token ) ) {
 			token = GetNextToken( " ", false );
 		}
-		batchType = strdup( token );
+		if ( token ) {
+			batchType = strdup( token );
+		}
 
 		while ( (token = GetNextToken( " ", false )) ) {
 			gahp_args.AppendArg( token );
 		}
-	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+	}
+	if ( !batchType ) {
+		sprintf( error_string, "%s is not set properly in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
