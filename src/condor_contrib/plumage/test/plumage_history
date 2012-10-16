@@ -26,7 +26,18 @@ import time, pwd, os
 from optparse import OptionParser
 from time import *
 
-history_states = {4:'C',5:'R'}
+# from proc.h
+#define JOB_STATUS_MIN      1 /* Smallest valid job status value */
+#define IDLE                1
+#define RUNNING             2
+#define REMOVED             3
+#define COMPLETED           4
+#define HELD                5
+#define TRANSFERRING_OUTPUT 6
+#define SUSPENDED           7
+#define JOB_STATUS_MAX      7 /* Largest valid job status value */
+history_states = {1:'I',2:'R',3:'X',4:'C',5:'H',6:'T',7:'S'}
+
 cluster = None
 proc = None
 query = {}
@@ -73,15 +84,19 @@ def print_history(opts):
     else:
         qdate_order = pymongo.DESCENDING
     matches = opts.match or 0 
-    for item in db['history'].find(query).sort('QDate',qdate_order).limit(int(matches)):
-        opts.long and print_full_ad(item) or print_summary(item)
+    try:
+        for item in db['history'].find(query).sort('QDate',qdate_order).limit(int(matches)):
+            opts.long and print_full_ad(item) or print_summary(item)
+    except (KeyError,TypeError,ValueError) as e:
+        print "Error in query: ", e
+        exit(1)
 
 parser = OptionParser(description='Query Condor ODS for job history')
 parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',
                     help='mongodb database server location: e.g., somehost, localhost:2012')
 parser.add_option('-f','--forward', action="store_true", default=False, help='list jobs oldest-to-newest')
-parser.add_option('-m','--match', action="store", dest='match', help='limit the number of jobs displayed')
+parser.add_option('-m','--match', action="store", dest='match', help='limit the number of jobs displayed by <int>')
 parser.add_option('-l','--long', action="store_true", default=False, help='verbose output (entire classads)')
 parser.add_option('-c','--cproc', action="store", dest='cproc', help='get information about specific cluster[.proc], e.g., 5 or 4.2')
 parser.add_option('-o','--owner', action="store", dest='owner', help='information about jobs owned by <owner>')
