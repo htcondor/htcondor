@@ -138,7 +138,7 @@ sub which {
 }
 
 sub is_windows {
-    if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
+    if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
         return 1;
     }
     return 0;

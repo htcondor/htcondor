@@ -44,7 +44,7 @@ print "Generating tasklist...\n";
 
 open(TASKLIST, '>', $tasklist_file) or die "Can't open $tasklist_file for writing: $!\n";
 
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     #Windows
     if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
         # new BATLAB

@@ -63,7 +63,7 @@ if( ! $fulltestname ) {
 
 # must use cygwin perl on Windows for batch_test.pl
 my $perl_exe = "perl";
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $perlver = `$perl_exe -version`;
     print $perlver;
     if ( !$force_cygwin ) {
