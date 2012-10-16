@@ -49,6 +49,10 @@ void ExprTree::debug_format_value(Value &value) const {
 		double doubleValue = 0;
 		string stringValue = "";
 
+			// Unparsing this of kind CLASSAD_NODE will result in the
+			// entire classad, which is unnecessarily verbose
+		if (CLASSAD_NODE == nodeKind) return;
+
 		PrettyPrint	unp;
 		string		buffer;
 		unp.Unparse( buffer, this );
