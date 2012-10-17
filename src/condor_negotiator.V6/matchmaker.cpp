@@ -3273,19 +3273,6 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			}
 			negotiate_ad.Assign("JOBPRIO_MIN",jmin);
 			negotiate_ad.Assign("JOBPRIO_MAX",jmax);
-			// Since we care about job priorities, make certain ATTR_JOB_PRIO is in
-			// our significant attributes (job_attr_references) for this submitter
-			if (!job_attr_references) {
-				job_attr_references = strdup(ATTR_JOB_PRIO);
-			} else {
-				StringList sigattrs(job_attr_references);
-				if ( sigattrs.contains_anycase(ATTR_JOB_PRIO) == FALSE ) {
-					// not there, add it
-					sigattrs.append(ATTR_JOB_PRIO);
-					free(job_attr_references);
-					job_attr_references = sigattrs.print_to_string();
-				}
-			}
 			dprintf (D_ALWAYS | D_MATCH,
 				"    USE_GLOBAL_JOB_PRIOS limit to jobprios between %d and %d\n",
 				jmin, jmax);
