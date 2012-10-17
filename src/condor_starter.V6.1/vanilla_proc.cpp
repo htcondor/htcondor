@@ -395,7 +395,9 @@ VanillaProc::StartJob()
 		network_name = namespace_name_ss.str();
 		int rc = NetworkPluginManager::PrepareNetwork(network_name);
 		if (rc) {
-			dprintf(D_ALWAYS, "Failed to create network namespace - bailing.\n");
+			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
+			rc = NetworkPluginManager::Cleanup(network_name);
+                	if (rc) dprintf(D_ALWAYS, "Failed to cleanup unprepared network namespace (rc=%d)\n", rc);
 			return FALSE;
 		}
 	}
@@ -444,6 +446,7 @@ VanillaProc::StartJob()
 		int rc = NetworkPluginManager::Cleanup(network_name);
 		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 	}
+	// TODO: This leaks on several of the above failure cases.
 	if (fs_remap) {
 		delete fs_remap;
 	}

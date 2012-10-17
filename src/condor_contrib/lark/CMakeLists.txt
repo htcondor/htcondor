@@ -28,4 +28,6 @@ if ( WITH_LARK )
   condor_exe( lark_network_namespace_tester "network_netlink_main.c;${LARKHDRS};${LARKSRCS}" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
   condor_exe( lark_cleanup_firewall "cleanup_firewall.c;${LARKHDRS};${LARKSRCS}" OFF "${CONDOR_LIBS}" OFF )
 
+  condor_plugin( lark-plugin "${LARKHDRS};${LARKSRCS};network_namespaces.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS}" ON)
+
 endif()
