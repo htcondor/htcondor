@@ -927,6 +927,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, StringCu
 
 	int wid = width ? width : strlen(heading);
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
+	if ( ! width) opts |= FormatOptionLeftAlign; // strings default to left align.
 	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
 
