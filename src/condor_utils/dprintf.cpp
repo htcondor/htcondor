@@ -1851,6 +1851,7 @@ dprintf_dump_stack(void) {
 			if (0 != setegid(orig_egid) ||
 			    0 != seteuid(orig_euid)) {
 				// what can we do about this???
+				args[0] = 0; // do something harmless and pointless so that fedora shuts up.
 			}
 		}
 
