@@ -10041,7 +10041,7 @@ url=
 tags=parrot
 id=602
 
-[DELEGATE_JOB_GSI_CREDENTIALS_RENEWAL]
+[DELEGATE_JOB_GSI_CREDENTIALS_REFRESH]
 aliases=
 default=0.25
 version=0.0.0
@@ -10051,7 +10051,7 @@ type=double
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Delegate Job GSI Credentials Renewal
+friendly_name=Delegate Job GSI Credentials Refresh
 usage=
 url=
 tags=
