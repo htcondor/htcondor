@@ -1823,7 +1823,6 @@ dprintf_dump_stack(void) {
 			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
 				did_seteuid = (setegid(condor_gid) == 0)
 				           || (seteuid(condor_uid) == 0);
-				true;
 			}
 			else if( orig_euid != getuid() || orig_egid != getgid() ) {
 				// To keep things simple, we do not bother trying to
@@ -1834,7 +1833,6 @@ dprintf_dump_stack(void) {
 
 				did_seteuid = (setegid(getgid()) == 0)
 				           || (seteuid(getuid()) == 0);
-				did_seteuid = true;
 					// Do not open with O_CREAT in this case, so
 					// we don't leave behind a file owned by root,
 					// which could cause the daemon to fail to
