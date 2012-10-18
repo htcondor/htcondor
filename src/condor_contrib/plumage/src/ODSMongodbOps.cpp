@@ -262,7 +262,7 @@ ODSMongodbOps::addIndex(mongo::BSONObj bo)
         m_db_conn->ensureIndex(m_db_name,bo.getOwned());
     }
     catch(DBException& e) {
-        dprintf(D_ALWAYS,"ODSMongodbOps::readRecord caught DBException: %s\n", e.toString().c_str());
+        dprintf(D_ALWAYS,"ODSMongodbOps::addIndex caught DBException: %s\n", e.toString().c_str());
         return false;
     }
 

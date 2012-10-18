@@ -1821,9 +1821,9 @@ dprintf_dump_stack(void) {
 			uid_t condor_uid = 0;
 			gid_t condor_gid = 0;
 			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
-				setegid(condor_gid);
-				seteuid(condor_uid);
-				did_seteuid = true;
+				did_seteuid = (setegid(condor_gid) == 0)
+				           || (seteuid(condor_uid) == 0);
+				true;
 			}
 			else if( orig_euid != getuid() || orig_egid != getgid() ) {
 				// To keep things simple, we do not bother trying to
@@ -1832,8 +1832,8 @@ dprintf_dump_stack(void) {
 				// probably either the same as our effective id
 				// (no-op) or root.
 
-				setegid(getgid());
-				seteuid(getuid());
+				did_seteuid = (setegid(getgid()) == 0)
+				           || (seteuid(getuid()) == 0);
 				did_seteuid = true;
 					// Do not open with O_CREAT in this case, so
 					// we don't leave behind a file owned by root,
@@ -1848,8 +1848,11 @@ dprintf_dump_stack(void) {
 		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|(create_log ? O_CREAT : 0),0644);
 
 		if( did_seteuid ) {
-			setegid(orig_egid);
-			seteuid(orig_euid);
+			if (0 != setegid(orig_egid) ||
+			    0 != seteuid(orig_euid)) {
+				// what can we do about this???
+				args[0] = 0; // do something harmless and pointless so that fedora shuts up.
+			}
 		}
 
 		if( fd==-1 ) {

@@ -857,7 +857,7 @@ StatisticsPool::~StatisticsPool()
       {
       pub.remove(name);
       if (item.fOwnedByPool && item.pattr)
-         free((void*)item.pattr);
+         free((void*)(const_cast<char*>(item.pattr)));
       }
 
    // then all of the probes. 
@@ -882,7 +882,7 @@ int StatisticsPool::RemoveProbe (const char * name)
    void * probe = item.pitem;
    bool fOwnedByPool = item.fOwnedByPool;
    if (fOwnedByPool) {
-      if (item.pattr) free((void*)item.pattr);
+      if (item.pattr) free((void*)(const_cast<char*>(item.pattr)));
    }
 
    // remove the probe from the pool (if it's still there)

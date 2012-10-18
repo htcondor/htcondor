@@ -33,7 +33,7 @@
 
 // local includes
 #include "ODSHistoryFile.h"
-#include "ODSHistoryUtils.h"
+#include "ODSHistoryProcessors.h"
 #include "ODSDBNames.h"
 #include "ODSUtils.h"
 
@@ -41,6 +41,7 @@ using namespace std;
 using namespace mongo;
 using namespace bson;
 using namespace plumage::etl;
+using namespace plumage::history;
 using namespace plumage::util;
 
 extern ODSMongodbOps* writer;
