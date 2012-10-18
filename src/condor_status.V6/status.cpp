@@ -88,6 +88,8 @@ ppOption	ppStyle	= PP_NOTSET;
 int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
 bool        expert = false;
+bool		wide_display = false; // when true, don't truncate field data
+bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 char*		direct = NULL;
@@ -561,6 +563,7 @@ usage ()
 		"\t-sort <expr>\t\tSort entries by expressions\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n"
+		"\t-wide\t\t\tdon't truncate data to fit in 80 columns.\n"
 		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
@@ -655,6 +658,10 @@ firstPass (int argc, char *argv[])
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
 			}
+		} else
+		if (matchPrefix (argv[i], "-wide", 3)) {
+			wide_display = true; // when true, don't truncate field data
+			//invalid_fields_empty = true;
 		} else
 		if (matchPrefix (argv[i], "-target", 5)) {
 			if( !argv[i+1] ) {
