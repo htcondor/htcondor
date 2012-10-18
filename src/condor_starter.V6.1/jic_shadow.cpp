@@ -1773,23 +1773,31 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 		}
 
 		// for the new timer, start with the payload proxy expiration time
-		time_t expiration = x509_proxy_expiration_time(path.Value());
+		time_t expiration = x509_proxy_expiration_time(proxyfilename);
 		time_t now = time(NULL);
 
-		// now subtract the configurable time allowed for eviction
-		// years of careful research show the default should be one minute.
-		int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
-		time_t expiration_delta = (expiration - now) - evict_window;
+		if( (int)expiration == -1 ) {
+			char const *err = x509_error_string();
+			dprintf(D_ALWAYS,"Failed to read proxy expiration time for %s: %s\n",
+					proxyfilename,
+					err ? err : "");
+		}
+		else {
+				// now subtract the configurable time allowed for eviction
+				// years of careful research show the default should be one minute.
+			int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
+			time_t expiration_delta = (expiration - now) - evict_window;
 
-		m_proxy_expiration_tid = daemonCore->Register_Timer(
-			expiration_delta,
-			(TimerHandlercpp)&JICShadow::proxyExpiring,
-			"proxy expiring",
-			this );
-		if (m_proxy_expiration_tid > 0) {
-			dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %i\n", m_proxy_expiration_tid, (int)expiration);
-		} else {
-			dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
+			m_proxy_expiration_tid = daemonCore->Register_Timer(
+				expiration_delta,
+				(TimerHandlercpp)&JICShadow::proxyExpiring,
+				"proxy expiring",
+				this );
+			if (m_proxy_expiration_tid > 0) {
+				dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %i\n", m_proxy_expiration_tid, (int)expiration);
+			} else {
+				dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
+			}
 		}
 	}
 
