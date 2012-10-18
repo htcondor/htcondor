@@ -35,7 +35,7 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 
 	file( GLOB ETL_SERVER_SRCS ${ETL_COMMON_SRCS} 
 						ODSJobLogConsumer.cpp 
-						ODSHistoryFile.cpp ODSProcessors.cpp 
+						ODSHistoryFile.cpp ODSHistoryProcessors.cpp 
 						plumage_job_daemon_main.cpp )
 
 	############################
@@ -44,7 +44,7 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	#src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 	#src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-	file( GLOB CollectorSrcs PlumageCollectorPlugin.cpp ODSAccountant.cpp ODSProcessors.cpp ${ETL_COMMON_SRCS})
+	file( GLOB CollectorSrcs PlumageCollectorPlugin.cpp ODSAccountant.cpp ODSStatsProcessors.cpp ${ETL_COMMON_SRCS})
 	condor_plugin( PlumageCollectorPlugin-plugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 	############################
@@ -63,7 +63,7 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	# install targets
 	############################
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
-	file(GLOB PLUMAGE_BIN ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats ../test/plumage_history)
+    file(GLOB PLUMAGE_BIN ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats ../test/plumage_history)
 	install(FILES ${PLUMAGE_BIN} DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 	file(GLOB TEST_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_*)
 	list(REMOVE_ITEM TEST_SCRIPTS ${PLUMAGE_BIN})

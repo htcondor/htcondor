@@ -3338,6 +3338,11 @@ setupAnalysis()
 	string		remoteUser;
 	int			index;
 
+	
+	if (verbose) {
+		fprintf(stderr, "Fetching machine ads for analysis...");
+	}
+
 	// fetch startd ads
     if (machineads_file != NULL) {
         if (!read_classad_file(machineads_file, startdAds, NULL)) {
@@ -3351,8 +3356,22 @@ setupAnalysis()
         }
     }
 
+	if (verbose) {
+		fprintf(stderr, "Done.\nFound %d machines ads.\n", startdAds.Length());
+	}
+
+
+	if (verbose) {
+		fprintf(stderr, "Fetching user priorities from negotiator...");
+	}
+
 	// fetch submittor prios
 	fetchSubmittorPrios();
+
+	if (verbose) {
+		fprintf(stderr, "Done.\n");
+	}
+
 
 	// populate startd ads with remote user prios
 	startdAds.Open();

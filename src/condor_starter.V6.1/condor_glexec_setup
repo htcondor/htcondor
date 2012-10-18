@@ -31,15 +31,15 @@ tar -C "$SANDBOX.condor" -c  . | \
 #
 for FILE in "$SANDBOX.condor"/* "$SANDBOX.condor"/.*
 do
-	if [ "$FILE" == "$SANDBOX.condor/." ]
+	if [ "$FILE" = "$SANDBOX.condor/." ]
 	then
 		continue
 	fi
-	if [ "$FILE" == "$SANDBOX.condor/.." ]
+	if [ "$FILE" = "$SANDBOX.condor/.." ]
 	then
 		continue
 	fi
-	if [ "$FILE" == "$SANDBOX.condor/$PROXY" ]
+	if [ "$FILE" = "$SANDBOX.condor/$PROXY" ]
 	then
 		continue
 	fi

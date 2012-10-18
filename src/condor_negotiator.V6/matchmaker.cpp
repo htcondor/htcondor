@@ -265,6 +265,7 @@ Matchmaker ()
 	cachedName = NULL;
 	cachedAddr = NULL;
 
+	want_globaljobprio = false;
 	want_matchlist_caching = false;
 	ConsiderPreemption = true;
 	want_nonblocking_startd_contact = true;
@@ -615,6 +616,7 @@ reinitialize ()
 		free( preferred_collector );
 	}
 
+	want_globaljobprio = param_boolean("USE_GLOBAL_JOB_PRIOS",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
@@ -2278,6 +2280,86 @@ void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
     }
 }
 
+/*
+ consolidate_globaljobprio_submitter_ads()
+ Scan through scheddAds looking for globaljobprio submitter ads, consolidating
+ them into a minimal set of submitter ads that contain JOBPRIO_MIN and
+ JOBPRIO_MAX attributes to reflect job priority ranges.
+ Return true on success and/or want_globaljobprio should be true,
+ false if there is a data structure inconsistency and/or want_globaljobprio should be false.
+*/
+bool Matchmaker::
+consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
+{
+	// nothing to do if unless want_globaljobprio is true...
+	if (!want_globaljobprio) {
+		return false;  // keep want_globajobprio false
+	}
+
+	ClassAd *curr_ad = NULL;
+	ClassAd *prev_ad = NULL;
+	MyString curr_name, curr_addr, prev_name, prev_addr;
+	int prev_prio_min, prev_prio_max, curr_prio;
+
+	scheddAds.Open();
+	while ( (curr_ad = scheddAds.Next()) )
+	{
+		// skip this submitter if we cannot identify its origin
+		if (!curr_ad->LookupString(ATTR_NAME,curr_name)) continue;
+		if (!curr_ad->LookupString(ATTR_SCHEDD_IP_ADDR,curr_addr)) continue;
+
+		// In obtainAdsFromCollector() inserted an ATTR_JOB_PRIO attribute; if
+		// it is not there, then the value of want_globaljobprio must have changed
+		// or something. In any event, if we cannot find what we need, don't honor
+		// the request for USE_GLOBAL_JOB_PRIOS for this negotiation cycle.
+		if (!curr_ad->LookupInteger(ATTR_JOB_PRIO,curr_prio)) {
+			dprintf(D_ALWAYS,
+				"WARNING: internal inconsistancy, ignoring USE_GLOBAL_JOB_PRIOS=True until next reconfig\n");
+			return false;
+		}
+
+		// If this ad has no ATTR_JOB_PRIO_ARRAY, then we don't want to assign
+		// any JOBPRIO_MIN or MAX, as this must be a schedd that does not (or cannot)
+		// play the global job prios game.  So just continue along.
+		if ( !curr_ad->Lookup(ATTR_JOB_PRIO_ARRAY) ) continue;
+
+		// If this ad is not from the same user and schedd previously
+		// seen, insert JOBPRIO_MIX and MAX attributes, update our notion
+		// of "previously seen", and continue along.
+		if ( curr_name != prev_name || curr_addr != prev_addr ) {
+			curr_ad->Assign("JOBPRIO_MIN",curr_prio);
+			curr_ad->Assign("JOBPRIO_MAX",curr_prio);
+			prev_ad = curr_ad;
+			prev_name = curr_name;
+			prev_addr = curr_addr;
+			prev_prio_min = curr_prio;
+			prev_prio_max = curr_prio;
+			continue;
+		}
+
+		// Some sanity assertions here. Assert that
+		// curr_prio always <= prev_prio_max, since
+		// we assume the scheddAds from the same user have alrady been
+		// sorted from high to low by ATTR_JOB_PRIO.... note this
+		// also means we should never have to update prev_ad's JOBPRIO_MAX,
+		// but may need to update prev_ad's JOBPRIO_MIN.
+		ASSERT(curr_prio <= prev_prio_max);
+		ASSERT(prev_ad);
+		ASSERT(curr_ad);
+
+		// Here is the meat: consolidate this submitter ad into the
+		// previous one, if we can...
+		if (curr_prio < prev_prio_min) {
+			// update the previous ad to negotiate for this priority as well
+			prev_ad->Assign("JOBPRIO_MIN",curr_prio);
+			// and now may as well delete the curr_ad, since negotiation will
+			// be handled by the prev ad
+			scheddAds.Remove(curr_ad);
+		}
+	}	// end of while iterate through scheddAds
+
+	return true;
+}
 
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
@@ -2308,7 +2390,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	int			totalTime;
 	int			num_idle_jobs;
 	time_t		startTime;
-	
 
     int duration_phase3 = 0;
     time_t start_time_phase4 = time(NULL);
@@ -2372,10 +2453,19 @@ negotiateWithGroup ( int untrimmed_num_startds,
             // This only needs to be done once: do it on the 1st spin, prior to 
             // iterating over submitter ads so they negotiate in sorted order.
             // The sort ordering function makes use of a submitter starvation
-            // attribute that is computed in calculatePieLeft, above
+            // attribute that is computed in calculatePieLeft, above.
+			// The sort order function also makes use of job priority information
+			// if want_globaljobprio is true.
             time_t start_time_phase3 = time(NULL);
             dprintf(D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n");
             scheddAds.Sort((lessThanFunc)comparisonFunction, this);
+
+			// Now that the submitter ad list (scheddAds) is sorted, we can
+			// scan through it looking for globaljobprio submitter ads, consolidating
+			// them into a minimal set of submitter ads that contain JOBPRIO_MIN and
+			// JOBPRIO_MAX attributes to reflect job priority ranges.
+			want_globaljobprio = consolidate_globaljobprio_submitter_ads(scheddAds);
+
             duration_phase3 += time(NULL) - start_time_phase3;
         }
 
@@ -2625,7 +2715,17 @@ comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
     if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = FLT_MAX;
     if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = FLT_MAX;
 
-    // secondary sort on submitter starvation
+	// secondary sort on job prio, if want_globaljobprio is true (see gt #3218)
+	if ( mm->want_globaljobprio ) {
+		int p1 = INT_MIN;	// no priority should be treated as lowest priority
+		int p2 = INT_MIN;
+		ad1->LookupInteger(ATTR_JOB_PRIO,p1);
+		ad2->LookupInteger(ATTR_JOB_PRIO,p2);
+		if (p1 > p2) return true;	// note: higher job prio is "better"
+		if (p1 < p2) return false;
+	}
+
+    // tertiary sort on submitter starvation
     if (sr1 < sr2) return true;
     if (sr1 > sr2) return false;
 
@@ -2930,12 +3030,58 @@ obtainAdsFromCollector (
             }
 
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
-			scheddAds.Insert(ad);
+
+			// Now all that is left is to insert the submitter ad
+			// into our list. However, if want_globaljobprio is true,
+			// we insert a submitter ad for each job priority in the submitter
+			// ad's job_prio_array attribute.  See gittrac #3218.
+			if ( want_globaljobprio ) {
+				MyString jobprioarray;
+				StringList jobprios;
+
+				if (!ad->LookupString(ATTR_JOB_PRIO_ARRAY,jobprioarray)) {
+					// By design, if negotiator has want_globaljobprio and a schedd
+					// does not give us a job prio array, behave as if this SubmitterAd had a
+					// JobPrioArray attribute with a single value w/ the worst job priority
+					jobprioarray = INT_MIN;
+				}
+
+				jobprios.initializeFromString( jobprioarray.Value() );
+				jobprios.rewind();
+				char *prio = NULL;
+				// Insert a group of submitter ads with one ATTR_JOB_PRIO value
+				// taken from the list in ATTR_JOB_PRIO_ARRAY.
+				while ( (prio = jobprios.next()) != NULL ) {
+					ClassAd *adCopy = new ClassAd( *ad );
+					ASSERT(adCopy);
+					adCopy->Assign(ATTR_JOB_PRIO,atoi(prio));
+					scheddAds.Insert(adCopy);
+				}
+			} else {
+				// want_globaljobprio is false, so just insert the submitter
+				// ad into our list as-is
+				scheddAds.Insert(ad);
+			}
 		}
         free(remoteHost);
         remoteHost = NULL;
 	}
 	allAds.Close();
+
+	// In the processing of allAds above, if want_globaljobprio is true,
+	// we may have created additional submitter ads and inserted them
+	// into scheddAds on the fly.
+	// As ads in scheddAds are not deleted when scheddAds is destroyed,
+	// we must be certain to insert these ads into allAds so it gets deleted.
+	// To accomplish this, we simply iterate through scheddAds and insert all
+	// ads found into scheddAds. No worries about duplicates since the Insert()
+	// method checks for duplicates already.
+	if (want_globaljobprio) {
+		scheddAds.Open();
+		while( (ad=scheddAds.Next()) ) {
+			allAds.Insert(ad);
+		}
+	}
 
 	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
 	ClassAdList startdPvtAdList;
@@ -3114,9 +3260,26 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 	sock->encode();
 	if( negotiate_cmd == NEGOTIATE ) {
+		// Here we create a negotiation ClassAd to pass parameters to the
+		// schedd's negotiation method.
 		ClassAd negotiate_ad;
+		int jmin, jmax;
+		// Tell the schedd to limit negotiation to this owner
 		negotiate_ad.Assign(ATTR_OWNER,scheddName);
+		// Tell the schedd to limit negotiation to this job priority range
+		if ( want_globaljobprio && scheddAd->LookupInteger("JOBPRIO_MIN",jmin) ) {
+			if (!scheddAd->LookupInteger("JOBPRIO_MAX",jmax)) {
+				EXCEPT("SubmitterAd with JOBPRIO_MIN attr, but no JOBPRIO_MAX\n");
+			}
+			negotiate_ad.Assign("JOBPRIO_MIN",jmin);
+			negotiate_ad.Assign("JOBPRIO_MAX",jmax);
+			dprintf (D_ALWAYS | D_MATCH,
+				"    USE_GLOBAL_JOB_PRIOS limit to jobprios between %d and %d\n",
+				jmin, jmax);
+		}
+		// Tell the schedd what sigificant attributes we found in the startd ads
 		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
+		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
 		if( !negotiate_ad.put( *sock ) ) {
 			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",

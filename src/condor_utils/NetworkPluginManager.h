@@ -122,6 +122,7 @@ class NetworkPluginManager : public PluginManager<NetworkManager> {
 			TemporaryPrivSentry sentry(PRIV_ROOT);
 			while (plugins.Next(plugin)) {
 				int result;
+				dprintf(D_FULLDEBUG, "Calling PrepareNetwork\n");
 				if ((result = plugin->PrepareNetwork(uniq_name))) {
 					return result;
 				}

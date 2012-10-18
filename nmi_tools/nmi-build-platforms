@@ -7,7 +7,7 @@ x86_64_MacOSX7
 x86_64_RedHat5
 x86_64_RedHat6
 x86_64_Windows7
-x86_Debian5
+#x86_Debian5
 x86_Debian6
 x86_RedHat5
 x86_RedHat6

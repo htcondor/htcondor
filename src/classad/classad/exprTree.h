@@ -157,7 +157,7 @@ class ExprTree
 
   	protected:
 		void debug_print(const char *message) const;
-		void debug_format_value(Value &value) const;
+		void debug_format_value(Value &value, double time=0) const;
 		ExprTree ();
 
         /** Fill in this ExprTree with the contents of the other ExprTree.

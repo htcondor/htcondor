@@ -88,7 +88,6 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
-#include "condor_email.h"
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
@@ -12754,7 +12753,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true, notify_shadow );
         if(!notify_shadow)	
 	{
-		dprintf( D_ALWAYS, "notify_shadow set to false but will still notify- this should not be optional");
+		dprintf( D_ALWAYS, "notify_shadow set to false but will still notify- this should not be optional\n");
 	}
 
 		// finally, email anyone our caller wants us to email.

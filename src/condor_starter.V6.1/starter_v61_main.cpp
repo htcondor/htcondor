@@ -37,7 +37,7 @@
 #include "jic_local_schedd.h"
 #include "vm_proc.h"
 #include "condor_getcwd.h"
-
+#include "NetworkPluginManager.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
@@ -283,6 +283,8 @@ main_init(int argc, char *argv[])
 			// we couldn't figure out what to do...
 		usage();
 	}
+
+	NetworkPluginManager::Load();
 
 	if( !Starter->Init(jic, orig_cwd, is_gridshell, starter_stdin_fd,
 					   starter_stdout_fd, starter_stderr_fd) ) {

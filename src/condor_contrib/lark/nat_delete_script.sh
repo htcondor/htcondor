@@ -22,7 +22,7 @@ iptables -t nat -D POSTROUTING --src $JOB_INNER_IP ! --dst $JOB_INNER_IP -j MASQ
 #  rc=$?
 #done
 
-./lark_cleanup_firewall $JOBID
+/home/bbockelm/projects/condor/src/condor_contrib/lark/lark_cleanup_firewall $JOBID
 
 #iptables -X $JOBID
 

@@ -28,7 +28,7 @@
 #include "CondorError.h"
 
 namespace plumage {
-namespace etl {
+namespace history {
     
 struct HistoryEntry {
     std::string file;
