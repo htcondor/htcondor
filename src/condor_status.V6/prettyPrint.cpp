@@ -67,11 +67,11 @@ void printCustom    	(ClassAd *);
 
 static const char *formatActivityTime( int , AttrList* , Formatter &);
 static const char *formatDueDate( int , AttrList* , Formatter &);
-static const char *formatElapsedDate( int , AttrList* , Formatter &);
+//static const char *formatElapsedDate( int , AttrList* , Formatter &);
 static const char *formatElapsedTime( int , AttrList* , Formatter &);
 static const char *formatRealTime( int , AttrList * , Formatter &);
 static const char *formatRealDate( int , AttrList * , Formatter &);
-static const char *formatFloat (float, AttrList *, Formatter &);
+//static const char *formatFloat (float, AttrList *, Formatter &);
 static const char *formatLoadAvg (float, AttrList *, Formatter &);
 
 static void ppInit()
