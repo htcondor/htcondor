@@ -2299,7 +2299,7 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
 	ClassAd *curr_ad = NULL;
 	ClassAd *prev_ad = NULL;
 	MyString curr_name, curr_addr, prev_name, prev_addr;
-	int prev_prio_min, prev_prio_max, curr_prio;
+	int min_prio=INT_MAX, max_prio=INT_MIN; // initialize to shut gcc up, the loop always sets before using.
 
 	scheddAds.Open();
 	while ( (curr_ad = scheddAds.Next()) )
@@ -2312,6 +2312,7 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
 		// it is not there, then the value of want_globaljobprio must have changed
 		// or something. In any event, if we cannot find what we need, don't honor
 		// the request for USE_GLOBAL_JOB_PRIOS for this negotiation cycle.
+		int curr_prio=0;
 		if (!curr_ad->LookupInteger(ATTR_JOB_PRIO,curr_prio)) {
 			dprintf(D_ALWAYS,
 				"WARNING: internal inconsistancy, ignoring USE_GLOBAL_JOB_PRIOS=True until next reconfig\n");
@@ -2332,30 +2333,28 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& scheddAds)
 			prev_ad = curr_ad;
 			prev_name = curr_name;
 			prev_addr = curr_addr;
-			prev_prio_min = curr_prio;
-			prev_prio_max = curr_prio;
+			max_prio = min_prio = curr_prio;
 			continue;
 		}
 
-		// Some sanity assertions here. Assert that
-		// curr_prio always <= prev_prio_max, since
-		// we assume the scheddAds from the same user have alrady been
-		// sorted from high to low by ATTR_JOB_PRIO.... note this
-		// also means we should never have to update prev_ad's JOBPRIO_MAX,
-		// but may need to update prev_ad's JOBPRIO_MIN.
-		ASSERT(curr_prio <= prev_prio_max);
+		// Some sanity assertions here.
 		ASSERT(prev_ad);
 		ASSERT(curr_ad);
 
 		// Here is the meat: consolidate this submitter ad into the
 		// previous one, if we can...
-		if (curr_prio < prev_prio_min) {
-			// update the previous ad to negotiate for this priority as well
+		// update the previous ad to negotiate for this priority as well
+		if (curr_prio < min_prio) {
 			prev_ad->Assign("JOBPRIO_MIN",curr_prio);
-			// and now may as well delete the curr_ad, since negotiation will
-			// be handled by the prev ad
-			scheddAds.Remove(curr_ad);
+			min_prio = curr_prio;
 		}
+		if (curr_prio > max_prio) {
+			prev_ad->Assign("JOBPRIO_MAX",curr_prio);
+			max_prio = curr_prio;
+		}
+		// and now may as well delete the curr_ad, since negotiation will
+		// be handled by the first ad for this user/schedd_addr
+		scheddAds.Remove(curr_ad);
 	}	// end of while iterate through scheddAds
 
 	return true;

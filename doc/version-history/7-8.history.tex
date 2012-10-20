@@ -55,6 +55,15 @@ The details of each version are described below.
 when a string argument containing a valid number is given.
 \Ticket{3102}
 
+\item Starting in 7.8.0, when using glexec, the job was put on hold
+shortly after the user's proxy was refreshed.  The stated hold
+reason was, ``Proxy about to expire.''
+\Ticket{3280}
+
+\item The configuration setting
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
+\Ticket{3282}
+
 \end{itemize}
 
 \noindent Known Bugs:
