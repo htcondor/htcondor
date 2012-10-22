@@ -25,6 +25,7 @@
 \oOpt{-currentrun}
 \oOpt{-avgqueuetime}
 \oOptArg{-jobads}{file} 
+\oOptArg{-userlog}{file}
 \oOptArg{-machineads}{file} 
 \oOpt{-stream-results}
 \oOpt{-wide}
@@ -310,6 +311,12 @@ per machine basis.
     This is most useful for debugging purposes.
     The ClassAds appear as if
     \Condor{q} \Opt{-l} is used with the header stripped out.}
+  \OptItem{\OptArg{-userlog}{file}}{Display jobs from a userlog,
+    instead of the real ClassAds from the \Condor{schedd} daemon.
+    This is most useful for automated testing of the status of jobs known to be
+    in the given userlog because it reduces the load on the \Condor{schedd}.
+    A userlog does not contain all of the job information, so some fields in
+    the normal output of \Condor{q} will be blank.}
   \OptItem{\OptArg{-machineads}{file}}{When doing analysis, use the
     machine ads from the file instead of the ones from the
     \Condor{collector} daemon. 
