@@ -10651,7 +10651,7 @@ id=608
 
 [MODIFY_REQUEST_EXPR_REQUESTMEMORY]
 aliases=
-default=quantize(RequestMemory,{TotalSlotMemory / TotalSlotCpus / 4})
+default=quantize(RequestMemory,{128})
 version=7.7.6
 range=.*
 state=default
