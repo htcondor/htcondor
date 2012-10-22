@@ -81,6 +81,7 @@ reduced load on the \Condor{schedd}.
 \Ticket{3188}
 
 \item Eucalyptus 3.x support added for the EC2 Gahp
+\Ticket{2974}
 
 \item File transfer remaps now support remapping directories.
 \Ticket{3039}
@@ -88,6 +89,16 @@ reduced load on the \Condor{schedd}.
 \item The \Condor{schedd} can now dynamically spawn a local \Condor{startd}
 to manage local universe jobs.
 \Ticket{3129}
+
+\item \Condor{q} \Opt{-jobads} will now respect the \Opt{-constraint} option.
+\Ticket{3191}
+
+\item Added BOSCO, a set of tools that makes it easy to use a Personal
+Condor to run jobs on remote batch systems without administrator
+assistance or manual installation of software on the remote systems.
+See \URL{https://twiki.grid.iu.edu/bin/view/CampusGrids/BoSCO} for more
+information about BOSCO.
+\Ticket{2421}
 
 \end{itemize}
 
