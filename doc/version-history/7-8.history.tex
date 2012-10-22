@@ -55,6 +55,10 @@ The details of each version are described below.
 when a string argument containing a valid number is given.
 \Ticket{3102}
 
+\item Contrary to the intended behavior, jobs run via glexec did not
+get put on hold shortly before their proxy expired.
+\Ticket{3283}
+
 \item Starting in 7.8.0, when using glexec, the job was put on hold
 shortly after the user's proxy was refreshed.  The stated hold
 reason was, ``Proxy about to expire.''
@@ -90,8 +94,10 @@ reason was, ``Proxy about to expire.''
 
 \begin{itemize}
 
-\item Condor version 7.8.5 not yet released.
-%\item Condor version 7.8.5 released on Month Date, 2012.
+\item Condor version 7.8.5 released on October 22, 2012.
+
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -118,6 +124,10 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as root.
+(CVE-2012-5390)
 
 \item Fixed a problem with jobs that are submitted with
 \begin{verbatim}
