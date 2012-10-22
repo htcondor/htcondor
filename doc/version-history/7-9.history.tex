@@ -19,12 +19,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.9.1 not yet released.
-%\item Condor version 7.9.1 released on Month Date, 2012.
+\item Condor version 7.9.1 released on October 22, 2012.
 
 \item Condor no longer looks for its main configuration file in the
 location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 \Ticket{2830}
+
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -137,6 +139,10 @@ Similarly, \Condor{ssh\_to\_job} has a new option \Opt{-remove-on-interrupt}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as root.
+(CVE-2012-5390)
 
 \item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute in
 the ad for all daemons would be reset to the current time when they are
