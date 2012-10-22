@@ -418,6 +418,8 @@ private:
 		// The shadow is feeding us a new proxy. Override from parent
 	bool updateX509Proxy(int cmd, ReliSock * s);
 
+	void setX509ProxyExpirationTimer();
+
 		// The proxy is about to expire, do something!
 	int proxyExpiring();
 

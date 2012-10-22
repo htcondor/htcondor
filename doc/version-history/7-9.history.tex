@@ -138,6 +138,15 @@ other clients of the remote \Condor{schedd} to time out trying to get the
 \Condor{schedd}'s attention.
 \Ticket{2575}
 
+\item \Condor{history} and \Condor{q} can now be told to read job records
+from a userlog instead of the parsing the history file or querying the
+\Condor{schedd}.  This can be used to monitor the status of jobs with
+reduced load on the \Condor{schedd}.
+\Ticket{3188}
+
+\item \Condor{q} \Opt{-jobads} will now respect the \Opt{-constraint} option.
+\Ticket{3191}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
