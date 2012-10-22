@@ -131,9 +131,14 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 				else if(logPath == "OUTDBGSTR")
 				{
 					it->outputTarget = OUTPUT_DEBUG_STR;
-					it->dprintfFunc = &dprintf_to_outdbgstr;
+					it->dprintfFunc = dprintf_to_outdbgstr;
 				}
 #endif
+				else
+				{
+					it->outputTarget = FILE_OUT;
+					it->dprintfFunc = _dprintf_global_func;
+				}
 				/*
 				This seems like a catch all default that we did not want.
 				else
