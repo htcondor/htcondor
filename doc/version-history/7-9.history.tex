@@ -165,6 +165,19 @@ in order to do a better job of identifying the operating system.
 list, specifying different values for different hosts.
 \Ticket{3220}
 
+\item The new configuration parameter \Macro{GRIDMANAGER\_JOB\_PROBE\_RATE}
+limits the number of job status requests sent to each remote resource.
+\Ticket{3023}
+
+\item The default value of \Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL} has
+changed from 300 to 60.
+\Ticket{3023}.
+
+\item The configuration parameters \Macro{CONDOR\_JOB\_POLL\_INTERVAL} and
+\Macro{INFN\_JOB\_POLL\_INTERVAL} should no longer be used. Use
+\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL\_CONDOR} and
+\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL\_BATCH} instead.
+\Ticket{3023}
 
 \end{itemize}
 
