@@ -218,6 +218,8 @@ void _condor_parse_merge_debug_flags(
 	DebugOutputChoice & basic, // in,out: basic output choice
 	DebugOutputChoice & verbose); // in,out: verbose output choice, expect this to get folded into basic someday.
 
+bool dprintf_to_term_check();
+
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
@@ -394,5 +396,3 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #endif	/* of ifdef WIN32 */
 
 #define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
-
-bool dprintf_to_term_check();
