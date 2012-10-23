@@ -30,11 +30,11 @@
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
-\index{Condor commands!condor\_q}
+\index{HTCondor commands!condor\_q}
 \index{condor\_q command}
 
 \Description
-\Condor{q} displays information about jobs in the Condor job queue.  By
+\Condor{q} displays information about jobs in the HTCondor job queue.  By
 default, \Condor{q} queries the local job queue but this behavior may be 
 modified by specifying:
 \begin{itemize}
@@ -109,7 +109,7 @@ columns are replaced with:
 If the \Opt{-globus} option is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 \begin{description}
-\item[STATUS] The state that Condor believes the job is in.
+\item[STATUS] The state that HTCondor believes the job is in.
 Possible values are
   \begin{description}
     \item[PENDING] The job is waiting for resources to become available
@@ -133,7 +133,7 @@ Possible values are
   \end{description}
 \item[MANAGER] 
 A guess at what remote batch system is running the job.
-It is a guess, because Condor looks at the Globus jobmanager contact
+It is a guess, because HTCondor looks at the Globus jobmanager contact
 string to attempt identification.
 If the value is fork, the job is running on the
 remote host without a jobmanager.
@@ -209,7 +209,7 @@ per machine basis.
     specified in the configuration file.}
   \OptItem{\Opt{-analyze}}{Perform an analysis to determine how
     many resources are available to run the requested jobs.  These results
-    are only meaningful for jobs using Condor's matchmaker.  This option
+    are only meaningful for jobs using HTCondor's matchmaker.  This option
     is never meaningful for Scheduler universe jobs and only meaningful
     for grid universe jobs doing matchmaking.}
   \OptItem{\Opt{-run}}{Get information about running jobs.}
@@ -315,7 +315,7 @@ The default output from \Condor{q} is formatted to be human readable,
 not script readable.
 In an effort to make the output fit within 80 characters, values in
 some fields might be truncated.
-Furthermore, the Condor Project can (and does) change the formatting
+Furthermore, the HTCondor Project can (and does) change the formatting
 of this default output as we see fit.
 Therefore, any script that is attempting to parse data from \Condor{q}
 is strongly encouraged to use the \Opt{-format} option (described
