@@ -1,6 +1,7 @@
 
 #include <string>
 #include <netinet/in.h>
+#include "condor_sockaddr.h"
 
 class IPLock
 {
@@ -8,16 +9,32 @@ class IPLock
 public:
 
 	IPLock(const std::string & network);
+	~IPLock();
 
-	sockaddr SelectIP(const std::string &);
+	bool Lock(condor_sockaddr &);
+	void Unlock();
 
 private:
+
+	bool ParseIPv4(const std::string &);
+	bool ParseIPv6(const std::string &);
+
+	enum LockStatus {
+		Locked, // We have successfully taken the lock.
+		Unavailable, // The lock is taken by someone else.
+		Stale, // The lock exists on disk, but no process owns it.
+		Error // Error when trying to lock
+	};
+
+	LockStatus LockIP(const std::string & network, bool force);
 
 	std::string m_network;
 	std::string m_netmask;
 	// To be converted to Condor structs when we link in Condor
 	in_addr m_network_addr;
 	in_addr m_prefix_addr;
+	int m_fd;
+	std::string m_lockfile;
 	bool m_valid;
 };
 
@@ -45,7 +62,7 @@ public:
 		{
 			current++;
 		}
-		if (current > (1 << limit))
+		if (current > (in_addr_t)(1 << limit))
 			return 0;
 		in_addr_t result = n_addr & p_addr;
 		result |= current & (~p_addr);
@@ -56,7 +73,7 @@ public:
 private:
 	in_addr_t n_addr;
 	in_addr_t p_addr;
-	unsigned char limit;
+	in_addr_t limit;
 	in_addr_t current;
 
 };
