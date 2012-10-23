@@ -72,7 +72,7 @@ StartdCronJobParams::Initialize( void )
 		else {
 			list<unsigned>::iterator iter;
 			for( iter = m_slots.begin(); iter != m_slots.end(); iter++ ) {
-				s.sprintf_cat( "%u ", *iter );
+				s.formatstr_cat( "%u ", *iter );
 			}
 		}
 		dprintf( D_ALWAYS, "%s\n", s.Value() );

@@ -856,7 +856,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	ClassAd regad;
 	ClassAd respad;
 
-	cmd = cmd; // quiet the compiler
+	(void)cmd; // quiet the compiler
 
 	dprintf(D_ALWAYS, "Entering TDMan::transferd_registration()\n");
 

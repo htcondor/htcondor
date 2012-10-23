@@ -18,40 +18,26 @@
 
 // always first
 #include "condor_common.h"
-
-// local includes
-#include "ODSMongodbOps.h"
 #include "condor_debug.h"
 #include "compat_classad_util.h"
 #include "classad/literals.h"
 #include "stl_string_utils.h"
 
+// local includes
+#include "ODSMongodbOps.h"
+#include "ODSUtils.h"
+
 using namespace std;
 using namespace compat_classad;
 using namespace mongo;
 using namespace plumage::etl;
+using namespace plumage::util;
 
 #define  LAST_DB_ERROR()   string last_err = m_db_conn->getLastError(); \
     if (!last_err.empty()) { \
         dprintf(D_ALWAYS,"mongodb getLastError: %s\n",last_err.c_str()); \
         return false; \
     }
-
-// cleans up the quoted values from the job log reader
-string trimQuotes(const char* str) {
-	string val = str;
-
-	size_t endpos = val.find_last_not_of("\\\"");
-	if( string::npos != endpos ) {
-		val = val.substr( 0, endpos+1 );
-	}
-	size_t startpos = val.find_first_not_of("\\\"");
-	if( string::npos != startpos ) {
-		val = val.substr( startpos );
-	}
-
-	return val;
-}
 
 ODSMongodbOps::ODSMongodbOps(const string& db_name)
 {
@@ -65,10 +51,10 @@ ODSMongodbOps::~ODSMongodbOps()
 
 bool ODSMongodbOps::init(const string& db_location) {
     try {
-        m_db_conn = new DBClientConnection();
+        m_db_conn = new DBClientConnection(true);
         m_db_conn->connect(db_location);
     }
-    catch (DBException e) {
+    catch (UserException e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::init couldn't connect to db '%s'\n",db_location.c_str());
         return false;
     }
@@ -260,7 +246,23 @@ ODSMongodbOps::readRecord(BSONObjBuilder& bob)
         m_db_conn->query(m_db_name, bob.obj());
     }
     catch(DBException& e) {
-        dprintf(D_ALWAYS,"ODSMongodbOps::createRecord caught DBException: %s\n", e.toString().c_str());
+        dprintf(D_ALWAYS,"ODSMongodbOps::readRecord caught DBException: %s\n", e.toString().c_str());
+        return false;
+    }
+
+    LAST_DB_ERROR();
+
+    return true;
+}
+
+bool
+ODSMongodbOps::addIndex(mongo::BSONObj bo)
+{
+    try {
+        m_db_conn->ensureIndex(m_db_name,bo.getOwned());
+    }
+    catch(DBException& e) {
+        dprintf(D_ALWAYS,"ODSMongodbOps::addIndex caught DBException: %s\n", e.toString().c_str());
         return false;
     }
 

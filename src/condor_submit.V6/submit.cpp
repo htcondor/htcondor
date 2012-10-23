@@ -259,6 +259,7 @@ const char	*NiceUser		= "nice_user";
 
 const char	*GridResource	= "grid_resource";
 const char	*X509UserProxy	= "x509userproxy";
+const char	*UseX509UserProxy = "use_x509userproxy";
 const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
@@ -370,6 +371,10 @@ const char	*LoadProfile = "load_profile";
 
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
+
+// Accounting Group parameters
+const char* Group = "group";
+const char* GroupUser = "group_user";
 
 //
 // VM universe Parameters
@@ -523,6 +528,7 @@ void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
 void SetConcurrencyLimits();
+void SetAccountingGroup();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -1146,10 +1152,14 @@ main( int argc, char *argv[] )
 		}
 		// If the user specified their own submit file for an interactive
 		// submit, "rewrite" the job to run /bin/sleep.
+		// This effectively means executable, transfer_executable,
+		// arguments, universe, and queue X are ignored from the submit
+		// file and instead we rewrite to the values below.
 		if ( !InteractiveSubmitFile ) {
 			extraLines.Append( "executable=/bin/sleep" );
 			extraLines.Append( "transfer_executable=false" );
 			extraLines.Append( "args=180" );
+			extraLines.Append( "universe=vanilla" );
 		}
 	}
 
@@ -1173,7 +1183,7 @@ main( int argc, char *argv[] )
 
 	if ( !DumpClassAdToFile ) {
 		if (Quiet) {
-			fprintf(stdout, "Submitting job(s)");
+			fprintf(stdout, "Submitting job(s)\n");
 		}
 	} else {
 		fprintf(stdout, "Storing job ClassAd(s)");
@@ -1387,6 +1397,7 @@ main( int argc, char *argv[] )
 		i=0;
 		sshargs[i++] = "condor_ssh_to_job"; // note: this must be in the PATH
 		sshargs[i++] = "-auto-retry";
+		sshargs[i++] = "-remove-on-interrupt";
 		sshargs[i++] = "-X";
 		if (PoolName) {
 			sshargs[i++] = "-pool";
@@ -1827,7 +1838,7 @@ SetExecutable()
 				}
 				else {
 					for (int i = 0; i < MAC_SIZE; i++) {
-						md5.sprintf_cat("%02x", static_cast<int>(md5_raw[i]));
+						md5.formatstr_cat("%02x", static_cast<int>(md5_raw[i]));
 					}
 					free(md5_raw);
 				}
@@ -1876,18 +1887,15 @@ void
 SetDescription()
 {
 
-	char* description;
-	description = condor_param( Description, ATTR_JOB_DESCRIPTION );
+	char* description = condor_param( Description, ATTR_JOB_DESCRIPTION );
 
 	if ( description ){
 		InsertJobExprString(ATTR_JOB_DESCRIPTION, description);
+		free(description);
 	}
 	else if ( InteractiveJob ){
-		std::string default_description = "Interactive from ";
-		default_description += my_full_hostname();
-		InsertJobExprString(ATTR_JOB_DESCRIPTION, default_description.c_str());
+		InsertJobExprString(ATTR_JOB_DESCRIPTION, "interactive job");
 	}
-	free(description);
 }
 
 #ifdef WIN32
@@ -1964,7 +1972,7 @@ SetUniverse()
 		if ( JobGridType ) {
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
-			//    gt2, gt5, infn, blah, pbs, lsf, nqs, naregi, condor,
+			//    gt2, gt5, blah, pbs, lsf, nqs, naregi, condor,
 			//    unicore, cream, deltacloud, ec2, sge
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
@@ -1973,7 +1981,6 @@ SetUniverse()
 			//   Condor 6.7.12.
 			if ((strcasecmp (JobGridType, "gt2") == MATCH) ||
 				(strcasecmp (JobGridType, "gt5") == MATCH) ||
-				(strcasecmp (JobGridType, "infn") == MATCH) ||
 				(strcasecmp (JobGridType, "blah") == MATCH) ||
 				(strcasecmp (JobGridType, "batch") == MATCH) ||
 				(strcasecmp (JobGridType, "pbs") == MATCH) ||
@@ -2325,7 +2332,7 @@ SetImageSize()
 	// we should only call calc_image_size_kb on the first
 	// proc in the cluster, since the executable cannot change.
 	if ( ProcId < 1 || ! got_exe_size ) {
-		ASSERT (job->LookupString (ATTR_JOB_CMD, buff));
+		ASSERT (job->LookupString (ATTR_JOB_CMD, buff, sizeof(buff)));
 		if( JobUniverse == CONDOR_UNIVERSE_VM ) { 
 			executable_size_kb = 0;
 		}else {
@@ -2370,10 +2377,10 @@ SetImageSize()
 	// the requirements line, but that caused many problems.
 	// Jeff Ballard 11/4/98
 
-	buffer.formatstr( "%s = %"PRId64, ATTR_IMAGE_SIZE, image_size_kb);
+	buffer.formatstr( "%s = %" PRId64, ATTR_IMAGE_SIZE, image_size_kb);
 	InsertJobExpr (buffer);
 
-	buffer.formatstr( "%s = %"PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
+	buffer.formatstr( "%s = %" PRId64, ATTR_EXECUTABLE_SIZE, executable_size_kb);
 	InsertJobExpr (buffer);
 
 	// set an initial value for memory usage
@@ -2388,7 +2395,7 @@ SetImageSize()
 			exit( 1 );
 		}
 		free(tmp);
-		buffer.formatstr( "%s = %"PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
+		buffer.formatstr( "%s = %" PRId64, ATTR_MEMORY_USAGE, memory_usage_mb);
 		InsertJobExpr (buffer);
 	}
 
@@ -2410,7 +2417,7 @@ SetImageSize()
 		// For non-vm jobs, VMMemoryMb is 0.
 		disk_usage_kb = executable_size_kb + TransferInputSizeKb + (int64_t)VMMemoryMb*1024;
 	}
-	buffer.formatstr( "%s = %"PRId64, ATTR_DISK_USAGE, disk_usage_kb );
+	buffer.formatstr( "%s = %" PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
 	// set an intial value for RequestMemory
@@ -2421,7 +2428,7 @@ SetImageSize()
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
 		if (parse_int64_bytes(tmp, req_memory_mb, 1024*1024)) {
-			buffer.formatstr("%s = %"PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
+			buffer.formatstr("%s = %" PRId64, ATTR_REQUEST_MEMORY, req_memory_mb);
 			RequestMemoryIsZero = (req_memory_mb == 0);
 		} else if (MATCH == strcasecmp(tmp,"undefined")) {
 			RequestMemoryIsZero = true;
@@ -2453,7 +2460,7 @@ SetImageSize()
 		// and insert it as text into the jobAd.
 		int64_t req_disk_kb = 0;
 		if (parse_int64_bytes(tmp, req_disk_kb, 1024)) {
-			buffer.formatstr("%s = %"PRId64, ATTR_REQUEST_DISK, req_disk_kb);
+			buffer.formatstr("%s = %" PRId64, ATTR_REQUEST_DISK, req_disk_kb);
 			RequestDiskIsZero = (req_disk_kb == 0);
 		} else if (MATCH == strcasecmp(tmp,"undefined")) {
 			RequestDiskIsZero = true;
@@ -2976,7 +2983,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
+			output_remaps.formatstr_cat("%s=%s",working_name,output.EscapeChars(";=\\",'\\').Value());
 		}
 
 		if(error.Length() && error != condor_basename(error.Value()) && 
@@ -2997,7 +3004,7 @@ SetTransferFiles()
 			InsertJobExprString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.IsEmpty()) output_remaps += ";";
-			output_remaps.sprintf_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
+			output_remaps.formatstr_cat("%s=%s",working_name,error.EscapeChars(";=\\",'\\').Value());
 		}
 	}
 
@@ -5707,6 +5714,7 @@ SetGSICredentials()
 {
 	char *tmp;
 	MyString buffer;
+	bool use_proxy = false;
 
 		// Find the X509 user proxy
 		// First param for it in the submit file. If it's not there
@@ -5715,19 +5723,31 @@ SetGSICredentials()
 		// bomb out if we can't find it.
 
 	char *proxy_file = condor_param( X509UserProxy );
+	tmp = condor_param( UseX509UserProxy );
+	if ( tmp ) {
+		if( tmp[0] == 'T' || tmp[0] == 't' ) {
+			use_proxy = true;
+		}
+		free( tmp );
+	}
 
-	if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GRID &&
+	if ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		 JobGridType != NULL &&
 		 (strcasecmp (JobGridType, "gt2") == MATCH ||
 		  strcasecmp (JobGridType, "gt5") == MATCH ||
 		  strcasecmp (JobGridType, "cream") == MATCH ||
-		  strcasecmp (JobGridType, "nordugrid") == MATCH)) {
+		  strcasecmp (JobGridType, "nordugrid") == MATCH) ) {
+
+		use_proxy = true;
+	}
+
+	if ( proxy_file == NULL && use_proxy ) {
 
 		proxy_file = get_x509_proxy_filename();
 		if ( proxy_file == NULL ) {
 
-			fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-			fprintf( stderr, "x509 user proxy is required for gt2, nordugrid or cream jobs\n");
+			fprintf( stderr, "\nERROR: Can't determine proxy filename\n" );
+			fprintf( stderr, "X509 user proxy is required for this job.\n");
 			exit (1);
 		}
 	}
@@ -6466,6 +6486,7 @@ queue(int num)
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
+        SetAccountingGroup();
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
@@ -7086,7 +7107,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 #else
 	// will just do nothing here and leave
 	// it up to the runtime to nicely report errors.
-	pathname = pathname;
+	(void)pathname;
 	return (err == EISDIR);
 #endif
 }
@@ -7408,8 +7429,9 @@ log_submit()
 			
 			// we don't know the gjid here, so pass in NULL as the last 
 			// parameter - epaulson 2/09/2007
-			if ( ! usr_log.initialize(owner, ntdomain, simple_name,
-									  0, 0, 0, NULL) ) {
+			if ( ! usr_log.initialize(owner, ntdomain,
+					std::vector<const char*>(1,simple_name),
+					0, 0, 0, NULL ) ) {
 				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
 			} else {
 				// Output the information
@@ -8020,6 +8042,44 @@ SetConcurrencyLimits()
 		}
 	}
 }
+
+
+void SetAccountingGroup() {
+    // is a group setting in effect?
+    char* group = condor_param(Group);
+    if (NULL == group) return;
+
+    // identify the configured separator character between group and user
+    char* s = param("GROUP_SEPARATOR");
+    std::string sep = (s) ? s : "";
+    if (sep.size() != 1) {
+        fprintf(stderr, "Configuration variable GROUP_SEPARATOR expects a single character\n");
+        DoCleanup(0, 0, NULL);
+        exit(1);
+    }
+
+    // look for the group_user setting, or default to owner
+    std::string group_user;
+    char* gu = condor_param(GroupUser);
+    if (NULL == gu) {
+        ASSERT(owner);
+        group_user = owner;
+    } else {
+        group_user = gu;
+        free(gu);
+    }
+
+    // set attributes Group, GroupUser and AccountingGroup on the job ad:
+    std::string assign;
+    formatstr(assign, "%s = \"%s%c%s\"", ATTR_ACCOUNTING_GROUP, group, sep[0], group_user.c_str()); 
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_GROUP, group);
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_GROUP_USER, group_user.c_str());
+    InsertJobExpr(assign.c_str());
+    free(group);
+}
+
 
 // this function must be called after SetUniverse
 void

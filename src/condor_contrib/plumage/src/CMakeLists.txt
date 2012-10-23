@@ -29,12 +29,14 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	# file target references.
 	############################
 
-	file( GLOB ETL_COMMON_SRCS ODSMongodbOps.cpp ODSPoolUtils.cpp)
+	file( GLOB ETL_COMMON_SRCS ODSUtils.cpp ODSMongodbOps.cpp)
 
-	file( GLOB ETL_SERVER_SRCS ods_job_daemon_main.cpp 
-						ODSJobLogConsumer.cpp
-						ODSHistoryFile.cpp ODSHistoryUtils.cpp 
-						${ETL_COMMON_SRCS} )
+    file( GLOB ETL_TOOL_SRCS ${ETL_COMMON_SRCS} plumage_history_load_main.cpp )
+
+	file( GLOB ETL_SERVER_SRCS ${ETL_COMMON_SRCS} 
+						ODSJobLogConsumer.cpp 
+						ODSHistoryFile.cpp ODSHistoryProcessors.cpp 
+						plumage_job_daemon_main.cpp )
 
 	############################
 	# daemon emitter plugins
@@ -42,29 +44,29 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	#src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 	#src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-	file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ODSAccountant.cpp ODSProcessors.cpp ${ETL_COMMON_SRCS})
-	condor_plugin( ODSCollectorPlugin-plugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+	file( GLOB CollectorSrcs PlumageCollectorPlugin.cpp ODSAccountant.cpp ODSStatsProcessors.cpp ${ETL_COMMON_SRCS})
+	condor_plugin( PlumageCollectorPlugin-plugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 	############################
 	# job etl daemon
 	############################
-	condor_exe( ods_job_etl_server "${ETL_SERVER_SRCS}"
+	condor_exe( plumage_job_etl_server "${ETL_SERVER_SRCS}"
 	  			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${MONGODB_FOUND}" OFF )
 
 	############################
 	# history loader tool
 	############################
 	set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
-	condor_exe(ods_job_etl_tool "ods_history_tool_main.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${MONGODB_FOUND}" OFF)
+	condor_exe(plumage_history_load "${ETL_TOOL_SRCS}" ${C_BIN} "${TOOL_LINK_LIBS};${MONGODB_FOUND}" OFF)
 
 	############################
 	# install targets
 	############################
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
-	file(GLOB PLUMAGE_STATS ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats )
-	install(FILES ${PLUMAGE_STATS} DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+    file(GLOB PLUMAGE_BIN ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats ../test/plumage_history)
+	install(FILES ${PLUMAGE_BIN} DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 	file(GLOB TEST_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_*)
-	list(REMOVE_ITEM TEST_SCRIPTS ${PLUMAGE_STATS})
+	list(REMOVE_ITEM TEST_SCRIPTS ${PLUMAGE_BIN})
 	
 	install(FILES ${TEST_SCRIPTS} DESTINATION ${C_LIB}/plumage PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../README DESTINATION ${C_LIB}/plumage)

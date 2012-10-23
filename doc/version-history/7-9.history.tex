@@ -12,6 +12,65 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-2}Version 7.9.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.9.2 not yet released.
+%\item Condor version 7.9.2 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that caused the \Condor{shadow} to set job attribute
+\Attr{X509UserProxySubject} to the wrong value when the job's X509
+proxy file was updated. It set the value to be the proxy's subject name
+rather than its identity.
+\Ticket{3265}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-1}Version 7.9.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -32,6 +91,13 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 \noindent New Features:
 
 \begin{itemize}
+
+\item \Condor{submit} now supports first-class syntax for specifying
+accounting groups, via the 'group' and 'group\_user' commands.  The
+separator character between group name and user name on internal
+representations is now configurable with \Macro{GROUP\_SEPARATOR}.
+Refer to section~\ref{sec:group-accounting} for more information.
+\Ticket{2728}
 
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
 different \Condor{schedd} than the one that serves as the source of
@@ -56,14 +122,30 @@ See definition at section~\ref{param:JobRouterSchedd2Pool}.
 \end{itemize}
 \Ticket{3030}
 
-\item \Condor{job\_router} can now optionally transform jobs in place
-rather than creating a second transformed version of the job.
+\item The \Condor{job\_router} can now optionally transform jobs in place,
+rather than creating a second transformed version (copy) of the job.
 \Ticket{3185}
 
-\item \Condor{defrag} now has a policy option to cancel draining
-of a machine that is in draining mode.  This can be used to effect
+\item The \Condor{defrag} daemon now has a policy option implemented
+by configuration to cancel the draining
+of a machine that is in the Draining mode.  This can be used to effect
 partial draining of machines.
 \Ticket{2993}
+
+\item Communication between the \Condor{c-gahp} and \Condor{schedd} has
+been improved. A large number of Condor-C jobs should no longer cause
+other clients of the remote \Condor{schedd} to time out trying to get the
+\Condor{schedd}'s attention.
+\Ticket{2575}
+
+\item \Condor{history} and \Condor{q} can now be told to read job records
+from a userlog instead of the parsing the history file or querying the
+\Condor{schedd}.  This can be used to monitor the status of jobs with
+reduced load on the \Condor{schedd}.
+\Ticket{3188}
+
+\item \Condor{q} \Opt{-jobads} will now respect the \Opt{-constraint} option.
+\Ticket{3191}
 
 \end{itemize}
 
@@ -71,12 +153,22 @@ partial draining of machines.
 
 \begin{itemize}
 
-\item The \Condor{schedd} now advertises the value of the configuration parameter
-COLLECTOR\_HOST in its daemon ad.  This allows one to determine if a given
-schedd reporting to a collector is flocking to that collector or not.
+\item Dynamic slots now fill the values for attributes of the form TotalSlotXxx, 
+for configured local resources, in a way consistent with standard resources
+such as TotalSlotCpus.  Previously those values were all filled with zero on
+dynamic slots.
+\Ticket{3229}
+
+\item The \Condor{schedd} now advertises the value of configuration variable
+\MacroNI{COLLECTOR\_HOST} as attribute \Attr{CollectorHost} in 
+its daemon ClassAd.  This allows one to determine if a given
+\Condor{schedd} reporting to a \Condor{collector} is flocking to that 
+\Condor{collector} or not.
+\Ticket{3202}
 
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
+\Ticket{2807}
 
 \item The new configuration variable
 \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
@@ -90,12 +182,24 @@ names of all jobs that these daemons will manage.
 \Ticket{3030}
 
 
-\item The new configuration variable \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}
+\item The new configuration variable \Macro{DEFRAG\_CANCEL\_REQUIREMENTS}
 is an expression that specifies which draining machines should have 
 draining be canceled.  
 This defaults to \MacroUNI{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  
 This could be used to drain partial rather than whole machines.
 \Ticket{2993}
+
+\item The new submit command \SubmitCmd{use\_x509userproxy} can be set
+to \Expr{True} to indicate that an X.509 user proxy is required for the job. 
+If \SubmitCmd{x509userproxy} is not set, 
+then the proxy file will be looked for in the standard locations.
+\Ticket{3025}
+
+\item If \Condor{submit} with the \Opt{-interactive} option
+is interrupted (via ctrl-c for example) before the interactive job starts,
+an attempt is made to immediately remove the interactive job from the queue.
+Similarly, \Condor{ssh\_to\_job} has a new option \Opt{-remove-on-interrupt}.
+\Ticket{3242}
 
 \end{itemize}
 
@@ -103,8 +207,31 @@ This could be used to drain partial rather than whole machines.
 
 \begin{itemize}
 
-\item The \Condor{negotiator} now sanity-checks accountant log file once only
-on startup.  Iteration through the accountant ClassAd log structure is faster.
+\item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute in
+the ad for all daemons would be reset to the current time when they are
+reconfigured.
+\Ticket{3235}
+
+\item \Security Although not user-visible, there were multiple updates to remove places
+in the code where potential buffer overruns could occur, thus removing
+potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to improve
+error checking of system calls, removing some potential security threats.  None
+were known to be exploitable.
+
+\item \Security Although not user-visible, some code that was no longer used was removed.
+The presence of this code could have lead to a Denial-of-Service attack which
+would allow an attacker to stop another user's jobs from running.
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
+of the directory used for authentication.  Without this, an attacker may have
+been able to impersonate another submitter on the same submit machine.
+
+\item The \Condor{negotiator} now checks the accountant log file for sanity
+once only on start up,  
+thereby increasing efficiency of iteration through 
+the accountant ClassAd log structure.
 \Ticket{3011}
 
 \item The ClassAd functions \Procedure{splitUserName} and 
@@ -113,19 +240,39 @@ no longer leak a small amount of memory each time they are evaluated.
 This bug was introduced when these functions were added in Condor version 7.7.6.
 \Ticket{3082}
 
-\item Several bug fixes for grid-type batch jobs:
+\item There are several bug fixes for grid-type batch jobs:
   \begin{itemize}
   \item Monitoring the status of jobs submitted to PBS and SGE has been
     improved. \Ticket{3067} \Ticket{3157} \Ticket{3181}
-  \item Job command-line arguments containing characters `(', `)', and `\&'
-    are now handled properly. \Ticket{3057}
+  \item Job command-line arguments containing 
+    left parenthesis, \verb@(@, right parenthesis, \verb@)@, 
+    and ampersand, \verb@&@, characters are now handled properly. 
+    \Ticket{3057}
   \item Removing PBS jobs that have just completed no longer causes the jobs
     to become held. \Ticket{3016}
-  \item Added work-around for \Condor{history} bug when submitting jobs to
-    a Condor pool running Condor 7.7.6 through 7.8.1. \Ticket{3133}
-  \item Improved handling of job files when the batch system has a shared
-    filesystem. \Ticket{3195}
+  \item Added a work-around for a bug when submitting jobs to
+    a Condor pool running Condor versions 7.7.6 through 7.8.2.
+    A bug in \Condor{history} \Opt{-f} caused an error in determining
+    a job's status.
+    \Ticket{3133}
+  \item Improved the handling of job files when the batch system has a shared
+    file system. \Ticket{3195}
   \end{itemize}
+
+\item Changes introduced in Condor version 7.9.0 caused jobs submitted by
+\Condor{dagman} in the local universe to not write to the default node log file,
+when \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was \Expr{True} (the default),
+and a user log was also defined. This is fixed. 
+\Ticket{3111}
+
+\item Fixed a bug introduced in Condor version 7.9.0 that caused grid type
+cream jobs to be held with a hold reason of 
+\footnotesize
+\begin{verbatim}
+  CREAM_Delegate Error: Cannot set credentials in the gsoap-plugin context.
+\end{verbatim}
+\normalsize
+\Ticket{3234}
 
 \end{itemize}
 
@@ -268,7 +415,6 @@ a \Condor{schedd} daemon or of a \Condor{submit} executable.
 platforms other than Windows,
 which schedules and runs a job that provides a shell prompt
 on the execute machine.
-Documentation of this feature is not yet available.
 \Ticket{3088}
 
 \end{itemize}

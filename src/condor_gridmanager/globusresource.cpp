@@ -256,12 +256,26 @@ void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "RestartJobmanagersWanted", restartJMsWanted.Number() );
 }
 
-void GlobusResource::UnregisterJob( GlobusJob *job )
+void GlobusResource::UnregisterJob( BaseJob *base_job )
 {
+	GlobusJob* job = dynamic_cast<GlobusJob*>( base_job );
+
 	JMComplete( job );
 
 	BaseResource::UnregisterJob( job );
 		// This object may be deleted now. Don't do anything below here!
+}
+
+void GlobusResource::SetJobPollInterval()
+{
+	if ( m_isGt5 ) {
+		BaseResource::SetJobPollInterval();
+	} else {
+		m_jobPollInterval = (submitJMsAllowed.Length() + restartJMsAllowed.Length()) / m_paramJobPollRate;
+		if ( m_jobPollInterval < m_paramJobPollInterval ) {
+			m_jobPollInterval = m_paramJobPollInterval;
+		}
+	}
 }
 
 bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
@@ -290,6 +304,7 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 		if ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
 			 submitJMLimit + restartJMLimit ) {
 			submitJMsAllowed.Append( job );
+			SetJobPollInterval();
 			return true;
 		} else {
 			submitJMsWanted.Append( job );
@@ -313,6 +328,7 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 		if ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
 			 submitJMLimit + restartJMLimit ) {
 			restartJMsAllowed.Append( job );
+			SetJobPollInterval();
 			return true;
 		} else {
 			restartJMsWanted.Append( job );
@@ -361,6 +377,8 @@ void GlobusResource::JMComplete( GlobusJob *job )
 				queued_job->SetEvaluateState();
 			}
 		}
+
+		SetJobPollInterval();
 	} else {
 		// We only have to check the Wanted queues if the job wasn't in
 		// the Allowed queues
@@ -373,6 +391,7 @@ void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 {
 	if ( !m_isGt5 ) {
 		restartJMsAllowed.Append( job );
+		SetJobPollInterval();
 	}
 }
 

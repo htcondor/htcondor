@@ -237,7 +237,7 @@ TransferQueueManager::HandleDisconnect( Stream *sock )
 	m_xfer_queue.Rewind();
 	MyString clients;
 	while( m_xfer_queue.Next( client ) ) {
-		clients.sprintf_cat(" (%p) %s\n",
+		clients.formatstr_cat(" (%p) %s\n",
 					 client->m_sock,client->m_sock->peer_description());
 	}
 	EXCEPT("TransferQueueManager: ERROR: disconnect from client (%p) %s;"

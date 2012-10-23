@@ -5,6 +5,12 @@
 #include "ipv6_interface.h"
 #include "condor_debug.h"
 
+typedef union sockaddr_storage_ptr_u {
+        const struct sockaddr     *raw;
+        struct sockaddr_in  *in;
+        struct sockaddr_in6 *in6;
+} sockaddr_storage_ptr;
+
 int condor_connect(int sockfd, const condor_sockaddr& addr)
 {
 	if (addr.is_ipv6() && addr.is_link_local()) {
@@ -107,7 +113,7 @@ int condor_getnameinfo (const condor_sockaddr& addr,
 		                char * __serv, socklen_t __servlen,
 		                unsigned int __flags)
 {
-	sockaddr* sa = addr.to_sockaddr();
+	const sockaddr* sa = addr.to_sockaddr();
 	socklen_t len = addr.get_socklen();
 	int ret;
 
@@ -128,23 +134,25 @@ int condor_getaddrinfo(const char *node,
 
 hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 {
-	sockaddr* sa = addr.to_sockaddr();
+	const sockaddr* sa = addr.to_sockaddr();
+	sockaddr_storage_ptr sock_address;
+	sock_address.raw = sa;
 	int type = sa->sa_family;
 	hostent* ret;
 	const char* p_addr = NULL;
 	int len;
 
 	if (type == AF_INET) {
-		sockaddr_in* sin4 = (sockaddr_in*)sa;
+		sockaddr_in* sin4 = sock_address.in;
 		p_addr = (const char*)&sin4->sin_addr;
 		len = sizeof(in_addr);
 	} else if (type == AF_INET6) {
-		sockaddr_in6* sin6 = (sockaddr_in6*)sa;
+		sockaddr_in6* sin6 = sock_address.in6;
 		p_addr = (const char*)&sin6->sin6_addr;
 		len = sizeof(in6_addr);
 	} else {
 		dprintf(D_ALWAYS, "condor_gethostbyaddr_ipv6 was passed an sa_family of %d. Only AF_INET (%d) and AF_INET6 (%d) can be handled.", type, int(AF_INET), int(AF_INET6));
-		sockaddr_in* sin4 = (sockaddr_in*)sa;
+		sockaddr_in* sin4 = sock_address.in;
 		p_addr = (const char*)&sin4->sin_addr;
 		len = 0;
 	}

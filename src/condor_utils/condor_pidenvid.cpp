@@ -293,5 +293,7 @@ pidenvid_optimize_final_env(char **env)
 {
 #if defined(LINUX)
 	pidenvid_shuffle_to_front(env);
+#else
+	if (env) {}
 #endif
 }

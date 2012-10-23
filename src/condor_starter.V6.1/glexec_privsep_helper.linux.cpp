@@ -119,7 +119,7 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 		        args.GetArg(0),
 		        ret,
 		        str.Value());
-		error_desc.sprintf_cat("%s exited with status %d and the following output: %s",
+		error_desc.formatstr_cat("%s exited with status %d and the following output: %s",
 				       condor_basename(args.GetArg(0)),
 				       ret,
 				       str.Value());
@@ -441,7 +441,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 							"GLEXEC: glexec call exited with status %d\n",
 							status);
 					if( error_msg ) {
-						error_msg->sprintf_cat(
+						error_msg->formatstr_cat(
 							" glexec call exited with status %d",
 							status);
 					}
@@ -452,7 +452,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 							"GLEXEC: glexec call exited via signal %d\n",
 							sig);
 					if( error_msg ) {
-						error_msg->sprintf_cat(
+						error_msg->formatstr_cat(
 							" glexec call exited via signal %d",
 							sig);
 					}
@@ -603,7 +603,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		err[bytes] = '\0';
 		dprintf(D_ALWAYS, "GLEXEC: error from wrapper: %s\n", err);
 		if( error_msg ) {
-			error_msg->sprintf_cat("glexec_job_wrapper error: %s", err);
+			error_msg->formatstr_cat("glexec_job_wrapper error: %s", err);
 		}
 			// prevent higher-level code from thinking this was a syscall error
 		errno = 0;

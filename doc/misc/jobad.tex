@@ -166,11 +166,25 @@ an event log used exclusively by DAGMan to monitor the state of the DAG's jobs.
 %%% ClassAd attribute: DAGManNodesLog
 \index{ClassAd job attribute!DAGManNodesMask}
 \index{DAGManNodesMask!job ClassAd attribute}
-\item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, controls the
-events inserted in the log referred to by \Attr{DAGManNodesLog} (the auxiliary
-log). If the mask is empty or undefined, all events are written to the
-auxiliary job log.  Otherwise, it is a list of numbers; events are only written
-to the auxiliary log if they are found in the list. If \Attr{DAGManNodesLog} is
+\item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, 
+controls which job user log
+events are appended to the log referred to by \Attr{DAGManNodesLog} 
+(the auxiliary log). 
+If the mask is empty or undefined, these events are written to the
+auxiliary job log:  
+\begin{itemize}
+ \item \Expr{Submit}, event code is 0
+ \item \Expr{Execute}, event code is 1
+ \item \Expr{Job terminated}, event code is 5
+ \item \Expr{Job aborted}, event code is 9
+ \item \Expr{Job held}, event code is 12
+ \item \Expr{Job released}, event code is 13
+ \item \Expr{Post script terminated}, event code is 16
+\end{itemize}
+Otherwise, this string is a comma-separated list of integer 
+user log event codes;
+only events found in the list are written to the auxiliary log. 
+If \Attr{DAGManNodesLog} is
 not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
 affect events recorded in the user log file referred to by \Attr{UserLog}.
 
@@ -502,6 +516,22 @@ of the the submit description file command \SubmitCmd{grid\_resource}.
 It specifies the target grid type, plus additional parameters
 specific to the grid type.
 
+%%% ClassAd attribute: Group
+\index{ClassAd job attribute!Group}
+\index{Group!job ClassAd attribute}
+\item[\AdAttr{Group}:] The accounting group name, as set in the
+\Condor{submit} file via the group command.  This attribute
+is only present if an accounting group was requested by the
+submission. See section~\ref{sec:group-accounting} for more 
+information about accounting groups.
+
+%%% ClassAd attribute: GroupUser
+\index{ClassAd job attribute!GroupUser}
+\index{GroupUser!job ClassAd attribute}
+\item[\AdAttr{GroupUser}:] The user name associated with the
+accounting group.  This attribute is only present if an
+accounting group was requested by the submission.
+
 %%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
 \index{HoldKillSig!job ClassAd attribute}
@@ -630,6 +660,17 @@ This is the same as the configuration setting
 page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
 the user log instead of the system event log.
 
+%%% ClassAd attribute: JobDescription
+\index{ClassAd job attribute!JobDescription}
+\index{JobDescription!job ClassAd attribute}
+\label{JobDescription-job-attribute}
+\item[\AdAttr{JobDescription}:]  A string that may be defined for
+a job by setting \SubmitCmd{description} in the submit description file.
+When set, tools which display the executable such as \Condor{q}
+will instead use this string.
+For interactive jobs that do not have a submit description file,
+this string will default to \Expr{"Interactive job"}.
+
 %%% ClassAd attribute: JobCurrentStartDate
 \index{ClassAd job attribute!JobCurrentStartDate}
 \index{JobCurrentStartDate!job ClassAd attribute}
@@ -643,7 +684,7 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 \index{JobCurrentStartExecutingDate!job ClassAd attribute}
 \label{JobCurrentStartExecutingDate-job-attribute}
 \item[\AdAttr{JobCurrentStartExecutingDate}:]  Time at which the job most recently finished
-transfering its input sandbox and began executing.  Measured in the
+transferring its input sandbox and began executing.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
 %%% ClassAd attribute: JobCurrentStartTransferOutputDate

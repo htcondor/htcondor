@@ -23,7 +23,6 @@
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
@@ -285,7 +284,7 @@ bool stringListSummarize_func( const char *name,
 	if ( is_real ) {
 		result.SetRealValue( accumulator );
 	} else {
-		result.SetIntegerValue( (int)accumulator );
+		result.SetIntegerValue( (long long)accumulator );
 	}
 
 	return true;
@@ -824,17 +823,7 @@ ClassAd::Insert( const char *str )
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
 	string newAdStr;
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-        if (str[i] == '\\') {
-			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
-			{
-				newAdStr.append( 1, '\\' );
-			}
-		}
-		newAdStr.append( 1, str[i] );
-	}
-	//newAdStr += "]";
+	ConvertEscapingOldToNew( str, newAdStr );
 	
 	if (!classad::ClassAd::Insert(newAdStr))
 	{
@@ -892,16 +881,16 @@ Assign(char const *name,char const *value)
 //  ExprTree* ClassAd::
 //  Lookup(const char*) const{}
 
-int ClassAd::
-LookupString( const char *name, char *value ) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	strcpy( value, strVal.c_str( ) );
-	return 1;
-} 
+//int ClassAd::
+//LookupString( const char *name, char *value ) const 
+//{
+//	string strVal;
+//	if( !EvaluateAttrString( string( name ), strVal ) ) {
+//		return 0;
+//	}
+//	strcpy( value, strVal.c_str( ) );
+//	return 1;
+//} 
 
 int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
@@ -911,6 +900,7 @@ LookupString(const char *name, char *value, int max_len) const
 		return 0;
 	}
 	strncpy( value, strVal.c_str( ), max_len );
+	if ( value && max_len && value[max_len - 1] ) value[max_len - 1] = '\0';
 	return 1;
 }
 
@@ -972,12 +962,32 @@ LookupInteger( const char *name, int &value ) const
 }
 
 int ClassAd::
-LookupInteger( const char *name, int64_t &value ) const
+LookupInteger( const char *name, long &value ) const 
 {
 	bool    boolVal;
 	int     haveInteger;
 	string  sName(name);
-	int		tmp_val;
+	long	tmp_val;
+
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
+		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
+	}
+	return haveInteger;
+}
+
+int ClassAd::
+LookupInteger( const char *name, long long &value ) const 
+{
+	bool    boolVal;
+	int     haveInteger;
+	string  sName(name);
+	long long	tmp_val;
 
 	if( EvaluateAttrInt(sName, tmp_val ) ) {
 		value = tmp_val;
@@ -995,7 +1005,7 @@ int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
-	int     intVal;
+	long long intVal;
 	int     haveFloat;
 
 	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
@@ -1011,9 +1021,28 @@ LookupFloat( const char *name, float &value ) const
 }
 
 int ClassAd::
+LookupFloat( const char *name, double &value ) const
+{
+	double  doubleVal;
+	long long intVal;
+	int     haveFloat;
+
+	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
+		haveFloat = TRUE;
+		value = doubleVal;
+	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
+		haveFloat = TRUE;
+		value = (double)intVal;
+	} else {
+		haveFloat = FALSE;
+	}
+	return haveFloat;
+}
+
+int ClassAd::
 LookupBool( const char *name, int &value ) const
 {
-	int   intVal;
+	long long intVal;
 	bool  boolVal;
 	int haveBool;
 	string sName;
@@ -1035,7 +1064,7 @@ LookupBool( const char *name, int &value ) const
 int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
-	int   intVal;
+	long long intVal;
 	bool  boolVal;
 	int haveBool;
 	string sName;
@@ -1164,7 +1193,7 @@ EvalString(const char *name, classad::ClassAd *target, std::string & value)
 }
 
 int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, int &value)
+EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 {
 	int rc = 0;
 	classad::Value val;
@@ -1196,17 +1225,17 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	if ( 1 == rc ) 
 	{
 	  double doubleVal;
-	  int intVal;
+	  long long intVal;
 	  bool boolVal;
 
 	  if( val.IsRealValue( doubleVal ) ) {
-	    value = ( int )doubleVal;
+	    value = ( long long )doubleVal;
 	  }
 	  else if( val.IsIntegerValue( intVal ) ) {
 	    value = intVal;
 	  }
 	  else if( val.IsBooleanValue( boolVal ) ) {
-	    value = ( int )boolVal;
+	    value = ( long long )boolVal;
 	  }
 	  else 
 	  { 
@@ -1225,7 +1254,7 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1293,7 +1322,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1503,7 +1532,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
-				output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 									value.c_str() );
 			}
 		}
@@ -1517,7 +1546,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
-			output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 								value.c_str() );
 		}
 	}
@@ -2066,31 +2095,47 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
         return FALSE;
     }
 
-    MyString out;
+    std::string out;
     sPrintAsXML(out,attr_white_list);
-    fprintf(fp, "%s", out.Value());
+    fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int ClassAd::
 sPrintAsXML(MyString &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml;
-	return TRUE;
+	std::string std_output;
+	int rc = sPrintAsXML(std_output, attr_white_list);
+	output += std_output;
+	return rc;
 }
 
 int ClassAd::
 sPrintAsXML(std::string &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml.Value();
+	classad::ClassAdXMLUnParser unparser;
+	std::string xml;
+
+	unparser.SetCompactSpacing(false);
+	if ( attr_white_list ) {
+		ClassAd tmp_ad;
+		classad::ExprTree *expr;
+		const char *attr;
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			if ( (expr = this->Lookup( attr )) ) {
+				tmp_ad.Insert( attr, expr, false );
+			}
+		}
+		unparser.Unparse( xml, &tmp_ad );
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			tmp_ad.Remove( attr );
+		}
+	} else {
+		unparser.Unparse( xml, this );
+	}
+	output += xml;
 	return TRUE;
 }
 ///////////// end XML functions /////////

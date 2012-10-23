@@ -40,7 +40,11 @@ if (WITH_GSOAP)
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
-			set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" )
+			if(DARWIN AND cxx_11)
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" "CXXFLAGS=-std=c++11 -stdlib=libc++" )
+			else()
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" )
+			endif()
 			set (GSOAP_MAKE make )
 			set (GSOAP_INSTALL make install )
 		endif(WINDOWS)

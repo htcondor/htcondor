@@ -447,7 +447,7 @@ static void test_classad(const Parameters &, Results &results)
         
         if (rank != NULL) {
             bool have_references;
-            if (have_references = c->GetExternalReferences(rank, refs, true)) {
+            if ((have_references = c->GetExternalReferences(rank, refs, true))) {
                 TEST("have_references", (have_references == true));
 
                 if (have_references) {

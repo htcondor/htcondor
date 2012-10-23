@@ -143,10 +143,10 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 			continue;
 		}
 		if( first_time ) {
-			attributes.sprintf_cat( "\n\n" );
+			attributes.formatstr_cat( "\n\n" );
 			first_time = false;
 		}
-		attributes.sprintf_cat( "%s = %s\n", tmp, ExprTreeToString(expr_tree) );
+		attributes.formatstr_cat( "%s = %s\n", tmp, ExprTreeToString(expr_tree) );
 	}
     return;
 }

@@ -683,7 +683,7 @@ ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg)
 void
 ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 {
-	result->sprintf_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').Value());
+	result->formatstr_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').Value());
 }
 
 void
@@ -953,7 +953,7 @@ ArgList::GetArgsStringSystem(MyString *result,int skip_args,MyString *error_msg)
 	MyString *arg=NULL;
 	for(int i=0;it.Next(arg);i++) {
 		if(i<skip_args) continue;
-		result->sprintf_cat("%s\"%s\"",
+		result->formatstr_cat("%s\"%s\"",
 							result->IsEmpty() ? "" : " ",
 							arg->EscapeChars("\"\\$`",'\\').Value());
 	}

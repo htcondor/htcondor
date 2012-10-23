@@ -38,6 +38,8 @@
 // all compilers!), but the bloat is in the text segment - shared on all processes!
 
 #define ATTR_ABSENT                    "Absent"
+#define ATTR_GROUP  "Group"
+#define ATTR_GROUP_USER  "GroupUser"
 #define ATTR_ACCOUNTING_GROUP          "AccountingGroup"
 #define ATTR_ACTION_CONSTRAINT  "ActionConstraint"
 #define ATTR_ACTION_IDS  "ActionIds"
@@ -249,6 +251,7 @@
 #define ATTR_PROPORTIONAL_SET_SIZE  "ProportionalSetSizeKb"
 #define ATTR_INTERACTIVE  "Interactive"
 #define ATTR_IS_DAEMON_CORE  "IsDaemonCore"
+#define ATTR_IS_LOCAL_STARTD  "IsLocalStartd"
 #define ATTR_IS_OWNER  "IsOwner"
 #define ATTR_IS_QUEUE_SUPER_USER  "IsQueueSuperUser"
 #define ATTR_IS_WAKE_SUPPORTED  "IsWakeOnLanSupported"
@@ -320,6 +323,8 @@
 #define ATTR_POST_JOB_PRIO1  "PostJobPrio1"
 #define ATTR_POST_JOB_PRIO2  "PostJobPrio2"
 #define ATTR_JOB_PRIO  "JobPrio"
+#define ATTR_JOB_PRIO_ARRAY "JobPrioArray" // optionally in submitter ad
+#define ATTR_JOB_PRIO_ARRAY_OVERFLOW "JobPrioArrayOverflow"
 #define ATTR_JOB_COMMITTED_TIME  "CommittedTime"
 #define ATTR_JOB_LANGUAGE  "JobLanguage"
 #define ATTR_JOB_LAST_START_DATE  "JobLastStartDate"

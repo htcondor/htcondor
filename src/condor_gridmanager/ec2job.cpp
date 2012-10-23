@@ -81,10 +81,6 @@ void EC2JobInit()
 
 void EC2JobReconfig()
 {
-	// change interval time for 5 minute
-	int tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 60 * 5 ); 
-	EC2Job::setProbeInterval( tmp_int );
-		
 	// Tell all the resource objects to deal with their new config values
 	EC2Resource *next_resource;
 
@@ -119,7 +115,6 @@ BaseJob* EC2JobCreate( ClassAd *jobad )
 }
 
 int EC2Job::gahpCallTimeout = 600;
-int EC2Job::probeInterval = 300;
 int EC2Job::submitInterval = 300;
 int EC2Job::maxConnectFailures = 3;
 int EC2Job::funcRetryInterval = 15;
@@ -631,7 +626,7 @@ void EC2Job::doEvaluateState()
 					// if current state isn't "running", we should check its state
 					// every "funcRetryInterval" seconds. Otherwise the interval should
 					// be "probeInterval" seconds.  
-					int interval = probeInterval;
+					int interval = myResource->GetJobPollInterval();
 					if ( remoteJobState != EC2_VM_STATE_RUNNING ) {
 						interval = funcRetryInterval;
 					}
@@ -1059,7 +1054,7 @@ void EC2Job::SetClientToken(const char *client_token)
 	if ( client_token ) {
 		m_client_token = client_token;
 	}
-	SetRemoteJobId(m_client_token.empty() ? NULL : m_client_token.c_str(),
+	EC2SetRemoteJobId(m_client_token.empty() ? NULL : m_client_token.c_str(),
 				   m_remoteJobId.c_str());
 }
 
@@ -1070,18 +1065,18 @@ void EC2Job::SetInstanceId( const char *instance_id )
 		m_remoteJobId = instance_id;
         jobAd->Assign( ATTR_EC2_INSTANCE_NAME, m_remoteJobId );
 	}
-	SetRemoteJobId( m_client_token.c_str(),
+	EC2SetRemoteJobId( m_client_token.c_str(),
 					m_remoteJobId.empty() ? NULL : m_remoteJobId.c_str() );
 }
 
-// SetRemoteJobId() is used to set the value of global variable "remoteJobID"
-void EC2Job::SetRemoteJobId( const char *client_token, const char *instance_id )
+// EC2SetRemoteJobId() is used to set the value of global variable "remoteJobID"
+void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_id )
 {
 	string full_job_id;
 	if ( client_token && client_token[0] ) {
 		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
-			sprintf_cat( full_job_id, " %s", instance_id );
+			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );

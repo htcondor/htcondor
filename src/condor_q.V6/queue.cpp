@@ -46,13 +46,22 @@
 #include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
-#include "condor_xml_classads.h"
 #include "condor_open.h"
 #include "condor_sockaddr.h"
+#include "condor_id.h"
+#include "userlog_to_classads.h"
 #include "ipv6_hostname.h"
 #include <map>
 #include <vector>
 #include "../classad_analysis/analysis.h"
+
+/*
+#ifndef WIN32
+#include <sys/types.h>
+#include <unistd.h>
+#include <pwd.h>
+#endif
+*/
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -127,7 +136,7 @@ static void init_output_mask();
 /* a type used to point to one of the above two functions */
 typedef bool (*show_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
-static bool read_classad_file(const char *filename, ClassAdList &classads);
+static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
 
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
@@ -166,6 +175,12 @@ static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
+
+static  char *userlog_file = NULL;
+
+// Constraint on JobIDs for faster filtering
+// a list and not set since we expect a very shallow depth
+static std::vector<CondorID> constrID;
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -281,7 +296,7 @@ static  List<const char> mask_head; // The list of headings for the mask entries
 static CollectorList * Collectors = NULL;
 
 // for run failure analysis
-static  int			findSubmittor( char * );
+static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
 static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd*, Daemon* );
@@ -415,7 +430,7 @@ int main (int argc, char **argv)
 	// Since we are assuming that we want to talk to a DB in the normal
 	// case, this will ensure that we don't try to when loading the job queue
 	// classads from file.
-	if (jobads_file != NULL) {
+	if ((jobads_file != NULL) || (userlog_file != NULL)) {
 		useDB = FALSE;
 	}
 
@@ -478,7 +493,7 @@ int main (int argc, char **argv)
            	// to the schedd time's out and the user gets nothing
            	// useful printed out. Therefore, we use show_queue,
            	// which fetches all of the ads, then analyzes them. 
-			if ( (unbuffered || verbose || better_analyze || jobads_file) && !g_stream_results ) {
+			if ( (unbuffered || verbose || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
 				sqfp = show_queue;
 			} else {
 				sqfp = show_queue_buffered;
@@ -718,7 +733,7 @@ int main (int argc, char **argv)
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
-				 ad->LookupString(ATTR_MACHINE, scheddMachine) &&
+				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine)) &&
 				 ad->LookupString(ATTR_VERSION, scheddVersion) ) ) 
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */
@@ -955,16 +970,17 @@ processCommandLineArguments (int argc, char *argv[])
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
 				sprintf( constraint, "((%s == %d) && (%s == %d))",
 					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
-                                Q.addOR( constraint );
-   
+				Q.addOR( constraint );
 				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				Q.addDBConstraint(CQ_PROC_ID, proc);
+				constrID.push_back(CondorID(cluster,proc,-1));
 				summarize = 0;
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
 				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
 				Q.addOR( constraint );
-   				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				constrID.push_back(CondorID(cluster,-1,-1));
 				summarize = 0;
 			} 
 			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
@@ -1463,6 +1479,15 @@ processCommandLineArguments (int argc, char *argv[])
                 jobads_file = strdup(argv[i]);
             }
         }
+        else if (match_prefix(arg, "userlog")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -userlog require filename\n");
+				exit(1);
+			} else {
+                i++;
+                userlog_file = strdup(argv[i]);
+            }
+        }
         else if (match_prefix(arg, "machineads")) {
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: Argument -machineads require filename\n");
@@ -1783,7 +1808,7 @@ format_remote_host (char *, AttrList *ad)
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
+	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
 		MyString hostname = get_hostname(addr);
 		if (hostname.Length() > 0) {
@@ -1793,15 +1818,15 @@ format_remote_host (char *, AttrList *ad)
 			return unknownHost;
 		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
-		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
+		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
 			return host_result;
-		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result) == 1)
+		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result,sizeof(host_result)) == 1)
 			return host_result;
 		else
 			return unknownHost;
 	}
 
-	if (ad->LookupString(ATTR_REMOTE_HOST, host_result) == 1) {
+	if (ad->LookupString(ATTR_REMOTE_HOST, host_result, sizeof(host_result)) == 1) {
 		if( is_valid_sinful(host_result) && 
 			addr.from_sinful(host_result) == true ) {
 			MyString hostname = get_hostname(addr);
@@ -2262,6 +2287,7 @@ usage (const char *myName)
 		"\t\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
+		"\t\t-userlog <file>\t\tFile of user log to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-direct <rdbms | schedd>\n"
@@ -2317,11 +2343,9 @@ void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char c
 	}
 	if( use_xml ) {
 			// keep this consistent with AttrListList::fPrintAttrListList()
-		ClassAdXMLUnparser  unparser;
-		MyString xml;
-		unparser.SetUseCompactSpacing(false);
-		unparser.AddXMLFileHeader(xml);
-		printf("%s\n", xml.Value());
+		std::string xml;
+		AddClassAdXMLFileHeader(xml);
+		printf("%s\n", xml.c_str());
 	}
 }
 
@@ -2808,11 +2832,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		}
 		if( use_xml ) {
 				// keep this consistent with AttrListList::fPrintAttrListList()
-			ClassAdXMLUnparser  unparser;
-			MyString xml;
-			unparser.SetUseCompactSpacing(false);
-			unparser.AddXMLFileFooter(xml);
-			printf("%s\n", xml.Value());
+			std::string xml;
+			AddClassAdXMLFileFooter(xml);
+			printf("%s\n", xml.c_str());
 		}
 	}
 
@@ -2935,10 +2957,10 @@ process_buffer_line( ClassAd *job )
 	}
 
 	if (use_xml) {
-		MyString s;
+		std::string s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
-		tempCPS->string = strnewp( s.Value() );
+		tempCPS->string = strnewp( s.c_str() );
 	} else if( verbose ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
@@ -2998,14 +3020,38 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 	char *lastUpdate=NULL;
 
+	// setup constraint variables to use in some of the later code.
+	const char * constr = NULL;
+	CondorID * JobIds = NULL;
+	int cJobIds = constrID.size();
+	if (cJobIds > 0) JobIds = &constrID[0];
+
+	std::string constr_string; // to hold the return from ExprTreeToString()
+	ExprTree *tree = NULL;
+	Q.rawQuery(tree);
+	if (tree) {
+		constr_string = ExprTreeToString(tree);
+		constr = constr_string.c_str();
+		delete tree;
+	}
+
     if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
-        if (!read_classad_file(jobads_file, jobs)) {
+        if (!read_classad_file(jobads_file, jobs, constr)) {
             return false;
         }
 		
 		/* The variable UseDB should be false in this branch since it was set 
 			in main() because jobads_file had a good value. */
+
+    } else if (userlog_file != NULL) {
+        if (!userlog_to_classads(userlog_file, jobs, JobIds, cJobIds, constr)) {
+            fprintf(stderr, "Can't open user log: %s\n", userlog_file);
+            return false;
+        }
+		
+		/* The variable UseDB should be false in this branch since it was set 
+			in main() because userlog_file had a good value. */
 
     } else {
 		/* else get the job queue either from quill or the schedd. */
@@ -3284,12 +3330,17 @@ setupAnalysis()
 	char		buffer[64];
 	char		*preq;
 	ClassAd		*ad;
-	char		remoteUser[128];
+	string		remoteUser;
 	int			index;
+
+	
+	if (verbose) {
+		fprintf(stderr, "Fetching machine ads for analysis...");
+	}
 
 	// fetch startd ads
     if (machineads_file != NULL) {
-        if (!read_classad_file(machineads_file, startdAds)) {
+        if (!read_classad_file(machineads_file, startdAds, NULL)) {
             exit ( 1 );
         }
     } else {
@@ -3300,14 +3351,28 @@ setupAnalysis()
         }
     }
 
+	if (verbose) {
+		fprintf(stderr, "Done.\nFound %d machines ads.\n", startdAds.Length());
+	}
+
+
+	if (verbose) {
+		fprintf(stderr, "Fetching user priorities from negotiator...");
+	}
+
 	// fetch submittor prios
 	fetchSubmittorPrios();
+
+	if (verbose) {
+		fprintf(stderr, "Done.\n");
+	}
+
 
 	// populate startd ads with remote user prios
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
 		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
+			if( ( index = findSubmittor( remoteUser.c_str() ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
 							prioTable[index].prio );
 				ad->Insert( buffer );
@@ -3390,7 +3455,7 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !al.LookupString( attrName, name ) || 
+    	if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, priority ) )
             break;
 
@@ -3415,7 +3480,7 @@ static const char *
 doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
-	char	remoteUser[128];
+	string	remoteUser;
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
@@ -3448,7 +3513,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		snprintf( return_buff, sizeof(return_buff), "%s", buf.Value() );
 	}
 
-	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
+	if( !request->LookupString( ATTR_OWNER , owner, sizeof(owner) ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
@@ -3514,9 +3579,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
-		remoteUser[0] = '\0';
 		totalMachines++;
-		offer->LookupString( ATTR_NAME , buffer );
+		offer->LookupString( ATTR_NAME , buffer, sizeof(buffer) );
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
@@ -3615,7 +3679,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
 									return_buff,
-									remoteUser);
+									 remoteUser.c_str());
 						}
 						continue;
 					} else {
@@ -3623,7 +3687,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 						if( verbose ) {
 							sprintf( return_buff,
 								"%sAvailable (can preempt %s)\n",
-								return_buff, remoteUser);
+									 return_buff, remoteUser.c_str());
 						}
 						available++;
 					}
@@ -3653,7 +3717,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			if( verbose ) {
 				sprintf( return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
-					return_buff, remoteUser );
+						 return_buff, remoteUser.c_str() );
 			}
 			continue;
 		}
@@ -3819,7 +3883,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 
 static int
-findSubmittor( char *name ) 
+findSubmittor( const char *name ) 
 {
 	MyString 	sub(name);
 	int			last = prioTable.getlast();
@@ -3870,36 +3934,47 @@ fixSubmittorName( char *name, int niceUser )
 	return NULL;
 }
 
-static bool read_classad_file(const char *filename, ClassAdList &classads)
+static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr)
 {
-    int is_eof, is_error, is_empty;
-    bool success;
-    ClassAd *classad;
-    FILE *file;
+	int is_eof, is_error, is_empty;
+	bool success;
+	bool include_classad;
+	ClassAd *classad;
+	FILE *file;
 
-    file = safe_fopen_wrapper_follow(filename, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+	file = safe_fopen_wrapper_follow(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
-    } else {
-        do {
-            classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
-            if (!is_error && !is_empty) {
-                classads.Insert(classad);
-            }
-			else {
+	} else {
+		do {
+			classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
+			include_classad = !is_error && !is_empty;
+			if (constr) {
+				classad::Value result;
+				if (classad->EvaluateExpr(constr,result)) {
+					if ( ! result.IsBooleanValueEquiv(include_classad)) {
+						include_classad=false;
+					}
+				}
+			}
+			if (include_classad) {
+				classads.Insert(classad);
+			} else {
 				delete classad;
 			}
-        } while (!is_eof && !is_error);
-        if (is_error) {
-            success = false;
-        } else {
-            success = true;
-        }
+		} while (!is_eof && !is_error);
+
+		if (is_error) {
+			success = false;
+		} else {
+			success = true;
+		}
 		fclose(file);
-    }
-    return success;
+	}
+	return success;
 }
+
 
 #ifdef HAVE_EXT_POSTGRESQL
 
@@ -4039,11 +4114,11 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 		bool exhausted = false;
 		ad->LookupBool("SwapSpaceExhausted", exhausted);
 		if (exhausted) {
-			result_buf.sprintf_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
-			result_buf.sprintf_cat("           would exhaust swap space and cause thrashing.\n");
-			result_buf.sprintf_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
-			result_buf.sprintf_cat("           Or add more swap space.\n");
-			result_buf.sprintf_cat("           The analysis code does not take this into consideration\n");
+			result_buf.formatstr_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
+			result_buf.formatstr_cat("           would exhaust swap space and cause thrashing.\n");
+			result_buf.formatstr_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
+			result_buf.formatstr_cat("           Or add more swap space.\n");
+			result_buf.formatstr_cat("           The analysis code does not take this into consideration\n");
 		}
 
 		int maxJobsRunning 	= -1;
@@ -4054,9 +4129,9 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 		if ((maxJobsRunning > -1) && (totalRunningJobs > -1) && 
 			(maxJobsRunning == totalRunningJobs)) { 
-			result_buf.sprintf_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
-			result_buf.sprintf_cat("       to run more concurrent jobs, raise this limit in the config file\n");
-			result_buf.sprintf_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
+			result_buf.formatstr_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
+			result_buf.formatstr_cat("       to run more concurrent jobs, raise this limit in the config file\n");
+			result_buf.formatstr_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
 		}
 
 		int status = -1;
@@ -4088,10 +4163,10 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 				int req = 0;
 				if( !ad->EvalBool(schedd_requirements_attr,job,req) ) {
-					result_buf.sprintf_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
+					result_buf.formatstr_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
 				}
 				else if( !req ) {
-					result_buf.sprintf_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
+					result_buf.formatstr_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
 				}
 			}
 		}

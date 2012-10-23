@@ -348,6 +348,22 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		}
 	}
 
+		// CRUFT
+		// Starting in 7.9.1, in ATTR_GRID_JOB_ID, the grid-types
+		// pbs, sge, lsf, nqs, and naregi were made sub-types of
+		// 'batch'.
+	std::string orig_value;
+	if ( job_ad->LookupString( ATTR_GRID_JOB_ID, orig_value ) ) {
+		const char *orig_str = orig_value.c_str();
+		if ( strncasecmp( "pbs", orig_str, 3 ) == 0 ||
+			 strncasecmp( "sge", orig_str, 3 ) == 0 ||
+			 strncasecmp( "lsf", orig_str, 3 ) == 0 ||
+			 strncasecmp( "nqs", orig_str, 3 ) == 0 ||
+			 strncasecmp( "naregi", orig_str, 6 ) == 0 ) {
+			std::string new_value = "batch " + orig_value;
+			job_ad->Assign( ATTR_GRID_JOB_ID, new_value );
+		}
+	}
 }
 
 QmgmtPeer::QmgmtPeer()
@@ -3457,6 +3473,13 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						fallback++;
 					}
 
+					if (strchr(name, '.')) {
+						// . is a legal character for some find_config_macros, but not other
+						// check here if one snuck through
+						attribute_not_found = true;
+						break;
+						
+					}
 					// Look for the name in the ad.
 					// If it is not there, use the fallback.
 					// If no fallback value, then fail.
@@ -4680,6 +4703,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					 char const * user)
 {
 	ClassAd				*ad;
+
+	if (user && (strlen(user) == 0)) {
+		user = NULL;
+	}
+
 	bool match_any_user = (user == NULL) ? true : false;
 
 	ASSERT(my_match_ad);

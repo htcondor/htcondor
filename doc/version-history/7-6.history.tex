@@ -16,6 +16,153 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-10}Version 7.6.10}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.10 released on September 19, 2012.
+
+\item This release contains several important security fixes and all users
+should upgrade as soon as possible.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could expose information which would allow an attacker to control
+another user's job.  (CVE-2012-3493)
+
+\item \Security Some code that was no longer used was removed.  The presence
+of this code could have lead to a Denial-of-Service attack which would allow
+an attacker to remove another user's idle job.  (CVE-2012-3491)
+
+\item \Security Filesystem (FS) authentication was improved to check the UNIX
+permissions of the directory used for authentication.  Without this, an
+attacker may have been able to impersonate another submitter on the same submit
+machine.  (CVE-2012-3492)
+
+\item \Security Although not user-visible, there were multiple updates to
+remove places in the code where potential buffer overruns could occur, thus
+removing potential attacks.  None were known to be exploitable.
+
+\item \Security Although not user-visible, there were updates to the code to
+improve error checking of system calls, removing some potential security
+threats.  None were known to be exploitable.
+
+
+% https://access.redhat.com/security/cve/CVE-2012-349X
+
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-9}Version 7.6.9}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.9 released on August 15, 2012.
+
+\item \Security Fixed a critical problem with DNS handling.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Security Fixed a critical problem with DNS handling.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-8}Version 7.6.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.8 released on August 14, 2012.  It was pulled from the web on August 15 due to a problem in how it was built, and should not be used.  If you installed 7.6.8, please upgrade to 7.6.9 or later instead.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-6-7}Version 7.6.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +170,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.6.7 not yet released.
-%\item Condor version 7.6.7 released on Month Date, 2012.
+\item Condor version 7.6.7 released on May 12, 2012.
 
 \end{itemize}
 

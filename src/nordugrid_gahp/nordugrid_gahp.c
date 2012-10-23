@@ -141,7 +141,7 @@ typedef struct user_arg_struct {
 	globus_ftp_client_handle_t *handle;
 	globus_ftp_client_operationattr_t *op_attr;
 	ptr_ref_count *cred;
-	void *buff;
+	globus_byte_t *buff;
 	globus_size_t buff_len;
 	globus_size_t buff_filled;
 	int fd;
@@ -915,7 +915,7 @@ nordugrid_submit_start_callback( void *arg,
 
 	result = globus_ftp_client_cwd( user_arg->handle, url,
 									user_arg->op_attr,
-									(globus_byte_t **)&user_arg->buff,
+									&user_arg->buff,
 									&user_arg->buff_len,
 									nordugrid_submit_cwd1_callback, arg );
 	if ( result != GLOBUS_SUCCESS ) {
@@ -938,7 +938,7 @@ void nordugrid_submit_cwd1_callback( void *arg,
 		return;
 	}
 
-	if ( sscanf( (const char *) user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
+	if ( sscanf( (char *)user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
@@ -1027,8 +1027,8 @@ nordugrid_submit_cwd2_callback( void *arg,
 	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
-		output = (char *) globus_libc_malloc( 10 + strlen( (const char *) user_arg->cmd[1] ) +
-									 strlen( (const char *) user_arg->buff ) );
+		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+									 strlen( (char *) user_arg->buff ) );
 		globus_libc_sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
 							 (char *)user_arg->buff );
 	} else {
@@ -1093,9 +1093,9 @@ void nordugrid_status_start_callback( void *arg,
 		nordugrid_status_get_callback( arg, handle,
 									 globus_error_peek( result ) );
 	} else {
-		void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
+		globus_byte_t *read_buff = malloc( TRANSFER_BUFFER_SIZE );
 		result = globus_ftp_client_register_read( user_arg->handle,
-												  (globus_byte_t*)read_buff,
+												  read_buff,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_status_read_callback,
 												  arg );
@@ -1135,7 +1135,7 @@ void nordugrid_status_read_callback( void *arg,
 		user_arg->buff = globus_libc_realloc( user_arg->buff,
 											  user_arg->buff_len );
 	}
-	bcopy( buffer, (void *)((long)user_arg->buff + offset), length );
+	bcopy( buffer, (void *)(user_arg->buff + offset), length );
 	if ( user_arg->buff_filled < offset + length ) {
 		user_arg->buff_filled = offset + length;
 	}
@@ -1165,9 +1165,9 @@ void nordugrid_status_get_callback( void *arg,
 	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
-		((char *)user_arg->buff)[user_arg->buff_filled-1] = '\0';
-		output = (char *) globus_libc_malloc( 10 + strlen( (const char *) user_arg->cmd[1] ) +
-									 strlen( (const char *) user_arg->buff ) );
+		(user_arg->buff)[user_arg->buff_filled-1] = '\0';
+		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+									 strlen( (char *) user_arg->buff ) );
 		globus_libc_sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
 							 (char *)user_arg->buff );
 	} else {
@@ -1381,8 +1381,8 @@ void nordugrid_stage_in_start_file_callback( void *arg,
 			error = globus_error_peek( result );
 			goto stage_in_end;
 		} else {
-			void *write_buff = malloc( TRANSFER_BUFFER_SIZE );
-			nordugrid_stage_in_write_callback( arg, handle, error, (globus_byte_t*)write_buff,
+			globus_byte_t *write_buff = malloc( TRANSFER_BUFFER_SIZE );
+			nordugrid_stage_in_write_callback( arg, handle, error, write_buff,
 										   0, 0, GLOBUS_FALSE );
 		}
 
@@ -1609,9 +1609,9 @@ void nordugrid_stage_out2_start_file_callback( void *arg,
 			error = globus_error_peek( result );
 			goto stage_out2_end;
 		} else {
-			void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
+			globus_byte_t *read_buff = malloc( TRANSFER_BUFFER_SIZE );
 			result = globus_ftp_client_register_read( user_arg->handle,
-													 (globus_byte_t*)read_buff,
+													 read_buff,
 													  TRANSFER_BUFFER_SIZE,
 													  nordugrid_stage_out2_read_callback,
 													  arg );
@@ -1775,9 +1775,9 @@ void nordugrid_exit_info_start_callback( void *arg,
 		nordugrid_exit_info_get_callback( arg, handle,
 										globus_error_peek( result ) );
 	} else {
-		void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
+		globus_byte_t *read_buff = malloc( TRANSFER_BUFFER_SIZE );
 		result = globus_ftp_client_register_read( user_arg->handle,
-												  (globus_byte_t*)read_buff,
+												  read_buff,
 												  TRANSFER_BUFFER_SIZE,
 												  nordugrid_exit_info_read_callback,
 												  arg );
@@ -1817,9 +1817,9 @@ void nordugrid_exit_info_read_callback( void *arg,
 		}
 		user_arg->buff = globus_libc_realloc( user_arg->buff,
 											  user_arg->buff_len );
-		memset( (void *)((long)user_arg->buff + old_len), '*', (long) user_arg->buff_len - old_len );
+		memset( (void *)(user_arg->buff + old_len), '*', (long) user_arg->buff_len - old_len );
 	}
-	bcopy( buffer, (void*)((long)user_arg->buff + offset), length );
+	bcopy( buffer, (void*)(user_arg->buff + offset), length );
 	if ( user_arg->buff_filled < offset + length ) {
 		user_arg->buff_filled = offset + length;
 	}
@@ -1860,7 +1860,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 			/* Add a null to the end of the buffer so that we don't
 			 * run off the end when doing string searches or printing.
 			 */
-		((char *)user_arg->buff)[user_arg->buff_filled] = '\0';
+		(user_arg->buff)[user_arg->buff_filled] = '\0';
 
 		while ( strncmp( file, "WallTime", 8 ) ) {
 			file = strchr( file, '\n' );
@@ -1921,7 +1921,7 @@ void nordugrid_exit_info_get_callback( void *arg,
 		while ( strncmp( file, "WallTime", 8 ) ) {
 			file = strchr( file, '\n' );
 			if ( file == NULL ) {
-				file = (char *) ( (long)user_arg->buff + user_arg->buff_filled );
+				file = ( (char *)user_arg->buff + user_arg->buff_filled );
 				break;
 			} else {
 				file += 1;
@@ -2288,8 +2288,8 @@ void gridftp_transfer_start_callback( void *arg,
 											globus_error_peek( result ) );
 			return;
 		} else {
-			void *write_buff = malloc( TRANSFER_BUFFER_SIZE );
-			gridftp_transfer_write_callback( arg, handle, error, (globus_byte_t *)write_buff,
+			globus_byte_t *write_buff = malloc( TRANSFER_BUFFER_SIZE );
+			gridftp_transfer_write_callback( arg, handle, error, write_buff,
 											 0, 0, GLOBUS_FALSE );
 		}
 
@@ -2313,9 +2313,9 @@ void gridftp_transfer_start_callback( void *arg,
 			gridftp_transfer_done_callback( arg, handle, globus_error_peek( result ) );
 			return;
 		} else {
-			void *read_buff = malloc( TRANSFER_BUFFER_SIZE );
+			globus_byte_t *read_buff = malloc( TRANSFER_BUFFER_SIZE );
 			result = globus_ftp_client_register_read( user_arg->handle,
-													  (globus_byte_t *)read_buff,
+													  read_buff,
 													  TRANSFER_BUFFER_SIZE,
 													  gridftp_transfer_read_callback,
 													  arg );

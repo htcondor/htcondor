@@ -47,7 +47,7 @@ set<MyString> open_files_in_pid(pid_t pid)
 	}
 
 #else
-
+	if (pid) {} // Fight compiler warnings!
 	EXCEPT("open_files(): Only available for LINUX!");
 
 #endif

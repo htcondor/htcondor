@@ -36,8 +36,6 @@ HashTable <HashKey, CondorResource *>
 HashTable <HashKey, CondorResource::ScheddPollInfo *>
     CondorResource::PollInfoByName( 100, hashFunction );
 
-int CondorResource::scheddPollInterval = 300;		// default value
-
 const char *CondorResource::HashName( const char *resource_name,
 									  const char *pool_name,
 									  const char *proxy_subject )
@@ -221,7 +219,7 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 	}
 }
 
-void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
+void CondorResource::CondorRegisterJob( CondorJob *job, const char *submitter_id )
 {
 	BaseResource::RegisterJob( job );
 
@@ -232,15 +230,17 @@ void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 										  ATTR_SUBMITTER_ID,
 										  submitter_id );
 		} else {
-			sprintf_cat( submitter_constraint, "||(%s=?=\"%s\")",
+			formatstr_cat( submitter_constraint, "||(%s=?=\"%s\")",
 											  ATTR_SUBMITTER_ID,
 											  submitter_id );
 		}
 	}
 }
 
-void CondorResource::UnregisterJob( CondorJob *job )
+void CondorResource::UnregisterJob( BaseJob *base_job )
 {
+	CondorJob *job = dynamic_cast<CondorJob*>( base_job );
+
 	ScheddPollInfo *poll_info = NULL;
 	PollInfoByName.lookup( HashKey( HashName( scheddName, poolName, NULL ) ),
 						   poll_info );
@@ -261,7 +261,7 @@ void CondorResource::DoScheddPoll()
 		 scheddStatusActive == false ) {
 			// No jobs or we can't talk to the schedd, so no point
 			// in polling
-		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
+		daemonCore->Reset_Timer( scheddPollTid, BatchStatusInterval() );
 		return;
 	}
 
@@ -292,8 +292,8 @@ void CondorResource::DoScheddPoll()
 		}
 
 		if ( poll_info->m_pollActive == true ||
-			 poll_info->m_lastPoll + scheddPollInterval > time(NULL) ) {
-			daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
+			 poll_info->m_lastPoll + BatchStatusInterval() > time(NULL) ) {
+			daemonCore->Reset_Timer( scheddPollTid, BatchStatusInterval() );
 			return;
 		}
 
@@ -425,7 +425,7 @@ void CondorResource::DoScheddPoll()
 
 		dprintf( D_FULLDEBUG, "Collective poll complete: %s\n", scheddName );
 
-		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
+		daemonCore->Reset_Timer( scheddPollTid, BatchStatusInterval() );
 	}
 }
 

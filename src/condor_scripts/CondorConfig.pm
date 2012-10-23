@@ -60,7 +60,7 @@ sub new( $$ )
     $self->SetFromConfig( "ARCH" );
     $self->SetFromConfig( "OPSYS" );
     $self->SetFromConfig( "OPSYSVER" );
-    $self->SetFromConfig( "OPSYS_AND_VER" );
+    $self->SetFromConfig( "OPSYSANDVER" );
     $self->SetFromConfig( "FILESYSTEM_DOMAIN" );
     $self->SetFromConfig( "UID_DOMAIN" );
     $self->SetFromConfig( "IP_ADDRESS" );

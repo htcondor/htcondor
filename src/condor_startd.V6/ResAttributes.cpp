@@ -356,28 +356,28 @@ MachAttributes::compute( amask_t how_much )
 		if( m_opsys_and_ver ) {
 			free( m_opsys_and_ver );
 		}
-		m_opsys_and_ver = param( "OPSYS_AND_VER" );
-		m_opsys_major_ver = param_integer( "OPSYS_MAJOR_VER", 0 );
+		m_opsys_and_ver = param( "OPSYSANDVER" );
+		m_opsys_major_ver = param_integer( "OPSYSMAJORVER", 0 );
 
 		if( m_opsys_name ) {
 			free( m_opsys_name );
                 } 
-		m_opsys_name = param( "OPSYS_NAME" );
+		m_opsys_name = param( "OPSYSNAME" );
 
 		if( m_opsys_long_name ) {
 			free( m_opsys_long_name );
                 } 
-		m_opsys_long_name = param( "OPSYS_LONG_NAME" );
+		m_opsys_long_name = param( "OPSYSLONGNAME" );
 
 		if( m_opsys_short_name ) {
 			free( m_opsys_short_name );
                 } 
-		m_opsys_short_name = param( "OPSYS_SHORT_NAME" );
+		m_opsys_short_name = param( "OPSYSSHORTNAME" );
 
 		if( m_opsys_legacy ) {
 			free( m_opsys_legacy );
                 } 
-		m_opsys_legacy = param( "OPSYS_LEGACY" );
+		m_opsys_legacy = param( "OPSYSLEGACY" );
 
        		// temporary attributes for raw utsname info
 		if( m_utsname_sysname ) {
@@ -1002,6 +1002,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
     c_slotres_map = slotres_map;
+    c_slottot_map = slotres_map;
 	c_execute_dir = execute_dir;
 	c_execute_partition_id = execute_partition_id;
 	c_idle = -1;
@@ -1148,7 +1149,16 @@ void
 CpuAttributes::show_totals( int dflag )
 {
 	::dprintf( dflag | D_NOHEADER, 
+			 "slot type %d: " , c_type);
+
+	
+	if( c_num_cpus == AUTO_CPU ) {
+		::dprintf( dflag | D_NOHEADER, 
+			 "Cpus: auto");
+	} else {
+		::dprintf( dflag | D_NOHEADER, 
 			 "Cpus: %d", c_num_cpus);
+	}
 
 	if( c_phys_mem == AUTO_MEM ) {
 		::dprintf( dflag | D_NOHEADER, 
@@ -1254,6 +1264,7 @@ AvailAttributes::AvailAttributes( MachAttributes* map ):
 	m_execute_partitions(500,MyStringHash,updateDuplicateKeys)
 {
 	a_num_cpus = map->num_cpus();
+	a_num_cpus_auto_count = 0;
 	a_phys_mem = map->phys_mem();
 	a_phys_mem_auto_count = 0;
 	a_virt_mem_fraction = 1.0;
@@ -1396,8 +1407,8 @@ AvailAttributes::show_totals( int dflag, CpuAttributes *cap )
 {
 	AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
 	::dprintf( dflag | D_NOHEADER, 
-			 "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
-			 a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
+			 "Slot #%d: Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
+			 cap->c_type, a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
 			 100*partition.m_disk_fraction );
     for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
         ::dprintf(dflag | D_NOHEADER, ", %s: %d", j->first.c_str(), int(j->second));

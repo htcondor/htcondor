@@ -4211,22 +4211,30 @@ WANT_HOLD_REASON = \
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
   A comma separated list of directories. 
   For each directory in the list, 
-  Condor creates a directory in the job's temporary scratch directory,
-  but make it available at the given name using bind mounts.
+  Condor creates a directory in the job's temporary scratch directory with that name,
+  and makes it available at the given name using bind mounts.
   This is available on Linux systems which provide bind mounts 
   and per-process tree mount tables,
-  such as Red Hat Enterprise Linux 5.
+  such as Red Hat Enterprise Linux 5.  
+  A bind mount is like a symbolic link,
+  but is not globally visible to all processes.
+  It is only visible to the job and the job's child processes.
   As an example:
 \begin{verbatim}
   MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
 \end{verbatim}
-  The job will think that it sees the usual \File{/tmp} and \File{/var/tmp}
-  directories, 
-  but they will actually exist as subdirectories in 
-  the job's temporary scratch directory. 
+  The job will see the usual \File{/tmp} and \File{/var/tmp}
+  directories, but when accessing files via these paths, the
+  system will redirect the access. 
+  The resultant files will actually end up in directories named 
+  \File{tmp} or \File{var/tmp}
+  under the the job's temporary scratch directory. 
   This is useful, because the job's scratch directory will be cleaned up 
-  after the job completes,
+  after the job completes, 
+  two concurrent jobs will not interfere with each other,
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
+  Another use case might be for home directories, which some jobs might want
+  to write to, but that should be cleaned up after each job run.
 
 \end{description}
 
@@ -6435,6 +6443,13 @@ do not specify their own with:
   When \Expr{True}, \Condor{submit} issues warnings when a job requests
   features that are no longer supported. 
 
+\label{param:InteractiveSubmitFile}
+\item[\Macro{INTERACTIVE\_SUBMIT\_FILE}]
+  The path and file name of a submit description file that \Condor{submit}
+  will use in the specification of an interactive job.
+  The default is \File{\MacroUNI{RELEASE\_DIR}/libexec/interactive.sub}
+  when not defined.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6880,30 +6895,31 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:DefaultPrioFactor} 
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
-  This macro sets the priority factor for local users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 1.
+  Sets the priority factor for local users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 1.0.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
-  This macro sets the priority factor for nice users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000000.
+  Sets the priority factor for nice users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 10000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
-  This macro defines the priority factor for remote users (users who
-  who do not belong to the accountant's local domain - see
-  below). See section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000.
+  Defines the priority factor for remote users,
+  which are those users who who do not belong to the local domain.
+  See section~\ref{sec:UserPrio} for details.  
+  Defaults to 10000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
-  This macro is used to decide if a user is local or remote. A user
-  is considered to be in the local domain if the UID\_DOMAIN matches
-  the value of this macro. Usually, this macro is set
-  to the local UID\_DOMAIN. If it is not defined, all users are considered
-  local.
+  Describes the local UID domain.
+  This variable is used to decide if a user is local or remote. 
+  A user is considered to be in the local domain if their UID domain matches
+  the value of this variable. Usually, this variable is set
+  to the local UID domain. 
+  If not defined, all users are considered local.
 
 \label{param:MaxAccountantDatabaseSize}
 \item[\Macro{MAX\_ACCOUNTANT\_DATABASE\_SIZE}] 
@@ -7374,6 +7390,16 @@ The following configuration macros affect negotiation for group users.
   unless the sum of subgroup quotas is considerably less than the group's
   quota, as scaling is currently based on the number of machines available,
   not assigned quotas (for static quotas).
+
+\label{param:GroupSeparator}
+\item[\Macro{GROUP\_SEPARATOR}]
+  A string value that contains the separator character used between
+accounting groups and the user name.  Defaults to \Expr{``.''} for
+backward compatability.  In this example, the separator character is set
+to \Expr{``:''}, to allow the use of \Expr{``.''} in user names:
+\begin{verbatim}
+GROUP_SEPARATOR = ":"
+\end{verbatim}
 
 \end{description}
 
@@ -9002,6 +9028,14 @@ section~\ref{sec:Security} on Security.
   X.509 proxy to be used in GSI authentication.
   When this configuration variable is defined, use of this proxy
   takes precedence over use of a certificate and key.
+
+\label{param:GSIAuthzConf}
+\item[\Macro{GSI\_AUTHZ\_CONF}]
+  A complete path and file name of the
+  Globus mapping library that looks for the mapping call out configuration.
+  There is no default value; as such, Condor uses the environment
+  variable \Env{GSI\_AUTHZ\_CONF} when this variable is not defined.
+  Setting this variable to \Expr{/dev/null} disables callouts.
 
 \label{param:DelegateJobGSICredentials} 
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]
@@ -10977,10 +11011,10 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   Machines are automatically excluded if they are already draining,
   or if they match \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
 
-\label{param:DefragRequirements}
+\label{param:DefragCancelRequirements}
 \item[\Macro{DEFRAG\_CANCEL\_REQUIREMENTS}] An expression that specifies
   which draining machines should have draining be canceled.  This defaults
-  to \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  This could be used to drain
+  to \MacroU{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  This could be used to drain
   partial rather than whole machines.
 
 \label{param:DefragRank}

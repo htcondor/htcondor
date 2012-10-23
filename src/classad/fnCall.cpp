@@ -28,6 +28,10 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 
+#ifndef WIN32
+#include <sys/time.h>
+#endif
+
 #if defined(WIN32) && !defined(USE_PCRE) && !defined(USE_POSIX_REGEX)
   #define USE_PCRE
   #define HAVE_PCRE_H
@@ -2496,13 +2500,23 @@ debug( const char* name,const ArgumentList &argList,EvalState &state,
 	bool old_debug = state.debug;
 	state.debug = true;
 
+	double diff = 0;
+#ifndef WIN32
+	struct timeval begin, end;
+	gettimeofday(&begin, NULL);
+#endif
 	if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );
 		return( false );
 	}
+#ifndef WIN32
+	gettimeofday(&end, NULL);
+	diff = (end.tv_sec + (end.tv_usec * 0.000001)) -
+		(begin.tv_sec + (begin.tv_usec * 0.000001));
+#endif
 	state.debug = old_debug;
 	result = arg;
-	argList[0]->debug_format_value(result);
+	argList[0]->debug_format_value(result, diff);
 	return true;
 }
 

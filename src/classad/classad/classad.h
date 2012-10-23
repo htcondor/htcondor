@@ -109,7 +109,7 @@ class ClassAd : public ExprTree
 		*/
 		bool Insert( const std::string& attrName, ExprTree *& pRef, bool cache=true);
 		bool Insert( const std::string& attrName, ClassAd *& expr, bool cache=true );
-		bool Insert( std::string& serialized_nvp);
+		bool Insert( const std::string& serialized_nvp);
 
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is

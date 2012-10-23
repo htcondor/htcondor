@@ -33,9 +33,10 @@
 #include "iso_dates.h"
 #include "basename.h" // for condor_dirname
 #include "match_prefix.h"
-#include "condor_xml_classads.h"
 #include "subsystem_info.h"
 #include "historyFileFinder.h"
+#include "condor_id.h"
+#include "userlog_to_classads.h"
 
 #include "history_utils.h"
 #include "backward_file_reader.h"
@@ -56,6 +57,7 @@ void Usage(char* name, int iExitCode)
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-file <file>\t\tRead history data from specified file\n"
+		"\t\t-userlog <file>\tRead job data specified userlog file\n"
 		"\t\t-backwards\t\tList jobs in reverse chronological order\n"
 		"\t\t-forwards\t\tList jobs in chronological order\n"
 		"\t\t-match <number>\t\tLimit the number of jobs displayed\n"
@@ -83,9 +85,10 @@ static bool checkDBconfig();
 static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static void readHistoryFromFiles(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
+static void printJobAds(ClassAdList & jobs);
 
 static int parse_autoformat_arg(int argc, char* argv[], int ixArg, const char *popts, AttrListPrintMask & print_mask, List<const char> & print_head);
 
@@ -127,6 +130,7 @@ main(int argc, char* argv[])
   char *completedsince = NULL;
   char *owner=NULL;
   bool readfromfile = false;
+  bool fileisuserlog = false;
 
   char* JobHistoryFileName=NULL;
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
@@ -236,6 +240,13 @@ main(int argc, char* argv[])
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
     }
+	else if (is_dash_arg_prefix(argv[i],"userlog",1)) {
+		if (i+1==argc || JobHistoryFileName) break;
+		i++;
+		JobHistoryFileName=argv[i];
+		readfromfile = true;
+		fileisuserlog = true;
+	}
     else if (is_dash_arg_prefix(argv[i],"help",1)) {
 		Usage(argv[0],0);
     }
@@ -461,7 +472,7 @@ main(int argc, char* argv[])
   }
   
   if(readfromfile == true) {
-      readHistoryFromFiles(JobHistoryFileName, constraint.c_str(), constraintExpr);
+      readHistoryFromFiles(fileisuserlog, JobHistoryFileName, constraint.c_str(), constraintExpr);
   }
   
   
@@ -853,7 +864,7 @@ static char * getDBConnStr(char *&quillName,
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
 	// Print header
 	if ( ! longformat) {
@@ -877,8 +888,18 @@ static void readHistoryFromFiles(const char *JobHistoryFileName, const char* con
 	}
 
     if (JobHistoryFileName) {
-        // If the user specified the name of the file to read, we read that file only.
-        readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+        if (fileisuserlog) {
+            ClassAdList jobs;
+            if ( ! userlog_to_classads(JobHistoryFileName, jobs, NULL, 0, constraint)) {
+                fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
+                exit(1);
+            }
+            printJobAds(jobs);
+            jobs.Clear();
+        } else {
+            // If the user specified the name of the file to read, we read that file only.
+            readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+        }
     } else {
         // The user didn't specify the name of the file to read, so we read
         // the history file, and any backups (rotated versions). 
@@ -1084,10 +1105,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
     while(!EndFlag) {
@@ -1168,10 +1188,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         }
     }
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
     fclose(LogFile);
     return;
@@ -1194,6 +1213,26 @@ static bool starts_with(const char * p1, const char * p2, const char ** ppEnd = 
 	if (ppEnd)
 		*ppEnd = p1e;
 	return true;
+}
+
+// print a single job ad
+//
+static void printJob(ClassAd & ad)
+{
+	if (longformat) {
+		if (use_xml) {
+			ad.fPrintAsXML(stdout);
+		} else {
+			ad.fPrint(stdout);
+		}
+		printf("\n");
+	} else {
+		if (customFormat) {
+			mask.display(stdout, &ad);
+		} else {
+			displayJobShort(&ad);
+		}
+	}
 }
 
 // convert list of expressions into a classad
@@ -1219,21 +1258,30 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 
 	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
-		if (longformat) {
-			if (use_xml) {
-				ad.fPrintAsXML(stdout);
-			} else {
-				ad.fPrint(stdout);
-			}
-			printf("\n");
-		} else {
-			if (customFormat) {
-				mask.display(stdout, &ad);
-			} else {
-				displayJobShort(&ad);
-			}
-		}
+		printJob(ad);
 		matchCount++; // if control reached here, match has occured
+	}
+}
+
+static void printJobAds(ClassAdList & jobs)
+{
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
+	}
+
+	jobs.Open();
+	ClassAd	*job;
+	while (( job = jobs.Next())) {
+		printJob(*job);
+	}
+	jobs.Close();
+
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
 }
 
@@ -1261,10 +1309,9 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
 	std::string line;        // holds the current line from the log file.
@@ -1326,10 +1373,9 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
 	reader.Close();
 }

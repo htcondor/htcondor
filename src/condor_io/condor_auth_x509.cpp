@@ -765,9 +765,10 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		// store the raw subject name for later mapping
 		setAuthenticatedName(server);
 
-		// Default to user name "gsi".
+		// Default to user name "gsi@unmapped".
 		// Later on, if configured, we will invoke the callout in nameGssToLocal.
 		setRemoteUser("gsi");
+		setRemoteDomain( UNMAPPED_DOMAIN );
 
 		// extract and store VOMS attributes
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
@@ -955,6 +956,7 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 		// store the raw subject name for later mapping
 		setAuthenticatedName(GSSClientname);
 		setRemoteUser("gsi");
+		setRemoteDomain( UNMAPPED_DOMAIN );
 
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 

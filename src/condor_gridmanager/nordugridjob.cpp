@@ -124,9 +124,6 @@ void NordugridJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	NordugridJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	NordugridJob::setGahpCallTimeout( tmp_int );
 
@@ -158,7 +155,6 @@ BaseJob *NordugridJobCreate( ClassAd *jobad )
 	return (BaseJob *)new NordugridJob( jobad );
 }
 
-int NordugridJob::probeInterval = 300;	// default value
 int NordugridJob::submitInterval = 300;	// default value
 int NordugridJob::gahpCallTimeout = 300;	// default value
 int NordugridJob::maxConnectFailures = 3;	// default value
@@ -220,7 +216,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	gahp_path = NULL;
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -253,7 +249,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( strrchr( buff, ' ' ) ) {
 		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
 		myResource->AlreadySubmitted( this );
@@ -528,13 +524,14 @@ void NordugridJob::doEvaluateState()
 					probeNow = false;
 				}
 /*
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOB;
 					break;
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 */
@@ -834,7 +831,7 @@ void NordugridJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -1011,7 +1008,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				sprintf_cat( *rsl, " \"%s\")", file );
+				formatstr_cat( *rsl, " \"%s\")", file );
 			} else {
 				*rsl += " \"\")";
 			}
@@ -1054,7 +1051,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( local_file ) ) {
-				sprintf_cat( *rsl, " \"%s\")", local_file );
+				formatstr_cat( *rsl, " \"%s\")", local_file );
 			} else {
 				*rsl += " \"\")";
 			}

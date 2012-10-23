@@ -52,7 +52,7 @@ hashFuncVoidPtr( void* const & pv )
    unsigned int ui = 0;
    for (int ix = 0; ix < (int)(sizeof(void*) / sizeof(int)); ++ix)
       {
-      ui += ((unsigned int*)&pv)[ix];
+      ui += ((unsigned int const*)&pv)[ix];
       }
    return ui;
 }

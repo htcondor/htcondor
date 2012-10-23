@@ -362,6 +362,20 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 		} else {
 			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
 		}
+#if defined(HAVE_EXT_GLOBUS)
+	} else if (auth_status == CAUTH_GSI ) {
+		// Fall back to using the globus mapping mechanism.  GSI is a bit unique in that
+		// it may be horribly expensive - or cause a SEGFAULT - to do an authorization callout.
+		// Hence, we delay it until after we apply a mapfile or, here, have no map file.
+		// nameGssToLocal calls setRemoteFoo directly.
+		const char * name_to_map = authenticator_->getAuthenticatedName();
+		if (name_to_map) {
+			int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(name_to_map);
+			dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
+		} else {
+			dprintf (D_SECURITY, "ZKM: name to map is null, not calling GSI authorization.\n");
+		}
+#endif
 	}
 	// for now, let's be a bit more verbose and print this to D_SECURITY.
 	// yeah, probably all of the log lines that start with ZKM: should be
@@ -508,10 +522,20 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		} else {
 			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", canonical_user.Value());
 		}
+	} else if (authentication_type == CAUTH_GSI) {
+        // See notes above around the nameGssToLocal call about why we invoke GSI authorization here.
+        // Theoretically, it should be impossible to hit this case - the invoking function thought
+		// we had a mapfile, but we couldnt create one.  This just covers weird corner cases.
+
+#if defined(HAVE_EXT_GLOBUS)
+		int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(authentication_name);
+		dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
+#else
+		dprintf(D_ALWAYS, "ZKM: GSI not compiled, so can't call nameGssToLocal!!");
+#endif
 	} else {
 		dprintf (D_FULLDEBUG, "ZKM: global_map_file not present!\n");
 	}
-
 }
 
 void Authentication::split_canonical_name(char const *can_name,char **user,char **domain) {

@@ -18,6 +18,8 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_config.h"
 #include "filename_tools.h"
 #include "MyString.h"
 
@@ -115,8 +117,21 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 	}
 }
 
-int filename_remap_find( const char *input, const char *filename, MyString &output )
+int filename_remap_find( const char *input, const char *filename, MyString &output, int cur_remap_level )
 {
+	if (cur_remap_level == 0) {
+		dprintf( D_FULLDEBUG, "REMAP: begin with rules: %s\n", input);
+	}
+	dprintf( D_FULLDEBUG, "REMAP: %i: %s\n", cur_remap_level, filename );
+
+	// if remaps create a loop, this will break it
+	int max_remap_level = param_integer("MAX_REMAP_RECURSIONS", 20);
+	if (cur_remap_level > max_remap_level) {
+		dprintf( D_FULLDEBUG, "REMAP: aborting after %i iterations\n", cur_remap_level);
+		output.formatstr("<abort>");
+		return -1;
+	}
+
 	char *name;
 	char *url;
 	char *buffer,*p;
@@ -160,6 +175,54 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 	free(buffer);
 	free(name);
 	free(url);
+
+	// allow directories to be remapped.
+	//
+	// above, we attempted to find an exact match of a rule to map <filename>
+	// to <output>.
+	//
+	// if that succeeded, recursively call ourselves again to see if more maps
+	// apply.
+	//
+	// if it did not succeed, then split the filename into parent/entry
+	// where entry contains no slashes and recursively call this function in
+	// attempt to remap all or some of the parent dir
+	//
+	// recursion stops when there are no more directories to pop, or we reach a
+	// limit (years of careful research says 20) which likely means there is a
+	// cycle in the rules.
+
+	if(found) {
+		// recurse, using the same remap rules (input)
+		MyString new_map;
+		int res = filename_remap_find( input, output.Value(), new_map, cur_remap_level+1 );
+		if (res == -1) {
+			MyString tmp = output;
+			output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_map.Value());
+			return -1;
+		}
+		if (res) {
+			output = new_map;
+		}
+	} else {
+		MyString parent;
+		MyString entry;
+    	if(filename_split( filename, parent, entry )) {
+			MyString new_parent;
+			int res = filename_remap_find( input, parent.Value(), new_parent, cur_remap_level+1 );
+			if (res == -1) {
+				output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_parent.Value());
+				return -1;
+			}
+			if (res) {
+				found = 1;
+				output.formatstr("%s%c%s",new_parent.Value(),DIR_DELIM_CHAR,entry.Value());
+			}
+		} else {
+			// can't be split
+		}
+	}
+
 	return found;
 }
 

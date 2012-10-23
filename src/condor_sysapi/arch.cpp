@@ -144,7 +144,9 @@ sysapi_get_windows_info(void)
 	opsys_legacy = strdup( tmp_info );
 	opsys = strdup( "WINDOWS" );
 	
-	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
+	if (info.dwMajorVersion == 6 && info.dwMinorVersion == 2) {
+		opsys_super_short_name = strdup("8");
+	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 1) {
 		opsys_super_short_name = strdup("7");
 	} else if (info.dwMajorVersion == 6 && info.dwMinorVersion == 0) {
 		opsys_super_short_name = strdup("Vista");
@@ -377,7 +379,7 @@ init_arch(void)
 	// NAME             OLD  ==> Linux       | BSD          | UNIX    | Windows
 	// ---------------------------------------------------------------------------
 	// OpSys =         LINUX ==> LINUX       | OSX          | AIX     | WINDOWS
-	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX703    | AIX53   | WINDOWS601
+	// OpSysAndVer =   LINUX ==> RedHat5     | MacOSX7      | AIX53   | WINDOWS601
 	// OpSysVer =        206 ==> 501         | 703          | 503     | 601
 	// OpSysShortName =  N/A ==> Linux       | MACOSX       | AIX     | Win7 
 	// OpSysLongName =   N/A ==> Red Hat 5.1 | MACOSX 7.3   | AIX 5.3 | Windows 7 SP2
@@ -393,15 +395,15 @@ init_arch(void)
 	opsys_long_name = sysapi_get_darwin_info();  
 	opsys_major_version = sysapi_find_darwin_major_version( opsys_long_name );
 	opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_version );
+	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_major_version );
 	opsys_name = sysapi_find_darwin_opsys_name( opsys_major_version );
 	
 #elif defined( CONDOR_FREEBSD )
 
 	opsys = strdup( "FREEBSD" );
 	opsys_legacy = strdup( opsys );
-	opsys_name = strdup ( opsys );
  	opsys_short_name = strdup( "FreeBSD" );
+	opsys_name = strdup ( opsys_short_name );
 	opsys_long_name = sysapi_get_bsd_info( opsys_short_name, buf.release ); 
 	opsys_major_version = sysapi_find_major_version( buf.release );
 	opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
@@ -421,14 +423,21 @@ init_arch(void)
 
      	} else
         {
+		// if opsys_long_name is "Solaris 11.250"
+		//    opsys_name      is "Solaris"
+		//    opsys_legacy    is "SOLARIS"
+		//    opsys           is "SOLARIS"
+		//    opsys_short_name is "Solaris"
+		//    opsys_versioned  is "Solaris11"
 		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
-		opsys = strdup( opsys_long_name );
-		opsys_legacy = strdup( opsys );
+		char * p = strdup( opsys_long_name );
+		opsys_name = p; p = strchr(p, ' '); if (p) *p = 0;
+		opsys_legacy = p = strdup( opsys_name ); for (; *p; ++p) { *p = toupper(*p); }
+		opsys = strdup( opsys_legacy );
+		opsys_short_name = strdup( opsys_name );
 		opsys_major_version = sysapi_find_major_version( opsys_long_name );
 		opsys_version = sysapi_translate_opsys_version( opsys_long_name );
-		opsys_versioned = sysapi_find_opsys_versioned( opsys, opsys_major_version );
-		opsys_name = strdup( opsys );
-		opsys_short_name = strdup( opsys );
+		opsys_versioned = sysapi_find_opsys_versioned( opsys_name, opsys_major_version );
         }
 
 #endif
@@ -476,12 +485,12 @@ const char *
 sysapi_get_darwin_info(void)
 {
     char ver_str[255];
-    char *args[] = {"/usr/bin/sw_vers", "-productVersion", NULL};
+    const char *args[] = {"/usr/bin/sw_vers", "-productVersion", NULL};
     FILE *output_fp;
 
     char tmp_info[262];
     char *info_str;
-    char *os_name = "MacOSX ";
+    const char *os_name = "MacOSX ";
  
     if ((output_fp = my_popenv(args, "r", FALSE)) != NULL) {
 	fgets(ver_str, 255, output_fp);
@@ -709,7 +718,6 @@ sysapi_get_unix_info( const char *sysname,
 	if( !strcmp(sysname, "SunOS")
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
-        sprintf( tmp, "SOLARIS" );
 		if ( !strcmp(release, "2.11") //LDAP entry
 			|| !strcmp(release, "5.11") )
 		{
@@ -753,6 +761,8 @@ sysapi_get_unix_info( const char *sysname,
 		else {
             pver = release;
 		}
+		if (!strcmp(version,"11.0")) version = "11";
+        sprintf( tmp, "Solaris %s.%s", version, pver );
 	}
 
 	else if( !strcmp(sysname, "HP-UX") ) {

@@ -379,7 +379,7 @@ IpVerify::UserHashToString(UserHash_t *user_hash, MyString &result)
 		if( users ) {
 			users->rewind();
 			while( (user=users->next()) ) {
-				result.sprintf_cat(" %s/%s",
+				result.formatstr_cat(" %s/%s",
 								   user,
 								   host.Value());
 			}
@@ -394,7 +394,7 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 		// to print IPv4 address neatly.
 	char buf[INET6_ADDRSTRLEN];
 	memset((void*)buf, 0, sizeof(buf));
-	uint32_t* addr = (uint32_t*)&host;
+	const uint32_t* addr = (const uint32_t*)&host;
 		// checks if IPv4-mapped-IPv6 address
 	
 	const char* ret = NULL;
@@ -909,7 +909,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			// of typo or DNS problem), record all the hostnames we
 			// searched for.
 			if( allow_reason && !peer_description.IsEmpty() ) {
-				allow_reason->sprintf_cat(
+				allow_reason->formatstr_cat(
 					"; identifiers used for this remote host: %s",
 					peer_description.Value());
 			}

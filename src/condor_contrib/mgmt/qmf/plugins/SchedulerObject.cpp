@@ -113,17 +113,17 @@ SchedulerObject::update(const ClassAd &ad)
     DOUBLE(JobCompletionRate);
     INTEGER(JobsExited);
     INTEGER(ShadowExceptions);
-    INTEGER(JobsSubmittedCum);
-    INTEGER(JobsCompletedCum);
-    INTEGER(JobsExitedCum);
-    INTEGER(ShadowExceptionsCum);
-    INTEGER(JobsStartedCum);
+    INTEGER(JobsSubmittedCumulative);
+    INTEGER(JobsCompletedCumulative);
+    INTEGER(JobsExitedCumulative);
+    INTEGER(ShadowExceptionsCumulative);
+    INTEGER(JobsStartedCumulative);
     INTEGER(JobsStarted);
     DOUBLE(JobStartRate);
-    DOUBLE(MeanTimeToStartCum);
-    DOUBLE(MeanRunningTimeCum);
-    INTEGER64(SumTimeToStartCum);
-    INTEGER64(SumRunningTimeCum);
+    DOUBLE(MeanTimeToStartCumulative);
+    DOUBLE(MeanRunningTimeCumulative);
+    INTEGER64(SumTimeToStartCumulative);
+    INTEGER64(SumRunningTimeCumulative);
     DOUBLE(MeanTimeToStart);
     DOUBLE(MeanRunningTime);
 
@@ -457,8 +457,10 @@ SchedulerObject::ManagementMethod(uint32_t methodId,
 
 	switch (methodId) {
 	case qmf::com::redhat::grid::Scheduler::METHOD_ECHO:
-		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
-
+		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) {
+			qmgmt_all_users_trusted = orig_qaut;
+			return STATUS_NOT_IMPLEMENTED;
+		}
 		break;
 	case qmf::com::redhat::grid::Scheduler::METHOD_SUBMITJOB:
 		result = Submit(((ArgsSchedulerSubmitJob &) args).i_Ad,

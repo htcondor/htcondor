@@ -28,6 +28,8 @@
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 
+#include "slot_builder.h"
+
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
@@ -56,9 +58,9 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 	if( _parent ) {
 		r_sub_id = _parent->m_id_dispenser->next();
-		tmp.sprintf_cat( "%d_%d", r_id, r_sub_id );
+		tmp.formatstr_cat( "%d_%d", r_id, r_sub_id );
 	} else {
-		tmp.sprintf_cat( "%d", r_id );
+		tmp.formatstr_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
 
@@ -1916,6 +1918,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	free(ptr);
 
+	    // Is this the local universe startd?
+    cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
+
 		// Put in max vacate time expression
 	ptr = param(ATTR_MACHINE_MAX_VACATE_TIME);
 	if( ptr && !*ptr ) {
@@ -2792,8 +2797,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					// so we can try again.
 					dprintf(D_ALWAYS, 
 						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
-					if ( req_classad ) delete req_classad;	// delete modified ad
-					req_classad = unmodified_req_classad;	// put back original					
+					req_classad->CopyFrom(*unmodified_req_classad);	// put back original					
+					delete unmodified_req_classad;
 					unmodified_req_classad = NULL;
 				} else {
 					rip->dprintf(D_ALWAYS, 
@@ -2826,7 +2831,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				cpus = 1; // reasonable default, for sure
 			}
 		}
-		type.sprintf_cat( "cpus=%d ", cpus );
+		type.formatstr_cat( "cpus=%d ", cpus );
 
 			// Look to see how much MEMORY is being requested.
 		schedd_requested_attr = "_condor_";
@@ -2840,7 +2845,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				return NULL;
 			}
 		}
-		type.sprintf_cat( "memory=%d ", memory );
+		type.formatstr_cat( "memory=%d ", memory );
 
 
 			// Look to see how much DISK is being requested.
@@ -2855,7 +2860,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 				return NULL;
 			}
 		}
-		type.sprintf_cat( "disk=%d%%",
+		type.formatstr_cat( "disk=%d%%",
 			max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 
@@ -2873,7 +2878,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					  "Match requesting resources: %s\n", type.Value() );
 
 		type_list.initializeFromString( type.Value() );
-		cpu_attrs = resmgr->buildSlot( rip->r_id, &type_list, -rip->type(), false );
+		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );

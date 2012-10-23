@@ -77,7 +77,7 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix) :
 	//
 	MyString procd_addr_base = m_procd_addr;
 	if (address_suffix != NULL) {
-		m_procd_addr.sprintf_cat(".%s", address_suffix);
+		m_procd_addr.formatstr_cat(".%s", address_suffix);
 	}
 
 	// see what log file (if any) the ProcD will be using if we
@@ -89,7 +89,7 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix) :
 		m_procd_log = procd_log;
 		free(procd_log);
 		if (address_suffix != NULL) {
-			m_procd_log.sprintf_cat(".%s", address_suffix);
+			m_procd_log.formatstr_cat(".%s", address_suffix);
 		}
 	}
 	

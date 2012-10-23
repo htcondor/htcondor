@@ -124,7 +124,7 @@ public:
 	sockaddr_storage to_storage() const;
 
 	// check sockaddr.sa_family before use (i.e. type-cast to sockaddr_in)
-	sockaddr* to_sockaddr() const;
+	const sockaddr* to_sockaddr() const;
 	socklen_t get_socklen() const;
 
 	bool is_valid() const;

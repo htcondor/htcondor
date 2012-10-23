@@ -27,7 +27,7 @@
 extern CStarter *Starter;
 
 int
-SSHDProc::StartJob(int std_fds[],char const *std_fnames[])
+SSHDProc::SshStartJob(int std_fds[],char const *std_fnames[])
 {
 	dprintf(D_FULLDEBUG,"in SSHDProc::StartJob()\n");
 

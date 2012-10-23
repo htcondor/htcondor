@@ -365,7 +365,7 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 		owner_key += attr_value;
 	}
 	if (cluster) {
-		owner_key.sprintf_cat( "-%d.%d", cluster, proc );
+		owner_key.formatstr_cat( "-%d.%d", cluster, proc );
 	}
 
 	if (!gman_pid_table) {
@@ -483,7 +483,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	MyString full_owner_name(owner);
 	if ( domain && *domain ) {
-		full_owner_name.sprintf_cat( "@%s", domain );
+		full_owner_name.formatstr_cat( "@%s", domain );
 	}
 	args.AppendArg("-o");
 	args.AppendArg(full_owner_name.Value());
@@ -614,7 +614,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		owner_key += attr_value;
 	}
 	if (cluster) {
-		owner_key.sprintf_cat( "-%d.%d", cluster, proc );
+		owner_key.formatstr_cat( "-%d.%d", cluster, proc );
 	}
 
 	ASSERT( gman_pid_table->insert(owner_key,gman_node) == 0 );

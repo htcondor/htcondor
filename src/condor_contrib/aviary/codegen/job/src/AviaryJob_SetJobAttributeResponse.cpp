@@ -11,13 +11,21 @@
           
 
        #ifdef __GNUC__
-       #pragma GCC diagnostic ignored "-Wunused-variable"
-       #pragma GCC diagnostic ignored "-Wunused-value"
-       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       # if __GNUC__ >= 4
        #pragma GCC diagnostic ignored "-Wcast-qual"
        #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
        #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #  if __GNUC_MINOR__ >= 6
+       #pragma GCC diagnostic ignored "-Wenum-compare"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #  endif
+       #  if __GNUC_MINOR__ >= 7
+       #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+       #  endif
+       # endif
        #endif
         
         #include <Environment.h>

@@ -1024,7 +1024,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 bool
 SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 {
-	inherit_buf.sprintf_cat("%s*",m_full_name.Value());
+	inherit_buf.formatstr_cat("%s*",m_full_name.Value());
 #ifdef WIN32
 	/*
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
@@ -1038,7 +1038,7 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
 		return false;
 	}
-	inherit_buf.sprintf_cat("%d", to_child);
+	inherit_buf.formatstr_cat("%d", to_child);
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );

@@ -26,8 +26,6 @@
 #include "get_port_range.h"
 #include "MyString.h"
 #include "util_lib_proto.h"
-#include "condor_xml_classads.h"
-#include "condor_new_classads.h"
 #include "gahp_common.h"
 #include "env.h"
 #include "condor_string.h"
@@ -306,17 +304,17 @@ GahpServer::Reaper(Service *,int pid,int status)
 	formatstr( buf, "Gahp Server (pid=%d) ", pid );
 
 	if( WIFSIGNALED(status) ) {
-		sprintf_cat( buf, "died due to %s", 
+		formatstr_cat( buf, "died due to %s", 
 			daemonCore->GetExceptionString(status) );
 	} else {
-		sprintf_cat( buf, "exited with status %d", WEXITSTATUS(status) );
+		formatstr_cat( buf, "exited with status %d", WEXITSTATUS(status) );
 	}
 
 	if ( dead_server ) {
-		sprintf_cat( buf, " unexpectedly" );
+		formatstr_cat( buf, " unexpectedly" );
 		EXCEPT( "%s", buf.c_str() );
 	} else {
-		sprintf_cat( buf, "\n" );
+		formatstr_cat( buf, "\n" );
 		dprintf( D_ALWAYS, "%s", buf.c_str() );
 	}
 }
@@ -2574,7 +2572,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 {
 	static const char* command = "CONDOR_JOB_SUBMIT";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -2587,22 +2585,17 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, job_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, job_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc2 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
@@ -2663,7 +2656,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 {
 	static const char* command = "CONDOR_JOB_UPDATE_CONSTRAINED";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -2677,23 +2670,18 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, update_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, update_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
 	char *esc2 = strdup( escapeGahpString(constraint) );
-	char *esc3 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc3 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr( reqline, "%s %s %s", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );
@@ -2808,11 +2796,19 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 			int idst = 0;
 			for ( int i = 0; i < *num_ads; i++,idst++ ) {
 				if ( useXMLClassads ) {
-					ClassAdXMLParser parser;
-					(*ads)[idst] = parser.ParseClassAd( result->argv[4 + i] );
+					classad::ClassAdXMLParser parser;
+					(*ads)[idst] = new ClassAd;
+					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
+						delete (*ads)[idst];
+						(*ads)[idst] = NULL;
+					}
 				} else {
-					NewClassAdParser parser;
-					(*ads)[idst] = parser.ParseClassAd( result->argv[4 + i] );
+					classad::ClassAdParser parser;
+					(*ads)[idst] = new ClassAd;
+					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
+						delete (*ads)[idst];
+						(*ads)[idst] = NULL;
+					}
 				}
 				if( (*ads)[idst] == NULL) {
 					dprintf(D_ALWAYS, "ERROR: Condor-C GAHP returned "
@@ -2912,7 +2908,7 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 {
 	static const char* command = "CONDOR_JOB_UPDATE";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -2925,22 +2921,17 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, update_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( update_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, update_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc2 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr(reqline, "%s %d.%d %s", esc1, job_id.cluster, job_id.proc,
 							 esc2);
 	free( esc1 );
@@ -3133,7 +3124,7 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 {
 	static const char* command = "CONDOR_JOB_STAGE_IN";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -3146,22 +3137,17 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 		ad_string=NULLSTRING;
 	} else {
 		if ( useXMLClassads ) {
-			ClassAdXMLUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdXMLUnParser unparser;
+			unparser.SetCompactSpacing( true );
+			unparser.Unparse( ad_string, job_ad );
 		} else {
-			NewClassAdUnparser unparser;
-			unparser.SetUseCompactSpacing( true );
-			unparser.SetOutputType( false );
-			unparser.SetOutputTargetType( false );
-			unparser.Unparse( job_ad, ad_string );
+			classad::ClassAdUnParser unparser;
+			unparser.Unparse( ad_string, job_ad );
 		}
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	char *esc2 = strdup( escapeGahpString(ad_string.Value()) );
+	char *esc2 = strdup( escapeGahpString(ad_string.c_str()) );
 	int x = formatstr(reqline, "%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
@@ -3371,7 +3357,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 	PROC_ID next_job;
 	int next_exp;
 	while ( jobs_i.Next( next_job ) && exps_i.Next( next_exp ) ) {
-		x = sprintf_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
+		x = formatstr_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
 								 next_exp );
 		ASSERT( x > 0 );
 	}
@@ -3444,7 +3430,7 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 {
 	static const char* command = "BLAH_JOB_SUBMIT";
 
-	MyString ad_string;
+	std::string ad_string;
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -3455,14 +3441,11 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		NewClassAdUnparser unparser;
-		unparser.SetUseCompactSpacing( true );
-		unparser.SetOutputType( false );
-		unparser.SetOutputTargetType( false );
-		unparser.Unparse( job_ad, ad_string );
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
-	int x = formatstr( reqline, "%s", escapeGahpString(ad_string.Value()) );
+	int x = formatstr( reqline, "%s", escapeGahpString(ad_string.c_str()) );
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 
@@ -3554,8 +3537,12 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 			error_string = "";
 		}
 		if ( strcasecmp( result->argv[4], NULLSTRING ) ) {
-			NewClassAdParser parser;
-			*status_ad = parser.ParseClassAd( result->argv[4] );
+			classad::ClassAdParser parser;
+			*status_ad = new ClassAd;
+			if ( !parser.ParseClassAd( result->argv[4], **status_ad ) ) {
+				delete *status_ad;
+				*status_ad = NULL;
+			}
 		}
 		if ( *status_ad != NULL ) {
 			(*status_ad)->Assign( ATTR_JOB_STATUS, atoi( result->argv[3] ) );
@@ -3678,6 +3665,213 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
 		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
+								  std::string &sandbox_path)
+{
+	static const char* command = "DOWNLOAD_SANDBOX";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 3 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		if ( strcasecmp ( result->argv[2], NULLSTRING ) ) {
+			sandbox_path = result->argv[2];
+		} else {
+			sandbox_path = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
+{
+	static const char* command = "UPLOAD_SANDBOX";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
+{
+	static const char* command = "DESTROY_SANDBOX";
+
+	std::string ad_string;
+
+		// Check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if ( !job_ad ) {
+		ad_string = NULLSTRING;
+	} else {
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
+	}
+	std::string reqline;
+	formatstr( reqline, "%s", escapeGahpString( sandbox_id ) );
+	formatstr_cat( reqline, " %s", escapeGahpString( ad_string.c_str() ) );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc;
+		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			rc = 0;
 			error_string = "";
 		}
 		delete result;
@@ -3991,7 +4185,7 @@ GahpClient::nordugrid_stage_in(const char *hostname, const char *job_id,
 	const char *filename;
 	files.rewind();
 	while ( (filename = files.next()) ) {
-		sprintf_cat(reqline, " %s", filename);
+		formatstr_cat(reqline, " %s", filename);
 		cnt++;
 	}
 	ASSERT( cnt == files.number() );
@@ -4063,7 +4257,7 @@ GahpClient::nordugrid_stage_out(const char *hostname, const char *job_id,
 	const char *filename;
 	files.rewind();
 	while ( (filename = files.next()) ) {
-		sprintf_cat(reqline," %s", filename);
+		formatstr_cat(reqline," %s", filename);
 		cnt++;
 	}
 	ASSERT( cnt == files.number() );
@@ -4140,7 +4334,7 @@ GahpClient::nordugrid_stage_out2(const char *hostname, const char *job_id,
 			(dest_filename = dest_files.next()) ) {
 		esc1 = strdup( escapeGahpString(src_filename) );
 		esc2 = strdup( escapeGahpString(dest_filename) );
-		sprintf_cat(reqline," %s %s", esc1, esc2);
+		formatstr_cat(reqline," %s %s", esc1, esc2);
 		cnt++;
 		free( esc1 );
 		free( esc2 );
@@ -5687,7 +5881,7 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( groupnames.number() > 0 ) {
 		while ( (group_name = groupnames.next()) ) {
 			esc_groupname = strdup( escapeGahpString(group_name) );
-			sprintf_cat(reqline, " %s", esc_groupname);
+			formatstr_cat(reqline, " %s", esc_groupname);
 			cnt++;
 			free( esc_groupname );
 		}
@@ -6489,7 +6683,7 @@ GahpClient::ec2_create_tags(std::string service_url,
 	if (tags.number() > 0) {
 		while ((tag = tags.next())) {
 			char *esc_tag = strdup(escapeGahpString(tag));
-			sprintf_cat(reqline, " %s", esc_tag);
+			formatstr_cat(reqline, " %s", esc_tag);
 			count++;
 			free(esc_tag);
 		}

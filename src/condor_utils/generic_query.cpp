@@ -268,7 +268,7 @@ makeQuery (ExprTree *&tree)
 			req += firstCategory ? "(" : " && (";
 			while ((item = stringConstraints [i].Next ()))
 			{
-				req.sprintf_cat ("%s(%s == \"%s\")", 
+				req.formatstr_cat ("%s(%s == \"%s\")", 
 						 firstTime ? " " : " || ", 
 						 stringKeywordList [i], item);
 				firstTime = false;
@@ -288,7 +288,7 @@ makeQuery (ExprTree *&tree)
 			req += firstCategory ? "(" : " && (";
 			while (integerConstraints [i].Next (value))
 			{
-				req.sprintf_cat ("%s(%s == %d)", 
+				req.formatstr_cat ("%s(%s == %d)", 
 						 firstTime ? " " : " || ",
 						 integerKeywordList [i], value);
 				firstTime = false;
@@ -308,7 +308,7 @@ makeQuery (ExprTree *&tree)
 			req += firstCategory ? "(" : " && (";
 			while (floatConstraints [i].Next (fvalue))
 			{
-				req.sprintf_cat ("%s(%s == %f)", 
+				req.formatstr_cat ("%s(%s == %f)", 
 						 firstTime ? " " : " || ",
 						 floatKeywordList [i], fvalue);
 				firstTime = false;
@@ -326,7 +326,7 @@ makeQuery (ExprTree *&tree)
 		req += firstCategory ? "(" : " && (";
 		while ((item = customANDConstraints.Next ()))
 		{
-			req.sprintf_cat ("%s(%s)", firstTime ? " " : " && ", item);
+			req.formatstr_cat ("%s(%s)", firstTime ? " " : " && ", item);
 			firstTime = false;
 			firstCategory = false;
 		}
@@ -341,7 +341,7 @@ makeQuery (ExprTree *&tree)
 		req += firstCategory ? "(" : " && (";
 		while ((item = customORConstraints.Next ()))
 		{
-			req.sprintf_cat ("%s(%s)", firstTime ? " " : " || ", item);
+			req.formatstr_cat ("%s(%s)", firstTime ? " " : " || ", item);
 			firstTime = false;
 			firstCategory = false;
 		}

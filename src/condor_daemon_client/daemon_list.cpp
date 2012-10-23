@@ -230,7 +230,7 @@ CollectorList::resortLocal( const char *preferred_collector )
 		}
 
 		tmp_preferred_collector = strdup(_hostname);
-		preferred_collector = preferred_collector; // So we know to free later
+		preferred_collector = tmp_preferred_collector; // So we know to free later
 	}
 
 

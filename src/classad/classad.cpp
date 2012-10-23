@@ -393,12 +393,13 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const string &value )
 }
 // --- end string attribute insertion
 
-bool ClassAd::Insert( std::string& serialized_nvp)
+bool ClassAd::Insert( const std::string& serialized_nvp)
 {
 
   bool bRet = false;
   string name, szValue;
   size_t pos, npos, vpos;
+  size_t bpos = 0;
   
   // comes in as "name = value" "name= value" or "name =value"
   npos=pos=serialized_nvp.find("=");
@@ -406,19 +407,37 @@ bool ClassAd::Insert( std::string& serialized_nvp)
   // only try to process if the string is valid 
   if ( pos != string::npos  )
   {
-    if (serialized_nvp[pos-1] == ' ')
+    while (npos > 0 && serialized_nvp[npos-1] == ' ')
     {
       npos--;
     }
-    name = serialized_nvp.substr(0, npos);
+    while (bpos < npos && serialized_nvp[bpos] == ' ')
+    {
+      bpos++;
+    }
+    name = serialized_nvp.substr(bpos, npos - bpos);
 
     vpos=pos+1;
-    if (serialized_nvp[vpos] == ' ')
+    while (serialized_nvp[vpos] == ' ')
     {
       vpos++;
     }
 
     szValue = serialized_nvp.substr(vpos);
+
+	if ( name[0] == '\'' ) {
+		// We don't handle quoted attribute names for caching here.
+		// Hand the name-value-pair off to the parser as a one-attribute
+		// ad and merge the results into this ad.
+		ClassAdParser parser;
+		ClassAd new_ad;
+		name = "[" + serialized_nvp + "]";
+		if ( parser.ParseClassAd( name, new_ad, true ) ) {
+			return Update( new_ad );
+		} else {
+			return false;
+		}
+	}
 
     // here is the special logic to check
     CachedExprEnvelope * cache_check = NULL;

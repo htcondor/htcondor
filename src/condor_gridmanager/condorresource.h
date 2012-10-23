@@ -44,8 +44,8 @@ class CondorResource : public BaseResource
 
 	const char *ResourceType();
 	void Reconfig();
-	void RegisterJob( CondorJob *job, const char *submitter_id );
-	void UnregisterJob( CondorJob *job );
+	void CondorRegisterJob( CondorJob *job, const char *submitter_id );
+	void UnregisterJob( BaseJob *job );
 
 	void DoScheddPoll();
 
@@ -55,10 +55,6 @@ class CondorResource : public BaseResource
 	static CondorResource *FindOrCreateResource( const char *resource_name,
 												 const char *pool_name,
 												 const Proxy *proxy );
-	static void setPollInterval( int new_interval )
-		{ scheddPollInterval = new_interval; }
-
-	static int scheddPollInterval;
 
 	StringList submitter_ids;
 	std::string submitter_constraint;

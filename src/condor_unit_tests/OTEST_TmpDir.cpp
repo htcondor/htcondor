@@ -195,16 +195,16 @@ static void setup() {
 	
 	//Get deep directories
 	for(int i = 0; i < 9; i++) {
-		cut_assert_true( deep_dir.sprintf_cat("%s%c", tmp.Value(),
+		cut_assert_true( deep_dir.formatstr_cat("%s%c", tmp.Value(),
 			DIR_DELIM_CHAR) );
 	}
-	cut_assert_true( deep_dir.sprintf_cat(tmp.Value()) );
+	cut_assert_true( deep_dir.formatstr_cat(tmp.Value()) );
 	
 	for(int i = 0; i < long_dir_depth - 1; i++) {
-		cut_assert_true( deep_dir_long.sprintf_cat("%s%c", long_dir,
+		cut_assert_true( deep_dir_long.formatstr_cat("%s%c", long_dir,
 						 DIR_DELIM_CHAR) );
 	}
-	cut_assert_true( deep_dir_long.sprintf_cat("%s", long_dir) );
+	cut_assert_true( deep_dir_long.formatstr_cat("%s", long_dir) );
 	
 	//Make some directories to test
 	for(int i = 0; i < 10; i++) {

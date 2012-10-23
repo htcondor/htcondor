@@ -1,0 +1,13 @@
+universe = local
+
+executable = bin/runfactory
+arguments = -c etc/campus_factory.conf
+getenv = true
+
+error = share/factory.err
+
++IsFactory = TRUE
+
+queue
+
+

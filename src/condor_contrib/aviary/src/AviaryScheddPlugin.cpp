@@ -55,8 +55,7 @@ AviaryScheddPlugin::earlyInitialize()
 
     string log_name;
     formatstr(log_name,"aviary_job.log");
-	string myname = "job@" + getScheddName();
-    provider = AviaryProviderFactory::create(log_name,myname,
+    provider = AviaryProviderFactory::create(log_name,getScheddName(),
 											 "SCHEDULER","JOB","services/job/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
@@ -268,7 +267,7 @@ AviaryScheddPlugin::processJob(const char *key,
 //	dprintf(D_FULLDEBUG, "Processing: %s\n", key);
 
 	id = getProcByString(key);
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Failed to parse key: %s - skipping\n", key);
 		return false;
 	}
@@ -290,11 +289,11 @@ AviaryScheddPlugin::processJob(const char *key,
 
 		// XXX: Use the jobAd instead of GetAttribute below, gets us $$() expansion
 
-	MyString submissionName;
-	if (GetAttributeString(id.cluster, id.proc,
-						   ATTR_JOB_SUBMISSION,
-						   submissionName) < 0) {
-			// Provide a default name for the Submission
+    MyString submissionName;
+    char* value = NULL;
+    if ( (GetAttributeString(id.cluster, id.proc,ATTR_JOB_SUBMISSION,submissionName) < 0) 
+        && (GetAttributeExprNew(id.cluster, id.proc, ATTR_JOB_SUBMISSION,&value) < 0) ) {
+        // Provide a default name for the Submission
 
 			// If we are a DAG node, we default to our DAG group
 		PROC_ID dagman;
@@ -327,6 +326,7 @@ AviaryScheddPlugin::processJob(const char *key,
 					 ATTR_JOB_SUBMISSION,
 					 tmp.Value());
 	}
+    if (value) free (value);
 
 	return true;
 }

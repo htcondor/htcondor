@@ -18,32 +18,35 @@
 
 #include "condor_common.h"
 
-// local includes
-#include "ODSJobLogConsumer.h"
-#include "ODSHistoryUtils.h"
-
 // condor includes
 #include "condor_attributes.h"
 #include "compat_classad_util.h"
 #include "stl_string_utils.h"
 
+// local includes
+#include "ODSJobLogConsumer.h"
+#include "ODSHistoryProcessors.h"
+#include "ODSDBNames.h"
+
 using namespace std;
 using namespace mongo;
 using namespace plumage::etl;
-
-const char DB_NAME[] = "condor_jobs.active";
+using namespace plumage::history;
 
 #define IS_JOB(key) ((key) && '0' != (key)[0])
 
-ODSJobLogConsumer::ODSJobLogConsumer(const string& url): m_reader(NULL)
+ODSJobLogConsumer::ODSJobLogConsumer(const string& url): m_reader(NULL),m_history_db(NULL), m_queue_db(NULL)
 { 
-    m_writer = new ODSMongodbOps(DB_NAME);
-    m_writer->init(url);
+    m_queue_db = new ODSMongodbOps(DB_JOBS_QUEUE);
+    m_queue_db->init(url);
+    m_history_db = new ODSMongodbOps(DB_JOBS_HISTORY);
+    m_history_db->init(url);
 }
 
 ODSJobLogConsumer::~ODSJobLogConsumer()
 {
-    if (m_writer) delete m_writer;
+    if (m_queue_db) delete m_queue_db;
+    if (m_history_db) delete m_history_db;
 }
 
 void
@@ -71,7 +74,7 @@ ODSJobLogConsumer::NewClassAd(const char *_key,
 
     mongo::BSONObjBuilder bsonkey;
     bsonkey.append(ATTR_CLUSTER_ID, proc.cluster).append(ATTR_PROC_ID, proc.proc);
-    return m_writer->createAd(bsonkey);
+    return m_queue_db->createAd(bsonkey);
 }
 
 bool
@@ -89,7 +92,7 @@ ODSJobLogConsumer::DestroyClassAd(const char *_key)
 
     mongo::BSONObjBuilder bsonkey;
     bsonkey.append(ATTR_CLUSTER_ID, proc.cluster).append(ATTR_PROC_ID, proc.proc);
-    return m_writer->deleteAd(bsonkey);
+    return m_queue_db->deleteAd(bsonkey);
 }
 
 bool
@@ -117,7 +120,7 @@ ODSJobLogConsumer::SetAttribute(const char *_key,
     
     mongo::BSONObjBuilder bsonkey;
     bsonkey.append(ATTR_CLUSTER_ID, proc.cluster);
-    return m_writer->updateAttr(bsonkey, _name, _value);
+    return m_queue_db->updateAttr(bsonkey, _name, _value);
 }
 
 bool
@@ -134,5 +137,5 @@ ODSJobLogConsumer::DeleteAttribute(const char *_key,
 
     mongo::BSONObjBuilder bsonkey;
     bsonkey.append(ATTR_CLUSTER_ID, proc.cluster).append(ATTR_PROC_ID, proc.proc);
-    return m_writer->deleteAttr(bsonkey, _name);
+    return m_queue_db->deleteAttr(bsonkey, _name);
 }

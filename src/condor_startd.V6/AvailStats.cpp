@@ -223,7 +223,7 @@ AvailStats::serialize()
 	as_avail_periods.Rewind();
 	int item;
 	while( as_avail_periods.Next(item) ) {
-		state.sprintf_cat( " %d", item );
+		state.formatstr_cat( " %d", item );
 	}
 
 	return state;

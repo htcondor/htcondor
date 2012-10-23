@@ -159,8 +159,8 @@ public:
 
 	virtual void startUpdateTimer( void ) {return;}
 	virtual bool updateJob( update_t /*type*/, SetAttributeFlags_t  /*commit_flags*/ = 0 ) { return true;}
-	virtual bool updateAttr( const char *  /*name*/, const char * /*expr*/, bool  /*updateMaster*/ ) { return true;}
-	virtual bool updateAttr( const char * /*name*/, int  /*value*/, bool  /*updateMaster*/ ) { return true;}
+	virtual bool updateAttr( const char *  /*name*/, const char * /*expr*/, bool  /*updateMaster*/, bool log=false ) { if (log) {} return true;}
+	virtual bool updateAttr( const char * /*name*/, int  /*value*/, bool  /*updateMaster*/, bool log=false ) { if (log) {} return true;}
 	virtual bool watchAttribute( const char*  /*attr*/, update_t /*type*/ = U_NONE ) { return true;}
 };
 

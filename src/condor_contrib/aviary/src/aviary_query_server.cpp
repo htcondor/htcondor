@@ -73,8 +73,7 @@ void main_init(int /* argc */, char * /* argv */ [])
 
     string log_name;
     formatstr(log_name,"aviary_query.log");
-	string myname = "query@" + getScheddName();
-    provider = AviaryProviderFactory::create(log_name,myname,
+    provider = AviaryProviderFactory::create(log_name,getScheddName(),
 											 "CUSTOM",QUERY_SERVER, "services/query/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");

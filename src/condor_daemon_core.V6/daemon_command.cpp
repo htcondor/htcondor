@@ -916,7 +916,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				// 6.6.1 or higher, we will force will_authenticate to
 				// SEC_FEAT_ACT_NO.
 
-				if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
 						char * remote_version = NULL;
 						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);

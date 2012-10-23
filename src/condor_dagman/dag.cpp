@@ -1014,16 +1014,16 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				}
 
 				if ( termEvent->normal ) {
-					errMsg.sprintf_cat( "POST Script failed with status %d",
+					errMsg.formatstr_cat( "POST Script failed with status %d",
 								termEvent->returnValue );
 				} else {
-					errMsg.sprintf_cat( "POST Script died on signal %d",
+					errMsg.formatstr_cat( "POST Script died on signal %d",
 								termEvent->signalNumber );
 				}
 
 				if( job->GetRetryMax() > 0 ) {
 						// add # of retries to error_text
-					errMsg.sprintf_cat( " (after %d node retries)",
+					errMsg.formatstr_cat( " (after %d node retries)",
 							job->GetRetries() );
 				}
 
@@ -1790,7 +1790,8 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		}
 		debug_printf(DEBUG_QUIET,"Initializing logfile %s, %d, %d, %d\n",
 			s,job->_CondorID._cluster,procID,subprocID);
-		ulog.initialize( s, job->_CondorID._cluster, procID, subprocID, NULL );
+		ulog.initialize( std::vector<const char*>(1,s), job->_CondorID._cluster,
+			procID, subprocID, NULL );
 
 		if( !ulog.writeEvent( &e ) ) {
 			debug_printf( DEBUG_QUIET,

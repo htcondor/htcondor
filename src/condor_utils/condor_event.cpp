@@ -1372,9 +1372,7 @@ GenericEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Info", info, sizeof(info)-1 ) ) {
-		info[ sizeof(info) - 1 ] = '\0';
-	}
+	ad->LookupString("Info", info, sizeof(info) );
 }
 
 void
@@ -1603,12 +1601,8 @@ RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Daemon", daemon_name, sizeof(daemon_name)) ) {
-		daemon_name[sizeof(daemon_name)-1] = '\0';
-	}
-	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
-		execute_host[sizeof(execute_host)-1] = '\0';
-	}
+	ad->LookupString("Daemon", daemon_name, sizeof(daemon_name));
+	ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host));
 	if( ad->LookupString("ErrorMsg", &buf) ) {
 		setErrorText(buf);
 		free(buf);
@@ -3144,20 +3138,20 @@ JobImageSizeEvent::~JobImageSizeEvent(void)
 int
 JobImageSizeEvent::writeEvent (FILE *file)
 {
-	if (fprintf (file, "Image size of job updated: %"PRId64"\n", image_size_kb) < 0)
+	if (fprintf (file, "Image size of job updated: %" PRId64"\n", image_size_kb) < 0)
 		return 0;
 
 	// when talking to older starters, memory_usage, rss & pss may not be set
 	if (memory_usage_mb >= 0 && 
-		fprintf (file, "\t%"PRId64"  -  MemoryUsage of job (MB)\n", memory_usage_mb) < 0)
+		fprintf (file, "\t%" PRId64"  -  MemoryUsage of job (MB)\n", memory_usage_mb) < 0)
 		return 0;
 
 	if (resident_set_size_kb >= 0 &&
-		fprintf (file, "\t%"PRId64"  -  ResidentSetSize of job (KB)\n", resident_set_size_kb) < 0)
+		fprintf (file, "\t%" PRId64"  -  ResidentSetSize of job (KB)\n", resident_set_size_kb) < 0)
 		return 0;
 
 	if (proportional_set_size_kb >= 0 &&
-		fprintf (file, "\t%"PRId64"  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb) < 0)
+		fprintf (file, "\t%" PRId64"  -  ProportionalSetSize of job (KB)\n", proportional_set_size_kb) < 0)
 		return 0;
 
 	return 1;
@@ -3168,7 +3162,7 @@ int
 JobImageSizeEvent::readEvent (FILE *file)
 {
 	int retval;
-	if ((retval=fscanf(file,"Image size of job updated: %"PRId64, &image_size_kb)) != 1)
+	if ((retval=fscanf(file,"Image size of job updated: %" PRId64, &image_size_kb)) != 1)
 		return 0;
 
 	// These fields were added to this event in 2012, so we need to tolerate the
@@ -3191,7 +3185,7 @@ JobImageSizeEvent::readEvent (FILE *file)
 		}
 
 		int64_t val; lbl[0] = 0;
-		if (2 == sscanf(sz, "\t%"PRId64"  -  %48s", &val, lbl)) {
+		if (2 == sscanf(sz, "\t%" PRId64"  -  %48s", &val, lbl)) {
 			if (!strcmp(lbl,"MemoryUsage")) {
 				memory_usage_mb = val;
 			} else if (!strcmp(lbl, "ResidentSetSize")) {
@@ -3217,22 +3211,22 @@ JobImageSizeEvent::toClassAd(void)
 	char buf0[250];
 
 	if( image_size_kb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "Size = %"PRId64, image_size_kb);
+		snprintf(buf0, sizeof(buf0), "Size = %" PRId64, image_size_kb);
 		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 	if( memory_usage_mb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "MemoryUsage = %"PRId64, memory_usage_mb);
+		snprintf(buf0, sizeof(buf0), "MemoryUsage = %" PRId64, memory_usage_mb);
 		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 	if( resident_set_size_kb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "ResidentSetSize = %"PRId64, resident_set_size_kb);
+		snprintf(buf0, sizeof(buf0), "ResidentSetSize = %" PRId64, resident_set_size_kb);
 		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
 	if( proportional_set_size_kb >= 0 ) {
-		snprintf(buf0, sizeof(buf0), "ProportionalSetSize = %"PRId64, proportional_set_size_kb);
+		snprintf(buf0, sizeof(buf0), "ProportionalSetSize = %" PRId64, proportional_set_size_kb);
 		buf0[sizeof(buf0)-1] = 0;
 		if( !myad->Insert(buf0) ) return NULL;
 	}
@@ -3389,9 +3383,7 @@ ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("Message", message, BUFSIZ) ) {
-		message[BUFSIZ - 1] = 0;
-	}
+	ad->LookupString("Message", message, BUFSIZ);
 
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);

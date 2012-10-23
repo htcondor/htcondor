@@ -41,6 +41,18 @@ set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLA
 set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
+# Turn off the OpenSSL deprecation warnings until we decide on the long-term direction with OpenSSL on Mac.
+if (DARWIN)
+	set_source_files_properties(condor_base64.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(condor_dh.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(condor_md.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_auth_passwd.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_auth_ssl.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_crypt.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_crypt_3des.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_crypt_blowfish.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+endif()
+
 #On windows we add the cpp file into the build 
 if (GSOAP_SRC)
 	set_source_files_properties(${GSOAP_SRC} PROPERTIES GENERATED TRUE)

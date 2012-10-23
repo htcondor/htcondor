@@ -63,12 +63,12 @@ bool vsprintfHelper(MyString* str, const char* format, ...) {
 	return toReturn;
 }
 
-bool vsprintf_catHelper(MyString* str, const char* format, ...) {
+bool vformatstr_catHelper(MyString* str, const char* format, ...) {
 	va_list args;
 	bool toReturn;
 
 	va_start(args, format);
-	toReturn = str->vsprintf_cat(format, args);
+	toReturn = str->vformatstr_cat(format, args);
 	va_end(args);
 
 	return toReturn;
