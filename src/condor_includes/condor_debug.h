@@ -396,3 +396,4 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #endif	/* of ifdef WIN32 */
 
 #define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
+
