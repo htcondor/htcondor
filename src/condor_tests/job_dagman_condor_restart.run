@@ -47,6 +47,10 @@ foreach $name (@logfiles) {
 	}
 }
 
+# Make sure we don't have a lock file hanging around -- that would
+# goof up the test.
+runcmd("rm -f job_dagman_condor_restart.dag.lock");
+
 # Seeing this file will cause the node job to do a condor_restart.
 runcmd("touch job_dagman_condor_restart-nodeA.do_restart");
 
