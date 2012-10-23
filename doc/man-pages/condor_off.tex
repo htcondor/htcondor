@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-off}\Condor{off}}{1}
-{Shutdown Condor daemons}
+{Shutdown HTCondor daemons}
 \Synopsis \SynProg{\Condor{off}}
 \ToolArgsBase
 
@@ -9,12 +9,12 @@
 \ToolWhere
 \ToolArgsAffect
 
-\index{Condor commands!condor\_off}
+\index{HTCondor commands!condor\_off}
 \index{condor\_off command}
 
 \Description 
 
-\Condor{off} shuts down a set of the Condor daemons running on a set of
+\Condor{off} shuts down a set of the HTCondor daemons running on a set of
 one or more machines.
 It does this cleanly so that checkpointable jobs may gracefully exit with
 minimal loss of work.
@@ -22,8 +22,8 @@ minimal loss of work.
 The command \Condor{off} without any arguments will shut down
 all daemons except \Condor{master}.
 The \Condor{master} can then handle both local and remote
-requests to restart the other Condor daemons if need be.  To restart
-Condor running on a machine, see the \Condor{on} command.
+requests to restart the other HTCondor daemons if need be.  To restart
+HTCondor running on a machine, see the \Condor{on} command.
 
 With the \OptArg{-daemon}{master} option, \Condor{off} will shut down
 all daemons including the \Condor{master}.
