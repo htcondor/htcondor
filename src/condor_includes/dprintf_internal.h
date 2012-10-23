@@ -22,7 +22,11 @@
 // to have any effect.
 #include <string>
 #include <map>
+#if _MSC_VER && (_MSC_VER < 1600)
+typedef _Longlong int64_t;
+#else
 #include <stdint.h>
+#endif
 
 struct DebugFileInfo;
 
