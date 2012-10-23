@@ -1,4 +1,3 @@
- #TEMPTEMP -- add dagman_condor_restart test
  ###############################################################
  # 
  # Copyright 2011 Red Hat, Inc. 
