@@ -55,6 +55,11 @@ The old behavior, or variations on the new behavior, can be achieved
 by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3333}
 
+\item \Condor{dagman} will now try twice to write a POST script terminate
+event, rather than trying once and exiting. \Condor{dagman} exits, writing
+a rescue DAG, if it is unable to write the event.
+\Ticket{965}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

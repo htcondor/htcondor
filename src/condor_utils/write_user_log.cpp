@@ -1380,6 +1380,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	}
 
 	// write ulog event
+	bool ret = true;
 	if ( m_userlog_enable ) {
 		for(std::vector<log_file>::iterator p = logs.begin(); p != logs.end(); ++p) {
 			if( !p->fp || !p->lock) {
@@ -1403,6 +1404,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					param_jobad) ) {
 				dprintf( D_ALWAYS, "ERROR: WriteUserLog: user doWriteEvent() failed on"
 					" normal log %s!\n", p->path.c_str() );
+				ret = false;
 			}
 			if( (p == logs.begin()) && param_jobad ) {
 					// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
@@ -1420,9 +1422,9 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	}
 
 	if ( written ) {
-		*written = true;
+		*written = ret;
 	}
-	return true;
+	return ret;
 }
 
 void
