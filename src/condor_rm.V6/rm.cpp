@@ -175,7 +175,6 @@ main( int argc, char *argv[] )
 	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
-	param_functions *p_funcs = NULL;
 
 		// Initialize our global variables
 	has_constraint = false;
@@ -246,9 +245,7 @@ main( int argc, char *argv[] )
 		if( arg[0] == '-' ) {
             if (match_prefix(arg, "-debug")) {
 				// dprintf to console
-				Termlog = 1;
-				p_funcs = get_param_functions();
-				dprintf_config ("TOOL", p_funcs);
+				dprintf_set_tool_debug("TOOL", 0);
             } else if (match_prefix(arg, "-constraint")) {
 				args[nArgs] = arg;
 				nArgs++;

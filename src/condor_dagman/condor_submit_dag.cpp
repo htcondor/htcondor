@@ -70,14 +70,11 @@ int submitDag( SubmitDagShallowOptions &shallowOpts );
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-	param_functions *p_funcs = NULL;
 	printf("\n");
 
 		// Set up the dprintf stuff to write to stderr, so that Condor
 		// libraries which use it will write to the right place...
-	Termlog = true;
-	p_funcs = get_param_functions();
-	dprintf_config("condor_submit_dag", p_funcs); 
+	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 	config();
 

@@ -530,7 +530,7 @@ ReliSock::put_bytes(const void *data, int sz)
         // Check to see if we need to encrypt
         // Okay, this is a bug! H.W. 9/25/2001
         if (get_encryption()) {
-            if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
+            if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
                 dprintf(D_SECURITY, "Encryption failed\n");
 				if (dta != NULL)
 				{

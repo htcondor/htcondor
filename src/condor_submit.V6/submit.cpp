@@ -873,7 +873,6 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL;
 	int i;
 	MyString method;
-	param_functions *p_funcs = NULL;
 
 	setbuf( stdout, NULL );
 
@@ -930,9 +929,7 @@ main( int argc, char *argv[] )
 				DisableFileChecks = 1;
 			} else if ( match_prefix( ptr[0], "-debug" ) ) {
 				// dprintf to console
-				Termlog = 1;
-				p_funcs = get_param_functions();
-				dprintf_config( "TOOL", p_funcs );
+				dprintf_set_tool_debug("TOOL", 0);
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;

@@ -124,7 +124,6 @@ main( int argc, char *argv[] )
 	config();
 	init_params();
 	BadFiles = new StringList;
-	param_functions *p_funcs = NULL;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -132,7 +131,7 @@ main( int argc, char *argv[] )
 			switch( (*argv)[1] ) {
 			
 			  case 'd':
-                Termlog = 1;
+                dprintf_set_tool_debug("TOOL", 0);
 			  case 'v':
 				VerboseFlag = TRUE;
 				break;
@@ -154,8 +153,6 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	p_funcs = get_param_functions();
-	dprintf_config("TOOL", p_funcs);
 	if (VerboseFlag)
 	{
 		// always append D_FULLDEBUG locally when verbose.

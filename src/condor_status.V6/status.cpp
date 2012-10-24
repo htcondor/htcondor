@@ -584,7 +584,6 @@ usage ()
 void
 firstPass (int argc, char *argv[])
 {
-	param_functions *p_funcs;
 	int had_pool_error = 0;
 	int had_direct_error = 0;
 	int had_statistics_error = 0;
@@ -706,9 +705,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 		} else
 		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();

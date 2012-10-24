@@ -47,8 +47,6 @@ static FILE *email_open_implementation(const char * final_args[]);
 
 extern DLL_IMPORT_MAGIC char **environ;
 
-extern int Termlog;
-
 FILE *
 email_open( const char *email_addr, const char *subject )
 {
@@ -238,7 +236,6 @@ email_open_implementation( const char * final_args[])
 	FILE *mailerstream;
 	pid_t pid;
 	int pipefds[2];
-	param_functions *p_funcs = NULL;
 
 	/* The gist of this code is to exec a mailer whose stdin is dup2'ed onto
 		the write end of a pipe. The parent gets the fdopen'ed read end
@@ -304,9 +301,7 @@ email_open_implementation( const char * final_args[])
 			process. Thankfully it is a short piece of code
 			before the exec.  -pete 03-05-2000
 		*/
-		Termlog = 1;
-		p_funcs = get_param_functions();
-		dprintf_config(get_mySubSystemName(), p_funcs);
+		dprintf_set_tool_debug("TOOL", 0);
 
 		/* this is a simple daemon that if it needs to stat . should be
 			able to. You might not be able to if the shadow's cwd is in the

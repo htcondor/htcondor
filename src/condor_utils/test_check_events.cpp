@@ -45,8 +45,7 @@ CheckResult(int line, CheckEvents::check_event_result_t expectedResult,
 int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("test_check_events", get_param_functions());
+	dprintf_set_tool_debug("test_check_events", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	bool			result = true;

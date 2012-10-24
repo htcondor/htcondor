@@ -1759,13 +1759,29 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 	// now, if the update was successful, and we are using glexec, make sure we
 	// set a timer to put the job on hold before the proxy expires and we lose
 	// control of it.
+	if( retval ) {
+		setX509ProxyExpirationTimer();
+	}
+
+	return retval;
+}
+
+void
+JICShadow::setX509ProxyExpirationTimer()
+{
+	MyString path;
+	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
+		return;
+	}
+	const char * proxyfilename = condor_basename(path.Value());
+
 #if defined(LINUX)
 	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
 #else
 	// dummy for non-linux platforms.
 	int* gpsh = NULL;
 #endif
-	if(retval && gpsh) {
+	if(gpsh) {
 		// if there was a timer registered, cancel it
 		if( m_proxy_expiration_tid != -1 ) {
 			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
@@ -1786,7 +1802,10 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 				// now subtract the configurable time allowed for eviction
 				// years of careful research show the default should be one minute.
 			int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
-			time_t expiration_delta = (expiration - now) - evict_window;
+			int expiration_delta = (expiration - now) - evict_window;
+			if( expiration_delta < 0 ) {
+				expiration_delta = 0;
+			}
 
 			m_proxy_expiration_tid = daemonCore->Register_Timer(
 				expiration_delta,
@@ -1794,14 +1813,12 @@ JICShadow::updateX509Proxy(int cmd, ReliSock * s)
 				"proxy expiring",
 				this );
 			if (m_proxy_expiration_tid > 0) {
-				dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %i\n", m_proxy_expiration_tid, (int)expiration);
+				dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %d seconds from now (proxy expires at time %i)\n", m_proxy_expiration_tid, (int)expiration_delta, (int)expiration);
 			} else {
 				dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
 			}
 		}
 	}
-
-	return retval;
 }
 
 
@@ -2037,6 +2054,8 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			set_priv( saved_priv );
 		}
 	}
+
+	setX509ProxyExpirationTimer();
 
 		// Now that we're done, let our parent class do its thing.
 	JobInfoCommunicator::setupJobEnvironment();

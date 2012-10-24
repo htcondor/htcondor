@@ -394,8 +394,6 @@ static bool checkDBconfig() {
 }
 #endif /* HAVE_EXT_POSTGRESQL */
 
-extern 	"C"	int		Termlog;
-
 int main (int argc, char **argv)
 {
 	ClassAd		*ad;
@@ -960,7 +958,6 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	const char * pcolon;
-	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");
@@ -1066,7 +1063,6 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit( 1 );
 			}
-			Termlog = 1;
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
@@ -1445,9 +1441,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 		}
 		else
 		if (match_prefix(arg,"io")) {
