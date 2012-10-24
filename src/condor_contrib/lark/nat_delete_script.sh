@@ -7,10 +7,10 @@ fi
 
 JOBID=$1
 DEV=$2
-PUBLIC_DEV="em1"
+#PUBLIC_DEV="em1"
 
-iptables -D FORWARD -i $DEV -o $PUBLIC_DEV -g $JOBID
-iptables -D FORWARD -o $DEV -i $PUBLIC_DEV -g $JOBID -m state --state RELATED,ESTABLISHED
+iptables -D FORWARD -i $DEV ! -o $DEV -g $JOBID
+iptables -D FORWARD -o $DEV ! -i $DEV -g $JOBID -m state --state RELATED,ESTABLISHED
 #iptables -t nat -D POSTROUTING -o $PUBLIC_DEV -j MASQUERADE
 JOB_INNER_IP="192.168.0.2"
 iptables -t nat -D POSTROUTING --src $JOB_INNER_IP ! --dst $JOB_INNER_IP -j MASQUERADE

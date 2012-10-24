@@ -14,7 +14,8 @@ static NetworkNamespaceManager instance;
 NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
 	m_internal_pipe(""), m_external_pipe(""),
-	m_sock(-1), m_created_pipe(false)
+	m_sock(-1), m_created_pipe(false),
+	m_iplock(NULL)
 	{
 		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
@@ -53,11 +54,28 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 		return rc;
 	}
 
+	// Grab an IP address for the external interface.
+	std::string network_spec;
+	if (!param(network_spec, "NAT_NETWORK", "192.168.181.0/255.255.255.0"))
+	{
+		dprintf(D_FULLDEBUG, "Parameter NAT_NETWORK is not specified; using default %s.\n", network_spec.c_str());
+	}
+	m_iplock.reset(new IPLock(network_spec));
+	if (!m_iplock->Lock(m_external_address))
+	{
+		dprintf(D_ALWAYS, "Unable to lock an IP address to use.\n");
+		m_state = FAILED;
+		return 1;
+	}
+	dprintf(D_ALWAYS, "Using address %s for external portion of NAT.\n", m_external_address.to_ip_string().Value());
+
 	ArgList args;
+	std::string external_address = m_external_address.to_ip_string();
 	args.AppendArg(namespace_script);
+	args.AppendArg(external_address.c_str());
 	args.AppendArg(m_network_namespace);
 	args.AppendArg(m_external_pipe);
-	dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s\n", namespace_script, m_network_namespace.c_str(), m_external_pipe.c_str());
+	dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s\n", namespace_script, external_address.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
 
 	FILE *fp = my_popen(args, "r", TRUE);
 	if (fp == NULL) {
@@ -333,6 +351,8 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 		dprintf(D_ALWAYS, "Failed to delete the veth interface; rc=%d\n", rc);
 		rc = rc3;
 	}
+
+	m_iplock.reset(NULL);
 
 	return rc2 ? rc2 : rc;
 }
