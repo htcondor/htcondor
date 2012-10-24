@@ -12,9 +12,8 @@
 
 int main(int argc, char *argv[])
 {
-	Termlog = 1;
-	param_functions *p_funcs = get_param_functions();
-	dprintf_config ("TOOL", p_funcs);
+	config();
+	dprintf_set_tool_debug("TOOL", 0);
 
 	if (argc != 2)
 	{

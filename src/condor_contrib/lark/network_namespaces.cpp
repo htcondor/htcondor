@@ -40,6 +40,12 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 	int rc = 0;
 
 	namespace_script = param("NETWORK_NAMESPACE_CREATE_SCRIPT");
+	if (!namespace_script)
+	{
+		dprintf(D_ALWAYS, "Parameter NETWORK_NAMESPACE_CREATE_SCRIPT is not specified.\n");
+		m_state = FAILED;
+		return 1;
+	}
 
 	if ((rc = CreateNetworkPipe())) {
 		dprintf(D_ALWAYS, "Unable to create a new set of network pipes; cannot create a namespace.\n");
@@ -318,13 +324,14 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 		return 1;
 	}
 
-	int rc;
+	int rc = 0, rc3;
 	// If the job launched successfully, the pipe may get deleted by the OS
 	// automatically.  In such a case, the delete_veth will return with
 	// either "no such device" or "invalid value".  Not sure why the kernel
 	// gives both - maybe some sort of race?
-	if ((rc = delete_veth(m_sock, m_external_pipe.c_str()))  && (rc != ENODEV) && (rc != EINVAL)) {
+	if ((rc3 = delete_veth(m_sock, m_external_pipe.c_str()))  && (rc3 != ENODEV) && (rc3 != EINVAL)) {
 		dprintf(D_ALWAYS, "Failed to delete the veth interface; rc=%d\n", rc);
+		rc = rc3;
 	}
 
 	return rc2 ? rc2 : rc;
