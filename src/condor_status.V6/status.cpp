@@ -584,7 +584,6 @@ usage ()
 void
 firstPass (int argc, char *argv[])
 {
-	param_functions *p_funcs;
 	int had_pool_error = 0;
 	int had_direct_error = 0;
 	int had_statistics_error = 0;

@@ -135,7 +135,6 @@ main(int argc, char* argv[])
   char* JobHistoryFileName=NULL;
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
   const char * pcolon=NULL;
-  param_functions *p_funcs = NULL;
 
 
   std::string constraint;

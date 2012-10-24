@@ -873,7 +873,6 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL;
 	int i;
 	MyString method;
-	param_functions *p_funcs = NULL;
 
 	setbuf( stdout, NULL );
 

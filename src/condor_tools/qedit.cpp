@@ -59,7 +59,6 @@ main(int argc, char *argv[])
 	bool UseConstraint = false;
 	MyString schedd_name;
 	MyString pool_name;
-	param_functions *p_funcs;
 
 	myDistro->Init( argc, argv );
 	config();

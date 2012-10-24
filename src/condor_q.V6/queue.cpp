@@ -958,7 +958,6 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	const char * pcolon;
-	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");

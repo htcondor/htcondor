@@ -124,7 +124,6 @@ main( int argc, char *argv[] )
 	config();
 	init_params();
 	BadFiles = new StringList;
-	param_functions *p_funcs = NULL;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {

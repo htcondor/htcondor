@@ -68,7 +68,7 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 int
-dprintf_config_tool(const char* subsys, int flags)
+dprintf_config_tool(const char* subsys, int /*flags*/)
 {
 	char *pval = NULL;
 	char pname[ BUFSIZ ];
@@ -406,3 +406,4 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	}
 	return 0;
 }
+

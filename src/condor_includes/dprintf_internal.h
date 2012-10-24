@@ -114,3 +114,4 @@ void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, st
 //Output to dbg string
 void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
 #endif
+

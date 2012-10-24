@@ -227,3 +227,4 @@ bool dprintf_to_term_check()
 
 	return false;
 }
+

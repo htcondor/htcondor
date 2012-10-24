@@ -149,7 +149,6 @@ int
 pseudo_shell( char *command, int /*len*/ )
 {
 	int rval;
-	int terrno;
 
 	dprintf( D_SYSCALLS, "\tcommand = \"%s\"\n", command );
 

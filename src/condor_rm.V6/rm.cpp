@@ -175,7 +175,6 @@ main( int argc, char *argv[] )
 	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
-	param_functions *p_funcs = NULL;
 
 		// Initialize our global variables
 	has_constraint = false;
