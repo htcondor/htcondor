@@ -63,6 +63,8 @@ SchedulerObject::SchedulerObject(qpid::management::ManagementAgent *agent,
 	// By default the scheduler will be persistent.
 	bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
 	agent->addObject(mgmtObject, _name, _lifetime);
+
+    m_new_stats = param_boolean("QMF_USE_NEW_STATS", true);
 }
 
 
@@ -73,6 +75,168 @@ SchedulerObject::~SchedulerObject()
 	}
 }
 
+// TODO: revisit when 7.6 support retires
+// need to map back to 7.6 schema values <sigh>
+
+void SchedulerObject::useOldStats(const ClassAd &ad) {
+    int num;
+    float flt;
+
+    INTEGER(WindowedStatWidth);
+    INTEGER(UpdateInterval);
+
+    INTEGER(JobsSubmitted);
+    INTEGER(JobsSubmittedCum);
+    DOUBLE(JobSubmissionRate);
+
+    INTEGER(JobsCompleted);
+    INTEGER(JobsCompletedCum);
+    DOUBLE(JobCompletionRate);
+
+    INTEGER(JobsExited);
+    INTEGER(JobsExitedCum);
+
+    INTEGER(ShadowExceptions);
+    INTEGER(ShadowExceptionsCum);
+
+    DOUBLE(MeanTimeToStartCum);
+    DOUBLE(MeanRunningTimeCum);
+    INTEGER64(SumTimeToStartCum);
+    INTEGER64(SumRunningTimeCum);
+    DOUBLE(MeanTimeToStart);
+    DOUBLE(MeanRunningTime);
+}
+
+void SchedulerObject::useNewStats(const ClassAd &ad) {
+    int num, stats_lifetime, jobs_started, recent_started, jobs_completed, recent_completed;
+    float flt;
+
+    // INTEGER(WindowedStatWidth);
+    if (ad.LookupInteger("RecentStatsLifetime", stats_lifetime)) {
+        mgmtObject->set_WindowedStatWidth((uint32_t) stats_lifetime);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentStatsLifetime' for 'WindowedStatWidth'\n");
+    }
+
+    // INTEGER(UpdateInterval);
+    if (ad.LookupInteger("StatsLastUpdateTime", num)) {
+        mgmtObject->set_UpdateInterval((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'StatsLastUpdateTime' for 'UpdateInterval'\n");
+    }
+
+    //INTEGER(JobsSubmittedCum);
+    if (ad.LookupInteger("JobsSubmitted", num)) {
+        mgmtObject->set_JobsSubmittedCum((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsSubmitted' for 'JobsSubmittedCum'\n");
+    }
+    //INTEGER(JobsSubmitted);
+    if (ad.LookupInteger("RecentJobsSubmitted", num)) {
+        mgmtObject->set_JobsSubmitted((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsSubmitted' for 'JobsSubmitted'\n");
+    }
+    //DOUBLE(JobSubmissionRate);
+    if (stats_lifetime > 0) {
+        mgmtObject->set_JobSubmissionRate((float) (num/stats_lifetime));
+    }
+
+    //INTEGER(JobsStartedCum);
+    if (ad.LookupInteger("JobsStarted", jobs_started)) {
+        mgmtObject->set_JobsStartedCum((uint32_t) jobs_started);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsStarted' for 'JobsStartedCum'\n");
+    }
+    //INTEGER(JobsStarted);
+    if (ad.LookupInteger("RecentJobsStarted", recent_started)) {
+        mgmtObject->set_JobsStarted((uint32_t) recent_started);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsStarted' for 'JobsStarted'\n");
+    }
+    //DOUBLE(JobStartRate);
+    if (stats_lifetime > 0) {
+        mgmtObject->set_JobStartRate((float) (recent_started/stats_lifetime));
+    }
+
+    //INTEGER(JobsCompletedCum);
+    if (ad.LookupInteger("JobsCompleted", jobs_completed)) {
+        mgmtObject->set_JobsCompletedCum((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsCompleted' for 'JobsCompletedCum'\n");
+    }
+    //INTEGER(JobsCompleted);
+    if (ad.LookupInteger("RecentJobsCompleted", recent_completed)) {
+        mgmtObject->set_JobsCompleted((uint32_t) recent_completed);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsCompleted' for 'JobsCompleted'\n");
+    }
+    //DOUBLE(JobCompletionRate);
+    if (stats_lifetime > 0) {
+        mgmtObject->set_JobCompletionRate((float) (recent_completed/stats_lifetime));
+    }
+
+    //INTEGER(JobsExitedCum);
+    if (ad.LookupInteger("JobsExited", num)) {
+        mgmtObject->set_JobsExitedCum((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsExited' for 'JobsExitedCum'\n");
+    }
+    //INTEGER(JobsExited);
+    if (ad.LookupInteger("RecentJobsExited", num)) {
+        mgmtObject->set_JobsExited((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsExited' for 'JobsExited'\n");
+    }
+
+    //INTEGER(ShadowExceptionsCum);
+    if (ad.LookupInteger("JobsExitException", num)) {
+        mgmtObject->set_ShadowExceptionsCum((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsExitException' for 'ShadowExceptionsCum'\n");
+    }
+
+    //INTEGER(ShadowExceptions);
+    if (ad.LookupInteger("RecentJobsExitException", num)) {
+        mgmtObject->set_ShadowExceptions((uint32_t) num);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsExitException' for 'ShadowExceptions'\n");
+    }
+
+    //DOUBLE(MeanTimeToStart);
+    if (recent_started > 0 && ad.LookupFloat("RecentJobsAccumTimeToStart", flt)) {
+        mgmtObject->set_MeanTimeToStart((float) (flt/recent_started));
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsAccumTimeToStart' for 'MeanTimeToStart'\n");
+    }
+    //INTEGER64(SumTimeToStartCum);
+    if (ad.LookupFloat("JobsAccumTimeToStart", flt)) {
+        mgmtObject->set_SumTimeToStartCum((float) flt);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsAccumTimeToStart' for 'SumTimeToStartCum'\n");
+    }
+    //DOUBLE(MeanTimeToStartCum);
+    if (jobs_started > 0) {
+        mgmtObject->set_MeanTimeToStartCum((float) (flt/jobs_started));
+    }
+
+    //DOUBLE(MeanRunningTime);
+    if (recent_completed > 0 && ad.LookupFloat("RecentJobsAccumRunningTime", flt)) {
+        mgmtObject->set_MeanRunningTime((float) (flt/recent_completed));
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'RecentJobsAccumRunningTime' for 'MeanRunningTime'\n");
+    }
+    //INTEGER64(SumRunningTimeCum);
+    if (ad.LookupFloat("JobsAccumRunningTime", flt)) {
+        mgmtObject->set_SumRunningTimeCum((float) flt);
+    } else {
+        dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsAccumRunningTime' for 'SumRunningTimeCum'\n");
+    }
+    //DOUBLE(MeanRunningTimeCum);
+    if (jobs_completed > 0) {
+        mgmtObject->set_MeanRunningTimeCum((float) (flt/jobs_completed));
+    }
+}
 
 void
 SchedulerObject::update(const ClassAd &ad)
@@ -104,28 +268,12 @@ SchedulerObject::update(const ClassAd &ad)
 	INTEGER(TotalRemovedJobs);
 	INTEGER(TotalRunningJobs);
 
-    INTEGER(WindowedStatWidth);
-    INTEGER(UpdateInterval);
-
-    INTEGER(JobsSubmitted);
-    DOUBLE(JobSubmissionRate);
-    INTEGER(JobsCompleted);
-    DOUBLE(JobCompletionRate);
-    INTEGER(JobsExited);
-    INTEGER(ShadowExceptions);
-    INTEGER(JobsSubmittedCumulative);
-    INTEGER(JobsCompletedCumulative);
-    INTEGER(JobsExitedCumulative);
-    INTEGER(ShadowExceptionsCumulative);
-    INTEGER(JobsStartedCumulative);
-    INTEGER(JobsStarted);
-    DOUBLE(JobStartRate);
-    DOUBLE(MeanTimeToStartCumulative);
-    DOUBLE(MeanRunningTimeCumulative);
-    INTEGER64(SumTimeToStartCumulative);
-    INTEGER64(SumRunningTimeCumulative);
-    DOUBLE(MeanTimeToStart);
-    DOUBLE(MeanRunningTime);
+    if (m_new_stats) {
+        useNewStats(ad);
+    }
+    else {
+        useOldStats(ad);
+    }
 
 	mgmtObject->set_System(mgmtObject->get_Machine());
 
