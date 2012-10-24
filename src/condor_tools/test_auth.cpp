@@ -79,7 +79,6 @@ int
 main( int argc, char* argv[] )
 {
 	int		i;
-	param_functions *p_funcs = NULL;
 	
 	set_mySubSystem( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
 
