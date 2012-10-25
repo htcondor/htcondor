@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#ifndef __dprintf_internal_h_
+#define __dprintf_internal_h_
+
 // This #define doesn't actually do anything. This value needs to be
 // defined before any system header files are included in the source file
 // to have any effect.
@@ -27,6 +30,7 @@ typedef _Longlong int64_t;
 #else
 #include <stdint.h>
 #endif
+#include <ctime>
 
 struct DebugFileInfo;
 
@@ -37,7 +41,8 @@ enum DebugOutput
 	FILE_OUT,
 	STD_OUT,
 	STD_ERR,
-	OUTPUT_DEBUG_STR
+	OUTPUT_DEBUG_STR,
+	SYSLOG
 };
 
 /* future
@@ -70,6 +75,7 @@ struct DebugFileInfo
 	bool want_truncate;
 	bool accepts_all;
 	bool dont_panic;
+	void *userData;
 	DebugFileInfo() :
 			outputTarget(FILE_OUT),
 			debugFP(0),
@@ -79,6 +85,7 @@ struct DebugFileInfo
 			want_truncate(false),
 			accepts_all(false),
 			dont_panic(false),
+			userData(NULL),
 			dprintfFunc(NULL)
 			{}
 	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
@@ -113,5 +120,7 @@ void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, st
 #ifdef WIN32
 //Output to dbg string
 void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+#endif
+
 #endif
 

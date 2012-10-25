@@ -24,6 +24,7 @@
 #include "condor_sys_types.h"
 #include "condor_debug.h"
 #include "dprintf_internal.h"
+#include "dprintf_syslog.h"
 #include "condor_constants.h"
 
 #if HAVE_BACKTRACE
@@ -134,6 +135,13 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 					it->dprintfFunc = dprintf_to_outdbgstr;
 				}
 #endif
+				else if (logPath == "SYSLOG")
+				{
+					// Intention is to eventually user-selected
+					it->dprintfFunc = DprintfSyslog::Log;
+					it->outputTarget = SYSLOG;
+					it->userData = static_cast<void*>(DprintfSyslogFactory::NewLog(LOG_DAEMON));
+				}
 				else
 				{
 					it->outputTarget = FILE_OUT;
@@ -211,6 +219,14 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 
 	if(debugLogsOld)
 	{
+		
+		for (it = debugLogsOld->begin(); it != debugLogsOld->end(); it++)
+		{
+			if ((it->outputTarget == SYSLOG) && (it->userData))
+			{
+				delete static_cast<DprintfSyslog*>(it->userData);
+			}
+		}
 		delete debugLogsOld;
 	}
 
