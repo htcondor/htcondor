@@ -1,5 +1,5 @@
 Each submit description file describes one cluster of jobs to be
-placed in the Condor execution pool. All jobs in a cluster must share
+placed in the HTCondor execution pool. All jobs in a cluster must share
 the same executable, but they may have different input and output files,
 and different program arguments. The submit description file is
 the only command-line argument to \Condor{submit}. If the submit description
@@ -233,7 +233,7 @@ commands).
 \index{submit commands!error}
 \label{man-condor-submit-error}
 \item[error = $<$pathname$>$]
-A path and file name used by Condor to capture any
+A path and file name used by HTCondor to capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
 A path is given with respect to the file system of the machine
@@ -272,7 +272,7 @@ to the current working directory of the user as the
 \Condor{submit} command is issued.
 
 If submitting into the standard universe, then the named executable
-must have been re-linked with the Condor libraries (such as via the
+must have been re-linked with the HTCondor libraries (such as via the
 \Condor{compile} command). If submitting into the vanilla universe
 (the default), then the named executable need not be re-linked and can
 be any process which can run in the background (shell scripts work
@@ -293,8 +293,8 @@ shell environment variables at the time of job submission into the job
 ClassAd. The job will therefore execute with the same set of environment
 variables that the user had at submit time. Defaults to \Expr{False}.
 %You must be careful when using this feature, since the maximum allowed
-%size of the environment in Condor is 10240 characters.
-%If your environment is larger than that, Condor will not allow you to
+%size of the environment in HTCondor is 10240 characters.
+%If your environment is larger than that, HTCondor will not allow you to
 %submit your job, and you will have to use the ``Environment'' setting
 %described below, instead.
 
@@ -312,7 +312,7 @@ commands).
 \index{submit commands!input}
 \label{man-condor-submit-input}
 \item[input = $<$pathname$>$]
-Condor assumes that its jobs are
+HTCondor assumes that its jobs are
 long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
 the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
@@ -342,14 +342,14 @@ the \SubmitCmd{arguments} command.
 \label{man-condor-submit-log}
 \item[log = $<$pathname$>$] 
 Use \SubmitCmd{log} to specify a file name where
-Condor will write a log file of what is happening with this job cluster.
-For example, Condor will place a log entry into this file
+HTCondor will write a log file of what is happening with this job cluster.
+For example, HTCondor will place a log entry into this file
 when and where the job begins running,
 when the job produces a checkpoint, or moves (migrates) to another machine,
 and when the job completes.
 Most users find specifying a \SubmitCmd{log} file to be handy;
 its use is recommended. If no \SubmitCmd{log} entry is specified, 
-Condor does not create a log for this cluster.
+HTCondor does not create a log for this cluster.
 
 %%%%%%%%%%%%%%%%%%%
 %% log_xml
@@ -375,7 +375,7 @@ this option in the same way.
 \index{submit commands!notification}
 \label{man-condor-submit-notification}
 \item[notification = $<$Always \Bar\ Complete \Bar\ Error \Bar\ Never$>$]
-Owners of Condor jobs are notified by
+Owners of HTCondor jobs are notified by
 e-mail when certain events occur.
 If defined by \Arg{Always}, the owner will be notified
 whenever the job produces a checkpoint, as well as when the job completes.
@@ -398,15 +398,15 @@ page~\pageref{sec:job-completion}.
 \label{man-condor-submit-notify-user}
 \item[notify\_user = $<$email-address$>$]
 Used to specify the e-mail
-address to use when Condor sends e-mail about a job.  If not specified,
-Condor defaults to using the e-mail address defined by
+address to use when HTCondor sends e-mail about a job.  If not specified,
+HTCondor defaults to using the e-mail address defined by
 \begin{verbatim}
 job-owner@UID_DOMAIN
 \end{verbatim}
 where the configuration variable \Macro{UID\_DOMAIN}
-is specified by the Condor site administrator.
+is specified by the HTCondor site administrator.
 If \Macro{UID\_DOMAIN} has not been specified,
-Condor sends the e-mail to:
+HTCondor sends the e-mail to:
 \begin{verbatim}
 job-owner@submit-machine-name
 \end{verbatim}
@@ -449,7 +449,7 @@ that file should \emph{not} be specified as the \SubmitCmd{output} file.
 \index{submit commands!priority}
 \label{man-condor-submit-priority}
 \item[priority = $<$integer$>$] 
-A Condor job priority 
+An HTCondor job priority 
 can be any integer, with 0 being the default.
 Jobs with higher numerical priority will
 run before jobs with lower numerical priority. Note that this priority
@@ -471,7 +471,7 @@ not these jobs will run ahead of another user's jobs.
 \index{submit commands!queue}
 \label{man-condor-submit-queue}
 \item[queue \oOptnm{number-of-procs}] Places one or more
-copies of the job into the Condor queue.
+copies of the job into the HTCondor queue.
 The optional
 argument \Arg{number-of-procs} specifies how many times to submit the
 job to the queue, and it defaults to 1.
@@ -490,16 +490,16 @@ one submit description file.
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
 \Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
-Specifies which Condor Universe to use when running this job.  The Condor
-Universe specifies a Condor execution environment.
-The \SubmitCmd{standard} Universe tells Condor that this job has been
-re-linked via \Condor{compile} with the Condor libraries and therefore
+Specifies which HTCondor Universe to use when running this job.  The HTCondor
+Universe specifies an HTCondor execution environment.
+The \SubmitCmd{standard} Universe tells HTCondor that this job has been
+re-linked via \Condor{compile} with the HTCondor libraries and therefore
 supports checkpointing and remote system calls.
 The \SubmitCmd{vanilla} Universe is the default (except where the
 configuration variable \Macro{DEFAULT\_UNIVERSE} defines it
 otherwise), and is an execution environment for jobs which have not
-been linked with the Condor libraries.  \emph{Note:} Use the
-\SubmitCmd{vanilla} Universe to submit shell scripts to Condor.
+been linked with the HTCondor libraries.  \emph{Note:} Use the
+\SubmitCmd{vanilla} Universe to submit shell scripts to HTCondor.
 The \SubmitCmd{scheduler} is for a job that
 should act as a metascheduler.
 The \SubmitCmd{grid} universe forwards the job to an external job
@@ -528,16 +528,16 @@ machine.
 A ClassAd Floating-Point
 expression that states how to rank machines which have already met the requirements
 expression. Essentially, rank expresses preference.  A higher numeric value
-equals better rank. Condor will give the job the machine with the
+equals better rank. HTCondor will give the job the machine with the
 highest rank.  For example,
 \begin{verbatim}
         requirements = Memory > 60
         rank = Memory
 \end{verbatim}
-asks Condor to find all available machines with more than 60 megabytes of memory
+asks HTCondor to find all available machines with more than 60 megabytes of memory
 and give to the job the machine with the most amount of memory.
 See section~\ref{sec:user-man-req-and-rank} 
-within the Condor Users
+within the HTCondor Users
 Manual for complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
 
@@ -637,7 +637,7 @@ command is a boolean ClassAd expression which uses C-like operators. In
 order for any job in this cluster to run on a given machine, this
 requirements expression must evaluate to true on the given machine. 
 
-%For example, to require that whatever machine executes a Condor job has 
+%For example, to require that whatever machine executes an HTCondor job has 
 %     NEED A NEW EXAMPLE HERE
 %\begin{verbatim}
 %requirements = Memory >= 64 && Mips > 45
@@ -655,7 +655,7 @@ the requirements expression:
 \begin{enumerate}
         \item Arch and OpSys are set equal to the Arch and OpSys of the
 submit machine.  In other words: unless you request otherwise, 
-Condor will give your
+HTCondor will give your
 job machines with the same architecture and operating system version as
 the machine running \Condor{submit}.
         \item Cpus $>=$ RequestCpus, if the job ClassAd attribute
@@ -667,11 +667,11 @@ The \AdAttr{DiskUsage} attribute is initialized to the size of the
 executable plus the size of any files specified in a
 \SubmitCmd{transfer\_input\_files} command.
 It exists to ensure there is enough disk space on the
-target machine for Condor to copy over both the executable
+target machine for HTCondor to copy over both the executable
 and needed input files.
 The \AdAttr{DiskUsage} attribute represents the maximum amount of
 total disk space required by the job in kilobytes.
-Condor automatically updates the \AdAttr{DiskUsage} attribute
+HTCondor automatically updates the \AdAttr{DiskUsage} attribute
 approximately every 20 minutes while the job runs with the
 amount of space being used by the job on the execute machine.
         \item Memory $>=$ RequestMemory, if the job ClassAd attribute
@@ -682,7 +682,7 @@ the submit machine's FileSystemDomain.
 View the requirements of a job
 which has already been submitted (along with everything else about the
 job ClassAd) with the command \Condor{q -l}; see the command reference for
-\Condor{q} on page~\pageref{man-condor-q}.  Also, see the Condor Users
+\Condor{q} on page~\pageref{man-condor-q}.  Also, see the HTCondor Users
 Manual for complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
 
@@ -799,22 +799,22 @@ section~\ref{sec:file-transfer-by-URL} for details.
 \index{file transfer mechanism!submit command should\_transfer\_files}
 \label{man-condor-submit-should-transfer-files}
 \item[should\_transfer\_files = $<$YES \Bar\ NO \Bar\ IF\_NEEDED $>$] 
-The \SubmitCmd{should\_transfer\_files} setting is used to define if Condor
+The \SubmitCmd{should\_transfer\_files} setting is used to define if HTCondor
 should transfer files to and from the remote machine where the job
 runs.
 The file transfer mechanism is used to run jobs which are not in the
 standard universe (and can therefore use remote system calls for file
 access) on machines which do not have a shared file system with the
 submit machine.
-\SubmitCmd{should\_transfer\_files} equal to \Arg{YES} will cause Condor to
+\SubmitCmd{should\_transfer\_files} equal to \Arg{YES} will cause HTCondor to
 always transfer files for the job.
-\Arg{NO} disables Condor's file transfer mechanism.
+\Arg{NO} disables HTCondor's file transfer mechanism.
 \Arg{IF\_NEEDED} will not transfer files for the job if it is matched
 with a resource in the same \Attr{FileSystemDomain} as the submit
 machine (and therefore, on a machine with the same shared file
 system).
 If the job is matched with a remote resource in a different 
-\Attr{FileSystemDomain}, Condor will transfer the necessary files. 
+\Attr{FileSystemDomain}, HTCondor will transfer the necessary files. 
 
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
@@ -908,10 +908,10 @@ ignored on Windows machines.
 This command is applicable to jobs submitted to the grid
 and vanilla universes.
 If \SubmitCmd{transfer\_executable} is set to
-\Expr{False}, then Condor looks for the executable on the remote machine, and
+\Expr{False}, then HTCondor looks for the executable on the remote machine, and
 does not transfer the executable over.
 This is useful for an already pre-staged 
-executable; Condor behaves more like rsh.
+executable; HTCondor behaves more like rsh.
 The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
@@ -947,7 +947,7 @@ When there is no trailing path separator,
 the directory is transferred, its contents are transferred,
 and these contents are placed inside the transferred directory.
 
-For grid universe jobs other than Condor-C, the transfer of
+For grid universe jobs other than HTCondor-C, the transfer of
 directories is not currently supported.
 
 Symbolic links to files are transferred as the files they point to.
@@ -975,14 +975,14 @@ back from the temporary working directory on the execute machine to
 the submit machine.
 If there are multiple files, they must be delimited with commas.
 
-For Condor-C jobs and all other non-grid universe jobs,
+For HTCondor-C jobs and all other non-grid universe jobs,
 if \SubmitCmd{transfer\_output\_files} is not specified,
-Condor will automatically transfer back all files in the job's
+HTCondor will automatically transfer back all files in the job's
 temporary working directory which have been
 modified or created by the job.  Subdirectories are not scanned for
 output, so if output from subdirectories is desired, the output list
 must be explicitly specified.
-For grid universe jobs other than Condor-C, desired output files must
+For grid universe jobs other than HTCondor-C, desired output files must
 also be explicitly listed.
 Another reason to explicitly list output files is for a job that creates
 many files, and the user wants only a subset transferred back.
@@ -1020,7 +1020,7 @@ When there is no trailing path separator,
 the directory is transferred, its contents are transferred,
 and these contents are placed inside the transferred directory.
 
-For grid universe jobs other than Condor-C, the transfer of
+For grid universe jobs other than HTCondor-C, the transfer of
 directories is not currently supported.
 
 Symbolic links to files are transferred as the files they point to.
@@ -1061,7 +1061,7 @@ You cannot specify directories to be remapped.
 \item[when\_to\_transfer\_output = $<$ ON\_EXIT \Bar\ ON\_EXIT\_OR\_EVICT $>$] 
 
 Setting \SubmitCmd{when\_to\_transfer\_output} equal to \Arg{ON\_EXIT} will
-cause Condor to transfer the job's output files back to the submitting
+cause HTCondor to transfer the job's output files back to the submitting
 machine only when the job completes (exits on its own).
 
 The \Arg{ON\_EXIT\_OR\_EVICT} option is intended for fault tolerant
@@ -1069,7 +1069,7 @@ jobs which periodically save their own state and can restart where
 they left off.
 In this case, files are spooled to the submit machine any time the
 job leaves a remote site, either because it exited on its own, or was
-evicted by the Condor system for any reason prior to job completion.
+evicted by the HTCondor system for any reason prior to job completion.
 The files spooled back are placed in a directory defined by
 the value of the \MacroNI{SPOOL} configuration variable.
 Any output files transferred back to the submit machine are
@@ -1141,7 +1141,7 @@ in this state.
 When the ClassAd Expression evaluates to \Expr{True}, the job is
 not removed from the queue upon completion.
 This allows the user of a remotely spooled job to retrieve output
-files in cases where Condor would have removed them as part of
+files in cases where HTCondor would have removed them as part of
 the cleanup associated with completion. The job will only exit
 the queue once it has been marked for removal (via \Condor{rm},
 for example) and the \SubmitCmd{leave\_in\_queue} expression has
@@ -1166,7 +1166,7 @@ leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
 \item[next\_job\_start\_delay = $<$ClassAd Boolean Expression$>$]
 This expression specifies the number of seconds to delay after starting up
 this job before the next job is started.  The maximum
-allowed delay is specified by the Condor configuration variable
+allowed delay is specified by the HTCondor configuration variable
 \Macro{MAX\_NEXT\_JOB\_START\_DELAY}, which defaults to 10 minutes.
 This command does not apply to \SubmitCmd{scheduler}
 or \SubmitCmd{local} universe jobs.
@@ -1284,7 +1284,7 @@ this \SubmitCmd{on\_exit\_remove} expression works well:
 \end{verbatim}
 \normalsize
 If the job was killed by a signal or exited with a non-zero exit
-status, Condor would leave the job in the queue to run again.
+status, HTCondor would leave the job in the queue to run again.
 
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
@@ -1472,7 +1472,7 @@ defaults to false.
 \item[append\_files = file1, file2, ...]
 
 If your job attempts to access a file mentioned in this list,
-Condor will force all writes to that file to be appended to the end.
+HTCondor will force all writes to that file to be appended to the end.
 Furthermore, condor\_submit will not truncate it.
 This list uses the same syntax as compress\_files, shown above.
 
@@ -1498,7 +1498,7 @@ This option only applies to standard-universe jobs.
 \item[buffer\_files $=$ $<$ `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' $>$ ]
 \item[buffer\_size $=$ $<$bytes-in-buffer$>$]
 \item[buffer\_block\_size $=$ $<$bytes-in-block$>$]
-Condor keeps a buffer of recently-used data for each file a job accesses.
+HTCondor keeps a buffer of recently-used data for each file a job accesses.
 This buffer is used both to cache commonly-used data and to consolidate small
 reads and writes into larger operations that get better throughput.
 The default settings should produce reasonable results for most programs.
@@ -1521,7 +1521,7 @@ buffer_size = 1000000
 buffer_block_size = 256000
 \end{verbatim}
 
-If you do not set these, Condor will use the values given by these
+If you do not set these, HTCondor will use the values given by these
 two configuration file macros:
 
 \begin{verbatim}
@@ -1529,7 +1529,7 @@ DEFAULT_IO_BUFFER_SIZE = 1000000
 DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
 \end{verbatim}
 
-Finally, if no other settings are present, Condor will use
+Finally, if no other settings are present, HTCondor will use
 a buffer of 512 Kbytes
 and a block size of 32 Kbytes.
 
@@ -1542,7 +1542,7 @@ and a block size of 32 Kbytes.
 \item[compress\_files = file1, file2, ...]
 
 If your job attempts to access any of the files mentioned in this list,
-Condor will automatically compress them (if writing) or decompress them (if reading).
+HTCondor will automatically compress them (if writing) or decompress them (if reading).
 The compress format is the same as used by GNU gzip.
 
 The files given in this list may be simple file names or complete paths and may
@@ -1570,7 +1570,7 @@ This option only applies to standard universe jobs.
 \label{condor-submit-fetch-files}
 \item[fetch\_files = file1, file2, ...]
 If your job attempts to access a file mentioned in this list,
-Condor will automatically copy the whole file to the executing machine,
+HTCondor will automatically copy the whole file to the executing machine,
 where it can be accessed quickly.  When your job closes the file,
 it will be copied back to its original location.
 This list uses the same syntax as compress\_files, shown above.
@@ -1585,7 +1585,7 @@ This option only applies to standard universe jobs.
 \label{condor-submit-file-remaps}
 \item[file\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
 
-Directs Condor to use a new file name in place of an old one.  \Arg{name}
+Directs HTCondor to use a new file name in place of an old one.  \Arg{name}
 describes a file name that your job may attempt to open, and \Arg{newname}
 describes the file name it should be replaced with.
 \Arg{newname} may include an optional leading
@@ -1601,7 +1601,7 @@ these special characters may be escaped with a backslash.
 \begin{description}
 \item[Example One:]
 Suppose that your job reads a file named \File{dataset.1}.
-To instruct Condor
+To instruct HTCondor
 to force your job to read \File{other.dataset} instead,
 add this to the submit file:
 \begin{verbatim}
@@ -1613,7 +1613,7 @@ called \File{very.big}.
 If this file can be found in the same place on
 a local disk in every machine in the pool,
 (say \File{/bigdisk/bigfile},) you can
-instruct Condor of this fact by remapping \File{very.big} to
+instruct HTCondor of this fact by remapping \File{very.big} to
 \File{/bigdisk/bigfile} and specifying that the file is to be read locally,
 which will be much faster than reading over the network.
 \begin{verbatim}
@@ -1638,7 +1638,7 @@ file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 \item[local\_files = file1, file2, ...]
 
 If your job attempts to access a file mentioned in this list,
-Condor will cause it to be read or written at the execution machine.
+HTCondor will cause it to be read or written at the execution machine.
 This is most useful for temporary files not used for input or output.
 This list uses the same syntax as compress\_files, shown above.
 
@@ -1709,7 +1709,7 @@ which defaults to one day.
 A value of 0 indicates that the delegated proxy
 should be valid for as long as allowed by the credential used to
 create the proxy.  This setting currently only applies to proxies
-delegated for non-grid jobs and for Condor-C jobs.  It does not currently
+delegated for non-grid jobs and for HTCondor-C jobs.  It does not currently
 apply to globus grid jobs, which always behave as though this setting
 were 0.  This variable has no effect if the configuration
 variable \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is \Expr{False},
@@ -1901,7 +1901,7 @@ so no default value is set.
 \item[ec2\_key\_pair\_file = $<$pathname$>$]
 For grid type \SubmitCmd{ec2} jobs, 
 specifies the complete path and file name of a file into which 
-Condor will write an SSH key for use with ec2 jobs. 
+HTCondor will write an SSH key for use with ec2 jobs. 
 The key can be used to \Prog{ssh} into the
 virtual machine once it is running.
 
@@ -2040,11 +2040,11 @@ the \Condor{gridmanager} gets a job ad to manage.
 Therefore, the expression is evaluated:
 \begin{enumerate}
 \item
-   when a grid universe job is first submitted to Condor-G
+   when a grid universe job is first submitted to HTCondor-G
 \item
    when a grid universe job is released from the hold state
 \item
-   when Condor-G is restarted (specifically, whenever the \Condor{gridmanager}
+   when HTCondor-G is restarted (specifically, whenever the \Condor{gridmanager}
    is restarted)
 \end{enumerate}
 If the expression evaluates to \Expr{True},
@@ -2101,7 +2101,7 @@ the first parameter is the name of the remote \Condor{schedd}
 daemon.
 The second parameter is the name of the pool to which the remote
 \Condor{schedd} daemon belongs.
-See section~\ref{sec:Condor-C-Submit} for details.
+See section~\ref{sec:HTCondor-C-Submit} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{cream},
 there are three parameters.
@@ -2341,9 +2341,9 @@ path name for X.509 user certificates. The default location for X.509 proxies
 is the \File{/tmp} directory,
 which is generally a local file system.
 Setting
-this value would allow Condor to access the proxy in a shared file system
+this value would allow HTCondor to access the proxy in a shared file system
 (for example, AFS).
-Condor will use the proxy specified in the submit description file first.
+HTCondor will use the proxy specified in the submit description file first.
 If nothing is specified in the submit description file,
 it will use the environment variable X509\_USER\_CERT.
 If that variable is not present,
@@ -2403,7 +2403,7 @@ the executable and automatically added to the classpath.
 \label{condor-submit-java-vm-args}
 \item[java\_vm\_args = $<$argument\_list$>$]
 Specifies a list of additional arguments to the Java VM itself,
-When Condor runs the Java program, these are the arguments that 
+When HTCondor runs the Java program, these are the arguments that 
 go before the class name.  This can be used to set VM-specific 
 arguments like stack size, garbage-collector arguments 
 and initial property values.
@@ -2539,7 +2539,7 @@ If not specified, then either networking type matches.
 \index{submit commands!vm\_no\_output\_vm}
 \label{condor-submit-vm-no-output-vm}
 \item[vm\_no\_output\_vm = $<$True \Bar\ False$>$]
-When \Expr{True}, prevents Condor from transferring output
+When \Expr{True}, prevents HTCondor from transferring output
 files back to the machine from which the vm universe job
 was submitted.
 If not specified, the default value is \Expr{False}.
@@ -2574,7 +2574,7 @@ are to be listed using \SubmitCmd{transfer\_input\_files}.
 \index{submit commands!vmware\_should\_transfer\_files}
 \label{condor-submit-vmware-should-transfer-files}
 \item[vmware\_should\_transfer\_files = $<$True \Bar\ False$>$]
-Specifies whether Condor will transfer VMware-specific files 
+Specifies whether HTCondor will transfer VMware-specific files 
 located as specified by \SubmitCmd{vmware\_dir} to
 the execute machine (\Expr{True}) or rely on access through 
 a shared file system (\Expr{False}).
@@ -2589,7 +2589,7 @@ job will not be submitted.
 \index{submit commands!vmware\_snapshot\_disk}
 \label{condor-submit-vmware-snapshot-disk}
 \item[vmware\_snapshot\_disk = $<$True \Bar\ False$>$]
-When \Expr{True}, causes Condor to utilize
+When \Expr{True}, causes HTCondor to utilize
 a VMware snapshot disk for new or modified files.
 If not specified, the default value is \Expr{True}.
 
@@ -2833,17 +2833,17 @@ of job completion.
 
 \index{submit commands!image\_size}
 \label{condor-submit-image-size}
-\item[image\_size = $<$size$>$] Advice to Condor specifying the maximum
+\item[image\_size = $<$size$>$] Advice to HTCondor specifying the maximum
 virtual image size to which the job will grow during its execution.
-Condor will then execute the job only on machines which have enough resources,
+HTCondor will then execute the job only on machines which have enough resources,
 (such as virtual memory), to support executing the job.
-If not specified, Condor will automatically make a (reasonably accurate)
+If not specified, HTCondor will automatically make a (reasonably accurate)
 estimate about the job's size and adjust this estimate as the program runs.
 If specified and underestimated, the job may crash due to
 the inability to acquire more address space; 
 for example, if \Procedure{malloc} fails. 
 If the image size is overestimated,
-Condor may have difficulty finding machines which have the required resources.
+HTCondor may have difficulty finding machines which have the required resources.
 \Arg{size} is specified in Kbytes. 
 For example, for an image size of 8 Megabytes, \Arg{size} should be 8000.
 
@@ -2958,13 +2958,13 @@ Otherwise, the job is abruptly killed.  The default is \Expr{false}.
 
 \index{submit commands!kill\_sig}
 \label{condor-submit-kill-sig}
-\item[kill\_sig = $<$signal-number$>$] When Condor needs to kick a job
+\item[kill\_sig = $<$signal-number$>$] When HTCondor needs to kick a job
 off of a machine, it will send the job the signal specified by
 \SubmitCmd{signal-number}.
 \SubmitCmd{signal-number} needs to be an integer which
 represents a valid signal on the execution machine.  For jobs submitted
 to the standard universe, the default value is the number for
-\verb@SIGTSTP@ which tells the Condor libraries to initiate a checkpoint
+\verb@SIGTSTP@ which tells the HTCondor libraries to initiate a checkpoint
 of the process.  For jobs submitted to other universes,
 the default value, when not defined,
 is \verb@SIGTERM@, which is the standard way to terminate a program in Unix.  
@@ -2976,10 +2976,10 @@ is \verb@SIGTERM@, which is the standard way to terminate a program in Unix.
 \index{submit commands!kill\_sig\_timeout}
 \label{condor-submit-kill-sig-timeout}
 \item[kill\_sig\_timeout = $<$seconds$>$] This submit command should
-no longer be used as of Condor version 7.7.3;
+no longer be used as of HTCondor version 7.7.3;
 use \SubmitCmd{job\_max\_vacate\_time} instead.
 If \SubmitCmd{job\_max\_vacate\_time} is not defined,
-this defines the number of seconds that Condor
+this defines the number of seconds that HTCondor
 should wait following the sending of the kill signal defined by
 \SubmitCmd{kill\_sig} and forcibly killing the job.
 The actual amount of time between sending the signal and forcibly killing
@@ -3111,14 +3111,14 @@ specify this in the requirements and/or rank expressions.
 \index{submit commands!nice\_user}
 \label{man-condor-submit-nice-user}
 \item[nice\_user = $<$True \Bar\ False$>$] Normally, when a machine
-becomes available to Condor, Condor decides which job to run based upon
+becomes available to HTCondor, HTCondor decides which job to run based upon
 user and job priorities. Setting \SubmitCmd{nice\_user} equal to \Expr{True}
-tells Condor not to use your regular user priority, but that this job
+tells HTCondor not to use your regular user priority, but that this job
 should have last priority among all users and all jobs. So jobs
 submitted in this fashion run only on machines which no other
 non-nice\_user job wants --- a true ``bottom-feeder'' job! This is very
 handy if a user has some jobs they wish to run, but do not wish to use
-resources that could instead be used to run other people's Condor jobs. Jobs
+resources that could instead be used to run other people's HTCondor jobs. Jobs
 submitted in this fashion have ``nice-user.'' pre-appended in front of
 the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
 default value is \SubmitCmd{False}.
@@ -3132,7 +3132,7 @@ default value is \SubmitCmd{False}.
 \item[noop\_job = $<$ClassAd Boolean Expression$>$]
 When this boolean expression is \Expr{True},
 the job is immediately removed from the queue,
-and Condor makes no attempt at running the job.
+and HTCondor makes no attempt at running the job.
 The log file for the job will show a
 job submitted event and a job terminated event,
 along with an exit code of 0,
@@ -3299,7 +3299,7 @@ and comments:
 \begin{description}
 
 \item[Macros] Parameterless macros in the form of \MacroUNI{macro\_name}
-may be inserted anywhere in Condor submit description files. Macros can be
+may be inserted anywhere in HTCondor submit description files. Macros can be
 defined by lines in the form of 
 \begin{verbatim} 
         <macro_name> = <string> 
@@ -3319,8 +3319,8 @@ ClassAd attribute, and the
 ClassAd attribute.
 These macros are
 intended to aid in the specification of input/output files, arguments,
-etc., for clusters with lots of jobs, and/or could be used to supply a
-Condor process with its own cluster and process numbers on the command
+etc., for clusters with lots of jobs, and/or could be used to supply an
+HTCondor process with its own cluster and process numbers on the command
 line.
 The 
 \MacroU{Node} macro is defined for MPI applications run
@@ -3358,7 +3358,7 @@ submission of an executable:
 executable = povray.$$(OpSys).$$(Arch)
 \end{verbatim}
 Values for the \AdAttr{OpSys} and \AdAttr{Arch} attributes are substituted at
-match time for any given resource. This example allows Condor to automatically
+match time for any given resource. This example allows HTCondor to automatically
 choose the correct executable for the matched machine.
 
 An extension to the syntax of the substitution macro provides an
