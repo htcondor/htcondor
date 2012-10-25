@@ -65,7 +65,7 @@ private:
 		if (!logger) return NULL;
 		if (m_count == 0)
 		{
-			openlog("condor", LOG_PID|LOG_NDELAY, facility);
+			openlog(NULL, LOG_PID|LOG_NDELAY, facility);
 		}
 		m_count++;
 		return logger;
