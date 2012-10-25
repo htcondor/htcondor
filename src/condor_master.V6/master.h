@@ -161,6 +161,7 @@ public:
 	void	DaemonsOff( int fast = 0 );
 	void	DaemonsOffPeaceful();
 	void 	StartAllDaemons();
+	int 	StartDaemonHere(class daemon *);
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
 	void	StopDaemon( char* name );
@@ -211,6 +212,8 @@ public:
 
 	class daemon*	FindDaemon( daemon_t dt );
 	class daemon*	FindDaemon( const char * );
+
+	void DeregisterDaemon( const char * );
 
 private:
 	std::map<std::string, class daemon*> daemon_ptr;
