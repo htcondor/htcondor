@@ -135,6 +135,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	unicore_gahp_callback_func = NULL;
 	unicore_gahp_callback_reqid = 0;
 
+	m_ssh_forward_port = 0;
 	my_id = strdup(id);
 	binary_path = strdup(path);
 	if ( args != NULL ) {
@@ -1385,6 +1386,15 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			*newline = '\0';
 			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
 					 m_gahp_error_buffer.c_str(), prev_line );
+			// For a gahp running over ssh with tunneling, look for a
+			// line declaring the listen port on the remote end.
+			// For correctness, we should be checking m_gahp_errorfd
+			// as well, but this should be one of the first lines in
+			// stderr and shouldn't be split across multiple reads.
+			if ( m_ssh_forward_port == 0 ) {
+				sscanf( prev_line, "Allocated port %d for remote forward to",
+						&m_ssh_forward_port );
+			}
 			prev_line = newline + 1;
 			m_gahp_error_buffer = "";
 
