@@ -1382,6 +1382,23 @@ void INFNBatchJob::CreateSandboxId()
 		pool_name = strdup( "NoPool" );
 	}
 
+	// The sandbox id becomes a directory on the remote side.
+	// Having ':', '?', ' ', or ',' in a path can mess up PBS and
+	// other systems, so we need to remove them.
+	for ( char *ptr = pool_name; *ptr != '\0'; ptr++ ) {
+		switch( *ptr ) {
+		case ':':
+			*ptr = '_';
+			break;
+		case '?':
+		case ',':
+		case ' ':
+		case '\t':
+			*ptr = '\0';
+			break;
+		}
+	}
+
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
 	std::string job_id;
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
