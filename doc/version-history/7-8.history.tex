@@ -19,6 +19,8 @@ The details of each version are described below.
 \subsection*{\label{sec:New-7-8-7}Version 7.8.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\noindent Release Notes:
+
 \begin{itemize}
 
 \item Condor version 7.8.7 not yet released.
@@ -56,9 +58,43 @@ been in Hold state due to failed file transfer for at least twelve hours;
 these jobs will be removed from the queue.
 \Ticket{3200}
 
+\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  
+\Ticket{3232}
+
+\item ClassAd functions int() and real() now ignore trailing characters
+when a string argument containing a valid number is given.
+\Ticket{3102}
+
+\item Contrary to the intended behavior, jobs run via glexec did not
+get put on hold shortly before their proxy expired.
+\Ticket{3283}
+
+\item Starting in 7.8.0, when using glexec, the job was put on hold
+shortly after the user's proxy was refreshed.  The stated hold
+reason was, ``Proxy about to expire.''
+\Ticket{3280}
+
+\item The configuration setting
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
+\Ticket{3282}
 
 \end{itemize}
 
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -95,24 +131,7 @@ these jobs will be removed from the queue.
 
 \begin{itemize}
 
-	\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  \Ticket{3232}
-
-\item ClassAd functions int() and real() now ignore trailing characters
-when a string argument containing a valid number is given.
-\Ticket{3102}
-
-\item Contrary to the intended behavior, jobs run via glexec did not
-get put on hold shortly before their proxy expired.
-\Ticket{3283}
-
-\item Starting in 7.8.0, when using glexec, the job was put on hold
-shortly after the user's proxy was refreshed.  The stated hold
-reason was, ``Proxy about to expire.''
-\Ticket{3280}
-
-\item The configuration setting
-\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
-\Ticket{3282}
+\item None.
 
 \end{itemize}
 
