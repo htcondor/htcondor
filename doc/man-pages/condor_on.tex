@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-on}\Condor{on}}{1}
-{Start up Condor daemons}
+{Start up HTCondor daemons}
 \Synopsis \SynProg{\Condor{on}}
 \ToolArgsBase
 
@@ -7,12 +7,12 @@
 \ToolDebugOption
 \ToolWhere \ToolArgsAffect
 
-\index{Condor commands!condor\_on}
+\index{HTCondor commands!condor\_on}
 \index{condor\_on command}
 
 \Description 
 
-\Condor{on} starts up a set of the Condor daemons on a set of
+\Condor{on} starts up a set of the HTCondor daemons on a set of
 machines.
 This command assumes that the \Condor{master} is already
 running on the machine.
@@ -20,7 +20,7 @@ If this is not the case, \Condor{on} will
 fail complaining that it cannot find the address of the master.
 The command \Condor{on} with no arguments or with
  the \OptArg{-daemon}{master} option will
-tell the \Condor{master} to start up the Condor daemons specified
+tell the \Condor{master} to start up the HTCondor daemons specified
 in the configuration variable \MacroNI{DAEMON\_LIST}.
 If a daemon other than the \Condor{master} is specified
 with the \Opt{-daemon} option,

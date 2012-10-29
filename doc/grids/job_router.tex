@@ -1,23 +1,23 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:JobRouter}The Condor Job Router}
+\section{\label{sec:JobRouter}The HTCondor Job Router}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job Router}
-\index{Condor daemon!condor\_job\_router@\Condor{job\_router}}
+\index{HTCondor daemon!condor\_job\_router@\Condor{job\_router}}
 \index{daemon!condor\_job\_router@\Condor{job\_router}}
 \index{condor\_job\_router daemon}
 
-The Condor Job Router is an add-on to the \Condor{schedd} that transforms
+The HTCondor Job Router is an add-on to the \Condor{schedd} that transforms
 jobs from one type into another according to a configurable policy.
 This process of transforming the jobs is called \emph{job routing}.
 
 One example of how the Job Router can be used is for the task of sending
 excess jobs to one or more remote grid sites.
 The Job Router can transform the jobs such as vanilla universe jobs into grid universe
-jobs that use any of the grid types supported by Condor.  The rate at
+jobs that use any of the grid types supported by HTCondor.  The rate at
 which jobs are routed can be matched roughly to the rate at which the
 site is able to start running them.  This makes it possible to balance
-a large work flow across multiple grid sites, a local Condor pool, and
-any flocked Condor pools, without having to guess in advance how quickly
+a large work flow across multiple grid sites, a local HTCondor pool, and
+any flocked HTCondor pools, without having to guess in advance how quickly
 jobs will run and complete in each of the different sites.
 
 Job Routing is most appropriate for high throughput work flows, 
@@ -65,7 +65,7 @@ the routed copy is removed.
 The \Condor{job\_router} daemon utilizes a \Term{routing table},
 in which a ClassAd describes each site to where jobs may be sent.
 The routing table is given in the New ClassAd language,
-as currently used by Condor internally.
+as currently used by HTCondor internally.
 A good place to learn about the syntax of New ClassAds
 is the Informal Language Description in the C++ ClassAds
 tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
@@ -77,7 +77,7 @@ each ClassAd is surrounded by square brackets.
 And, in the New ClassAd language,
 each assignment statement ends with a semicolon.
 When the New
-ClassAd is embedded in a Condor configuration file,
+ClassAd is embedded in an HTCondor configuration file,
 it may appear all on a single line,
 but the readability is often improved by inserting line continuation
 characters
@@ -90,7 +90,7 @@ characters in configuration files.
 An alternative is to use C-style comments (\Code{/* \Dots */}).
 Another alternative is to read in the routing table entries
 from a separate file,
-rather than embedding them in the Condor configuration file.
+rather than embedding them in the HTCondor configuration file.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:RouterJobSubmission}Job Submission with Job Routing Capability}
@@ -105,7 +105,7 @@ necessary prerequisites to be considered for routing.
 \item Jobs appropriate for routing to the grid must not rely on access to
 a shared file system, or other services that are only available on the
 local pool.
-The job will use Condor's file transfer mechanism, 
+The job will use HTCondor's file transfer mechanism, 
 rather than relying on a shared file system
 to access input files and write output files.
 In the submit description file, to enable file transfer, there
@@ -121,10 +121,10 @@ transfer_output_files = output1, output2
 Vanilla universe jobs and most types of grid universe jobs differ in the
 set of files transferred back when the job completes.
 Vanilla universe jobs transfer back all files created or modified,
-while all grid universe jobs except for Condor-C only transfer back the \SubmitCmd{output} file,
+while all grid universe jobs except for HTCondor-C only transfer back the \SubmitCmd{output} file,
 as well as those explicitly listed
 with \SubmitCmd{transfer\_output\_files}.
-Therefore, when routing jobs to grid universes other than Condor-C, it is
+Therefore, when routing jobs to grid universes other than HTCondor-C, it is
 important to explicitly specify all
 output files that must be transferred upon job completion.
 
@@ -192,7 +192,7 @@ x509userproxy = /tmp/x509up_u275
 queue
 \end{verbatim}
 
-The status of the job may be observed as with any other Condor job,
+The status of the job may be observed as with any other HTCondor job,
 for example by looking in the job's log file.
 Before the job completes,
 \Condor{q} shows the job's status.
@@ -236,9 +236,9 @@ The following sample configuration sets up potential job routing
 to three routes (grid sites).
 Definitions of the configuration variables specific to the Job Router
 are in section~ \ref{sec:JobRouter-Config-File-Entries}.
-One route is a Condor site accessed via the Globus gt2 protocol.
+One route is an HTCondor site accessed via the Globus gt2 protocol.
 A second route is a PBS site, also accessed via Globus gt2.
-The third site is a Condor site accessed by Condor-C.
+The third site is an HTCondor site accessed by HTCondor-C.
 The \Condor{job\_router} daemon
 does not know which site will be best for a given job.
 The policy implemented in this sample configuration 
@@ -252,7 +252,7 @@ before setting up and using the Job Router.
 Typically, the single required element that needs to be
 added for GSI authentication
 is an X.509 trusted certification authority directory,
-in a place recognized by Condor
+in a place recognized by HTCondor
 (for example,  \File{/etc/grid-security/certificates}).
 The VDT (\URL{http://vdt.cs.wisc.edu}) project provides 
 a convenient way to set up and install a trusted CAs,
@@ -294,7 +294,7 @@ JOB_ROUTER_ENTRIES = \
    ]
 
 
-# Reminder: you must restart Condor for changes to DAEMON_LIST to take effect.
+# Reminder: you must restart HTCondor for changes to DAEMON_LIST to take effect.
 DAEMON_LIST = $(DAEMON_LIST) JOB_ROUTER
 
 # For testing, set this to a small value to speed things up.
@@ -486,7 +486,7 @@ entry is ignored.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Open Science Grid has a service called ReSS (Resource Selection
-Service).  It presents grid sites as ClassAds in a Condor collector.
+Service).  It presents grid sites as ClassAds in an HTCondor collector.
 This example builds a routing table from the site ClassAds in the ReSS
 collector.
 

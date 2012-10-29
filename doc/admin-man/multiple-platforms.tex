@@ -1,10 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Multiple-Platforms}Configuring Condor for
+\subsection{\label{sec:Multiple-Platforms}Configuring HTCondor for
 Multiple Platforms} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A single, global
-configuration file may be used for all platforms in a Condor pool, with only
+configuration file may be used for all platforms in an HTCondor pool, with only
 platform-specific settings placed in separate files.  This greatly
 simplifies administration of a heterogeneous pool by allowing
 changes of platform-independent, global settings in one place, instead of
@@ -26,8 +26,8 @@ Then set the \MacroNI{LOCAL\_CONFIG\_FILE} configuration variable from that
 global configuration file to specify both a platform-specific
 configuration file and
 optionally, a local, machine-specific configuration file (this parameter is
-described in section~\ref{sec:Condor-wide-Config-File-Entries} on
-``Condor-wide Configuration File Entries'').
+described in section~\ref{sec:HTCondor-wide-Config-File-Entries} on
+``HTCondor-wide Configuration File Entries'').
 
 The order of file specification in the
 \MacroNI{LOCAL\_CONFIG\_FILE} configuration variable is important,
@@ -46,7 +46,7 @@ Platform-Specific Configuration File}
 The name of 
 platform-specific configuration files may be specified by using the
 \MacroNI{ARCH} and \MacroNI{OPSYS} configuration variables, as are defined
-automatically by Condor.
+automatically by HTCondor.
 For example, for 32-bit Intel Windows 7
 machines and 64-bit Intel Linux machines,
 the files ought to be named:
@@ -100,14 +100,14 @@ The configuration variables that are truly platform-specific are:
 \begin{description}
 
 \item[\Macro{RELEASE\_DIR}] Full path to to the installed
-  Condor binaries.  While the configuration files may be shared among
+  HTCondor binaries.  While the configuration files may be shared among
   different platforms, the binaries certainly cannot.  Therefore,
   maintain separate release directories for each platform
-  in the pool.  See section~\ref{sec:Condor-wide-Config-File-Entries}
-  on ``Condor-wide Configuration File Entries'' for details.
+  in the pool.  See section~\ref{sec:HTCondor-wide-Config-File-Entries}
+  on ``HTCondor-wide Configuration File Entries'' for details.
 
 \item[\Macro{MAIL}] The full path to the mail program.  See
-  section~\ref{sec:Condor-wide-Config-File-Entries} on ``Condor-wide
+  section~\ref{sec:HTCondor-wide-Config-File-Entries} on ``HTCondor-wide
   Configuration File Entries'' for details.
 
 \item[\Macro{CONSOLE\_DEVICES}] Which devices in \File{/dev} should be
@@ -129,7 +129,7 @@ Reasonable defaults for all of these configuration variables
 will be found in the
 default configuration files inside a given platform's binary distribution
 (except the \MacroNI{RELEASE\_DIR}, since 
-the location of the Condor binaries and libraries is installation specific).
+the location of the HTCondor binaries and libraries is installation specific).
 With multiple platforms,
 use one of the \File{condor\_config} files from
 either running \Condor{configure} or from the
@@ -178,7 +178,7 @@ only contain a definition for \MacroNI{LOCAL\_CONFIG\_FILE}, and all
 other configuration variables would be placed in separate files.  
 
 Different people may be given different permissions to change different
-Condor settings.  For example, if a user is to be able to
+HTCondor settings.  For example, if a user is to be able to
 change certain settings, but nothing else, those
 settings may be placed in a file which was early
 in the \MacroNI{LOCAL\_CONFIG\_FILE} list,

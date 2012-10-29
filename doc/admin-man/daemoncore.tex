@@ -3,9 +3,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{daemoncore|(}
-\index{Condor!shared functionality in daemons}
+\index{HTCondor!shared functionality in daemons}
 This section is a brief description of \Term{DaemonCore}.  DaemonCore
-is a library that is shared among most of the Condor daemons which
+is a library that is shared among most of the HTCondor daemons which
 provides common functionality.  Currently, the following daemons use
 DaemonCore:
 
@@ -77,8 +77,8 @@ with no chance to write a checkpoint.
 For all daemons, a reconfigure results in the daemon re-reading
 its configuration file(s), causing any settings that have changed
 to take effect.
-See section~\ref{sec:Configuring-Condor} on
-page~\pageref{sec:Configuring-Condor}, Configuring Condor for full
+See section~\ref{sec:Configuring-HTCondor} on
+page~\pageref{sec:Configuring-HTCondor}, Configuring HTCondor for full
 details on what settings are in the configuration files and what they do.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -87,7 +87,7 @@ Command-line Arguments}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{daemoncore!command line arguments}
-\index{Condor daemon!command line arguments}
+\index{HTCondor daemon!command line arguments}
 The second visible feature that DaemonCore provides to administrators
 is a common set of command-line arguments that all daemons understand.
 These arguments and what they do are described below:
@@ -101,12 +101,12 @@ These arguments and what they do are described below:
 \item[-b] Causes the daemon to start up in the background.  When a
   DaemonCore process starts up with this option, it disassociates itself
   from the terminal and forks itself, so that it runs in the
-  background.  This is the default behavior for Condor daemons.
+  background.  This is the default behavior for HTCondor daemons.
 
 \item[-c filename] Causes the daemon to use the specified \Opt{filename}
   as a full path and file name as its global configuration file.  This
   overrides the \Env{CONDOR\_CONFIG} environment variable and the
-  regular locations that Condor checks for its configuration file.
+  regular locations that HTCondor checks for its configuration file.
 
 \item[-d] Use dynamic directories.
  The \MacroUNI{LOG}, \MacroUNI{SPOOL}, and \MacroUNI{EXECUTE} directories
@@ -117,7 +117,7 @@ These arguments and what they do are described below:
  These values are then inherited by all children of the daemon
  invoked with this \Opt{-d} argument.
  For the \Condor{master},
- all Condor processes will use the new directories.
+ all HTCondor processes will use the new directories.
  If a \Condor{schedd} is invoked with the \Arg{-d} argument,
  then only the \Condor{schedd} daemon and any
  \Condor{shadow} daemons it spawns will use the dynamic
@@ -139,7 +139,7 @@ These arguments and what they do are described below:
   \Note When the \Condor{master} starts up daemons, it does
   so with the \Opt{-f} option, as it has already forked a process for the
   new daemon.  There will be a \Opt{-f} in the argument list for all
-  Condor daemons that the \Condor{master} spawns.
+  HTCondor daemons that the \Condor{master} spawns.
 
 \item[-k filename] For non-Windows operating systems,
   causes the daemon to read out a PID from the
@@ -151,7 +151,7 @@ These arguments and what they do are described below:
   the configuration files.  Primarily, this option is used with the
   \Condor{kbdd} when it needs to run as the individual user logged
   into the machine, instead of running as root.  Regular users would
-  not normally have permission to write files into Condor's log
+  not normally have permission to write files into HTCondor's log
   directory.  Using this option, they can override the value of
   \MacroNI{LOG} and have the \Condor{kbdd} write its log file into a
   directory that the user has permission to write to.
@@ -166,7 +166,7 @@ These arguments and what they do are described below:
   command socket.  The \Condor{master} daemon
   uses this option to ensure that the
   \Condor{collector} and \Condor{negotiator} start up using
-  well-known ports that the rest of Condor depends upon them using.
+  well-known ports that the rest of HTCondor depends upon them using.
 
 \item[-pidfile filename] Causes the daemon to write out its PID
   (process id number) to the specified \Opt{filename}.

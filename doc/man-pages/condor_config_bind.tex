@@ -10,12 +10,12 @@
 \Arg{configfile2}
 \oArg{configfile3\ldots}
 
-\index{Condor commands!condor\_config\_bind}
+\index{HTCondor commands!condor\_config\_bind}
 \index{condor\_config\_bind command}
 
 \Description
 
-\Condor{config\_bind} dynamically binds two or more Condor
+\Condor{config\_bind} dynamically binds two or more HTCondor
 configuration files through the use of a new configuration file.  The
 purpose of this tool is to allow the user to dynamically bind a local
 configuration file into an already created, and possible immutable,
@@ -26,7 +26,7 @@ files).  This program does not modify the given configuration files.
 Rather, it creates a new configuration file that specifies the given
 configuration files as local configuration files.  
 
-Condor evaluates each of the configuration files in the given
+HTCondor evaluates each of the configuration files in the given
 command-line order (left to right).
 A value defined 
 in two or more of the configuration files results in

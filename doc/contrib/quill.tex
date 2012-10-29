@@ -6,21 +6,21 @@
 \section{\label{sec:Quill}Quill}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Quill contrib|(}
-\index{Condor daemon, source code contrib!condor\_quill@\Condor{quill}}
+\index{HTCondor daemon, source code contrib!condor\_quill@\Condor{quill}}
 \index{condor\_quill source code contrib daemon}
-\index{Condor daemon, source code contrib!condor\_dbmsd@\Condor{dbmsd}}
+\index{HTCondor daemon, source code contrib!condor\_dbmsd@\Condor{dbmsd}}
 \index{condor\_dbmsd source code contrib daemon}
-Quill is an optional component of Condor that maintains a mirror 
-of Condor operational data
+Quill is an optional component of HTCondor that maintains a mirror 
+of HTCondor operational data
 in a relational database.  The \Condor{quill} daemon updates
 the data in the relation database, and the \Condor{dbmsd} daemon
 maintains the database itself.
 
-As of Condor version 7.5.5,
+As of HTCondor version 7.5.5,
 Quill is distributed only with the source code.
-It is not included in the builds of Condor provided by UW,
+It is not included in the builds of HTCondor provided by UW,
 but it is available as a feature that can be enabled by those who compile
-Condor from the source code.
+HTCondor from the source code.
 Find the code within the \File{condor\_contrib} directory, 
 in the directories \File{condor\_tt} and \File{condor\_dbmsd}.
 
@@ -173,7 +173,7 @@ Since this gives all access to the \Username{quillwriter} user,
 its password cannot be stored in a public place 
 (such as in a ClassAd).
 For this reason, the \Username{quillwriter} password is stored
-in a file named \File{.pgpass} in the Condor spool directory.
+in a file named \File{.pgpass} in the HTCondor spool directory.
 Appropriate protections on this file guarantee secure access to the database.
 This file must be created and protected by the site administrator;
 if this file does not exist as and where expected, the \Condor{quill}
@@ -190,7 +190,7 @@ the "quillwriter" user name,
 and the password.
 The form used in the first field must exactly match the value set for 
 the configuration variable \QuillMacro{QUILL\_DB\_IP\_ADDR}.
-Condor uses a string comparison between the two, and it does not resolve the
+HTCondor uses a string comparison between the two, and it does not resolve the
 host names to compare IP addresses.
 Example:
 \footnotesize
@@ -211,7 +211,7 @@ createlang plpgsql [databasename]
 \end{verbatim}
 
 Then, load the Quill schema from the sql files in the \File{sql} subdirectory
-of the Condor release directory:
+of the HTCondor release directory:
 
 \begin{verbatim}
 psql [databasename] [username] < common_createddl.sql
@@ -220,14 +220,14 @@ psql [databasename] [username] < pgsql_createddl.sql
 where \verb@[username]@ will be \verb@quillwriter@.
 
 
-After \Prog{PostgreSQL} is configured and running, Condor must also be
+After \Prog{PostgreSQL} is configured and running, HTCondor must also be
 configured to use Quill, since by default Quill is configured to be off.
 
 \begin{description}
 \item Add the file \File{.pgpass} to the 
   \QuillMacroNI{VALID\_SPOOL\_FILES} variable, since \Condor{preen} must
   be told not to delete this file.
-  This step may not be necessary, depending on which version of Condor 
+  This step may not be necessary, depending on which version of HTCondor 
   you are upgrading from. 
  
 \item Set up configuration variables that are specific to the installation,
@@ -267,7 +267,7 @@ SCHEDD_DAEMON_AD_FILE   = $(LOG)/.schedd_classad
 
 \end{description}
 
-The default Condor configuration file should already contain definitions
+The default HTCondor configuration file should already contain definitions
 for \QuillMacroNI{QUILL} and \QuillMacroNI{QUILL\_LOG}.  
 When upgrading from a previous version that did not have Quill to
 a new one that does, define these two configuration variables.
@@ -334,12 +334,12 @@ management and interface to its representation of the job queue.
 
   See the description of \QuillMacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
-  for defaults and composition of valid Condor daemon names.
+  for defaults and composition of valid HTCondor daemon names.
 
 \label{param:QuillUseSQLLog}
 \item[\QuillMacro{QUILL\_USE\_SQL\_LOG}]
   In order for Quill to store historical job information or resource
-  information, the Condor daemons must write information to the SQL logfile.
+  information, the HTCondor daemons must write information to the SQL logfile.
   By default, this is set to \Expr{False}, and the only information Quill
   stores in the database is the current job queue.
   This can be set on a per daemon basis. For example, to store information
@@ -593,7 +593,7 @@ for the various time stamp formats.
 \subsection{\label{sec:Quill-Security}Quill and Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-There are several layers of security in Quill, some provided by Condor and
+There are several layers of security in Quill, some provided by HTCondor and
 others provided by the database.  First, all accesses to the database
 are password-protected.
 
@@ -608,7 +608,7 @@ connect successfully to the database.  Access to the database by the
 query tools.  The \Condor{quill} daemon ensures this protected access using the sql
 GRANT command when it first creates the tables in the database.  Note that
 access to the \Username{quillreader} password itself can be blocked by
-blocking access to the collector, a feature already supported in Condor.
+blocking access to the collector, a feature already supported in HTCondor.
 
 \item The \Condor{quill} and \Condor{dbmsd} daemons, on the other hand,
 need read and write access to the database.
@@ -617,7 +617,7 @@ who has owner privileges to the database.  Since this gives all
 access to the \Username{quillwriter} user, this password cannot
 be stored in a public place (such as the collector).  For this
 reason, the \Username{quillwriter} password is stored in a file called
-\File{.pgpass} in the Condor spool directory.
+\File{.pgpass} in the HTCondor spool directory.
 Appropriate protections on this file guarantee secure access to the database.
 This file must be created and protected by the site administrator;
 if this file does not exist as and where expected, the \Condor{quill}
@@ -625,7 +625,7 @@ daemon logs an error and exits.
 
 \item The \Attr{IsRemotelyQueryable} attribute in the Quill ClassAd advertised
 by the Quill daemon to the collector can be used by site administrators
-to disallow the database from being read by all remote Condor query tools.
+to disallow the database from being read by all remote HTCondor query tools.
 
 \end{enumerate}
 

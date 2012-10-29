@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-history}\Condor{history}}{1}
-{View log of Condor jobs completed to date}
+{View log of HTCondor jobs completed to date}
 \Synopsis
 \SynProg{\Condor{history}}
 \oOpt{-help} 
@@ -14,17 +14,17 @@
 \oOptArg{-match}{number}
 \oOpt{cluster \Bar cluster.process \Bar owner}
 
+\index{HTCondor commands!condor\_history}
+\index{condor\_history command}
 \Description
-\Condor{history} displays a summary of all Condor jobs listed in the
+\Condor{history} displays a summary of all HTCondor jobs listed in the
 specified history files.
 If no history files are specified with the \Opt{-f} option, 
-the local history file as specified in Condor's configuration file
+the local history file as specified in HTCondor's configuration file
 (\File{\MacroUNI{SPOOL}/history} by default) is read.  
 The default listing summarizes in reverse chronological order
 each job on a single line, and  contains the following items:
 
-\index{Condor commands!condor\_history}
-\index{condor\_history command}
 
 \begin{description}
 \item[ID] The cluster/process id of the job. 

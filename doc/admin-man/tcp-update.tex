@@ -18,9 +18,9 @@ UDP sockets are datagrams, and are not reliable.
 There is very little overhead in establishing or using a UDP socket,
 but there is also no guarantee that the data will be delivered.
 Typically, the lack of guaranteed delivery for UDP does not cause
-problems for Condor.
+problems for HTCondor.
 
-Condor can be configured to use TCP
+HTCondor can be configured to use TCP
 sockets to send updates to the \Condor{collector} instead of
 UDP datagrams.
 This feature is intended for sites where UDP updates are
@@ -35,7 +35,7 @@ setting is used:
 \begin{description}
 
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
-  When set to \Expr{True}, the Condor daemons to use TCP to
+  When set to \Expr{True}, the HTCondor daemons to use TCP to
   update the \Condor{collector}, instead of the default UDP.
   Defaults to \Expr{False}.
 
@@ -45,7 +45,7 @@ When there are sufficient file descriptors, the \Condor{collector} leaves
 established TCP sockets open, facilitating better performance.
 Subsequent updates can reuse an already open socket.
 
-Each Condor daemon will have 1 socket open to the \Condor{collector}.
+Each HTCondor daemon will have 1 socket open to the \Condor{collector}.
 So, in a pool with N machines, each of them running a \Condor{master},
 \Condor{schedd}, and \Condor{startd}, the \Condor{collector} would
 need at least 3*N file descriptors.  If the \Condor{collector} is also

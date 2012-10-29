@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
-{Query or set a given Condor configuration variable}
+{Query or set a given HTCondor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
 \oOpt{options}
 \oOpt{-config}
@@ -36,13 +36,13 @@
 \SynProg{\Condor{config\_val}} \Opt{-dump} \oOpt{-expand}
 \oOpt{-verbose}
 
-\index{Condor commands!condor\_config\_val}
+\index{HTCondor commands!condor\_config\_val}
 \index{condor\_config\_val command}
 
 \Description
 
 \Condor{config\_val} can be used to quickly see what the current
-Condor configuration is on any given machine.  Given a list of
+HTCondor configuration is on any given machine.  Given a list of
 variables, \Condor{config\_val} will report what each of these
 variables is currently set to.  If a given variable is not defined,
 \Condor{config\_val} will halt on that variable, and report that it is
@@ -74,9 +74,9 @@ It is generally wise to test a new configuration on a single
 machine to ensure that no syntax or other errors in the
 configuration have been made before the reconfiguration of many machines.  
 Having bad syntax or invalid configuration settings is a fatal error
-for Condor daemons, and they will exit.
+for HTCondor daemons, and they will exit.
 It is far better to discover such a problem on a single machine than to
-cause all the Condor daemons in the pool to exit.
+cause all the HTCondor daemons in the pool to exit.
 
 The \Opt{-set} option sets one or more persistent configuration file entries.
 The \Arg{string} must be a single argument, so enclose it in double quote marks.
@@ -100,7 +100,7 @@ entries to their previous value.
 The \Opt{-runset} option changes one or more runtime configuration file
 entries to their previous value.
 
-The \Opt{-tilde} option displays the path to the Condor home directory.
+The \Opt{-tilde} option displays the path to the HTCondor home directory.
 
 The \Opt{-owner} option displays the owner of the \Condor{config\_val} process.
 
@@ -112,7 +112,7 @@ their values. If the \Opt{-verbose} option is supplied as well,
 then the specific configuration file which defined each variable,
 along with the line number of its definition is also printed. 
 \Note The output of this argument is likely to change 
-in a future revision of Condor.
+in a future revision of HTCondor.
 If the \Opt{-expand} option is given in addition to the \Opt{-dump} option,
 then variable values in the configuration files are expanded before
 being printed out.

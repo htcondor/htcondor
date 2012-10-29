@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-status}\Condor{status}}{1}
-{Display status of the Condor pool}
+{Display status of the HTCondor pool}
 \Synopsis \SynProg{\Condor{status}}
 \ToolDebugOption
 \oArg{help options}
@@ -8,12 +8,12 @@
 \oArg{custom options}
 \oArg{name \Dots}
 
-\index{Condor commands!condor\_status}
+\index{HTCondor commands!condor\_status}
 \index{condor\_status command}
 
 \Description
 \Condor{status} is a versatile tool that may be used to monitor and query the 
-Condor pool.  The \Condor{status} tool can be used to query resource 
+HTCondor pool.  The \Condor{status} tool can be used to query resource 
 information, submitter information, checkpoint server information, and daemon
 master information.  The specific query sent and the resulting information 
 display is controlled by the query options supplied.  Queries and display 
@@ -180,7 +180,7 @@ options} may be specified.
 	be human readable, not script readable.
 	In an effort to make the output fit within 80 characters,
 	values in some fields might be truncated.
-	Furthermore, the Condor Project can (and does) change the
+	Furthermore, the HTCondor Project can (and does) change the
 	formatting of this default output as we see fit.
 	Therefore, any script that is attempting to parse data from
 	\Condor{status} is strongly encouraged to use the
@@ -189,7 +189,7 @@ options} may be specified.
 	\item The information obtained from \Condor{startd} and \Condor{schedd}
 	daemons
 	may sometimes appear to be inconsistent.  This is normal since
-	\Condor{startd}  and \Condor{schedd} daemons update the Condor
+	\Condor{startd}  and \Condor{schedd} daemons update the HTCondor
 	manager at different rates, and since there is a
 	delay as information propagates through the network and the system.
 
@@ -204,7 +204,7 @@ options} may be specified.
 	that host, or you can list specific slots by name.
 	See the examples below for details.
 
-	\item If you specify host names, without domains, Condor will
+	\item If you specify host names, without domains, HTCondor will
 	automatically try to resolve those host names into fully
 	qualified host names for you.
 	This also works when specifying specific nodes of an SMP
@@ -321,7 +321,7 @@ of more than 750, the Unix command is
 \underline{-cod option example}
 
 The \Opt{-cod} option displays the status of COD
-claims within a given Condor pool. 
+claims within a given HTCondor pool. 
 
 \footnotesize
 \begin{verbatim}

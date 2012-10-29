@@ -7,7 +7,7 @@ Enabling the Transfer of Files Specified by a URL}
 \index{URL file transfer}
 
 Because staging data on the submit machine is not always efficient,
-Condor permits input files to be transferred
+HTCondor permits input files to be transferred
 from a location specified by a URL;
 likewise, output files may be transferred
 to a location specified by a URL.
@@ -71,7 +71,7 @@ If more than one plugin is capable of handling a particular protocol,
 then the last one within the list given by \MacroNI{FILETRANSFER\_PLUGINS}
 is used.
 
-Condor assumes that all plug-ins will respond in specific
+HTCondor assumes that all plug-ins will respond in specific
 ways.
 To determine the capabilities of the plug-ins as to which protocols
 they handle,
@@ -133,7 +133,7 @@ output_destination = url://server/some/directory/
 transfer_output_files = foo, bar, qux
 \end{verbatim}
 \normalsize
-Condor invokes the plug-in that handles the \Expr{url} protocol
+HTCondor invokes the plug-in that handles the \Expr{url} protocol
 three times.
 The directory delimiter
 (\verb@/@ on Unix, and \verb@\@ on Windows) 
@@ -174,10 +174,10 @@ the full path along with the file name \File{r-data} as the location
 for the plug-in to write 128 bytes of random data.
 
 The transfer of output files in this manner was introduced 
-in Condor version 7.6.0. 
+in HTCondor version 7.6.0. 
 Incompatibility and inability to function will result if the executables
 for the \Condor{starter} and \Condor{shadow} are versions earlier
-than Condor version 7.6.0.
+than HTCondor version 7.6.0.
 Here is the expected behavior for these cases that 
 cannot be backward compatible. 
 \begin{itemize}

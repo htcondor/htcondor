@@ -1,19 +1,19 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Virtual-Machines}
-Running Condor Jobs within a Virtual Machine}
+Running HTCondor Jobs within a Virtual Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{virtual machine!running Condor jobs under}
+\index{virtual machine!running HTCondor jobs under}
 
-Condor jobs are formed from executables that are compiled to execute
+HTCondor jobs are formed from executables that are compiled to execute
 on specific platforms.
-This in turn restricts the machines within a Condor pool where
+This in turn restricts the machines within an HTCondor pool where
 a job may be executed.
-A Condor job may now be executed on a 
+An HTCondor job may now be executed on a 
 virtual machine system running VMware, Xen, or KVM.
 This allows Windows executables to run on a Linux machine,
 and Linux executables to run on a Windows machine.
 
-In older versions of Condor, other parts of the system were also
+In older versions of HTCondor, other parts of the system were also
 referred to as \Term{virtual machines}, but in all cases, those are now
 known as \Term{slots}.
 A virtual machine here describes the environment in which
@@ -21,18 +21,18 @@ the outside operating system (called the host) emulates an inner operating
 system (called the inner virtual machine),
 such that an executable appears to run directly
 on the inner virtual machine.
-In other parts of Condor, a \Term{slot} (formerly known as
+In other parts of HTCondor, a \Term{slot} (formerly known as
 \Term{virtual machine}) refers to the multiple CPUs of an SMP
 machine.
 Also, be careful not to confuse the virtual machines discussed here
 with the Java Virtual Machine (JVM) referenced in other parts of this
 manual.
 
-Condor has the flexibility to run a job on either the host
+HTCondor has the flexibility to run a job on either the host
 or the inner virtual machine, 
 hence two platforms appear to exist on a single machine.
-Since two platforms are an illusion, Condor understands the illusion, 
-allowing a Condor job to be execute on only
+Since two platforms are an illusion, HTCondor understands the illusion, 
+allowing an HTCondor job to be execute on only
 one at a time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -41,7 +41,7 @@ Installation and Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{virtual machine!configuration}
-Condor must be separately installed, separately configured,
+HTCondor must be separately installed, separately configured,
 and separately running on both
 the host and the inner virtual machine.
 
@@ -69,16 +69,16 @@ VMP_HOST_MACHINE = host.domain.com
 \normalsize
 
 Given this configuration, as well as communication between
-Condor daemons running on the host and on the inner virtual machine,
-the policy for when jobs may execute is set by Condor.
-While the host is executing a Condor job,
+HTCondor daemons running on the host and on the inner virtual machine,
+the policy for when jobs may execute is set by HTCondor.
+While the host is executing an HTCondor job,
 the \MacroNI{START} policy on the inner virtual machine
 is overridden with \Expr{False},
-so no Condor jobs will be started on the inner virtual machine.
-Conversely, while the inner virtual machine is executing a Condor job,
+so no HTCondor jobs will be started on the inner virtual machine.
+Conversely, while the inner virtual machine is executing an HTCondor job,
 the \MacroNI{START} policy on the host
 is overridden with \Expr{False},
-so no Condor jobs will be started on the host.
+so no HTCondor jobs will be started on the host.
 
 The inner virtual machine is further provided with a new syntax for
 referring to the machine ClassAd attributes of its host.

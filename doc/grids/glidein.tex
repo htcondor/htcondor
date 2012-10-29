@@ -2,14 +2,14 @@
 \section{\label{sec:Glidein}Glidein}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!grid}
-\index{Condor commands!condor\_glidein}
+\index{HTCondor commands!condor\_glidein}
 \index{glidein}
 \index{grid computing!glidein}
 
 Glidein is a mechanism by which one or more grid resources (remote machines)
-temporarily join a local Condor pool. 
+temporarily join a local HTCondor pool. 
 The program \Condor{glidein} is used to add a machine
-to a Condor pool.
+to an HTCondor pool.
 During the period of time when the added resource is
 part of the local pool, the resource is visible 
 to users of the pool.
@@ -18,7 +18,7 @@ use by the user
 that added the resource to the pool.
 
 After glidein, the user may submit jobs for execution on the
-added resource the same way that all Condor jobs are submitted.
+added resource the same way that all HTCondor jobs are submitted.
 To force a submitted job to run on the added resource, the
 submit description file could contain a requirement that the job run 
 specifically on the added resource.
@@ -29,17 +29,17 @@ specifically on the added resource.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Condor{glidein} works by installing and executing
-necessary Condor daemons and configuration on the remote resource,
+necessary HTCondor daemons and configuration on the remote resource,
 such that the resource reports to and joins the local pool.
 \Condor{glidein} accomplishes two separate tasks towards
-having a remote grid resource join the local Condor pool.
+having a remote grid resource join the local HTCondor pool.
 They are the set up task and the execution task.
 
 The set up task generates necessary 
 configuration files and locates proper platform-dependent
-binaries for the Condor daemons.
+binaries for the HTCondor daemons.
 A script is also generated that can be used during
-the execution task to invoke the proper Condor daemons.
+the execution task to invoke the proper HTCondor daemons.
 These files are copied to the remote resource as necessary.
 The configuration variable \Macro{GLIDEIN\_SERVER\_URLS}
 defines a list of locations from which the necessary
@@ -52,13 +52,13 @@ on page~\pageref{param:GlideinServerURLS}
 for a full definition of this configuration variable.
 
 When the files are correctly in place,
-the execution task starts the Condor daemons.
-\Condor{glidein} does this by submitting a Condor job
+the execution task starts the HTCondor daemons.
+\Condor{glidein} does this by submitting an HTCondor job
 to run under the grid universe.
 The job runs the \Condor{master} on the remote grid resource.
 The \Condor{master} invokes other daemons, which contact
 the local pool's \Condor{collector} to join the pool.
-The Condor daemons exit gracefully when no jobs run on the daemons for a
+The HTCondor daemons exit gracefully when no jobs run on the daemons for a
 preset period of time.
 
 Here is an example of how a glidein resource appears, similar to how
@@ -108,19 +108,19 @@ Recall that for configuration file changes to take effect,
 \Condor{reconfig} must be run.
 
 If this configuration change to the security settings on
-the local Condor pool cannot be made,
-an additional Condor pool that utilizes
-personal Condor may be defined.
+the local HTCondor pool cannot be made,
+an additional HTCondor pool that utilizes
+personal HTCondor may be defined.
 The single machine pool
-may coexist with other instances of Condor.
+may coexist with other instances of HTCondor.
 \Condor{glidein} is executed to have the remote grid
-resources join this personal Condor pool.
+resources join this personal HTCondor pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Running Jobs on the Remote Grid Resource After Glidein }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Once the Globus resource has been added to the local Condor
+Once the Globus resource has been added to the local HTCondor
 pool with \Condor{glidein},
 job(s) may be submitted.
 To force a job to run on the Globus resource,
@@ -134,14 +134,14 @@ that forces submission to the Globus resource denali.mcs.anl.gov:
          && Arch != "" && OpSys != ""
 \end{verbatim}
 This example requires that the job run only on denali.mcs.anl.gov,
-and it prevents Condor from inserting the file system domain,
+and it prevents HTCondor from inserting the file system domain,
 architecture, and operating system attributes as requirements
 in the matchmaking process.
-Condor must be told not to use the submission machine's
+HTCondor must be told not to use the submission machine's
 attributes in those cases
 where the Globus resource's attributes
 do not match the submission machine's attributes and your job
 really is capable of running on the target machine.  You
-may want to use Condor's file-transfer capabilities in order
+may want to use HTCondor's file-transfer capabilities in order
 to copy input and output files back and forth between the submission
 and execution machine.
