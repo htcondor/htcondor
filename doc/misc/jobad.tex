@@ -45,7 +45,7 @@ A cluster is a group of jobs that were submitted together.  Each
 job has its own unique job identifier within the cluster, but shares a
 common cluster identifier.
 The value changes each time a job or set of jobs are queued for
-execution under Condor.
+execution under HTCondor.
 
 %%% ClassAd attribute: Cmd
 \index{ClassAd job attribute!Cmd}
@@ -157,7 +157,7 @@ contain
 \item[\AdAttr{DeltacloudAvailableActions}:] 
 Used for grid-type deltacloud jobs.
 For a running job,
-Condor sets this string to contain a comma-separated list of actions
+HTCondor sets this string to contain a comma-separated list of actions
 that can be performed on a Deltacloud instance, 
 as given by the selected service.
 
@@ -228,7 +228,7 @@ with the Deltacloud service for a grid-type deltacloud job.
 \index{DeltacloudPrivateNetworkAddresses!job ClassAd attribute}
 \item[\AdAttr{DeltacloudPrivateNetworkAddresses}:] 
 For a running Deltacloud instance,
-Condor receives and sets this comma-separated list of the private IP addresses
+HTCondor receives and sets this comma-separated list of the private IP addresses
 allocated to the running virtual machine.
 
 %%% ClassAd attribute: DeltacloudPublicNetworkAddresses
@@ -236,7 +236,7 @@ allocated to the running virtual machine.
 \index{DeltacloudPublicNetworkAddresses!job ClassAd attribute}
 \item[\AdAttr{DeltacloudPublicNetworkAddresses}:] 
 For a running Deltacloud instance,
-Condor receives and sets this comma-separated list of the public IP addresses
+HTCondor receives and sets this comma-separated list of the public IP addresses
 allocated to the running virtual machine.
 
 %%% ClassAd attribute: DeltacloudRealmId
@@ -268,7 +268,7 @@ with the Deltacloud service for a grid-type deltacloud job.
 %%% ClassAd attribute: DiskUsage
 \index{ClassAd job attribute!DiskUsage}
 \index{DiskUsage!job ClassAd attribute}
-\item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the Condor
+\item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the HTCondor
 execute directory on the execute machine that this job has used.
 An initial value may be set at the job's request, placing into the
 job's submit description file a setting such as
@@ -456,7 +456,7 @@ unavailable. In this case, \AdAttr{ExitSignal} will be undefined.
 %%% ClassAd attribute: ExitStatus
 \index{ClassAd job attribute!ExitStatus}
 \index{ExitStatus!job ClassAd attribute}
-\item[\AdAttr{ExitStatus}:]  The way that Condor previously dealt with
+\item[\AdAttr{ExitStatus}:]  The way that HTCondor previously dealt with
 a job's exit status.
 This attribute should no longer be used.
 It is not always accurate in
@@ -524,7 +524,7 @@ reason that a job was put on hold.
   The Unix  error number. \\ \hline
 10 & The standard input stream for the job could not be opened. &
   The Unix  error number. \\ \hline
-11 & An internal Condor protocol error was encountered when transferring files. \\ \hline
+11 & An internal HTCondor protocol error was encountered when transferring files. \\ \hline
 12 & The \Condor{starter} failed to download input files. &
   The Unix  error number. \\ \hline
 13 & The \Condor{starter} failed to upload output files. &
@@ -535,7 +535,7 @@ reason that a job was put on hold.
 16 & Input files are being spooled. \\ \hline
 17 & A standard universe job is not compatible with the
   \Condor{shadow} version available on the submitting machine.  \\ \hline
-18 & An internal Condor protocol error was encountered when transferring
+18 & An internal HTCondor protocol error was encountered when transferring
   files. \\ \hline
 19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. \\ \hline
 20 & The job missed its deferred execution time and therefore failed to run. \\ \hline
@@ -590,8 +590,8 @@ the same memory pages more than once.
 \index{IwdFlushNFSCache!job ClassAd attribute}
 \label{IwdFlushNFSCache-job-attribute}
 \item[\AdAttr{IwdFlushNFSCache}:]  A boolean expression that controls
-whether or not Condor attempts to flush a submit machine's NFS cache,
-in order to refresh a Condor job's initial working directory.
+whether or not HTCondor attempts to flush a submit machine's NFS cache,
+in order to refresh an HTCondor job's initial working directory.
 The value will be \Expr{True}, unless a job explicitly adds this
 attribute, setting it to \Expr{False}.
 
@@ -742,7 +742,7 @@ It is relevant only for jobs running on Unix machines.
 \index{ClassAd job attribute!KillSigTimeout}
 \index{KillSigTimeout!job ClassAd attribute}
 \item[\AdAttr{KillSigTimeout}:]  This attribute is replaced by the
-functionality in \AdAttr{JobMaxVacateTime} as of Condor version 7.7.3.
+functionality in \AdAttr{JobMaxVacateTime} as of HTCondor version 7.7.3.
 The number of seconds that the job
 (other than the standard universe) requests the \Condor{starter} wait
 after sending the signal defined as \Attr{KillSig} and before forcibly
@@ -789,7 +789,7 @@ human-readable message about why the match failed.
 \index{ClassAd job attribute!LastRejMatchTime}
 \index{LastRejMatchTime!job ClassAd attribute}
 \item[\AdAttr{LastRejMatchTime}:]   An integer containing the epoch
-time when Condor-G last tried to find a match for the job,
+time when HTCondor-G last tried to find a match for the job,
 but failed to do so.
 
 %%% ClassAd attribute: LastSuspensionTime
@@ -884,7 +884,7 @@ by the configuration variable \Macro{MAX\_NEXT\_JOB\_START\_DELAY}.
 \index{NiceUser!job ClassAd attribute}
 \item[\AdAttr{NiceUser}:]  Boolean value which when \Expr{True} indicates
 that this job is a \emph{nice} job, raising its user priority value, 
-thus causing it to run on a machine only when no other Condor jobs want 
+thus causing it to run on a machine only when no other HTCondor jobs want 
 the machine.
 
 %%% ClassAd attribute: NTDomain
@@ -969,8 +969,8 @@ checkpoint attempted by this job during its lifetime.
 \index{ClassAd job attribute!NumSystemHolds}
 \index{NumSystemHolds!job ClassAd attribute}
 \item[\AdAttr{NumSystemHolds}:]   An integer that is incremented each time
-Condor-G places a job on hold due to some sort of error condition.  This
-counter is useful, since Condor-G will always place a job on hold when it
+HTCondor-G places a job on hold due to some sort of error condition.  This
+counter is useful, since HTCondor-G will always place a job on hold when it
 gives up on some error condition.  Note that if the user places the job
 on hold using the \Condor{hold} command, this attribute is not incremented.
 
@@ -1007,10 +1007,10 @@ job.
 to parallel universe jobs.  Without this attribute defined, the default
 policy applied to parallel universe jobs is to consider the whole job
 completed when the first node exits, killing processes running on
-all remaining nodes.  If defined to the following strings, Condor's
+all remaining nodes.  If defined to the following strings, HTCondor's
 behavior changes:
   \begin{description}
-  \item[\AdStr{WAIT\_FOR\_ALL}] Condor will wait until every node in 
+  \item[\AdStr{WAIT\_FOR\_ALL}] HTCondor will wait until every node in 
   the parallel job has completed to consider the job finished.
   \end{description}
 
@@ -1180,8 +1180,8 @@ This number of bytes replaces the default allocation of 512 Mbytes.
 \index{StageOutFinish!job ClassAd attribute}
 \item[\AdAttr{StageOutFinish}:]   
 An attribute representing a Unix epoch time that is defined for a job that is
-spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
-and causes Condor to hold the output in the spool while the job waits 
+spooled to a remote site using \Expr{condor\_submit -spool} or HTCondor-C
+and causes HTCondor to hold the output in the spool while the job waits 
 in the queue in the \Expr{Completed} state.
 This attribute is defined when retrieval of the output finishes.
 
@@ -1190,8 +1190,8 @@ This attribute is defined when retrieval of the output finishes.
 \index{StageOutStart!job ClassAd attribute}
 \item[\AdAttr{StageOutStart}:]   
 An attribute representing a Unix epoch time that is defined for a job that is
-spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
-and causes Condor to hold the output in the spool while the job waits 
+spooled to a remote site using \Expr{condor\_submit -spool} or HTCondor-C
+and causes HTCondor to hold the output in the spool while the job waits 
 in the queue in the \Expr{Completed} state.
 This attribute is defined when retrieval of the output begins.
 
@@ -1408,7 +1408,7 @@ setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, which
 defaults to one day.  A value of 0 indicates that the delegated proxy
 should be valid for as long as allowed by the credential used to
 create the proxy.  This setting currently only applies to proxies
-delegated for non-grid jobs and Condor-C jobs.  It does not currently
+delegated for non-grid jobs and HTCondor-C jobs.  It does not currently
 apply to globus grid jobs, which always behave as though this setting
 were 0.  This setting has no effect if the configuration
 setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false, because in
