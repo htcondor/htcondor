@@ -105,25 +105,10 @@ reason was, ``Proxy about to expire.''
 
 \begin{itemize}
 
-\item Condor version 7.8.6 not yet released.
-%\item Condor version 7.8.6 released on Month Date, 2012.
+\item Condor version 7.8.6 released on October 25, 2012.
 
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item None.
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -131,25 +116,12 @@ reason was, ``Proxy about to expire.''
 
 \begin{itemize}
 
-\item None.
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as root.
+(CVE-2012-5390)
 
 \end{itemize}
 
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Additions and Changes to the Manual:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-5}Version 7.8.5}
@@ -160,9 +132,6 @@ reason was, ``Proxy about to expire.''
 \begin{itemize}
 
 \item Condor version 7.8.5 released on October 22, 2012.
-
-\item \Security This version contains an important security bug fix.  See below
-for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -189,10 +158,6 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item \Security Fixed a bug which allowed jobs submitted to the standard
-universe to escalate privilege on the submit machine and execute code as root.
-(CVE-2012-5390)
 
 \item Fixed a problem with jobs that are submitted with
 \begin{verbatim}
