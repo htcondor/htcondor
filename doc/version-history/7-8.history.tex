@@ -46,10 +46,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Jobs that are submitted with the ``-spool'' option to \Condor{submit}
-will no longer be left indefinitely in hold state.  Instead the jobs will be
-removed if spooling fails, and will also periodically remove jobs that have
-been in hold state due to file transfer for at least twelve hours.
+\item Jobs that were submitted with \Condor{submit} \Opt{-spool}
+and failed during submission were 
+left indefinitely in the queue in the Hold state.  
+This has been fixed, such that these jobs are removed from the queue.
+In addition, the \Condor{schedd} daemon will periodically 
+check for jobs that have
+been in Hold state due to failed file transfer for at least twelve hours;
+these jobs will be removed from the queue.
 \Ticket{3200}
 
 
