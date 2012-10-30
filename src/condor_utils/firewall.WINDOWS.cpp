@@ -511,7 +511,6 @@ int main(int argc, char **argv) {
 	int result;
 	bool isOn;
 	const char* app;
-	param_functions *p_funcs = NULL;
 
 	result = 0;
 

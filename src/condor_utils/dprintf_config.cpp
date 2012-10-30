@@ -75,6 +75,8 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 	unsigned int HeaderOpts = 0;
 	DebugOutputChoice verbose = 0;
 
+	PRAGMA_REMIND("TJ: allow callers of dprintf_config_tool to pass logging verbosity and flags");
+
 	dprintf_output_settings tool_output;
 	tool_output.choice = 1<<D_ALWAYS | 1<<D_ERROR;
 	tool_output.accepts_all = true;

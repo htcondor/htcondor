@@ -72,11 +72,13 @@ typedef vector<AviaryCommon::Attribute*> CommonAttributeCollection;
 void
 checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
 {
-	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
-	if (!(_jobId->getSubmission()->getPool() == schedulerObj->getPool()) ||
-		!(_jobId->getSubmission()->getName() == schedulerObj->getName())) {
-	_text = "WARNING: the pool and scheduler names of the requested jobid were empty or did not match this scheduler!";
-	}
+    SchedulerObject* schedulerObj = SchedulerObject::getInstance();
+    if (!_jobId->isSubmissionNil()) {
+        if ((_jobId->getSubmission()->getPool() != schedulerObj->getPool()) ||
+            (_jobId->getSubmission()->getName() != schedulerObj->getName())) {
+        _text = "WARNING: the pool and scheduler names of the requested jobid were empty or did not match this scheduler!";
+        }
+    }
 }
 
 void
