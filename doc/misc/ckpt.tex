@@ -1,42 +1,42 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{ckpt-reference}
-Condor's Checkpoint Mechanism}
+HTCondor's Checkpoint Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{checkpoint}
 
 Checkpointing is taking a snapshot of the current state of a program
 in such a way that the program can be restarted from that state at a
-later time.  Checkpointing gives the Condor scheduler the freedom to
+later time.  Checkpointing gives the HTCondor scheduler the freedom to
 reconsider scheduling decisions through preemptive-resume scheduling.
 If the scheduler decides to no longer allocate a machine to a job (for
 example, when the owner of that machine returns), it can checkpoint
 the job and preempt it without losing the work the job has already
 accomplished.  The job can be resumed later when the scheduler
 allocates it a new machine.  Additionally, periodic checkpointing
-provides fault tolerance in Condor.  Snapshots are taken periodically,
+provides fault tolerance in HTCondor.  Snapshots are taken periodically,
 and after an interruption in service the program can continue from the
 most recent snapshot.
 
-Condor provides checkpointing services to single process jobs on a
+HTCondor provides checkpointing services to single process jobs on a
 number of Unix platforms.
 To enable checkpointing, the user must link the program with the
-Condor system call library (\File{libcondorsyscall.a}), using the
+HTCondor system call library (\File{libcondorsyscall.a}), using the
 \Condor{compile} command.
 This means that the
 user must have the object files or source code of the program to use
-Condor checkpointing.  However, the checkpointing services provided by
-Condor are strictly optional.  So, while there are some classes of
-jobs for which Condor does not provide checkpointing services, these
-jobs may still be submitted to Condor to take advantage of Condor's
+HTCondor checkpointing.  However, the checkpointing services provided by
+HTCondor are strictly optional.  So, while there are some classes of
+jobs for which HTCondor does not provide checkpointing services, these
+jobs may still be submitted to HTCondor to take advantage of HTCondor's
 resource management functionality.  (See
 section~\ref{sec:standard-universe} on
 page~\pageref{sec:standard-universe} for a description of the
-classes of jobs for which Condor does not provide checkpointing
+classes of jobs for which HTCondor does not provide checkpointing
 services.)
 
 \index{checkpoint!implementation}
-Process checkpointing is implemented in the Condor system call library
-as a signal handler.  When Condor sends a checkpoint signal to a
+Process checkpointing is implemented in the HTCondor system call library
+as a signal handler.  When HTCondor sends a checkpoint signal to a
 process linked with this library, the provided signal handler writes
 the state of the process out to a file or a network socket.  This
 state includes the contents of the process stack and data segments,
@@ -48,7 +48,7 @@ state, signal handlers, and pending signals.  The checkpoint signal
 handler then returns to user code, which continues from where it left
 off when the checkpoint signal arrived.
 
-Condor processes for which checkpointing is enabled perform a
+HTCondor processes for which checkpointing is enabled perform a
 checkpoint when preempted from a machine.  When a suitable replacement
 execution machine is found (of the same architecture and operating
 system), the process is restored on this new machine from the
@@ -57,41 +57,41 @@ that can not be checkpointed are preempted and restarted from the
 beginning.
 
 \index{checkpoint!periodic}
-Condor's periodic checkpointing provides fault tolerance.  Condor
+HTCondor's periodic checkpointing provides fault tolerance.  HTCondor
 pools are each configured with the \Macro{PERIODIC\_CHECKPOINT}
 expression which controls when and how often jobs which can be
 checkpointed do periodic checkpoints (examples: never, every three
 hours, etc.).  When the time for a periodic checkpoint occurs, the job
 suspends processing, performs the checkpoint, and immediately
 continues from where it left off.  There is also a \Condor{ckpt} command
-which allows the user to request that a Condor job immediately perform
+which allows the user to request that an HTCondor job immediately perform
 a periodic checkpoint.
 
-In all cases, Condor jobs continue execution from the most recent
+In all cases, HTCondor jobs continue execution from the most recent
 complete checkpoint.  If service is interrupted while a checkpoint is
 being performed, causing that checkpoint to fail, the process will
-restart from the previous checkpoint.  Condor uses a commit style
+restart from the previous checkpoint.  HTCondor uses a commit style
 algorithm for writing checkpoints: a previous checkpoint is deleted
 only after a new complete checkpoint has been written successfully.
 
 In certain cases, checkpointing may be delayed until a more appropriate
-time.  For example, a Condor job will defer a checkpoint request if
+time.  For example, an HTCondor job will defer a checkpoint request if
 it is communicating with another process over the network.  When the
 network connection is closed, the checkpoint will occur.
 
-The Condor checkpointing facility can also be used for any Unix process
-outside of the Condor batch environment. Standalone checkpointing
+The HTCondor checkpointing facility can also be used for any Unix process
+outside of the HTCondor batch environment. Standalone checkpointing
 is described in section~\ref{sec:standalone-ckpt}.
 
 \index{checkpoint!compression}
-Condor can produce and use compressed checkpoints.
+HTCondor can produce and use compressed checkpoints.
 Configuration variables (detailed in 
 section~\ref{sec:Shadow-Config-File-Entries}
 control whether compression is used.
 The default is to not compress.
 
 By default, a checkpoint is written to a file on the local disk of the
-machine where the job was submitted.  A Condor pool can also be
+machine where the job was submitted.  An HTCondor pool can also be
 configured with a checkpoint server or servers that
 serve as a repository for checkpoints.  (See
 section~\ref{sec:Ckpt-Server} on page~\pageref{sec:Ckpt-Server}.)
@@ -107,12 +107,12 @@ the purpose of storing checkpoints).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{checkpoint!stand alone}
-Using the Condor checkpoint library without the remote system call
-functionality and outside of the Condor system is known as standalone
+Using the HTCondor checkpoint library without the remote system call
+functionality and outside of the HTCondor system is known as standalone
 mode checkpointing.
 
 To prepare a program for standalone checkpointing, simply use the
-\Condor{compile} utility as for a standard Condor job, 
+\Condor{compile} utility as for a standard HTCondor job, 
 but do not use \Condor{submit}.
 Run the program from the command line.
 The checkpointing library will print a message to let you know
@@ -122,8 +122,8 @@ The message is of the form:
 
 \footnotesize
 \begin{verbatim}
-Condor: Notice: Will checkpoint to program_name.ckpt
-Condor: Notice: Remote system calls disabled.
+HTCondor: Notice: Will checkpoint to program_name.ckpt
+HTCondor: Notice: Remote system calls disabled.
 \end{verbatim}
 \normalsize
 
@@ -185,7 +185,7 @@ In this example, the program would re-read data from the file, but
 instead of finding the original data, would see data created in the
 future, and yield unexpected results.
 
-To prevent this sort of accident, Condor displays a warning
+To prevent this sort of accident, HTCondor displays a warning
 if a file is used for both reading and writing.  You can ignore or disable
 these warnings if you choose (see section \ref{sec:ckpt-warnings},) but
 please understand that your program may compute incorrect results.
@@ -194,14 +194,14 @@ please understand that your program may compute incorrect results.
 \subsection{\label{sec:ckpt-warnings}Checkpoint Warnings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor has warning messages in the case unexpected
+HTCondor has warning messages in the case unexpected
 behaviors in your program.  For example, if file \File{x}
 is opened for reading
 and writing, you will see:
 
 \footnotesize
 \begin{verbatim}
-Condor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
+HTCondor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
 \end{verbatim}
 \normalsize
 
@@ -297,7 +297,7 @@ be called once for every time that \Code{\_condor\_ckpt\_disable()}
 is called.
 
 \item \Code{int \_condor\_warning\_config( const char *kind, const char *mode )}\\
-This function controls what warnings are displayed by Condor.
+This function controls what warnings are displayed by HTCondor.
 The \Code{kind} and \Code{mode} arguments are the same as for the
 \Code{-\_condor\_warning} option described in section \ref{sec:ckpt-warnings}.  This function returns true
 if the arguments are understood and accepted.  Otherwise, it returns false.

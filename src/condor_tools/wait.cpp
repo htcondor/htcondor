@@ -102,7 +102,6 @@ int main( int argc, char *argv[] )
 	int print_status = false;
 	int echo_events = false;
 	int debug_print_rescue = false;
-	param_functions *p_funcs = NULL;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -116,12 +115,10 @@ int main( int argc, char *argv[] )
 			EXIT_FAILURE;
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 			print_status = false;
 		} else if(!strcmp(argv[i],"-status")) {
-			if (Termlog) {
+			if (dprintf_to_term_check()) {
 				fprintf(stderr,"-status is implied by -debug\n");
 			} else {
 				print_status = true;

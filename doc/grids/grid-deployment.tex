@@ -4,27 +4,27 @@
 \index{dynamic deployment!relevance to grid computing}
 
 See section~\ref{sec:Dynamic-Deployment}
-for a complete description of Condor's dynamic deployment tools.
+for a complete description of HTCondor's dynamic deployment tools.
 
-Condor's dynamic deployment tools
+HTCondor's dynamic deployment tools
 (\Condor{cold\_start} and \Condor{glidein})
 allow new pools of resources to be  incorporated on the fly.
-While Condor is able to manage compute jobs remotely 
+While HTCondor is able to manage compute jobs remotely 
 through Globus and other grid-computing protocols,
-dynamic deployment of Condor makes it possible to go one step further.
-Condor remotely installs and runs portions of itself.
-This process of Condor gliding in to inhabit computing resources
+dynamic deployment of HTCondor makes it possible to go one step further.
+HTCondor remotely installs and runs portions of itself.
+This process of HTCondor gliding in to inhabit computing resources
 on demand leverages the lowest common denominator of grid middleware systems,
 simple program  execution,
 to bind together resources in a heterogeneous computing grid,
 with different management policies and different job execution methods,
-into a full-fledged Condor system. 
+into a full-fledged HTCondor system. 
 
-The mobility of Condor services also benefits from
-the development  of Condor-C,
-which provides a richer tool set for interlinking Condor-managed computers.
-Condor-C is a protocol that allows one Condor scheduler
-to delegate jobs to another Condor scheduler.
+The mobility of HTCondor services also benefits from
+the development  of HTCondor-C,
+which provides a richer tool set for interlinking HTCondor-managed computers.
+HTCondor-C is a protocol that allows one HTCondor scheduler
+to delegate jobs to another HTCondor scheduler.
 The second scheduler could be at a remote site and/or an entry point
 into a restricted network.
 Delegating details of managing a job
@@ -32,10 +32,10 @@ achieves greater flexibility with respect to network architecture,
 as well as fault tolerance and scalability.
 In the  context of glide in deployments,
 the beach-head for each compute site is a dynamically deployed
-Condor scheduler which then serves as a target for Condor-C traffic.
+HTCondor scheduler which then serves as a target for HTCondor-C traffic.
 
 In general,
-the mobility of the Condor scheduler and job execution agents,
+the mobility of the HTCondor scheduler and job execution agents,
 and the flexibility in how these are interconnected
 provide a uniform and feature-rich platform
 that can expand onto diverse resources and environments

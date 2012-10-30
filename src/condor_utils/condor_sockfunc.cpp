@@ -113,7 +113,7 @@ int condor_getnameinfo (const condor_sockaddr& addr,
 		                char * __serv, socklen_t __servlen,
 		                unsigned int __flags)
 {
-	sockaddr* sa = addr.to_sockaddr();
+	const sockaddr* sa = addr.to_sockaddr();
 	socklen_t len = addr.get_socklen();
 	int ret;
 
@@ -134,7 +134,7 @@ int condor_getaddrinfo(const char *node,
 
 hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 {
-	sockaddr* sa = addr.to_sockaddr();
+	const sockaddr* sa = addr.to_sockaddr();
 	sockaddr_storage_ptr sock_address;
 	sock_address.raw = sa;
 	int type = sa->sa_family;

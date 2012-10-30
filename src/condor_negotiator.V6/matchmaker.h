@@ -153,6 +153,7 @@ class Matchmaker : public Service
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, ClaimIdHash& );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
+		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & scheddAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
             @param groupName name of group negotiating under (or NULL)
@@ -302,6 +303,7 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
+		bool want_globaljobprio;	// cached value of config knob USE_GLOBAL_JOB_PRIOS
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?

@@ -82,8 +82,8 @@ int scandirectory(const char *dir, struct dirent ***namelist,
 }
 
 int doalphasort(const void *a, const void *b) {
-        const struct dirent **d1 = (const struct dirent**)a;
-        const struct dirent **d2 = (const struct dirent**)b;		
+        const struct dirent **d1 = (const struct dirent**)const_cast<void*>(a);
+        const struct dirent **d2 = (const struct dirent**)const_cast<void*>(b);
         return(strcmp(const_cast<char*>((*d1)->d_name),
 		const_cast<char*>((*d2)->d_name)));
 }

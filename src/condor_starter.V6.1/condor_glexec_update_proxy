@@ -11,7 +11,7 @@ NEW_PROXY="$2"
 PROXY="$3"
 SANDBOX="$4"
 
-if [ $GLEXEC == - ]
+if [ $GLEXEC = - ]
 then
 	mv -f "$NEW_PROXY" "$SANDBOX/$PROXY"
 	if [ $? != 0 ]

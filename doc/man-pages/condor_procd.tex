@@ -7,13 +7,13 @@
 \OptArg{-A}{address-file}
 \oOpt{options}
 
-\index{Condor commands!condor\_procd}
+\index{HTCondor commands!condor\_procd}
 \index{condor\_procd command}
 
 \Description 
 
 \Condor{procd} tracks and manages process families on behalf of the
-Condor daemons. 
+HTCondor daemons. 
 It may track families of PIDs via relationships such
 as: direct parent/child, environment variables, UID, and supplementary
 group IDs.  
@@ -25,7 +25,7 @@ Management of the PID families include
 continuing, or killing the family 
 \item getting a snapshot of the tree of families 
 \end{itemize}
-In a regular Condor installation, 
+In a regular HTCondor installation, 
 this program is not intended to be used or executed by any human.
 
 The required argument, 
@@ -100,7 +100,7 @@ that clients must use to speak with the \Condor{procd}.
 \GenRem
 
 This program may be used in a stand alone mode, independent of
-Condor, to track process families. The programs \Prog{procd\_ctl} and
+HTCondor, to track process families. The programs \Prog{procd\_ctl} and
 \Prog{gidd\_alloc} are used with the \Condor{procd} in stand alone mode
 to interact with the daemon and to inquire about certain state of running
 processes on the machine, respectively.

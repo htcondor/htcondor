@@ -142,7 +142,7 @@ displayTotals (FILE *file, int keyLength)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
-		free((void *)keys[k]);
+		free((void *)const_cast<char*>(keys[k]));
 		ct->displayInfo(file);
 	}
 	delete [] keys;

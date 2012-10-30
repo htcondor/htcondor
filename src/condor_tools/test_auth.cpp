@@ -79,7 +79,6 @@ int
 main( int argc, char* argv[] )
 {
 	int		i;
-	param_functions *p_funcs = NULL;
 	
 	set_mySubSystem( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
 
@@ -98,9 +97,7 @@ main( int argc, char* argv[] )
 			}
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config( "DAEMON-TOOL", p_funcs );
+			dprintf_set_tool_debug("DAEMON-TOOL", 0);
 			set_debug_flags(NULL, D_FULLDEBUG|D_SECURITY);
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();

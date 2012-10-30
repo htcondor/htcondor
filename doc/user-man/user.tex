@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Welcome to Condor}  
+\section{Welcome to HTCondor}  
 %
 % .... or alternatively called the 'warm fuzzies' section
 % <smirk>  
@@ -10,27 +10,27 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \label{sec:usermanual}
-\index{Condor!user manual|(}
+\index{HTCondor!user manual|(}
 \index{user manual|(}
-Presenting Condor \VersionNotice! Condor is developed by
-the Condor Team at the University of Wisconsin-Madison (UW-Madison), and
+Presenting HTCondor \VersionNotice! HTCondor is developed by
+the HTCondor Team at the University of Wisconsin-Madison (UW-Madison), and
 was first installed as a production system in the UW-Madison Computer
-Sciences department more than 15 years ago. This Condor pool has since
+Sciences department more than 15 years ago. This HTCondor pool has since
 served as a major source of computing cycles to UW faculty and students.
 For many, it has revolutionized the role computing plays in their
 research. An increase of one, and sometimes even two, orders of
 magnitude in the computing throughput of a research organization can
 have a profound impact on its size, complexity, and scope. Over the
-years, the Condor Team has established collaborations with scientists
+years, the HTCondor Team has established collaborations with scientists
 from around the world, and it has provided them with access to surplus
 cycles (one scientist has consumed 100 CPU years!). Today, our
 department's pool consists of more than 700 desktop Unix workstations
 and more than 100 Windows machines.
 On a typical day, our pool delivers more than 500 CPU days to UW
-researchers. Additional Condor pools have been established over the
+researchers. Additional HTCondor pools have been established over the
 years across our campus and the world. Groups of researchers, engineers,
-and scientists have used Condor to establish compute pools ranging in
-size from a handful to hundreds of workstations. We hope that Condor
+and scientists have used HTCondor to establish compute pools ranging in
+size from a handful to hundreds of workstations. We hope that HTCondor
 will help revolutionize your compute environment as well.
 
 
@@ -39,23 +39,23 @@ will help revolutionize your compute environment as well.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-In a nutshell, Condor is a specialized batch system 
+In a nutshell, HTCondor is a specialized batch system 
 \index{batch system}
 for managing compute-intensive jobs.
-Like most batch systems, Condor provides a
+Like most batch systems, HTCondor provides a
 queuing mechanism, scheduling policy, priority scheme, and resource
-classifications.  Users submit their compute jobs to Condor, Condor puts
+classifications.  Users submit their compute jobs to HTCondor, HTCondor puts
 the jobs in a queue, runs them, and then informs the user as to the
 result.
 
 Batch systems normally operate only with dedicated machines.  Often 
 termed compute servers, these dedicated machines are typically owned by
 one organization and dedicated to the sole purpose of running compute
-jobs.  Condor can schedule jobs on dedicated machines.  But unlike traditional 
-batch systems, Condor is also designed to effectively 
+jobs.  HTCondor can schedule jobs on dedicated machines.  But unlike traditional 
+batch systems, HTCondor is also designed to effectively 
 utilize non-dedicated machines to run jobs.  By being told to only
 run compute jobs on machines which are currently not being used (no keyboard
-activity, low load average, etc.), Condor can
+activity, low load average, etc.), HTCondor can
 effectively harness otherwise idle machines throughout a pool of machines.
 This is important because often times the amount of
 compute power represented by the aggregate total of all the non-dedicated 
@@ -63,7 +63,7 @@ desktop workstations sitting on people's desks throughout the
 organization is far greater than the compute power of a dedicated
 central resource.
 
-Condor has several unique capabilities at its disposal which are geared 
+HTCondor has several unique capabilities at its disposal which are geared 
 toward effectively utilizing non-dedicated resources that are not owned or
 managed by a centralized resource. These include transparent process
 checkpoint and migration, remote system calls, and ClassAds.
@@ -77,14 +77,14 @@ discussion of these features before reading any further.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you learn about how to submit a job, it is important to
-understand how Condor allocates resources. 
-\index{Condor!resource allocation}
+understand how HTCondor allocates resources. 
+\index{HTCondor!resource allocation}
 Understanding the
-unique framework by which Condor matches submitted jobs with machines is
-the key to getting the most from Condor's scheduling algorithm. 
+unique framework by which HTCondor matches submitted jobs with machines is
+the key to getting the most from HTCondor's scheduling algorithm. 
 
-Condor simplifies job submission by acting as a matchmaker of ClassAds.
-Condor's ClassAds
+HTCondor simplifies job submission by acting as a matchmaker of ClassAds.
+HTCondor's ClassAds
 \index{ClassAd}
 are analogous to the classified advertising section of the
 newspaper. Sellers advertise specifics about what they have to sell,
@@ -97,11 +97,11 @@ Furthermore, both want to rank requests to their own advantage.
 Certainly a seller would rank
 one offer of \$50 dollars higher than a different
 offer of \$25.
-In Condor, users submitting
+In HTCondor, users submitting
 jobs can be thought of as buyers of compute resources and machine owners
 are sellers. 
 
-All machines in a Condor pool advertise their attributes,
+All machines in a HTCondor pool advertise their attributes,
 \index{ClassAd!attributes}
 such as
 available memory, CPU type and speed, virtual memory size, current
@@ -109,10 +109,10 @@ load average, along with other static and dynamic properties.
 This machine ClassAd
 \index{ClassAd!machine}
 also advertises under what conditions it is
-willing to run a Condor job and what type of job it would prefer. These
+willing to run a HTCondor job and what type of job it would prefer. These
 policy attributes can reflect the individual terms and preferences by
 which all the different owners have graciously allowed their machine to
-be part of the Condor pool. 
+be part of the HTCondor pool. 
 You may
 advertise that your machine is only willing to run jobs at night
 and when there is no keyboard activity on your machine.
@@ -127,25 +127,25 @@ The ClassAd
 includes the
 type of machine you  wish to use. For instance, perhaps you are
 looking for the fastest floating point performance available.
-You want Condor to rank available machines
+You want HTCondor to rank available machines
 based upon floating point performance. Or, perhaps you
 care only that the machine has a minimum of 128 Mbytes of RAM.
 Or, perhaps you will
 take any machine you can get! These job attributes and requirements
 are bundled up into a job ClassAd.
 
-Condor plays the role of a matchmaker by continuously reading
+HTCondor plays the role of a matchmaker by continuously reading
 all the job ClassAds and all the machine ClassAds, 
 matching and ranking job ads with machine ads.
-Condor makes certain that all
+HTCondor makes certain that all
 requirements in both ClassAds are satisfied. 
 
 %%%%%
 \subsection{Inspecting Machine ClassAds with \condor{status}}
 %%%%%
 
-\index{Condor commands!condor\_status}
-Once Condor is installed,
+\index{HTCondor commands!condor\_status}
+Once HTCondor is installed,
 you will get a feel for what
 a machine ClassAd does by trying
 the \Condor{status} command.
@@ -194,7 +194,7 @@ The following shows a portion of a machine ClassAd
 \index{machine ClassAd}
 for a single machine: turunmaa.cs.wisc.edu. Some of the listed
 attributes are used by
-Condor for scheduling. Other attributes are for information purposes.
+HTCondor for scheduling. Other attributes are for information purposes.
 An important point is that \emph{any} of the attributes in a
 machine ClassAd can be utilized at job submission time as part of a request
 or preference on what machine to use. Additional attributes
@@ -245,32 +245,32 @@ MyType = "Machine"
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!preparation}
-The road to using Condor effectively is a short one.  The basics
+The road to using HTCondor effectively is a short one.  The basics
 are quickly and easily learned.
 
-Here are all the steps needed to run a job using Condor.
+Here are all the steps needed to run a job using HTCondor.
 \begin{description}
 
 \item[Code Preparation.]
-A job run under Condor must be able to 
+A job run under HTCondor must be able to 
 run as a background batch job.
 \index{job!batch ready}
-Condor runs the program unattended and in the background. 
+HTCondor runs the program unattended and in the background. 
 A program that runs in the background will not be able
 to do interactive input and output.
-Condor can redirect console output (stdout and stderr)
+HTCondor can redirect console output (stdout and stderr)
 and keyboard input (stdin)
 to and from files for you.
 Create any needed files that contain
 the proper keystrokes needed for program input.
 Make certain the program will run correctly with the files.
 
-\item[The Condor Universe.]
-Condor has several 
+\item[The HTCondor Universe.]
+HTCondor has several 
 runtime environments (called a \Term{universe}) from which to choose.
 Of the universes, two are likely choices when learning
-to submit a job to Condor: the standard universe and the vanilla universe.
-The standard universe allows a job running under Condor to
+to submit a job to HTCondor: the standard universe and the vanilla universe.
+The standard universe allows a job running under HTCondor to
 handle system calls by returning them to the machine where the
 job was submitted.
 The standard universe also provides the mechanisms necessary
@@ -278,7 +278,7 @@ to take a checkpoint and migrate a partially completed job,
 should the machine on which the job is executing become
 unavailable.
 To use the standard universe, it is necessary to
-relink the program with the Condor library using the
+relink the program with the HTCondor library using the
 \Condor{compile} command.
 The manual page for \Condor{compile} on page~\pageref{man-condor-compile} has details.
 
@@ -287,9 +287,9 @@ relinked.
 There is no way to take a checkpoint or migrate a job executed
 under the vanilla universe.
 For access to input and output files, jobs must either use a shared
-file system, or use Condor's File Transfer mechanism.
+file system, or use HTCondor's File Transfer mechanism.
 
-Choose a universe under which to run the Condor program,
+Choose a universe under which to run the HTCondor program,
 and re-link the program if necessary.
 
 \item[Submit description file.]
@@ -300,7 +300,7 @@ about the job such as what executable to run, the
 files to use for keyboard and screen data,
 the platform type required to run the program, and
 where to send e-mail when the job completes.
-You can also tell Condor how many times to run a program;
+You can also tell HTCondor how many times to run a program;
 it is simple to run the same program
 multiple times with multiple data sets.
 
@@ -308,42 +308,42 @@ Write a submit description file to go with the job, using
 the examples provided in section~\ref{sec:sample-submit-files}
 for guidance.
 
-\item[Submit the Job.]Submit the program to Condor with
+\item[Submit the Job.]Submit the program to HTCondor with
 the \Condor{submit} command.
-\index{Condor commands!condor\_submit}
+\index{HTCondor commands!condor\_submit}
 
 \end{description}
 
-Once submitted, Condor does the rest toward running
+Once submitted, HTCondor does the rest toward running
 the job.
 Monitor the job's progress with the \Condor{q}
-\index{Condor commands!condor\_q}
+\index{HTCondor commands!condor\_q}
 and \Condor{status} commands.
-\index{Condor commands!condor\_status}
-You may modify the order in which Condor will run your jobs with
-\Condor{prio}. If desired, Condor can even inform you in a log file 
+\index{HTCondor commands!condor\_status}
+You may modify the order in which HTCondor will run your jobs with
+\Condor{prio}. If desired, HTCondor can even inform you in a log file 
 every time your job is checkpointed and/or migrated to a different machine. 
 
-When your program completes, Condor will tell you
+When your program completes, HTCondor will tell you
 (by e-mail, if preferred) the exit status of your program and various
 statistics about its performances, including time used and I/O performed.
 If you are using a log file for the job (which is recommended) the exit
 status will be recorded in the log file.
 You can remove a job from the
 queue prematurely with \Condor{rm}. 
-\index{Condor commands!condor\_rm}
+\index{HTCondor commands!condor\_rm}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Choosing-Universe}
-Choosing a Condor Universe}
+Choosing an HTCondor Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A \Term{universe} in Condor
+A \Term{universe} in HTCondor
 \index{universe}
-\index{Condor!universe}
+\index{HTCondor!universe}
 defines an execution environment. 
-Condor \VersionNotice\ supports several different
+HTCondor \VersionNotice\ supports several different
 universes for user jobs:
 \begin{itemize}
 	\item Standard
@@ -360,10 +360,10 @@ The \SubmitCmd{universe} under which a job runs
 is specified in the submit description file.
 If a universe is not specified,
 the default is vanilla,
-unless your Condor administrator has changed the default.
+unless your HTCondor administrator has changed the default.
 However, we strongly encourage you to specify the universe,
-since the default can be changed by your Condor administrator,
-and the default that ships with Condor has changed.
+since the default can be changed by your HTCondor administrator,
+and the default that ships with HTCondor has changed.
 
 \index{universe!standard}
 The standard universe provides migration and reliability, but has some
@@ -373,7 +373,7 @@ The vanilla universe provides fewer services, but has very few
 restrictions.
 \index{universe!Grid}
 The grid universe allows users to submit 
-jobs using Condor's interface.
+jobs using HTCondor's interface.
 These jobs are submitted for execution on grid resources.
 \index{universe!java}
 \index{Java}
@@ -399,7 +399,7 @@ the execution of a virtual machine.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{universe!standard}
-In the standard universe, Condor provides \Term{checkpointing} and
+In the standard universe, HTCondor provides \Term{checkpointing} and
 \Term{remote system calls}.  These features make a job more reliable
 and allow it uniform access to resources from anywhere in the pool.
 To prepare a program as a standard universe job, it must be relinked
@@ -408,14 +408,14 @@ universe job, but there are a few restrictions.
 
 \index{checkpoint}
 \index{checkpoint image}
-Condor checkpoints a job at regular intervals.
+HTCondor checkpoints a job at regular intervals.
 A \Term{checkpoint image} is essentially a snapshot of the current
 state of a job. 
 If a job must be migrated from one machine to another,
-Condor makes a checkpoint image, copies the image to the new machine,
+HTCondor makes a checkpoint image, copies the image to the new machine,
 and restarts the job continuing the job from where it left off.
 If a machine should
-crash or fail while it is running a job, Condor can restart the job on
+crash or fail while it is running a job, HTCondor can restart the job on
 a new machine using the most recent checkpoint image.
 In this way, jobs
 can run for months or years even in the face of occasional computer failures.
@@ -429,7 +429,7 @@ When a job runs on a remote machine, a second process, called
 a \Condor{shadow} runs on the machine where the job was submitted.
 \index{condor\_shadow}
 \index{agents!condor\_shadow}
-\index{Condor daemon!condor\_shadow}
+\index{HTCondor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
 When the job attempts a system call, the \Condor{shadow} performs
 the system call instead and sends the results to the remote
@@ -441,7 +441,7 @@ and send the data to the machine where
 the job is running.
 
 To convert your program into a standard universe job, you must use
-\Condor{compile} to relink it with the Condor libraries.
+\Condor{compile} to relink it with the HTCondor libraries.
 Put \Condor{compile} in front of your usual link command.
 You do not need to modify the program's source code,
 but you do need access to the unlinked object files.
@@ -453,7 +453,7 @@ For example, if you would have linked the job by executing:
 % cc main.o tools.o -o program
 \end{verbatim}
 
-Then, relink the job for Condor with:
+Then, relink the job for HTCondor with:
 \begin{verbatim}
 % condor_compile cc main.o tools.o -o program
 \end{verbatim}
@@ -468,7 +468,7 @@ There are a few restrictions on standard universe jobs:
 %%%%%%%%%%%%
 
 \index{universe!vanilla}
-The vanilla universe in Condor is intended
+The vanilla universe in HTCondor is intended
 for programs which cannot
 be successfully re-linked.
 Shell scripts are another case where the vanilla universe
@@ -479,30 +479,30 @@ This has unfortunate consequences for a job that is partially
 completed 
 when the remote machine running a job must be returned
 to its owner.
-Condor has only two choices.  It can suspend the job, hoping to
+HTCondor has only two choices.  It can suspend the job, hoping to
 complete it at a later time,
 or it can give up and restart the job \emph{from the beginning} 
 on another machine in the pool.
 
-Since Condor's remote system call features cannot be used with the
+Since HTCondor's remote system call features cannot be used with the
 vanilla universe, access to the job's input and output files becomes a
 concern.
-One option is for Condor to rely on a shared file system, such as NFS
+One option is for HTCondor to rely on a shared file system, such as NFS
 or AFS. 
-Alternatively, Condor has a mechanism for transferring files on behalf
+Alternatively, HTCondor has a mechanism for transferring files on behalf
 of the user.
-In this case, Condor will transfer any files needed by a job to the
+In this case, HTCondor will transfer any files needed by a job to the
 execution site, run the job, and transfer the output back to the
 submitting machine.
 
-Under Unix, Condor presumes a shared file system for vanilla jobs. 
+Under Unix, HTCondor presumes a shared file system for vanilla jobs. 
 However, if a shared file system is unavailable, a user can enable the
-Condor File Transfer mechanism.
+HTCondor File Transfer mechanism.
 On Windows platforms, the default is to use the File Transfer
 mechanism.
 For details on running a job with a shared file system, see
 section~\ref{sec:shared-fs} on page~\pageref{sec:shared-fs}.
-For details on using the Condor File Transfer mechanism, see 
+For details on using the HTCondor File Transfer mechanism, see 
 section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
 
 
@@ -511,8 +511,8 @@ section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
 %%%%%%%%%%%%
 
 \index{universe!Grid}
-The Grid universe in Condor is intended to provide the standard
-Condor interface to users who wish to start jobs
+The Grid universe in HTCondor is intended to provide the standard
+HTCondor interface to users who wish to start jobs
 intended for remote management systems.
 Section~\ref{sec:GridUniverse} on page~\pageref{sec:GridUniverse}
 has details on using the Grid universe.
@@ -528,7 +528,7 @@ the grid-related attributes.
 \index{universe!Java}
 
 A program submitted to the Java universe may run on any sort of machine
-with a JVM regardless of its location, owner, or JVM version.  Condor
+with a JVM regardless of its location, owner, or JVM version.  HTCondor
 will take care of all the details such as finding the JVM binary and
 setting the classpath.
 
@@ -567,7 +567,7 @@ favor of the newer local universe.
 
 \index{universe!local}
 \index{local universe}
-The local universe allows a Condor job to be submitted and
+The local universe allows an HTCondor job to be submitted and
 executed with different assumptions for the execution conditions
 of the job.
 The job does not wait to be matched with a machine.
@@ -583,7 +583,7 @@ ClassAd.
 \index{universe!parallel}
 \index{parallel universe}
 The parallel universe allows parallel programs, such as MPI jobs,
-to be run within the opportunistic Condor environment.
+to be run within the opportunistic HTCondor environment.
 Please see section~\ref{sec:Parallel} for more details.
 
 %%%%%%%%%%%%
@@ -591,7 +591,7 @@ Please see section~\ref{sec:Parallel} for more details.
 %%%%%%%%%%%%
 \index{universe!vm}
 \index{vm universe}
-Condor facilitates the execution of VMware and Xen
+HTCondor facilitates the execution of VMware and Xen
 virtual machines with the vm universe.
 
 Please see section~\ref{sec:vmuniverse} for details.
@@ -602,28 +602,28 @@ Please see section~\ref{sec:vmuniverse} for details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!submitting}
-A job is submitted for execution to Condor using the
+A job is submitted for execution to HTCondor using the
 \Condor{submit} command.
-\index{Condor commands!condor\_submit}
+\index{HTCondor commands!condor\_submit}
 \Condor{submit} takes as an argument the name of a
 file called a submit description file.
 \index{submit description file}
 \index{file!submit description}
 This file contains commands and keywords to direct the queuing of jobs.
-In the submit description file, Condor finds everything it needs
+In the submit description file, HTCondor finds everything it needs
 to know about the job.  Items such as the name of the executable to run,
 the initial working directory, and command-line arguments to the
 program all go into
 the submit description file.  \Condor{submit} creates a job
 ClassAd based upon the information,
-and Condor
+and HTCondor
 works toward running the job.
 
 The contents of a submit file
 \index{submit description file!contents of}
-can save time for Condor users.
+can save time for HTCondor users.
 It is easy to submit multiple runs of a program to
-Condor. To run the same program 500 times on 500
+HTCondor. To run the same program 500 times on 500
 different input data sets, arrange your data files
 accordingly so that each run reads its own input, and each run
 writes its own output.
@@ -658,8 +658,8 @@ in the
 Example 1 is one of the simplest submit description
 files possible. It queues up one copy of the program \Prog{foo}
 (which had been created by \Condor{compile})
-for execution by Condor.
-Since no platform is specified, Condor will use its default,
+for execution by HTCondor.
+Since no platform is specified, HTCondor will use its default,
 which is to run the job on a machine which has the
 same architecture and operating system as the machine from which it was
 submitted. 
@@ -674,7 +674,7 @@ files \File{stdin}, \File{stdout}, and \File{stderr} will all refer to
 The program may produce output by explicitly opening a file and writing to
 it.
 A log file, \File{foo.log}, will also be produced that contains events
-the job had during its lifetime inside of Condor.
+the job had during its lifetime inside of HTCondor.
 When the job finishes, its exit conditions will be noted in the log file.
 It is recommended that you always have a log file so you know what
 happened to your jobs.
@@ -703,7 +703,7 @@ directory \File{run\_2}. For both queued copies,
 There will be two sets of files written,
 as the files are each written to their own directories.
 This is a convenient way to organize data if you
-have a large group of Condor jobs to run. The example file 
+have a large group of HTCondor jobs to run. The example file 
 shows program submission of
 \Prog{mathematica} as a vanilla universe job.
 This may be necessary if the source
@@ -742,10 +742,10 @@ The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
 LINUX running on a 32-bit Intel processor.
-This job requires Condor to run the program on machines which have
+This job requires HTCondor to run the program on machines which have
 greater than 32 Mbytes of physical memory, and expresses a
 preference to run the program on machines with more than 64 Mbytes.
-It also advises Condor that this standard universe job will
+It also advises HTCondor that this standard universe job will
 use up to 28000 Kbytes of memory when running.
 Each of the 150 runs of the program is given its own process number,
 starting with process number 0.
@@ -756,7 +756,7 @@ of the program,
 \File{in.1}, \File{out.1},
 and \File{err.1} for the second run of the program, and so forth.
 A log file containing entries
-about when and where Condor runs, checkpoints, and migrates processes for
+about when and where HTCondor runs, checkpoints, and migrates processes for
 all the 150 queued programs
 will be written into the single file \File{foo.log}.
 \begin{verbatim}
@@ -800,7 +800,7 @@ Using them effectively requires care, and this section presents
 those details.
 
 Both \AdAttr{requirements} and \AdAttr{rank} need to be specified 
-as valid Condor ClassAd expressions, however, default values are set by the
+as valid HTCondor ClassAd expressions, however, default values are set by the
 \Condor{submit} program if these are not defined in the submit description file.
 From the \Condor{submit} manual page and the above examples, you see
 that writing ClassAd expressions is intuitive, especially if you
@@ -833,10 +833,10 @@ and the prefix \verb@TARGET.@ causes a reference to
 a potential machine or matched machine ClassAd attribute.
 
 The \Condor{status} command displays
-\index{Condor commands!condor\_status}
+\index{HTCondor commands!condor\_status}
 statistics about machines within the pool.
 The \Opt{-l} option displays the
-machine ClassAd attributes for all machines in the Condor pool.
+machine ClassAd attributes for all machines in the HTCondor pool.
 The job ClassAds, if there are jobs in the queue, can be seen
 with the \Condor{q -l} command.
 This shows all the defined attributes for current jobs in the queue.
@@ -867,7 +867,7 @@ If \Attr{Rank} evaluates to a floating point value,
 the best match will be the one with the largest, positive value.
 If no \Attr{Rank} is given 
 in the submit description file,
-then Condor substitutes a default value of 0.0 when considering
+then HTCondor substitutes a default value of 0.0 when considering
 machines to match.
 If the job's \Attr{Rank} of a given machine evaluates
 to UNDEFINED or ERROR,
@@ -911,7 +911,7 @@ While all machines have floating point processing ability,
 not all machines will have the \Attr{kflops} attribute defined.
 For machines where this attribute is not defined,
 \Attr{Rank} will evaluate to the value UNDEFINED, and
-Condor will use a default rank of the machine of 0.0.
+HTCondor will use a default rank of the machine of 0.0.
 The \Attr{Rank} attribute will only rank machines where
 the attribute is defined.
 Therefore, the machine with the highest floating point
@@ -975,7 +975,7 @@ and all three of these machines are ranked higher than others.
 \index{execution environment}
 The environment under which a job executes often contains
 information that is potentially useful to the job.
-Condor allows a user to both set and reference environment
+HTCondor allows a user to both set and reference environment
 variables for a job or job cluster.
 
 Within a submit description file, the user may define environment
@@ -1001,7 +1001,7 @@ environment variables of the submitter as a job is submitted.
 Submit description file commands use \verb@$ENV(EnvironmentVariableName)@
 to reference the value of an environment variable.
 
-Condor sets several additional environment variables for each executing
+HTCondor sets several additional environment variables for each executing
 job that may be useful for the job to reference.
 
 \begin{itemize}
@@ -1011,7 +1011,7 @@ job that may be useful for the job to reference.
  gives the directory
 where the job may place temporary data files. 
 This directory is unique for every job that is run,
-and its contents are deleted by Condor
+and its contents are deleted by HTCondor
 when the job stops running on a machine, no matter how the job completes.
 
 \item \Env{\_CONDOR\_SLOT}
@@ -1030,7 +1030,7 @@ machines and their configuration.
 \index{environment variables!CONDOR\_VM}
 equivalent to \Env{\_CONDOR\_SLOT} described above, except that it is
 only available in the standard universe.
-\Note As of Condor version 6.9.3, this environment variable is no longer
+\Note As of HTCondor version 6.9.3, this environment variable is no longer
 used.
 It will only be defined if the \Macro{ALLOW\_VM\_CRUFT} configuration
 variable is set to \Expr{True}.
@@ -1052,7 +1052,7 @@ the job ad for the currently running job.  The job ad is current
 as of the start of the job, but is not updated during the running
 of the job.  The job may read attributes and their values out of
 this file as it runs, but any changes will not be acted on in any
-way by Condor.  The format is the same as the output of the
+way by HTCondor.  The format is the same as the output of the
 \Condor{q}  \Opt{-l} command.  This environment variable may be particularly
 useful in a USER\_JOB\_WRAPPER.
 
@@ -1074,7 +1074,7 @@ is the path to the initial working directory the job was born with.
 \index{\_CONDOR\_WRAPPER\_ERROR\_FILE environment variable}
 \index{environment variables!\_CONDOR\_WRAPPER\_ERROR\_FILE}
 is only set when the administrator has installed a USER\_JOB\_WRAPPER.
-If this file exists, Condor assumes that the job wrapper has failed
+If this file exists, HTCondor assumes that the job wrapper has failed
 and copies the contents of the file to the StarterLog for the administrator
 to debug the problem.
 
@@ -1090,8 +1090,8 @@ to debug the problem.
 \index{running a job!on a different architecture}
 \index{heterogeneous pool!submitting a job to}
 If executables are available for the different platforms of machines
-in the Condor pool,
-Condor can be allowed the choice of a larger number of machines
+in the HTCondor pool,
+HTCondor can be allowed the choice of a larger number of machines
 when allocating a machine for a job.
 Modifications to the submit description file allow this choice
 of platforms.
@@ -1132,7 +1132,7 @@ many different architectures to gain full
 use of a diverse architecture and operating system pool.
 If the executables are available for the different architectures,
 then a modification to the submit description file
-will allow Condor to choose an executable after an
+will allow HTCondor to choose an executable after an
 available machine is chosen.
 
 A special-purpose Machine Ad substitution macro can be used in
@@ -1142,7 +1142,7 @@ The macro has the form
 \begin{verbatim}
   $$(MachineAdAttribute)
 \end{verbatim}
-The \$\$() informs Condor to substitute the requested 
+The \$\$() informs HTCondor to substitute the requested 
 \AdAttr{MachineAdAttribute} 
 from the machine where the job will be executed.
 
@@ -1167,7 +1167,7 @@ will work correctly for the macro
 
 The executables or links to executables with this name
 are placed into the initial working directory so that they may be
-found by Condor. 
+found by HTCondor. 
 A submit description file that queues three jobs for this example:
 
 \begin{verbatim}
@@ -1205,13 +1205,13 @@ work correctly.
 There are two common errors made with the substitution macro.
 The first is the use of a non-existent \AdAttr{MachineAdAttribute}.
 If the specified \AdAttr{MachineAdAttribute} does not
-exist in the machine's ClassAd, then Condor will place
+exist in the machine's ClassAd, then HTCondor will place
 the job in the held state until the problem is resolved.
 
 The second common error occurs due to an incomplete job set up.
 For example, the submit description file given above specifies
 three available executables.
-If one is missing, Condor reports back that an
+If one is missing, HTCondor reports back that an
 executable is missing when it happens to match the
 job with a resource that requires the missing binary.
 
@@ -1227,9 +1227,9 @@ to a platform.
 If migrated to a different machine, correct execution requires that
 the platform must remain the same.
 
-In previous versions of Condor, the author of the heterogeneous
+In previous versions of HTCondor, the author of the heterogeneous
 submission file would need to write extra policy expressions in the
-\AdAttr{requirements} expression to force Condor to choose the
+\AdAttr{requirements} expression to force HTCondor to choose the
 same type of platform when continuing a checkpointed job.
 However, since it is needed in the common case, this
 additional policy is now automatically added
@@ -1237,7 +1237,7 @@ to the \AdAttr{requirements} expression.
 The additional expression is added
 provided the user does not use
 \AdAttr{CkptArch} in the \AdAttr{requirements} expression.
-Condor will remain backward compatible for those users who have explicitly
+HTCondor will remain backward compatible for those users who have explicitly
 specified \AdAttr{CkptRequirements}--implying use of \AdAttr{CkptArch},
 in their \AdAttr{requirements} expression.
 
@@ -1246,7 +1246,7 @@ will default to
 
 \footnotesize
 \begin{verbatim}
-  # Added by Condor
+  # Added by HTCondor
   CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
                       ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
 
@@ -1288,7 +1288,7 @@ The complete submit description file for this example:
   Output       = povray.out.$(Process)
   Error        = povray.err.$(Process)
 
-  # Condor automatically adds the correct expressions to insure that the
+  # HTCondor automatically adds the correct expressions to insure that the
   # checkpointed jobs will restart on the correct platform types.
   Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
                  (Arch == "X86_64" && OpSys == "LINUX") )
@@ -1382,7 +1382,7 @@ Here is a more compact way to specify a RedHat 6 platform.
 \section{\label{sec:Priorities}Priorities and Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor has two independent priority controls: \Term{job}
+HTCondor has two independent priority controls: \Term{job}
 priorities and \Term{user} priorities.  
 
 \subsection{Job Priority}
@@ -1390,9 +1390,9 @@ priorities and \Term{user} priorities.
 \index{job!priority}
 \index{priority!of a job}
 Job priorities allow the assignment of a priority level to
-each submitted Condor job in order to
+each submitted HTCondor job in order to
 control the order of their execution.
-\index{Condor commands!condor\_prio}
+\index{HTCondor commands!condor\_prio}
 To set a job priority, use the \Condor{prio} command;
 see the example in section~\ref{sec:job-prio}, or the
 command reference page on page~\pageref{man-condor-prio}.
@@ -1410,13 +1410,13 @@ Machines are allocated to users based upon a user's priority.
 A lower numerical value for user priority means higher priority,
 so a user with priority 5 will get more resources than
 a user with priority 50.
-User priorities in Condor can be examined with the \Condor{userprio}
+User priorities in HTCondor can be examined with the \Condor{userprio}
 command (see page~\pageref{man-condor-userprio}).
-\index{Condor commands!condor\_userprio}
-Condor administrators can set and change individual user priorities
+\index{HTCondor commands!condor\_userprio}
+HTCondor administrators can set and change individual user priorities
 with the same utility.
 
-Condor continuously calculates the share of available machines that each
+HTCondor continuously calculates the share of available machines that each
 user should be allocated.    This share is inversely related to the ratio
 between user priorities.
 For example, a user with a priority of 10 will get twice as many
@@ -1430,7 +1430,7 @@ the user priority will worsen by numerically increasing over time.
 If the number of machines is less then the priority,
 the priority will improve by numerically decreasing over time. 
 The long-term result is fair-share access across all users.
-The speed at which Condor adjusts the priorities is
+The speed at which HTCondor adjusts the priorities is
 controlled with the configuration variable \Macro{PRIORITY\_HALFLIFE},
 an exponential half-life value.
 The default is one day.
@@ -1439,19 +1439,19 @@ utilizing 100 machines removes all his/her jobs,
 one day later that user's
 priority will be 50, and two days later the priority will be 25.
 
-Condor enforces that each user gets his/her fair share of machines
+HTCondor enforces that each user gets his/her fair share of machines
 according to user priority both when allocating machines which become
 available and by priority preemption of currently allocated machines.
 For instance, if a low priority user is utilizing all available machines
-and suddenly a higher priority user submits jobs, Condor will
+and suddenly a higher priority user submits jobs, HTCondor will
 immediately take a checkpoint and vacate jobs belonging to the lower priority
-user. This will free up machines that Condor will then give over to the
-higher priority user. Condor will not starve the lower priority user; it
+user. This will free up machines that HTCondor will then give over to the
+higher priority user. HTCondor will not starve the lower priority user; it
 will preempt only enough jobs so that the higher priority user's fair
 share can be realized (based upon the ratio between user priorities). To
-prevent thrashing of the system due to priority preemption, the Condor 
-site administrator can define a \Macro{PREEMPTION\_REQUIREMENTS} expression in Condor's configuration.
-The default expression that ships with Condor is configured to only preempt 
+prevent thrashing of the system due to priority preemption, the HTCondor 
+site administrator can define a \Macro{PREEMPTION\_REQUIREMENTS} expression in HTCondor's configuration.
+The default expression that ships with HTCondor is configured to only preempt 
 lower priority jobs that have run
 for at least one hour. So in the previous example, in the worse case it
 could take up to a maximum of one hour until the higher priority user
@@ -1463,7 +1463,7 @@ section \ref{sec:Disabling Preemption} of the Administrator's manual.
 
 User priorities are keyed on \Expr{<username>@<domain>}, for example
 \Expr{johndoe@cs.wisc.edu}. The domain name to use, if any, is configured by
-the Condor site administrator.  Thus, user priority and therefore resource
+the HTCondor site administrator.  Thus, user priority and therefore resource
 allocation is not impacted by which machine the user submits from or
 even if the user submits jobs from multiple machines.
 
@@ -1474,26 +1474,26 @@ a \Term{nice} job (see page~\pageref{man-condor-submit-nice}).
 Nice jobs artificially boost the user priority 
 by ten million just for the nice job.
 This effectively means that nice jobs will only run on
-machines that no other Condor job (that is, non-niced job) wants.
-In a similar fashion, a Condor administrator could set
-the user priority of any specific Condor user very high.
+machines that no other HTCondor job (that is, non-niced job) wants.
+In a similar fashion, an HTCondor administrator could set
+the user priority of any specific HTCondor user very high.
 If done, for example, with a guest account,
 the guest could only use cycles not wanted by other users of the system.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Vacate-Explained}
-Details About How Condor Jobs Vacate Machines}
+Details About How HTCondor Jobs Vacate Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{vacate}
 \index{preemption!vacate}
-When Condor needs a job to vacate a machine for whatever reason, it
+When HTCondor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
 attribute of the job's ClassAd.
 The value of this attribute can be specified by
 the user at submit time by placing the \Opt{kill\_sig} option in the
-Condor submit description file.  
+HTCondor submit description file.  
 
 If a program wanted to do some special work when required
 to vacate a machine, the program may set up a
@@ -1502,11 +1502,11 @@ to clean up.
 When submitting this job, this clean up signal is specified to be used with
 \Opt{kill\_sig}.
 Note that the clean up work needs to be quick.
-If the job takes too long to go away, Condor
+If the job takes too long to go away, HTCondor
 follows up with a SIGKILL signal which immediately terminates the
 process.
 
-\index{Condor commands!condor\_compile}
+\index{HTCondor commands!condor\_compile}
 A job that is linked using \Condor{compile}
 and is subsequently submitted into the standard universe, 
 will checkpoint and exit upon receipt of a SIGTSTP signal.
@@ -1514,10 +1514,10 @@ Thus, SIGTSTP is
 the default value for \AdAttr{KillSig} when submitting to the standard
 universe.
 The user's code may still checkpoint itself at any time
-by calling one of the following functions exported by the Condor libraries:
+by calling one of the following functions exported by the HTCondor libraries:
 \begin{description}
 \item[\Procedure{ckpt()}] Performs a checkpoint and then returns.
-\item[\Procedure{ckpt\_and\_exit()}] Checkpoints and exits; Condor will then
+\item[\Procedure{ckpt\_and\_exit()}] Checkpoints and exits; HTCondor will then
 restart the process again later, potentially on a different machine.
 \end{description}
 
@@ -1559,18 +1559,18 @@ the usual method to nicely terminate a Unix program.
 
 \index{file system!AFS}
 \index{AFS!interaction with}
-The Condor daemons do not run authenticated to AFS; they do not possess
+The HTCondor daemons do not run authenticated to AFS; they do not possess
 AFS tokens.
-Therefore, no child process of Condor will be AFS authenticated.
+Therefore, no child process of HTCondor will be AFS authenticated.
 The implication of this is that you must set file permissions so
 that your job can access any necessary files residing on an AFS volume
 without relying on having your AFS permissions.
 
-If a job you submit to Condor needs to access files residing in AFS,
+If a job you submit to HTCondor needs to access files residing in AFS,
 you have the following choices:
 \begin{enumerate}
 \item Copy the needed files from AFS to either a local hard disk where 
-Condor can access them using remote system calls (if
+HTCondor can access them using remote system calls (if
 this is a standard universe job), or copy them to an NFS volume.
 \item If the files must be kept on AFS, then set a host ACL
 (using the AFS \Prog{fs setacl} command) on the subdirectory to
@@ -1583,7 +1583,7 @@ If you do not know how to use an AFS host ACL, ask the person at your
 site responsible for the AFS configuration.
 \end{enumerate}
 
-The Condor Team hopes to improve upon how Condor deals with AFS 
+The HTCondor Team hopes to improve upon how HTCondor deals with AFS 
 authentication in a subsequent release.
 
 Please see section~\ref{sec:Condor-AFS-Users} on
@@ -1596,7 +1596,7 @@ further discussion of this problem.
 \index{file system!NFS}
 \index{NFS!interaction with}
 If the current working directory when a job is submitted
-is accessed via an NFS automounter, Condor may have problems if the
+is accessed via an NFS automounter, HTCondor may have problems if the
 automounter later decides to unmount the volume before the job has
 completed.
 This is because \Condor{submit} likely has stored the
@@ -1620,8 +1620,8 @@ submit description file solves the problem.
 
 \index{NFS!cache flush on submit machine}
 \index{ClassAd job attribute!IwdFlushNFSCache}
-%As of Condor version 7.4.0, 
-Condor attempts to flush the NFS cache on a submit machine in order to
+%As of HTCondor version 7.4.0, 
+HTCondor attempts to flush the NFS cache on a submit machine in order to
 refresh a job's initial working directory.
 This allows files written by the job into an NFS mounted 
 initial working directory to be immediately visible on the submit machine.
@@ -1636,27 +1636,27 @@ See page~\pageref{IwdFlushNFSCache-job-attribute} for a definition
 of the job ClassAd attribute.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Condor Daemons That Do Not Run as root}
+\subsection{HTCondor Daemons That Do Not Run as root}
 
 \index{running as root}
 \index{daemon!running as root}
-Condor is normally installed such that the Condor daemons have root
+HTCondor is normally installed such that the HTCondor daemons have root
 permission.
-This allows Condor to run the \Condor{shadow} 
-\index{Condor daemon!condor\_shadow}
+This allows HTCondor to run the \Condor{shadow} 
+\index{HTCondor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
 daemon and
 the job with the submitting user's UID and file access rights.
-When Condor
-is started as root, Condor jobs can access whatever files the
+When HTCondor
+is started as root, HTCondor jobs can access whatever files the
 user that submits the jobs can.
 
-However, it is possible that the Condor installation 
+However, it is possible that the HTCondor installation 
 does not have root access, or
 has decided not to run the daemons as root.
 That is unfortunate,
-since Condor is designed to be run as root.
-To see if Condor is
+since HTCondor is designed to be run as root.
+To see if HTCondor is
 running as root on a specific machine, use the command
 \begin{verbatim}
   condor_status -master -l <machine-name>
@@ -1665,14 +1665,14 @@ running as root on a specific machine, use the command
 where \verb@<machine-name>@ is the name of the specified machine.
 This command displays the full \condor{master} ClassAd; if the
 attribute \AdAttr{RealUid} equals zero,
-then the Condor daemons are indeed
+then the HTCondor daemons are indeed
 running with root access.  If the
-\AdAttr{RealUid} attribute is not zero, then the Condor daemons do not have
+\AdAttr{RealUid} attribute is not zero, then the HTCondor daemons do not have
 root access.
 
 \Note The Unix program \Prog{ps}
 is \emph{not} an effective
-method of determining if Condor is running with root access.
+method of determining if HTCondor is running with root access.
 When using \Prog{ps},
 it may often appear that the daemons are
 running as the condor user instead of root.
@@ -1692,7 +1692,7 @@ and/or directories that the job will touch readable and/or writable by
 the UID (user id) specified by the \Attr{RealUid} attribute.
 Often this may
 mean using the Unix command \verb@chmod 777@
-on the directory from which the Condor job is submitted.
+on the directory from which the HTCondor job is submitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Job-Lease}
@@ -1769,17 +1769,17 @@ dropping a claim due to missing keep alive messages.
 
 \subsection{\label{sec:renaming-argv}Renaming of argv[0]}
 
-\index{argv[0]!Condor use of}
-When Condor starts up your job, it renames argv[0] (which usually
+\index{argv[0]!HTCondor use of}
+When HTCondor starts up your job, it renames argv[0] (which usually
 contains the name of the program) to \condor{exec}.
 This is
 convenient when examining a machine's processes with the Unix
 command \Prog{ps}; the process
-is easily identified as a Condor job.  
+is easily identified as an HTCondor job.  
 
 Unfortunately, some programs read argv[0] expecting their own program
 name and get confused if they find something unexpected like
 \condor{exec}.
 
-\index{Condor!user manual|)}
+\index{HTCondor!user manual|)}
 \index{user manual|)}

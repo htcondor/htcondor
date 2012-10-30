@@ -117,10 +117,7 @@ usage( bool error = true )
 static void
 enable_debug( void )
 {
-	param_functions *p_funcs = get_param_functions();
-	Termlog = true;
-	dprintf_config( "TOOL", p_funcs );
-	set_debug_flags( NULL, D_FULLDEBUG );
+	dprintf_set_tool_debug("TOOL", 0);
 }
 
 static void

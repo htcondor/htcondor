@@ -2,7 +2,7 @@
 %
 \index{ClassAd!machine attributes}
 \index{ClassAd machine attribute!Activity}
-\item[\AdAttr{Activity}:] String which describes Condor job activity on the machine.
+\item[\AdAttr{Activity}:] String which describes HTCondor job activity on the machine.
 Can have one of the following values:
 	\begin{description}
 	\item[\AdStr{Idle}:] There is no job activity
@@ -60,7 +60,7 @@ where 0 = Sunday, 1 = Monday, \Dots, and 6 = Saturday.
 %
 \index{ClassAd machine attribute!CondorLoadAvg}
 \item[\AdAttr{CondorLoadAvg}:] The portion of the load average generated 
-by Condor, either from remote jobs or running benchmarks.
+by HTCondor, either from remote jobs or running benchmarks.
 %
 \index{ClassAd machine attribute!ConsoleIdle}
 \item[\AdAttr{ConsoleIdle}:] The number of seconds since activity on the system
@@ -73,8 +73,8 @@ It is 1 for a single CPU slot, 2 for a dual CPU slot, etc.
 \index{ClassAd machine attribute!CurrentRank}
 \item[\AdAttr{CurrentRank}:] A float which represents this machine
 owner's affinity
-for running the Condor job which it is currently hosting.  If not
-currently hosting a Condor job, \AdAttr{CurrentRank} is 0.0.
+for running the HTCondor job which it is currently hosting.  If not
+currently hosting an HTCondor job, \AdAttr{CurrentRank} is 0.0.
 When a machine is claimed,
 the attribute's value is computed by evaluating the machine's
 \AdAttr{Rank} expression with respect to the current job's ClassAd.
@@ -83,7 +83,7 @@ the attribute's value is computed by evaluating the machine's
 \item[\AdAttr{Disk}:] The amount of disk space on this machine available for
 the job in Kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
 is the amount of disk space available in the directory specified in
-the Condor configuration files by the \Macro{EXECUTE} macro, minus any
+the HTCondor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
 %
 \index{ClassAd machine attribute!Draining}
@@ -156,7 +156,7 @@ number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
 %
 \index{ClassAd machine attribute!FileSystemDomain}
 \item[\AdAttr{FileSystemDomain}:] A domain name configured by the
-Condor administrator which describes a cluster of machines which all
+HTCondor administrator which describes a cluster of machines which all
 access the same, uniformly-mounted, networked file systems usually via
 NFS or AFS.  This is useful for Vanilla universe jobs which require
 remote file access.
@@ -211,7 +211,7 @@ Linpack benchmark.
 \Condor{drain}).
 %
 \index{ClassAd machine attribute!LastHeardFrom}
-\item[\AdAttr{LastHeardFrom}:] Time when the Condor central manager last
+\item[\AdAttr{LastHeardFrom}:] Time when the HTCondor central manager last
 received a status update from this machine.  
 Expressed as 
 the number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
@@ -465,7 +465,7 @@ version number.
 \index{ClassAd machine attribute!Requirements}
 \item[\AdAttr{Requirements}:] A boolean, which when evaluated within the context
 of the machine ClassAd and a job ClassAd, must evaluate to
-TRUE before Condor will allow the job to use this machine.
+TRUE before HTCondor will allow the job to use this machine.
 %
 \index{ClassAd machine attribute!MaxJobRetirementTime}
 \item[\AdAttr{MaxJobRetirementTime}:] An expression giving the
@@ -487,8 +487,8 @@ The value will be \verb@X@ for the slot with
 name="slotX@full.hostname"
 \end{verbatim}
 For non-SMP machines with one slot, the value will be 1.
-\Note This attribute was added in Condor version 6.9.3.
-For older versions of Condor, see \AdAttr{VirtualMachineID} below.
+\Note This attribute was added in HTCondor version 6.9.3.
+For older versions of HTCondor, see \AdAttr{VirtualMachineID} below.
 %
 \index{ClassAd machine attribute!SlotWeight}
 \item[\AdAttr{SlotWeight}:]
@@ -508,19 +508,19 @@ network interface, that information will be included here as well.
 
 %
 \index{ClassAd machine attribute!State}
-\item[\AdAttr{State}:] String which publishes the machine's Condor state.
+\item[\AdAttr{State}:] String which publishes the machine's HTCondor state.
 Can be:
 	\begin{description}
 	\item[\AdStr{Owner}:] The machine owner is using the machine, and
-it is unavailable to Condor.
-	\item[\AdStr{Unclaimed}:] The machine is available to run Condor jobs,
+it is unavailable to HTCondor.
+	\item[\AdStr{Unclaimed}:] The machine is available to run HTCondor jobs,
 but a good match is either not available or not 
 yet found.
-	\item[\AdStr{Matched}:] The Condor central manager has found a good
-match for this resource, but a Condor scheduler has not yet claimed it.
+	\item[\AdStr{Matched}:] The HTCondor central manager has found a good
+match for this resource, but an HTCondor scheduler has not yet claimed it.
 	\item[\AdStr{Claimed}:] The machine is claimed by a remote
 \Condor{schedd} and is probably running a job.
-	\item[\AdStr{Preempting}:] A Condor job is being preempted (possibly
+	\item[\AdStr{Preempting}:] An HTCondor job is being preempted (possibly
 via checkpointing) in order to clear the machine for either a higher
 priority job or because the machine owner wants the machine back.
 	\item[\AdStr{Drained}:] This slot is not accepting jobs,
@@ -642,13 +642,13 @@ began executing.
 This attribute will only be defined if it has a value greater than 0.
 %
 \index{ClassAd machine attribute!UidDomain}
-\item[\AdAttr{UidDomain}:] a domain name configured by the Condor 
+\item[\AdAttr{UidDomain}:] a domain name configured by the HTCondor 
 administrator which describes a cluster of machines which all have 
 the same \File{passwd} file entries, and therefore all have the same logins.
 %
 \index{ClassAd machine attribute!VirtualMachineID}
 \item[\AdAttr{VirtualMachineID}:] 
-Starting with Condor version 6.9.3, this attribute is now longer used.
+Starting with HTCondor version 6.9.3, this attribute is now longer used.
 Instead, use \AdAttr{SlotID}, as described above.
 This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 %
@@ -757,9 +757,9 @@ as the relationship between \AdAttr{RemoteUser} and \AdAttr{RemoteOwner}.
 
 \index{ClassAd machine attribute (in Claimed State)!PreemptingRank}
 \item[\AdAttr{PreemptingRank}:] A float which represents this machine
-owner's affinity for running the Condor job which is waiting for the
-current job to finish or be preempted.  If not currently hosting a
-Condor job, \AdAttr{PreemptingRank} is undefined.  When a machine is
+owner's affinity for running the HTCondor job which is waiting for the
+current job to finish or be preempted.  If not currently hosting an
+HTCondor job, \AdAttr{PreemptingRank} is undefined.  When a machine is
 claimed and there is already a job running, the attribute's value is
 computed by evaluating the machine's \AdAttr{Rank} expression with
 respect to the preempting job's ClassAd.

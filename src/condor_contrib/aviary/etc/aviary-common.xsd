@@ -105,11 +105,12 @@
 		<xs:sequence>
 			<xs:element name="name" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
-			<xs:element name="qdate" type="xs:int" minOccurs="0"/>
-			<!-- where this submission was created in the condor space -->
-			<xs:element name="pool" type="xs:string" minOccurs="0"/>
-			<xs:element name="scheduler" type="xs:string" minOccurs="0"/>
+			<xs:element name="qdate" type="xs:int" minOccurs="0"/>			
 		</xs:sequence>
+        <!-- where this submission was created in the condor space -->
+        <!-- TODO: tactical hiding for backward compat, revisit -->
+        <xs:attribute name="pool" type="xs:string"/>
+        <xs:attribute name="scheduler" type="xs:string"/>
 	</xs:complexType>
 	<xs:complexType name="JobID">
 		<xs:sequence>

@@ -3,33 +3,33 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{privilege separation}
 \index{PrivSep (privilege separation)}
-\index{Condor daemon!condor\_procd@\Condor{procd}}
+\index{HTCondor daemon!condor\_procd@\Condor{procd}}
 \index{daemon!condor\_procd@\Condor{procd}}
 \index{condor\_procd daemon}
 
 Section~\ref{sec:uids} discusses why, under most circumstances, it is
-beneficial to run the Condor daemons as \Login{root}. In situations
-where multiple users are involved or where Condor is responsible for
+beneficial to run the HTCondor daemons as \Login{root}. In situations
+where multiple users are involved or where HTCondor is responsible for
 enforcing a machine owner's policy, running as \Login{root} is the 
-\emph{only} way for Condor to do its job correctly and securely.
+\emph{only} way for HTCondor to do its job correctly and securely.
 
-Unfortunately, this requirement of running Condor as \Login{root} is
+Unfortunately, this requirement of running HTCondor as \Login{root} is
 at odds with a well-established goal of security-conscious
 administrators: keeping the amount of software that runs with
-superuser privileges to a minimum. Condor's nature as a
+superuser privileges to a minimum. HTCondor's nature as a
 large distributed system that routinely communicates with potentially
 untrusted components over the network further aggravates this goal.
 
-The privilege separation (PrivSep) effort in Condor aims to minimize
+The privilege separation (PrivSep) effort in HTCondor aims to minimize
 the amount of code that needs \Login{root}-level access, while still
-giving Condor the tools it needs to work properly. Note that PrivSep
+giving HTCondor the tools it needs to work properly. Note that PrivSep
 is currently only available for execute side functionality, and is not
 implemented on Windows.
 
-In the PrivSep model, all logic in Condor that requires superuser
+In the PrivSep model, all logic in HTCondor that requires superuser
 privilege is contained in a small component called 
 the PrivSep Kernel.
-The Condor daemons execute as an unprivileged account.
+The HTCondor daemons execute as an unprivileged account.
 They explicitly request action from the PrivSep Kernel whenever
 \Login{root}-level operations are needed.
 
@@ -48,9 +48,9 @@ Further, limits on requested actions from the PrivSep Kernel
 contain and restrict the attacker's sphere of influence.
 
 The following section describes the configuration necessary
-to enable PrivSep for an execute-side Condor installation.
+to enable PrivSep for an execute-side HTCondor installation.
 After this is a detailed description of
-the services that the PrivSep Kernel provides to Condor, and how it
+the services that the PrivSep Kernel provides to HTCondor, and how it
 limits the allowed \Login{root}-level actions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,8 +60,8 @@ limits the allowed \Login{root}-level actions.
 The PrivSep Kernel is implemented as two programs:
 the \Condor{root\_switchboard} and the \Condor{procd}.
 Both are contained in
-the \File{sbin} directory of the Condor distribution. When Condor is
-running in PrivSep mode, these are to be the only two Condor daemons that run
+the \File{sbin} directory of the HTCondor distribution. When HTCondor is
+running in PrivSep mode, these are to be the only two HTCondor daemons that run
 with \Login{root} privilege.
 
 Each of these binaries must be accessible on the file system via a
@@ -84,7 +84,7 @@ chmod 4755 /opt/condor/release/sbin/condor_root_switchboard
 The PrivSep Kernel has its own configuration file.
 This file  must be \File{/etc/condor/privsep\_config}.
 The format of this file is different than 
-a Condor configuration file.
+an HTCondor configuration file.
 It consists
 of lines with ``\Code{key = value}'' pairs. 
 Lines with only white space
@@ -131,37 +131,37 @@ The following settings are required to configure the PrivSep Kernel:
 \item \Code{valid-caller-uids} and \Code{valid-caller-gids}. These lists
 specify users and groups that will be allowed to request action from
 the PrivSep Kernel. The list typically will contain the
-UID and primary GID that the Condor daemons will run as.
+UID and primary GID that the HTCondor daemons will run as.
 
 \item \Code{valid-target-uids} and \Code{valid-target-gids}. These lists
-specify the users and groups that Condor will be allowed to act on
+specify the users and groups that HTCondor will be allowed to act on
 behalf of. The list will need to include IDs of all users and groups
-that Condor jobs may use on the given execute machine.
+that HTCondor jobs may use on the given execute machine.
 
 \item \Code{valid-dirs}. This list specifies directories that
-Condor will be allowed to manage for the use of temporary job
-files. Normally, this will only need to include the value of Condor's
+HTCondor will be allowed to manage for the use of temporary job
+files. Normally, this will only need to include the value of HTCondor's
 \MacroU{EXECUTE} directory. Any entry in this list must be a trusted
 path. This means that all components of the path must be directories
 that are \Login{root}-owned and only writable by \Login{root}. For
 many sites, this may require a change in ownership and permissions
 to the \MacroU{LOCAL\_DIR} and \MacroU{EXECUTE} directories. Note also
-that the PrivSep Kernel does not have access to Condor's configuration
+that the PrivSep Kernel does not have access to HTCondor's configuration
 variables, and therefore may not refer to them in this file.
 
 \item \Code{procd-executable}. A (trusted) full path to the
 \Condor{procd} executable.
 Note that the PrivSep Kernel does not
-have access to Condor's configuration variables,
+have access to HTCondor's configuration variables,
 and therefore may not refer to them in this file.
 
 \end{itemize}
 
 Here is an example of a full \File{privsep\_config} file.
 This file gives the \Login{condor} account access to the PrivSep
-Kernel. Condor's use of this execute machine will be restricted to a
+Kernel. HTCondor's use of this execute machine will be restricted to a
 set of eight dedicated accounts, along with the \Login{users}
-group. Condor's \MacroUNI{EXECUTE} directory and the \Condor{procd}
+group. HTCondor's \MacroUNI{EXECUTE} directory and the \Condor{procd}
 executable are also specified, as required.
 \begin{verbatim}
 valid-caller-uids = condor
@@ -172,11 +172,11 @@ valid-dirs = /opt/condor/local/execute
 procd-executable = /opt/condor/release/sbin/condor_procd
 \end{verbatim}
 
-Once the PrivSep Kernel is properly installed and configured, Condor's
+Once the PrivSep Kernel is properly installed and configured, HTCondor's
 configuration must be updated to specify that PrivSep should be
-used. The Condor configuration variable \Macro{PRIVSEP\_ENABLED} 
+used. The HTCondor configuration variable \Macro{PRIVSEP\_ENABLED} 
 is a boolean flag serving this purpose.
-In addition, Condor must be told where the
+In addition, HTCondor must be told where the
 \Condor{root\_switchboard} binary is located using the
 \Macro{PRIVSEP\_SWITCHBOARD} setting. The following example
 illustrates:
@@ -186,10 +186,10 @@ PRIVSEP_SWITCHBOARD = $(SBIN)/condor_root_switchboard
 \end{verbatim}
 
 Finally, note that while the \Condor{procd} is in general an optional
-component of Condor, it is required when PrivSep is in use. If
+component of HTCondor, it is required when PrivSep is in use. If
 \MacroNI{PRIVSEP\_ENABLED} is \Expr{True}, the \Condor{procd} will be used
 regardless of the \Macro{USE\_PROCD} setting.
-Details on these Condor configuration variables are in
+Details on these HTCondor configuration variables are in
 section~\ref{sec:Config-PrivSep} for PrivSep variables
 and 
 section~\ref{sec:Procd-Config-File-Entries} for \Condor{procd} variables.
@@ -199,8 +199,8 @@ section~\ref{sec:Procd-Config-File-Entries} for \Condor{procd} variables.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes the \Login{root}-enabled operations that the
-PrivSep Kernel makes available to Condor. The PrivSep Kernel's
-interface is designed to provide only operations needed by Condor in
+PrivSep Kernel makes available to HTCondor. The PrivSep Kernel's
+interface is designed to provide only operations needed by HTCondor in
 order to function properly. Each operation is further restricted based
 on the PrivSep Kernel's configuration settings.
 
@@ -227,7 +227,7 @@ target user or the user invoking the PrivSep Kernel.
 including everything contained within. The directory's parent must be
 a valid directory.
 
-\item \emph{Execute a program as a user.} Condor can invoke the
+\item \emph{Execute a program as a user.} HTCondor can invoke the
 PrivSep kernel to execute a program as a valid target user. The user's
 primary group and any supplemental groups that it is a member of must
 all be valid target groups. This operation may also include opening
@@ -237,23 +237,23 @@ program.
 \end{itemize}
 
 After launching a program as a valid target user, the PrivSep Kernel
-allows Condor limited control over its execution. The following
+allows HTCondor limited control over its execution. The following
 operations are supported on a program executed via the PrivSep Kernel:
 
 \begin{itemize}
 
-\item \emph{Get resource usage information.} This allows Condor to
+\item \emph{Get resource usage information.} This allows HTCondor to
 gather usage statistics such as CPU time and memory image size. This
 applies to the program's initial process and any of its descendants.
 
-\item \emph{Signal the program.} Condor may ask that signals be sent
+\item \emph{Signal the program.} HTCondor may ask that signals be sent
 to the program's initial process as a notification mechanism.
 
 \item \emph{Suspend and resume the program.} These operations send
 \Code{SIGSTOP} or \Code{SIGCONT} signals to all processes that make up
 the program.
 
-\item \emph{Kill the process and all descendants.} Condor is allowed
+\item \emph{Kill the process and all descendants.} HTCondor is allowed
 to terminate the execution of the program or any processes
 left behind when the program completes.
 
@@ -261,7 +261,7 @@ left behind when the program completes.
 
 By sufficiently constraining the valid target
 accounts and valid directories to which the PrivSep Kernel allows
-access, the ability of a compromised Condor daemon to do damage can
+access, the ability of a compromised HTCondor daemon to do damage can
 be considerably reduced.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -275,21 +275,21 @@ inputs,
 and maps the proxy to a local identity (that is, a Unix UID),
 which it then uses to execute the command.
 Like the \Condor{root\_switchboard} command,
-which provides similar functionality for Condor's PrivSep mode
+which provides similar functionality for HTCondor's PrivSep mode
 (see section \ref{sec:PrivSep}), \Prog{glexec} must be installed as a root-owned
 setuid program. See \URL{http://www.nikhef.nl/grid/lcaslcmaps/glexec/}
 for more information about \Prog{glexec}.
 
-Condor can interoperate with \Prog{glexec}, using it in a similar way
-to how the \Condor{root\_switchboard} is used when running Condor in
+HTCondor can interoperate with \Prog{glexec}, using it in a similar way
+to how the \Condor{root\_switchboard} is used when running HTCondor in
 PrivSep mode. The \Condor{starter} uses \Prog{glexec} when launching
-a job, in order to give the job a separate UID from that of the Condor daemons.
+a job, in order to give the job a separate UID from that of the HTCondor daemons.
 \Prog{glexec} is also used when performing maintenance actions such as
 cleaning up a job's files and processes, which cannot be done well
-directly under the Condor daemons' UID due to permissions.
+directly under the HTCondor daemons' UID due to permissions.
 A consequence
 of this type of integration with \Prog{glexec} is that the execution
-of a single Condor job results in several \Prog{glexec} invocations, and
+of a single HTCondor job results in several \Prog{glexec} invocations, and
 each must map the proxy to the same UID.
 It is thus important to ensure
 that \Prog{glexec} is configured to provide this guarantee.
@@ -297,10 +297,10 @@ that \Prog{glexec} is configured to provide this guarantee.
 Configuration for \Prog{glexec} support is straightforward. 
 The boolean configuration variable \Macro{GLEXEC\_JOB} 
 must be set \Expr{True} on execute machines where \Prog{glexec} is to be used.
-Condor also must be given the full path
+HTCondor also must be given the full path
 to the \Prog{glexec} binary using the \Macro{GLEXEC} configuration variable.
-Note that Condor must be started as a non-root user when \Prog{glexec} is used.
-This is because when Condor runs as root,
+Note that HTCondor must be started as a non-root user when \Prog{glexec} is used.
+This is because when HTCondor runs as root,
 it can perform actions as other UIDs arbitrarily,
 and \Prog{glexec}'s services are not needed.
 Finally, for a job to execute
@@ -310,7 +310,7 @@ specified via the \SubmitCmd{x509userproxy} command in
 its submit description file,
 since a proxy is needed as input to \Prog{glexec}.
 
-Earlier versions of Condor employed a different form of \Prog{glexec}
+Earlier versions of HTCondor employed a different form of \Prog{glexec}
 support, where the \Condor{starter} daemon ran under the same UID as the job.
 This feature was enabled using 
 the \Macro{GLEXEC\_STARTER} configuration variable.

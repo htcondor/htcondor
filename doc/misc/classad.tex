@@ -1,14 +1,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:classad-reference}
-Condor's ClassAd Mechanism}
+HTCondor's ClassAd Mechanism}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd|(}
 
 ClassAds are a flexible mechanism for representing the characteristics and
-constraints of machines and jobs in the Condor system.  ClassAds are used
-extensively in the Condor system to represent jobs, resources, submitters
-and other Condor daemons.  An understanding of this mechanism is required
-to harness the full flexibility of the Condor system.
+constraints of machines and jobs in the HTCondor system.  ClassAds are used
+extensively in the HTCondor system to represent jobs, resources, submitters
+and other HTCondor daemons.  An understanding of this mechanism is required
+to harness the full flexibility of the HTCondor system.
 
 A ClassAd is is a set of uniquely named expressions.  Each named expression
 is called an \Term{attribute}.  Figure~\ref{ClassAd:example} shows an example 
@@ -63,31 +63,31 @@ ClassAds: Old and New}
 
 ClassAds have existed for quite some time in two forms:
 Old and New.
-Old ClassAds were the original form and were used in Condor
-until Condor version 7.5.0.
-They were heavily tied to the Condor development libraries.
+Old ClassAds were the original form and were used in HTCondor
+until HTCondor version 7.5.0.
+They were heavily tied to the HTCondor development libraries.
 New ClassAds added new features
 and were designed as a stand-alone library that could be used apart
-from Condor.
+from HTCondor.
 
-In Condor version 7.5.1, Condor switched the internal usage of
+In HTCondor version 7.5.1, HTCondor switched the internal usage of
 ClassAds from Old to New.
 All user interaction with tools (such as \Condor{q}) as well as
 output of tools is still done as Old ClassAds.
-Before Condor version 7.5.1, New ClassAds were used in just a few places 
-within Condor, 
+Before HTCondor version 7.5.1, New ClassAds were used in just a few places 
+within HTCondor, 
 for example, in the Job Router and  in \Condor{q} \Opt{-better-analyze}.
 There are some syntax and behavior differences between Old and New
 ClassAds,
-all of which will remain invisible to users of Condor for this version.
+all of which will remain invisible to users of HTCondor for this version.
 A complete description of New ClassAds can be found at
 \URL{http://www.cs.wisc.edu/condor/classad/},
 and in the ClassAd Language Reference Manual found on this web page.
 
 Some of the features of New ClassAds that are \emph{not} in Old ClassAds are
 lists, nested ads, time values, and matching groups of ads.
-Condor will avoid using these features until the 7.7.x development series,
-as using them makes it difficult to interact with older versions of Condor.
+HTCondor will avoid using these features until the 7.7.x development series,
+as using them makes it difficult to interact with older versions of HTCondor.
 
 The syntax varies slightly between Old and New ClassAds.
 Here is an example ClassAd presented in both forms.
@@ -109,7 +109,7 @@ Moo = Foo isnt Undefined;
 ]
 \end{verbatim}
 
-Condor will convert to and from Old ClassAd syntax as needed.
+HTCondor will convert to and from Old ClassAd syntax as needed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{New ClassAd Attribute References}
@@ -146,11 +146,11 @@ and with the \Opt{-constraint} option to command-line tools.
 
 New ClassAds have no \Attr{CurrentTime} attribute.
 If needed, use the \Procedure{time} function instead.
-In order to mimic Old ClassAd semantics in this Condor version 7.5.1 release,
+In order to mimic Old ClassAd semantics in this HTCondor version 7.5.1 release,
 all ClassAds have an explicit \Attr{CurrentTime} attribute,
 with a value of \Procedure{time}.
 
-In this Condor version 7.5.1 release, 
+In this HTCondor version 7.5.1 release, 
 New ClassAds will mimic the evaluation behavior of Old ClassAds.
 No configuration variables or submit description file contents should
 need to be changed.
@@ -158,7 +158,7 @@ To eliminate this behavior and use only the semantics of New ClassAds,
 set the configuration variable
 \Macro{STRICT\_CLASSAD\_EVALUATION} to \Expr{True}.
 This permits testing expressions to see if any adjustment is required,
-before a future version of Condor potentially makes New ClassAds
+before a future version of HTCondor potentially makes New ClassAds
 evaluation behavior the default or the only option. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -286,9 +286,9 @@ Optional parameters are given within square brackets.
 
   Note that referring to attributes of a job from within the string
   passed to \Procedure{eval} in the \Attr{Requirements} or
-  \Attr{Rank} expressions could cause inaccuracies in Condor's
+  \Attr{Rank} expressions could cause inaccuracies in HTCondor's
   automatic auto-clustering of jobs into equivalent groups for
-  matchmaking purposes.  This is because Condor needs to determine
+  matchmaking purposes.  This is because HTCondor needs to determine
   which ClassAd attributes are significant for matchmaking purposes,
   and indirect references from within the string passed to \Procedure{eval}
   will not be counted.
@@ -1113,11 +1113,11 @@ outcome of the \Expr{=!=} operator.
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Old ClassAds in the Condor System}
+\subsection{Old ClassAds in the HTCondor System}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The simplicity and flexibility of ClassAds is heavily exploited in the Condor
+The simplicity and flexibility of ClassAds is heavily exploited in the HTCondor
 system.  ClassAds are not only used to represent machines and jobs in the 
-Condor pool, but also other entities that exist in the pool such as 
+HTCondor pool, but also other entities that exist in the pool such as 
 checkpoint servers, submitters of jobs and master daemons.  Since arbitrary
 expressions may be supplied and evaluated over these ads, users have a uniform
 and powerful mechanism to specify constraints over these ads.  These constraints

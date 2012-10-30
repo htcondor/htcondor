@@ -2,15 +2,15 @@
 \section{\label{sec:hooks}Hooks}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Hooks|(}
-A \Term{hook} is an external program or script invoked by Condor.
+A \Term{hook} is an external program or script invoked by HTCondor.
 
 Job hooks that fetch work allow sites to write their own programs or scripts, 
-and allow Condor to invoke these hooks at the right moments 
+and allow HTCondor to invoke these hooks at the right moments 
 to accomplish the desired outcome.
 This eliminates the expense of the matchmaking and scheduling provided 
 by the \Condor{schedd} and the \Condor{negotiator},
 although at the price of the flexibility they offer. 
-Therefore, job hooks that fetch work allow Condor to more easily and directly
+Therefore, job hooks that fetch work allow HTCondor to more easily and directly
 interface with external scheduling systems. 
 
 Hooks may also behave as a Job Router.
@@ -45,7 +45,7 @@ daemon at various points during the life cycle of a routed job.
 
 The following sections describe how and when these hooks are used,
 what hooks are invoked at various stages of the job's life, 
-and how to configure Condor to use these Hooks.
+and how to configure HTCondor to use these Hooks.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:job-hooks-JR}
@@ -54,22 +54,22 @@ Hooks Invoked for Job Routing}
 \index{Job Router}
 
 The Job Router Hooks allow for replacement of the transformation engine used
-by Condor for routing a job.
-Since the external transformation engine is not controlled by Condor,
+by HTCondor for routing a job.
+Since the external transformation engine is not controlled by HTCondor,
 additional hooks provide a means to update the job's
-status in Condor, and to clean up upon exit or failure cases.
+status in HTCondor, and to clean up upon exit or failure cases.
 This allows one job to be transformed to just about any other type of job
-that Condor supports,
-as well as to use execution nodes not normally available to Condor.
+that HTCondor supports,
+as well as to use execution nodes not normally available to HTCondor.
 
 It is important to note that if the Job Router Hooks are utilized, 
-then Condor will not ignore or work around a failure in any hook execution.
+then HTCondor will not ignore or work around a failure in any hook execution.
 If a hook is configured,
-then Condor assumes its invocation is required and will not
+then HTCondor assumes its invocation is required and will not
 continue by falling back to a part of its internal engine.
 For example,
 if there is a problem transforming the job using the hooks,
-Condor will not fall back on its transformation accomplished without the hook
+HTCondor will not fall back on its transformation accomplished without the hook
 to process the job.
 
 There are 2 ways in which the Job Router Hooks may be enabled.
@@ -110,14 +110,14 @@ All hooks must exit successfully.
   is invoked when the Job Router has determined that a job
   meets the definition for a route.  This hook is responsible for doing the
   transformation of the job and configuring any resources that are external to
-  Condor if applicable.
+  HTCondor if applicable.
 
 \begin{description}
 \item[Command-line arguments passed to the hook]
   None.
 \item[Standard input given to the hook]
   The first line will be the route that the job matched as
-  defined in Condor's configuration files followed by the job ClassAd,
+  defined in HTCondor's configuration files followed by the job ClassAd,
   separated by the string \verb@"------"@ and a new line.
 \item[Expected standard output from the hook]
   The transformed job.
@@ -143,8 +143,8 @@ All hooks must exit successfully.
 \item[Expected standard output from the hook]
    The job attributes to be updated in the routed job,
    or nothing, if there was no update.
-   To prevent clashing with Condor's management of job attributes,
-   only attributes that are not managed by Condor should be output
+   To prevent clashing with HTCondor's management of job attributes,
+   only attributes that are not managed by HTCondor should be output
    from this hook.
 \item[Exit status of the hook]
   0 for success, any non-zero value on failure.

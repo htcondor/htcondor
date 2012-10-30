@@ -1,8 +1,8 @@
 \begin{ManPage}{\label{man-condor-configure}\Condor{configure}}{1}
-{Configure or install Condor}
+{Configure or install HTCondor}
 
-\index{Condor commands!condor\_configure}
-\index{Condor commands!condor\_install}
+\index{HTCondor commands!condor\_configure}
+\index{HTCondor commands!condor\_install}
 \index{condor\_configure command}
 \index{condor\_install command}
 
@@ -56,15 +56,15 @@
 \Description 
 
 \Condor{configure} and \Condor{install} refer to a single script that installs
-and/or configures Condor on Unix machines.  As the names imply,
-\Condor{install} is intended to perform a Condor installation, and
+and/or configures HTCondor on Unix machines.  As the names imply,
+\Condor{install} is intended to perform a HTCondor installation, and
 \Condor{configure} is intended to configure (or reconfigure) an
 existing installation.
 Both will run with Perl 5.6.0 or more recent versions.
 
 \Condor{configure} (and \Condor{install}) are designed to be run more
 than one time where required.
-It can install Condor when invoked with a correct configuration via
+It can install HTCondor when invoked with a correct configuration via
 \begin{verbatim}
 condor_install
 \end{verbatim}
@@ -77,8 +77,8 @@ or, it can change the configuration files when invoked via
 condor_configure
 \end{verbatim}
 Note that changes in the configuration files do not result
-in changes while Condor is running.
-To effect changes while Condor is running,
+in changes while HTCondor is running.
+To effect changes while HTCondor is running,
 it is necessary to further use the \Condor{reconfig} or \Condor{restart}
 command.
 \Condor{reconfig}  is required where the currently executing
@@ -94,7 +94,7 @@ The \verb@--@\textbf{help} option can be used to display a full help screen.
 
 Within the options given below, 
 the phrase \Term{release directories} is the list of directories that are
-released with Condor.  This list includes: 
+released with HTCondor.  This list includes: 
 \File{bin}, \File{etc}, \File{examples}, \File{include},
 \File{lib}, \File{libexec}, \File{man}, \File{sbin},
 \File{sql} and \File{src}.
@@ -105,14 +105,14 @@ released with Condor.  This list includes:
   \OptItem{\Opt{---install}} {Perform installation, assuming that
     the current working directory contains the release directories.
     Without further options, the configuration is that of
-    a Personal Condor, a complete one-machine pool.
+    a Personal HTCondor, a complete one-machine pool.
     If used as an 
     upgrade within an existing installation directory, existing 
     configuration files and local directory are preserved.  This
     is the default behavior of \Condor{install}. }
 
   \OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
-    where Condor should be installed or the path where it already is
+    where HTCondor should be installed or the path where it already is
     installed. The default is the current working directory.}
 
   \OptItem{\Opt{---prefix=$<$path$>$}} {This is an alias for
@@ -121,7 +121,7 @@ released with Condor.  This list includes:
   \OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
     location of the local directory, which is the directory that generally 
     contains the local (machine-specific) configuration file as well as the
-    directories where Condor daemons write their run-time information 
+    directories where HTCondor daemons write their run-time information 
     (\File{spool}, \File{log}, \File{execute}).
     This location is indicated  by the \MacroNI{LOCAL\_DIR} 
     variable in the configuration file. 
@@ -138,34 +138,34 @@ released with Condor.  This list includes:
     directories will be moved there from their current location.}
 
   \OptItem{\Opt{---make-personal-condor}} {Installs and configures for 
-     Personal Condor, a fully-functional, one-machine pool.}
+     Personal HTCondor, a fully-functional, one-machine pool.}
 
   \OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One
     or more of the types may be listed.
     This determines the roles that a machine may play in a pool.
     In general, any machine can be a submit and/or execute machine,
     and there is one central manager per pool.
-    In the case of a Personal Condor,
+    In the case of a Personal HTCondor,
     the machine fulfills all three of these roles.}
 
   \OptItem {\Opt{---central-manager=$<$hostname$>$}} {Instructs
-    the current Condor installation to use the specified machine
+    the current HTCondor installation to use the specified machine
     as the central manager. 
     This modifies the configuration variable \MacroNI{COLLECTOR\_HOST}
-    to point to the given host name).
-    The central manager machine's Condor configuration needs
+    to point to the given host name.
+    The central manager machine's HTCondor configuration needs
     to be independently configured to 
     act as a manager using the option \Opt{--type=manager}. }
 
   \OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
-    such that Condor daemons will be executed as the given owner.
+    such that HTCondor daemons will be executed as the given owner.
     This modifies the 
     ownership on the \File{log}, \File{spool} and \File{execute}
     directories and sets the \MacroNI{CONDOR\_IDS} value
     in the configuration file,
-    to ensure that Condor daemons start up as the specified effective user.
+    to ensure that HTCondor daemons start up as the specified effective user.
     See section~\ref{sec:uids} on
-    UIDs in Condor on page~\pageref{sec:uids} for details.
+    UIDs in HTCondor on page~\pageref{sec:uids} for details.
     This is only applicable when \Condor{configure} is run by root.
     If not run as root, the owner is the user running
     the \Condor{configure} command.  }
@@ -174,14 +174,14 @@ released with Condor.  This list includes:
     Always overwrite the contents of the \File{sbin} directory in
     the installation directory.  By default, \Condor{install}
     will not install if it finds an existing \File{sbin} directory
-    with Condor programs in it.  In this case, \Condor{install}
+    with HTCondor programs in it.  In this case, \Condor{install}
     will exit with an error message.  Specify
     \Opt{--overwrite} or \Opt{--backup} to tell \Condor{install}
     what to do.
 
     This prevents \Condor{install} from moving an \File{sbin}
     directory out of the way that it should not move.  This is
-    particularly useful when trying to install Condor in a
+    particularly useful when trying to install HTCondor in a
     location used by other things (\File{/usr}, \File{/usr/local}, etc.)
     For example: \Condor{install} \Opt{--prefix=/usr}
          will not move
@@ -196,14 +196,14 @@ released with Condor.  This list includes:
   \OptItem{\Opt{---backup}} {
     Always backup the \File{sbin} directory in the installation
     directory.  By default, \Condor{install} will not install if
-    it finds an existing \File{sbin} directory with Condor programs
+    it finds an existing \File{sbin} directory with HTCondor programs
     in it.  In this case, \Condor{install} with exit with an
     error message.  You must specify \Opt{--overwrite} or
     \Opt{--backup} to tell \Condor{install} what to do.
 
     This prevents \Condor{install} from moving an \File{sbin}
     directory out of the way that it should not move.  This is
-    particularly useful if you're trying to install Condor in a
+    particularly useful if you're trying to install HTCondor in a
     location used by other things (\File{/usr}, \File{/usr/local}, etc.)
     For example: \Condor{install} \Opt{--prefix=/usr}
          will not move
@@ -239,7 +239,7 @@ released with Condor.  This list includes:
   \OptItem{\Opt{---env-scripts-dir=$<$directory$>$}} {
     By default, the simple \Prog{sh} and \Prog{csh} shell scripts (see
     \Opt{---no-env-scripts} for details) are created in 
-    the root directory of the Condor installation.  This option
+    the root directory of the HTCondor installation.  This option
     causes \Condor{configure} to generate these scripts in the
     specified directory.  }
 
@@ -263,17 +263,17 @@ released with Condor.  This list includes:
 and it will exit with a nonzero value upon failure.
 
 \Examples
-Install Condor on the machine (machine1@cs.wisc.edu)
+Install HTCondor on the machine (machine1@cs.wisc.edu)
 to be the pool's central manager.
 On machine1,
-within the directory that contains the unzipped Condor
+within the directory that contains the unzipped HTCondor
 distribution directories:
 \footnotesize
 \begin{verbatim}
 % condor_install --type=submit,execute,manager
 \end{verbatim}
 \normalsize
-This will allow the machine to submit and execute Condor jobs, 
+This will allow the machine to submit and execute HTCondor jobs, 
 in addition to being the central manager of the pool.
 
 
@@ -282,7 +282,7 @@ machine2@cs.wisc.edu is an execute-only machine
 (that is, a dedicated computing node)
 within a pool with central manager on machine1@cs.wisc.edu,
 issue the command on that machine2@cs.wisc.edu
-from within the directory where Condor is installed:
+from within the directory where HTCondor is installed:
 \footnotesize
 \begin{verbatim}
 % condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
@@ -292,7 +292,7 @@ from within the directory where Condor is installed:
 
 
 To change the location of the \MacroNI{LOCAL\_DIR} directory
-in the configuration file, do (from the directory where Condor is installed):
+in the configuration file, do (from the directory where HTCondor is installed):
 \footnotesize
 \begin{verbatim}
 % condor_configure --local-dir=/path/to/new/local/directory

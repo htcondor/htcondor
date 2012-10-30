@@ -2,31 +2,31 @@
 \subsection{\label{sec:shared-port-daemon}Reducing Port Usage with the \Condor{shared\_port} Daemon}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Condor daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{HTCondor daemon!condor\_shared\_port@\Condor{shared\_port}}
 \index{daemon!condor\_shared\_port@\Condor{shared\_port}}
 \index{condor\_shared\_port daemon}
 The \Condor{shared\_port} is an optional daemon
 responsible for creating a TCP listener port shared by all of the
-Condor daemons for which the configuration variable
+HTCondor daemons for which the configuration variable
 \Macro{USE\_SHARED\_PORT} is \Expr{True}.
 The \Condor{master} will invoke the \Condor{shared\_port} daemon
 if it is listed in \MacroNI{DAEMON\_LIST}.
 
 The main purpose of the \Condor{shared\_port} daemon is to reduce the
-number of ports that must be opened when Condor needs to be
+number of ports that must be opened when HTCondor needs to be
 accessible through a firewall.
 This has a greater security benefit
 than simply reducing the number of open ports.
 Without the \Condor{shared\_port} daemon,
-one can configure Condor to use a range of ports,
-but since some Condor daemons are created dynamically, 
-this full range of ports will not be in use by Condor at all times.
-This implies that other non-Condor processes not intended to be exposed to
+one can configure HTCondor to use a range of ports,
+but since some HTCondor daemons are created dynamically, 
+this full range of ports will not be in use by HTCondor at all times.
+This implies that other non-HTCondor processes not intended to be exposed to
 the outside network could unintentionally bind to ports in the range
-intended for Condor,
+intended for HTCondor,
 unless additional steps are taken to control access to those ports.  
 While the \Condor{shared\_port} daemon is running,
-it is exclusively bound to its port, which means that other non-Condor
+it is exclusively bound to its port, which means that other non-HTCondor
 processes cannot accidentally bind to that port.
 
 A secondary benefit of the \Condor{shared\_port} daemon
@@ -44,8 +44,8 @@ After increasing the ephemeral port range as to as many as possible,
 port exhaustion occurred between 20K and 25K running jobs.
 Using the \Condor{shared\_port} daemon,
 each running job requires fewer, approximately 1.1 ephemeral ports
-on the submit node, if Condor on the submit node connects directly
-to Condor on the execute node.
+on the submit node, if HTCondor on the submit node connects directly
+to HTCondor on the execute node.
 If the submit node connects via CCB to the execute
 node, \emph{no} ports are required per running job; only the one port
 allocated to the \Condor{shared\_port} daemon is used.
@@ -60,8 +60,8 @@ they all effectively share the same setting,
 and the \Condor{shared\_port} daemon handles all CCB connection
 requests on their behalf.
 
-Condor's authentication and authorization steps are unchanged by the
-use of a shared port.  Each Condor daemon continues to operate
+HTCondor's authentication and authorization steps are unchanged by the
+use of a shared port.  Each HTCondor daemon continues to operate
 according to its configured policy.  Requests for connections to the
 shared port are not authenticated or restricted by
 the \Condor{shared\_port} daemon.
@@ -116,7 +116,7 @@ TCP updates will be automatically used instead of UDP.
 Under Unix, this means that the
 \Condor{collector} daemon should be configured to have enough file descriptors.
 See section~\ref{sec:tcp-collector-update} for more information on using
-TCP within Condor.
+TCP within HTCondor.
 
 SOAP commands cannot be sent over a shared port.
 However, a daemon may be configured to open a fixed, non-shared port,

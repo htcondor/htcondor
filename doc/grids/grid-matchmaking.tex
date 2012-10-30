@@ -13,23 +13,23 @@ or a higher-level resource broker
 has decided which grid site should be used.
 
 When a user has a variety of grid sites to choose from,
-Condor allows matchmaking of grid universe jobs
+HTCondor allows matchmaking of grid universe jobs
 to decide which grid resource a job should run on. 
 Please note that this form of matchmaking is relatively new.
 There are some rough edges as continual improvement occurs.
 
-To facilitate Condor's matching of jobs with grid resources,
+To facilitate HTCondor's matching of jobs with grid resources,
 both the jobs and the grid resources are involved.
 The job's submit description file provides all commands
 needed to make the
 job work on a matched grid resource.
-The grid resource identifies itself to Condor by advertising
+The grid resource identifies itself to HTCondor by advertising
 a ClassAd.
-This ClassAd specifies all necessary attributes, such that Condor
+This ClassAd specifies all necessary attributes, such that HTCondor
 can properly make matches.
 The grid resource identification is accomplished by 
 using \Condor{advertise} to send a ClassAd representing the
-grid resource, which is then used by Condor to make matches.
+grid resource, which is then used by HTCondor to make matches.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Job Submission}
@@ -105,16 +105,16 @@ the grid resource's ad. This means that the job can be matched with
 a resource of any type, not just \SubmitCmd{gt2}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Advertising Grid Resources to Condor}
+\subsubsection{Advertising Grid Resources to HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Any grid resource that wishes to be matched by Condor with
-a job must advertise itself to Condor using a ClassAd.
+Any grid resource that wishes to be matched by HTCondor with
+a job must advertise itself to HTCondor using a ClassAd.
 To properly advertise, a ClassAd is sent
 periodically to the \Condor{collector} daemon.
 A ClassAd is a list of pairs, where each pair consists of
 an attribute name and value that describes an entity.
-There are two entities relevant to Condor:
+There are two entities relevant to HTCondor:
 a job, and a machine.
 A grid resource is a machine.
 The ClassAd describes the grid resource, as well
@@ -161,7 +161,7 @@ TargetType     = "Job"
 \end{verbatim}
 identify the grid resource as a machine,
 and that the machine is to be matched with a job.
-In Condor, machines are matched with jobs, and jobs are matched with
+In HTCondor, machines are matched with jobs, and jobs are matched with
 machines.
 These attributes are strings.
 Strings are surrounded by double quote marks.
@@ -241,7 +241,7 @@ Rank             = 0.000000
 CurrentRank      = 0.000000
 \end{verbatim}
 \normalsize
-are both necessary for Condor's negotiation to proceed,
+are both necessary for HTCondor's negotiation to proceed,
 but are not relevant to grid matchmaking.
 Set both to the floating point value 0.0.
 
@@ -283,7 +283,7 @@ and remains incorrect to maintain backward compatibility.
 
 To limit the number of matches made to the single grid resource,
 the resource must have the ability to keep track of the number 
-of Condor jobs it has.
+of HTCondor jobs it has.
 This integer value is given as the \Attr{CurMatches} attribute
 in the advertised ClassAd.
 It is then compared in order to limit the number of jobs matched
@@ -298,7 +298,7 @@ CurMatches     = 1
 This example assumes that the grid resource already has
 one job, and is willing to accept a maximum of 9 jobs.
 If \Attr{CurMatches} does not appear in the ClassAd,
-Condor uses a default value of 0.
+HTCondor uses a default value of 0.
 
 \MacroIndex{NEGOTIATOR\_MATCHLIST\_CACHING}
 \MacroIndex{NEGOTIATOR\_IGNORE\_USER\_PRIORITIES}
@@ -324,7 +324,7 @@ A recommended implementation uses a script to create or modify
 the ClassAd together with
 \Prog{cron} to send the ClassAd every five minutes.
 The \Condor{advertise} program must be installed on the 
-machine sending the ClassAd, but the remainder of Condor
+machine sending the ClassAd, but the remainder of HTCondor
 does not need to be installed.
 The required argument for the \Condor{advertise} command
 is \Arg{UPDATE\_STARTD\_AD}.
@@ -339,8 +339,8 @@ to use TCP for communication.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 What if a job fails to run at a grid site due to an error? It will be
-returned to the queue, and Condor will attempt to match it and
-re-run it at another site. Condor isn't very clever about avoiding
+returned to the queue, and HTCondor will attempt to match it and
+re-run it at another site. HTCondor isn't very clever about avoiding
 sites that may be bad, but you can give it some assistance. Let's say
 that you want to avoid running at the last grid site you ran at. You
 could add this to your job description:
@@ -356,7 +356,7 @@ This will prefer to run at a grid site that was not just tried, but it
 will allow the job to be run there if there is no other option. 
 
 When you specify \Opt{match\_list\_length}, you provide an integer N, and
-Condor will keep track of the last N matches. The oldest match will be
+HTCondor will keep track of the last N matches. The oldest match will be
 LastMatchName0, and next oldest will be LastMatchName1, and so on. (See
 the \Condor{submit} manual page for more details.) The Rank expression
 allows you to specify a numerical ranking for different matches. When
@@ -417,5 +417,5 @@ globus_resubmit = NumSystemHolds == (NumGlobusSubmits + 1) * 4
 \normalsize
 
 If you are concerned about unknown or malicious grid sites reporting
-to your \Condor{collector}, you should use Condor's security options,
+to your \Condor{collector}, you should use HTCondor's security options,
 documented in Section~\ref{sec:Security}.

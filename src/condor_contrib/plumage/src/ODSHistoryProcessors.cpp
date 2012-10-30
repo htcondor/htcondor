@@ -20,31 +20,30 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "CondorError.h"
-#include "directory.h"
-#include "stat_wrapper.h"
-
-//local includes
-#include "ODSJobLogConsumer.h"
-#include "ODSHistoryUtils.h"
-#include "ODSHistoryFile.h"
 
 // platform includes
 #include <libgen.h> // dirname
+#include "directory.h"
+#include "stat_wrapper.h"
 
-// c++ includes
-#include <string>
-#include <deque>
-#include <set>
+// local includes
+#include "ODSHistoryProcessors.h"
+#include "ODSDBNames.h"
+#include "ODSUtils.h"
+#include "ODSHistoryFile.h"
 
 using namespace std;
-using namespace plumage::etl;
+using namespace compat_classad;
+using namespace mongo;
+using namespace plumage::history;
+using namespace plumage::util;
 
 typedef set<long unsigned int> HistoryFileListType;
 static HistoryFileListType m_historyFiles;
 MyString m_path;
 
 // force a reset of history processing
-void plumage::etl::initHistoryFiles() {
+void plumage::history::initHistoryFiles() {
     m_historyFiles.clear();
     processHistoryDirectory();
     processCurrentHistory(true);
@@ -59,7 +58,7 @@ void plumage::etl::initHistoryFiles() {
  * map.
  */
 void
-plumage::etl::processHistoryDirectory()
+plumage::history::processHistoryDirectory()
 {
     const char *file = NULL;
 
@@ -101,7 +100,7 @@ plumage::etl::processHistoryDirectory()
  * 4) detect rotations
  */
 void
-plumage::etl::processCurrentHistory(bool force_reset)
+plumage::history::processCurrentHistory(bool force_reset)
 {
     static MyString currentHistoryFilename = m_path + DIR_DELIM_STRING + "history";
     static ODSHistoryFile currentHistory ( currentHistoryFilename.Value() );
@@ -112,7 +111,7 @@ plumage::etl::processCurrentHistory(bool force_reset)
        currentHistory.cleanup();
     }
 
-	// (1)
+    // (1)
     long unsigned int id;
     if ( !currentHistory.getId ( id ) || force_reset)
     {

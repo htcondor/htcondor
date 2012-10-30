@@ -71,14 +71,6 @@ namespace AviaryCommon
         setQdateNil();
             
 
-        bool WSF_CALL
-        setPoolNil();
-            
-
-        bool WSF_CALL
-        setSchedulerNil();
-            
-
 
 
         /******************************* public functions *********************************/
@@ -289,6 +281,13 @@ namespace AviaryCommon
 
 
         
+        /**
+         * Set pool to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setPoolNil();
+        
 
         /**
          * Check whether scheduler is Nill
@@ -298,6 +297,13 @@ namespace AviaryCommon
         isSchedulerNil();
 
 
+        
+        /**
+         * Set scheduler to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setSchedulerNil();
         
 
         /**************************** Serialize and De serialize functions ***************************/

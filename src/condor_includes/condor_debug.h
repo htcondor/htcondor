@@ -182,7 +182,6 @@ typedef unsigned int DebugOutputChoice;
 extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
 extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
 extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
-extern int Termlog;		/* Are we logging to a terminal? */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
 
 /* DebugId is a function that may be registered to be called to insert text
@@ -204,9 +203,10 @@ void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 //         for all config knobs.
 int dprintf_config( 
 	const char *subsys,  // in: subsystem name to use for param lookups
-	param_functions * p_funcs = NULL, // in: callback functions to use for param-ing
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
-	int c_info = 0);                  // in: number of entries in p_info array on input.
+	int c_info = 0); // in: number of entries in p_info array on input.                  
+
+int dprintf_config_tool(const char* subsys = NULL, int flags = 0);
 
 // parse strflags and cat_and_flags and merge them into the in,out args
 // for backward compatibility, the D_ALWAYS bit will always be set in basic
@@ -218,8 +218,7 @@ void _condor_parse_merge_debug_flags(
 	DebugOutputChoice & basic, // in,out: basic output choice
 	DebugOutputChoice & verbose); // in,out: verbose output choice, expect this to get folded into basic someday.
 
-// initialize
-void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
+bool dprintf_to_term_check();
 
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
@@ -395,3 +394,6 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #	define ASSERT(cond) CONDOR_ASSERT(cond)
 #	define assert(cond) CONDOR_ASSERT(cond)
 #endif	/* of ifdef WIN32 */
+
+#define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
+

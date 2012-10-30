@@ -121,6 +121,13 @@
           axiom_node_t *parent = *dp_parent;
           
           bool status = AXIS2_SUCCESS;
+          
+          axiom_attribute_t *parent_attri = NULL;
+          axiom_element_t *parent_element = NULL;
+          axis2_char_t *attrib_text = NULL;
+
+          axutil_hash_t *attribute_hash = NULL;
+
            
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
@@ -146,6 +153,9 @@
                       first_node = axiom_node_get_first_child(parent, Environment::getEnv());
                       
                     
+                 parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
+                 attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
+              
 
                      
                      /*
@@ -457,248 +467,96 @@
                      element_qname = NULL;
                   }
                  
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
 
-                     
-                     /*
-                      * building pool element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "pool", NULL, NULL);
-                                 
-
-                           if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("pool", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("pool", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
-                                      {
-                                            status = setPool(text_value);
-                                      }
-                                      
-                                      else
-                                      {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element pool");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setPool("");
-                                            }
-                                      }
-                                      
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for pool ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
                            
+                           
+                               if(!strcmp((axis2_char_t*)key, "pool"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "pool", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "pool");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           setPool(attrib_text);
+                        
+                    }
+                  
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
                      element_qname = NULL;
                   }
                  
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
 
-                     
-                     /*
-                      * building scheduler element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "scheduler", NULL, NULL);
-                                 
-
-                           if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("scheduler", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("scheduler", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
-                                      {
-                                            status = setScheduler(text_value);
-                                      }
-                                      
-                                      else
-                                      {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element scheduler");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setScheduler("");
-                                            }
-                                      }
-                                      
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for scheduler ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
                            
+                           
+                               if(!strcmp((axis2_char_t*)key, "scheduler"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "scheduler", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "scheduler");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           setScheduler(attrib_text);
+                        
+                    }
+                  
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -738,6 +596,8 @@
         {
             
             
+               axiom_attribute_t *text_attri = NULL;
+             
              axis2_char_t *string_to_stream;
             
          
@@ -766,6 +626,8 @@
                     axis2_char_t *text_value_5;
                     axis2_char_t *text_value_5_temp;
                     
+                axis2_char_t *text_value = NULL;
+             
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -787,6 +649,38 @@
             if(!parent_tag_closed)
             {
             
+                if(isValidPool)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           text_value = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(property_Pool.c_str()) +
+                                                                axutil_strlen("pool")));
+                           sprintf(text_value, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "pool", property_Pool.c_str());
+                           axutil_stream_write(stream, Environment::getEnv(), text_value, axutil_strlen(text_value));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, text_value);
+                        
+                   }
+                   
+                if(isValidScheduler)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           text_value = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(property_Scheduler.c_str()) +
+                                                                axutil_strlen("scheduler")));
+                           sprintf(text_value, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "scheduler", property_Scheduler.c_str());
+                           axutil_stream_write(stream, Environment::getEnv(), text_value, axutil_strlen(text_value));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, text_value);
+                        
+                   }
+                   
               string_to_stream = ">"; 
               axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
               tag_closed = 1;
@@ -981,138 +875,40 @@
                  } 
 
                  
-                       p_prefix = NULL;
-                      
-
-                   if (!isValidPool)
-                   {
-                      
-                           /* no need to complain for minoccurs=0 element */
-                            
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("pool"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("pool")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing pool element
-                      */
-
                     
+                    if(parent_tag_closed)
+                    {
+                       if(isValidPool)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           text_value = (axis2_char_t*)property_Pool.c_str();
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "pool", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                        
+                      }
+                       
+                  }
+                
                     
-                            sprintf(start_input_str, "<%s%spool>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%spool>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_4 = (axis2_char_t*)property_Pool.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
-                            
-                           text_value_4_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_4, true);
-                           if (text_value_4_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_4_temp, axutil_strlen(text_value_4_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_4_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
-                   if (!isValidScheduler)
-                   {
-                      
-                           /* no need to complain for minoccurs=0 element */
-                            
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("scheduler"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("scheduler")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing scheduler element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%sscheduler>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sscheduler>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_5 = (axis2_char_t*)property_Scheduler.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
-                            
-                           text_value_5_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_5, true);
-                           if (text_value_5_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_5_temp, axutil_strlen(text_value_5_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_5_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
+                    if(parent_tag_closed)
+                    {
+                       if(isValidScheduler)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           text_value = (axis2_char_t*)property_Scheduler.c_str();
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "scheduler", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                        
+                      }
+                       
+                  }
+                
 
             return parent;
         }
@@ -1404,6 +1200,13 @@
                 }
 
                 
+                  if(arg_Pool.empty())
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"pool is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
 
                 
                 resetPool();
@@ -1486,6 +1289,13 @@
                     return true;
                 }
 
+                
+                  if(arg_Scheduler.empty())
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"scheduler is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
                 
 
                 

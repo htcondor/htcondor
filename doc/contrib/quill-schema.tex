@@ -1,4 +1,3 @@
-\newcommand{\cd}{{C}ondor}
 \newcommand{\qp}{{Q}uill}
 \newcommand{\ca}{{C}lass{A}d}
 \newcommand{\cas}{{C}lass{A}ds}
@@ -13,7 +12,7 @@ abbreviated ``ts(\textit{precision}) w tz.''
 \item The column O. Type is an abbreviation for Oracle Type.
 \item The column P. Type is an abbreviation for {PostgreSQL} Type.
 \end{itemize}
-Although the current version of Condor does not support Oracle, we
+Although the current version of HTCondor does not support Oracle, we
 anticipate supporting it in the future, so Oracle support in this
 schema document is for future reference.
 \vspace{24pt}
@@ -230,7 +229,7 @@ schema document is for future reference.
     src\_host & varchar(4000) & varchar(4000) & Name of the source machine.\\ \hline
     src\_port & integer & integer & Source port number used for the transfer.\\ \hline
     src\_path & varchar(4000) & varchar(4000) & Path to the file on the source machine.\\ \hline
-    src\_daemon & varchar(30) & varchar(30) & \cd\ demon performing the transfer on the source machine.\\ \hline
+    src\_daemon & varchar(30) & varchar(30) & HTCondor daemon performing the transfer on the source machine.\\ \hline
     src\_protocol & varchar(30) & varchar(30) & The protocol used on the source machine.\\ \hline
     src\_credential\_id & integer & integer & Not yet used, null.\\ \hline
     src\_acl\_id & integer & integer & Not yet used, null.\\ \hline
@@ -238,7 +237,7 @@ schema document is for future reference.
     dst\_host & varchar(4000) & varchar(4000) & Name of the destination machine.\\ \hline
     dst\_port & integer & integer & Destination port number used for the transfer.\\ \hline
     dst\_path & varchar(4000) & varchar(4000) & Path to the file on the destination machine.\\ \hline
-    dst\_daemon & varchar(30) & varchar(30) & \cd\ daemon receiving the transfer on the destination machine.\\ \hline
+    dst\_daemon & varchar(30) & varchar(30) & HTCondor daemon receiving the transfer on the destination machine.\\ \hline
     dst\_protocol & varchar(30) & varchar(30) & The protocol used on the destination machine.\\ \hline
     dst\_credential\_id & integer & integer & Not yet used, null.\\ \hline
     dst\_acl\_id & integer & integer &  Not yet used, null.\\ \hline
@@ -310,7 +309,7 @@ schema document is for future reference.
     remotewallclocktime & numeric(38) & numeric(38) & Committed cumulative number of seconds the job has been allocated to a machine.\\ \hline
     cmd & clob & text & Path to and filename of the job to be executed.\\ \hline
     args & clob & text & Arguments passed to the job.\\ \hline
-    jobuniverse & integer & integer & The \cd\ universe used by the job.\\ \hline
+    jobuniverse & integer & integer & The HTCondor universe used by the job.\\ \hline
     \multicolumn{4}{|l|}{\textbf{PRIMARY KEY:} (scheddname, cluster\_id)} \\ \hline
     \multicolumn{4}{|l|}{\textbf{NOT NULL:} scheddname and cluster\_id cannot be null} \\ \hline
   \end{tabular}
@@ -343,12 +342,12 @@ schema document is for future reference.
     numckpts & integer & integer & Number of checkpoints written by the job during its lifetime.\\ 
 \hline
     numrestarts & integer & integer & Number of restarts from a checkpoint attempted by the job in its lifetime.\\ \hline
-    numsystemholds & integer & integer & Number of times Condor-G placed the job on hold.\\ \hline
-    condorversion & varchar(4000) & varchar(4000) & Version of \cd\ that ran the job.\\ \hline
+    numsystemholds & integer & integer & Number of times HTCondor-G placed the job on hold.\\ \hline
+    condorversion & varchar(4000) & varchar(4000) & Version of HTCondor that ran the job.\\ \hline
     condorplatform & varchar(4000) & varchar(4000) & Platform of the computer where the schedd runs.\\ \hline
     rootdir & varchar(4000) & varchar(4000) & Root directory on the system where the job is submitted from.\\ \hline
     iwd & varchar(4000) & varchar(4000) & Initial working directory of the job.\\ \hline
-    jobuniverse & integer & integer & The Condor universe used by the job.\\ \hline
+    jobuniverse & integer & integer & The HTCondor universe used by the job.\\ \hline
     cmd & clob & text & Path to and filename of the job to be executed.\\ \hline
     minhosts & integer & integer & Minimum number of hosts that must be in the claimed state for this job, before the job may enter the running state.\\ \hline
     maxhosts & integer & integer & Maximum number of hosts this job would like to claim.\\ \hline
@@ -373,7 +372,7 @@ schema document is for future reference.
     transferout & varchar(5) & varchar(5) & (boolean) For globus universe jobs. True if output should be transferred back to the submit machine.\\ \hline
     stderr & varchar(4000) & varchar(4000) & The file used as stderr.\\ \hline
     transfererr & varchar(5) & varchar(5) & (boolean) For globus universe jobs. True if error output should be transferred back to the submit machine.\\ \hline
-    shouldtransferfiles & varchar (4000) & varchar(4000) & Whether \cd\ should transfer files to and from the machine where the job runs.\\ \hline
+    shouldtransferfiles & varchar (4000) & varchar(4000) & Whether HTCondor should transfer files to and from the machine where the job runs.\\ \hline
     transferfiles & varchar(4000) & varchar(4000) & Depreciated. Similar to shouldtransferfiles.\\ \hline
     executablesize & numeric(38) & numeric(38) & Size of the executable in kilobytes.\\ \hline
     diskusage & integer & integer & Size of the executable and input files to be transferred.\\ \hline
@@ -400,7 +399,7 @@ schema document is for future reference.
     fileseekcount & numeric(38) & numeric(38) & Number of seek calls that this job made (only standard universe).\\ \hline
     totalsuspensions & integer & integer & Number of times the job has been suspended during its lifetime\\ \hline
     imagesize & numeric(38) & numeric(38) & Estimate of memory image size of the job in kilobytes.\\ \hline
-    exitstatus & integer & integer & No longer used by Condor.\\ \hline
+    exitstatus & integer & integer & No longer used by HTCondor.\\ \hline
     localusercpu & numeric(38) & numeric(38) & Number of seconds of user CPU time the job used on the submit machine.\\ \hline
     localsyscpu & numeric(38) & numeric(38) & Number of seconds of system CPU time the job used on the submit machine.\\ \hline
     remoteusercpu & numeric(38) & numeric(38) & Number of seconds of user CPU time the job used on remote machines.\\ \hline
@@ -484,22 +483,22 @@ schema document is for future reference.
     machine\_id & varchar(4000) & varchar(4000) & Unique identifier of the machine.\\ \hline
     opsys & varchar(4000) & varchar(4000) & Operating system running on the machine.\\ \hline
     arch & varchar(4000) & varchar(4000) & Architecture of the machine.\\ \hline
-    state & varchar(4000) & varchar(4000) & Condor state of the machine.\\ \hline
-    activity & varchar(4000) & varchar(4000) & Condor job activity on the machine.\\ \hline
+    state & varchar(4000) & varchar(4000) & HTCondor state of the machine.\\ \hline
+    activity & varchar(4000) & varchar(4000) & HTCondor job activity on the machine.\\ \hline
     keyboardidle & integer & integer & Number of seconds since activity has been detected on any keyboard or mouse associated with the machine.\\ \hline
     consoleidle & integer & integer & Number of seconds since activity has been detected on the console keyboard or mouse.\\ \hline
     loadavg & real & real & Current load average of the machine.\\ \hline
-    condorloadavg & real & real & Portion of load average generated by Condor\\ \hline
+    condorloadavg & real & real & Portion of load average generated by HTCondor\\ \hline
     totalloadavg & real & real & \\ \hline
     virtualmemory & integer & integer & Amount of currently available virtual memory in kilobytes.\\ \hline
     memory & integer & integer & Amount of {RAM} in megabytes.\\ \hline
     totalvirtualmemory & integer & integer & \\ \hline
     cpubusytime & integer & integer & Time in seconds since cpuisbusy became true.\\ \hline
     cpuisbusy & varchar(5) & varchar(5) & (boolean) True when the CPU is busy.\\ \hline
-    currentrank & real & real & The machine owner's affinity for running the Condor job which it is currently hosting.\\ \hline
+    currentrank & real & real & The machine owner's affinity for running the HTCondor job which it is currently hosting.\\ \hline
     clockmin & integer & integer & Number of minutes passed since midnight.\\ \hline
     clockday & integer & integer & The day of the week.\\ \hline
-    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the Condor central manager last received a status update from this machine.\\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the HTCondor central manager last received a status update from this machine.\\ \hline
     enteredcurrentactivity & ts(3) w tz & ts(3) w tz & Time when the machine entered the current activity.\\ \hline
     enteredcurrentstate & ts(3) w tz & ts(3) w tz & Time when the machine entered the current state.\\ \hline
     updatesequencenumber & integer & integer & Each update includes a sequence number.\\ \hline
@@ -526,22 +525,22 @@ schema document is for future reference.
     machine\_id & varchar(4000) & varchar(4000) & Unique identifier of the machine.\\ \hline
     opsys & varchar(4000) & varchar(4000) & Operating system running on the machine.\\ \hline
     arch & varchar(4000) & varchar(4000) & Architecture of the machine.\\ \hline
-    state & varchar(4000) & varchar(4000) & Condor state of the machine.\\ \hline
-    activity & varchar(4000) & varchar(4000) & Condor job activity on the machine.\\ \hline
+    state & varchar(4000) & varchar(4000) & HTCondor state of the machine.\\ \hline
+    activity & varchar(4000) & varchar(4000) & HTCondor job activity on the machine.\\ \hline
     keyboardidle & integer & integer & Number of seconds since activity has been detected on any keyboard or mouse associated with the machine.\\ \hline
     consoleidle & integer & integer & Number of seconds since activity has been detected on the console keyboard or mouse.\\ \hline
     loadavg & real & real & Current load average of the machine.\\ \hline
-    condorloadavg & real & real & Portion of load average generated by Condor\\ \hline
+    condorloadavg & real & real & Portion of load average generated by HTCondor\\ \hline
     totalloadavg & real & real & \\ \hline
     virtualmemory & integer & integer & Amount of currently available virtual memory in kilobytes.\\ \hline
     memory & integer & integer & Amount of {RAM} in megabytes.\\ \hline
     totalvirtualmemory & integer & integer & \\ \hline
     cpubusytime & integer & integer & Time in seconds since cpuisbusy became true.\\ \hline
     cpuisbusy & varchar(5) & varchar(5) & (boolean) True when the CPU is busy.\\ \hline
-    currentrank & real & real & The machine owner's affinity for running the Condor job which it is currently hosting.\\ \hline
+    currentrank & real & real & The machine owner's affinity for running the HTCondor job which it is currently hosting.\\ \hline
     clockmin & integer & integer & Number of minutes passed since midnight.\\ \hline
     clockday & integer & integer & The day of the week.\\ \hline
-    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the Condor central manager last received a status update from this machine.\\ \hline
+    lastreportedtime & ts(3) w tz & ts(3) w tz & Time when the HTCondor central manager last received a status update from this machine.\\ \hline
     enteredcurrentactivity & ts(3) w tz & ts(3) w tz & Time when the machine entered the current activity.\\ \hline
     enteredcurrentstate & ts(3) w tz & ts(3) w tz & Time when the machine entered the current state.\\ \hline
     updatesequencenumber & integer & integer & Each update includes a sequence number.\\ \hline

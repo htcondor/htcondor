@@ -1,21 +1,21 @@
 \begin{ManPage}{\label{man-condor-preen}\Condor{preen}}{1}
-{remove extraneous files from Condor directories}
+{remove extraneous files from HTCondor directories}
 \Synopsis \SynProg{\Condor{preen}}
 \oOpt{-mail}
 \oOpt{-remove}
 \oOpt{-verbose}
 
-\index{Condor commands!condor\_preen}
+\index{HTCondor commands!condor\_preen}
 \index{condor\_preen command}
 
 \Description 
 
-\Condor{preen} examines the directories belonging to Condor, 
+\Condor{preen} examines the directories belonging to HTCondor, 
 and removes extraneous files and directories which may be left over from
-Condor processes which terminated abnormally either due to internal errors or
+HTCondor processes which terminated abnormally either due to internal errors or
 a system crash. The directories checked are 
 the \MacroNI{LOG}, \MacroNI{EXECUTE}, and \MacroNI{SPOOL}
-directories as defined in the Condor configuration files. \Condor{preen} is
+directories as defined in the HTCondor configuration files. \Condor{preen} is
 intended to be run as user \Login{root} or user \Login{condor}
 periodically as a backup
 method to ensure reasonable file system cleanliness in the face of

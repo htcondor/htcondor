@@ -622,7 +622,6 @@ void
 parseArgv( int  /*argc*/, char* argv[] )
 {
 	char** tmp = argv;
-	param_functions *p_funcs = NULL;
 
 	for( tmp++; *tmp; tmp++ ) {
 		if( (*tmp)[0] != '-' ) {
@@ -653,9 +652,7 @@ parseArgv( int  /*argc*/, char* argv[] )
 			if( strncmp("-debug", *tmp, strlen(*tmp)) ) {
 				invalid( *tmp );
 			} 
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 			break;
 
 		case 'a':

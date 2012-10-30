@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef _ODS_PROCESSORS_H
-#define _ODS_PROCESSORS_H
+#ifndef _ODS_HISTORY_PROCESSORS_H
+#define _ODS_HISTORY_PROCESSORS_H
 
 #include "compat_classad.h"
 #include "ODSMongodbOps.h"
 
 namespace plumage {
-namespace etl {
-
-// stat processors
-void processSubmitterStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
-void processMachineStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
-void processSchedulerStats(plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
-void processAccountantStats(compat_classad::ClassAd* ad, plumage::etl::ODSMongodbOps* conn, mongo::Date_t& ts);
+namespace history {
 
 // history file processors
 void initHistoryFiles();
@@ -37,4 +31,4 @@ void processCurrentHistory(bool force_reset = false);
 
 }}
 
-#endif /* _ODS_PROCESSORS_H */
+#endif /* _ODS_HISTORY_PROCESSORS_H */
