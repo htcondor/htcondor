@@ -400,6 +400,7 @@ daemon::DoConfig( bool init )
 	this->env.MergeFrom(env_parser);
 
 	if( NULL != controller_name ) {
+		DetachController();
 		free( controller_name );
 	}
 	sprintf(buf, "MASTER_%s_CONTROLLER", name_in_config_file );
@@ -1111,6 +1112,7 @@ daemon::Exited( int status )
 	}
 
 		// Kill any controllees I might have
+dprintf(D_FULLDEBUG, "Exited with %d controllees\n", num_controllees);
 	for( int num = 0;  num < num_controllees;  num++ ) {
 		dprintf( D_ALWAYS, "Killing %s's controllee (%s)\n",
 				 name_in_config_file,
@@ -1565,14 +1567,67 @@ daemon::SetupController( void )
 	return 0;
 }
 
+
+int
+daemon::DetachController( void )
+{
+	if ( !controller_name ) {
+		return 0;
+	}
+
+	// Find the matching daemon by name
+	controller = daemons.FindDaemon( controller_name );
+	if ( ! controller ) {
+		dprintf( D_ALWAYS,
+				 "%s: Can't find my controller daemon '%s'\n",
+				 name_in_config_file, controller_name );
+		return -1;
+	}
+	controller->DeregisterControllee( this );
+
+	// Done
+	return 0;
+}
+
 int
 daemon::RegisterControllee( class daemon *controllee )
 {
+	bool found = false;
+
 	if ( num_controllees >= MAX_CONTROLLEES ) {
 		return -1;
 	}
-	controllees[num_controllees++] = controllee;
+	for ( int num = 0; num < num_controllees; ++num ) {
+		if( strncmp(controllee->name_in_config_file, controllees[num]->name_in_config_file, strlen(controllees[num]->name_in_config_file)) == 0 ) {
+			found = true;
+			break;
+		}
+	}
+	if ( !found ) {
+		controllees[num_controllees++] = controllee;
+	}
 	return 0;
+}
+
+
+void
+daemon::DeregisterControllee( class daemon *controllee )
+{
+	bool found = false;
+
+	for ( int num = 0; num < num_controllees; ++num ) {
+		if( strncmp(controllee->name_in_config_file, controllees[num]->name_in_config_file, strlen(controllees[num]->name_in_config_file)) == 0 ) {
+			controllees[num] = NULL;
+			found = true;
+		}
+		else if ( found ) {
+			controllees[num-1] = controllees[num];	
+			controllees[num] = NULL;
+		}
+	}
+	if ( found ) {
+		num_controllees--;
+	}
 }
 
 
@@ -1604,18 +1659,6 @@ Daemons::RegisterDaemon(class daemon *d)
 	ret = daemon_ptr.insert( std::pair<char*, class daemon*>(d->name_in_config_file, d) );
 	if( ret.second == false ) {
 		EXCEPT( "Registering daemon %s failed", d->name_in_config_file );
-	}
-}
-
-
-void
-Daemons::DeregisterDaemon(const char* name)
-{
-	std::map<std::string, class daemon*>::iterator iter;
-
-	iter = daemon_ptr.find( name );
-	if( iter != daemon_ptr.end() ) {
-		daemon_ptr.erase( iter );
 	}
 }
 
@@ -1925,6 +1968,7 @@ Daemons::StopDaemon( char* name )
 		}
 		else {
 			iter->second->CancelAllTimers();
+			iter->second->DetachController();
 			delete iter->second;
 		}
 		daemon_ptr.erase( iter );

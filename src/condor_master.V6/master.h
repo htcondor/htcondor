@@ -82,7 +82,9 @@ public:
 	void	InitParams();
 
 	int		SetupController( void );
+	int		DetachController( void );
 	int		RegisterControllee( class daemon * );
+	void		DeregisterControllee( class daemon * );
 
 	bool	IsHA( void ) { return is_ha; };
 
@@ -212,8 +214,6 @@ public:
 
 	class daemon*	FindDaemon( daemon_t dt );
 	class daemon*	FindDaemon( const char * );
-
-	void DeregisterDaemon( const char * );
 
 private:
 	std::map<std::string, class daemon*> daemon_ptr;

@@ -980,7 +980,6 @@ main_config()
 			adaemon = daemons.FindDaemon(daemon_name);
 			if ( adaemon == NULL ) {
 				dprintf( D_ALWAYS, "ERROR: Setup for daemon %s failed\n", daemon_name );
-				daemons.DeregisterDaemon( daemon_name );
 			}
 			else if ( adaemon->SetupController() < 0 ) {
 				dprintf( D_ALWAYS,
