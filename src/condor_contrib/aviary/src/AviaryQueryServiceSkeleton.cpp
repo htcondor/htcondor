@@ -138,10 +138,13 @@ axutil_date_time_t* encodeDateTime(const time_t& ts) {
 
 void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 
+	JobServerObject* jso = JobServerObject::getInstance();
 	// JobID should already been in our summary
 	SubmissionID* sid = new SubmissionID;
 	sid->setName(fields.submission_id);
 	sid->setOwner(fields.owner);
+	sid->setPool(jso->getPool());
+	sid->setScheduler(jso->getName());
 	_summary->getId()->setSubmission(sid);
 	// do date/time conversion
 	_summary->setQueued(encodeDateTime(fields.queued));
