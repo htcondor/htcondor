@@ -7669,17 +7669,25 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL}]
   The number of seconds between
   active probes of the status of a submitted job.
-  The default is 5 minutes (300 seconds).
+  The default is 1 minute (60 seconds).
+  Intervals for specific grid types can be set by appending the
+  grid type to the parameter name, like so:
+  \begin{verbatim}
+  GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
+  \end{verbatim}
 
-\label{param:CondorJobPollInterval}
-\item[\Macro{CONDOR\_JOB\_POLL\_INTERVAL}]
-  After a condor grid type job is submitted,
-  how often (in seconds) the \Condor{gridmanager}
-  should probe the remote \Condor{schedd} to check the jobs status.  
-  This defaults to 300 seconds (5 minutes).
-  Setting this to a lower number will decrease latency (HTCondor will discover
-  that a job has finished more quickly), but will increase network traffic.
-
+\label{param:GridmanagerJobProbeRate}
+\item[\Macro{GRIDMANAGER\_JOB\_PROBE\_RATE}]
+  The maximum number of job status probes per second that will be
+  issued to a given remote resource.
+  The time between status probes for individual jobs may be lengthened
+  beyond \Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL} to enforce this rate.
+  The default is 5 probes per seconds.
+  Rates for specific grid types can be set by appending the
+  grid type to the parameter name, like so:
+  \begin{verbatim}
+  GRIDMANAGER_JOB_PROBE_RATE_GT5 = 300
+  \end{verbatim}
 
 \label{param:GridmanagerResourceProbeInterval}
 \item[\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL}]
@@ -7707,16 +7715,20 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
   An integer value that limits the number of jobs
   that a \Condor{gridmanager} daemon will submit to a resource.
-  It is useful for controlling the number of \Prog{jobmanager}
-  processes running on the front-end node of a cluster.
-  This number may be exceeded, if it is reduced through the use
-  of \Condor{reconfig} while the \Condor{gridmanager} is running,
-  or if the \Condor{gridmanager} receives new
-  jobs from the \Condor{schedd} that were already submitted
-  (that is, their \MacroNI{GridJobId} is not undefined).
-  In these cases, submitted jobs will not be killed,
-  but no new jobs can be submitted until the number of submitted
-  jobs falls below the current limit.
+  Limits for specific remote resources can be set by supplying
+  a comma-separated list like so:
+  \begin{verbatim}
+  GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 200, foo.edu, 50, bar.com, 100
+  \end{verbatim}
+  In this example, all resources have a job limit of 200, except foo.edu,
+  which has a limit of 50, and bar.com, which has a limit of 100.
+
+  You can also set limits for specific grid-types by appending the 
+  grid-type's name to the paramater, like so:
+  \begin{verbatim}
+  GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+  \end{verbatim}
+  In this example, the job limit for all CREAM resources is 300.
   Defaults to 1000.
 
 \label{param:GridmanagerMaxJobmanagersPerResource}
