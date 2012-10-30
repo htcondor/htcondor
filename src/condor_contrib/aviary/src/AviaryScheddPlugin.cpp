@@ -25,6 +25,7 @@
 #include "AviaryProvider.h"
 #include "SchedulerObject.h"
 #include "AviaryUtils.h"
+#include "LocatorObject.h"
 
 // Global from the condor_schedd, it's name
 extern char * Name;
@@ -37,6 +38,7 @@ using namespace std;
 using namespace aviary::job;
 using namespace aviary::transport;
 using namespace aviary::util;
+using namespace aviary::locator;
 
 // global SchedulerObject
 // TODO: convert to singleton
@@ -53,9 +55,9 @@ AviaryScheddPlugin::earlyInitialize()
 	static bool skip = false;
 	if (skip) return; skip = true;
 
-    string log_name;
-    sprintf(log_name,"aviary_job.log");
-    provider = AviaryProviderFactory::create(log_name,getScheddName(),
+    string log_name("aviary_job.log");
+    string id_name("job"); id_name+=SEPARATOR; id_name+=getPoolName();
+    provider = AviaryProviderFactory::create(log_name,id_name,
 											 "SCHEDULER","JOB","services/job/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");

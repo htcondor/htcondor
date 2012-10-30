@@ -46,7 +46,8 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
         return response;
     }
 
-	bool partials = _locate->getPartialMatches();
+	// happily assume partial name matches
+	bool partials = _locate->isPartialMatchesNil() || _locate->getPartialMatches();
 	ResourceID* id = _locate->getId();
 	locator.locate(id->getName(),id->getResource()->getResourceType(),id->getSub_type(),partials,endpoints);
 
@@ -57,7 +58,13 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
 		for (EndpointSetType::iterator it = endpoints.begin(); it != endpoints.end(); it++) {
 			ResourceLocation* resLoc = new ResourceLocation;
 			ResourceID* resId = new ResourceID;
-			resId->setName((*it).Name.c_str());
+			if (partials) {
+				// split off separators
+				resId->setName((*it).Name.substr((*it).Name.find(aviary::locator::SEPARATOR)+1));
+			}
+			else {
+				resId->setName((*it).Name);
+			}
 			resId->setPool(locator.getPool());
 			resId->setResource(new ResourceType((*it).MajorType.c_str()));
 			resId->setSub_type((*it).MinorType.c_str());
