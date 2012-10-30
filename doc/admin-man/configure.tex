@@ -3302,7 +3302,7 @@ NEGOTIATOR_USERID = condor
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
 \label{param:MasterShutdownProgram}
-\item[\Macro{MASTER\_SHUTDOWN\_$<$Name$>$}]
+\item[\Macro{MASTER\_SHUTDOWN\_<Name>}]
   A full path and file name of
   a program that the \Condor{master} is to execute
   via the Unix \Procedure{execl} call, 
@@ -3310,11 +3310,11 @@ NEGOTIATOR_USERID = condor
   instead of the normal call to \Procedure{exit}.
   Multiple programs to execute may be defined with multiple entries,
   each with a unique \MacroNI{Name}.
-  These macros have no affect on a
+  These macros have no effect on a
   \Condor{master} unless \Condor{set\_shutdown} is run.  
   The \MacroNI{Name} specified as an argument to the \Condor{set\_shutdown}
   program must match the \MacroNI{Name} portion of one of these
-  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} macros; if not, the
+  \MacroNI{MASTER\_SHUTDOWN\_<Name>} macros; if not, the
   \Condor{master} will log an error and ignore the command.  If a
   match is found, the \Condor{master} will attempt to verify the
   program, and it will store the path and program name.  When the
@@ -4319,14 +4319,14 @@ SMP Machines for details.
   A string which specifies what prefix to give the unique HTCondor
   resources that are advertised on SMP machines.
   Previously, HTCondor used the term \Term{virtual machine} to describe
-  these resources, so the default value for this setting was ``vm''.
-  However, to avoid confusion with other kinds of virtual machines
-  (the ones created using tools like VMware or Xen), the old
-  \Term{virtual machine} terminology has been changed, and we now use
+  these resources, so the default value for this setting was \Expr{vm}.
+  However, to avoid confusion with other kinds of virtual machines,
+  such as the ones created using tools like VMware or Xen, the old
+  \Term{virtual machine} terminology has been changed, and has become
   the term \Term{slot}.
-  Therefore, the default value of this prefix is now ``slot''.
-  If sites want to keep using ``vm'', or prefer something other
-  ``slot'', this setting enables sites to define what string the
+  Therefore, the default value of this prefix is now \Expr{slot}.
+  If sites want to contine using \Expr{vm}, or prefer something other
+  \Expr{slot}, this setting enables sites to define what string the
   \Condor{startd} will use to name the individual resources on an SMP
   machine.
 
@@ -4406,9 +4406,9 @@ change to take effect (for example, using
 \Code{condor\_restart -startd}).
 
 \Note Prior to version 6.9.3, any settings that included the term
-``slot'' used to use ``virtual machine'' or ``vm''.
-If you're looking for information about one of these older settings,
-search for the corresponding attribute names using ``slot'', instead.
+\Expr{slot} used to use virtual machine or \Expr{vm}.
+If searching for information about one of these older settings,
+search for the corresponding attribute names using \Expr{slot}, instead.
 
 \begin{description}
 
@@ -5174,7 +5174,7 @@ MAX_JOBS_RUNNING	= \
   causing keep alive messages to be sent from the \Condor{startd} to the
   \Condor{schedd} by TCP during a claim.
   When \Expr{False}, the \Condor{schedd} daemon sends keep alive signals
-  to the the \Condor{startd}, reversing the direction.
+  to the \Condor{startd}, reversing the direction.
   If both \Condor{startd} and \Condor{schedd} daemons are HTCondor version 7.5.4
   or more recent, this variable is only used by the \Condor{schedd} daemon.
   For earlier HTCondor versions, the variable must be set to the same value,
