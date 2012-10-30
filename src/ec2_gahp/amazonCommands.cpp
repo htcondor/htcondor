@@ -150,17 +150,13 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
 // We also make extensive use of this function in the XML parsing code,
 // for pretty much exactly the same reason.
 //
-size_t appendToString( void * ptr, size_t size, size_t nmemb, void * str ) {
+size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
     if( size == 0 || nmemb == 0 ) { return 0; }
     
-    char * ucptr = (char *)ptr;
-    char last = ucptr[ (size * nmemb) - 1 ];
-    ucptr[ (size * nmemb) - 1 ] = '\0';
+    std::string source( (const char *)ptr, size * nmemb );
     std::string * ssptr = (std::string *)str;
-    ssptr->append( ucptr );
-    (*ssptr) += last;
-    ucptr[ (size * nmemb) - 1 ] = last;
-    
+    ssptr->append( source );
+
     return (size * nmemb);
 }
 
@@ -573,7 +569,7 @@ void vmStartESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
 void vmStartCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
     if( vsud->inInstanceId ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->instanceID );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->instanceID );
     }
 }
 
@@ -931,7 +927,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusUD * vsud = (vmStatusUD *)vUserData;
 
     if( vsud->inGroup ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
         return;
     }
 
@@ -977,7 +973,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
             return;
     }
 
-    appendToString( (void *)cdata, len, 1, (void *)targetString );
+    appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
 void vmStatusEEH( void * vUserData, const XML_Char * name ) {
@@ -1178,7 +1174,7 @@ void createKeypairESH( void * vUserData, const XML_Char * name, const XML_Char *
 void createKeypairCDH( void * vUserData, const XML_Char * cdata, int len ) {
     privateKeyUD * pkud = (privateKeyUD *)vUserData;
     if( pkud->inKeyMaterial ) {
-        appendToString( (void *)cdata, len, 1, (void *) & pkud->keyMaterial );
+        appendToString( (const void *)cdata, len, 1, (void *) & pkud->keyMaterial );
     }
 }
 
@@ -1331,7 +1327,7 @@ void keypairNamesESH( void * vUserData, const XML_Char * name, const XML_Char **
 void keypairNamesCDH( void * vUserData, const XML_Char * cdata, int len ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
     if( knud->inKeyName ) {
-        appendToString( (void *)cdata, len, 1, (void *) & knud->keyName );
+        appendToString( (const void *)cdata, len, 1, (void *) & knud->keyName );
     }
 }
 
