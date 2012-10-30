@@ -5,7 +5,7 @@
 \index{installation!Windows|(}
 \index{Windows!installation|(}
 This section contains the instructions for 
-installing the Windows version of Condor.  
+installing the Windows version of HTCondor.  
 The install program will set up a slightly customized configuration
 file that may be further customized after the installation has completed.
 
@@ -13,59 +13,59 @@ Please read the copyright and disclaimer information in
 section~\ref{sec:license} on
 page~\pageref{sec:license} of the manual.
 Installation and
-use of Condor is acknowledgment that you have read and agree to the
+use of HTCondor is acknowledgment that you have read and agree to the
 terms.
 
-Be sure that the Condor tools are of the same version
+Be sure that the HTCondor tools are of the same version
 as the daemons installed.
-The Condor executable for distribution is packaged in
+The HTCondor executable for distribution is packaged in
 a single file named similar to:
 \begin{verbatim}
   condor-7.4.3-winnt50-x86.msi
 \end{verbatim}
 \index{Windows!installation!initial file size}
 This file is approximately 80 Mbytes in size, and it may be
-removed once Condor is fully installed.
+removed once HTCondor is fully installed.
 
-Before installing Condor, please consider joining the condor-world mailing
+Before installing HTCondor, please consider joining the condor-world mailing
 list.  Traffic on this list is kept to an absolute minimum.  It is only
-used to announce new releases of Condor.
+used to announce new releases of HTCondor.
 To subscribe, follow the directions given at
 \URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 
-For any installation, Condor services are installed and run as the
+For any installation, HTCondor services are installed and run as the
 Local System account.
-Running the Condor services as any other account (such as a domain user) 
+Running the HTCondor services as any other account (such as a domain user) 
 is not supported and could be problematic.
  
 \subsubsection{Installation Requirements}
 
 \begin{itemize}
 
-\item Condor for Windows requires Windows 2000 SP4, Windows XP SP2, 
+\item HTCondor for Windows requires Windows 2000 SP4, Windows XP SP2, 
 or a more recent version.
 
 \item 300 megabytes of free disk space is recommended.  Significantly more 
 disk space could be desired to be able to run jobs with large data files.
 
-\item Condor for Windows will operate on either an NTFS or FAT file system.  However, for security purposes, NTFS is preferred.
+\item HTCondor for Windows will operate on either an NTFS or FAT file system.  However, for security purposes, NTFS is preferred.
 
-\item Condor for Windows requires the Visual C++ 2008 C runtime library.
+\item HTCondor for Windows requires the Visual C++ 2008 C runtime library.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:NT-Preparing-to-Install}Preparing to Install
-Condor under Windows } 
+HTCondor under Windows } 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows!installation!preparation}
-Before installing the Windows version of Condor,
+Before installing the Windows version of HTCondor,
 there are two major
 decisions to make about the basic layout of the pool.
 
 \begin{enumerate}
 \item What machine will be the central manager?
-\item Is there enough disk space for Condor?
+\item Is there enough disk space for HTCondor?
 \end{enumerate}
 
 If the answers to these questions are already known,
@@ -82,12 +82,12 @@ If unsure, read on.
 
 One machine in your pool must be the central manager.
 This is the
-centralized information repository for the Condor pool and is also the
+centralized information repository for the HTCondor pool and is also the
 machine that matches available machines with waiting
 jobs.  If the central manager machine crashes, any currently active
 matches in the system will keep running, but no new matches will be
-made.  Moreover, most Condor tools will stop working.  Because of the
-importance of this machine for the proper functioning of Condor, we
+made.  Moreover, most HTCondor tools will stop working.  Because of the
+importance of this machine for the proper functioning of HTCondor, we
 recommend installing it on a machine that is likely to stay up all the
 time, or at the very least, one that will be rebooted quickly if it
 does crash.  Also, because all the services will send updates (by
@@ -95,20 +95,20 @@ default every 5 minutes) to this machine, it is advisable to consider
 network traffic and network layout when choosing the central
 manager.
 
-Install Condor on the central manager before installing
+Install HTCondor on the central manager before installing
 on the other machines within the pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\item{Is there enough disk space for Condor?}
+\item{Is there enough disk space for HTCondor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows!installation!required disk space}
-The Condor release directory takes up a fair amount of space.
+The HTCondor release directory takes up a fair amount of space.
 The size requirement for the release
 directory is approximately 250 Mbytes.
-Condor itself, however, needs space to store all of the jobs and their
+HTCondor itself, however, needs space to store all of the jobs and their
 input files.  If there will be large numbers of jobs,
-consider installing Condor on a volume with a large amount
+consider installing HTCondor on a volume with a large amount
 of free space.
 
 \end{itemize}
@@ -125,23 +125,23 @@ Installation Procedure Using the MSI Program}
 %  to install, must be running with administrator privileges
 %  the kernel runs as == local system
 
-Installation of Condor must be done by a user with administrator privileges.
-After installation, the Condor services will be run under 
+Installation of HTCondor must be done by a user with administrator privileges.
+After installation, the HTCondor services will be run under 
 the local system account.
-When Condor is running a user job, however, 
+When HTCondor is running a user job, however, 
 it will run that user job with normal user permissions.
 
-Download Condor, and start the installation process by running the installer. 
-The Condor installation is completed by answering questions 
+Download HTCondor, and start the installation process by running the installer. 
+The HTCondor installation is completed by answering questions 
 and choosing options within the following steps.
 
 \begin{description}
-\item[If Condor is already installed.]
+\item[If HTCondor is already installed.]
 
-     If Condor has been previously installed,
-     a dialog box will appear before the installation of Condor proceeds.
+     If HTCondor has been previously installed,
+     a dialog box will appear before the installation of HTCondor proceeds.
      The question asks if you wish to preserve your current
-     Condor configuration files.
+     HTCondor configuration files.
      Answer yes or no, as appropriate.
 	 
      If you answer yes, your configuration files will not be changed, 
@@ -154,7 +154,7 @@ and choosing options within the following steps.
 
 \item[STEP 1: License Agreement.]
 
-     The first step in installing Condor
+     The first step in installing HTCondor
      is a welcome screen and license agreement.
      You are reminded that it is best to run the installation
      when no other Windows programs are running.
@@ -167,9 +167,9 @@ and choosing options within the following steps.
      Also fill in name and company information,
      or use the defaults as given.
 
-\item[STEP 2: Condor Pool Configuration.]
+\item[STEP 2: HTCondor Pool Configuration.]
 
-     The Condor configuration needs to be set based upon
+     The HTCondor configuration needs to be set based upon
      if this is a new pool or to join an existing one.
      Choose the appropriate radio button.
 
@@ -179,7 +179,7 @@ and choosing options within the following steps.
 
 \item[STEP 3: This Machine's Roles.] 
 
-     Each machine within a Condor pool may either
+     Each machine within an HTCondor pool may either
      submit jobs or execute submitted jobs, or both
      submit and execute jobs.
      A check box determines if this machine will be a submit point for
@@ -190,19 +190,19 @@ and choosing options within the following steps.
      There are four choices:
      \begin{description}
      \item[Do not run jobs on this machine.]
-     This machine will not execute Condor jobs.
+     This machine will not execute HTCondor jobs.
      \item[Always run jobs and never suspend them.]
      \item[Run jobs when the keyboard has been idle for 15 minutes.]
      \item[Run jobs when the keyboard has been idle for 15 minutes,
 and the CPU is idle.]
      \end{description}
 
-     For testing purposes, it is often helpful to use the always run Condor
+     For testing purposes, it is often helpful to use the always run HTCondor
      jobs option. 
 
      For a machine that is to execute jobs and the choice is one of
 the last two in the list,
-Condor needs to further know what to do with the currently running jobs.
+HTCondor needs to further know what to do with the currently running jobs.
 There are two choices:
      \begin{description}
      \item[Keep the job in memory and continue when the machine meets
@@ -226,29 +226,29 @@ the condition chosen for when to run jobs.]
 % drives, things get screwed up.
 
      Enter the machine's accounting (or UID) domain.
-     On this version of Condor for Windows, this setting is only used for user
+     On this version of HTCondor for Windows, this setting is only used for user
      priorities (see section~\ref{sec:UserPrio} on
      page~\pageref{sec:UserPrio}) and to form a default e-mail address for
      the user.
 
 \item[STEP 5: E-mail Settings.]
 
-     Various parts of Condor will send e-mail to a Condor administrator
+     Various parts of HTCondor will send e-mail to an HTCondor administrator
      if something goes wrong and requires human attention.
      Specify the e-mail address and the SMTP relay host
      of this administrator.  Please pay close attention to this e-mail,
-     since it will indicate problems in the Condor pool.
+     since it will indicate problems in the HTCondor pool.
 
 \item[STEP 6: Java Settings.]
      In order to run jobs in the \SubmitCmd{java} universe,
-     Condor must have the path to the jvm executable on the machine.
+     HTCondor must have the path to the jvm executable on the machine.
      The installer will search for and list the jvm path, if it finds one.
      If not, enter the path.
      To disable use of the \SubmitCmd{java} universe,
      leave the field blank.
 
 \item[STEP 7: Host Permission Settings.]
-     Machines within the Condor pool will need various types of 
+     Machines within the HTCondor pool will need various types of 
      access permission. 
      The three categories of permission are read, write, and administrator.
      Enter the machines or domain to be given access permissions,
@@ -258,22 +258,22 @@ the condition chosen for when to run jobs.]
      \begin{description}
      \item[Read]
      Read access allows a machine to obtain information about
-     Condor such as the status of machines in the pool and the job queues.
+     HTCondor such as the status of machines in the pool and the job queues.
      All machines in the pool should be given read access. 
      In addition, giving read access to *.cs.wisc.edu 
-     will allow the Condor team to obtain information about
-     the Condor pool, in the event that debugging is needed.
+     will allow the HTCondor team to obtain information about
+     the HTCondor pool, in the event that debugging is needed.
      \item[Write]
      All machines in the pool should be given write access. 
      It allows the machines you specify to send information to your
-     local Condor daemons, for example, to start a Condor job.
-     Note that for a machine to join the Condor pool, 
+     local HTCondor daemons, for example, to start an HTCondor job.
+     Note that for a machine to join the HTCondor pool, 
      it must have both read and write access to all of the machines in the pool.
      \item[Administrator]
      A machine with administrator access will be allowed more
      extended permission to do things such as
      change other user's priorities, modify the job queue,
-     turn Condor services on and off, and restart Condor.
+     turn HTCondor services on and off, and restart HTCondor.
      The central manager should be given administrator access
      and is the default listed.
      This setting is granted to the entire machine, 
@@ -282,7 +282,7 @@ the condition chosen for when to run jobs.]
 
      For more details on these access permissions, and others that can be
      manually changed in your configuration file, please
-     see the section titled Setting Up IP/Host-Based Security in Condor
+     see the section titled Setting Up IP/Host-Based Security in HTCondor
      in section section~\ref{sec:Host-Security}
      on page~\pageref{sec:Host-Security}.
 
@@ -290,7 +290,7 @@ the condition chosen for when to run jobs.]
      A radio button determines whether 
      this machine will be configured to run \SubmitCmd{vm} universe jobs 
      utilizing VMware.
-     In addition to having the VMware Server installed, Condor also needs
+     In addition to having the VMware Server installed, HTCondor also needs
      \Prog{Perl} installed.
      The resources available for \SubmitCmd{vm} universe jobs can be tuned 
      with these settings, or the defaults listed may be used.
@@ -324,7 +324,7 @@ the condition chosen for when to run jobs.]
      either name node or data node mode.
 
      Running HDFS requires Java to be installed,
-     and Condor must know where the installation is.
+     and HTCondor must know where the installation is.
      Running HDFS in data node mode also requires the installation of Cygwin,
      and the path to the Cygwin directory must be added to the 
      global \Env{PATH} environment variable.
@@ -343,39 +343,39 @@ the condition chosen for when to run jobs.]
 \item[STEP 10: Choose Setup Type]
 
 \index{Windows!installation!location of files}
-The next step is where the destination of the Condor files will be
+The next step is where the destination of the HTCondor files will be
 decided.
-We recommend that Condor be installed in the location shown as the default 
+We recommend that HTCondor be installed in the location shown as the default 
 in the install choice:
 \verb@C:\Condor@. This is due to several hard coded
 paths in scripts and configuration files.
 Clicking on the Custom choice permits changing the installation directory.
 
 Installation on the local disk is chosen for several reasons.
-The Condor services run as local system, and within Microsoft Windows, 
+The HTCondor services run as local system, and within Microsoft Windows, 
 local system has no network privileges.
-Therefore, for Condor to operate, 
-Condor should be installed on a local hard drive,
+Therefore, for HTCondor to operate, 
+HTCondor should be installed on a local hard drive,
 as opposed to a network drive (file server).
 
 The second reason for installation on the local disk is that
 the Windows usage of drive letters has implications for where
-Condor is placed.
+HTCondor is placed.
 The drive letter used must be not change, even when different users are
 logged in.
 Local drive letters do not change under normal operation of Windows.
 
 While it is strongly discouraged, 
-it may be possible to place Condor on a hard drive that is not local,
+it may be possible to place HTCondor on a hard drive that is not local,
 if a dependency is added to the service control manager
-such that Condor starts after the required file services
+such that HTCondor starts after the required file services
 are available.
 
 %  !! goes in C:/condor   (default)
 %  !! advice is really should go on local hard drive,
 %  as opposed to a network drive (also called file server)
 %  Because,
-%    1. Condor runs as local system, and accesses to a network
+%    1. HTCondor runs as local system, and accesses to a network
 %      drive can't be authenticated  -- local system has
 %      no network privileges.
 %    2.  it is likely that you don't have this set up:
@@ -397,12 +397,12 @@ Unattended Installation Procedure Using the Included Set Up Program}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows!installation!unattended install}
-This section details how to run the Condor for Windows installer in an
+This section details how to run the HTCondor for Windows installer in an
 unattended batch mode.
 This mode is one that occurs completely from the command prompt,
 without the GUI interface.
 
-The Condor for Windows installer uses the Microsoft Installer (MSI)
+The HTCondor for Windows installer uses the Microsoft Installer (MSI)
 technology, and it can be configured for unattended installs analogous
 to any other ordinary MSI installer.
 
@@ -453,7 +453,7 @@ sets the name of the pool, if a new pool is to be created. Possible values
 are either the name or the empty string \verb@""@.
 
 \item [RUNJOBS = $<$ N \Bar\ A \Bar\ I \Bar\ C $>$]
-determines when Condor will run jobs. This can be set to:
+determines when HTCondor will run jobs. This can be set to:
 \begin{itemize}
 \item Never run jobs (N)
 \item Always run jobs (A)
@@ -463,9 +463,9 @@ usage is low (C)
 \end{itemize}
 
 \item [VACATEJOBS = $<$ Y \Bar\ N $>$]
-determines what Condor should do when it has to stop the execution of
-a user job. When set to Y, Condor will vacate the job and start
-it somewhere else if possible. When set to N, Condor will merely
+determines what HTCondor should do when it has to stop the execution of
+a user job. When set to Y, HTCondor will vacate the job and start
+it somewhere else if possible. When set to N, HTCondor will merely
 suspend the job in memory and wait for the machine to become available
 again. 
 
@@ -474,30 +474,30 @@ will cause the installer to configure the machine as a submit
 node when set to Y. 
 
 \item[CONDOREMAIL]
-sets the e-mail address of the Condor administrator. Possible values are
+sets the e-mail address of the HTCondor administrator. Possible values are
 an e-mail address or the empty string \verb@""@.
 
 \item[HOSTALLOWREAD]
 is a list of host names that are allowed to issue READ commands to
-Condor daemons. This value should be set in accordance with the
+HTCondor daemons. This value should be set in accordance with the
 \Macro{HOSTALLOW\_READ} setting in the configuration file, as described in
 section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 
 \item[HOSTALLOWWRITE]
 is a list of host names that are allowed to issue WRITE commands to
-Condor daemons. This value should be set in accordance with the
+HTCondor daemons. This value should be set in accordance with the
 \Macro{HOSTALLOW\_WRITE} setting in the configuration file, as described in
 section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 
 \item[HOSTALLOWADMINISTRATOR]
 is a list of host names that are allowed to issue ADMINISTRATOR commands to
-Condor daemons. This value should be set in accordance with the
+HTCondor daemons. This value should be set in accordance with the
 \Macro{HOSTALLOW\_ADMINISTRATOR} setting in the configuration file, 
 as described in
 section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
 
 \item[INSTALLDIR]
-defines the path to the directory where Condor will be installed. 
+defines the path to the directory where HTCondor will be installed. 
 
 \item[POOLHOSTNAME]
 defines the host name of the pool's central manager. 
@@ -568,26 +568,26 @@ can be found at Microsoft's website at
 \URL{http://www.microsoft.com/resources/documentation/windows/xp/all/proddocs/en-us/msiexec.mspx}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows}
+\subsubsection{\label{sec:NT-Manual-Install}Manual Installation HTCondor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{Windows!manual install}
-If you are to install Condor on many different machines, you may wish
-to use some other mechanism to install Condor on additional machines
+If you are to install HTCondor on many different machines, you may wish
+to use some other mechanism to install HTCondor on additional machines
 rather than running the Setup program described above on each machine.
 
 \Warn This is for advanced users only!  All others should use the Setup program described above. 
 
-Here is a brief overview of how to install Condor manually without using the provided GUI-based setup program:
+Here is a brief overview of how to install HTCondor manually without using the provided GUI-based setup program:
 
 \begin{description}
 \item [The Service]
-The service that Condor will install is called "Condor".  The Startup
+The service that HTCondor will install is called "Condor".  The Startup
 Type is Automatic.  The service should log on as System Account, but
 \Bold{do not enable} "Allow Service to Interact with Desktop".  The
 program that is run is \Condor{master.exe}.
 
-The Condor service can be installed and removed using the
+The HTCondor service can be installed and removed using the
 \File{sc.exe} tool, which is included in Windows XP and Windows 2003
 Server. The tool is also available as part of the Windows 2000
 Resource Kit.
@@ -603,17 +603,17 @@ sc delete Condor
 \end{verbatim}
 
 \item [The Registry]
-Condor uses a few registry entries in its operation.  The key that Condor
-uses is HKEY\_LOCAL\_MACHINE/Software/Condor.  The values that Condor puts
+HTCondor uses a few registry entries in its operation.  The key that HTCondor
+uses is HKEY\_LOCAL\_MACHINE/Software/Condor.  The values that HTCondor puts
 in this registry key serve two purposes.
 \begin{enumerate}
-\item The values of CONDOR\_CONFIG and RELEASE\_DIR are used for Condor
+\item The values of CONDOR\_CONFIG and RELEASE\_DIR are used for HTCondor
 to start its service.
 
 CONDOR\_CONFIG should point to the \File{condor\_config} file.  In this version
-of Condor, it \Bold{must} reside on the local disk.
+of HTCondor, it \Bold{must} reside on the local disk.
 
-RELEASE\_DIR should point to the directory where Condor is installed.  This
+RELEASE\_DIR should point to the directory where HTCondor is installed.  This
 is typically
 \verb@C:\Condor@, and again, this \Bold{must} reside on the
 local disk.
@@ -623,9 +623,9 @@ so that they can be used for the next one.
 \end{enumerate}
 
 \item [The File System]
-The files that are needed for Condor to operate are identical to the Unix
-version of Condor, except that executable files end in \File{.exe}.  For
-example the on Unix one of the files is \File{condor\_master} and on Condor
+The files that are needed for HTCondor to operate are identical to the Unix
+version of HTCondor, except that executable files end in \File{.exe}.  For
+example the on Unix one of the files is \File{condor\_master} and on HTCondor
 the corresponding file is \File{condor\_master.exe}.
 
 These files currently must reside on the local disk for a variety of reasons.
@@ -635,7 +635,7 @@ is started.  Second, the files must always be in the same spot (including
 drive letter), no matter who is logged into the machine.  
 
 Note also that when installing manually, you will need to create the
-directories that Condor will expect to be present given your
+directories that HTCondor will expect to be present given your
 configuration. This normally is simply a matter of creating the
 \File{log}, \File{spool}, and \File{execute} directories.
 
@@ -644,19 +644,19 @@ configuration. This normally is simply a matter of creating the
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{nt-installed-now-what}
-Starting Condor Under Windows After Installation}
+Starting HTCondor Under Windows After Installation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Windows!starting the Condor service}
-\index{starting Condor!Windows platforms}
+\index{Windows!starting the HTCondor service}
+\index{starting HTCondor!Windows platforms}
 
-After the installation of Condor is completed, the Condor service
+After the installation of HTCondor is completed, the HTCondor service
 must be started.  If you used the GUI-based setup program to install
-Condor, the Condor service should already be started.  If you installed
-manually, Condor must
-be started by hand, or you can simply reboot. \Note The Condor service
+HTCondor, the HTCondor service should already be started.  If you installed
+manually, HTCondor must
+be started by hand, or you can simply reboot. \Note The HTCondor service
 will start automatically whenever you reboot your machine.
 
-To start Condor by hand:
+To start HTCondor by hand:
 \begin{enumerate}
 \item From the Start menu, choose Settings.
 \item From the Settings menu, choose Control Panel.
@@ -669,32 +669,32 @@ Or, alternatively you can enter the following command from a command prompt:
          net start condor
 \end{verbatim}
 
-\index{Windows!Condor daemon names}
-Run the Task Manager (Control-Shift-Escape) to check that Condor
+\index{Windows!HTCondor daemon names}
+Run the Task Manager (Control-Shift-Escape) to check that HTCondor
 services are running.  The following tasks should
 be running:  
 \begin{itemize}
 \item \Condor{master.exe}
 \item \Condor{negotiator.exe}, if this machine is a central manager.
 \item \Condor{collector.exe}, if this machine is a central manager.
-\item \Condor{startd.exe}, if you indicated that this Condor node should start jobs
-\item \Condor{schedd.exe}, if you indicated that this Condor node should submit jobs
-to the Condor pool.
+\item \Condor{startd.exe}, if you indicated that this HTCondor node should start jobs
+\item \Condor{schedd.exe}, if you indicated that this HTCondor node should submit jobs
+to the HTCondor pool.
 \end{itemize}
 
 Also, you should now be able to open up a new cmd (DOS prompt) window, and
-the Condor bin directory should be in your path, so you can issue the normal
-Condor commands, such as \Condor{q} and \Condor{status}.
+the HTCondor bin directory should be in your path, so you can issue the normal
+HTCondor commands, such as \Condor{q} and \Condor{status}.
 
 \index{installation!Windows|)}
 \index{Windows!installation|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{nt-running-now-what}
-Condor is Running Under Windows ... Now What?}
+HTCondor is Running Under Windows ... Now What?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Once Condor services are running, try submitting test jobs.
+Once HTCondor services are running, try submitting test jobs.
 Example 2 within section~\ref{sec:sample-submit-files} 
 on page~\pageref{sec:sample-submit-files} presents a vanilla
 universe job.

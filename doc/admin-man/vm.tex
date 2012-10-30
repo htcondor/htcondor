@@ -7,7 +7,7 @@
 
 Virtual machines can be executed on any execution site with VMware, Xen
 (via \Prog{libvirt}), or KVM.
-To do this, Condor must be informed of some details of the 
+To do this, HTCondor must be informed of some details of the 
 virtual machine installation, and the execution machines must
 be configured correctly.
 This permits the execution of \SubmitCmd{vm} universe jobs.
@@ -68,7 +68,7 @@ Here we only discuss those that are required.
 First, the type of virtual machine that is installed on the
 execute machine must be specified. 
 For now, only one type can be utilized per machine.
-For instance, the following tells Condor to use VMware:
+For instance, the following tells HTCondor to use VMware:
 
 \begin{verbatim}
 VM_TYPE = vmware
@@ -90,7 +90,7 @@ VM_GAHP_LOG = $(LOG)/VMGahpLog
 %VM_VERSION = server1.0.4
 %\end{verbatim}
 
-%While required, this option does not alter the behavior of Condor.
+%While required, this option does not alter the behavior of HTCondor.
 %Instead, it is added to the ClassAd for the machine, so it 
 %can be matched against.  This way, if future releases of VMware/Xen support
 %new features that are desirable for your job, you can match on this string.
@@ -116,7 +116,7 @@ then a full path to the \Prog{Perl} executable will be required.
 The final required configuration is the location of the VMware control script
 used by the \Condor{vm-gahp} on the execute machine
 to talk to the virtual machine hypervisor.
-It is located in Condor's \File{sbin} directory:
+It is located in HTCondor's \File{sbin} directory:
 
 \begin{verbatim}
 VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
@@ -156,7 +156,7 @@ installation, and a variety of other factors. We can offer only limited
 advice on these matters:
 
 For Xen and KVM,
-the \SubmitCmd{vm} universe is only available when \Login{root} starts Condor.
+the \SubmitCmd{vm} universe is only available when \Login{root} starts HTCondor.
 This is a restriction currently imposed because root privileges are 
 required to create a virtual machine on top of a Xen-enabled kernel.
 Specifically, root is needed 

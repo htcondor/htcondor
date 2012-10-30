@@ -3,13 +3,13 @@
 \condor{compile}} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In order to take advantage of two major Condor features: checkpointing
-and remote system calls, users of the Condor system need to relink
-their binaries.  Programs that are not relinked for Condor can run in
-Condor's ``vanilla'' universe just fine, however, they cannot
+In order to take advantage of two major HTCondor features: checkpointing
+and remote system calls, users of the HTCondor system need to relink
+their binaries.  Programs that are not relinked for HTCondor can run in
+HTCondor's ``vanilla'' universe just fine, however, they cannot
 checkpoint and migrate, or run on machines without a shared filesystem.
 
-To relink your programs with Condor, we provide a special tool,
+To relink your programs with HTCondor, we provide a special tool,
 \Condor{compile}.  As installed by default, \Condor{compile} works
 with the following commands: \Prog{gcc}, \Prog{g++}, \Prog{g77},
 \Prog{cc}, \Prog{acc}, \Prog{c89}, \Prog{CC}, \Prog{f77},
@@ -21,8 +21,8 @@ However, you can make \Condor{compile} work transparently with all
 commands on your system whatsoever, including \Prog{make}.  
 
 The basic idea here is to replace the system linker (\Prog{ld}) with
-the Condor linker.  Then, when a program is to be linked, the condor
-linker figures out whether this binary will be for Condor, or for a
+the HTCondor linker.  Then, when a program is to be linked, the condor
+linker figures out whether this binary will be for HTCondor, or for a
 normal binary.  If it is to be a normal compile, the old \Prog{ld} is
 called.  If this binary is to be linked for condor, the script
 performs the necessary operations in order to prepare a binary that
@@ -60,7 +60,7 @@ On these platforms, issue the following commands (as root), where
         chmod 755 /[ld-path]/ld
 \end{verbatim}
 
-If you remove Condor from your system latter on, linking will continue
+If you remove HTCondor from your system latter on, linking will continue
 to work, since the condor linker will always default to compiling
 normal binaries and simply call the real ld.  In the interest of
 simplicity, it is recommended that you reverse the above changes by

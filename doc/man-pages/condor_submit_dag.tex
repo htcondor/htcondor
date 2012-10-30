@@ -38,26 +38,26 @@
 \oOptArg{-schedd-daemon-ad-file}{FileName}
 \oOptArg{-schedd-address-file}{FileName}
 
-\index{Condor commands!condor\_submit\_dag}
+\index{HTCondor commands!condor\_submit\_dag}
 \index{condor\_submit\_dag command}
 
 \Description
 
 \Condor{submit\_dag} is the program for submitting a DAG (directed
-acyclic graph) of jobs for execution under Condor.
+acyclic graph) of jobs for execution under HTCondor.
 The program enforces the job dependencies defined
 in one or more \Arg{DAGInputFile}s.
 Each \Arg{DAGInputFile} contains commands
 to direct the submission of jobs implied by the nodes
-of a DAG to Condor.
-See the Condor User Manual, section~\ref{sec:DAGMan} for a complete
+of a DAG to HTCondor.
+See the HTCondor User Manual, section~\ref{sec:DAGMan} for a complete
 description.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information.}
   \OptItem{\Opt{-version}}{Display version information.}
-  \OptItem{\Opt{-no\_submit}}{Produce the Condor submit description file
-     for DAGMan, but do not submit DAGMan as a Condor job.}
+  \OptItem{\Opt{-no\_submit}}{Produce the HTCondor submit description file
+     for DAGMan, but do not submit DAGMan as an HTCondor job.}
   \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
      to give verbose error messages.}
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
@@ -78,7 +78,7 @@ description.
      this argument, each individual process within a cluster counts as a 
      job, which is inconsistent with \OptArg{-maxjobs}.}
   \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
-     within the DAG that will be submitted to Condor at one time.
+     within the DAG that will be submitted to HTCondor at one time.
      \Arg{NumberOfJobs} is a positive integer. If the option is
      omitted, the default number of jobs is unlimited.  Note that for
      this argument, each cluster counts as one job, no matter how many
@@ -95,7 +95,7 @@ description.
      \Arg{NumberOfPOSTScripts} is a positive integer. If this option is
      omitted, the default number of POST scripts is unlimited.}
   \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
-     for DAGMan itself. This information will be used within the Condor
+     for DAGMan itself. This information will be used within the HTCondor
      submit description file for DAGMan. This file is produced by
      \Condor{submit\_dag}. See \Opt{notification}
      within the section of submit description file commands in the
@@ -286,7 +286,7 @@ description.
   \end{Options}
 
 \SeeAlso
-Condor User Manual
+HTCondor User Manual
 
 \ExitStatus
 

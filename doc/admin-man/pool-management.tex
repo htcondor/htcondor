@@ -3,18 +3,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{pool management}
 
-Condor provides administrative tools to help with
+HTCondor provides administrative tools to help with
 pool management.
 This section describes some of these tasks.
 
 All of the commands described in this section are subject to the
-security policy chosen for the Condor pool.
+security policy chosen for the HTCondor pool.
 As such, the commands must be either run from a
 machine that has the proper authorization, 
 or run by a user that is authorized to issue the commands.
 Section~\ref{sec:Security} on
 page~\pageref{sec:Security} details the implementation of 
-security in Condor.
+security in HTCondor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Pool-Upgrade}
@@ -23,14 +23,14 @@ Upgrading -- Installing a New Version on an Existing Pool}
 \index{pool management!installing a new version on an existing pool}
 \index{installation!installing a new version on an existing pool}
 
-An upgrade changes the running version of Condor
+An upgrade changes the running version of HTCondor
 from the current installation to a newer version.
 The safe method
-to install and start running a newer version of Condor
+to install and start running a newer version of HTCondor
 in essence is:
-shut down the current installation of Condor,
+shut down the current installation of HTCondor,
 install the newer version,
-and then restart Condor using the newer version.
+and then restart HTCondor using the newer version.
 To allow for falling back to the current version,
 place the new version in a separate directory.
 Copy the existing configuration files,
@@ -39,31 +39,31 @@ as well as incorporate any configuration variables that are new or changed
 in the new version.
 Set the \Env{CONDOR\_CONFIG} environment variable
 to point to the new copy of the configuration,
-so the new version of Condor will use the new configuration when restarted.
+so the new version of HTCondor will use the new configuration when restarted.
 
-When upgrading from a version of Condor earlier than 6.8 to more recent version,
+When upgrading from a version of HTCondor earlier than 6.8 to more recent version,
 note that the configuration settings must be modified for security reasons.
 Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
 must be explicitly changed,
 or no jobs may be submitted,
-and error messages will be issued by Condor tools.
+and error messages will be issued by HTCondor tools.
 
-Another way to upgrade leaves Condor running. 
-Condor will automatically restart itself if the \Condor{master} binary
+Another way to upgrade leaves HTCondor running. 
+HTCondor will automatically restart itself if the \Condor{master} binary
 is updated,
 and this method takes advantage of this. 
 Download the newer version, placing it such that it does not 
 overwrite the currently running version.
 With the download will be a new set of configuration files;
 update this new set with any specializations implemented in the currently
-running version of Condor.
+running version of HTCondor.
 Then, modify the currently running installation by changing its
 configuration such that the path to binaries points instead
 to the new binaries.
 One way to do that (under Unix) is to use a symbolic link that points 
-to the current Condor installation directory (for example, \File{/opt/condor}).
+to the current HTCondor installation directory (for example, \File{/opt/condor}).
 Change the symbolic link to point to the new directory. 
-If Condor is configured to locate its binaries via the symbolic link, 
+If HTCondor is configured to locate its binaries via the symbolic link, 
 then after the symbolic link changes, 
 the \Condor{master} daemon notices the new binaries and restarts itself. 
 How frequently it checks is controlled by the configuration variable 
@@ -111,14 +111,14 @@ This causes jobs to be hard-killed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Pool-Shutdown-and-Restart}
-Shutting Down and Restarting a Condor Pool}
+Shutting Down and Restarting an HTCondor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{pool management!shutting down Condor}
-\index{pool management!restarting Condor}
+\index{pool management!shutting down HTCondor}
+\index{pool management!restarting HTCondor}
 
 \begin{description}
-\item[Shutting Down Condor]
-There are a variety of ways to shut down all or parts of a Condor pool.
+\item[Shutting Down HTCondor]
+There are a variety of ways to shut down all or parts of an HTCondor pool.
 All utilize the \Condor{off} tool.
 
 To stop a single execute machine from running jobs,
@@ -143,14 +143,14 @@ Th shut down all execution machines within the pool,
 \end{verbatim}
 
 To wait indefinitely for each machine in the pool to finish its current
-Condor job,
+HTCondor job,
 shutting down all of the execute machines as they no longer
 have a running job,
 \begin{verbatim}
   condor_off -all -startd -peaceful
 \end{verbatim}
 
-To shut down Condor on a machine from which jobs are submitted,
+To shut down HTCondor on a machine from which jobs are submitted,
 \begin{verbatim}
   condor_off -schedd <hostname>
 \end{verbatim}
@@ -173,17 +173,17 @@ and shut down the submission of jobs is
 Substitute the option \Opt{-all} for the host name,
 if all submit machines in the pool are to be shut down.
 
-\item[Restarting Condor, If Condor Daemons Are Not Running]
-If Condor is not running,
+\item[Restarting HTCondor, If HTCondor Daemons Are Not Running]
+If HTCondor is not running,
 perhaps because one of the \Condor{off} commands was used,
-then starting Condor daemons back up depends on which part of
-Condor is currently not running.
+then starting HTCondor daemons back up depends on which part of
+HTCondor is currently not running.
 
-If no Condor daemons are running, then starting Condor is a matter
+If no HTCondor daemons are running, then starting HTCondor is a matter
 of executing the \Condor{master} daemon.
 The \Condor{master} daemon will then invoke all other specified daemons
 on that machine.
-The \Condor{master} daemon executes on every machine that is to run Condor.
+The \Condor{master} daemon executes on every machine that is to run HTCondor.
 
 If a specific daemon needs to be started up, and the \Condor{master} daemon
 is already running, then issue the command on the specific machine with
@@ -201,8 +201,8 @@ where \verb@<subsystemname>@ is replaced by the daemon's subsystem
 name, and \verb@<hostname>@ is replaced by the host name of the
 machine where this \Condor{on} command is to be directed.
 
-\item[Restarting Condor, If Condor Daemons Are Running]
-If Condor daemons are currently running, but need to be killed and
+\item[Restarting HTCondor, If HTCondor Daemons Are Running]
+If HTCondor daemons are currently running, but need to be killed and
 newly invoked,
 the \Condor{restart} tool does this.
 This would be the case for a new value of a configuration variable for
@@ -223,7 +223,7 @@ machine to be restarted.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Reconfigure-Pool}Reconfiguring a Condor Pool}
+\subsection{\label{sec:Reconfigure-Pool}Reconfiguring an HTCondor Pool}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{pool management!reconfiguration}
 
@@ -242,7 +242,7 @@ before issuing the \Condor{reconfig} command.
 
 Issuing a \Condor{reconfig} command is inadequate for some
 configuration variables.
-For those, a restart of Condor is required.
+For those, a restart of HTCondor is required.
 Those configuration variables that require a restart are listed in
 section~\ref{sec:Macros-Requiring-Restart}
 on page~\pageref{sec:Macros-Requiring-Restart}.

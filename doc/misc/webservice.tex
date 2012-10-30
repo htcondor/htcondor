@@ -6,15 +6,15 @@
 \index{Simple Object Access Protocol(SOAP)}
 \index{Web Service API}
 
-Condor's Web Service (WS) API provides a way for application developers
-to interact with Condor, without needing to utilize
-Condor's command-line tools.
-In keeping with the Condor philosophy of reliability and fault-tolerance,
+HTCondor's Web Service (WS) API provides a way for application developers
+to interact with HTCondor, without needing to utilize
+HTCondor's command-line tools.
+In keeping with the HTCondor philosophy of reliability and fault-tolerance,
 this API is designed to provide a simple and powerful way
-to interact with Condor.
-Condor daemons understand and implement
+to interact with HTCondor.
+HTCondor daemons understand and implement
 the SOAP (Simple Object Access Protocol) XML API
-to provide a web service interface for Condor job submission
+to provide a web service interface for HTCondor job submission
 and management.
 
 To deal with the issues of reliability and fault-tolerance,
@@ -339,20 +339,20 @@ once the job has been Middle Aged (been completed) for 24 hours.
 \subsubsection{\label{sec:WebService-Implementation} Implementation Details}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor daemons understand and communicate using the
+HTCondor daemons understand and communicate using the
 SOAP XML protocol.
 An application seeking to use this protocol
 will require code that handles the communication.
 The XML WSDL (Web Services Description Language)
-that Condor implements is included with the
-Condor distribution.
+that HTCondor implements is included with the
+HTCondor distribution.
 It is in \File{\MacroUNI{RELEASE\_DIR}/lib/webservice}.
 The WSDL must be run through a toolkit to produce
 language-specific routines that do communication.
 The application is compiled with these routines.
 
 \index{Web Service API!\Condor{schedd} daemon command port}
-Condor must be configured to enable responses to SOAP calls.
+HTCondor must be configured to enable responses to SOAP calls.
 Please see 
 section~\ref{sec:API-Config-File-Entries} for definitions of the
 configuration variables related to the web services API.
@@ -372,7 +372,7 @@ a further command locates the port number to use:
 \end{verbatim}
 \normalsize
 
-Condor's security configuration must be set up such that 
+HTCondor's security configuration must be set up such that 
 access is authorized for the SOAP client.
 See Section~\ref{sec:Security-Authorization}
 for information on how to set the
@@ -756,7 +756,7 @@ will vary according  to the target programming language.
 
 \item [\Code{removeCluster}]
   Remove a job cluster, and all the jobs within it.
-  %% What does it mean within Condor to remove a cluster?  
+  %% What does it mean within HTCondor to remove a cluster?  
   A prototype is 
 
   \Code{Status removeCluster(Transaction transaction, int clusterId,
@@ -889,7 +889,7 @@ will vary according  to the target programming language.
 
 
 \item [\Code{getJobAds}]
-  %% Find them from where?  The API's set of cluster/jobs or Condor's?
+  %% Find them from where?  The API's set of cluster/jobs or HTCondor's?
   A prototype is 
 
   \Code{StatusAndClassAdArray getJobAds(Transaction transaction, 
@@ -1134,7 +1134,7 @@ getJobAds(transaction, "(ClusterId==clusterId && JobId==jobId)")
 
   \begin{description}
     \item[ Return Value]
-      Returns the Condor version as a string.
+      Returns the HTCondor version as a string.
   \end{description}  
 
 \item [\Code{getPlatformString}]
@@ -1144,7 +1144,7 @@ getJobAds(transaction, "(ClusterId==clusterId && JobId==jobId)")
 
   \begin{description}
     \item[ Return Value]
-      Returns the platform information Condor is running on as string.
+      Returns the platform information HTCondor is running on as string.
   \end{description}  
 
 \end{description}

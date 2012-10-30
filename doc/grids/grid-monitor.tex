@@ -1,11 +1,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-GridMonitor}The Grid Monitor}
+\subsubsection{\label{sec:HTCondor-G-GridMonitor}The Grid Monitor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Grid Monitor}
 \index{grid computing!Grid Monitor}
 \index{scalability!using the Grid Monitor}
 
-Condor's Grid Monitor is designed to improve the scalability of
+HTCondor's Grid Monitor is designed to improve the scalability of
 machines running the Globus Toolkit's GRAM2 gatekeeper.
 Normally, this service runs a jobmanager process for 
 every job submitted to the gatekeeper.
@@ -22,14 +22,14 @@ this frequent polling can heavily load the gatekeeper.
 When the gatekeeper is under heavy load,
 the system can become non-responsive, and a variety of problems can occur.
 
-Condor's Grid Monitor temporarily replaces these jobmanagers.
+HTCondor's Grid Monitor temporarily replaces these jobmanagers.
 It is named the Grid Monitor, because it replaces the monitoring
 (polling) duties previously done by jobmanagers.
 When the Grid Monitor runs,
-Condor attempts to start a single
+HTCondor attempts to start a single
 process to poll all of a user's jobs at a given gatekeeper.
 While a job is waiting in the queue, but not yet running,
-Condor shuts down the associated jobmanager,
+HTCondor shuts down the associated jobmanager,
 and instead relies on the Grid Monitor to report changes in status.
 The jobmanager started to add the job to the remote
 batch system queue is shut down.

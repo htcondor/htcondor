@@ -4,14 +4,14 @@
 \index{Job hooks}
 \index{Hooks!job hooks that fetch work}
 
-In the past, Condor has always sent work to the execute machines by
+In the past, HTCondor has always sent work to the execute machines by
 pushing jobs to the \Condor{startd} daemon, either from the \Condor{schedd}
 daemon or via \Condor{cod}.
-Beginning with the Condor version 7.1.0, the \Condor{startd} daemon now has the
+Beginning with the HTCondor version 7.1.0, the \Condor{startd} daemon now has the
 ability to pull work by fetching jobs via a system of plug-ins or
 hooks.
 Any site can configure a set of hooks to fetch work, completely
-outside of the usual Condor matchmaking system.
+outside of the usual HTCondor matchmaking system.
 
 A projected use of the hook mechanism implements what might
 be termed a \Term{glide-in factory}, especially where the
@@ -74,11 +74,11 @@ will be evicted, and the slot will return to the Owner state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:job-hooks-hooks}
-Work Fetching Hooks Invoked by Condor}
+Work Fetching Hooks Invoked by HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Job hooks!Hooks invoked by Condor} 
+\index{Job hooks!Hooks invoked by HTCondor} 
 
-There are a handful of hooks invoked by Condor related to fetching
+There are a handful of hooks invoked by HTCondor related to fetching
 work, some of which are called by the \Condor{startd} and others by
 the \Condor{starter}.
 Each hook is described, including when it is invoked, what
@@ -396,11 +396,11 @@ privileges as the job itself.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:job-hooks-keywords}
-Keywords to Define Job Fetch Hooks in the Condor Configuration files }
+Keywords to Define Job Fetch Hooks in the HTCondor Configuration files }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Job hooks!keywords} 
 
-Hooks are defined in the Condor configuration files by prefixing
+Hooks are defined in the HTCondor configuration files by prefixing
 the name of the hook with a keyword.
 This way, a given machine can have multiple sets of hooks, each set
 identified by a specific keyword.
@@ -512,7 +512,7 @@ The availability of multiple versions of an application leads to
 the need to specify one of the versions. 
 As an example, consider that 
 the java universe utilizes a single, fixed JVM.
-There may be multiple JVMs available, and the Condor job may
+There may be multiple JVMs available, and the HTCondor job may
 need to make the choice of JVM version.
 The use of a job hook solves this problem.
 The job does not use the java universe, and instead uses the

@@ -5,13 +5,13 @@
 \index{universe!vm}
 \index{vm universe}
 
-The \SubmitCmd{vm} universe facilitates a Condor job
+The \SubmitCmd{vm} universe facilitates an HTCondor job
 that matches and then lands a disk image on an execute machine
-within a Condor pool.
+within an HTCondor pool.
 This disk image is intended to be a virtual machine.
 In this manner, the virtual machine is the job to be executed.
 
-This section describes this type of Condor job.
+This section describes this type of HTCondor job.
 See section~\ref{sec:Config-VMs}
 for details of configuration variables.
 
@@ -51,7 +51,7 @@ or
 The job is required to specify its memory needs 
 for the disk image with \SubmitCmd{vm\_memory},
 which is given in Mbytes.
-Condor uses this number to assure a match with a machine
+HTCondor uses this number to assure a match with a machine
 that can provide the needed memory space.
 
 Virtual machine networking is enabled with the command
@@ -68,7 +68,7 @@ matches the job only with a machine that is configured to use
 NAT networking.
 When no definition of
 \SubmitCmd{vm\_networking\_type} is given,
-Condor may
+HTCondor may
 match the job with a machine that enables networking,
 and further, the choice of bridge or NAT networking
 is determined by the machine's configuration.
@@ -76,7 +76,7 @@ is determined by the machine's configuration.
 Modified disk images are transferred back to the machine from which
 the job was submitted as the \SubmitCmd{vm} universe job completes.
 Job completion for a \SubmitCmd{vm} universe job occurs when 
-the virtual machine is shut down, and Condor notices 
+the virtual machine is shut down, and HTCondor notices 
 (as the result of a periodic check on the state of the virtual machine).
 Should the job not want any files transferred back (modified or not),
 for example because the job explicitly transferred its own files,
@@ -110,14 +110,14 @@ These commands are
   \item \SubmitCmd{vm\_disk}
 \end{itemize}
 For VMware virtual machines,
-setting values for these commands causes Condor to modify the
+setting values for these commands causes HTCondor to modify the
 \File{.vmx} file, overwriting existing values.
 For KVM and Xen virtual machines,
-Condor uses these values when it produces the description file.
+HTCondor uses these values when it produces the description file.
 
 For Xen and KVM jobs, if any files need to be transferred from the submit machine
 to the machine where the \SubmitCmd{vm} universe job will execute, 
-Condor must be explicitly told to do so with the 
+HTCondor must be explicitly told to do so with the 
 standard file transfer attributes:
 \footnotesize
 \begin{verbatim}
@@ -147,19 +147,19 @@ which form a virtual hard drive (disk image) for the virtual machine.
 VMX files containing the primary configuration for the virtual
 machine would also be in this directory.
 
-Condor must be told whether or not the contents of the \SubmitCmd{vmware\_dir}
+HTCondor must be told whether or not the contents of the \SubmitCmd{vmware\_dir}
 directory must be transferred to the machine where the job is
 to be executed.
 This required information is given with the submit command
 \SubmitCmd{vmware\_should\_transfer\_files}.
 With a value of \Expr{True},
-Condor does transfer the contents of the directory.
+HTCondor does transfer the contents of the directory.
 With a value of \Expr{False},
-Condor does not transfer the contents of the directory,
+HTCondor does not transfer the contents of the directory,
 and instead presumes that access to this directory is
 available through a shared file system.
 
-By default, Condor uses a snapshot disk for new and modified files.
+By default, HTCondor uses a snapshot disk for new and modified files.
 They may also be utilized for checkpoints.
 The snapshot disk is initially quite small,
 growing only as new files are created or files are modified.
@@ -169,7 +169,7 @@ used with the command
 \begin{verbatim}
   vmware_snapshot_disk = False
 \end{verbatim}
-In this case, Condor will utilize original disk files in producing
+In this case, HTCondor will utilize original disk files in producing
 checkpoints. 
 Note that \Condor{submit} issues an error message and does not
 submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
@@ -194,9 +194,9 @@ vmware_should_transfer_files = True
 queue
 \end{verbatim}
 This sample uses the \SubmitCmd{vmware\_dir} command to identify
-the location of the disk image to be executed as a Condor job.
+the location of the disk image to be executed as an HTCondor job.
 The contents of this directory are transferred to the machine assigned
-to execute the Condor job.
+to execute the HTCondor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-Xensubmitfile}Xen-Specific Submit Commands}
@@ -265,7 +265,7 @@ Open network connections at the time of the checkpoint will likely
 be lost when the checkpoint is subsequently used to resume execution
 of the virtual machine.
 This occurs whether or not the execution resumes
-on the same machine or a different one within the Condor pool.   
+on the same machine or a different one within the HTCondor pool.   
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-disk-image-details}Disk Images}
@@ -296,7 +296,7 @@ other platforms as well.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Job completion for a \SubmitCmd{vm} universe job occurs when 
-the virtual machine is shut down, and Condor notices 
+the virtual machine is shut down, and HTCondor notices 
 (as the result of a periodic check on the state of the virtual machine).
 This is different from jobs executed under the environment of other 
 universes.
@@ -324,7 +324,7 @@ causes the job to hang.
 Since the successful completion of the \SubmitCmd{vm} universe job
 requires the successful shut down of the virtual machine,
 it is good advice to try the shut down procedure outside of
-Condor, before a \SubmitCmd{vm} universe job is submitted.
+HTCondor, before a \SubmitCmd{vm} universe job is submitted.
 
 
 \index{virtual machine universe|)}

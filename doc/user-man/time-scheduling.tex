@@ -6,7 +6,7 @@
 \index{job execution!at a specific time}
 
 Jobs may be scheduled to begin execution at a specified time in the future
-with Condor's job deferral functionality.
+with HTCondor's job deferral functionality.
 All specifications are in a job's submit description file.
 Job deferral functionality is expanded to provide for the
 periodic execution of a job, known as the CronTab scheduling.
@@ -20,7 +20,7 @@ periodic execution of a job, known as the CronTab scheduling.
 
 Job deferral allows the specification of
 the exact date and time at which a job is to begin executing.
-Condor attempts to match the job to an execution machine
+HTCondor attempts to match the job to an execution machine
 just like any other job,
 however, the job will wait until the exact time to begin execution.
 A user can define the job to allow some flexibility in the execution of jobs
@@ -33,19 +33,19 @@ that miss their execution time.
 \index{deferral time!of a job}
 \index{ClassAd job attribute!DeferralTime}
 
-A job's deferral time is the exact time that Condor should attempt
+A job's deferral time is the exact time that HTCondor should attempt
 to execute the job.
 The deferral time attribute is defined as an expression
 that evaluates to a Unix Epoch timestamp
 (the number of seconds elapsed since 00:00:00 on January 1, 1970,
 Coordinated Universal Time).
-This is the time that Condor will begin to execute the job.
+This is the time that HTCondor will begin to execute the job.
 
 After a job is matched and all of its files have been transferred
 to an execution machine,
-Condor checks to see if the job's ClassAd contains a deferral time.
+HTCondor checks to see if the job's ClassAd contains a deferral time.
 If it does,
-Condor calculates the number of seconds between the execution
+HTCondor calculates the number of seconds between the execution
 machine's current system time and the job's deferral time.
 If the deferral time is in the future,
 the job waits to begin execution.
@@ -58,7 +58,7 @@ that is, if the deferral time is in the past,
 the job is evicted from the execution machine and put on hold in the queue.
 
 The specification of a deferral time does not interfere
-with Condor's behavior.
+with HTCondor's behavior.
 For example, if a job is waiting to begin execution
 when a \Condor{hold} command is issued,
 the job is removed from the execution machine and is put on hold.
@@ -66,7 +66,7 @@ If a job is waiting to begin execution when
 a \Condor{suspend} command is issued,
 the job continues to wait.
 When the deferral time arrives,
-Condor begins execution for the job,
+HTCondor begins execution for the job,
 but immediately suspends it.
 
 The deferral time is specified in the job's submit description file
@@ -93,7 +93,7 @@ The deferral window
 is the number of seconds after the deferral time,
 within which the job may begin.
 When a job arrives too late,
-Condor calculates the difference in seconds
+HTCondor calculates the difference in seconds
 between the execution machine's current time
 and the job's deferral time.
 If this difference is less than or equal to the deferral window,
@@ -194,7 +194,7 @@ from being matched until 60 seconds before the job is to begin execution.
 \subsubsection{Limitations}
 \label{sec:JobDeferral-Limitations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-There are some limitations to Condor's job deferral feature.
+There are some limitations to HTCondor's job deferral feature.
 
 \begin{itemize}
 \item Job deferral is not available for scheduler universe jobs.
@@ -226,20 +226,20 @@ executing and a job that is waiting for its deferral time.
 \index{job scheduling!periodic}
 \index{scheduling jobs!to execute periodically}
 
-Condor's CronTab scheduling functionality allows jobs to be 
+HTCondor's CronTab scheduling functionality allows jobs to be 
 scheduled to execute periodically. 
 A job's execution schedule is defined by commands within
 the submit description file.
 The notation is much like that used by the Unix \Prog{cron} daemon. 
-As such, Condor developers are fond of referring to CronTab
+As such, HTCondor developers are fond of referring to CronTab
 \index{Crondor}
 scheduling as \Term{Crondor}.
-The scheduling of jobs using Condor's CronTab feature 
+The scheduling of jobs using HTCondor's CronTab feature 
 calculates and utilizes
 the \Attr{DeferralTime} ClassAd attribute. 
 
 Also, unlike the Unix \Prog{cron} daemon, 
-Condor never runs more than one instance of a job at the same time. 
+HTCondor never runs more than one instance of a job at the same time. 
 
 The capability for repetitive or periodic execution of the job is 
 enabled by specifying an \SubmitCmd{on\_exit\_remove}
@@ -253,12 +253,12 @@ such that the job does not leave the queue until desired.
 
 A job's execution schedule is defined by a set of specifications
 within the submit description file.
-Condor uses these to calculate a \Attr{DeferralTime} for the job.
+HTCondor uses these to calculate a \Attr{DeferralTime} for the job.
 
 Table \ref{tab:CronTab-Attributes} 
 lists the submit commands and acceptable values for these commands.
 At least one of these must be defined 
-in order for Condor to calculate a \Attr{DeferralTime} for the job.
+in order for HTCondor to calculate a \Attr{DeferralTime} for the job.
 Once one CronTab value is defined, 
 the default for all the others uses 
 all the values in the allowed values ranges.
@@ -356,7 +356,7 @@ The \SubmitCmd{cron\_prep\_time} command
 is analogous to the deferral time's \SubmitCmd{deferral\_prep\_time} command. 
 It specifies the number of seconds before the deferral time
 that the job is to be matched and sent to the execution machine. 
-This permits Condor to
+This permits HTCondor to
 make necessary preparations before the deferral time occurs. 
 
 Consider the submit description file example that includes 
@@ -373,7 +373,7 @@ The job will be matched and sent to an execution machine
 no more than five minutes before the next deferral time. 
 For example, if a job is submitted at 9:30am, then the 
 next deferral time will be calculated to be 10:00am.
-Condor may attempt to match the job to a machine and send the job
+HTCondor may attempt to match the job to a machine and send the job
 once it is 9:55am.
 
 As the CronTab scheduling calculates and uses deferral time,
@@ -400,9 +400,9 @@ as seen by the time kept on the execution machine.
 \label{sec:crontab-scheduling}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-When a job using the CronTab functionality is submitted to Condor, 
+When a job using the CronTab functionality is submitted to HTCondor, 
 use of at least one of the submit description file commands
-beginning with \SubmitCmd{cron\_} causes Condor
+beginning with \SubmitCmd{cron\_} causes HTCondor
 to calculate and set a deferral time for when the job should run. 
 A deferral time is determined based on the current time 
 rounded later in time to the next minute. 
@@ -417,13 +417,13 @@ affects the job queue is issued.
 
 A job's deferral time is not always the same time that a job 
 will receive a match and be sent to the execution machine. 
-This is because Condor operates on the job queue
+This is because HTCondor operates on the job queue
 at times that are independent of job events,
 such as when job execution completes.
 Therefore,
-Condor may operate on the job queue just after 
+HTCondor may operate on the job queue just after 
 a job's deferral time states that it is to begin execution. 
-Condor attempts to start a job when the 
+HTCondor attempts to start a job when the 
 following pseudo-code boolean expression evaluates to \Expr{True}:
 
 \footnotesize
@@ -433,13 +433,13 @@ following pseudo-code boolean expression evaluates to \Expr{True}:
 \normalsize
 
 If the \Attr{CurrentTime} plus the number of seconds 
-until the next time Condor checks 
+until the next time HTCondor checks 
 the job queue is greater than or equal to the time that the job 
 should be submitted to the execution machine, 
 then the job is to be matched and sent now.
 
 Jobs using the CronTab functionality are not automatically 
-re-queued by Condor after their execution is complete. 
+re-queued by HTCondor after their execution is complete. 
 The submit description file for a job
 must specify an appropriate \SubmitCmd{on\_exit\_remove} 
 command to ensure that a job remains in the queue. 
@@ -503,7 +503,7 @@ because the mechanism is based upon deferral times.
 \item It is impossible to schedule vanilla 
 and standard universe jobs 
 at intervals that are smaller than the
-interval at which Condor evaluates jobs.
+interval at which HTCondor evaluates jobs.
 This interval is determined by 
 the configuration variable \Macro{SCHEDD\_INTERVAL}. 
 As a vanilla or standard universe job completes execution 
@@ -511,11 +511,11 @@ and is placed back into the job queue,
 it may not be placed in the idle state in time.
 This problem does not afflict local universe jobs.
 
-\item Condor cannot guarantee that a job will be
+\item HTCondor cannot guarantee that a job will be
 matched in order to make its scheduled deferral time.
 A job must be matched with an execution machine just as
-any other Condor job; 
-if Condor is unable to find a match, 
+any other HTCondor job; 
+if HTCondor is unable to find a match, 
 then the job will miss its chance for executing
 and must wait for the next execution time 
 specified by the CronTab schedule.

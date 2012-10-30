@@ -1,18 +1,18 @@
 \begin{ManPage}{\label{man-condor-run}\Condor{run}}{1}
-{Submit a shell command-line as a Condor job}
+{Submit a shell command-line as an HTCondor job}
 \Synopsis \SynProg{\Condor{run}}
 \oOptArg{-u}{universe}
 \Arg{"shell command"}
 
-\index{Condor commands!condor\_run}
+\index{HTCondor commands!condor\_run}
 \index{condor\_run command}
 
 \Description
-\Condor{run} bundles a shell command line into a Condor
+\Condor{run} bundles a shell command line into an HTCondor
 job and submits the job.
-The \Condor{run} command waits for the Condor job to complete,
+The \Condor{run} command waits for the HTCondor job to complete,
 writes the job's output to the terminal,
-and exits with the exit status of the Condor job.
+and exits with the exit status of the HTCondor job.
 No output appears until the job completes.
 
 Enclose the shell command line in double quote marks,
@@ -28,7 +28,7 @@ redirect the input from a file, as illustrated by the example
 \Condor{run} jobs rely on a shared file system for
 access to any necessary input files.
 The current working directory of the job must be
-accessible to the machine within the Condor pool where the job runs.
+accessible to the machine within the HTCondor pool where the job runs.
 
 Specialized environment variables may be used to specify
 requirements for the machine where the job may run.
@@ -41,7 +41,7 @@ requirements for the machine where the job may run.
   platform. Values will be the same as the \Attr{OpSys}
   machine ClassAd attribute.
 \item[CONDOR\_REQUIREMENTS] Specifies any additional requirements for
-  the Condor job.  It is recommended that the value defined for
+  the HTCondor job.  It is recommended that the value defined for
   \Env{CONDOR\_REQUIREMENTS} be enclosed in parenthesis.
 \end{description}
 
@@ -59,11 +59,11 @@ requests a machine of the same platform as
 the machine on which \Condor{run} is executed.
 
 All environment variables set when \Condor{run} is executed will be
-included in the environment of the Condor job.
+included in the environment of the HTCondor job.
 
-\Condor{run} removes the Condor job from the queue and
+\Condor{run} removes the HTCondor job from the queue and
 deletes its temporary files, if \Condor{run} is killed before the 
-Condor job completes.
+HTCondor job completes.
 
 \begin{Options}
 
@@ -113,27 +113,27 @@ of \Condor{run}.
   command line.
 \item[\File{.condor\_submit.<pid>}] The submit description file for
   the job.
-\item[\File{.condor\_log.<pid>}] The Condor job's log file; it is
+\item[\File{.condor\_log.<pid>}] The HTCondor job's log file; it is
   monitored by \Condor{run}, to determine when the job exits.
-\item[\File{.condor\_out.<pid>}] The output of the Condor
+\item[\File{.condor\_out.<pid>}] The output of the HTCondor
   job before it is output to the terminal.
-\item[\File{.condor\_error.<pid>}] Any error messages for the Condor
+\item[\File{.condor\_error.<pid>}] Any error messages for the HTCondor
   job  before they are output to the terminal.
 \end{description}
 \Condor{run} removes these files when the job completes.  However, if
 \Condor{run} fails, it is possible that these files will remain in the
-user's working directory, and the Condor job may remain in the queue.
+user's working directory, and the HTCondor job may remain in the queue.
 
 \GenRem
 
 \Condor{run} is intended for submitting simple shell command lines to
-Condor.  It does not provide the full functionality of
+HTCondor.  It does not provide the full functionality of
 \Condor{submit}.  Therefore, some \Condor{submit} errors and
 system failures may not be handled correctly. 
 
 All processes specified within the single shell command line
 will be executed on the single machine
-matched with the job.  Condor will not distribute multiple
+matched with the job.  HTCondor will not distribute multiple
 processes of a command line pipe across multiple machines.
 
 \Condor{run} will use the shell specified in the \Macro{SHELL} environment

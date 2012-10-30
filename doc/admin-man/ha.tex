@@ -14,7 +14,7 @@ No job queue due to having a nonfunctional machine
 implies that no jobs can be run.
 This situation is worsened by using one machine
 as the single submission point.
-For each Condor job (taken from the queue) that is executed,
+For each HTCondor job (taken from the queue) that is executed,
 a \Condor{shadow} process runs on the machine where submitted
 to handle input/output functionality.
 If this machine becomes nonfunctional, none of the jobs can
@@ -33,7 +33,7 @@ would wait until the machine running the \Condor{schedd} daemon
 became available (after fixing whatever caused it to become
 unavailable).
 
-Condor uses its flexible configuration mechanisms to allow
+HTCondor uses its flexible configuration mechanisms to allow
 the transfer of the \Condor{schedd} daemon from one machine
 to another.
 The configuration specifies
@@ -76,7 +76,7 @@ and the URL of the lock.
 delete it if it is placed in the \MacroNI{SPOOL} directory, so be
 sure to add SCHEDD.lock to \Macro{VALID\_SPOOL\_FILES}.
 
-As Condor starts on machines that are configured to run
+As HTCondor starts on machines that are configured to run
 the single \Condor{schedd} daemon, 
 the \Condor{master} daemon of the
 first machine that looks at (polls) the lock
@@ -134,7 +134,7 @@ configuration to have
 the same value for each potentially running \Condor{schedd} daemon.
 In addition, the value chosen for the variable \MacroNI{SCHEDD\_NAME}
 will need to include the at symbol (\verb$@$),
-such that Condor will not modify the value set for this variable.
+such that HTCondor will not modify the value set for this variable.
 See the description of \MacroNI{MASTER\_NAME} in
 section~\ref{param:MasterName} on page~\pageref{param:MasterName}
 for defaults and composition of valid values for \MacroNI{SCHEDD\_NAME}.
@@ -164,7 +164,7 @@ Central Manager}
 \subsubsection{\label{sec:HA-not-with-flocking} Interaction with Flocking} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Condor high availability mechanisms discussed in this section
+The HTCondor high availability mechanisms discussed in this section
 currently do not work well in configurations involving flocking.
 The individual problems listed listed below interact to make the situation
 worse.
@@ -197,12 +197,12 @@ jobs from a flocked \Condor{schedd}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The \Condor{negotiator} and \Condor{collector} daemons
-are the heart of the Condor matchmaking system.
-The availability of these daemons is critical to a Condor pool's
+are the heart of the HTCondor matchmaking system.
+The availability of these daemons is critical to an HTCondor pool's
 functionality.
 Both daemons usually run on the same machine,
 most often known as the central manager.
-The failure of a central manager machine prevents Condor from matching
+The failure of a central manager machine prevents HTCondor from matching
 new jobs and allocating new resources.
 High availability of the \Condor{negotiator} and \Condor{collector} daemons
 eliminates this problem. 
@@ -220,7 +220,7 @@ these are the idle central managers.
 All submit and execute machines are configured to report
 to all potential central manager machines.
 
-\index{Condor daemon!condor\_had@\Condor{had}}
+\index{HTCondor daemon!condor\_had@\Condor{had}}
 \index{daemon!condor\_had@\Condor{had}}
 \index{condor\_had daemon}
 Each potential central manager machine runs the high
@@ -291,10 +291,10 @@ to replicate this file on all potential central manager machines.
 This daemon promulgates the file in a way that is safe from error,
 and more secure than dependence on a shared file system copy.
 
-\index{Condor daemon!condor\_replication@\Condor{replication}}
+\index{HTCondor daemon!condor\_replication@\Condor{replication}}
 \index{daemon!condor\_replication@\Condor{replication}}
 \index{condor\_replication daemon}
-\index{Condor daemon!condor\_transferer@\Condor{transferer}}
+\index{HTCondor daemon!condor\_transferer@\Condor{transferer}}
 \index{daemon!condor\_transferer@\Condor{transferer}}
 \index{condor\_transferer daemon}
 The \Condor{replication} daemon runs on each
@@ -462,7 +462,7 @@ HAD_LIST = \
 
 ## HAD connection time.
 ## Recommended value is 2 if the central managers are on the same subnet.
-## Recommended value is 5 if Condor security is enabled.
+## Recommended value is 5 if HTCondor security is enabled.
 ## Recommended value is 10 if the network is very slow, or
 ## to reduce the sensitivity of HA daemons to network failures.
 HAD_CONNECTION_TIMEOUT = 2
@@ -477,7 +477,7 @@ HAD_USE_PRIMARY = true
 
 ##  What machines have administrative rights for your pool?  This
 ##  defaults to your central manager.  You should set it to the
-##  machine(s) where whoever is the condor administrator(s) works
+##  machine(s) where whoever is the HTCondor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
 HOSTALLOW_ADMINISTRATOR = $(COLLECTOR_HOST) 
@@ -599,7 +599,7 @@ HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST)
 
 %A sanity check scrip is provided to check
 %that all high-availability-related configuration
-%variables on the running Condor pool are configured correctly. 
+%variables on the running HTCondor pool are configured correctly. 
 %The script does not check that daemons are indeed
 %running on the machine;
 %it only ensures the correctness of configuration variables.

@@ -4,7 +4,7 @@
 \index{Deltacloud}
 \index{cloud computing!submitting jobs to Deltacloud}
 
-Condor jobs may be submitted to Deltacloud services.
+HTCondor jobs may be submitted to Deltacloud services.
 Deltacloud is a translation service for cloud services.
 Cloud services allow the rental of computers by the hour to run
 computation applications.
@@ -22,7 +22,7 @@ for more information about Deltacloud.
 \subsubsection{\label{sec:Deltacloud-submit}Deltacloud Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor jobs are submitted to Deltacloud
+HTCondor jobs are submitted to Deltacloud
 using the \SubmitCmd{grid} universe and the
 \SubmitCmd{grid\_resource} command
 into the submit description file
@@ -47,7 +47,7 @@ In the submit description file,
 provide the identifier for the image using the
 \SubmitCmd{deltacloud\_image\_id} command.
 
-To authenticate with Deltacloud, Condor needs your credentials for
+To authenticate with Deltacloud, HTCondor needs your credentials for
 the cloud service that the Deltacloud server is representing. 
 The credentials are
 presented as a user name and the name of a file that holds a secret key.
