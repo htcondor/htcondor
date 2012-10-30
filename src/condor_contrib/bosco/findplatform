@@ -4,6 +4,7 @@
 import sys
 import os
 import platform
+import optparse
 
 UNKNOWN="UNKNOWN"
 UNSUPPORTED="UNSUPPORTED"
@@ -12,19 +13,32 @@ RH6="RH6"
 OSX="MAC"
 DEB6="DEB6"
 
-def findversion_mac():
+# download URLs for the different platforms
+URL_DICT={
+  DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_Debian6.tar.gz",
+  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_MacOSX7.tar.gz",
+  RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_RedHat5.tar.gz",
+  RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_RedHat6.tar.gz",
+}
+
+BIT32="32bit"
+BIT64="64bit"
+
+def findversion_mac(detail=False):
   # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
   #      System Version: Mac OS X 10.6.8 (10K549)
   #
   import commands 
   ec, out = commands.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
   retv = out.strip()[len("System Version:"):].strip()
+  if detail and ec==0:
+    return retv
   if retv.startswith('Mac'):
     # should I check for specific Version numbers?
     return OSX
   return UNKNOWN
 
-def findvertion_redhat():
+def findversion_redhat(detail=False):
   # content of /etc/redhat-release
   #Scientific Linux release 6.2 (Carbon)
   #Red Hat Enterprise Linux Server release 5.8 (Tikanga)
@@ -37,6 +51,8 @@ def findvertion_redhat():
   # no 
   lines = open('/etc/redhat-release').readlines()
   for line in lines:
+    if detail and 'release'in line:
+      return line
     if 'release 5.' in line:
       return RH5
     if 'release 6.' in line:
@@ -44,7 +60,7 @@ def findvertion_redhat():
     return UNSUPPORTED
   return UNKNOWN
 
-def findvertion_debian():
+def findversion_debian(detail=False):
   """cat /etc/*release                                                                                                      
 DISTRIB_ID=Ubuntu                                                                                                                           
 DISTRIB_RELEASE=11.10                                                                                                                       
@@ -64,6 +80,9 @@ Codename:    oneiric
   retv=UNSUPPORTED
   lines = open('/etc/lsb-release').readlines()
   for line in lines:
+    if detail:
+       if 'DISTRIB_DESCRIPTION' in line:
+        return line[len('DISTRIB_DESCRIPTION='):]
     if 'DISTRIB_ID' in line:
       if not 'Debian' in line:
         return UNSUPPORTED
@@ -94,10 +113,49 @@ def findversion():
         if mydist[1].startswith('6.'):
           return DEB6
     if os.path.isfile('/etc/redhat-release'):
-      return findvertion_redhat()
+      return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):
-      return findvertion_debian()
+      return findversion_debian()
   return UNKNOWN
 
+def findversion_detail():
+  #if not os.name=='posix':
+  #  return UNKNOWN 
+  if sys.platform=='darwin':
+    return findversion_mac(True)
+  elif sys.platform.startswith('linux'):
+    if os.path.isfile('/etc/redhat-release'):
+      return findversion_redhat(True)
+    elif os.path.isfile('/etc/lsb-release'):
+      return findversion_debian(True)
+  return UNKNOWN
+
+   
 if __name__ == "__main__":
-    print findversion()
+  parser = optparse.OptionParser()
+  parser.add_option('-u', '--url', help='return the download URL for the current platform', dest='url', \
+                    default=False, action='store_true')
+  parser.add_option('-b', '--bit', help='return if the architecture is 32bit or 64bit', dest='bit', \
+                    default=False, action='store_true')
+  parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details', \
+                    default=False, action='store_true')
+  (opts, args) = parser.parse_args()
+
+  if opts.details and opts.bit:
+    print "Option full and bit are mutually exclusive\n"
+    parser.print_help()
+    exit(-1)
+  if opts.bit:
+    if platform.architecture()[0]=='64bit':
+      print BIT64
+    else:
+      print BIT32
+    exit(0)
+  elif opts.details:
+    print findversion_detail()
+  else:
+    res = findversion()
+    if opts.url:
+      print URL_DICT[res]
+    else:
+      print res
