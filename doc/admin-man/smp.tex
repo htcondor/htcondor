@@ -653,9 +653,9 @@ The value of these variables can be ClassAd expressions.
 The default values for these variables, should they not be set are
 
 \begin{description}
-  \item{\Macro{JOB\_DEFAULT\_REQUEST\_MEMORY} = \Expr{ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)}}
-  \item{\Macro{JOB\_DEFAULT\_REQUEST\_CPUS} = \Expr{1}}
-  \item{\Macro{JOB\_DEFAULT\_REQUEST\_DISK} = \Expr{DiskUsage}}
+  \item{\MacroNI{JOB\_DEFAULT\_REQUESTMEMORY} = \Expr{ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)}}
+  \item{\MacroNI{JOB\_DEFAULT\_REQUESTCPUS} = \Expr{1}}
+  \item{\MacroNI{JOB\_DEFAULT\_REQUESTDISK} = \Expr{DiskUsage}}
 \end{description}
 
 Note that these default values are chosen such that 
