@@ -5,7 +5,7 @@
 \index{grid computing!submitting jobs using the EC2 Query API}
 \index{grid type!ec2}
 
-Condor jobs may be submitted to clouds supporting
+HTCondor jobs may be submitted to clouds supporting
 Amazon's Elastic Compute Cloud (EC2) interface.
 Amazon's EC2 is an on-line commercial service that allows 
 the rental of computers by the hour to run computational applications.
@@ -21,7 +21,7 @@ also called the EC2 REST API.
 \subsubsection{\label{sec:Amazon-submit}EC2 Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor jobs are submitted to Amazon's EC2
+HTCondor jobs are submitted to Amazon's EC2
 with the \SubmitCmd{grid} universe, and setting the
 \SubmitCmd{grid\_resource} command to \SubmitCmd{ec2}, followed 
 by the service's URL. For example,
@@ -74,12 +74,12 @@ ec2_secret_access_key = /path/to/x.509/private.key
 
 If using an X.509 proxy, specify the proxy in both places.
 
-Condor can use the EC2 API to create an SSH key pair that allows
+HTCondor can use the EC2 API to create an SSH key pair that allows
 secure log in to the virtual machine once it is running.
 If the command
 \SubmitCmd{ec2\_keypair\_file}
 is set in the submit description file,
-Condor will write an SSH private key into the indicated file.
+HTCondor will write an SSH private key into the indicated file.
 The key can be used to log into the virtual machine.
 Note that modification will also be needed of the firewall
 rules for the job to incoming SSH connections.
@@ -89,22 +89,22 @@ the virtual machine instances it runs.
 Typically, no incoming connections are allowed.
 One can define sets of firewall rules and give them names.
 The EC2 API calls these security groups. 
-If utilized, tell Condor what set of security
+If utilized, tell HTCondor what set of security
 groups should be applied to each VM using the
 \SubmitCmd{ec2\_security\_groups} submit description file command.
-If not provided, Condor uses the security group \SubmitCmd{default}.
+If not provided, HTCondor uses the security group \SubmitCmd{default}.
 
 The EC2 API allows the choice of different hardware configurations 
 for instances to run on.
 Select which configuration to use for the \SubmitCmd{ec2} grid type
 with the \SubmitCmd{ec2\_instance\_type} submit description file command.
-Condor provides no default.
+HTCondor provides no default.
 
 Each virtual machine instance can be given up to 16Kbytes of unique data, 
 accessible by the instance by connecting to a well-known address.
 This makes it easy for many instances to share the same VM image,
 but perform different work.
-This data can be specified to Condor in one of two ways.
+This data can be specified to HTCondor in one of two ways.
 First, the data can be provided directly in the submit description file 
 using the \SubmitCmd{ec2\_user\_data} command.
 Second, the data can be
@@ -113,7 +113,7 @@ stored in a file, and the file name is specified with the
 This second option allows the use of binary data.
 If both options are used, the two blocks of
 data are concatenated, with the data from \SubmitCmd{ec2\_user\_data} 
-occurring first.  Condor performs the base64 encoding that EC2 expects on 
+occurring first.  HTCondor performs the base64 encoding that EC2 expects on 
 the data.
 
 
@@ -122,7 +122,7 @@ the data.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The \SubmitCmd{ec2} grid type requires these configuration variables 
-to be set in the Condor configuration file:
+to be set in the HTCondor configuration file:
 
 \footnotesize
 \begin{verbatim}

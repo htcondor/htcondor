@@ -118,7 +118,7 @@ char *Condor_Crypt_Base::randomHexKey(int length)
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
 #ifdef HAVE_EXT_OPENSSL
-    return Condor_MD_MAC::computeOnce((unsigned char *)initialKey, strlen(initialKey));
+    return Condor_MD_MAC::computeOnce((unsigned char *)const_cast<char*>(initialKey), strlen(initialKey));
 #else 
     return NULL;
 #endif

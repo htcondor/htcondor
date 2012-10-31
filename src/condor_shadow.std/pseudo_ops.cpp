@@ -149,33 +149,18 @@ int
 pseudo_shell( char *command, int /*len*/ )
 {
 	int rval;
-	int terrno;
 
 	dprintf( D_SYSCALLS, "\tcommand = \"%s\"\n", command );
-
-	/* This feature of Condor is sort of a security hole, um, maybe
-		a big security hole, so by default, if this is not
-		defined by the condor admin, do NOT run the command. */
-
-	if (param_boolean_crufty("SHADOW_ALLOW_UNSAFE_REMOTE_EXEC", false)) {
-		dprintf(D_SYSCALLS, 
-			"\tThe CONDOR_shell remote system call is currently disabled.\n");
-		dprintf(D_SYSCALLS, 
-			"\tTo enable it, please use SHADOW_ALLOW_UNSAFE_REMOTE_EXEC.\n");
-		rval = -1;
-		errno = ENOSYS;
-		return rval;
-	}
 
 	rval = -1;
 	errno = ENOSYS;
 
-	rval = system(command);
-	
-	terrno = errno;
-	errno = terrno;
-
 	return rval;
+
+	/* This feature of Condor is sort of a security hole, um, maybe
+		a big security hole, so let's just never do it.  As far as
+		we know, nobody uses this.  */
+
 }
 
 /*

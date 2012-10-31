@@ -83,12 +83,12 @@ void Reconfig()
 	// If we use Termlog,
 	// we don't want logs from DaemonCore
 #ifdef vmprintf
-	if (Termlog) {
+	if (dprintf_to_term_check()) {
 		set_debug_flags(NULL, D_NOHEADER);
 	}
 #else // the old way
 	oriDebugFlags = DebugFlags;
-	if( Termlog ) {
+	if( dprintf_to_term_check() ) {
 		DebugFlags = 0;
 	}
 
@@ -275,7 +275,7 @@ void main_init(int argc, char *argv[])
 			DC_Exit(1);
 	}
 
-	if( Termlog && (vmgahp_mode != VMGAHP_TEST_MODE ) &&
+	if( dprintf_to_term_check() && (vmgahp_mode != VMGAHP_TEST_MODE ) &&
 			(vmgahp_mode != VMGAHP_KILL_MODE )) {
 		// Initialize pipe for stderr
 		vmgahp_stderr_pipe = daemonCore->Inherit_Pipe(fileno(stderr),

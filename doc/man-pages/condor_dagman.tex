@@ -27,17 +27,17 @@
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
-\index{Condor commands!condor\_dagman}
+\index{HTCondor commands!condor\_dagman}
 \index{condor\_dagman command}
 
 \Description
-\Condor{dagman} is a meta scheduler for the Condor jobs within
+\Condor{dagman} is a meta scheduler for the HTCondor jobs within
 a DAG (directed acyclic graph) (or multiple DAGs).
 In typical usage,
 a submitter of jobs that are organized into a DAG submits the
 DAG using \Condor{submit\_dag}.
 \Condor{submit\_dag} does error checking on aspects of the DAG
-and then submits \Condor{dagman} as a Condor job.
+and then submits \Condor{dagman} as an HTCondor job.
 \Condor{dagman} uses log files to coordinate the further 
 submission of the jobs within the DAG.
 
@@ -94,7 +94,7 @@ output DAG input file lines as they are parsed
        If not specified, the number of idle jobs is unlimited.  }
     \OptItem{\OptArg{-maxjobs}{numberOfJobs}}{Sets the maximum number of 
        clusters
-       within the DAG that will be submitted to Condor at one time.
+       within the DAG that will be submitted to HTCondor at one time.
        \Arg{numberOfJobs} is a positive integer.
        This command-line option to \Condor{submit\_dag} is passed to
        \Condor{dagman}.
@@ -187,7 +187,7 @@ output DAG input file lines as they are parsed
     \OptItem{\OptArg{-notification}{value}}{(This argument is only
        included to be passed to \Condor{submit\_dag} if lazy submit file
        generation is used for nested DAGs.)  Sets the e-mail notification
-       for DAGMan itself. This information will be used within the Condor
+       for DAGMan itself. This information will be used within the HTCondor
        submit description file for DAGMan. This file is produced by
        \Condor{submit\_dag}. See \Opt{notification}
        within the section of submit description file commands in the
@@ -227,7 +227,7 @@ output DAG input file lines as they are parsed
     \OptItem{\Opt{-DontAlwaysRunPost}}{This option causes \Condor{dagman} to
        observe the exit status of the PRE script when deciding whether or not
        to run the POST script.  
-       Versions of \Condor{dagman} previous to Condor version 7.7.2 
+       Versions of \Condor{dagman} previous to HTCondor version 7.7.2 
        would not run the POST script if the PRE script exited 
        with a nonzero status, 
        but this default has been changed such that the POST script will run,
@@ -246,7 +246,7 @@ and it will exit with the value 1 (one) upon failure.
 
 \Examples
 
-\Condor{dagman} is normally not run directly, but submitted as a Condor
+\Condor{dagman} is normally not run directly, but submitted as an HTCondor
 job by running \condor{submit\_dag}.  See the \condor{submit\_dag} manual
 page~\pageref{man-condor-submit-dag} for examples.
 

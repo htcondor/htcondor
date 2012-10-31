@@ -46,8 +46,7 @@ int
 main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("test_write_term", get_param_functions());
+	dprintf_set_tool_debug("test_write_term", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	int		result = 0;

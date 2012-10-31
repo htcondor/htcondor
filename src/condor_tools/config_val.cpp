@@ -159,7 +159,6 @@ main( int argc, char* argv[] )
 	bool    print_config_sources = false;
 	bool	write_config = false;
 	bool	debug = false;
-	param_functions *p_funcs = NULL;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -316,9 +315,7 @@ main( int argc, char* argv[] )
 	}
 
 	if (debug) {
-		p_funcs = get_param_functions();
-		Termlog = 1;
-		dprintf_config( "TOOL", p_funcs );
+		dprintf_set_tool_debug("TOOL", 0);
 	}
 
 	/* XXX -dump only currently spits out variables found through the

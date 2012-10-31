@@ -1,11 +1,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:kbdd}The \Condor{kbdd}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor daemon!condor\_kbdd@\Condor{kbdd}}
+\index{HTCondor daemon!condor\_kbdd@\Condor{kbdd}}
 \index{daemon!condor\_kbdd@\Condor{kbdd}}
 \index{condor\_kbdd daemon}
 
-The Condor keyboard daemon (\Condor{kbdd}) monitors X events on
+The HTCondor keyboard daemon (\Condor{kbdd}) monitors X events on
 machines where the operating system does not provide a way of
 monitoring the idle time of the keyboard or mouse.  On UNIX platforms,
 it is needed to detect USB keyboard activity but otherwise is not
@@ -24,7 +24,7 @@ by Windows. This change has been made even to pre-Vista Windows
 versions because it adds the capability of monitoring keyboard activity
 from multiple users.
 
-To achieve the auto-start with user login, the Condor installer adds a
+To achieve the auto-start with user login, the HTCondor installer adds a
 \Condor{kbdd} entry to the registry key at
 \verb|HKLM\Software\Microsoft\Windows\CurrentVersion\Run|. On 64bit versions
 of Vista and higher, the entry is actually placed in

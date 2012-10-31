@@ -1,36 +1,36 @@
 
-\index{Condor!FAQ|(}
-\index{Condor!Frequently Asked Questions|(}
+\index{HTCondor!FAQ|(}
+\index{HTCondor!Frequently Asked Questions|(}
 \index{FAQ|(}
 \index{Frequently Asked Questions|(}
 
 This is where you can find quick answers to some commonly asked
-questions about Condor.
+questions about HTCondor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Obtaining \& Installing Condor}
+\section{Obtaining \& Installing HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{FAQ!installing Condor}
+\index{FAQ!installing HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Where can I download Condor?}
+\subsection*{Where can I download HTCondor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!downloading}
-\index{Condor!distribution}
-\index{Condor!getting}
-\index{Condor!binaries}
+\index{HTCondor!downloading}
+\index{HTCondor!distribution}
+\index{HTCondor!getting}
+\index{HTCondor!binaries}
 
-Condor can be downloaded from the mirrors listed at
+HTCondor can be downloaded from the mirrors listed at
 \URL{http://www.cs.wisc.edu/condor/downloads}.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{When I click to download Condor, it sends me back to the downloads page!}
+\subsection*{When I click to download HTCondor, it sends me back to the downloads page!}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If you are trying to download Condor through a web proxy, try
+If you are trying to download HTCondor through a web proxy, try
 disabling it.
 Our web site uses the ``referring page'' as you navigate through our
-download menus in order to give you the right version of Condor, but
+download menus in order to give you the right version of HTCondor, but
 sometimes proxies block this information from reaching our web site.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -45,38 +45,38 @@ Chapter~\ref{platforms} on page~\pageref{platforms}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Can I get the source code?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!source code}
+\index{HTCondor!source code}
 
-For Condor version 7.0.0 and later releases,
-the Condor source code is available for 
+For HTCondor version 7.0.0 and later releases,
+the HTCondor source code is available for 
 public download with the binary distributions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What is Personal Condor?}
+\subsection*{What is Personal HTCondor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!Personal}
-\index{Personal Condor}
+\index{HTCondor!Personal}
+\index{Personal HTCondor}
 
-Personal Condor is a term used to describe a specific style of Condor
+Personal HTCondor is a term used to describe a specific style of HTCondor
 installation suited for individual users who do not have their own
-pool of machines, but want to submit Condor jobs to run elsewhere.
+pool of machines, but want to submit HTCondor jobs to run elsewhere.
 
-A Personal Condor is essentially a one-machine, self-contained Condor
-pool which can use \Term{flocking} to access resources in other Condor
+A Personal HTCondor is essentially a one-machine, self-contained HTCondor
+pool which can use \Term{flocking} to access resources in other HTCondor
 pools.
 See Section~\ref{sec:Flocking}, on page~\pageref{sec:Flocking} for
 more information on flocking.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What do I do now? My installation of Condor does not work.}
+\subsection*{What do I do now? My installation of HTCondor does not work.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{port usage!FAQ on communication errors}
-What to do to get Condor running properly depends on what sort of
+What to do to get HTCondor running properly depends on what sort of
 error occurs. 
 One common error category are communication errors.
-Condor daemon log files report a failure to bind.
+HTCondor daemon log files report a failure to bind.
 For example:
 
 \footnotesize
@@ -108,7 +108,7 @@ Error:  Could not fetch ads --- error communication error
 \normalsize
 
 To solve this problem, understand that
-Condor uses the first network interface it sees on the machine.
+HTCondor uses the first network interface it sees on the machine.
 Since machines often have more than one interface,
 this problem usually implies that the wrong network
 interface is being used.  It also may be the case that
@@ -136,25 +136,25 @@ The contents will be of the form:
 
 The last line tells the IP address and port the collector has
 bound to and is listening on.
-If the IP address is 127.0.0.1, then Condor is definitely using the wrong
+If the IP address is 127.0.0.1, then HTCondor is definitely using the wrong
 network interface.
 
 There are two solutions to this problem.
 One solution changes the order of the network interfaces.
 The preferred solution
-sets which network interface Condor should use
+sets which network interface HTCondor should use
 by adding the following parameter to the
-local Condor configuration file:
+local HTCondor configuration file:
 
 \begin{verbatim}
 NETWORK_INTERFACE = machine-ip-address
 \end{verbatim}
 
 Where \verb@machine-ip-address@ is the IP address of the interface you wish
-Condor to use.
+HTCondor to use.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{After an installation of Condor, why do the daemons refuse to start?}
+\subsection*{After an installation of HTCondor, why do the daemons refuse to start?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This message appears in the log files:
@@ -168,17 +168,17 @@ at line 217 in file condor_config.C
 \end{verbatim}
 \normalsize
 
-As of Condor 6.8.0, if 
-Condor sees the bare key word: 
+As of HTCondor 6.8.0, if 
+HTCondor sees the bare key word: 
 \Expr{YOU\_MUST\_CHANGE\_THIS\_INVALID\_CONDOR\_CONFIGURATION\_VALUE}
 as the value of a configuration file entry,
-Condor daemons will log the given error message and exit.
+HTCondor daemons will log the given error message and exit.
 
-By default, an installation of Condor 6.8.0 and later releases
+By default, an installation of HTCondor 6.8.0 and later releases
 will have the
 configuration file entry \MacroNI{HOSTALLOW\_WRITE} set to the above sentinel
 value. 
-The Condor administrator must alter this value to be the correct domain
+The HTCondor administrator must alter this value to be the correct domain
 or IP addresses that the administrator desires.
 The wild card character (\verb@*@) may be used to define this entry,
 but that allows anyone, from anywhere,
@@ -191,12 +191,12 @@ A better value will be of the form \Expr{*.domainname.com}.
 \label{sec:checkpoint-platform-faq}
 
 Standard universe jobs that remain in the job queue across an upgrade
-from any Condor release previous to 6.7.15
-to any Condor release of 6.7.15 or more recent
+from any HTCondor release previous to 6.7.15
+to any HTCondor release of 6.7.15 or more recent
 cannot run.
 They are missing a required ClassAd attribute
 (\Attr{LastCheckpointPlatform}) added for
-all standard universe jobs as of Condor version 6.7.15.
+all standard universe jobs as of HTCondor version 6.7.15.
 This new attribute describes the platform where a job was
 running when it produced a checkpoint.
 The attribute is utilized to identify platforms capable of 
@@ -232,16 +232,16 @@ cannot run, yet are in the queue:
   Note that this operation must also have to be performed on standard
   universe jobs flocking in to an upgraded pool. 
   It is recommended that pools that flock between each other upgrade to a
-  post 6.7.15 version of Condor.
+  post 6.7.15 version of HTCondor.
 \end{enumerate}
 
-Note that if the upgrade to Condor takes place at the same time
+Note that if the upgrade to HTCondor takes place at the same time
 as a platform change (such as booting an upgraded kernel),
 there is no way to properly set the \Attr{LastCheckpointPlatform} attribute.
 The only option is to remove and resubmit the standard universe jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Setting up Condor}
+\section{Setting up HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -255,7 +255,7 @@ page~\pageref{sec:Multiple-Interfaces}.
 \subsection*{How do I get more than one job to run on my SMP machine?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor will automatically recognize a SMP machine and advertise each
+HTCondor will automatically recognize a SMP machine and advertise each
 CPU of the machine separately.
 For more details, see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP}.
@@ -281,7 +281,7 @@ To specify that a given machine should only run certain users' jobs,
 and always run the jobs regardless of other activity on the machine,
 load average, etc.,
 place the following entry in the
-machine's Condor configuration file:
+machine's HTCondor configuration file:
 
 \footnotesize
 \begin{verbatim}
@@ -293,7 +293,7 @@ START = ( (User == "userfoo@baz.edu") || \
 A more likely scenario is that the machine is restricted to run
 only specific users' jobs, contingent on the machine not having
 other interactive activity and not being heavily loaded.
-The following entries are in the machine's Condor configuration file. 
+The following entries are in the machine's HTCondor configuration file. 
 Note that extra configuration variables are defined to make 
 the \MacroNI{START} variable easier to read.
 
@@ -303,7 +303,7 @@ the \MacroNI{START} variable easier to read.
 # 1) the job is owned by the allowed users, AND
 # 2) the keyboard has been idle long enough, AND
 # 3) the load average is low enough OR the machine is currently
-#    running a Condor job, and would therefore accept running
+#    running an HTCondor job, and would therefore accept running
 #    a different one
 AllowedUser    = ( (User == "userfoo@baz.edu") || \
                    (User == "userbar@baz.edu") )
@@ -317,7 +317,7 @@ To configure multiple machines to do so, create a common
 configuration file containing this entry for them to share.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How do I configure Condor to run my jobs only on machines that have the right packages installed?}
+\subsection*{How do I configure HTCondor to run my jobs only on machines that have the right packages installed?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a two-step process.
@@ -360,14 +360,14 @@ running anywhere!
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How do I configure Condor to only run jobs at night?}
+\subsection*{How do I configure HTCondor to only run jobs at night?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{running a job!only at night|}
 \index{running a job!at certain times of day|}
 
 A commonly requested policy for running batch jobs is to only allow
 them to run at night, or at other pre-specified times of the day.
-Condor allows you to configure this policy with the use of the
+HTCondor allows you to configure this policy with the use of the
 \Attr{ClockMin} and \Attr{ClockDay} \Condor{startd} attributes.  
 A complete example of how to use these attributes for this kind of
 policy is discussed in subsubsection~\ref{sec:Time of Day Policy} on
@@ -375,7 +375,7 @@ page~\pageref{sec:Time of Day Policy}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
+\subsection*{How do I configure HTCondor such that all machines do not produce checkpoints at the same time?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:randomintegerusage}
 \index{checkpoint!periodic}
@@ -426,12 +426,12 @@ ERROR: Can't read config file /mnt/condor/hosts/bagel/condor_config.local
 \normalsize
 
 This is not a bug; it is a feature!
-Condor has always worked this way on purpose.
+HTCondor has always worked this way on purpose.
 There is a potentially
-large security hole if Condor is configured to read from a file that
+large security hole if HTCondor is configured to read from a file that
 does not exist.
 By creating that file, a malicious user could
-change all sorts of Condor settings.
+change all sorts of HTCondor settings.
 This is an easy way
 to gain root access to a machine,
 where the daemons are running as root.
@@ -450,14 +450,14 @@ Consider the example where the local configuration file was on an NFS
 partition and the server was down. 
 There would be all sorts of
 really important stuff in the local configuration file,
-and Condor might do bad things if it started without those settings.  
+and HTCondor might do bad things if it started without those settings.  
 
 If supplied it with an empty file, the \Condor{master} works fine.
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Running Condor Jobs}
+\section{Running HTCondor Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -477,16 +477,16 @@ for information on why a job might not be running.
 Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
 As
 it explains, your home directory is in AFS, which by default has
-access control restrictions which can prevent Condor jobs from running
+access control restrictions which can prevent HTCondor jobs from running
 properly.
 The above URL will explain how to solve the problem.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{I'm getting a lot of e-mail from Condor.  Can I just delete it all?}
+\subsection*{I'm getting a lot of e-mail from HTCondor.  Can I just delete it all?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
-but you can reduce the amount you get by telling Condor that you don't
+Generally you shouldn't ignore \Bold{all} of the mail HTCondor sends,
+but you can reduce the amount you get by telling HTCondor that you don't
 want to be notified every time a job successfully completes, only when
 a job experiences an error.
 To do this, include a line in your submit file like the following:
@@ -518,7 +518,7 @@ vanilla jobs that's preventing them from running but not other jobs?}
 See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
 page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
 
-\item{Is Condor running as a non-root user?}
+\item{Is HTCondor running as a non-root user?}
 
 See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 
@@ -530,20 +530,20 @@ have extra things that I did not put in my submit description file?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{requirements attribute!automatic extensions}
 There are several extensions to the submitted \Attr{requirements}
-that are automatically added by Condor.
+that are automatically added by HTCondor.
 Here is a list:
 \begin{itemize}
-  \item Condor automatically adds \Attr{arch} and \Attr{opsys} if 
+  \item HTCondor automatically adds \Attr{arch} and \Attr{opsys} if 
   not specified in the submit description file. It is assumed that
   the executable needs to execute on the same platform as the machine
   on which the job is submitted.
 
-  \item Condor automatically adds the expression
+  \item HTCondor automatically adds the expression
   \Expr{(Memory * 1024 > ImageSize)}.
   This ensures that the job will run on a machine with at
   least as much physical memory as the memory footprint of the job.
 
-  \item Condor automatically adds the expression
+  \item HTCondor automatically adds the expression
   \Expr{(Disk >= DiskUsage)} if not already specified.
   This ensures that the job will run on a machine with enough disk
   space for the job's local I/O (if there is any).
@@ -555,14 +555,14 @@ Here is a list:
   These configuration variables give
   pool administrators the flexibility to set policy for a local pool.
 
-  \item Older versions of Condor needed to add confusing clauses
+  \item Older versions of HTCondor needed to add confusing clauses
   about WINNT and the FileSystemDomain to vanilla universe jobs.
   This made sure that the jobs ran on a machine where files were
   accessible.
   The Windows version supported automatically transferring files
   with the vanilla job,
   while the Unix version relied on a shared file system.
-  Since the Unix version of Condor now supports transferring files,
+  Since the Unix version of HTCondor now supports transferring files,
   these expressions are no longer added to the
   \Attr{requirements} for a job.
 \end{itemize}
@@ -577,7 +577,7 @@ Here is a list:
 linkers that it supports
 (for example \Prog{gcc}, \Prog{g77}, \Prog{cc}, \Prog{CC}, \Prog{ld})
 where a special linker script
-provided by Condor must be invoked during the final linking stages of
+provided by HTCondor must be invoked during the final linking stages of
 the supplied compiler or linker.
 
 In some rare cases,
@@ -589,7 +589,7 @@ choose our supplied linker script is not honored
 by the compiler.
 When this happens, an executable is produced,
 but the executable is devoid of the
-Condor libraries which both identify it as a Condor executable linked
+HTCondor libraries which both identify it as an HTCondor executable linked
 for the standard universe and implement the feature sets of remote I/O
 and transparent process checkpointing and migration.
 
@@ -597,7 +597,7 @@ Often, the only fix in order to use the compiler desired,
 is to reconfigure and recompile the compiler itself,
 such that it does not use the errant options mentioned. 
 
-With Condor's standard universe,
+With HTCondor's standard universe,
 we highly recommend that your source files
 are compiled with the supported compiler for your platform.
 See
@@ -611,7 +611,7 @@ It is often found in the directory \File{/usr/bin}.
 \subsection*{Why might my job be preempted (evicted)?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-There are four circumstances under which Condor may evict a job.
+There are four circumstances under which HTCondor may evict a job.
 They are controlled by different expressions.
 
 Reason number 1 is the user priority:
@@ -653,24 +653,24 @@ job so that it can start running the second (preferred) job.
 For more on \Attr{RANK},
 see section~\ref{sec:Configuring-Policy}.
 
-Reason number 4 is if Condor is to be shutdown:
+Reason number 4 is if HTCondor is to be shutdown:
 on a machine that is currently running a job.
-Condor evicts the currently running job before proceeding
+HTCondor evicts the currently running job before proceeding
 with the shutdown.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Condor does not stop the Condor jobs running on my Linux machine
+\subsection*{HTCondor does not stop the HTCondor jobs running on my Linux machine
 when I use my keyboard and mouse.  Is there a bug?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Linux!keyboard and mouse activity}
 
-There is no bug in Condor.
+There is no bug in HTCondor.
 Unfortunately,
 recent Linux 2.4.x and all Linux 2.6.x kernels through 
 version 2.6.10
 do not post proper state information,
-such that Condor can detect keyboard and mouse activity.
-Condor 
+such that HTCondor can detect keyboard and mouse activity.
+HTCondor 
 implements workarounds to piece together the needed
 state information for PS/2 devices.
 A better fix of the problem utilizes the 
@@ -678,13 +678,13 @@ kernel patch linked to from the directions posted at
 \URL{http://www.cs.wisc.edu/condor/kernel.patch.html}.
 This patch works better for PS/2 devices, and
 may also work for USB devices.
-A future version of Condor will implement better recognition
+A future version of HTCondor will implement better recognition
 of USB devices,
 such that the kernel patch will also definitively work for USB devices.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What signals get sent to my jobs when Condor needs to preempt or kill them, or when I remove them from the queue?  Can I tell Condor which signals to send?}
+\subsection*{What signals get sent to my jobs when HTCondor needs to preempt or kill them, or when I remove them from the queue?  Can I tell HTCondor which signals to send?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The answer is dependent on the universe of the jobs.
@@ -696,13 +696,13 @@ the user in the submit description file with the form of
 remove_kill_sig = SIGWHATEVER
 \end{verbatim}
 If this command is not defined, 
-Condor further looks for a command 
+HTCondor further looks for a command 
 in the submit description file with the form
 \begin{verbatim}
 kill_sig = SIGWHATEVER
 \end{verbatim}
 And, if that command is also not given,
-Condor uses SIGTERM.
+HTCondor uses SIGTERM.
 
 For all other universes, the jobs get the value of
 the submit description file command
@@ -721,7 +721,7 @@ the child must catch and forward signals as appropriate.
 This in turn depends on the user's desired behavior.
 The exception to this is (again) where the job is receiving
 a hard kill.
-Condor sends the value SIGKILL to all the PIDs in the family.
+HTCondor sends the value SIGKILL to all the PIDs in the family.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why does my Linux job have an enormous ImageSize and
@@ -732,8 +732,8 @@ refuse to run anymore?}
 \index{ImageSize}
 
 Sometimes Linux jobs run, are preempted and can not start again because
-Condor thinks the image size of the job is too big. This is because
-Condor has a problem calculating the image size of a program on Linux
+HTCondor thinks the image size of the job is too big. This is because
+HTCondor has a problem calculating the image size of a program on Linux
 that uses threads. It is particularly noticeable in the Java universe,
 but it also happens in the vanilla universe. It is not an issue in the
 standard universe, because threaded programs are not allowed.
@@ -741,11 +741,11 @@ standard universe, because threaded programs are not allowed.
 On Linux, each thread appears to consume as much memory as the entire
 program consumes, so the image size appears to be (number-of-threads *
 image-size-of-program). If your program uses a lot of threads, your
-apparent image size balloons. You can see the image size that Condor
+apparent image size balloons. You can see the image size that HTCondor
 believes your program has by using the -l option to \Condor{q}, and
 looking at the \Attr{ImageSize} attribute.
 
-When you submit your job, Condor creates or extends the requirements
+When you submit your job, HTCondor creates or extends the requirements
 for your job. In particular, it adds a requirement that you job must
 run on a machine with sufficient memory:
 
@@ -764,8 +764,8 @@ It does not account for memory that the job uses indirectly in the operating
 system's file system cache.
 
 In the Requirements expression above, 
-Condor added \Expr{(Memory * 1024) >= ImageSize)} on behalf of the job.
-To prevent Condor from doing this,
+HTCondor added \Expr{(Memory * 1024) >= ImageSize)} on behalf of the job.
+To prevent HTCondor from doing this,
 provide your own expression about memory in the submit description file,
 as in this example:
 
@@ -792,7 +792,7 @@ as [?????] ? }
 \index{clock skew}
 \index{skew in timing information}
 
-Condor collects timing information for a large variety of uses.
+HTCondor collects timing information for a large variety of uses.
 Collection of the data relies on accurate times.
 Being a distributed system, clock skew among machines causes 
 errant timing calculations.
@@ -815,7 +815,7 @@ An administrator can do this using a tool such as \Prog{ntp}.
 \subsection*{The user condor's home directory cannot be found.  Why?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{NIS!Condor must be dynamically linked}
+\index{NIS!HTCondor must be dynamically linked}
 \index{user condor!home directory not found}
 This problem may be observed after installation, when attempting
 to execute
@@ -834,17 +834,17 @@ The command prints a message such as
 
 In this case, the difficulty stems from 
 using NIS,
-because the Condor daemons fail to communicate properly with NIS to get
+because the HTCondor daemons fail to communicate properly with NIS to get
 account information.
-To fix the problem, a dynamically linked version of Condor must
+To fix the problem, a dynamically linked version of HTCondor must
 be installed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Condor commands (including \Condor{q}) are really slow. What is going on?}
+\subsection*{HTCondor commands (including \Condor{q}) are really slow. What is going on?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor commands!really slow; why?}
+\index{HTCondor commands!really slow; why?}
 
-Some Condor programs will react slowly if they expect to find a
+Some HTCondor programs will react slowly if they expect to find a
 \Condor{collector} daemon, yet cannot contact one.
 Notably, \Condor{q} can be very slow.
 The \Condor{schedd} daemon will also be slow,
@@ -887,7 +887,7 @@ of the intermediate files.
 \subsection*{\label{sec:vmware-symlink-bug}Why are my vm universe VMware jobs failing and being put on hold?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Strange behavior has been noted when Condor tries to run a 
+Strange behavior has been noted when HTCondor tries to run a 
 \SubmitCmd{vm} universe VMware
 job using a path to a VMX file that contains a symbolic link.
 An example of an error message that may appear in such a job's user log:
@@ -915,15 +915,15 @@ symbolic link path name components.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Condor on Windows}
+\section{HTCondor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{FAQ!Condor on Windows machines}
+\index{FAQ!HTCondor on Windows machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Will Condor work on a network of mixed Unix and Windows machines?}
+\subsection*{Will HTCondor work on a network of mixed Unix and Windows machines?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-You can have a Condor pool that consists of both Unix and Windows machines.
+You can have an HTCondor pool that consists of both Unix and Windows machines.
 
 Your central manager can be either Windows or Unix.  For example,
 even if you had a pool consisting strictly of Unix machines, you could
@@ -940,7 +940,7 @@ So, in summary:
 
 \begin{enumerate}
 
-\item{A single Condor pool can consist of both Windows and Unix
+\item{A single HTCondor pool can consist of both Windows and Unix
 machines.}
 
 \item{It does not matter at all if your Central Manager is Unix or Windows.}
@@ -955,7 +955,7 @@ or Unix machines.}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What versions of Windows will Condor run on?}
+\subsection*{What versions of Windows will HTCondor run on?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 See Section~\ref{sec:Availability}, on
@@ -964,11 +964,11 @@ page~\pageref{sec:Availability}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{My Windows program works fine when executed on its own, but it
-does not work when submitted to Condor.}
+does not work when submitted to HTCondor.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \underline{First}, make sure that the program really does work
-outside of Condor under Windows,
+outside of HTCondor under Windows,
 that the disk is not full,
 and that the system is not out of user resources.
 
@@ -976,7 +976,7 @@ and that the system is not out of user resources.
 know that 
 some Windows programs do not run properly because they are dynamically linked,
 and they cannot find the \File{.dll} files that they depend on.
-Version 6.4.x of Condor sets the \Env{PATH} to be empty when
+Version 6.4.x of HTCondor sets the \Env{PATH} to be empty when
 running a job.
 To avoid these difficulties, do one of the following
 \begin{enumerate}
@@ -997,14 +997,14 @@ using the submit description file command \Opt{transfer\_input\_files}.
 \subsection*{Why is the \Condor{master} daemon failing to start, giving an error about\\
    	"In StartServiceCtrlDispatcher, Error number: 1063"?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-In Condor for Windows, the \Condor{master} daemon is started as a service.
+In HTCondor for Windows, the \Condor{master} daemon is started as a service.
 Therefore,
 starting the \Condor{master} daemon as you would on Unix will not work.
-Start Condor on Windows machines using either
+Start HTCondor on Windows machines using either
 \begin{verbatim}
 	net start condor
 \end{verbatim}
-or start the Condor service from the Service Control Manager located in
+or start the HTCondor service from the Service Control Manager located in
 the Windows Control Panel.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1012,14 +1012,14 @@ the Windows Control Panel.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Jobs submitted from a Windows machine require a stashed password in
-order for Condor to perform certain operations on the user's behalf.
+order for HTCondor to perform certain operations on the user's behalf.
 Refer to section \ref{sec:windows-sps} for information about password
 storage on Windows.  The command which stashes a password for a user
 is \Condor{store\_cred}.  See the manual page on on
 page~\pageref{man-condor-store-cred} for usage details.
 \index{job!credential error on Windows}
 
-The error message that Condor gives if a user has not stashed a
+The error message that HTCondor gives if a user has not stashed a
 password is of the form:
 \footnotesize
 \begin{verbatim}
@@ -1051,25 +1051,25 @@ machine for execution on a Windows machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{When I run \Condor{status} I get a communication error, or the Condor daemon log files report a failure to bind.}
+\subsection*{When I run \Condor{status} I get a communication error, or the HTCondor daemon log files report a failure to bind.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor uses the first network interface it sees on your machine.
+HTCondor uses the first network interface it sees on your machine.
 This problem usually means you have an extra, inactive network
 interface (such as a RAS dial up interface) defined before the
 regular network interface.
 
 To solve this problem, either change the order of the network
 interfaces in the Control Panel, or explicitly set which network
-interface Condor should use by adding the following definition to the
-Condor configuration file:
+interface HTCondor should use by adding the following definition to the
+HTCondor configuration file:
 
 \begin{verbatim}
 NETWORK_INTERFACE = <ip-address>
 \end{verbatim}
 
 Where \verb@<ip-address>@ is the IP address of the interface that
-Condor is to use.
+HTCondor is to use.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{My job starts but exits right away with status 128.}
@@ -1086,10 +1086,10 @@ in Explorer, choose Quickview, and look under ``Import List''.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How can I access network files with Condor on Windows?}
+\subsection*{How can I access network files with HTCondor on Windows?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Five methods for making access of network files work with Condor
+Five methods for making access of network files work with HTCondor
 are given in 
 section~\ref{sec:network-files-solutions}.
 
@@ -1127,7 +1127,7 @@ For the example given, the configuration entry will be
 \end{verbatim}
 
 After adding this configuration file entry, use \Condor{restart}
-to restart the Condor daemons and effect the change.
+to restart the HTCondor daemons and effect the change.
 
 %To correct this incomplete host name on Windows 2000 or XP,
 %use the ``Append parent suffixes of the primary DNS suffix''
@@ -1137,7 +1137,7 @@ to restart the Condor daemons and effect the change.
 %
 %To correct this incomplete host name on Windows NT Version 4,
 %set the domain in the TCP/IP Properties dialog box.
-%Restart Condor after making this change.
+%Restart HTCondor after making this change.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Does \MacroNI{USER\_JOB\_WRAPPER} work on Windows machines?}
@@ -1197,7 +1197,7 @@ HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\SubSystems\W
 
 The SharedSection value can have three values separated by commas.
 The third value controls the desktop heap size for non-interactive desktops,
-which the Condor service uses.
+which the HTCondor service uses.
 The default is 512 (Kbytes).
 60 \Condor{shadow} daemons consume about 256 Kbytes,
 hence 120 shadows can run with the default value.
@@ -1209,10 +1209,10 @@ For more information,
 see Microsoft Article Q184802.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why do Condor daemons exit after logging a 10038 (WSAENOTSOCK) error on some machines?}
+\subsection*{Why do HTCondor daemons exit after logging a 10038 (WSAENOTSOCK) error on some machines?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Usually when Condor daemons exit in this manner, it is because the system in
+Usually when HTCondor daemons exit in this manner, it is because the system in
 question has a non-standard Winsock Layered Service Provider (LSP) installed
 on it. An LSP is, in effect, a plug-in for the TCP/IP protocol stack.
 LSPs have been 
@@ -1223,7 +1223,7 @@ There are several tools available to check your system for the
 presence of LSPs. One with which we have had success is \Prog{LSP-Fix},
 available at \URL{http://www.cexx.org/lspfix.htm}.
 Any non-Microsoft LSPs identified by
-this tool may potentially be causing the WSAENOTSOCK error in Condor.
+this tool may potentially be causing the WSAENOTSOCK error in HTCondor.
 Although the \Prog{LSP-Fix} tool allows the direct removal of an LSP,
 it is likely advisable to completely remove the application for which
 the LSP is a part via the Control Panel.
@@ -1238,12 +1238,12 @@ in when the OS was first installed.  The log file defined above will
 record all the configuration changes made by \verb@netsh@.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why do Condor daemons exit with "Unexpected performance counter size", "unable to spawn the ProcD" or "loadavg thread died, restarting. (exit code=2)" errors?}
+\subsection*{Why do HTCondor daemons exit with "Unexpected performance counter size", "unable to spawn the ProcD" or "loadavg thread died, restarting. (exit code=2)" errors?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor on Windows platforms relies on built-in performance counters
+HTCondor on Windows platforms relies on built-in performance counters
 for its operation. 
-If performance counters that Condor requires are disabled,
+If performance counters that HTCondor requires are disabled,
 daemons may exit with a message such as
 
 \footnotesize
@@ -1285,7 +1285,7 @@ it to \verb@0@.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This error results when the VBScript engine is not registered.
-Since Condor's installer depends on the VBScript engine for custom steps,
+Since HTCondor's installer depends on the VBScript engine for custom steps,
 the installer will fail if it cannot find the VBScript engine.
 
 The fix is to register the VMScript engine.
@@ -1308,14 +1308,14 @@ If successful, the message
 is printed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does Condor sometimes fail to parse floating point numbers?}
+\subsection*{Why does HTCondor sometimes fail to parse floating point numbers?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor assumes that all floating point numbers are of the form x.y, which,
+HTCondor assumes that all floating point numbers are of the form x.y, which,
 depending on a computer's current locale, may not always be the case. This
-problem occurs even if Condor is running under an account that has had the
+problem occurs even if HTCondor is running under an account that has had the
 locale configured correctly.  The problem lies in the template user account
-which is used to create Condor's dynamic accounts. Even if the entire
+which is used to create HTCondor's dynamic accounts. Even if the entire
 system is configured to use a new locale, this template account seems to
 retain the original system locale. The following steps can be used fix
 this problem.
@@ -1360,8 +1360,8 @@ and click \textbf{OK}.
 \textbf{System Properties} dialog.
 \end{enumerate}
 
-If Condor has already created some dynamic accounts, you will need to remove
-them so that Condor can re-create them with the new template account.
+If HTCondor has already created some dynamic accounts, you will need to remove
+them so that HTCondor can re-create them with the new template account.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
@@ -1372,24 +1372,24 @@ them so that Condor can re-create them with the new template account.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What must be installed to access grid resources?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-A single machine with Condor installed such that jobs may
+A single machine with HTCondor installed such that jobs may
 be submitted is the minimum software necessary.
 If matchmaking or glidein is desired,
-then a single machine must not only be running Condor
+then a single machine must not only be running HTCondor
 such that jobs may be submitted,
 but also fill the role of a central manager.
-A Personal Condor installation may satisfy both.
+A Personal HTCondor installation may satisfy both.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{I am the administrator at Physics, and I have a 64-node cluster
-running Condor.
-The administrator at Chemistry is also running Condor on her 64-node cluster.
+running HTCondor.
+The administrator at Chemistry is also running HTCondor on her 64-node cluster.
 We would like to be able to share resources.
 How do we do this?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor's flocking feature
-allows multiple Condor pools to share resources.
+HTCondor's flocking feature
+allows multiple HTCondor pools to share resources.
 By setting configuration variables within each pool,
 jobs may be executed on either cluster.
 See the manual section on flocking, section~\ref{sec:Flocking},
@@ -1401,28 +1401,28 @@ for details.
 
 \index{glidein}
 Glidein provides a way to temporarily add a resource
-to a local Condor pool.
+to a local HTCondor pool.
 Glidein uses Globus resource-management software to run jobs
 on the resource.
-Those jobs are initially portions of Condor
-software, such that Condor is running on the resource,
+Those jobs are initially portions of HTCondor
+software, such that HTCondor is running on the resource,
 configured to be part of the local pool.
-Then, Condor may execute the user's jobs.
+Then, HTCondor may execute the user's jobs.
 There are several benefits to working in this way.
 Standard universe jobs may be submitted to run on the resource.
-Condor can also dynamically schedule jobs across the grid.
+HTCondor can also dynamically schedule jobs across the grid.
 
 See the section on Glidein, section~\ref{sec:Glidein} of the manual
 for further information.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Using my Globus gatekeeper to submit jobs to the Condor pool
+\subsection*{Using my Globus gatekeeper to submit jobs to the HTCondor pool
 does not work.  What is wrong?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Globus!gatekeeper errors}
 
-The Condor configuration file is in a non-standard location,
+The HTCondor configuration file is in a non-standard location,
 and the Globus software does not know how to locate it,
 when you see either of the following error messages.
 
@@ -1456,7 +1456,7 @@ because the job failed when the job manager attempted to run it
 
 As described in
 section~\ref{sec:Preparing-to-Install}, 
-Condor searches for its configuration file using the following
+HTCondor searches for its configuration file using the following
 ordering.
 \begin{enumerate}
 \item File specified in the \Env{CONDOR\_CONFIG} environment variable
@@ -1564,7 +1564,7 @@ Complete details of \Condor{q} are contained in the manual page
 at page~\pageref{man-condor-q}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What does Condor offer that can help with running
+\subsection*{What does HTCondor offer that can help with running
 a large number of jobs?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1583,10 +1583,10 @@ what does that mean?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{permission denied}
 
-Most likely, the Condor installation has been misconfigured
-and Condor's access control security functionality is preventing
+Most likely, the HTCondor installation has been misconfigured
+and HTCondor's access control security functionality is preventing
 daemons and tools from communicating with each other.
-Other symptoms of this problem include Condor tools (such as
+Other symptoms of this problem include HTCondor tools (such as
 \Condor{status} and \Condor{q}) not producing any output, or commands
 that appear to have no effect (for example, \Condor{off} or
 \Condor{on}). 
@@ -1622,13 +1622,13 @@ back on line.
 The \Condor{schedd} daemon receives signal 25,
 dies, and is restarted when the
 history file reaches a 2 Gbyte size limit.
-On 32-bit OSes, Condor cannot write log files larger than
+On 32-bit OSes, HTCondor cannot write log files larger than
 2 Gbytes.
 If you need to keep more than 2 Gbytes of history, you can set a
 maximum history file size of 2 Gbytes and multiple rotations of the
 file.
 For example, to keep 6 Gbytes of history, you would put these lines in
-your Condor configuration file:
+your HTCondor configuration file:
 \begin{verbatim}
 ENABLE_HISTORY_ROTATION = True
 MAX_HISTORY_LOG = 2000000000
@@ -1637,18 +1637,18 @@ MAX_HISTORY_ROTATIONS = 2
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{When I ssh/telnet to a machine to check particulars of how
-Condor is doing something, it is always vacating or unclaimed when I
+HTCondor is doing something, it is always vacating or unclaimed when I
 know a job had been running there!}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Depending on how your policy is set up, Condor will track \emph{any} tty
+Depending on how your policy is set up, HTCondor will track \emph{any} tty
 on the machine for the purpose of determining if a job is to be vacated
 or suspended on the machine. It could be the case that after you ssh
-there, Condor notices activity on the tty allocated to your connection
+there, HTCondor notices activity on the tty allocated to your connection
 and then vacates the job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What is wrong? I get no output from \Condor{status}, but the Condor daemons are running.}
+\subsection*{What is wrong? I get no output from \Condor{status}, but the HTCondor daemons are running.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \underline{One likely error message} within the collector log of the form
@@ -1664,7 +1664,7 @@ This could be because
 you used domain names in your \MacroNI{HOSTALLOW\_WRITE} and/or
 \MacroNI{HOSTDENY\_WRITE} configuration macros,
 but the domain name server (DNS) is not properly configured at your site.
-Without the proper configuration, Condor cannot resolve
+Without the proper configuration, HTCondor cannot resolve
 the IP addresses of your machines
 into fully-qualified domain names (an inverse look up).
 If this is the problem, then the solution takes one of two forms:
@@ -1672,7 +1672,7 @@ If this is the problem, then the solution takes one of two forms:
 \item Fix the DNS so that inverse look ups (trying to get the domain name
    from an IP address) works for your machines.  You can
    either fix the DNS itself,
-   or use the \MacroNI{DEFAULT\_DOMAIN\_NAME} setting in your Condor
+   or use the \MacroNI{DEFAULT\_DOMAIN\_NAME} setting in your HTCondor
          configuration file.
 \item Use numeric IP addresses in the \MacroNI{HOSTALLOW\_WRITE} and/or
    \MacroNI{HOSTDENY\_WRITE} configuration macros
@@ -1726,17 +1726,17 @@ is the problem (as opposed to write permission).
 Use the solutions given above.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does Condor leave mail processes around?}
+\subsection*{Why does HTCondor leave mail processes around?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Under FreeBSD and Mac OSX operating systems,
 misconfiguration of of a system's outgoing mail causes
-Condor to inadvertently leave paused and zombie mail
-processes around when Condor attempts to send notification e-mail.
+HTCondor to inadvertently leave paused and zombie mail
+processes around when HTCondor attempts to send notification e-mail.
 The solution to this problem is
 to correct the mailer configuration.
 
-Execute the following command as the user under which Condor
+Execute the following command as the user under which HTCondor
 daemons run to determine whether outgoing e-mail works.
 
 \begin{verbatim}
@@ -1750,15 +1750,15 @@ Note that this problem does not manifest itself
 on non-BSD Unix platforms, such as Linux.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:xen-jiffies-bug}Why are there spurious Condor errors on some machines running Xen kernels?}
+\subsection*{\label{sec:xen-jiffies-bug}Why are there spurious HTCondor errors on some machines running Xen kernels?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Some older Xen kernels had a problem where the kernel's jiffy counter
 could jump backwards in time. This breaks an assumption made by the
 \Condor{procd}. This problem can only be worked around by upgrading
 the Xen kernel to a version that fixes the issue with the jiffy counter.
-Running Condor on an affected Xen kernel often results in failures
-of the following forms in Condor daemon log files:
+Running HTCondor on an affected Xen kernel often results in failures
+of the following forms in HTCondor daemon log files:
 \begin{itemize}
 \item \verb@error: parent process's birthday is later than our own@
 \item \verb@ERROR: No family with the given PID is registered@
@@ -1770,22 +1770,22 @@ of the following forms in Condor daemon log files:
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Is there a Condor mailing-list?}
+\subsection*{Is there an HTCondor mailing-list?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!mailing lists}
+\index{HTCondor!mailing lists}
 \index{mailing lists}
-\index{Condor!new versions, notification of}
-\index{Condor!contact information}
+\index{HTCondor!new versions, notification of}
+\index{HTCondor!contact information}
 
 Yes. There are two useful mailing lists.
 First, we run an extremely low traffic mailing list solely to announce new
-versions of Condor.
-Follow the instructions for Condor World at
+versions of HTCondor.
+Follow the instructions for HTCondor World at
 \URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 Second, our users can be extremely knowledgeable,
 and they help each other solve problems
-using the Condor Users mailing list.
-Again, follow the instructions for Condor Users at
+using the HTCondor Users mailing list.
+Again, follow the instructions for HTCondor Users at
 \URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 
 
@@ -1796,21 +1796,21 @@ Again, follow the instructions for Condor Users at
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
-Try joining the Condor Users mailing list, where our users
+Try joining the HTCondor Users mailing list, where our users
 support each other in finding answers to problems.
 Follow the instructions at
 \URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 If you still can't find an answer, feel free to contact us at
 \Email{condor-admin@cs.wisc.edu}.
 
-Note that Condor's free e-mail support is provided on a best-effort
+Note that HTCondor's free e-mail support is provided on a best-effort
 basis, and at times we may not be able to provide a timely response.
 If guaranteed support is important to you, please inquire about our
 paid support services.
 
 
 
-\index{Condor!FAQ|)}
-\index{Condor!Frequently Asked Questions|)}
+\index{HTCondor!FAQ|)}
+\index{HTCondor!Frequently Asked Questions|)}
 \index{FAQ|)}
 \index{Frequently Asked Questions|)}

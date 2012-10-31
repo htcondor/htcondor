@@ -28,10 +28,10 @@ DRMAA preserves flexibility and choice in system design.
 The API allows users who write programs using DRMAA functions
 and link to a DRMAA library to submit,
 control, and retrieve information about jobs to a Grid system.
-The Condor implementation of a portion of the API
+The HTCondor implementation of a portion of the API
 allows programs (applications) to use the library
 functions provided to submit, monitor and control
-Condor jobs.
+HTCondor jobs.
 
 See the DRMAA site 
 (\URL{http://www.drmaa.org}) to find the
@@ -51,9 +51,9 @@ are not guaranteed thread safety when calling the library's functions.
 
 The object library file is called \File{libcondordrmaa.a},
 and it is located within
-the \File{<release>/lib} directory in the Condor download.
+the \File{<release>/lib} directory in the HTCondor download.
 Its header file  is called \File{lib\_condor\_drmaa.h}, and it is located within
-the \File{<release>/include} directory in the Condor download.
+the \File{<release>/include} directory in the HTCondor download.
 Also within \File{<release>/include} is the file
 \File{lib\_condor\_drmaa.README},
 which gives further details on the implementation.
@@ -95,7 +95,7 @@ arbitrary attributes can be added to the job's ClassAd
 by prefixing the attribute with +.  In this case, you will need to put
 string values in quotation marks, the same as in a submit file.
 
-Thus to tell Condor that the job will likely use 64 megabytes of memory (65536
+Thus to tell HTCondor that the job will likely use 64 megabytes of memory (65536
 kilobytes), to more highly rank machines with more memory, and to add the
 arbitrary attribute of department set to chemistry, you would set
 Attr{DRMAA\_NATIVE\_SPECIFICATION} to the C string:

@@ -1,30 +1,30 @@
 \begin{ManPage}{\label{man-condor-gather-info}\Condor{gather\_info}}{1}
-{Gather information about a Condor installation and a queued job}
+{Gather information about an HTCondor installation and a queued job}
 \Synopsis
 
 \SynProg{\Condor{gather\_info}}
 [\verb@--@\textbf{jobid} \textit{$<$ClusterId.ProcId$>$}]
 [\verb@--@\textbf{scratch} \textit{/path/to/directory}]
 
-% \index{Condor commands!condor\_gather\_info}
+% \index{HTCondor commands!condor\_gather\_info}
 % \index{condor\_gather\_info command}
 
 \Description
 
 \Note  The usage information that the 
-Condor versions 7.7.3 and 7.7.4 \Condor{gather\_info} tool outputs
+HTCondor versions 7.7.3 and 7.7.4 \Condor{gather\_info} tool outputs
 is not quite correct.
 This manual page is more accurate for those releases.
 
 \Condor{gather\_info} will collect and output information 
 about the machine it is run upon,
-about the Condor installation local to the machine, 
-and optionally about a specified Condor job. 
+about the HTCondor installation local to the machine, 
+and optionally about a specified HTCondor job. 
 The information gathered by this tool is most often used as a debugging aid
-for the developers of Condor.
+for the developers of HTCondor.
 
 Without the \verb@--@\textbf{jobid} option, information about the
-local machine and its Condor installation is gathered and
+local machine and its HTCondor installation is gathered and
 placed into the file called \File{condor-profile.txt},
 in the current working directory. 
 Specification of the information gathered is given in 
@@ -54,8 +54,8 @@ where the process ID is that of the \Condor{gather\_info} executable.
 
 \begin{Options}
   \OptItem{\OptArg{---jobid}{$<$ClusterId.ProcId$>$}}
-  {Data mine information about this Condor job from the local 
-  Condor installation and \Condor{schedd}.}
+  {Data mine information about this HTCondor job from the local 
+  HTCondor installation and \Condor{schedd}.}
   \OptItem{\OptArg{---scratch}{/path/to/directory}}
   {A path to temporary space needed when building the output tar file.
   Defaults to \File{/tmp/cgi-<PID>}, where \Expr{<PID>} is replaced by
@@ -85,9 +85,9 @@ The information gathered by this tool is:
           \item Contents of \File{/etc/nsswitch.conf}
           \item \Shell{ulimit -a}
           \item Network interface configuration (\Shell{ifconfig})
-          \item Condor version
-          \item Location of Condor configuration files
-          \item Condor configuration variables
+          \item HTCondor version
+          \item Location of HTCondor configuration files
+          \item HTCondor configuration variables
 		  \begin{itemize}
                 \item All variables and values
                 \item Definition locations for each configuration variable 

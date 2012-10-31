@@ -78,7 +78,7 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	memset(*output, 0, input_length);
 
 	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new_mem_buf((void *)input, input_length);
+	bmem = BIO_new_mem_buf((void *)const_cast<char*>(input), input_length);
 	bmem = BIO_push(b64, bmem);
 
 	*output_length = BIO_read(bmem, *output, input_length);

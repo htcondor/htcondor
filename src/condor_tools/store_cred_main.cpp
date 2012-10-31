@@ -284,7 +284,6 @@ bool
 parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 
 	int i;
-	param_functions *p_funcs = NULL;
 	opts->mode = 0;
 	opts->pw[0] = opts->pw[MAX_PASSWORD_LENGTH] = '\0';
 	opts->username[0] = opts->username[MAX_PASSWORD_LENGTH] = '\0';
@@ -452,9 +451,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 					break;
 #endif
 				case 'd':
-					Termlog = 1;
-					p_funcs = get_param_functions();
-					dprintf_config ("TOOL", p_funcs);
+					dprintf_set_tool_debug("TOOL", 0);
 					break;
 				case 'h':
 					opts->help = true;

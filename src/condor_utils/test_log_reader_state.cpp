@@ -202,7 +202,6 @@ int
 main(int argc, const char **argv)
 {
 	set_debug_flags(NULL, D_ALWAYS);
-	param_functions *p_funcs = NULL;
 
 	set_mySubSystem( "TEST_LOG_READER_STATE", SUBSYSTEM_TYPE_TOOL );
 
@@ -211,8 +210,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	p_funcs = get_param_functions();
-	dprintf_config("TEST_LOG_READER_STATE", p_funcs);
+	dprintf_config("TEST_LOG_READER_STATE");
 
 	Options	opts;
 	if ( CheckArgs( argc, argv, opts ) < 0 ) {

@@ -1,14 +1,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:CCB}Condor Connection Brokering (CCB)}
+\subsection{\label{sec:CCB}HTCondor Connection Brokering (CCB)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{CCB (Condor Connection Brokering)}
+\index{CCB (HTCondor Connection Brokering)}
 
-Condor Connection Brokering, or CCB, is a way of allowing Condor
+HTCondor Connection Brokering, or CCB, is a way of allowing HTCondor
 components to communicate with each other when one side is in a
 private network or behind a firewall.  Specifically, CCB allows
 communication across a private network boundary in the following
-scenario: a Condor tool or daemon (process A) needs to connect to a
-Condor daemon (process B), but the network does not allow a TCP
+scenario: an HTCondor tool or daemon (process A) needs to connect to an
+HTCondor daemon (process B), but the network does not allow a TCP
 connection to be created from A to B; it only allows connections from
 B to A.  In this case, B may be configured
 to register itself with a CCB server that both A and B can connect to.
@@ -16,7 +16,7 @@ Then when A needs to connect to B, it can send a request to the CCB
 server, which will instruct B to connect to A so that the two can
 communicate.
 
-As an example, consider a Condor execute node that is within
+As an example, consider an HTCondor execute node that is within
 a private network. 
 This execute node's \Condor{startd} is process B.
 This execute node cannot normally run jobs submitted from a machine
@@ -90,15 +90,15 @@ The definition of \MacroNI{PRIVATE\_NETWORK\_NAME} ensures that all
 communication between nodes within the private network continues to happen
 as normal, and without going through the CCB server.
 The name chosen for \MacroNI{PRIVATE\_NETWORK\_NAME} should be different
-from the private network name chosen for any Condor installations that
+from the private network name chosen for any HTCondor installations that
 will be communicating with this pool.
 
-Under Unix, and with large Condor pools,
+Under Unix, and with large HTCondor pools,
 it is also necessary to give the \Condor{collector} acting as the CCB server
 a large enough limit of file descriptors.
 This may be accomplished with the configuration variable
 \Macro{MAX\_FILE\_DESCRIPTORS} or an equivalent.
-Each Condor process configured to use CCB with \MacroNI{CCB\_ADDRESS}
+Each HTCondor process configured to use CCB with \MacroNI{CCB\_ADDRESS}
 requires one persistent TCP connection to the CCB server.
 A typical execute node
 requires one connection for the \Condor{master},
@@ -138,7 +138,7 @@ are playing the role of process A in the above description).  It
 authorizes all connection requests (from process B) at the READ
 authorization level.  As usual, whether process B authorizes process A
 to do whatever it is trying to do is up to the security policy for
-process B; from the Condor security model's point of view, it is as if
+process B; from the HTCondor security model's point of view, it is as if
 process A connected to process B, even though at the network layer,
 the reverse is true.
 
@@ -150,9 +150,9 @@ These errors may be identified by searching for "CCB" in the log message.
 Command-line tools require the argument
 \Opt{-debug} for this information to be visible.  To see details of
 the CCB protocol add \Dflag{FULLDEBUG} to the debugging options for
-the particular Condor subsystem of interest.
+the particular HTCondor subsystem of interest.
 Or, add \Dflag{FULLDEBUG} to
-\MacroNI{ALL\_DEBUG} to get extra debugging from all Condor
+\MacroNI{ALL\_DEBUG} to get extra debugging from all HTCondor
 components.
 
 A daemon that has successfully registered itself with CCB will
@@ -162,7 +162,7 @@ about its \AdStr{CCBID}.
 
 \subsubsection{Scalability and CCB}
 
-Any number of CCB servers may be used to serve a pool of Condor
+Any number of CCB servers may be used to serve a pool of HTCondor
 daemons.  For example, half of the pool could use one CCB server and
 half could use another.  Or for redundancy, all daemons could use both
 CCB servers and then CCB connection requests will load-balance

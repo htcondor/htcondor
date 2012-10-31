@@ -645,6 +645,56 @@ Scheduler::~Scheduler()
 	}
 }
 
+// If a job has been spooling for 12 hours,
+// It may well be that the remote condor_submit died
+// So we kill this job
+int check_for_spool_zombies(ClassAd *ad)
+{
+	int cluster;
+	if( !ad->LookupInteger( ATTR_CLUSTER_ID, cluster) ) {
+		return 0;
+	}
+	int proc;
+	if( !ad->LookupInteger( ATTR_PROC_ID, proc) ) {
+		return 0;
+	}
+	int hold_status;
+	if( GetAttributeInt(cluster,proc,ATTR_JOB_STATUS,&hold_status) >= 0 ) {
+		if(hold_status == HELD) {
+			int hold_reason_code;
+			if( GetAttributeInt(cluster,proc,ATTR_HOLD_REASON_CODE,
+					&hold_reason_code) >= 0) {
+				if(hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput) {
+					dprintf( D_FULLDEBUG, "Job %d.%d held for spooling. "
+						"Checking how long...\n",cluster,proc);
+					int stage_in_start;
+					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
+							&stage_in_start);
+					if(ret >= 0) {
+						time_t now = time(NULL);
+						int diff = now - stage_in_start;
+						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %d seconds.\n",
+							cluster,proc,diff);
+						if(diff > 60*60*12) { // 12 hours is sufficient?
+							dprintf( D_FULLDEBUG, "Aborting job %d.%d\n",
+								cluster,proc);
+							abortJob(cluster,proc,
+								"Spooling is taking too long",true);
+						}
+					}
+					if(ret < 0) {
+						dprintf( D_FULLDEBUG, "Attribute %s not set in %d.%d. "
+							"Set it.\n", ATTR_STAGE_IN_START,cluster,proc);
+						time_t now = time(0);
+						SetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,now);
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 void
 Scheduler::timeout()
 {
@@ -683,7 +733,10 @@ Scheduler::timeout()
 
 	count_jobs();
 
-	clean_shadow_recs();	
+	clean_shadow_recs();
+
+		// Spooling should not take too long
+	WalkJobQueue(check_for_spool_zombies);
 
 	/* Call preempt() if we are running more than max jobs; however, do not
 	 * call preempt() here if we are shutting down.  When shutting down, we have
@@ -3133,6 +3186,12 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
+		int len = (*jobs).getlast() + 1;
+		for(int jobIndex = 0; jobIndex < len; ++jobIndex) {
+			int cluster = (*jobs)[jobIndex].cluster;
+			int proc = (*jobs)[jobIndex].proc;
+			abortJob( cluster, proc, "Staging of job files failed", true);
+		}
 		delete jobs;
 		return FALSE;
 	}
@@ -3351,11 +3410,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		free( peer_version );
 	}
 
-	if (answer == OK ) {
-		return TRUE;
-	} else {
-		return FALSE;
-	}
+   return ((answer == OK)?TRUE:FALSE);
 }
 
 // This function is used BOTH for uploading and downloading files to the
@@ -3474,7 +3529,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	setQSock(rsock);	// so OwnerCheck() will work
 
 	time_t now = time(NULL);
-
+	dprintf( D_FULLDEBUG, "Looking at spooling: mode is %d\n", mode);
 	switch(mode) {
 		// uploading files to schedd 
 		case SPOOL_JOB_FILES:
@@ -3503,7 +3558,23 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						unsetQSock();
 						return FALSE;
 					}
-
+					int holdcode;
+					int job_status;
+					int job_status_result = GetAttributeInt(a_job.cluster,
+						a_job.proc,ATTR_JOB_STATUS,&job_status);
+					if( job_status_result >= 0 &&
+							GetAttributeInt(a_job.cluster,a_job.proc,
+							ATTR_HOLD_REASON_CODE,&holdcode) >= 0) {
+						dprintf( D_FULLDEBUG, "job_status is %d\n", job_status);
+						if(job_status == HELD &&
+								holdcode != CONDOR_HOLD_CODE_SpoolingInput) {
+							dprintf( D_ALWAYS, "Job %d.%d is not in hold state for "
+								"spooling. Do not allow stagein\n",
+								a_job.cluster, a_job.proc);
+							unsetQSock();
+							return FALSE;
+						}
+					}
 					SetAttributeInt(a_job.cluster,a_job.proc,
 									ATTR_STAGE_IN_START,now);
 				}

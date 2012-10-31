@@ -92,8 +92,11 @@ if ( WITH_BLAHP )
 		install ( DIRECTORY ${BLAHP_INSTALL_LOC}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
 		install ( CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ../../lib ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/lib)" )
 		if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
-			file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/bin/[bBt]*" )
-			install( CODE "execute_process(COMMAND strip ${StripFiles})" )
+			# Strip the libraries manually.
+			# Since cmake didn't create the libraries
+			# itself, it doesn't know to strip them.
+			install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/bin/. -name [bBt]*[^h]
+				COMMAND xargs strip)" )
 		endif()
 
 		condor_post_external( blahp OFF OFF )

@@ -82,6 +82,10 @@ private:
 	status_t Continue(std::string id, std::string &reason, std::string &text);
 #endif
 
+    void useNewStats(const ClassAd &ad);
+    void useOldStats(const ClassAd &ad);
+    bool m_new_stats;
+
 };
 
 
