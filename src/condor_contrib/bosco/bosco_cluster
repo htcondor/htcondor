@@ -68,6 +68,31 @@ start_ssh () {
 
 }    
 
+ssh_upload_and_run () {
+    # upload_and_run remote_host command start_dir
+    # 1. remote host
+    # 2. start dir DEFAULT to use the default bosco/tmp
+    # 3. script name
+    # 4 to 6 optional parameters for the script
+    remote_host=$1
+    local_script=$3
+    start_dir=$2
+    if [ "x$start_dir" == "xDEFAULT" ]; then
+        start_dir="bosco/tmp"
+    fi
+    # TODO: suppress banner printout  -o LogLevel=Error  does not work , redirect stderr to /dev/null
+    ssh $remote_host "mkdir -p $start_dir"
+    scp $local_script $remote_host:$start_dir/bosco_run
+    cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"  2>/dev/null`
+    #cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
+    cmd_ec=$?
+    if [ $cmd_ec -eq 0 ]; then
+        # output only if successful
+        echo $cmd_out
+    fi    
+    return $cmd_ec
+}
+
 check_cluster_list () {
     # $1 = cluster to check for
     remote_host=$1
@@ -594,37 +619,89 @@ fi
 
 echo "Installing BOSCO on $remote_host..."
 
+# Find remote platform
+#findplatform_path="`pwd`/findplatform"
+findplatform_path="`which findplatform`"
+if [ $? -ne 0 ]; then
+    echo "Unable to find the findplatform script."
+    echo "Is BOSCO installed and setup correctly?"
+    exit 1
+fi
+
+if [ "x$TMP_INSTALL" == "x" ]; then
+    TMP_INSTALL="DEFAULT"
+fi
+
+url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url`
+
+# Create a tmp dir, download the files and rsync them to the remote system
+# A download to the remote system would be faster but we cannot count on ports different form the SSH one
+# OS X mktemp requires a template
+tmp_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
+curl -s -o $tmp_dir/bosco-download.tar.gz $url 
+tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
+archive_dir=`ls -d $tmp_dir/condor*`
+if [ $? -ne 0 ]; then
+    echo "Unable to dovnload and prepare BOSCO for remote installation."
+    echo "Download URL: $url"
+    echo "Aborting installation to $remote_host."
+    rm -r $tmp_dir
+    exit 1
+fi
+
+
+# Remote directories
+#TODO: do we need a separate sandbox for each cluster?
+remote_base_dir_root="bosco/cluster"
+remote_base_dir_default="$remote_base_dir_root/default"
+remote_base_dir_host="bosco"
+# TODO: uncomment to enable subdirs
+#remote_base_dir_host="$remote_base_dir_root/$remote_host"
+remote_glite_dir="$remote_base_dir_host/glite"
+remote_sandbox_dir="$remote_base_dir_host/sandbox"
+
+#ssh $remote_host "mkdir -p bosco/glite/lib; mkdir -p bosco/glite/log; mkdir -p bosco/sandbox"
 # Make the necessary remote directories
-ssh $remote_host "mkdir -p bosco/glite/lib; mkdir -p bosco/glite/log; mkdir -p bosco/sandbox"
+ssh $remote_host "mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $remote_sandbox_dir"
+# TODO: uncomment to enable subdirs
+#ssh $remote_host "ln -sfn $remote_base_dir_host $remote_base_dir_default"
+
 
 # Copy over blahp
-rsync -aq $glite_location/[^l]* $remote_host:bosco/glite/
-if [ -d $release_dir/lib64 ] ; then
+rsync -aq $archive_dir/libexec/glite/[^l]* $remote_host:$remote_glite_dir/
+if [ -d $archive_dir/lib64 ] ; then
     libdir=lib64
 else
     libdir=lib
 fi
-rsync -aq  $release_dir/$libdir/libclassad.so* $remote_host:bosco/glite/lib/
-rsync -aq  $release_dir/$libdir/libcondor_utils* $remote_host:bosco/glite/lib/
-rsync -aq  $release_dir/$libdir/condor $remote_host:bosco/glite/lib/
-rsync -aq  $release_dir/libexec/campus_factory/share $remote_host:bosco/campus_factory/
-rsync -aq  $release_dir/sbin/condor_ft-gahp $remote_host:bosco/glite/bin
-ssh $remote_host "cat >bosco/glite/etc/condor_config.ft-gahp" <<EOF
-BOSCO_SANDBOX_DIR=\$ENV(HOME)/bosco/sandbox
-LOG=\$ENV(HOME)/bosco/glite/log
+rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
+rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
+rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
+rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_host:$remote_glite_dir/bin 2>/dev/null
+rsync -aq  $archive_dir/libexec/campus_factory/share $remote_host:$remote_base_dir_host/campus_factory/ 2>/dev/null
+
+ssh $remote_host "cat >$remote_glite_dir/etc/condor_config.ft-gahp" 2>/dev/null <<EOF
+BOSCO_SANDBOX_DIR=\$ENV(HOME)/$remote_sandbox_dir
+LOG=\$ENV(HOME)/$remote_glite_dir/log
 FT_GAHP_LOG=\$(LOG)/FTGahpLog
 SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
-SEC_PASSWORD_FILE = \$ENV(HOME)/bosco/glite/etc/passwdfile
+SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_glite_dir/etc/passwdfile
 EOF
 
 # Generate the password file, if it doesn't already exist 
 bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
+if [ "x$bosco_passwd_file" == "x" ]; then
+    echo "The BOSCO password file is not defined."
+    echo "Aborting installation to $remote_host."
+    rm -r $tmp_dir
+    exit 1
+fi
 if [ ! -e $bosco_passwd_file ]; then  
     random_string=`echo $RANDOM | md5sum | awk '{print $1}'` 
     condor_store_cred -p $random_string -f $bosco_passwd_file 
 fi
-rsync -aq $bosco_passwd_file $remote_host:bosco/campus_factory/share/glidein_jobs
-rsync -aq $bosco_passwd_file $remote_host:bosco/glite/etc
+rsync -aq $bosco_passwd_file $remote_host:$remote_base_dir_host/campus_factory/share/glidein_jobs 2>/dev/null
+rsync -aq $bosco_passwd_file $remote_host:$remote_glite_dir/etc 2>/dev/null
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type
