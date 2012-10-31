@@ -7668,10 +7668,10 @@ These macros affect the \Condor{gridmanager}.
 \label{param:GridmanagerJobProbeInterval}
 \item[\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL}]
   The number of seconds between
-  active probes of the status of a submitted job.
+  active probes for the status of a submitted job.
   The default is 1 minute (60 seconds).
-  Intervals for specific grid types can be set by appending the
-  grid type to the parameter name, like so:
+  Intervals specific to grid types can be set by appending the
+  name of the grid type to the configuration variable name, as the example
   \begin{verbatim}
   GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
   \end{verbatim}
@@ -7682,11 +7682,11 @@ These macros affect the \Condor{gridmanager}.
   issued to a given remote resource.
   The time between status probes for individual jobs may be lengthened
   beyond \Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL} to enforce this rate.
-  The default is 5 probes per seconds.
-  Rates for specific grid types can be set by appending the
-  grid type to the parameter name, like so:
+  The default is 5 probes per second.
+  Rates specific to grid types can be set by appending the
+  name of the grid type to the configuration variable name, as the example
   \begin{verbatim}
-  GRIDMANAGER_JOB_PROBE_RATE_GT5 = 300
+  GRIDMANAGER_JOB_PROBE_RATE_GT5 = 15
   \end{verbatim}
 
 \label{param:GridmanagerResourceProbeInterval}
@@ -7708,23 +7708,27 @@ These macros affect the \Condor{gridmanager}.
   resource, once the \Condor{gridmanager} has no active jobs
   on that resource.
   An active job is a grid universe job that is in the queue,
-  but is not in the HELD state.
+  for which \Attr{JobStatus} is anything other than Held. 
   Defaults to 300 seconds.
 
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
   An integer value that limits the number of jobs
   that a \Condor{gridmanager} daemon will submit to a resource.
-  Limits for specific remote resources can be set by supplying
-  a comma-separated list like so:
+  A comma-separated list of pairs that follows this integer limit
+  will specify limits for specific remote resources.
+  Each pair is a host name and the job limit for that host.
+  Consider the example:
+  \footnotesize
   \begin{verbatim}
   GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 200, foo.edu, 50, bar.com, 100
   \end{verbatim}
+  \normalsize
   In this example, all resources have a job limit of 200, except foo.edu,
   which has a limit of 50, and bar.com, which has a limit of 100.
 
-  You can also set limits for specific grid-types by appending the 
-  grid-type's name to the paramater, like so:
+  Limits specific to grid types can be set by appending the
+  name of the grid type to the configuration variable name, as the example
   \begin{verbatim}
   GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
   \end{verbatim}
@@ -7736,10 +7740,10 @@ These macros affect the \Condor{gridmanager}.
   For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
   processes that the \Condor{gridmanager} lets run at a time on
   the remote head node. Allowing too many globus-job-managers to run
-  causes severe load on the headnote, possibly making it
+  causes severe load on the head note, possibly making it
   non-functional.
   This number may be exceeded if it is reduced through the use
-  of \Condor{reconfig} while the \Condor{gridmanager} is running
+  of \Condor{reconfig} while the \Condor{gridmanager} is running,
   or if some globus-job-managers take a few extra seconds to exit.
   The value 0 means there is no limit. The default value is 10.
 
