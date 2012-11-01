@@ -5521,12 +5521,12 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddBackupSpool}
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
-  This macro is used to enable the
-  \Condor{schedd} to make a backup of the job queue as it starts.  If
-  set to ``True'', the \Condor{schedd} will create host specific a
+  A boolean value that, when \Expr{True}, causes the
+  \Condor{schedd} to make a backup of the job queue as it starts.
+  When \Expr{True}, the \Condor{schedd} creates a host-specific
   backup of the current spool file to the spool directory.  This
-  backup file will be overwritten each time the \Condor{schedd}
-  starts.  \Macro{SCHEDD\_BACKUP\_SPOOL} defaults to ``False''.
+  backup file will be overwritten each time the \Condor{schedd} starts.
+  Defaults to \Expr{False}.
 
 \label{param:ScheddPreemptionRequirements}
 \item[\Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS}]
