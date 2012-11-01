@@ -11,14 +11,16 @@ UNSUPPORTED="UNSUPPORTED"
 RH5="RH5"
 RH6="RH6"
 OSX="MAC"
+OSX_UNSUPPORTED="UNSUPPORTED"
 DEB6="DEB6"
 
+SUPPORTED_OSX = ['10.6', '10.7', '10.8']
 SUPPORTED_PLATFORMS = [ RH5, RH6, OSX, DEB6 ]
 
 # download URLs for the different platforms
 URL_DICT={
   DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_Debian6.tar.gz",
-  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_MacOSX7.tar.gz",
+  OSX: "ftp://ftp.cs.wisc.edu /condor/bosco/latest/bosco-beta-x86_64_MacOSX7.tar.gz",
   RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_RedHat5.tar.gz",
   RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_RedHat6.tar.gz",
 }
@@ -37,9 +39,11 @@ def findversion_mac(detail=False):
   retv = out.strip()[len("System Version:"):].strip()
   if detail and ec==0:
     return retv
-  if retv.startswith('Mac'):
-    # should I check for specific Version numbers?
-    return OSX
+  if retv.startswith('Mac OS X 10.'):
+    version = [i.strip() for i in retv.strip()[len("Mac OS X "):].split('.')]
+    if '.'.join(version[:2]) in SUPPORTED_OSX:
+      return OSX
+    return OSX_UNSUPPORTED
   return UNKNOWN
 
 def findversion_redhat(detail=False):
@@ -100,8 +104,11 @@ def findversion():
   if not os.name=='posix':
     return UNSUPPORTED
   if sys.platform=='darwin':
-    # skip if there is no need to check versions: return findversion_mac()
-    return OSX
+    myver = platform.mac_ver()
+    if myver[0]:
+      if '.'.join(myver[0].split('.')[:2]) in SUPPORTED_OSX:
+        return OSX
+    return findversion_mac()
   elif sys.platform.startswith('linux'):
     # only 64 bit supported
     if not platform.architecture()[0]=='64bit':
@@ -231,7 +238,7 @@ if __name__ == "__main__":
   parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install', \
                     default=False, action='store_true')
   (opts, args) = parser.parse_args(my_par)
-  print "Force: %s" % opts.force
+  # options consistency
   if opts.force and not opts.force in SUPPORTED_PLATFORMS:
     print "The platform %s is not supported.\n" % opts.force
     parser.print_help()
@@ -240,6 +247,7 @@ if __name__ == "__main__":
     print "Option full and bit are mutually exclusive\n"
     parser.print_help()
     sys.exit(-1)
+  # run
   if opts.bit:
     if platform.architecture()[0]=='64bit':
       print BIT64
