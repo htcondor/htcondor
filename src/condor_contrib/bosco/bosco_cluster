@@ -71,25 +71,31 @@ start_ssh () {
 ssh_upload_and_run () {
     # upload_and_run remote_host command start_dir
     # 1. remote host
-    # 2. start dir DEFAULT to use the default bosco/tmp
+    # 2. start dir DEFAULT to use a temporary directory removed afterwards
     # 3. script name
-    # 4 to 6 optional parameters for the script
+    # 4 to 7 optional parameters for the script
     remote_host=$1
-    local_script=$3
     start_dir=$2
+    local_script=$3
+    # TODO: suppress banner printout  -o LogLevel=Error  does not work, 
+    # redirect stderr to /dev/null suppresses errors as well
     if [ "x$start_dir" == "xDEFAULT" ]; then
-        start_dir="bosco/tmp"
+        # OS X mktemp requires a template
+        start_dir=`ssh $remote_host "mktemp -d /tmp/tmp_bosco_probe.XXXXXXXX" 2>/dev/null` 
+    else:
+        ssh $remote_host "mkdir -p $start_dir" 
     fi
-    # TODO: suppress banner printout  -o LogLevel=Error  does not work , redirect stderr to /dev/null
-    ssh $remote_host "mkdir -p $start_dir"
     scp $local_script $remote_host:$start_dir/bosco_run
-    cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"  2>/dev/null`
+    cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6 $7"  2>/dev/null`
     #cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
     cmd_ec=$?
     if [ $cmd_ec -eq 0 ]; then
         # output only if successful
         echo $cmd_out
-    fi    
+    fi
+    if [ "x$2" == "xDEFAULT" ]; then
+        ssh $remote_host "rm -r $start_dir" 
+    fi        
     return $cmd_ec
 }
 
@@ -620,7 +626,7 @@ fi
 echo "Installing BOSCO on $remote_host..."
 
 # Find remote platform
-#findplatform_path="`pwd`/findplatform"
+# TODO: add the possibility to force a specific platform for the remote system (./findplatform --force=RH5)
 findplatform_path="`which findplatform`"
 if [ $? -ne 0 ]; then
     echo "Unable to find the findplatform script."
@@ -633,6 +639,11 @@ if [ "x$TMP_INSTALL" == "x" ]; then
 fi
 
 url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url`
+if [ "x$url" == "x" ]; then
+    echo "BOSCO is not supporting the remote platform."
+    echo "Aborting installation to $remote_host."
+    exit 1
+fi    
 
 # Create a tmp dir, download the files and rsync them to the remote system
 # A download to the remote system would be faster but we cannot count on ports different form the SSH one
@@ -642,7 +653,7 @@ curl -s -o $tmp_dir/bosco-download.tar.gz $url
 tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
 archive_dir=`ls -d $tmp_dir/condor*`
 if [ $? -ne 0 ]; then
-    echo "Unable to dovnload and prepare BOSCO for remote installation."
+    echo "Unable to download and prepare BOSCO for remote installation."
     echo "Download URL: $url"
     echo "Aborting installation to $remote_host."
     rm -r $tmp_dir
