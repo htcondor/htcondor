@@ -1,5 +1,8 @@
 #!/bin/bash
 
+BOSCO_ENV_DIR="~/.bosco"
+BOSCO_SSH_KEY_FILES="~/.ssh/bosco_key.*"
+
 IS_BOSCO=`condor_config_val IS_BOSCO`
 echo "$IS_BOSCO" | grep -q -i true 
 if [ $? != 0 ] ; then
@@ -19,6 +22,9 @@ if [ "x$1" != "x--all" ]; then
         echo "Removing $i"
         bosco_cluster --remove $i
     done
+
+    rm -rf $BOSCO_ENV_DIR
+    rm $BOSCO_SSH_KEY_FILES
 fi
 
 
