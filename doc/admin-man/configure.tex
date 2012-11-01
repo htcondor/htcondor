@@ -4616,8 +4616,9 @@ Power Management for more details.
   If used, a value 300 (5 minutes) is recommended.
 
   As a special case, the interval is ignored when the 
-  machine has just returned from a low power state (excluding 
-  shutdown (5)).  In order to avoid machines from volleying between 
+  machine has just returned from a low power state, 
+  excluding \Expr{"SHUTDOWN"}.
+  In order to avoid machines from volleying between 
   a running state and a low power state, an hour of uptime is enforced
   after a machine has been woken.  After the hour has passed,
   regular checks resume.
@@ -4625,41 +4626,41 @@ Power Management for more details.
 \label{param:Hibernate}
 \item[\Macro{HIBERNATE}]
   A string expression that represents lower power state.  When this
-  state name evaluates to a valid non-``NONE'' state (see below),
+  state name evaluates to a valid state other than \Expr{"NONE"},
   causes HTCondor to put the machine into the specified low power state.
   The following names are supported
   (and are not case sensitive):
 
   \begin{itemize}
-  \item[] "NONE", "0": No-op: do not enter a low power state
-  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, this is Sleep (standby)
-  \item[] "S2",   "2": On Windows, this is Sleep (standby)
-  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": On Windows, this is Sleep (standby)
-  \item[] "S4",   "4", "DISK", "HIBERNATE": Hibernate
-  \item[] "S5",   "5", "SHUTDOWN", "OFF": Shutdown (soft-off)
+  \item[] \Expr{"NONE"}, \Expr{"0"}: No-op; do not enter a low power state
+  \item[] \Expr{"S1"},   \Expr{"1"}, \Expr{"STANDBY"}, \Expr{"SLEEP"}: On Windows, this is Sleep (standby)
+  \item[] \Expr{"S2"},   \Expr{"2"}: On Windows, this is Sleep (standby)
+  \item[] \Expr{"S3"},   \Expr{"3"}, \Expr{"RAM"}, \Expr{"MEM"}, \Expr{"SUSPEND"}: On Windows, this is Sleep (standby)
+  \item[] \Expr{"S4"},   \Expr{"4"}, \Expr{"DISK"}, \Expr{"HIBERNATE"}: Hibernate
+  \item[] \Expr{"S5"},   \Expr{"5"}, \Expr{"SHUTDOWN"}, \Expr{"OFF"}: Shutdown (soft-off)
   \end{itemize}
   
   The \MacroNI{HIBERNATE} expression is written in terms of the S-states
   as defined in the Advanced Configuration and Power Interface 
-  (ACPI) specification.  The S-states take the form S$n$, where $n$ is 
-  an integer in the range $0$ to $5$, inclusive.  The number that results 
+  (ACPI) specification.  The S-states take the form S<n>, where <n> is 
+  an integer in the range 0 to 5, inclusive.  The number that results 
   from evaluating the expression determines which S-state to enter. The 
-  $n$ from S$n$ notation was adopted because at this junction in time 
+  notation was adopted because
   it appears to be the standard naming scheme for power states on several
-  popular Operating Systems, including various flavors of Windows and Linux
-  distributions.  The other strings ("RAM", "DISK", etc.) are
-  provided for ease of configuration.
+  popular operating systems, including various flavors of Windows and Linux
+  distributions.  The other strings, such as \Expr{"RAM"} and \Expr{"DISK"},
+  are provided for ease of configuration.
 
   Since this expression is evaluated in the context of each slot on the
   machine, any one slot has veto power over the other slots.  If the 
-  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to "NONE"
-  or "0", then the machine will not be placed into a low power
+  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to \Expr{"NONE"}
+  or \Expr{"0"}, then the machine will not be placed into a low power
   state.  On the other 
   hand, if all slots evaluate to a non-zero value, but differ in value, 
   then the largest value is used as the representative power state.
 
   Strings that do not match any in the table above are treated as
-  "NONE".
+  \Expr{"NONE"}.
 
 \label{param:Unhibernate}
 \item[\Macro{UNHIBERNATE}]
@@ -5498,23 +5499,24 @@ SYSTEM_PERIODIC_HOLD = \
 \label{param:SystemPeriodicRelease}
 \item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
   This expression behaves identically
-  to the job expression \AdAttr{periodic\_release}, but it is evaluated by
+  to a job's definition of a \SubmitCmd{periodic\_release} expression
+  in a submit description file,
+  but it is evaluated by
   the \Condor{schedd} daemon individually for each job in the queue.
   It defaults to \Expr{False}.
-  When \Expr{True}, it causes a held job to return to the idle state.
+  When \Expr{True}, it causes a Held job to return to the Idle state.
   Here is an example
   that releases jobs from hold if they have tried to run less than 20
   times, have most recently been on hold for over 20 minutes, and have
-  gone on hold due to ``Connection timed out'' when trying to execute
+  gone on hold due to \Expr{Connection timed out} when trying to execute
   the job, because the file system containing the job's executable is
   temporarily unavailable.
 
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_RELEASE = \
-  (JobRunCount < 20 && CurrentTime - EnteredCurrentStatus > 1200 ) && ( \
-    (HoldReasonCode == 6 && HoldReasonSubCode == 110) \
-  )
+  (JobRunCount < 20 && (CurrentTime - EnteredCurrentStatus) > 1200 ) &&  \
+    (HoldReasonCode == 6 && HoldReasonSubCode == 110) 
 \end{verbatim} 
 \normalsize
 
@@ -5590,12 +5592,12 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddBackupSpool}
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
-  This macro is used to enable the
-  \Condor{schedd} to make a backup of the job queue as it starts.  If
-  set to ``True'', the \Condor{schedd} will create host specific a
+  A boolean value that, when \Expr{True}, causes the
+  \Condor{schedd} to make a backup of the job queue as it starts.
+  When \Expr{True}, the \Condor{schedd} creates a host-specific
   backup of the current spool file to the spool directory.  This
-  backup file will be overwritten each time the \Condor{schedd}
-  starts.  \Macro{SCHEDD\_BACKUP\_SPOOL} defaults to ``False''.
+  backup file will be overwritten each time the \Condor{schedd} starts.
+  Defaults to \Expr{False}.
 
 \label{param:ScheddPreemptionRequirements}
 \item[\Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS}]
@@ -6405,9 +6407,11 @@ do not specify their own with:
 
 \label{param:SubmitExprs}
 \item[\Macro{SUBMIT\_EXPRS}]
-  A comma-separated list of ClassAd attributes to be inserted into all 
-  the job ClassAds that \Condor{submit} creates.  This is equivalent
-  to the \verb@"+"@ syntax in a submit description file.
+  A comma-separated and/or space-separated 
+  list of ClassAd attribute names for which the attribute and value will
+  be inserted into all the job ClassAds that \Condor{submit} creates.  
+  In this way,
+  it is like the \verb@"+"@ syntax in a submit description file.
   Attributes defined in the submit description file with \verb@"+"@ will
   override attributes defined in the configuration file with
   \MacroNI{SUBMIT\_EXPRS}. 
