@@ -4284,7 +4284,7 @@ SMP Machines for details.
   \Term{virtual machine} terminology has been changed, and has become
   the term \Term{slot}.
   Therefore, the default value of this prefix is now \Expr{slot}.
-  If sites want to contine using \Expr{vm}, or prefer something other
+  If sites want to continue using \Expr{vm}, or prefer something other
   \Expr{slot}, this setting enables sites to define what string the
   \Condor{startd} will use to name the individual resources on an SMP
   machine.
@@ -6292,9 +6292,11 @@ do not specify their own with:
 
 \label{param:SubmitExprs}
 \item[\Macro{SUBMIT\_EXPRS}]
-  A comma-separated list of ClassAd attributes to be inserted into all 
-  the job ClassAds that \Condor{submit} creates.  This is equivalent
-  to the \verb@"+"@ syntax in a submit description file.
+  A comma-separated and/or space-separated 
+  list of ClassAd attribute names for which the attribute and value will
+  be inserted into all the job ClassAds that \Condor{submit} creates.  
+  In this way,
+  it is like the \verb@"+"@ syntax in a submit description file.
   Attributes defined in the submit description file with \verb@"+"@ will
   override attributes defined in the configuration file with
   \MacroNI{SUBMIT\_EXPRS}. 
