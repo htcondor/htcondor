@@ -13,6 +13,8 @@ RH6="RH6"
 OSX="MAC"
 DEB6="DEB6"
 
+SUPPORTED_PLATFORMS = [ RH5, RH6, OSX, DEB6 ]
+
 # download URLs for the different platforms
 URL_DICT={
   DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-beta-x86_64_Debian6.tar.gz",
@@ -141,13 +143,16 @@ def install(platform, options=None):
   import tarfile
   import commands
   # make tmp dir
+  if not platform in SUPPORTED_PLATFORMS:
+      print "You system is not supported. Aborting the installation."
+      sys.exit(1)
   try:
     tmp_dir = tempfile.mkdtemp() # create dir
     # download bosco and save directly to file
     condor_dir = ""
     try:
-      print "Downloading BOSCO from %s" % URL_DICT[res]
-      response = urllib2.urlopen(URL_DICT[res])
+      print "Downloading BOSCO from %s" % URL_DICT[platform]
+      response = urllib2.urlopen(URL_DICT[platform])
       fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
       f = open(fname, 'wb')
       shutil.copyfileobj(response, f)
@@ -174,7 +179,7 @@ def install(platform, options=None):
       print "Installing BOSCO in ~/bosco"
     else:
       print "Installing BOSCO with: ./bosco_install %s" % options_list
-    cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[res]),
+    cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[platform]),
                 #"tar xzf %s/bosco-download.tar.gz -C %s" % (tmp_dir, tmp_dir),
                 "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
                ]
@@ -221,9 +226,16 @@ if __name__ == "__main__":
                     default=False, action='store_true')
   parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details', \
                     default=False, action='store_true')
+  parser.add_option('--force', help='force a specific platform %s' % SUPPORTED_PLATFORMS, dest='force', \
+                    )
   parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install', \
                     default=False, action='store_true')
   (opts, args) = parser.parse_args(my_par)
+  print "Force: %s" % opts.force
+  if opts.force and not opts.force in SUPPORTED_PLATFORMS:
+    print "The platform %s is not supported.\n" % opts.force
+    parser.print_help()
+    sys.exit(-1)
   if opts.details and opts.bit:
     print "Option full and bit are mutually exclusive\n"
     parser.print_help()
@@ -237,7 +249,10 @@ if __name__ == "__main__":
   elif opts.details:
     print findversion_detail()
   else:
-    res = findversion()
+    if opts.force:
+      res = opts.force
+    else:
+      res = findversion()
     if opts.install:
       install(res, install_par)
       sys.exit(0)
