@@ -204,8 +204,10 @@ stop_ssh () {
 }
 
 remove_cluster () {
-    # $1 = cluster to remove
-    remote_host=$1
+    # $1 = cluster to remove 
+    # $1 could be user@hostname/queue, queue part removed
+    # bash specific, generic no removing queue: remote_host=$1 
+    remote_host=${1%%/*}
 
     # First, check if the cluster is in the cluster list, exit if not
     check_cluster_list2 $remote_host "ve"
