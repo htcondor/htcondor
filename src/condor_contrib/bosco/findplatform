@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#Marco Mambelli - 10/8/2012 
+#Marco Mambelli - first version 10/8/2012 
 
 import sys
 import os
@@ -23,6 +23,8 @@ URL_DICT={
 
 BIT32="32bit"
 BIT64="64bit"
+
+INSTALLER_NAME="boscoinstaller"
 
 def findversion_mac(detail=False):
   # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
@@ -61,20 +63,21 @@ def findversion_redhat(detail=False):
   return UNKNOWN
 
 def findversion_debian(detail=False):
-  """cat /etc/*release                                                                                                      
-DISTRIB_ID=Ubuntu                                                                                                                           
-DISTRIB_RELEASE=11.10                                                                                                                       
-DISTRIB_CODENAME=oneiric                                                                                                                    
-DISTRIB_DESCRIPTION="Ubuntu 11.10"                                                                                                          
-                                                                                                                                            
-adrewmm@bellatrix:~$ lsb_release                                                                                                            
-No LSB modules are available.                                                                                                               
-                                                                                                                                            
-adrewmm@bellatrix:~$ lsb_release -a                                                                                                         
-No LSB modules are available.                                                                                                               
-Distributor ID:    Ubuntu                                                                                                                   
-Description:    Ubuntu 11.10                                                                                                                
-Release:    11.10                                                                                                                           
+  """cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=11.10
+DISTRIB_CODENAME=oneiric
+DISTRIB_DESCRIPTION="Ubuntu 11.10"
+
+user@bellatrix:~$ lsb_release
+No LSB modules are available.
+
+user@bellatrix:~$ lsb_release -a  
+No LSB modules are available.
+
+Distributor ID:    Ubuntu
+Description:    Ubuntu 11.10
+Release:    11.10
 Codename:    oneiric       
 """
   retv=UNSUPPORTED
@@ -130,32 +133,115 @@ def findversion_detail():
       return findversion_debian(True)
   return UNKNOWN
 
+def install(platform, options=None):
+  """Install BOSCO for the platform"""
+  import tempfile
+  import urllib2
+  import shutil
+  import tarfile
+  import commands
+  # make tmp dir
+  try:
+    tmp_dir = tempfile.mkdtemp() # create dir
+    # download bosco and save directly to file
+    condor_dir = ""
+    try:
+      print "Downloading BOSCO from %s" % URL_DICT[res]
+      response = urllib2.urlopen(URL_DICT[res])
+      fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
+      f = open(fname, 'wb')
+      shutil.copyfileobj(response, f)
+      f.close()
+      response.close() 
+      tar = tarfile.open(fname, "r")
+      for tarname in tar.getnames():
+        tar.extract(tarname, tmp_dir)
+      tar.close()
+      condor_dir_list = [i for i in os.listdir(tmp_dir) if i.startswith('condor')]
+    except:
+      (etype, evalue, etraceback) = sys.exc_info()
+      if evalue:
+        print evalue
+      condor_dir_list = []
+    if not condor_dir_list:
+      print "The download and extraction of BOSCO failed. Aborting the installation."
+      sys.exit(1)
+    # run bosco_install (pass parameters)
+    options_list = ""
+    if options:
+      options_list =  " ".join(options)
+    if not options_list:
+      print "Installing BOSCO in ~/bosco"
+    else:
+      print "Installing BOSCO with: ./bosco_install %s" % options_list
+    cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[res]),
+                #"tar xzf %s/bosco-download.tar.gz -C %s" % (tmp_dir, tmp_dir),
+                "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
+               ]
+    for cmd in cmd_list:
+      ec, out = commands.getstatusoutput(cmd)
+      if ec != 0:
+        print "Error installing BOSCO"
+        print "Command %s failed:\n%s" % (cmd, out)
+        print "Aborting BOSCO installation"
+        sys.exit(1)
+      else:
+        print out
+  finally:
+    try:
+      shutil.rmtree(tmp_dir) # delete directory
+    except OSError, e:
+      if e.errno != 2: # code 2 - no such file or directory
+        raise
+  # rm itself and exit or not?  
+  print "Congratulations, you installed BOSCO succesfully!"
+  return
    
 if __name__ == "__main__":
-  parser = optparse.OptionParser()
+  # invoked as installer (INSTALLER_NAME [install options])
+  if os.path.basename(sys.argv[0])==INSTALLER_NAME:
+    res = findversion()
+    install(res, sys.argv[1:])
+    sys.exit(0)
+  # install parameter separation
+  my_par = sys.argv[1:]
+  install_par = None 
+  for i in range(1, len(sys.argv)):
+    if sys.argv[i]=='--':
+      my_par = sys.argv[1:i]
+      install_par = sys.argv[i+1:]
+  usage = '\n'.join(["Usage: %prog [options]",
+                     "       %prog --install [-- install options]",
+                     "       %s [install options]" % INSTALLER_NAME
+                    ]) 
+  parser = optparse.OptionParser(usage=usage)
   parser.add_option('-u', '--url', help='return the download URL for the current platform', dest='url', \
                     default=False, action='store_true')
   parser.add_option('-b', '--bit', help='return if the architecture is 32bit or 64bit', dest='bit', \
                     default=False, action='store_true')
   parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details', \
                     default=False, action='store_true')
-  (opts, args) = parser.parse_args()
-
+  parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install', \
+                    default=False, action='store_true')
+  (opts, args) = parser.parse_args(my_par)
   if opts.details and opts.bit:
     print "Option full and bit are mutually exclusive\n"
     parser.print_help()
-    exit(-1)
+    sys.exit(-1)
   if opts.bit:
     if platform.architecture()[0]=='64bit':
       print BIT64
     else:
       print BIT32
-    exit(0)
+    sys.exit(0)
   elif opts.details:
     print findversion_detail()
   else:
     res = findversion()
-    if opts.url:
+    if opts.install:
+      install(res, install_par)
+      sys.exit(0)
+    elif opts.url:
       print URL_DICT[res]
     else:
       print res
