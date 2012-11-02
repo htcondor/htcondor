@@ -9540,10 +9540,10 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 
 \label{param:HADControllee}
 \item[\Macro{HAD\_CONTROLLEE}]
-  This macro is used to specify the name of the daemon which the
+  This variable is used to specify the name of the daemon which the
   \Condor{had} daemon controls.   This name should match the daemon
-  name in the \Condor{master}'s \MacroNI{DAEMON\_LIST}.  The default
-  value of \MacroNI{HAD\_CONTROLLEE} is ``NEGOTIATOR''.
+  name in the \Condor{master} daemon's \MacroNI{DAEMON\_LIST} definition.  
+  The default value is \Expr{NEGOTIATOR}.
 
 \label{param:HADConnectionTimeout}
 \item[\Macro{HAD\_CONNECTION\_TIMEOUT}]
