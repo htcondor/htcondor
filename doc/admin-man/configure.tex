@@ -6005,10 +6005,12 @@ These settings affect the \Condor{starter}.
 
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
-  This setting is only meaningful on Windows machines.  If True, HTCondor will
+  This boolean variable is only meaningful on Windows machines.  
+  If \Expr{True}, HTCondor will
   allow the job to create windows on the desktop of the execute machine and
   interact with the job.  This is particularly useful for debugging why an
-  application will not run under HTCondor.  If False, HTCondor uses the default
+  application will not run under HTCondor.  
+  If \Expr{False}, HTCondor uses the default
   behavior of creating a new, non-visible desktop to run the job on.
   See section~\ref{sec:platform-windows} for details on how HTCondor 
   interacts with the desktop.
