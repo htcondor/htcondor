@@ -34,6 +34,7 @@
 \oOpt{-valgrind}
 \oOpt{-DontAlwaysRunPost}
 \oOptArg{-priority}{number}
+\oOpt{-dont\_use\_default\_node\_log}
 \oOptArg{-schedd-daemon-ad-file}{FileName}
 \oOptArg{-schedd-address-file}{FileName}
 \Arg{DAGInputFile1}
@@ -274,6 +275,15 @@ description.
   \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority
     of jobs submitted and running under the \Condor{dagman} job
     submitted by this \Condor{submit\_dag} command.
+  }
+  \OptItem{\Opt{-dont\_use\_default\_node\_log}}{ Tells \Condor{dagman}
+     to use the file specified by the job ClassAd
+     attribute \Attr{UserLog} to monitor job status.
+     If this command line argument is used,
+     then the user log file cannot be defined with a macro.
+     This is necessary if using a \Condor{dagman} version of 7.9.0 or later
+     and submitting to a \Condor{schedd} daemon
+     with version number 7.8.0 or an earlier version.
   }
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
