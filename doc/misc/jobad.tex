@@ -620,7 +620,7 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 \index{JobCurrentStartExecutingDate!job ClassAd attribute}
 \label{JobCurrentStartExecutingDate-job-attribute}
 \item[\AdAttr{JobCurrentStartExecutingDate}:]  Time at which the job most recently finished
-transfering its input sandbox and began executing.  Measured in the
+transferring its input sandbox and began executing.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970)
 
 %%% ClassAd attribute: JobCurrentStartTransferOutputDate
@@ -1307,6 +1307,12 @@ by job attribute \Attr{Out}.
 If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
+
+%%% ClassAd attribute: UserLog
+\index{ClassAd job attribute!UserLog}
+\index{UserLog!job ClassAd attribute}
+\item[\AdAttr{UserLog}:] The full path and file name on the submit machine
+of the log file of job events.   
 
 \index{ClassAd job attribute!WantGracefulRemoval}
 \item[\AdAttr{WantGracefulRemoval}:] A boolean expression that,
