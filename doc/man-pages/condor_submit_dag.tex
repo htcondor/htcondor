@@ -269,6 +269,15 @@ description.
      POST script regardless of the return value of the PRE script. 
      Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
      value and would not run the POST script if the PRE script failed.}
+  \OptItem{\OptArg{-priority}{number}}{%
+	Sets the minimum job priority of jobs submitted by the DAGMan running under
+    the \Condor{dagman} submitted by this \Condor{submit\_dag} command.}
+  \OptItem{\Opt{-dont\_use\_default\_node\_log}}{%
+	This argument tells \Condor{dagman} to use the file specified by the JobAd
+    UserLog attribute to monitor job status. If this argument is given to
+    \Condor{submit\_dag}, then the user log file cannot be defined with a macro.
+    This is necessary if one is using a \Condor{dagman} version of at least 7.9.0
+    and submitting to a \Condor{schedd} daemon with version number 7.8 or lower.}
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
     Therefore this allows submission to a specific scheduler if several
