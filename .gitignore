@@ -207,3 +207,5 @@ src/safefile/config.status
 src/safefile/safe_id_range_list.h
 src/safefile/stamp-h1
 src/safefile/stamp-h2
+src/safefile/safe_id_range_list.h.in.tmp
+src/safefile/safe_id_range_list.h.tmp_out

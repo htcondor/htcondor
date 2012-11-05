@@ -292,6 +292,13 @@ description.
     The value for this argument defaults to the configuration attribute
     \MacroNI{SCHEDD\_ADDRESS\_FILE}.
   }
+   \OptItem{\Opt{-suppress\_notification}}{This option causes jobs submitted
+    by \Condor{dagman} to not send email notification for events. The same effect
+    can be achieved by setting \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to ``True''
+    in a configuration file. This command line flag is independent of the
+    ``-notification'' command line flag, which controls notification for the
+    \Condor{dagman} job itself.
+  }
   \end{Options}
 
 \SeeAlso

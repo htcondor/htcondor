@@ -8923,6 +8923,17 @@ in section~\ref{sec:DAG-configuration}.
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
   or using a \Condor{submit} executable that is older than Condor version 7.9.0.
 
+\label{param:DAGmanSuppressNotification}
+\item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]
+	A boolean value defining whether jobs submitted by \Condor{dagman} will use
+	email notification when certain events occur.  If set to true, then all jobs
+	submitted by \Condor{dagman} will have ``notification = never'' set. This does 
+    not affect the notification of the \Condor{dagman} job itself. A user could set
+	this flag to true, then would only receive one notification when the \Condor{dagman}
+	job completes, rather than thousands of notifications from the jobs submitted by
+	\Condor{dagman}. This flag defaults to false, meaning that job notification will
+	be under the control of the job submit file.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
