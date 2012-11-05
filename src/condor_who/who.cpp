@@ -927,6 +927,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, StringCu
 
 	int wid = width ? width : strlen(heading);
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
+	if ( ! width) opts |= FormatOptionLeftAlign; // strings default to left align.
 	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
 
@@ -960,8 +961,7 @@ void parse_args(int /*argc*/, char *argv[])
 			} else {
 				pflags = NULL;
 			}
-			Termlog = 1;
-			dprintf_config ("TOOL", get_param_functions());
+			dprintf_set_tool_debug("TOOL", 0);
 			set_debug_flags( pflags, D_NOHEADER | D_FULLDEBUG );
 			continue;
 		}

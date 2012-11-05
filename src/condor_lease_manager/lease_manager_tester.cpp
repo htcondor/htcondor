@@ -822,8 +822,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("TEST_LEASE_MANAGER", get_param_functions());
+	dprintf_set_tool_debug("TEST_LEASE_MANAGER", 0);
 
 	Tests	tests;
 	int		status;

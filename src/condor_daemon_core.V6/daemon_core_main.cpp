@@ -84,6 +84,8 @@ char*	pidFile = NULL;
 char*	addrFile = NULL;
 static	char*	logAppend = NULL;
 
+static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
+
 static char *core_dir = NULL;
 
 int condor_main_argc;
@@ -1417,7 +1419,7 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName(), get_param_functions());
+	dprintf_config(get_mySubSystem()->getName());
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -1963,7 +1965,10 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
+		if(Termlog)
+			dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
+		else
+			dprintf_config(get_mySubSystem()->getName());
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2098,7 +2103,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
+		dprintf_config(get_mySubSystem()->getName());
 	}
 
 		// Now that we have the daemonCore object, we can finally

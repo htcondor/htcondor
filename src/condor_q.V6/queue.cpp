@@ -87,6 +87,8 @@ enum {
 	DIRECT_SCHEDD = 4
 };
 
+struct 	PrioEntry { MyString name; float prio; };
+
 #ifdef WIN32
 static int getConsoleWindowSize(int * pHeight = NULL) {
 	CONSOLE_SCREEN_BUFFER_INFO ws;
@@ -136,7 +138,8 @@ static void init_output_mask();
 /* a type used to point to one of the above two functions */
 typedef bool (*show_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
-static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
+static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr);
+static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
 
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
@@ -175,6 +178,7 @@ static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
+static  char *userprios_file = NULL;
 
 static  char *userlog_file = NULL;
 
@@ -298,10 +302,9 @@ static CollectorList * Collectors = NULL;
 // for run failure analysis
 static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
-static 	void		fetchSubmittorPrios();
+static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
 static	void		doRunAnalysis( ClassAd*, Daemon* );
 static	const char *doRunAnalysisToBuffer( ClassAd*, Daemon* );
-struct 	PrioEntry { MyString name; float prio; };
 static  bool        better_analyze = false;
 static	bool		run = false;
 static	bool		goodput = false;
@@ -357,6 +360,80 @@ static void freeConnectionStrings() {
 	}
 }
 
+class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+{
+ public:
+	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
+	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
+	std::string schedd_name;
+	std::string schedd_addr;
+};
+
+// this method is called before each line is parsed. 
+// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+{
+	// treat blank lines as delimiters.
+	if (line.size() <= 0) {
+		return 2; // end of classad.
+	}
+
+	// standard delimitors are ... and ***
+	if (starts_with(line,"\n") || starts_with(line,"...") || starts_with(line,"***")) {
+		return 2; // end of classad.
+	}
+
+	// the normal output of condor_q -long is "-- schedd-name <addr>"
+	// we want to treat that as a delimiter, and also capture the schedd name and addr
+	if (starts_with(line, "-- ")) {
+		if (starts_with(line.substr(3), "Schedd:")) {
+			schedd_name = line.substr(3+8);
+			size_t ix1 = schedd_name.find_first_of(": \t\n");
+			if (ix1 != string::npos) {
+				size_t ix2 = schedd_name.find_first_not_of(": \t\n", ix1);
+				if (ix2 != string::npos) {
+					schedd_addr = schedd_name.substr(ix2);
+					ix2 = schedd_addr.find_first_of(" \t\n");
+					if (ix2 != string::npos) {
+						schedd_addr = schedd_addr.substr(0,ix2);
+					}
+				}
+				schedd_name = schedd_name.substr(0,ix1);
+			}
+		}
+		return 2;
+	}
+
+
+	// check for blank lines or lines whose first character is #
+	// tell the parser to skip those lines, otherwise tell the parser to
+	// parse the line.
+	for (size_t ix = 0; ix < line.size(); ++ix) {
+		if (line[ix] == '#' || line[ix] == '\n')
+			return 0; // skip this line, but don't stop parsing.
+		if (line[ix] != ' ' && line[ix] != '\t')
+			break;
+	}
+	return 1; // parse this line
+}
+
+// this method is called when the parser encounters an error
+// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad, FILE* file)
+{
+	// when we get a parse error, skip ahead to the start of the next classad.
+	int ee = this->PreParse(line, ad, file);
+	while (1 == ee) {
+		if ( ! readLine(line, file, false) || feof(file)) {
+			ee = 2;
+			break;
+		}
+		ee = this->PreParse(line, ad, file);
+	}
+	return ee;
+}
+
+
 #ifdef HAVE_EXT_POSTGRESQL
 /* this function for checking whether database can be used for querying in local machine */
 static bool checkDBconfig() {
@@ -393,8 +470,6 @@ static bool checkDBconfig() {
 	return true;
 }
 #endif /* HAVE_EXT_POSTGRESQL */
-
-extern 	"C"	int		Termlog;
 
 int main (int argc, char **argv)
 {
@@ -443,6 +518,11 @@ int main (int argc, char **argv)
 	// check if analysis is required
 	if( better_analyze ) {
 		setupAnalysis();
+		if ((jobads_file != NULL || userlog_file != NULL)) {
+			retval = show_queue(scheddAddr, scheddName, "Unknown", "Unknown", FALSE);
+			freeConnectionStrings();
+			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+		}
 	}
 
 	// if we haven't figured out what to do yet, just display the
@@ -960,7 +1040,6 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	const char * pcolon;
-	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");
@@ -1066,7 +1145,6 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit( 1 );
 			}
-			Termlog = 1;
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
@@ -1445,9 +1523,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 		}
 		else
 		if (match_prefix(arg,"io")) {
@@ -1475,33 +1551,42 @@ processCommandLineArguments (int argc, char *argv[])
 			expert = true;
 			attrs.clearAll();
 		}
-        else if (match_prefix(arg, "jobads")) {
+		else if (match_prefix(arg, "jobads")) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -jobads require filename\n");
+				fprintf( stderr, "Error: Argument -jobads requires a filename\n");
 				exit(1);
 			} else {
-                i++;
-                jobads_file = strdup(argv[i]);
-            }
-        }
-        else if (match_prefix(arg, "userlog")) {
+				i++;
+				jobads_file = strdup(argv[i]);
+			}
+		}
+		else if (match_prefix(arg, "userlog")) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -userlog require filename\n");
+				fprintf( stderr, "Error: Argument -userlog requires a filename\n");
 				exit(1);
 			} else {
-                i++;
-                userlog_file = strdup(argv[i]);
-            }
-        }
-        else if (match_prefix(arg, "machineads")) {
+				i++;
+				userlog_file = strdup(argv[i]);
+			}
+		}
+		else if (match_prefix(arg, "machineads")) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -machineads require filename\n");
+				fprintf( stderr, "Error: Argument -machineads requires a filename\n");
 				exit(1);
 			} else {
-                i++;
-                machineads_file = strdup(argv[i]);
-            }
-        }
+				i++;
+				machineads_file = strdup(argv[i]);
+			}
+		}
+		else if (is_arg_colon_prefix(arg, "userprios", &pcolon, 5)) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -userprios requires a filename\n");
+				exit(1);
+			} else {
+				i++;
+				userprios_file = strdup(argv[i]);
+			}
+		}
 #ifdef HAVE_EXT_POSTGRESQL
 		else if (match_prefix(arg, "avgqueuetime")) {
 				/* if user want average wait time, we will perform direct DB query */
@@ -3040,11 +3125,22 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		delete tree;
 	}
 
-    if (jobads_file != NULL) {
+	bool analyze_no_schedd = false;
+	CondorQClassAdFileParseHelper jobads_file_parse_helper;
+	if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
-        if (!read_classad_file(jobads_file, jobs, constr)) {
-            return false;
-        }
+		if (!read_classad_file(jobads_file, jobs, &jobads_file_parse_helper, constr)) {
+			return false;
+		}
+		// if we are doing analysis, print out the schedd name and address
+		// that we got from the classad file.
+		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
+			scheddName    = jobads_file_parse_helper.schedd_name.c_str();
+			scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
+			scheddMachine = "Unknown";
+			scheddVersion = "";
+			analyze_no_schedd = true;
+			}
 		
 		/* The variable UseDB should be false in this branch since it was set 
 			in main() because jobads_file had a good value. */
@@ -3130,7 +3226,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		if (useDB) {
 			printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
 					db_ipAddr, db_name);
-		} else if( querySchedds ) {
+		} else if (querySchedds || analyze_no_schedd) {
 			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
 		} else {
 			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
@@ -3138,11 +3234,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 
 		Daemon schedd_daemon(DT_SCHEDD,scheddName,pool ? pool->addr() : NULL);
-		schedd_daemon.locate();
+		if ( ! analyze_no_schedd)
+			schedd_daemon.locate();
 
 		jobs.Open();
 		while( ( job = jobs.Next() ) ) {
-			doRunAnalysis( job, &schedd_daemon );
+			doRunAnalysis( job, analyze_no_schedd ? NULL : &schedd_daemon );
 		}
 		jobs.Close();
 
@@ -3338,9 +3435,14 @@ setupAnalysis()
 	string		remoteUser;
 	int			index;
 
+	
+	if (verbose) {
+		fprintf(stderr, "Fetching machine ads for analysis...");
+	}
+
 	// fetch startd ads
     if (machineads_file != NULL) {
-        if (!read_classad_file(machineads_file, startdAds, NULL)) {
+        if (!read_classad_file(machineads_file, startdAds, NULL, NULL)) {
             exit ( 1 );
         }
     } else {
@@ -3351,8 +3453,36 @@ setupAnalysis()
         }
     }
 
-	// fetch submittor prios
-	fetchSubmittorPrios();
+	if (verbose) {
+		fprintf(stderr, "Done.\nFound %d machines ads.\n", startdAds.Length());
+	}
+
+	if (verbose) {
+		fprintf(stderr, "Fetching user priorities for analysis...");
+	}
+
+	int cPrios = 0;
+	if (userprios_file != NULL) {
+		cPrios = read_userprio_file(userprios_file, prioTable);
+		if (cPrios < 0) {
+			PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
+			exit (1);
+		}
+	} else {
+		// fetch submittor prios
+		cPrios = fetchSubmittorPriosFromNegotiator(prioTable);
+		if (cPrios < 0) {
+			PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
+			exit(1);
+		}
+	}
+
+	if (verbose) {
+		fprintf(stderr, "Done.\nFound %d submitters\n", cPrios);
+	} else if (cPrios <= 0) {
+		printf( "Warning:  Found no submitters\n" );
+	}
+
 
 	// populate startd ads with remote user prios
 	startdAds.Open();
@@ -3404,14 +3534,13 @@ setupAnalysis()
 }
 
 
-static void
-fetchSubmittorPrios()
+static int
+fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios)
 {
 	AttrList	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
-	int		i = 1;
 
 	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool ? pool->addr() : NULL );
 
@@ -3421,7 +3550,7 @@ fetchSubmittorPrios()
 	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
 		fprintf( stderr, "Error: Could not connect to negotiator (%s)\n",
 				 negotiator.fullHostname() );
-		exit( 1 );
+		return -1;
 	}
 
 	sock->end_of_message();
@@ -3430,30 +3559,101 @@ fetchSubmittorPrios()
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
-		exit( 1 );
+		return -1;
 	}
 	sock->close();
 	delete sock;
 
 
-	i = 1;
-	while( i ) {
-    	sprintf( attrName , "Name%d", i );
-    	sprintf( attrPrio , "Priority%d", i );
+	int cPrios = 0;
+	while( true ) {
+		sprintf( attrName , "Name%d", cPrios+1 );
+		sprintf( attrPrio , "Priority%d", cPrios+1 );
 
-    	if( !al.LookupString( attrName, name, sizeof(name) ) || 
+		if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, priority ) )
-            break;
+			break;
 
-		prioTable[i-1].name = name;
-		prioTable[i-1].prio = priority;
-		i++;
+		prios[cPrios].name = name;
+		prios[cPrios].prio = priority;
+		++cPrios;
 	}
 
-	if( i == 1 ) {
-		printf( "Warning:  Found no submitters\n" );
-	}
+	return cPrios;
 }
+
+// parse lines of the form "attrNNNN = value" and return attr, NNNN and value as separate fields.
+static int parse_userprio_line(const char * line, std::string & attr, std::string & value)
+{
+	int id = 0;
+
+	// skip over the attr part
+	const char * p = line;
+	while (*p && isspace(*p)) ++p;
+
+	// parse prefixNNN and set id=NNN and attr=prefix
+	const char * pattr = p;
+	while (*p) {
+		if (isdigit(*p)) {
+			attr.assign(pattr, p-pattr);
+			id = atoi(p);
+			while (isdigit(*p)) ++p;
+			break;
+		} else if  (isspace(*p)) {
+			break;
+		}
+		++p;
+	}
+	if (id <= 0)
+		return -1;
+
+	// parse = with or without whitespace.
+	while (isspace(*p)) ++p;
+	if (*p != '=')
+		return -1;
+	++p;
+	while (isspace(*p)) ++p;
+
+	// parse value, remove "" from around strings 
+	if (*p == '"')
+		value.assign(p+1,strlen(p)-2);
+	else
+		value = p;
+	return id;
+}
+
+static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
+{
+	int cPrios = 0;
+
+	FILE *file = safe_fopen_wrapper_follow(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Can't open file of user priorities: %s\n", filename);
+		return -1;
+	} else {
+		while (const char * line = getline(file)) {
+			std::string attr, value;
+			int id = parse_userprio_line(line, attr, value);
+			if (id <= 0) {
+				// there are valid attributes that we want to ignore that return -1 from
+				// this call, so just skip them
+				continue;
+			}
+
+			if (attr == "Priority") {
+				float priority = atof(value.c_str());
+				prios[id].prio = priority;
+				cPrios = MAX(cPrios, id);
+			} else if (attr == "Name") {
+				prios[id].name = value;
+				cPrios = MAX(cPrios, id);
+			}
+		}
+		fclose(file);
+	}
+	return cPrios;
+}
+
 
 
 static void
@@ -3920,19 +4120,55 @@ fixSubmittorName( char *name, int niceUser )
 	return NULL;
 }
 
-static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr)
-{
-	int is_eof, is_error, is_empty;
-	bool success;
-	bool include_classad;
-	ClassAd *classad;
-	FILE *file;
 
-	file = safe_fopen_wrapper_follow(filename, "r");
+static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr)
+{
+	bool success = false;
+
+	FILE* file = safe_fopen_wrapper_follow(filename, "r");
 	if (file == NULL) {
 		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
 	} else {
+#if 1
+		CondorClassAdFileParseHelper generic_helper("\n");
+		if ( ! pparse_help)
+			pparse_help = &generic_helper;
+
+		for (;;) {
+			ClassAd* classad = new ClassAd();
+
+			int error;
+			bool is_eof;
+			int cAttrs = classad->InsertFromFile(file, is_eof, error, pparse_help);
+
+			bool include_classad = cAttrs > 0 && error >= 0;
+			if (include_classad && constr) {
+				classad::Value result;
+				if (classad->EvaluateExpr(constr,result)) {
+					if ( ! result.IsBooleanValueEquiv(include_classad)) {
+						include_classad = false;
+					}
+				}
+			}
+			if (include_classad) {
+				classads.Insert(classad);
+			} else {
+				delete classad;
+			}
+
+			if (is_eof) {
+				success = true;
+				break;
+			}
+			if (error < 0) {
+				success = false;
+				break;
+			}
+		}
+#else
+		int is_eof, is_error, is_empty;
+		int cEmpty = 0;
 		do {
 			classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
 			include_classad = !is_error && !is_empty;
@@ -3949,6 +4185,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 			} else {
 				delete classad;
 			}
+
 		} while (!is_eof && !is_error);
 
 		if (is_error) {
@@ -3956,6 +4193,8 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, const
 		} else {
 			success = true;
 		}
+#endif
+
 		fclose(file);
 	}
 	return success;

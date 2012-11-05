@@ -7,11 +7,11 @@ look at the man pages of the commands referred to (located in
 Chapter~\ref{sec:command-reference} beginning on
 page~\pageref{sec:command-reference}) for more information. 
 
-When jobs are submitted, Condor will attempt to find resources
+When jobs are submitted, HTCondor will attempt to find resources
 to run the jobs. 
 A list of all those with jobs submitted
 may be obtained through \Condor{status}
-\index{Condor commands!condor\_status}
+\index{HTCondor commands!condor\_status}
 with the 
 \Arg{-submitters} option. 
 An example of this would yield output similar to:
@@ -42,7 +42,7 @@ nice-user.condor@cs.                 6                504                  0
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 At any time, you can check on the status of your jobs with the \Condor{q}
 command.
-\index{Condor commands!condor\_q}
+\index{HTCondor commands!condor\_q}
 This command displays the status of all queued jobs.
 An example of the output from \Condor{q} is
 \footnotesize
@@ -97,7 +97,7 @@ log file.  Various events such as execution commencement, checkpoint, eviction
 and termination are logged in the file.
 Also logged is the time at which the event occurred.
 
-When a job begins to run, Condor starts up a \Condor{shadow} process
+When a job begins to run, HTCondor starts up a \Condor{shadow} process
 \index{condor\_shadow}
 \index{remote system call!condor\_shadow}
 on the submit machine.  The shadow process is the mechanism by which the
@@ -114,7 +114,7 @@ the number of jobs that can run simultaneously by reducing the
 
 You can also find all the machines that are running your job through the
 \Condor{status} command.
-\index{Condor commands!condor\_status}
+\index{HTCondor commands!condor\_status}
 For example, to find all the machines that are
 running jobs submitted by \Expr{breach@cs.wisc.edu}, type:
 \footnotesize
@@ -159,7 +159,7 @@ bardolph.c INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc.
 \subsection{Removing a job from the queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 A job can be removed from the queue at any time by using the \Condor{rm}
-\index{Condor commands!condor\_rm}
+\index{HTCondor commands!condor\_rm}
 command.  If the job that is being removed is currently running, the job
 is killed without a checkpoint, and its queue entry is removed.  
 The following example shows the queue of jobs before and after
@@ -191,8 +191,8 @@ Job 132.0 removed.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Placing a job on hold}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor commands!condor\_hold}
-\index{Condor commands!condor\_release}
+\index{HTCondor commands!condor\_hold}
+\index{HTCondor commands!condor\_release}
 \index{job!state}
 A job in the queue may be placed on hold by running the command
 \Condor{hold}.
@@ -222,14 +222,14 @@ contain usage details.
 
 \index{job!priority}
 \index{priority!of a job}
-In addition to the priorities assigned to each user, Condor also provides
+In addition to the priorities assigned to each user, HTCondor also provides
 each user with the capability of assigning priorities to each submitted job.
 These job priorities are local to each queue and can be any integer value, with
 higher values meaning better priority.
 
 The default priority of a job is 0, but can be changed using the \Condor{prio}
 command.
-\index{Condor commands!condor\_prio}
+\index{HTCondor commands!condor\_prio}
 For example, to change the priority of a job to -15,
 \footnotesize
 \begin{verbatim}
@@ -254,7 +254,7 @@ For example, to change the priority of a job to -15,
 \normalsize
 
 It is important to note that these \emph{job} priorities are completely 
-different from the \emph{user} priorities assigned by Condor.  Job priorities
+different from the \emph{user} priorities assigned by HTCondor.  Job priorities
 do not impact user priorities.  They are only a mechanism for the user to
 identify the relative importance of jobs among all the jobs submitted by the
 user to that specific queue.
@@ -271,8 +271,8 @@ behind why a job is not running.
 
 At the most basic level, the user knows the status of a job by
 using \Condor{q} to see that the job is not running.
-By far, the most common reason (to the novice Condor job submitter)
-why the job is not running is that Condor has not yet 
+By far, the most common reason (to the novice HTCondor job submitter)
+why the job is not running is that HTCondor has not yet 
 been through its periodic negotiation cycle,
 in which queued jobs are assigned to machines within the pool 
 and begin their execution.
@@ -284,7 +284,7 @@ Further inquiries are dependent on whether the job has
 never run at all, or has run for at least a little bit.
 
 For jobs that have never run,
-\index{Condor commands!condor\_q}
+\index{HTCondor commands!condor\_q}
 many problems can be diagnosed by using the \Opt{-analyze}
 option of the \Condor{q} command.
 For example, a job (assigned the cluster.process value of
@@ -386,7 +386,7 @@ A swap space problem will show in the log with the following message:
 \end{verbatim}
 \normalsize
 As an explanation,
-Condor computes the total swap space on the submit machine.
+HTCondor computes the total swap space on the submit machine.
 It then tries to limit the total number of jobs it
 will spawn based on an estimate of the size of the \Condor{shadow}
 daemon's memory footprint and a configurable amount of swap space
@@ -400,12 +400,12 @@ and it would run out of swap space and thrash.
 
 Things can go wrong if a machine has a lot of physical memory and
 little or no swap space.
-Condor does not consider the physical memory size,
-so the situation occurs where Condor thinks
+HTCondor does not consider the physical memory size,
+so the situation occurs where HTCondor thinks
 it has no swap space to work with,
 and it will not run the submitted jobs.
 
-To see how much swap space Condor thinks a given machine has, use
+To see how much swap space HTCondor thinks a given machine has, use
 the output of a \Condor{status} command of the following form:
 
 \footnotesize
@@ -413,13 +413,13 @@ the output of a \Condor{status} command of the following form:
 % condor_status -schedd [hostname] -long | grep VirtualMemory
 \end{verbatim}
 \normalsize
-If the value listed is 0, then this is what is confusing Condor.
+If the value listed is 0, then this is what is confusing HTCondor.
 There are two ways to fix the problem:
 
 \begin{enumerate}
 \item Configure the machine with some real swap space.
 
-\item Disable this check within Condor.
+\item Disable this check within HTCondor.
 Define the amount of reserved swap space for the submit machine to 0.
 Set \Macro{RESERVED\_SWAP} to 0 in the configuration file:
 
@@ -645,9 +645,9 @@ remote status was previous logged as unknown.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!completion}
 
-When a Condor job completes,
+When an HTCondor job completes,
 either through normal means or by abnormal termination by signal,
-Condor will remove it from the job queue.
+HTCondor will remove it from the job queue.
 That is,
 the job will no longer appear in the output of \Condor{q},
 and the job will be inserted into the job history file.
@@ -656,7 +656,7 @@ If there is a log file specified in the submit description file for the job,
 then the job exit status will be recorded there as well.
 
 \index{submit commands!notification}
-By default, Condor sends an email message when the job completes.
+By default, HTCondor sends an email message when the job completes.
 Modify this behavior with the
 \SubmitCmd{notification} command in the submit description file.
 The message will include the exit status of the job,

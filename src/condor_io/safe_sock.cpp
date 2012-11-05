@@ -386,7 +386,7 @@ int SafeSock::put_bytes(const void *data, int sz)
     // Check to see if we need to encrypt
     // This works only because putn will actually put all 
     if (get_encryption()) {
-        if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
+        if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
             dprintf(D_SECURITY, "Encryption failed\n");
             return -1;  // encryption failed!
         }

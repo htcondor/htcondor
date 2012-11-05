@@ -8,7 +8,7 @@
 \OptArg{-A}{address-file}
 \oOpt{command}
 
-\index{Condor commands!procd\_ctl}
+\index{HTCondor commands!procd\_ctl}
 \index{procd\_ctl command}
 
 \Description 
@@ -19,11 +19,11 @@ cause the \Condor{procd} to do anything that the \Condor{procd}
 is capable of doing,
 such as tracking and managing process families.
 
-This is a program only available for the Linux ports of Condor.
+This is a program only available for the Linux ports of HTCondor.
 
-\Prog{procd\_ctl} honors the discovery algorithm for Condor's configuration
+\Prog{procd\_ctl} honors the discovery algorithm for HTCondor's configuration
 files, which specify debugging information.
-As such, if Condor is not installed or the configuration files are
+As such, if HTCondor is not installed or the configuration files are
 unavailable,
 then set the environment variable \Env{CONDOR\_CONFIG} 
 to \File{/dev/null} to be utilized by the discovery algorithm.
@@ -91,7 +91,7 @@ The choices for the command are defined by the Options.
 \GenRem
 
 This program may be used in a standalone mode, independent of
-Condor, to track process families. The programs \Prog{procd\_ctl} and
+HTCondor, to track process families. The programs \Prog{procd\_ctl} and
 \Prog{gidd\_alloc} are used with the \Condor{procd} in standalone mode
 to interact with the daemon and inquire about certain state of running
 processes on the machine, respectively.

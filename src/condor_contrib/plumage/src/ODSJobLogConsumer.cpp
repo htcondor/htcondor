@@ -25,12 +25,13 @@
 
 // local includes
 #include "ODSJobLogConsumer.h"
-#include "ODSHistoryUtils.h"
+#include "ODSHistoryProcessors.h"
 #include "ODSDBNames.h"
 
 using namespace std;
 using namespace mongo;
 using namespace plumage::etl;
+using namespace plumage::history;
 
 #define IS_JOB(key) ((key) && '0' != (key)[0])
 

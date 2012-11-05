@@ -2262,7 +2262,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 		return -1;
 	}
 	pidinfo->pipe_buf[0] = new MyString;
-	*pidinfo->pipe_buf[0] = (char*)buffer;
+	*pidinfo->pipe_buf[0] = (const char*)buffer;
 	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
 	return 0;
 }
@@ -10107,12 +10107,11 @@ int
 DaemonCore::PidEntry::pipeFullWrite(int fd)
 {
 	int bytes_written = 0;
-	void* data_left = NULL;
 	int total_len = 0;
 
 	if (pipe_buf[0] != NULL)
 	{
-		data_left = (void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
+		const void* data_left = (const void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
 		total_len = pipe_buf[0]->Length();
 		bytes_written = daemonCore->Write_Pipe(fd, data_left, total_len - stdin_offset);
 		dprintf(D_DAEMONCORE, "DaemonCore::PidEntry::pipeFullWrite: Total bytes to write = %d, bytes written this pass = %d\n", total_len, bytes_written);

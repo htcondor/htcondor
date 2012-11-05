@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Condor-HDFS}Using Condor with the Hadoop File System}
+\section{\label{sec:HTCondor-HDFS}Using HTCondor with the Hadoop File System}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Hadoop Distributed File System (HDFS)!integrated with Condor}
+\index{Hadoop Distributed File System (HDFS)!integrated with HTCondor}
 
 The Hadoop project is an Apache project,
 headquartered at \URL{http://hadoop.apache.org}, 
@@ -12,8 +12,8 @@ and there are several Hadoop-provided tools which use the file system,
 most notably databases and tools which use 
 the map-reduce distributed programming style.  
 
-Distributed with the Condor source code,
-Condor provides a way to manage the daemons which implement an HDFS,
+Distributed with the HTCondor source code,
+HTCondor provides a way to manage the daemons which implement an HDFS,
 but no direct support for the high-level tools which run atop this file system.
 There are two types of daemons, which together create an instance of 
 a Hadoop File System.
@@ -24,26 +24,26 @@ If the Name node is not running, no files can be accessed.
 The HDFS does not support fail over of the Name node,
 but it does support a hot-spare for the Name node,
 called the Backup node.
-Condor can configure one node to be running as a Backup node.
+HTCondor can configure one node to be running as a Backup node.
 The second kind of daemon is the Data node,
 and there is one Data node per machine in the distributed file system.
 As these are both implemented in Java,
-Condor cannot directly manage these daemons.
-Rather, Condor provides a small DaemonCore daemon,
+HTCondor cannot directly manage these daemons.
+Rather, HTCondor provides a small DaemonCore daemon,
 called \Condor{hdfs},
-which reads the Condor configuration file, 
-responds to Condor commands like \Condor{on} and \Condor{off},
+which reads the HTCondor configuration file, 
+responds to HTCondor commands like \Condor{on} and \Condor{off},
 and runs the Hadoop Java code.
-It translates entries in the Condor configuration file 
+It translates entries in the HTCondor configuration file 
 to an XML format native to HDFS.
 These configuration items are listed with the 
 \Condor{hdfs} daemon in section~\ref{sec:HDFS-Config-File-Entries}. 
-So, to configure HDFS in Condor,
-the Condor configuration file should specify one machine in the
+So, to configure HDFS in HTCondor,
+the HTCondor configuration file should specify one machine in the
 pool to be the HDFS Name node, and others to be the Data nodes.
 
 Once an HDFS is deployed, 
-Condor jobs can directly use it in a vanilla universe job,
+HTCondor jobs can directly use it in a vanilla universe job,
 by transferring input files directly from the HDFS by specifying 
 a URL within the job's submit description file command
 \SubmitCmd{transfer\_input\_files}. 

@@ -12,11 +12,11 @@ $|$ \OptArg{-constraint}{expression} \Dots
 \ToolLocate
 \ToolAll
 
-\index{Condor commands!condor\_transfer\_data}
+\index{HTCondor commands!condor\_transfer\_data}
 \index{condor\_transfer\_data command}
 
 \Description
-\Condor{transfer\_data} causes Condor to transfer spooled
+\Condor{transfer\_data} causes HTCondor to transfer spooled
 data.
 It is meant to be used in conjunction with the \Opt{-spool}
 option of \Condor{submit}, as in
@@ -25,7 +25,7 @@ option of \Condor{submit}, as in
 condor_submit -spool mysubmitfile
 \end{verbatim}
 \normalsize
-Submission of a job with the \Opt{-spool} option causes Condor
+Submission of a job with the \Opt{-spool} option causes HTCondor
 to spool all input files, the user log, and any proxy across
 a connection to the machine where the \Condor{schedd} daemon
 is running.

@@ -6,35 +6,35 @@
 
 \Description
 
-\index{Condor commands!condor\_compile}
+\index{HTCondor commands!condor\_compile}
 \index{condor\_compile command}
 
-Use \Condor{compile} to relink a program with the Condor libraries for
-submission into Condor's Standard Universe.
-The Condor libraries provide the program with additional support, such
-as the capability to checkpoint, which is required in Condor's
+Use \Condor{compile} to relink a program with the HTCondor libraries for
+submission into HTCondor's Standard Universe.
+The HTCondor libraries provide the program with additional support, such
+as the capability to checkpoint, which is required in HTCondor's
 Standard Universe mode of operation.
 \Condor{compile} requires access to the source or object code of the
 program to be submitted; if source or object code for the program is
 not available (i.e. only an executable binary, or if it is a shell
-script), then the program must submitted into Condor's Vanilla
+script), then the program must submitted into HTCondor's Vanilla
 Universe.
-See the reference page for \Condor{submit} and/or consult the "Condor
+See the reference page for \Condor{submit} and/or consult the "HTCondor
 Users and Administrators Manual" for further information.
 
 To use \Condor{compile}, simply enter "condor\_compile" followed by
 whatever you would normally enter to compile or link your
 application.
-Any resulting executables will have the Condor libraries linked in.
+Any resulting executables will have the HTCondor libraries linked in.
 For example: 
 \begin{verbatim}
         condor_compile cc -O -o myprogram.condor file1.c file2.c ... 
 \end{verbatim}
-will produce a binary "myprogram.condor" which is relinked for Condor,
+will produce a binary "myprogram.condor" which is relinked for HTCondor,
 capable of checkpoint/migration/remote-system-calls, and ready to
 submit to the Standard Universe.  
 
-If the Condor administrator has opted to fully install
+If the HTCondor administrator has opted to fully install
 \Condor{compile}, then \Condor{compile} can be followed by practically
 any command or program, including make or shell-script programs.
 For example, the following would all work:
@@ -48,7 +48,7 @@ For example, the following would all work:
         condor_compile /bin/csh compile-me-shellscript 
 \end{verbatim}
 
-If the Condor administrator has opted to only do a partial install of
+If the HTCondor administrator has opted to only do a partial install of
 \Condor{compile}, the you are restricted to following \Condor{compile}
 with one of these programs:  
 \begin{verbatim}
