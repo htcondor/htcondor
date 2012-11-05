@@ -33,6 +33,10 @@ elseif(${OS_NAME} MATCHES "WIN")
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
 	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+	
+	if(MSVC11)
+		set(PREFER_CPP11 TRUE)
+	endif()
 
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
@@ -533,7 +537,9 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 endif()
 
 ###########################################
+if (NOT MSVC11)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+endif()
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
