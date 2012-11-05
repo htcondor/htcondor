@@ -325,7 +325,7 @@ bool AmazonRequest::SendRequest() {
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     const unsigned char * hmac = HMAC( EVP_sha256(), saKey.c_str(), saKey.length(),
-        (unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
+        (const unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
     if( hmac == NULL ) {
         this->errorCode = "E_INTERNAL";
         this->errorMessage = "Unable to calculate query signature (SHA256 HMAC).";
