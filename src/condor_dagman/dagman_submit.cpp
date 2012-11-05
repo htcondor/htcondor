@@ -422,6 +422,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			+ dm._claim_hold_time;
 		args.AppendArg( holdit.Value() );	
 	}
+	
+	if (dm._submitDagDeepOpts.suppress_notification) {
+		args.AppendArg( "-a" );
+		MyString notify = MyString("notification = never");
+		args.AppendArg( notify.Value() );
+	}
 
 	args.AppendArg( cmdFile );
 

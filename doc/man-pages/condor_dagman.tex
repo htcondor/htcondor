@@ -235,6 +235,12 @@ output DAG input file lines as they are parsed
        Using this option restores the previous behavior, 
        in which \Condor{dagman} will not run the POST script if the PRE
        script fails.}
+    \OptItem{\Opt{-Suppress\_notification}}{This option causes jobs submitted
+       by \Condor{dagman} to not send email notification for events. The same effect
+       can be achieved by setting \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to ``True''
+       in a configuration file. This command line flag is independent of the
+       ``-notification'' command line flag, which controls notification for the
+       \Condor{dagman} job itself.}
 
 \end{Options}
 

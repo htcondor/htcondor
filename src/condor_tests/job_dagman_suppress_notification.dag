@@ -1,0 +1,5 @@
+Config  job_dagman_suppress_notification.cfg
+Job     NODERET         job_dagman_suppress_notification-node.cmd
+Script POST NODERET     ./job_dagman_suppress_notification-post.pl $RETURN $JOBID
+Subdag External NODESUB job_dagman_suppress_notification-subdag.dag
+Parent NODERET Child NODESUB
