@@ -13,6 +13,12 @@ CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 # Executables
 TR=tr
 
+if [ `uname` = Darwin ] ; then
+    MD5SUM=md5
+else
+    MD5SUM=md5sum
+fi
+
 usage()
 {
 cat << EOM
@@ -710,7 +716,7 @@ if [ "x$bosco_passwd_file" == "x" ]; then
     exit 1
 fi
 if [ ! -e $bosco_passwd_file ]; then  
-    random_string=`echo $RANDOM | md5sum | awk '{print $1}'` 
+    random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'` 
     condor_store_cred -p $random_string -f $bosco_passwd_file 
 fi
 rsync -aq $bosco_passwd_file $remote_host:$remote_base_dir_host/campus_factory/share/glidein_jobs 2>/dev/null

@@ -21,7 +21,11 @@ if [ ! -e $bosco_passwd_file.daemon ]; then
 fi
 
 # Check file ownership of the passwd file, and change if possible
-daemon_owner=`stat -c %U $bosco_passwd_file.daemon`
+if [ `uname` = Darwin ] ; then
+    daemon_owner=`stat -f %Su $bosco_passwd_file.daemon`
+else
+    daemon_owner=`stat -c %U $bosco_passwd_file.daemon`
+fi
 if [ "$daemon_owner" != `whoami` ]; then
     chown `whoami`: $bosco_passwd_file.daemon
 fi

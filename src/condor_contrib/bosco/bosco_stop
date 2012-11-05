@@ -28,7 +28,6 @@ fi
 # Assuming Linux (GNU ps, paths)
 PS="/bin/ps"
 PS_OPTS="auxwww"
-AWK="/bin/awk"
 
 
 CONDOR_USERS=""
@@ -48,22 +47,22 @@ detect_condor_users() {
     return 0
   fi
 
-  TMP_USER=`echo $IDS|$AWK 'BEGIN{FS="[ ,.]"} /^[^0-9]/{print $1}'`
+  TMP_USER=`echo $IDS|awk 'BEGIN{FS="[ ,.]"} /^[^0-9]/{print $1}'`
   if [ "$TMP_USER" != "" ] ; then
     CONDOR_USERS="$TMP_USER,root,$MYUSER" 
     return 0
   fi
-  CONDOR_UID=`echo $IDS|$AWK 'BEGIN{FS="[ ,.]"} /^[0-9]/{print $1}'`
+  CONDOR_UID=`echo $IDS|awk 'BEGIN{FS="[ ,.]"} /^[0-9]/{print $1}'`
 
   for u in condor ; do
-    TMP_UID=`id $u|$AWK '{ sub(/uid=/,"",$1); sub(/\(.*\)/,"",$1); print $1; }'`
+    TMP_UID=`id $u|awk '{ sub(/uid=/,"",$1); sub(/\(.*\)/,"",$1); print $1; }'`
     if [ "$TMP_UID" = "$CONDOR_UID" ] ; then
       CONDOR_USERS="${u},root,$MYUSER" 
       return 0
     fi
   done
   
-  TMP_USER=`cat /etc/passwd|$AWK 'BEGIN{FS=":"; UID=ARGV[1]; ARGC=0; } { if($3==UID){print $1} }' $CONDOR_UID`
+  TMP_USER=`cat /etc/passwd|awk 'BEGIN{FS=":"; UID=ARGV[1]; ARGC=0; } { if($3==UID){print $1} }' $CONDOR_UID`
   if [ "$TMP_USER" != "" ] ; then
     #echo "$TMP_USER had uid $CONDOR_UID"
     CONDOR_USERS="$TMP_USER,root,$MYUSER" #set_condor_users "$TMP_USER" "root" "$MYUSER"
@@ -84,7 +83,7 @@ find_masters() {
     OPTS="${PS_OPTS}"
     TMP_USERS=$CONDOR_USERS
   fi
-  pids=`$PS $OPTS|$AWK 'BEGIN{split(ARGV[1],users,","); ARGC=0; } { if( (index($0,"condor_master") != 0) && (index($0,"awk") == 0) ) { for(i in users){ if($1==users[i]){print $2; break;} } } }' $TMP_USERS`
+  pids=`$PS $OPTS|awk 'BEGIN{split(ARGV[1],users,","); ARGC=0; } { if( (index($0,"condor_master") != 0) && (index($0,"awk") == 0) ) { for(i in users){ if($1==users[i]){print $2; break;} } } }' $TMP_USERS`
   echo "$pids"
 }
 
