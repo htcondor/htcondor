@@ -712,6 +712,24 @@ See section~\ref{sec:Job-Lease} for details on job leases.
 the time in seconds requested by the job for being allowed to
 gracefully shut down.
 
+%%% ClassAd attribute: JobNotification
+\index{ClassAd job attribute!JobNotification}
+\index{JobNotification!job ClassAd attribute}
+\item[\AdAttr{JobNotification}:] An integer indicating what events should
+be emailed to the user. The values below correspond to what the user enters in 
+the submit file for ``notification''
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{10cm}|} \hline
+\emph{Value} & \emph{Status} \\ \hline \hline
+0 & Never \\ \hline
+1 & Always \\ \hline
+2 & Complete \\ \hline
+3 & Error \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
 %%% ClassAd attribute: JobPrio
 \index{ClassAd job attribute!JobPrio}
 \index{JobPrio!job ClassAd attribute}

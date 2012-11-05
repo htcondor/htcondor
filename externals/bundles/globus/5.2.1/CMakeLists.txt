@@ -37,7 +37,9 @@ if (WITH_GLOBUS)
 		# GNU libtool isn't included in Mac OS 10.8, but Globus
 		# needs libltdl. Build it and install it in the Globus
 		# install location. Then add it to the include and link paths.
-		if ( DARWIN AND ${OS_VER} MATCHES "^12[.]" )
+		# (For our 10.7 binaries to run on 10.6 or 10.8, we can't
+		#  use the OS's libltdl. So always build our own on Darwin.)
+		if ( DARWIN )
 			condor_pre_external( LIBTOOL libtool-2.4.2 "lib;include" "done")
 
 			ExternalProject_Add(libtool
