@@ -33,10 +33,12 @@
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
 \oOpt{-DontAlwaysRunPost}
-\Arg{DAGInputFile1}
-\oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
+\oOptArg{-priority}{number}
+\oOpt{-dont\_use\_default\_node\_log}
 \oOptArg{-schedd-daemon-ad-file}{FileName}
 \oOptArg{-schedd-address-file}{FileName}
+\Arg{DAGInputFile1}
+\oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
 \index{HTCondor commands!condor\_submit\_dag}
 \index{condor\_submit\_dag command}
@@ -245,8 +247,8 @@ description.
      to immediately dump a rescue DAG and then exit, as opposed to
      actually running the DAG.  This feature is mainly intended for
      testing.  The Rescue DAG file is produced whether or not
-       there are parse errors reading the original DAG input file.
-       The name of the file differs if there was a parse error.
+     there are parse errors reading the original DAG input file.
+     The name of the file differs if there was a parse error.
   }
   \OptItem{\Opt{-valgrind}}{This optional argument causes the submit
      description file generated for the submission of \Condor{dagman}
@@ -256,46 +258,43 @@ description.
      Note that this argument is intended for testing purposes only.
      Using the \Opt{-valgrind} option without the necessary
      \Prog{valgrind} software installed will cause the DAG to fail.
-     If the DAG does run, it will run much more slowly than usual.
-  }
-  \OptItem{\Opt{-DontAlwaysRunPost}}{This option causes the submit
+     If the DAG does run, it will run much more slowly than usual.  }
+  \OptItem{\Opt{-DontAlwaysRunPost}}{Causes the submit
      description file generated for the submission of \Condor{dagman} to
      be modified.  
      It causes the \Opt{-DontAlwaysRunPost} option to be in the
-     arguments to \Condor{dagman} in the submit description file, 
+     command line arguments to \Condor{dagman} in the submit description file, 
      which causes \Condor{dagman} to use the return value from a PRE script 
      to determine whether or not a POST script will run.  
      By default, \Condor{dagman} runs the
      POST script regardless of the return value of the PRE script. 
      Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
      value and would not run the POST script if the PRE script failed.}
-  \OptItem{\OptArg{-priority}{number}}{%
-	Sets the minimum job priority of jobs submitted by the DAGMan running under
-    the \Condor{dagman} submitted by this \Condor{submit\_dag} command.}
-  \OptItem{\Opt{-dont\_use\_default\_node\_log}}{%
-	This argument tells \Condor{dagman} to use the file specified by the JobAd
-    UserLog attribute to monitor job status. If this argument is given to
-    \Condor{submit\_dag}, then the user log file cannot be defined with a macro.
-    This is necessary if one is using a \Condor{dagman} version of at least 7.9.0
-    and submitting to a \Condor{schedd} daemon with version number 7.8 or lower.}
+  \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority 
+     of jobs submitted by the DAGMan running under the \Condor{dagman} 
+     submitted by this \Condor{submit\_dag} command.}
+  \OptItem{\Opt{-dont\_use\_default\_node\_log}}{ Tells \Condor{dagman} 
+     to use the file specified by the job ClassAd
+     attribute \Attr{UserLog} to monitor job status. 
+     If this command line argument is used,
+     then the user log file cannot be defined with a macro.
+     This is necessary if using a \Condor{dagman} version of 7.9.0 or later
+     and submitting to a \Condor{schedd} daemon 
+     with version number 7.8.0 or an earlier version.}
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
-    Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
-    Therefore this allows submission to a specific scheduler if several
-    are available without repeatedly querying the \Condor{collector}.
-    The value for this argument defaults to the configuration attribute
-    \MacroNI{SCHEDD\_DAEMON\_AD\_FILE}.
-  }
-   \OptItem{\OptArg{-schedd-address-file}{FileName}}{
-    Specifies a full path to an address file dropped by a \Condor{schedd}.
-    Therefore this allows submission to a specific scheduler if several
-    are available without repeatedly querying the \Condor{collector}.
-    The value for this argument defaults to the configuration attribute
-    \MacroNI{SCHEDD\_ADDRESS\_FILE}.
+     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
+     Therefore this allows submission to a specific scheduler if several
+     are available without repeatedly querying the \Condor{collector}.
+     The value for this argument defaults to the configuration attribute
+     \MacroNI{SCHEDD\_DAEMON\_AD\_FILE}.  }
+  \OptItem{\OptArg{-schedd-address-file}{FileName}}{
+     Specifies a full path to an address file dropped by a \Condor{schedd}.
+     Therefore this allows submission to a specific scheduler if several
+     are available without repeatedly querying the \Condor{collector}.
+     The value for this argument defaults to the configuration attribute
+     \MacroNI{SCHEDD\_ADDRESS\_FILE}.
   }
   \end{Options}
-
-\SeeAlso
-HTCondor User Manual
 
 \ExitStatus
 
