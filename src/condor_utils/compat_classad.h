@@ -495,6 +495,9 @@ class ClassAd : public classad::ClassAd
 class ClassAdFileParseHelper
 {
  public:
+	// Some compilers whine when you have virtual methods but not an
+	// explicit virtual destructor
+	virtual ~ClassAdFileParseHelper() {}
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file)=0;
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
@@ -507,6 +510,9 @@ class ClassAdFileParseHelper
 class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 {
  public:
+	// Some compilers whine when you have virtual methods but not an
+	// explicit virtual destructor
+	virtual ~CondorClassAdFileParseHelper() {}
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
