@@ -28,6 +28,17 @@
 #undef max
 #include <limits>
 
+
+int configured_statistics_window_quantum() {
+    int quantum = param_integer("STATISTICS_WINDOW_QUANTUM_DAEMONCORE", INT_MAX, 1, INT_MAX);
+    if (quantum >= INT_MAX)
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM_DC", INT_MAX, 1, INT_MAX);
+    if (quantum >= INT_MAX)
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+
+    return quantum;
+}
+
 static void self_monitor()
 {
     daemonCore->monitor_data.CollectData();
@@ -57,9 +68,10 @@ SelfMonitorData::~SelfMonitorData()
 
 void SelfMonitorData::EnableMonitoring(void)
 {
+    int quantum = configured_statistics_window_quantum();
     if (!_monitoring_is_on) {
         _monitoring_is_on = true;
-        _timer_id = daemonCore->Register_Timer( 0, 240,
+        _timer_id = daemonCore->Register_Timer( 0, quantum,
                                 self_monitor, "self_monitor" );
     }
     return;
@@ -134,18 +146,14 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 //                          DaemonCore Statistics
 
 
-// the windowed schedd statistics are quantized to the nearest N seconds
-// STATISTICS_WINDOW_SECONDS/schedd_stats_window_quantum is the number of slots
-// in the window ring_buffer.
-const int dc_stats_window_quantum = 4*60; // == 240 4min quantum, same as SelfMonitor
-
 void DaemonCore::Stats::Reconfig()
 {
     int window = param_integer("DCSTATISTICS_WINDOW_SECONDS", -1, -1, INT_MAX);
     if (window < 0)
        window = param_integer("STATISTICS_WINDOW_SECONDS", 1200, 1, INT_MAX);
 
-    int quantum = dc_stats_window_quantum;
+    int quantum = configured_statistics_window_quantum();
+    this->RecentWindowQuantum = quantum;
     this->RecentWindowMax = (window + quantum - 1) / quantum * quantum;
 
     this->PublishFlags    = 0 | IF_RECENTPUB;
@@ -160,7 +168,7 @@ void DaemonCore::Stats::Reconfig()
 void DaemonCore::Stats::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-   Pool.SetRecentMax(window, dc_stats_window_quantum);
+   Pool.SetRecentMax(window, this->RecentWindowQuantum);
 }
 
 #define DC_STATS_ADD_RECENT(pool,name,as)  STATS_POOL_ADD_VAL_PUB_RECENT(pool, "DC", name, as) 
@@ -172,7 +180,7 @@ void DaemonCore::Stats::SetWindowSize(int window)
 void DaemonCore::Stats::Init() 
 { 
    Clear();
-   this->RecentWindowMax = dc_stats_window_quantum; 
+   this->RecentWindowMax = this->RecentWindowQuantum; 
    this->PublishFlags    = -1;
 
    // insert static items into the stats pool so we can use the pool 
@@ -283,7 +291,7 @@ time_t DaemonCore::Stats::Tick(time_t now)
    int cAdvance = generic_stats_Tick(
       now,
       this->RecentWindowMax,   // RecentMaxTime
-      dc_stats_window_quantum, // RecentQuantum
+      this->RecentWindowQuantum, // RecentQuantum
       this->InitTime,
       this->StatsLastUpdateTime,
       this->RecentStatsTickTime,
@@ -332,7 +340,7 @@ stats_entry_recent<Probe> * DaemonCore::Stats::AddSample(const char * name, int 
        if (probe) {
           //int as_recent = as | stats_entry_recent<Probe>::PubRecent | IF_RECENTPUB;
           //Pool.AddPublish(attr.Value(), probe, strdup(attr.Value()), as_recent);
-          probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
        }
    }
 
@@ -361,7 +369,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          {
          stats_entry_recent<int> * probe = 
          Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), as);
-         probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+         probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
          ret = probe;
          }
          break;
@@ -371,7 +379,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          {
          stats_entry_recent<time_t> * probe =
          Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), as);
-         probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+         probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
          ret = probe;
          }
          break;
@@ -386,7 +394,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          Pool.AddPublish(attr.Value(), probe, NULL, 0, 
                        (FN_STATS_ENTRY_PUBLISH)&stats_recent_counter_timer::PublishDebug);
         #endif
-         probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+         probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
          ret = probe;
          }
          break;
@@ -410,7 +418,7 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
        int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
        this->probe = pool->NewProbe< stats_entry_recent<Probe> >(name, attr.Value(), as_pub);
        if (this->probe) {
-          this->probe->SetRecentMax(daemonCore->dc_stats.RecentWindowMax / dc_stats_window_quantum);
+          this->probe->SetRecentMax(daemonCore->dc_stats.RecentWindowMax / daemonCore->dc_stats.RecentWindowQuantum);
        }
    }
    if (this->probe)

@@ -1530,6 +1530,7 @@ class DaemonCore : public Service
 	   time_t InitTime;            // last time we init'ed the structure
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+       int    RecentWindowQuantum;
        int    PublishFlags;        // verbositiy of publishing
 
 	   // helper methods

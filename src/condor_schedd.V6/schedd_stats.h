@@ -22,11 +22,6 @@
 
 #include <generic_stats.h>
 
-// the windowed schedd statistics are quantized to the nearest N seconds
-// STATISTICS_WINDOW_SECONDS/schedd_stats_window_quantum is the number of slots
-// in the window ring_buffer.
-const int schedd_stats_window_quantum = 200;
-
 // this struct is used to contain statistics values for the Scheduler class.
 // the values are published using the names as shown here. so for instance
 // the ClassAd that we publish into will have "JobsSubmitted=32" if the
@@ -93,6 +88,7 @@ typedef struct ScheddStatistics {
    // non-published values
    time_t InitTime;            // last time we init'ed the structure
    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+   int    RecentWindowQuantum;
    int    PublishFlags;
 
    StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names

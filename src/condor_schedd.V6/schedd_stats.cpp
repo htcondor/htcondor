@@ -26,8 +26,17 @@
 
 void ScheddStatistics::Reconfig()
 {
-    this->RecentWindowMax = param_integer("STATISTICS_WINDOW_SECONDS", 1200, 
-                                          schedd_stats_window_quantum, INT_MAX);
+    int quantum = param_integer("STATISTICS_WINDOW_QUANTUM_SCHEDULER", INT_MAX, 1, INT_MAX);
+    if (quantum >= INT_MAX)
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM_SCHEDD", INT_MAX, 1, INT_MAX);
+    if (quantum >= INT_MAX)
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+    this->RecentWindowQuantum = quantum;
+
+    this->RecentWindowMax = param_integer("STATISTICS_WINDOW_SECONDS", 1200, quantum, INT_MAX);
+
+
+
     this->PublishFlags    = IF_BASICPUB | IF_RECENTPUB;
     char * tmp = param("STATISTICS_TO_PUBLISH");
     if (tmp) {
@@ -45,7 +54,7 @@ void ScheddStatistics::Reconfig()
 void ScheddStatistics::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-   Pool.SetRecentMax(window, schedd_stats_window_quantum);
+   Pool.SetRecentMax(window, this->RecentWindowQuantum);
 }
 
 
@@ -88,7 +97,7 @@ void ScheddStatistics::Init(int fOtherPool)
 
    Clear();
    // default window size to 1 quantum, we may set it to something else later.
-   this->RecentWindowMax = schedd_stats_window_quantum;
+   this->RecentWindowMax = this->RecentWindowQuantum;
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
@@ -169,7 +178,7 @@ time_t ScheddStatistics::Tick(time_t now)
    int cAdvance = generic_stats_Tick(
       now,
       this->RecentWindowMax,   // RecentMaxTime
-      schedd_stats_window_quantum, // RecentQuantum
+      this->RecentWindowQuantum, // RecentQuantum
       this->InitTime,
       this->StatsLastUpdateTime,
       this->RecentStatsTickTime,

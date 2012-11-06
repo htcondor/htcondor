@@ -10120,6 +10120,54 @@ url=
 tags=
 id=601
 
+[STATISTICS_WINDOW_QUANTUM]
+aliases=
+default=240
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Internal Statistics Ring Buffer In Seconds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
+[STATISTICS_WINDOW_QUANTUM_DC]
+aliases=
+default=
+version=0.0.0
+range=1,1000000000
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Internal Statistics Ring Buffer In Seconds for DaemonCore Stats
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
+[STATISTICS_WINDOW_QUANTUM_SCHEDD]
+aliases=
+default=
+version=0.0.0
+range=1,1000000000
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Internal Statistics Ring Buffer In Seconds for Scheduler Stats
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
 [STATISTICS_WINDOW_SECONDS]
 aliases=
 default=1200
@@ -10138,11 +10186,11 @@ id=602
 
 [DCSTATISTICS_WINDOW_SECONDS]
 aliases=
-default=1200
+default=
 version=0.0.0
 range=1,1000000000
 state=default
-type=int
+type=string
 is_macro=false
 reconfig=true
 customization=seldom
