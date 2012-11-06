@@ -156,8 +156,8 @@ check_reverse_connectivity() {
     if [ $? -eq 0 ]; then
         return 0
     fi
-    # test nc from remote_host to 9618 (bosco is started and default port is used)
-    ssh $remote_host nc -z $myhost 9618 > /dev/null 2>/dev/null
+    # test nc from remote_host to 11000 (bosco is started and default port is used)
+    ssh $remote_host nc -z $myhost 11000 > /dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
         return 0
     fi
