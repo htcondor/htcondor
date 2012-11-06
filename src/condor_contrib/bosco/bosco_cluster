@@ -88,7 +88,7 @@ ssh_upload_and_run () {
     if [ "x$start_dir" == "xDEFAULT" ]; then
         # OS X mktemp requires a template
         start_dir=`ssh $remote_host "mktemp -d /tmp/tmp_bosco_probe.XXXXXXXX" 2>/dev/null` 
-    else:
+    else
         ssh $remote_host "mkdir -p $start_dir" 
     fi
     scp $local_script $remote_host:$start_dir/bosco_run
