@@ -735,11 +735,6 @@ else(MSVC)
 		if (cxx_fstack_protector)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
 		endif(cxx_fstack_protector)
-
-		check_cxx_compiler_flag(-fnostack-protector cxx_fnostack_protector)
-		if (cxx_fnostack_protector)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fnostack-protector")
-		endif(cxx_fnostack_protector)
 	endif(NOT AIX)
 
 	check_cxx_compiler_flag(-rdynamic cxx_rdynamic)

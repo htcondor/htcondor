@@ -2778,8 +2778,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					// so we can try again.
 					dprintf(D_ALWAYS, 
 						"Job no longer matches partitionable slot after MODIFY_REQUEST_EXPR_ edits, retrying w/o edits\n");
-					if ( req_classad ) delete req_classad;	// delete modified ad
-					req_classad = unmodified_req_classad;	// put back original					
+					req_classad->CopyFrom(*unmodified_req_classad);	// put back original					
+					delete unmodified_req_classad;
 					unmodified_req_classad = NULL;
 				} else {
 					rip->dprintf(D_ALWAYS, 
