@@ -282,8 +282,9 @@ description.
      If this command line argument is used,
      then the user log file cannot be defined with a macro.
      This is necessary if using a \Condor{dagman} version of 7.9.0 or later
-     and submitting to a \Condor{schedd} daemon
-     with version number 7.8.0 or an earlier version.
+% Any version prior to 7.9.0 will need this flag defined
+     and submitting to a \Condor{schedd} daemon that is earlier than 7.9.0,
+     including any in the 7.8 series of HTCondor releases.
   }
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
