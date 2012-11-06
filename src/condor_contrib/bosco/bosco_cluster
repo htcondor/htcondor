@@ -697,7 +697,13 @@ rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_host:$remote_glite_dir/li
 rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_host:$remote_glite_dir/bin 2>/dev/null
-rsync -aq  $archive_dir/libexec/campus_factory/share $remote_host:$remote_base_dir_host/campus_factory/ 2>/dev/null
+
+# create the glidein
+export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
+export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
+glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
+rsync -aq  $tmp_dir/glideinExec.tar.gz $remote_host:$remote_base_dir_host/campus_factory/ 2>/dev/null
+
 
 ssh $remote_host "cat >$remote_glite_dir/etc/condor_config.ft-gahp" 2>/dev/null <<EOF
 BOSCO_SANDBOX_DIR=\$ENV(HOME)/$remote_sandbox_dir
