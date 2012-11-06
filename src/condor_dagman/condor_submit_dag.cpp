@@ -770,6 +770,10 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	{
 		args.AppendArg("-Suppress_notification");
 	}
+	else
+	{
+		args.AppendArg("-Dont_Suppress_notification");
+	}
 
 	args.AppendArg("-CsdVersion");
 	args.AppendArg(CondorVersion());
@@ -1115,6 +1119,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				deepOpts.suppress_notification = true;
 			}
+			else if ( (strArg.find("-dont_suppress_notification") != -1) )
+			{
+				deepOpts.suppress_notification = false;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{
@@ -1256,5 +1264,6 @@ int printUsage(int iExitCode)
 	printf("    -priority <priority> (jobs will run with this priority by default)\n");
 	printf("    -dont_use_default_node_log (Restore pre-7.9.0 behavior of using UserLog only)\n");
 	printf("    -suppress_notification (Set \"notification = never\" in all jobs submitted by this DAGMan)\n");
+	printf("    -dont_suppress_notification (Allow jobs to specify notification)\n");
 	exit(iExitCode);
 }

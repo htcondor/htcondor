@@ -133,6 +133,8 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	if( deepOpts.suppress_notification ) {
 		args.AppendArg( "-suppress_notification" );
+	} else {
+		args.AppendArg( "-dont_suppress_notification" );
 	}
 
 	args.AppendArg( dagFile );
