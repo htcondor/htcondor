@@ -32,7 +32,9 @@ The details of each version are described below.
 \item Added a ``-suppress\_notification'' command line flag and corresponding
 \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration macro to \Condor{dagman}.
 This enables a user of \Condor{dagman} to stop notification by email of job
-events for jobs submitted by \Condor{dagman}.
+events for jobs submitted by \Condor{dagman}. The value of
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to true, so that jobs submitted
+by \Condor{dagman} will not send email notification. 
 \Ticket{3225}
 
 \end{itemize}
