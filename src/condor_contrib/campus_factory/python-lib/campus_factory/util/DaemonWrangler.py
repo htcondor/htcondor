@@ -18,7 +18,7 @@ DEFAULT_GLIDEIN_DAEMONS = [ 'condor_master', 'condor_procd', 'condor_startd', \
                             'condor_starter' ]
 
 class DaemonWrangler:
-    def __init__(self, daemons=None):
+    def __init__(self, daemons=None, base_condor_dir = None, dumb_package = False):
         """
         @param daemons: A list of daemons that will be included in the package
         """
@@ -26,12 +26,19 @@ class DaemonWrangler:
             self.daemons = DEFAULT_GLIDEIN_DAEMONS
         else:
             self.daemons = daemons
+        
+        try:
+            self.glidein_dir = get_option("GLIDEIN_DIRECTORY")
+        except:
+            self.glidein_dir = ""
             
-        self.campus_dir = os.environ['CAMPUSFACTORY_DIR']
+        self.base_condor_dir = base_condor_dir
+        self.dumb_package = dumb_package
+        
             
     def Package(self, name=""): 
         if name == "":
-            name = os.path.join(self.campus_dir,"share/glidein_jobs/glideinExec.tar.gz")
+            name = os.path.join(self.glidein_dir,"glideinExec.tar.gz")
         
         # See if the daemons exist
         daemon_paths = self._CheckDaemons()
@@ -40,7 +47,11 @@ class DaemonWrangler:
             raise Exception("Unable to check all daemons")
         
         # And now libraries
-        library_paths = self._GetDynamicLibraries(daemon_paths)
+        if self.dumb_package:
+            library_paths = self._GetAllLibs()
+        else:
+            library_paths = self._GetDynamicLibraries(daemon_paths)
+            
         try:
             self._CheckLibraries(library_paths)
         except Exception, e:
@@ -58,7 +69,7 @@ class DaemonWrangler:
             shutil.copy(daemon_path, target_dir)
         
         # Add any other files that should go into the tar file
-        shutil.copy(os.path.join(self.campus_dir, "share/glidein_jobs/glidein_startup"), target_dir)
+        shutil.copy(os.path.join(self.glidein_dir, "glidein_startup"), target_dir)
         
         tfile = None
         try:
@@ -84,7 +95,11 @@ class DaemonWrangler:
         available and readable.
         """
         
-        condor_sbin = get_option("SBIN")
+        # If running on a specific base dir
+        if self.base_condor_dir:
+            condor_sbin = os.path.join(self.base_condor_dir, "sbin")
+        else:
+            condor_sbin = get_option("SBIN")
         logging.debug("Found SBIN directory = %s" % condor_sbin)
         daemon_paths = []
         for daemon in self.daemons:
@@ -94,6 +109,24 @@ class DaemonWrangler:
         
         # Done checking all the daemons
         return daemon_paths
+
+
+    def _GetAllLibs(self, libdirs = ['lib', 'lib/condor']):
+        """
+        Get all libs in the lib directories 
+        """
+        toreturn = []
+       
+        # For each dir in libdirs, get the files
+        for libdir in libdirs:
+            pathname = os.path.join(self.base_condor_dir, libdir)
+            for libfile in os.listdir(pathname):
+                full_libfile = os.path.join(pathname, libfile)
+                if not os.path.isdir(full_libfile):
+                    toreturn.append(full_libfile)
+
+        return toreturn
+        
 
 
     def _CheckLibraries(self, library_paths):

@@ -11,12 +11,13 @@ from campus_factory.ClusterStatus import CondorConfig
 parsed_config_file = None
 local_set_options = {}
 
-def get_option(option, default=None):
+def get_option(option, default=None, section="general"):
     """
     This function looks through the configuration for an option.
     
     @param option: The option to lookup
     @param default: The default if the option isn't found
+    @param section: Section in the campus factory to look for the option
     @return: The option with key = param option, or default if the option is not found.
     """
     
@@ -31,11 +32,16 @@ def get_option(option, default=None):
         return env_option
     
     # Third get from the campus factory configuration
+    config_option = _get_config_option(option, section)
+    if config_option:
+        return config_option
+    
+    # Forth, get factory configuration from general section
     config_option = _get_config_option(option)
     if config_option:
         return config_option
     
-    # Forth, get from the condor configuration
+    # Fifth, get from the condor configuration
     condor_option = _get_condor_option(option)
     if condor_option:
         return condor_option
@@ -43,23 +49,6 @@ def get_option(option, default=None):
     # If all else fails, return the default
     return default
 
-    
-
-def get_option_section(section, option, default=None):
-    """
-    Option argument only applies to the condor config file
-    
-    @param section: Section in the configuration file to search for the option
-    @param option: Option to return value for
-    @param default: Default value
-    
-    """ 
-    
-    config_response = _get_config_option(option, section)
-    if config_response != None:
-        return config_response
-    else:
-        return default
     
 
 def set_option(option, value):

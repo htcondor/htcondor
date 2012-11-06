@@ -76,13 +76,13 @@ class Factory:
         else:
             # Check for the bosco cluster command
             (stdout, stderr) = RunExternal("bosco_cluster -l")
-            if len(stdout) != 0:
+            if len(stdout) != 0 and stdout is not "No clusters configured":
                 logging.debug("Using the cluster list installed with BOSCO")
                 for cluster_id in stdout.split("\n"):
                     if len(cluster_id) > 0 and cluster_id != "":
                         self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
             else:
-                # Initialize as emtpy, which infers to submit 'here'
+                # Initialize as empty, which infers to submit 'here'
                 self.cluster_list = [ Cluster(get_option("CONDOR_HOST"), useOffline = self.UseOffline) ]
         
         # Tar up the executables
