@@ -1,3 +1,19 @@
+condor (7.8.6~dfsg.1-1) experimental; urgency=low
+
+  * New upstream bug fix release (skipped 7.8.5).
+    - Avoid rare crashes of condor_schedd in association with jobs that have
+      'noop_job = true' (Ticket 3156).
+    - Fix condor_startd crash when failing to match a partitionable slot after
+      the application of configuration variables of the MODIFY_REQUEST_EXPR_
+      category (Ticket 3260).
+    - Prevent removal of scheduler universe jobs from the job queue when they
+      should have been requeued, according to policy. This caused condor_dagman
+      jobs to fail to restart. This bug exists in all Condor versions 7.8.0
+      through 7.8.4. Upon upgrading from these Condor versions, users will need
+      to intervene in order to restart their dagman jobs (Ticket 3207).
+
+ -- Michael Hanke <mih@debian.org>  Tue, 06 Nov 2012 08:22:29 +0100
+
 condor (7.8.4~dfsg.1-1) experimental; urgency=low
 
   * New upstream bug fix release (missed 7.8.3). This release addresses four
