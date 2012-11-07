@@ -406,7 +406,7 @@ const char* EC2AvailabilityZone= "ec2_availability_zone";
 const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
-
+const char* EC2SpotPrice = "ec2_spot_price";
 
 //
 // Deltacloud Parameters
@@ -5479,6 +5479,13 @@ SetGridParams()
         free( tmp );
         InsertJobExpr( buffer.Value() );
     }
+	
+	// EC2SpotPrice is not a necessary parameter
+	if( (tmp = condor_param( EC2SpotPrice, ATTR_EC2_SPOT_PRICE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SPOT_PRICE, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}	
 	
 	// EC2UserData is not a necessary parameter
 	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
