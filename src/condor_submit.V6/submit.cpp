@@ -3830,12 +3830,15 @@ SetNotification()
 	char *how = condor_param( Notification, ATTR_JOB_NOTIFICATION );
 	int notification;
 	MyString buffer;
-
-	if( (how == NULL) || (strcasecmp(how, "COMPLETE") == 0) ) {
-		notification = NOTIFY_COMPLETE;
-	} 
-	else if( strcasecmp(how, "NEVER") == 0 ) {
+	
+	if( how == NULL ) {
+		how = param ( "JOB_DEFAULT_NOTIFICATION" );		
+	}
+	if( (how == NULL) || (strcasecmp(how, "NEVER") == 0) ) {
 		notification = NOTIFY_NEVER;
+	} 
+	else if( strcasecmp(how, "COMPLETE") == 0 ) {
+		notification = NOTIFY_COMPLETE;
 	} 
 	else if( strcasecmp(how, "ALWAYS") == 0 ) {
 		notification = NOTIFY_ALWAYS;
