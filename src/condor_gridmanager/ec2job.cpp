@@ -855,8 +855,6 @@ void EC2Job::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_SUBMITTED; // GM_SUBMITTED knows how to handle this
 				} else {
-					string new_status;
-					string public_dns;
 					StringList returnStatus;
 
 					// need to call ec2_vm_status(), ec2_vm_status()
@@ -892,13 +890,26 @@ void EC2Job::doEvaluateState()
 							returnStatus.append( EC2_VM_STATE_TERMINATED );
 						}
 
-						// VM Status is the second value in the return string list
-						returnStatus.rewind();
-						if ( returnStatus.number() >= 2 ) {
-							// jump to the value I need
-							returnStatus.next();
-							new_status = returnStatus.next();
-						}
+                        //
+                        // Grab everything out of returnStatus in one pass.
+                        //
+                        returnStatus.rewind();
+                        
+                        // Required; srCode may be null.
+                        std::string instance_id = returnStatus.next();
+                        std::string new_status = returnStatus.next();
+                        std::string ami_id = returnStatus.next();
+                        std::string srCode = returnStatus.next();
+                        
+                        // Optional.
+                        std::string public_dns, private_dns, keyname;
+                        if( returnStatus.number() >= 5 ) {
+                            public_dns = returnStatus.next();
+                            private_dns = returnStatus.next();
+                            keyname = returnStatus.next();
+                        }
+                        
+                        // Any remaining values are the security groups.
 
 						// if ec2 VM's state is "running" or beyond,
 						// change condor job status to Running.
@@ -913,26 +924,61 @@ void EC2Job::doEvaluateState()
 							// the are non-blocking and we continue even if they fail.
                             if ( new_status == EC2_VM_STATE_RUNNING )
                             {
-								associate_n_attach(returnStatus);
+                                associate_n_attach(returnStatus);
                             }
-                            
 						}
-												
+
 						remoteJobState = new_status;
 						SetRemoteJobStatus( new_status.c_str() );
-										
-						
-						returnStatus.rewind();
-						int size = returnStatus.number();
-						// only when status changed to running, can we have the public dns name
-						// at this situation, the number of return value is larger than 4
-						if (size >= 5 ) {
-							for (int i=0; i<4; i++) {
-								returnStatus.next();							
-							}
-							public_dns = returnStatus.next();
-							SetRemoteVMName( public_dns.c_str() );
-						}
+
+                        if( ! public_dns.empty() ) {
+                            SetRemoteVMName( public_dns.c_str() );
+                        }
+
+                        dprintf( D_ALWAYS, "DEBUG: srCode = %s (assuming 'NULL')\n", srCode.c_str() );
+                        if( srCode != "NULL" ) {
+                            // Send the user a copy of the reason code.
+                            // FIXME: jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, srCode.c_str() );
+                            
+                            // The semantics for each code listed on
+                            // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-ItemType-StateReasonType.html
+                            // should be considered..
+                            
+                            //
+                            // Many of the codes should result in the job going
+                            // on hold, because they represent permanent problems
+                            // with the job (and we need to tell the user), or
+                            // temporary problems with the service (and we need
+                            // to rate-limit the retries?).  However, we've
+                            // decided that using OnExitRemove and/or job
+                            // postscripts in DAGMan will suffice, given the
+                            // attribute updated above, to determine if the
+                            // job should be resubmitted if the instance
+                            // died because of the spot price going up.  Aside
+                            // from that, we should probably treat the user
+                            // terminating the instance as a normal exit, which also
+                            // means we don't need to worry about reading 
+                            // that result code if we just terminated it because
+                            // the user removed the job.
+                            //
+                            
+                            if( srCode == "Server.SpotInstanceTermination" ) {
+                                // ATTR_EXIT_CODE is declared but not defined.
+                                jobAd->Assign( ATTR_ON_EXIT_CODE, 1 );
+                            }
+                            
+                            requestScheddUpdate( this, false );
+                        }
+
+                        //
+                        // The state reason code is the fourth entry in the
+                        // returnStatus, but may be null.  Add a field to the
+                        // job ad to store it, if not.  Set the [research
+                        // needed: job exit code?] as semantically appropriate,
+                        // based on the code.  Do NOT block for this schedd
+                        // update; the state reason does not change recovery.
+                        //
+
 					}
 
 					lastProbeTime = now;
